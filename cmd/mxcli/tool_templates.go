@@ -255,6 +255,10 @@ func generateDevcontainerJSON(projectName, mprPath string) string {
     "ghcr.io/devcontainers/features/node:1": {}
   },
   "forwardPorts": [8080, 8090, 5432],
+  "portsAttributes": {
+    "8080-8099": { "onAutoForward": "silent" },
+    "5432-5499": { "onAutoForward": "silent" }
+  },
   "containerEnv": {
     "PLAYWRIGHT_CLI_SESSION": "mendix-app"
   },
@@ -305,7 +309,15 @@ func generatePlaywrightConfig() string {
     "navigation": 30000
   },
   "network": {
-    "allowedOrigins": ["http://localhost:8080"]
+    "allowedOrigins": [
+      "http://localhost:8079",
+      "http://localhost:8080",
+      "http://localhost:8081",
+      "http://localhost:8082",
+      "http://localhost:8083",
+      "http://localhost:8084",
+      "http://localhost:8085"
+    ]
   }
 }
 `

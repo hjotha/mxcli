@@ -3,8 +3,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/playwright"
@@ -64,6 +67,13 @@ Examples:
 			os.Exit(1)
 		}
 
+		// Auto-detect port from .docker/.env when --base-url is not explicitly set
+		if !cmd.Flags().Changed("base-url") && projectPath != "" {
+			if port := readAppPort(projectPath); port != "" {
+				baseURL = fmt.Sprintf("http://localhost:%s", port)
+			}
+		}
+
 		if list {
 			if err := playwright.ListScripts(args, os.Stdout); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -107,4 +117,27 @@ func init() {
 	playwrightVerifyCmd.Flags().BoolP("skip-health-check", "", false, "Skip app reachability check")
 
 	playwrightCmd.AddCommand(playwrightVerifyCmd)
+}
+
+// readAppPort reads APP_PORT from .docker/.env relative to the project file.
+// Returns empty string if the file doesn't exist or APP_PORT is not set.
+func readAppPort(projectPath string) string {
+	envPath := filepath.Join(filepath.Dir(projectPath), ".docker", ".env")
+	f, err := os.Open(envPath)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "#") || line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "APP_PORT=") {
+			return strings.TrimPrefix(line, "APP_PORT=")
+		}
+	}
+	return ""
 }
