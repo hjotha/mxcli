@@ -5,6 +5,7 @@ package playwright
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -163,8 +164,12 @@ func Verify(opts VerifyOptions) (*SuiteResult, error) {
 	}
 
 	// Step 4: Open browser session
-	fmt.Fprintf(w, "Opening browser session...\n")
-	if err := runPlaywrightCLI("open", baseURL); err != nil {
+	browser := readBrowserName(opts.ProjectPath)
+	if browser == "" {
+		browser = "chromium"
+	}
+	fmt.Fprintf(w, "Opening browser session (%s)...\n", browser)
+	if err := runPlaywrightCLI("--browser", browser, "open", baseURL); err != nil {
 		return nil, fmt.Errorf("opening browser: %w", err)
 	}
 
@@ -386,6 +391,29 @@ func healthCheck(baseURL string) error {
 		return fmt.Errorf("server returned %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// readBrowserName reads browserName from .playwright/cli.config.json relative
+// to the project file. Returns empty string if the file doesn't exist or
+// browserName is not set.
+func readBrowserName(projectPath string) string {
+	if projectPath == "" {
+		return ""
+	}
+	configPath := filepath.Join(filepath.Dir(projectPath), ".playwright", "cli.config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return ""
+	}
+	var config struct {
+		Browser struct {
+			BrowserName string `json:"browserName"`
+		} `json:"browser"`
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		return ""
+	}
+	return config.Browser.BrowserName
 }
 
 // runPlaywrightCLI runs a playwright-cli command.
