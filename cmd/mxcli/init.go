@@ -369,6 +369,22 @@ func generateClaudeMD(projectName, mprFile string) string {
 	w("# Mendix Project: " + projectName + "\n\n")
 	w("This is a Mendix project configured for AI-assisted development using mxcli and MDL (Mendix Definition Language).\n\n")
 
+	// ── Communication Style ────────────────────────────────────────
+	w("## Communication Style\n\n")
+	w("When discussing changes with the user:\n\n")
+	w("- **Never show raw MDL scripts in chat.** Instead, describe changes in plain language as a numbered list.\n")
+	w("- After the user approves, write the MDL to a script file, validate it, and execute it silently.\n")
+	w("- Only show MDL code if the user explicitly asks to see the script.\n")
+	w("- When reporting results, summarize what was created/modified in plain language.\n\n")
+	w("**Example — instead of showing MDL code, write this:**\n\n")
+	w("> Here's what I'll do:\n")
+	w("> 1. Create a new **Customer** entity in MyModule with:\n")
+	w(">    - **Name** (text, up to 100 characters)\n")
+	w(">    - **Email** (text, up to 200 characters)\n")
+	w(">    - **Age** (whole number)\n")
+	w(">\n")
+	w("> Shall I go ahead?\n\n")
+
 	// ── mxcli Location ─────────────────────────────────────────────
 	w("## Important: mxcli Location\n\n")
 	w("The " + bt + "mxcli" + bt + " tool is located in the **root folder of this project**, not in the system PATH. Always use the local path:\n\n")
