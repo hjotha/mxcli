@@ -19,11 +19,11 @@ import (
 // EvalTest represents a single evaluation test case parsed from a Markdown file.
 type EvalTest struct {
 	// Metadata from YAML frontmatter
-	ID       string        `yaml:"id"`
-	Category string        `yaml:"category"`
-	Tags     []string      `yaml:"tags"`
-	Timeout  time.Duration `yaml:"-"`
-	RawTimeout string      `yaml:"timeout"`
+	ID         string        `yaml:"id"`
+	Category   string        `yaml:"category"`
+	Tags       []string      `yaml:"tags"`
+	Timeout    time.Duration `yaml:"-"`
+	RawTimeout string        `yaml:"timeout"`
 
 	// Parsed from Markdown sections
 	Title    string

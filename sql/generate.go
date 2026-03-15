@@ -20,9 +20,9 @@ type GenerateConfig struct {
 
 // GenerateResult holds the generated MDL and statistics.
 type GenerateResult struct {
-	MDL           string   // complete MDL (constants + entities + database connection)
-	ExecutableMDL string   // constants + entities only (parseable/executable by mxcli)
-	ConnectionMDL string   // DATABASE CONNECTION definition (reference output)
+	MDL           string // complete MDL (constants + entities + database connection)
+	ExecutableMDL string // constants + entities only (parseable/executable by mxcli)
+	ConnectionMDL string // DATABASE CONNECTION definition (reference output)
 	TableCount    int
 	ViewCount     int
 	SkippedCols   []string // "table.column: type" for unmappable columns

@@ -16,6 +16,32 @@ Mendix projects are stored in binary `.mpr` files that AI agents can't read dire
 - **Linting** - Check projects for common issues
 - **Unix pipe support** - Output formats designed for scripting and chaining
 
+## What is mxcli
+
+Mxcli is a tool that enables some of the following use cases.
+
+### Command line tool to work with Mendix projects
+
+### A REPL to work with Mendix projects
+
+* Mass update pages
+
+### Skills to enable Agentic Coding tools to work with Mendix projects
+
+### Migration skills
+
+### Metadata Catalog 
+
+### A Mendix project linter
+
+### VSCode for Mendix projects
+
+### Run and test your Mendix projects
+
+### Automated Playwright-cli testing for Mendix projects
+
+### Data migration for Mendix projects
+
 ## Quick Start
 
 The recommended way to use mxcli is inside a **Dev Container**. This sandboxes the AI agent so it can only access your project files, preventing unintended changes to your system. `mxcli init` sets up a `.devcontainer/` configuration automatically.

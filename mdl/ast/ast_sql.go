@@ -104,19 +104,19 @@ type DatabaseQueryParamDef struct {
 
 // CreateDatabaseConnectionStmt represents: CREATE DATABASE CONNECTION Module.Name ...
 type CreateDatabaseConnectionStmt struct {
-	Name             QualifiedName
-	DatabaseType     string // "PostgreSQL", "MSSQL", "Oracle"
-	ConnectionString string // constant ref or string literal for connection string
-	ConnectionStringIsRef bool // true if @Module.Const reference
-	UserName         string
-	UserNameIsRef    bool
-	Password         string
-	PasswordIsRef    bool
-	Host             string
-	Port             int
-	Database         string
-	Queries          []DatabaseQueryDef
-	CreateOrModify   bool
+	Name                  QualifiedName
+	DatabaseType          string // "PostgreSQL", "MSSQL", "Oracle"
+	ConnectionString      string // constant ref or string literal for connection string
+	ConnectionStringIsRef bool   // true if @Module.Const reference
+	UserName              string
+	UserNameIsRef         bool
+	Password              string
+	PasswordIsRef         bool
+	Host                  string
+	Port                  int
+	Database              string
+	Queries               []DatabaseQueryDef
+	CreateOrModify        bool
 }
 
 func (s *CreateDatabaseConnectionStmt) isStatement() {}
@@ -148,4 +148,3 @@ type ImportStmt struct {
 }
 
 func (s *ImportStmt) isStatement() {}
-

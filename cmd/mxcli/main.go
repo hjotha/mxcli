@@ -21,11 +21,7 @@ var (
 	BuildTime = ""
 )
 
-const warningBanner = `WARNING: This is a vibe-coded proof of concept intended to inspire feedback
-on this idea, not supported for production use. It has bugs, hallucinations,
-and untested code, so use with care.
-
-`
+const warningBanner = "WARNING: This is a vibe-coded PoC, alpha quality, not fit for production use.\n"
 
 func main() {
 	// Show warning banner unless --quiet, -q, --help, -h, or --version is passed

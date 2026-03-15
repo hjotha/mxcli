@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/antlr4-go/antlr/v4"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
-	"github.com/antlr4-go/antlr/v4"
 )
 
 // unquoteIdentifier strips surrounding double-quotes or backticks from a quoted identifier.

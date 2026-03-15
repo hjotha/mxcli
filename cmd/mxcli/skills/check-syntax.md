@@ -51,21 +51,19 @@ Before writing any MDL, verify these requirements:
 - `BREAK` / `CONTINUE` - Not implemented
 - `COMMIT MESSAGE 'text'` - Not in current grammar (session command only)
 
-### 2. Check Reserved Words
+### 2. Quote All Identifiers
 
-Most common words now work unquoted as attribute and entity names (Caption, Label, Title, Text, Content, Format, Range, Source, Check, Status, Type, Value, Index, etc.).
+**Best practice: Always quote all identifiers** (entity names, attribute names, parameter names) with double quotes. This eliminates all reserved keyword conflicts and is always safe — quotes are stripped automatically by the parser.
 
-However, some structural MDL keywords still require quoting when used as identifiers:
+```sql
+CREATE PERSISTENT ENTITY Module."Customer" (
+  "Name": String(200),
+  "Status": String(50),
+  "Create": DateTime
+);
+```
 
-| Reserved Word | Use Instead |
-|---------------|-------------|
-| `Create` | `"Create"` or rename |
-| `Delete` | `"Delete"` or rename |
-| `Begin` | `"Begin"` or rename |
-| `End` | `"End"` or rename |
-| `Return` | `"Return"` or rename |
-
-**Quoted identifiers** (`"Range"` or `` `Range` ``) work for any reserved word when needed.
+Both `"Name"` and `` `Name` `` syntax are supported. Prefer double quotes for consistency.
 
 Run `mxcli syntax keywords` for the full list of 320+ reserved keywords.
 

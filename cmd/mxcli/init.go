@@ -359,7 +359,7 @@ func generateClaudeMD(projectName, mprFile string) string {
 		mprPath = "<project>.mpr"
 	}
 
-	bt := "`"   // backtick helper
+	bt := "`"    // backtick helper
 	bt3 := "```" // triple backtick helper
 
 	var sb strings.Builder

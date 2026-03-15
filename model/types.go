@@ -429,17 +429,17 @@ type PublishedMember struct {
 // DatabaseConnection represents a DatabaseConnector$DatabaseConnection document.
 type DatabaseConnection struct {
 	BaseElement
-	ContainerID          ID                     `json:"containerId"`
-	Name                 string                 `json:"name"`
-	DatabaseType         string                 `json:"databaseType"`          // "PostgreSQL", "MSSQL", "Oracle"
-	ConnectionString     string                 `json:"connectionString"`      // BY_NAME ref to constant: "Module.ConstantName"
-	ConnectionInputValue string                 `json:"connectionInputValue"`  // Actual JDBC URL for Studio Pro dev
-	UserName             string                 `json:"userName"`              // BY_NAME ref to constant
-	Password             string                 `json:"password"`              // BY_NAME ref to constant
-	Documentation        string                 `json:"documentation,omitempty"`
-	Excluded             bool                   `json:"excluded,omitempty"`
-	ExportLevel          string                 `json:"exportLevel,omitempty"`
-	Queries              []*DatabaseQuery       `json:"queries,omitempty"`
+	ContainerID          ID               `json:"containerId"`
+	Name                 string           `json:"name"`
+	DatabaseType         string           `json:"databaseType"`         // "PostgreSQL", "MSSQL", "Oracle"
+	ConnectionString     string           `json:"connectionString"`     // BY_NAME ref to constant: "Module.ConstantName"
+	ConnectionInputValue string           `json:"connectionInputValue"` // Actual JDBC URL for Studio Pro dev
+	UserName             string           `json:"userName"`             // BY_NAME ref to constant
+	Password             string           `json:"password"`             // BY_NAME ref to constant
+	Documentation        string           `json:"documentation,omitempty"`
+	Excluded             bool             `json:"excluded,omitempty"`
+	ExportLevel          string           `json:"exportLevel,omitempty"`
+	Queries              []*DatabaseQuery `json:"queries,omitempty"`
 }
 
 // DatabaseQuery represents a DatabaseConnector$DatabaseQuery.
@@ -455,10 +455,10 @@ type DatabaseQuery struct {
 // DatabaseQueryParameter represents a DatabaseConnector$QueryParameter.
 type DatabaseQueryParameter struct {
 	BaseElement
-	ParameterName        string `json:"parameterName"`
-	DataType             string `json:"dataType"`             // e.g. "DataTypes$IntegerType", "DataTypes$StringType"
-	DefaultValue         string `json:"defaultValue"`         // test value for Studio Pro
-	EmptyValueBecomesNull bool  `json:"emptyValueBecomesNull"` // true = test with NULL
+	ParameterName         string `json:"parameterName"`
+	DataType              string `json:"dataType"`              // e.g. "DataTypes$IntegerType", "DataTypes$StringType"
+	DefaultValue          string `json:"defaultValue"`          // test value for Studio Pro
+	EmptyValueBecomesNull bool   `json:"emptyValueBecomesNull"` // true = test with NULL
 }
 
 // DatabaseTableMapping represents a DatabaseConnector$TableMapping.

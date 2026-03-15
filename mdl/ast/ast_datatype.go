@@ -33,9 +33,9 @@ const (
 	TypeAutoNumber
 	TypeBinary
 	TypeEnumeration
-	TypeEntity         // Entity reference (for microflow parameters)
-	TypeListOf         // List of entity (for microflow parameters)
-	TypeVoid           // Void return type (for microflows)
+	TypeEntity          // Entity reference (for microflow parameters)
+	TypeListOf          // List of entity (for microflow parameters)
+	TypeVoid            // Void return type (for microflows)
 	TypeStringTemplate  // StringTemplate(Sql) etc. for Java actions
 	TypeEntityTypeParam // ENTITY <pEntity> type parameter declaration for Java actions
 )

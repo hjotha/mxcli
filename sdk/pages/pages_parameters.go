@@ -69,7 +69,7 @@ type LocalVariable struct {
 	model.BaseElement
 	ContainerID  model.ID `json:"containerId"`
 	Name         string   `json:"name"`
-	DefaultValue string   `json:"defaultValue"`          // Mendix expression string
+	DefaultValue string   `json:"defaultValue"`           // Mendix expression string
 	VariableType string   `json:"variableType,omitempty"` // BSON $Type, e.g., "DataTypes$BooleanType"
 }
 

@@ -15,11 +15,11 @@ type CheckResult struct {
 
 // PhaseResult holds the results for a single evaluation phase (initial or iteration).
 type PhaseResult struct {
-	Phase   string        `json:"phase"` // "initial" or "iteration"
-	Checks  []CheckResult `json:"checks"`
-	Passed  int           `json:"passed"`
-	Total   int           `json:"total"`
-	Score   float64       `json:"score"` // 0.0 - 1.0
+	Phase  string        `json:"phase"` // "initial" or "iteration"
+	Checks []CheckResult `json:"checks"`
+	Passed int           `json:"passed"`
+	Total  int           `json:"total"`
+	Score  float64       `json:"score"` // 0.0 - 1.0
 }
 
 // ComputeScore calculates passed/total/score from the check results.
@@ -38,15 +38,15 @@ func (pr *PhaseResult) ComputeScore() {
 
 // EvalResult holds the complete result of evaluating a single test case.
 type EvalResult struct {
-	TestID       string       `json:"test_id"`
-	Category     string       `json:"category"`
-	Title        string       `json:"title"`
-	Timestamp    time.Time    `json:"timestamp"`
+	TestID       string        `json:"test_id"`
+	Category     string        `json:"category"`
+	Title        string        `json:"title"`
+	Timestamp    time.Time     `json:"timestamp"`
 	Duration     time.Duration `json:"duration"`
-	Initial      PhaseResult  `json:"initial"`
-	Iteration    *PhaseResult `json:"iteration,omitempty"`
-	OverallScore float64      `json:"overall_score"` // 0.0 - 1.0
-	Criteria     []string     `json:"criteria"`
+	Initial      PhaseResult   `json:"initial"`
+	Iteration    *PhaseResult  `json:"iteration,omitempty"`
+	OverallScore float64       `json:"overall_score"` // 0.0 - 1.0
+	Criteria     []string      `json:"criteria"`
 }
 
 // ComputeOverallScore calculates the overall score from phase results.
@@ -87,9 +87,9 @@ func (er *EvalResult) TotalChecks() int {
 
 // RunSummary holds results for multiple eval tests in a single run.
 type RunSummary struct {
-	Timestamp time.Time    `json:"timestamp"`
+	Timestamp time.Time     `json:"timestamp"`
 	Duration  time.Duration `json:"duration"`
-	Results   []EvalResult `json:"results"`
+	Results   []EvalResult  `json:"results"`
 }
 
 // AverageScore returns the average overall score across all results.

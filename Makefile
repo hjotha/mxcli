@@ -5,6 +5,9 @@
 #   make release   - Build mxcli for all platforms (macOS, Windows, Linux)
 #   make test      - Run unit tests
 #   make test-mdl  - Run MDL integration tests (requires Docker)
+#   make lint      - Lint all code (Go + TypeScript)
+#   make lint-go   - Lint Go code (fmt + vet)
+#   make lint-ts   - Lint TypeScript code (tsc --noEmit)
 #   make grammar   - Regenerate ANTLR parser
 #   make sbom      - Generate CycloneDX SBOM (Go + TypeScript)
 #   make sbom-report - Generate Markdown dependency report
@@ -19,7 +22,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
-.PHONY: build release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation vscode-ext vscode-install source-tree sbom sbom-report
+.PHONY: build release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation vscode-ext vscode-install source-tree sbom sbom-report lint lint-go lint-ts fmt vet
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -133,6 +136,27 @@ test:
 MPR ?= app.mpr
 test-mdl: build
 	$(BUILD_DIR)/$(BINARY_NAME) test mdl-examples/doctype-tests/microflow-spec.test.mdl -p $(MPR)
+
+# Lint all code (Go + TypeScript)
+lint: lint-go lint-ts
+
+# Lint Go code
+lint-go: fmt vet
+	@echo "Go lint passed"
+
+# Format Go code
+fmt:
+	go fmt ./...
+
+# Vet Go code (filters out generated ANTLR parser warnings)
+vet:
+	@CGO_ENABLED=0 go vet ./... 2>&1 | grep -v 'grammar/parser/' | grep -v 'mdl-grammar/parser/' || true
+	@! CGO_ENABLED=0 go vet ./... 2>&1 | grep -v 'grammar/parser/' | grep -v 'mdl-grammar/parser/' | grep -q 'vet:'
+
+# Lint TypeScript code (VS Code extension)
+lint-ts:
+	cd vscode-mdl && bun install --silent && bun run lint
+	@echo "TypeScript lint passed"
 
 # Regenerate ANTLR parser from MDLLexer.g4 and MDLParser.g4
 grammar:

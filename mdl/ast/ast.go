@@ -46,10 +46,10 @@ type Program struct {
 type DocumentType string
 
 const (
-	DocumentTypePage        DocumentType = "PAGE"
-	DocumentTypeMicroflow   DocumentType = "MICROFLOW"
-	DocumentTypeSnippet     DocumentType = "SNIPPET"
-	DocumentTypeNanoflow    DocumentType = "NANOFLOW"
+	DocumentTypePage               DocumentType = "PAGE"
+	DocumentTypeMicroflow          DocumentType = "MICROFLOW"
+	DocumentTypeSnippet            DocumentType = "SNIPPET"
+	DocumentTypeNanoflow           DocumentType = "NANOFLOW"
 	DocumentTypeEntity             DocumentType = "ENTITY"
 	DocumentTypeEnumeration        DocumentType = "ENUMERATION"
 	DocumentTypeConstant           DocumentType = "CONSTANT"

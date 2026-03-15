@@ -13,8 +13,8 @@ func TestTableToEntityName(t *testing.T) {
 		{"order_items", "OrderItem"},
 		{"categories", "Category"},
 		{"addresses", "Address"},
-		{"status", "Status"},      // don't singularize words ending in "us"
-		{"Employee", "Employee"},  // already singular PascalCase
+		{"status", "Status"},     // don't singularize words ending in "us"
+		{"Employee", "Employee"}, // already singular PascalCase
 		{"users", "User"},
 	}
 	for _, tt := range tests {

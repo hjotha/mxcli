@@ -62,9 +62,9 @@ type ScriptResult struct {
 
 // SuiteResult holds results for all scripts in a verify run.
 type SuiteResult struct {
-	Name    string
-	Scripts []ScriptResult
-	Started time.Time
+	Name     string
+	Scripts  []ScriptResult
+	Started  time.Time
 	Duration time.Duration
 }
 

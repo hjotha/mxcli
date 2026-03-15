@@ -413,7 +413,6 @@ $$;`
 	}
 }
 
-
 func TestJavaAction_ExposedWithSpecialChars(t *testing.T) {
 	// Test that special characters in exposed strings are handled
 	input := `CREATE JAVA ACTION MyModule.SendNotification(

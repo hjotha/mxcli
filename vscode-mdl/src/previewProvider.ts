@@ -13,9 +13,9 @@ import { getMermaidWebviewContent } from './preview/mermaidTemplate';
  */
 export class MdlPreviewProvider {
 	private panel: vscode.WebviewPanel | undefined;
-	private mxcliPath: string;
+	private mxcliPath!: string;
 	private mprPath: string | undefined;
-	private diagramTheme: string;
+	private diagramTheme!: string;
 	private sourceProvider: MdlSourceContentProvider | undefined;
 
 	// Sync state for diagram-with-source mode

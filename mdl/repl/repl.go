@@ -13,10 +13,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/chzyer/readline"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
-	"github.com/chzyer/readline"
 )
 
 // REPL is an interactive read-eval-print loop for MDL commands.
@@ -432,27 +432,27 @@ func (c *mdlCompleter) dynamicComplete(line, lineUpper string) ([][]rune, int) {
 
 	// Patterns that need qualified name completion (Module.Object)
 	qualifiedPatterns := map[string]func(string) []string{
-		"DESCRIBE MICROFLOW ":       c.executor.GetMicroflowNames,
-		"DESCRIBE ENTITY ":          c.executor.GetEntityNames,
-		"DESCRIBE ENUMERATION ":     c.executor.GetEnumerationNames,
-		"DESCRIBE ASSOCIATION ":     c.executor.GetAssociationNames,
-		"DESCRIBE PAGE ":            c.executor.GetPageNames,
-		"DESCRIBE SNIPPET ":         c.executor.GetSnippetNames,
-		"DESCRIBE LAYOUT ":          c.executor.GetLayoutNames,
-		"DESCRIBE JAVA ACTION ":     c.executor.GetJavaActionNames,
-		"DESCRIBE ODATA CLIENT ":    c.executor.GetODataClientNames,
-		"DESCRIBE ODATA SERVICE ":   c.executor.GetODataServiceNames,
-		"DESCRIBE EXTERNAL ENTITY ":          c.executor.GetEntityNames,
-		"DESCRIBE DATABASE CONNECTION ":      c.executor.GetDatabaseConnectionNames,
-		"DESCRIBE BUSINESS EVENT SERVICE ":   c.executor.GetBusinessEventServiceNames,
-		"DROP ENTITY ":                       c.executor.GetEntityNames,
-		"DROP DATABASE CONNECTION ":          c.executor.GetDatabaseConnectionNames,
-		"DROP BUSINESS EVENT SERVICE ":       c.executor.GetBusinessEventServiceNames,
-		"DROP MICROFLOW ":           c.executor.GetMicroflowNames,
-		"DROP ENUMERATION ":         c.executor.GetEnumerationNames,
-		"DROP ASSOCIATION ":         c.executor.GetAssociationNames,
-		"DROP PAGE ":                c.executor.GetPageNames,
-		"DROP SNIPPET ":             c.executor.GetSnippetNames,
+		"DESCRIBE MICROFLOW ":              c.executor.GetMicroflowNames,
+		"DESCRIBE ENTITY ":                 c.executor.GetEntityNames,
+		"DESCRIBE ENUMERATION ":            c.executor.GetEnumerationNames,
+		"DESCRIBE ASSOCIATION ":            c.executor.GetAssociationNames,
+		"DESCRIBE PAGE ":                   c.executor.GetPageNames,
+		"DESCRIBE SNIPPET ":                c.executor.GetSnippetNames,
+		"DESCRIBE LAYOUT ":                 c.executor.GetLayoutNames,
+		"DESCRIBE JAVA ACTION ":            c.executor.GetJavaActionNames,
+		"DESCRIBE ODATA CLIENT ":           c.executor.GetODataClientNames,
+		"DESCRIBE ODATA SERVICE ":          c.executor.GetODataServiceNames,
+		"DESCRIBE EXTERNAL ENTITY ":        c.executor.GetEntityNames,
+		"DESCRIBE DATABASE CONNECTION ":    c.executor.GetDatabaseConnectionNames,
+		"DESCRIBE BUSINESS EVENT SERVICE ": c.executor.GetBusinessEventServiceNames,
+		"DROP ENTITY ":                     c.executor.GetEntityNames,
+		"DROP DATABASE CONNECTION ":        c.executor.GetDatabaseConnectionNames,
+		"DROP BUSINESS EVENT SERVICE ":     c.executor.GetBusinessEventServiceNames,
+		"DROP MICROFLOW ":                  c.executor.GetMicroflowNames,
+		"DROP ENUMERATION ":                c.executor.GetEnumerationNames,
+		"DROP ASSOCIATION ":                c.executor.GetAssociationNames,
+		"DROP PAGE ":                       c.executor.GetPageNames,
+		"DROP SNIPPET ":                    c.executor.GetSnippetNames,
 	}
 
 	for pattern, getter := range qualifiedPatterns {

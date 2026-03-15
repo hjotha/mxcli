@@ -763,11 +763,11 @@ func (ExportMappingCallAction) isMicroflowAction() {}
 // Used for executing queries against external databases via the Database Connector.
 type ExecuteDatabaseQueryAction struct {
 	model.BaseElement
-	ErrorHandlingType       ErrorHandlingType                `json:"errorHandlingType,omitempty"`
-	OutputVariableName      string                           `json:"outputVariableName,omitempty"`
-	Query                   string                           `json:"query,omitempty"`                   // BY_NAME ref: "Module.Connection.QueryName"
-	DynamicQuery            string                           `json:"dynamicQuery,omitempty"`             // Raw SQL expression (overrides Query)
-	ParameterMappings       []*DatabaseQueryParameterMapping `json:"parameterMappings,omitempty"`
+	ErrorHandlingType           ErrorHandlingType                     `json:"errorHandlingType,omitempty"`
+	OutputVariableName          string                                `json:"outputVariableName,omitempty"`
+	Query                       string                                `json:"query,omitempty"`        // BY_NAME ref: "Module.Connection.QueryName"
+	DynamicQuery                string                                `json:"dynamicQuery,omitempty"` // Raw SQL expression (overrides Query)
+	ParameterMappings           []*DatabaseQueryParameterMapping      `json:"parameterMappings,omitempty"`
 	ConnectionParameterMappings []*DatabaseConnectionParameterMapping `json:"connectionParameterMappings,omitempty"`
 }
 

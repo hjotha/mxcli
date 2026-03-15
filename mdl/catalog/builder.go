@@ -34,13 +34,13 @@ type Builder struct {
 	// Document caches — avoid redundant BSON parsing across builder phases.
 	// Each List* call on the reader re-parses ALL documents from BSON.
 	// By caching results, we parse each document type exactly once.
-	microflowCache     []*microflows.Microflow
-	nanoflowCache      []*microflows.Nanoflow
-	pageCache          []*pages.Page
-	domainModelCache   []*domainmodel.DomainModel
-	enumerationCache   []*model.Enumeration
-	workflowCache      []*workflows.Workflow
-	businessEventCache     []*model.BusinessEventService
+	microflowCache          []*microflows.Microflow
+	nanoflowCache           []*microflows.Nanoflow
+	pageCache               []*pages.Page
+	domainModelCache        []*domainmodel.DomainModel
+	enumerationCache        []*model.Enumeration
+	workflowCache           []*workflows.Workflow
+	businessEventCache      []*model.BusinessEventService
 	databaseConnectionCache []*model.DatabaseConnection
 }
 

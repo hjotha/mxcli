@@ -228,18 +228,18 @@ func LoadStarlarkRule(path string) (*StarlarkRule, error) {
 func (r *StarlarkRule) buildPredeclared() starlark.StringDict {
 	return starlark.StringDict{
 		// Query functions
-		"entities":        starlark.NewBuiltin("entities", r.builtinEntities),
-		"microflows":      starlark.NewBuiltin("microflows", r.builtinMicroflows),
-		"pages":           starlark.NewBuiltin("pages", r.builtinPages),
-		"enumerations":    starlark.NewBuiltin("enumerations", r.builtinEnumerations),
-		"widgets":         starlark.NewBuiltin("widgets", r.builtinWidgets),
-		"refs_to":         starlark.NewBuiltin("refs_to", r.builtinRefsTo),
-		"attributes_for":  starlark.NewBuiltin("attributes_for", r.builtinAttributesFor),
-		"permissions":     starlark.NewBuiltin("permissions", r.builtinPermissions),
-		"permissions_for": starlark.NewBuiltin("permissions_for", r.builtinPermissionsFor),
-		"snippets":              starlark.NewBuiltin("snippets", r.builtinSnippets),
-		"database_connections":  starlark.NewBuiltin("database_connections", r.builtinDatabaseConnections),
-		"activities_for":        starlark.NewBuiltin("activities_for", r.builtinActivitiesFor),
+		"entities":             starlark.NewBuiltin("entities", r.builtinEntities),
+		"microflows":           starlark.NewBuiltin("microflows", r.builtinMicroflows),
+		"pages":                starlark.NewBuiltin("pages", r.builtinPages),
+		"enumerations":         starlark.NewBuiltin("enumerations", r.builtinEnumerations),
+		"widgets":              starlark.NewBuiltin("widgets", r.builtinWidgets),
+		"refs_to":              starlark.NewBuiltin("refs_to", r.builtinRefsTo),
+		"attributes_for":       starlark.NewBuiltin("attributes_for", r.builtinAttributesFor),
+		"permissions":          starlark.NewBuiltin("permissions", r.builtinPermissions),
+		"permissions_for":      starlark.NewBuiltin("permissions_for", r.builtinPermissionsFor),
+		"snippets":             starlark.NewBuiltin("snippets", r.builtinSnippets),
+		"database_connections": starlark.NewBuiltin("database_connections", r.builtinDatabaseConnections),
+		"activities_for":       starlark.NewBuiltin("activities_for", r.builtinActivitiesFor),
 
 		// Project-level queries
 		"user_roles":       starlark.NewBuiltin("user_roles", r.builtinUserRoles),
