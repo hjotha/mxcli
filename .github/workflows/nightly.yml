@@ -1,0 +1,78 @@
+name: Nightly Release
+
+on:
+  schedule:
+    # Every day at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.26'
+
+      - name: Check for new commits since last nightly
+        id: check
+        run: |
+          LAST_NIGHTLY=$(gh release view nightly --json publishedAt -q .publishedAt 2>/dev/null || echo "")
+          if [ -n "$LAST_NIGHTLY" ]; then
+            COMMITS=$(git log --since="$LAST_NIGHTLY" --oneline origin/main | wc -l)
+            if [ "$COMMITS" -eq 0 ]; then
+              echo "No new commits since last nightly, skipping."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "$COMMITS new commit(s) since last nightly."
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Build release binaries
+        if: steps.check.outputs.skip != 'true'
+        run: VERSION=nightly-$(date -u +%Y%m%d)-$(git rev-parse --short HEAD) make release
+
+      - name: Generate changelog
+        if: steps.check.outputs.skip != 'true'
+        id: changelog
+        run: |
+          {
+            echo "body<<NIGHTLY_EOF"
+            echo "**Nightly build from \`main\` — $(date -u +%Y-%m-%d)**"
+            echo ""
+            echo "Commit: [\`$(git rev-parse --short HEAD)\`](https://github.com/${{ github.repository }}/commit/$(git rev-parse HEAD))"
+            echo ""
+            echo "### Recent changes"
+            echo ""
+            git log --oneline -20 origin/main
+            echo ""
+            echo "> This is an automated pre-release build. Use tagged releases for production."
+            echo "NIGHTLY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Delete previous nightly release
+        if: steps.check.outputs.skip != 'true'
+        run: gh release delete nightly --cleanup-tag -y 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create nightly release
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          gh release create nightly \
+            --prerelease \
+            --title "Nightly $(date -u +%Y-%m-%d)" \
+            --notes "${{ steps.changelog.outputs.body }}" \
+            bin/mxcli-*
+        env:
+          GH_TOKEN: ${{ github.token }}

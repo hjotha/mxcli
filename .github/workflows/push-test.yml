@@ -16,3 +16,19 @@ jobs:
         run: make test
       - name: Lint Go
         run: make lint-go
+      - name: Check MDL example scripts
+        run: |
+          FAILED=0
+          for f in mdl-examples/doctype-tests/*.mdl; do
+            [[ "$f" == *.test.mdl ]] && continue
+            NAME=$(basename "$f")
+            echo "::group::$NAME"
+            if ./bin/mxcli check "$f"; then
+              echo "PASS: $NAME"
+            else
+              echo "::error file=$f::Syntax check failed: $NAME"
+              FAILED=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $FAILED
