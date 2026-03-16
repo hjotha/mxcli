@@ -337,6 +337,8 @@ $$;
 | `StringTemplate(Sql)` | SQL/OQL query template with parameters |
 | `StringTemplate(Text)` | Text template with parameters |
 | `ENTITY <pEntity>` | Type parameter declaration (entity type selector) |
+| `ENUM Module.EnumName` | Enumeration type |
+| `Enumeration(Module.EnumName)` | Enumeration type (alternative syntax) |
 | `pEntity` (type param ref) | Type parameter reference (entity instance) |
 
 ### Examples

@@ -281,7 +281,7 @@ CREATE OR REPLACE NAVIGATION Responsive
 | Drop Java action | `DROP JAVA ACTION Module.Name;` | Delete a Java action |
 | Call from microflow | `$Result = CALL JAVA ACTION Module.Name(Param = value);` | Inside BEGIN...END |
 
-**Parameter Types:** `String`, `Integer`, `Long`, `Decimal`, `Boolean`, `DateTime`, `Module.Entity`, `List of Module.Entity`, `StringTemplate(Sql)`, `StringTemplate(Oql)`, `ENTITY <pEntity>` (type parameter declaration), bare `pEntity` (type parameter reference).
+**Parameter Types:** `String`, `Integer`, `Long`, `Decimal`, `Boolean`, `DateTime`, `Module.Entity`, `List of Module.Entity`, `ENUM Module.EnumName`, `Enumeration(Module.EnumName)`, `StringTemplate(Sql)`, `StringTemplate(Oql)`, `ENTITY <pEntity>` (type parameter declaration), bare `pEntity` (type parameter reference).
 
 **Type Parameters** allow generic entity handling. `ENTITY <pEntity>` declares the type parameter inline and becomes the entity type selector; bare `pEntity` parameters receive entity instances:
 ```sql

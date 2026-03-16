@@ -75,6 +75,9 @@ $Customer: Module.Entity
 
 -- List types
 $ProductList: List of Module.Product
+
+-- Enumeration types
+$Status: ENUM Module.OrderStatus
 ```
 
 ## Variable Declarations

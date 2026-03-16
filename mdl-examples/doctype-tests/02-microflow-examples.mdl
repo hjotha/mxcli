@@ -2197,6 +2197,71 @@ show microflows;
 show microflows in MfTest;
 show microflows in MfTest2;
 
+-- MARK: ENUM RETURN TYPES
+
+-- ============================================================================
+-- LEVEL 16: Enumeration Return Types and Parameters
+-- ============================================================================
+--
+-- Microflows can return enumerations and accept them as parameters.
+-- Use ENUM Module.EnumName or Enumeration(Module.EnumName) syntax.
+
+/**
+ * Example 16.1: Microflow returning an enumeration
+ *
+ * Demonstrates ENUM return type with ENUM keyword syntax.
+ */
+CREATE MICROFLOW MfTest.M092_GetDefaultCountry ()
+RETURNS ENUM MfTest.Country AS $DefaultCountry
+BEGIN
+  DECLARE $DefaultCountry ENUM MfTest.Country = empty;
+  SET $DefaultCountry = MfTest.Country.NL;
+  RETURN $DefaultCountry;
+END;
+/
+
+/**
+ * Example 16.2: Microflow with enumeration parameter
+ *
+ * Accepts an enumeration parameter and returns a string.
+ */
+CREATE MICROFLOW MfTest.M093_GetCountryLabel (
+  $Country: ENUM MfTest.Country
+)
+RETURNS String AS $Label
+BEGIN
+  DECLARE $Label String = 'Unknown';
+
+  IF $Country = MfTest.Country.US THEN
+    SET $Label = 'United States';
+  ELSE
+    IF $Country = MfTest.Country.NL THEN
+      SET $Label = 'Netherlands';
+    END IF;
+  END IF;
+
+  RETURN $Label;
+END;
+/
+
+/**
+ * Example 16.3: Enumeration parameter with alternative syntax
+ *
+ * Uses Enumeration(Module.EnumName) syntax instead of ENUM keyword.
+ */
+CREATE MICROFLOW MfTest.M094_IsEuropean (
+  $Country: Enumeration(MfTest.Country)
+)
+RETURNS Boolean AS $IsEU
+BEGIN
+  DECLARE $IsEU Boolean = false;
+  IF $Country = MfTest.Country.NL OR $Country = MfTest.Country.DE OR $Country = MfTest.Country.FR THEN
+    SET $IsEU = true;
+  END IF;
+  RETURN $IsEU;
+END;
+/
+
 -- MARK: ANNOTATIONS
 
 -- ============================================================================
@@ -2499,6 +2564,10 @@ END;
 --    - MOVE MICROFLOW Module.Name TO OtherModule - move to another module (root)
 --    - MOVE MICROFLOW Module.Name TO FOLDER 'path' IN OtherModule - cross-module with folder
 --    - MOVE ENTITY Module.Name TO OtherModule - move entity across modules
+-- ✅ Enumeration Return Types and Parameters:
+--    - RETURNS ENUM Module.EnumName AS $Var - enumeration return type
+--    - $Param: ENUM Module.EnumName - enumeration parameter
+--    - $Param: Enumeration(Module.EnumName) - alternative syntax
 -- ⏳ REST Calls (PROPOSED - NOT YET IMPLEMENTED):
 --    - REST CALL GET/POST/PUT/PATCH/DELETE <url>
 --    - HEADER <name> = <expression> - custom HTTP headers
@@ -2508,6 +2577,6 @@ END;
 --    - TIMEOUT <expression> - timeout in seconds
 --    - RETURNS String | HttpResponse | MAPPING <Name> AS <Entity> | FILE <Entity> | Nothing
 --
--- Total: 75 example microflows + MOVE examples showcasing parser capabilities
+-- Total: 78 example microflows + MOVE examples showcasing parser capabilities
 --
 -- ============================================================================
