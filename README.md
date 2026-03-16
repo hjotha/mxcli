@@ -22,19 +22,31 @@ Mxcli is a tool that enables some of the following use cases.
 
 ### Command line tool to work with Mendix projects
 
+![Mxcli](docs/images/mxcli-cli.png)
+
 ### A REPL to work with Mendix projects
 
-* Mass update pages
+![Mxcli repl](docs/images/mxcli-repl.png)
 
 ### Skills to enable Agentic Coding tools to work with Mendix projects
+
+![Mxcli skills](docs/images/mxcli-init-claud.png)
 
 ### Migration skills
 
 ### Metadata Catalog 
 
+![Mxcli catalog](docs/images/mxcli-catalog.png)
+
 ### A Mendix project linter
 
+![Mxcli lint](docs/images/mxcli-lint.png)
+
 ### VSCode for Mendix projects
+
+![mxcli vscode claude code](docs/images/mxcli-vscode-claude.png)
+
+![mxcli vscode mendix extions](docs/images/mxcli-vscode-ext.png)
 
 ### Run and test your Mendix projects
 
