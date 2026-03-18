@@ -16,11 +16,11 @@ Mendix projects are stored in binary `.mpr` files that AI agents can't read dire
 - **Linting** - Check projects for common issues
 - **Unix pipe support** - Output formats designed for scripting and chaining
 
-## What is mxcli
+## What is mxcli?
 
 Mxcli is a tool that enables some of the following use cases.
 
-## A textual DSL for mendix models
+### A textual DSL for mendix models
 
 MDL, Mendix Definition Language, is a DSL that provides textual models at the same abstraction level as the visual models in Studio Pro. 
 
@@ -68,9 +68,11 @@ The catalog tables are exposed as Starlark APIs so you can use the available dat
 
 ### VSCode for Mendix projects
 
-The easiest way to use mxcli is in vscode. You can run Claude Code inside vscode, mxcli installs a Mendix vscode extension that helps you review and understand your Mendix project. The project structure shows you all modules with document, similar to the app explorer in Mendix Studio Pro.
+The easiest way to use mxcli is in vscode. You can run Claude Code inside vscode, mxcli installs a Mendix vscode extension that helps you review and understand your Mendix project. 
 
 ![mxcli vscode claude code](docs/images/mxcli-vscode-claude.png)
+
+The project structure shows you all modules with document, similar to the app explorer in Mendix Studio Pro. The VSCode extension also provides visualizations for some Mendix document types, ensuring you can review the generated documents without leaving VSCode.
 
 ![mxcli vscode mendix extions](docs/images/mxcli-vscode-ext.png)
 
