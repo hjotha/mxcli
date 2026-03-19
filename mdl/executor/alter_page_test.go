@@ -5,45 +5,46 @@ package executor
 import (
 	"testing"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 )
 
 // Helper to build a minimal raw BSON page structure for testing.
-func makeRawPage(widgets ...map[string]any) map[string]any {
-	widgetArr := []any{int32(2)} // type marker
+func makeRawPage(widgets ...bson.D) bson.D {
+	widgetArr := bson.A{int32(2)} // type marker
 	for _, w := range widgets {
 		widgetArr = append(widgetArr, w)
 	}
-	return map[string]any{
-		"FormCall": map[string]any{
-			"Arguments": []any{
+	return bson.D{
+		{Key: "FormCall", Value: bson.D{
+			{Key: "Arguments", Value: bson.A{
 				int32(2), // type marker
-				map[string]any{
-					"Widgets": widgetArr,
+				bson.D{
+					{Key: "Widgets", Value: widgetArr},
 				},
-			},
-		},
+			}},
+		}},
 	}
 }
 
-func makeWidget(name string, typeName string) map[string]any {
-	return map[string]any{
-		"$Type": typeName,
-		"Name":  name,
+func makeWidget(name string, typeName string) bson.D {
+	return bson.D{
+		{Key: "$Type", Value: typeName},
+		{Key: "Name", Value: name},
 	}
 }
 
-func makeContainerWidget(name string, children ...map[string]any) map[string]any {
-	childArr := []any{int32(2)} // type marker
+func makeContainerWidget(name string, children ...bson.D) bson.D {
+	childArr := bson.A{int32(2)} // type marker
 	for _, c := range children {
 		childArr = append(childArr, c)
 	}
-	return map[string]any{
-		"$Type":   "Pages$DivContainer",
-		"Name":    name,
-		"Widgets": childArr,
+	return bson.D{
+		{Key: "$Type", Value: "Pages$DivContainer"},
+		{Key: "Name", Value: name},
+		{Key: "Widgets", Value: childArr},
 	}
 }
 
@@ -56,9 +57,8 @@ func TestFindBsonWidget_TopLevel(t *testing.T) {
 	if result == nil {
 		t.Fatal("Expected to find txtName")
 	}
-	name, _ := result.widget["Name"].(string)
-	if name != "txtName" {
-		t.Errorf("Expected name 'txtName', got %q", name)
+	if dGetString(result.widget, "Name") != "txtName" {
+		t.Errorf("Expected name 'txtName', got %q", dGetString(result.widget, "Name"))
 	}
 	if result.index != 0 {
 		t.Errorf("Expected index 0, got %d", result.index)
@@ -74,9 +74,8 @@ func TestFindBsonWidget_Nested(t *testing.T) {
 	if result == nil {
 		t.Fatal("Expected to find txtInner inside container")
 	}
-	name, _ := result.widget["Name"].(string)
-	if name != "txtInner" {
-		t.Errorf("Expected name 'txtInner', got %q", name)
+	if dGetString(result.widget, "Name") != "txtInner" {
+		t.Errorf("Expected name 'txtInner', got %q", dGetString(result.widget, "Name"))
 	}
 }
 
@@ -102,17 +101,17 @@ func TestApplyDropWidget_Single(t *testing.T) {
 	}
 
 	// Verify txtEmail was removed
-	formCall := rawData["FormCall"].(map[string]any)
-	args := getBsonArrayElements(formCall["Arguments"])
-	argMap := args[0].(map[string]any)
-	widgets := getBsonArrayElements(argMap["Widgets"])
+	formCall := dGetDoc(rawData, "FormCall")
+	args := dGetArrayElements(dGet(formCall, "Arguments"))
+	argDoc := args[0].(bson.D)
+	widgets := dGetArrayElements(dGet(argDoc, "Widgets"))
 
 	if len(widgets) != 2 {
 		t.Fatalf("Expected 2 widgets after drop, got %d", len(widgets))
 	}
 
-	name0, _ := widgets[0].(map[string]any)["Name"].(string)
-	name1, _ := widgets[1].(map[string]any)["Name"].(string)
+	name0 := dGetString(widgets[0].(bson.D), "Name")
+	name1 := dGetString(widgets[1].(bson.D), "Name")
 	if name0 != "txtName" {
 		t.Errorf("Expected first widget 'txtName', got %q", name0)
 	}
@@ -132,16 +131,16 @@ func TestApplyDropWidget_Multiple(t *testing.T) {
 		t.Fatalf("applyDropWidget failed: %v", err)
 	}
 
-	formCall := rawData["FormCall"].(map[string]any)
-	args := getBsonArrayElements(formCall["Arguments"])
-	argMap := args[0].(map[string]any)
-	widgets := getBsonArrayElements(argMap["Widgets"])
+	formCall := dGetDoc(rawData, "FormCall")
+	args := dGetArrayElements(dGet(formCall, "Arguments"))
+	argDoc := args[0].(bson.D)
+	widgets := dGetArrayElements(dGet(argDoc, "Widgets"))
 
 	if len(widgets) != 1 {
 		t.Fatalf("Expected 1 widget after dropping a and c, got %d", len(widgets))
 	}
 
-	name, _ := widgets[0].(map[string]any)["Name"].(string)
+	name := dGetString(widgets[0].(bson.D), "Name")
 	if name != "b" {
 		t.Errorf("Expected remaining widget 'b', got %q", name)
 	}
@@ -204,10 +203,10 @@ func TestApplySetProperty_Name(t *testing.T) {
 }
 
 func TestApplySetProperty_ButtonStyle(t *testing.T) {
-	w1 := map[string]any{
-		"$Type":       "Pages$ActionButton",
-		"Name":        "btnSave",
-		"ButtonStyle": "Default",
+	w1 := bson.D{
+		{Key: "$Type", Value: "Pages$ActionButton"},
+		{Key: "Name", Value: "btnSave"},
+		{Key: "ButtonStyle", Value: "Default"},
 	}
 	rawData := makeRawPage(w1)
 
@@ -225,8 +224,8 @@ func TestApplySetProperty_ButtonStyle(t *testing.T) {
 	if result == nil {
 		t.Fatal("Expected to find btnSave")
 	}
-	if result.widget["ButtonStyle"] != "Success" {
-		t.Errorf("Expected ButtonStyle='Success', got %v", result.widget["ButtonStyle"])
+	if dGetString(result.widget, "ButtonStyle") != "Success" {
+		t.Errorf("Expected ButtonStyle='Success', got %v", dGet(result.widget, "ButtonStyle"))
 	}
 }
 
@@ -250,32 +249,32 @@ func TestApplySetProperty_PluggableWidget(t *testing.T) {
 	// Pluggable widget properties are identified by TypePointer referencing
 	// a PropertyType entry in Type.ObjectType.PropertyTypes, NOT by a "Key" field.
 	propTypeID := primitive.Binary{Subtype: 0x04, Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}
-	w1 := map[string]any{
-		"$Type": "CustomWidgets$CustomWidget",
-		"Name":  "cb1",
-		"Type": map[string]any{
-			"$Type": "CustomWidgets$CustomWidgetType",
-			"ObjectType": map[string]any{
-				"PropertyTypes": []any{
+	w1 := bson.D{
+		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
+		{Key: "Name", Value: "cb1"},
+		{Key: "Type", Value: bson.D{
+			{Key: "$Type", Value: "CustomWidgets$CustomWidgetType"},
+			{Key: "ObjectType", Value: bson.D{
+				{Key: "PropertyTypes", Value: bson.A{
 					int32(2), // type marker
-					map[string]any{
-						"$ID":         propTypeID,
-						"PropertyKey": "showLabel",
+					bson.D{
+						{Key: "$ID", Value: propTypeID},
+						{Key: "PropertyKey", Value: "showLabel"},
 					},
-				},
-			},
-		},
-		"Object": map[string]any{
-			"Properties": []any{
+				}},
+			}},
+		}},
+		{Key: "Object", Value: bson.D{
+			{Key: "Properties", Value: bson.A{
 				int32(2), // type marker
-				map[string]any{
-					"TypePointer": propTypeID,
-					"Value": map[string]any{
-						"PrimitiveValue": "yes",
-					},
+				bson.D{
+					{Key: "TypePointer", Value: propTypeID},
+					{Key: "Value", Value: bson.D{
+						{Key: "PrimitiveValue", Value: "yes"},
+					}},
 				},
-			},
-		},
+			}},
+		}},
 	}
 	rawData := makeRawPage(w1)
 
@@ -293,22 +292,22 @@ func TestApplySetProperty_PluggableWidget(t *testing.T) {
 	if result == nil {
 		t.Fatal("Expected to find cb1")
 	}
-	obj := result.widget["Object"].(map[string]any)
-	props := getBsonArrayElements(obj["Properties"])
-	propMap := props[0].(map[string]any)
-	valMap := propMap["Value"].(map[string]any)
-	if valMap["PrimitiveValue"] != "no" {
-		t.Errorf("Expected PrimitiveValue='no', got %v", valMap["PrimitiveValue"])
+	obj := dGetDoc(result.widget, "Object")
+	props := dGetArrayElements(dGet(obj, "Properties"))
+	propDoc := props[0].(bson.D)
+	valDoc := dGetDoc(propDoc, "Value")
+	if dGetString(valDoc, "PrimitiveValue") != "no" {
+		t.Errorf("Expected PrimitiveValue='no', got %v", dGet(valDoc, "PrimitiveValue"))
 	}
 }
 
-func TestSetBsonArray_PreservesMarker(t *testing.T) {
-	parent := map[string]any{
-		"Widgets": []any{int32(2), "a", "b"},
+func TestDSetArray_PreservesMarker(t *testing.T) {
+	parent := bson.D{
+		{Key: "Widgets", Value: bson.A{int32(2), "a", "b"}},
 	}
-	setBsonArray(parent, "Widgets", []any{"x", "y"})
+	dSetArray(parent, "Widgets", []any{"x", "y"})
 
-	result := parent["Widgets"].([]any)
+	result := toBsonA(dGet(parent, "Widgets"))
 	if len(result) != 3 {
 		t.Fatalf("Expected 3 elements (marker + 2), got %d", len(result))
 	}
@@ -320,13 +319,13 @@ func TestSetBsonArray_PreservesMarker(t *testing.T) {
 	}
 }
 
-func TestSetBsonArray_NoMarker(t *testing.T) {
-	parent := map[string]any{
-		"Widgets": []any{"a", "b"},
+func TestDSetArray_NoMarker(t *testing.T) {
+	parent := bson.D{
+		{Key: "Widgets", Value: bson.A{"a", "b"}},
 	}
-	setBsonArray(parent, "Widgets", []any{"x"})
+	dSetArray(parent, "Widgets", []any{"x"})
 
-	result := parent["Widgets"].([]any)
+	result := toBsonA(dGet(parent, "Widgets"))
 	if len(result) != 1 {
 		t.Fatalf("Expected 1 element, got %d", len(result))
 	}
@@ -337,32 +336,32 @@ func TestSetBsonArray_NoMarker(t *testing.T) {
 
 func TestFindBsonWidget_LayoutGrid(t *testing.T) {
 	inner := makeWidget("txtInGrid", "Pages$TextBox")
-	rawData := map[string]any{
-		"FormCall": map[string]any{
-			"Arguments": []any{
+	rawData := bson.D{
+		{Key: "FormCall", Value: bson.D{
+			{Key: "Arguments", Value: bson.A{
 				int32(2),
-				map[string]any{
-					"Widgets": []any{
+				bson.D{
+					{Key: "Widgets", Value: bson.A{
 						int32(2),
-						map[string]any{
-							"$Type": "Pages$LayoutGrid",
-							"Name":  "lg1",
-							"Rows": []any{
+						bson.D{
+							{Key: "$Type", Value: "Pages$LayoutGrid"},
+							{Key: "Name", Value: "lg1"},
+							{Key: "Rows", Value: bson.A{
 								int32(2),
-								map[string]any{
-									"Columns": []any{
+								bson.D{
+									{Key: "Columns", Value: bson.A{
 										int32(2),
-										map[string]any{
-											"Widgets": []any{int32(2), inner},
+										bson.D{
+											{Key: "Widgets", Value: bson.A{int32(2), inner}},
 										},
-									},
+									}},
 								},
-							},
+							}},
 						},
-					},
+					}},
 				},
-			},
-		},
+			}},
+		}},
 	}
 
 	result := findBsonWidget(rawData, "txtInGrid")
@@ -376,26 +375,26 @@ func TestFindBsonWidget_LayoutGrid(t *testing.T) {
 // ============================================================================
 
 // Helper to build a minimal raw BSON snippet structure (Studio Pro format).
-func makeRawSnippet(widgets ...map[string]any) map[string]any {
-	widgetArr := []any{int32(2)} // type marker
+func makeRawSnippet(widgets ...bson.D) bson.D {
+	widgetArr := bson.A{int32(2)} // type marker
 	for _, w := range widgets {
 		widgetArr = append(widgetArr, w)
 	}
-	return map[string]any{
-		"Widgets": widgetArr,
+	return bson.D{
+		{Key: "Widgets", Value: widgetArr},
 	}
 }
 
 // Helper to build a minimal raw BSON snippet structure (mxcli format).
-func makeRawSnippetMxcli(widgets ...map[string]any) map[string]any {
-	widgetArr := []any{int32(2)} // type marker
+func makeRawSnippetMxcli(widgets ...bson.D) bson.D {
+	widgetArr := bson.A{int32(2)} // type marker
 	for _, w := range widgets {
 		widgetArr = append(widgetArr, w)
 	}
-	return map[string]any{
-		"Widget": map[string]any{
-			"Widgets": widgetArr,
-		},
+	return bson.D{
+		{Key: "Widget", Value: bson.D{
+			{Key: "Widgets", Value: widgetArr},
+		}},
 	}
 }
 
@@ -408,9 +407,8 @@ func TestFindBsonWidgetInSnippet_TopLevel(t *testing.T) {
 	if result == nil {
 		t.Fatal("Expected to find txtName in snippet")
 	}
-	name, _ := result.widget["Name"].(string)
-	if name != "txtName" {
-		t.Errorf("Expected 'txtName', got %q", name)
+	if dGetString(result.widget, "Name") != "txtName" {
+		t.Errorf("Expected 'txtName', got %q", dGetString(result.widget, "Name"))
 	}
 }
 
@@ -456,21 +454,21 @@ func TestApplyDropWidget_Snippet(t *testing.T) {
 	}
 
 	// Verify txtEmail was removed
-	widgets := getBsonArrayElements(rawData["Widgets"])
+	widgets := dGetArrayElements(dGet(rawData, "Widgets"))
 	if len(widgets) != 1 {
 		t.Fatalf("Expected 1 widget after drop, got %d", len(widgets))
 	}
-	name, _ := widgets[0].(map[string]any)["Name"].(string)
+	name := dGetString(widgets[0].(bson.D), "Name")
 	if name != "txtName" {
 		t.Errorf("Expected remaining widget 'txtName', got %q", name)
 	}
 }
 
 func TestApplySetProperty_Snippet(t *testing.T) {
-	w1 := map[string]any{
-		"$Type":       "Pages$ActionButton",
-		"Name":        "btnAction",
-		"ButtonStyle": "Default",
+	w1 := bson.D{
+		{Key: "$Type", Value: "Pages$ActionButton"},
+		{Key: "Name", Value: "btnAction"},
+		{Key: "ButtonStyle", Value: "Default"},
 	}
 	rawData := makeRawSnippet(w1)
 
@@ -488,30 +486,30 @@ func TestApplySetProperty_Snippet(t *testing.T) {
 	if result == nil {
 		t.Fatal("Expected to find btnAction")
 	}
-	if result.widget["ButtonStyle"] != "Danger" {
-		t.Errorf("Expected ButtonStyle='Danger', got %v", result.widget["ButtonStyle"])
+	if dGetString(result.widget, "ButtonStyle") != "Danger" {
+		t.Errorf("Expected ButtonStyle='Danger', got %v", dGet(result.widget, "ButtonStyle"))
 	}
 }
 
 func TestFindBsonWidget_DataViewFooter(t *testing.T) {
 	footer := makeWidget("btnFooter", "Pages$ActionButton")
-	rawData := map[string]any{
-		"FormCall": map[string]any{
-			"Arguments": []any{
+	rawData := bson.D{
+		{Key: "FormCall", Value: bson.D{
+			{Key: "Arguments", Value: bson.A{
 				int32(2),
-				map[string]any{
-					"Widgets": []any{
+				bson.D{
+					{Key: "Widgets", Value: bson.A{
 						int32(2),
-						map[string]any{
-							"$Type":         "Pages$DataView",
-							"Name":          "dv1",
-							"Widgets":       []any{int32(2)},
-							"FooterWidgets": []any{int32(2), footer},
+						bson.D{
+							{Key: "$Type", Value: "Pages$DataView"},
+							{Key: "Name", Value: "dv1"},
+							{Key: "Widgets", Value: bson.A{int32(2)}},
+							{Key: "FooterWidgets", Value: bson.A{int32(2), footer}},
 						},
-					},
+					}},
 				},
-			},
-		},
+			}},
+		}},
 	}
 
 	result := findBsonWidget(rawData, "btnFooter")

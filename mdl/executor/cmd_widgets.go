@@ -216,10 +216,14 @@ func (e *Executor) updateWidgetsInContainer(containerID string, widgetRefs []wid
 
 // updateWidgetsInPage updates widgets in a page using raw BSON.
 func (e *Executor) updateWidgetsInPage(containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
-	// Load raw BSON for the page
-	rawData, err := e.reader.GetRawUnit(model.ID(containerID))
+	// Load raw BSON as ordered document (preserves field ordering)
+	rawBytes, err := e.reader.GetRawUnitBytes(model.ID(containerID))
 	if err != nil {
 		return 0, fmt.Errorf("failed to load page %s: %w", containerName, err)
+	}
+	var rawData bson.D
+	if err := bson.Unmarshal(rawBytes, &rawData); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal page %s: %w", containerName, err)
 	}
 
 	updated := 0
@@ -243,13 +247,13 @@ func (e *Executor) updateWidgetsInPage(containerID, containerName string, widget
 		updated++
 	}
 
-	// Save back via raw BSON
+	// Save back via raw BSON (bson.D preserves field ordering)
 	if !dryRun && updated > 0 {
-		bytes, err := bson.Marshal(rawData)
+		outBytes, err := bson.Marshal(rawData)
 		if err != nil {
 			return updated, fmt.Errorf("failed to marshal page %s: %w", containerName, err)
 		}
-		if err := e.writer.UpdateRawUnit(containerID, bytes); err != nil {
+		if err := e.writer.UpdateRawUnit(containerID, outBytes); err != nil {
 			return updated, fmt.Errorf("failed to save page %s: %w", containerName, err)
 		}
 	}
@@ -259,10 +263,14 @@ func (e *Executor) updateWidgetsInPage(containerID, containerName string, widget
 
 // updateWidgetsInSnippet updates widgets in a snippet using raw BSON.
 func (e *Executor) updateWidgetsInSnippet(containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
-	// Load raw BSON for the snippet
-	rawData, err := e.reader.GetRawUnit(model.ID(containerID))
+	// Load raw BSON as ordered document (preserves field ordering)
+	rawBytes, err := e.reader.GetRawUnitBytes(model.ID(containerID))
 	if err != nil {
 		return 0, fmt.Errorf("failed to load snippet %s: %w", containerName, err)
+	}
+	var rawData bson.D
+	if err := bson.Unmarshal(rawBytes, &rawData); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal snippet %s: %w", containerName, err)
 	}
 
 	updated := 0
@@ -286,13 +294,13 @@ func (e *Executor) updateWidgetsInSnippet(containerID, containerName string, wid
 		updated++
 	}
 
-	// Save back via raw BSON
+	// Save back via raw BSON (bson.D preserves field ordering)
 	if !dryRun && updated > 0 {
-		bytes, err := bson.Marshal(rawData)
+		outBytes, err := bson.Marshal(rawData)
 		if err != nil {
 			return updated, fmt.Errorf("failed to marshal snippet %s: %w", containerName, err)
 		}
-		if err := e.writer.UpdateRawUnit(containerID, bytes); err != nil {
+		if err := e.writer.UpdateRawUnit(containerID, outBytes); err != nil {
 			return updated, fmt.Errorf("failed to save snippet %s: %w", containerName, err)
 		}
 	}

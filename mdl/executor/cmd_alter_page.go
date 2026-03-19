@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
@@ -50,10 +51,15 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 		containerID = h.FindModuleID(page.ContainerID)
 	}
 
-	// Load raw BSON
-	rawData, err := e.reader.GetRawUnit(unitID)
+	// Load raw BSON as ordered document (bson.D preserves field ordering,
+	// which is required by Mendix Studio Pro).
+	rawBytes, err := e.reader.GetRawUnitBytes(unitID)
 	if err != nil {
 		return fmt.Errorf("failed to load raw %s data: %w", strings.ToLower(containerType), err)
+	}
+	var rawData bson.D
+	if err := bson.Unmarshal(rawBytes, &rawData); err != nil {
+		return fmt.Errorf("failed to unmarshal %s BSON: %w", strings.ToLower(containerType), err)
 	}
 
 	// Resolve module name for building new widgets
@@ -88,14 +94,14 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 		}
 	}
 
-	// Marshal back to BSON bytes
-	bytes, err := bson.Marshal(rawData)
+	// Marshal back to BSON bytes (bson.D preserves field ordering)
+	outBytes, err := bson.Marshal(rawData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal modified %s: %w", strings.ToLower(containerType), err)
 	}
 
 	// Save
-	if err := e.writer.UpdateRawUnit(string(unitID), bytes); err != nil {
+	if err := e.writer.UpdateRawUnit(string(unitID), outBytes); err != nil {
 		return fmt.Errorf("failed to save modified %s: %w", strings.ToLower(containerType), err)
 	}
 
@@ -104,36 +110,138 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 }
 
 // ============================================================================
+// bson.D helper functions for ordered document access
+// ============================================================================
+
+// dGet returns the value for a key in a bson.D, or nil if not found.
+func dGet(doc bson.D, key string) any {
+	for _, elem := range doc {
+		if elem.Key == key {
+			return elem.Value
+		}
+	}
+	return nil
+}
+
+// dGetDoc returns a nested bson.D field value, or nil.
+func dGetDoc(doc bson.D, key string) bson.D {
+	v := dGet(doc, key)
+	if d, ok := v.(bson.D); ok {
+		return d
+	}
+	return nil
+}
+
+// dGetString returns a string field value, or "".
+func dGetString(doc bson.D, key string) string {
+	v := dGet(doc, key)
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+// dSet sets a field value in a bson.D in place. If the key exists, it's updated.
+func dSet(doc bson.D, key string, value any) {
+	for i := range doc {
+		if doc[i].Key == key {
+			doc[i].Value = value
+			return
+		}
+	}
+}
+
+// dGetArrayElements extracts Mendix array elements from a bson.D field value.
+// Handles the int32 type marker at index 0. Works with bson.A and []any.
+func dGetArrayElements(val any) []any {
+	arr := toBsonA(val)
+	if len(arr) == 0 {
+		return nil
+	}
+	// Skip type marker (int32) at index 0
+	if _, ok := arr[0].(int32); ok {
+		return arr[1:]
+	}
+	if _, ok := arr[0].(int); ok {
+		return arr[1:]
+	}
+	return arr
+}
+
+// toBsonA converts various BSON array types to []any.
+func toBsonA(v any) []any {
+	switch arr := v.(type) {
+	case bson.A:
+		return []any(arr)
+	case []any:
+		return arr
+	default:
+		return nil
+	}
+}
+
+// dSetArray sets a Mendix-style BSON array field, preserving the int32 marker.
+func dSetArray(doc bson.D, key string, elements []any) {
+	existing := toBsonA(dGet(doc, key))
+	var marker any
+	if len(existing) > 0 {
+		if _, ok := existing[0].(int32); ok {
+			marker = existing[0]
+		} else if _, ok := existing[0].(int); ok {
+			marker = existing[0]
+		}
+	}
+	var result bson.A
+	if marker != nil {
+		result = make(bson.A, 0, len(elements)+1)
+		result = append(result, marker)
+		result = append(result, elements...)
+	} else {
+		result = make(bson.A, len(elements))
+		copy(result, elements)
+	}
+	dSet(doc, key, result)
+}
+
+// extractBinaryIDFromDoc extracts a binary ID string from a bson.D field.
+func extractBinaryIDFromDoc(val any) string {
+	if bin, ok := val.(primitive.Binary); ok {
+		return mpr.BlobToUUID(bin.Data)
+	}
+	return ""
+}
+
+// ============================================================================
 // BSON widget tree walking
 // ============================================================================
 
 // bsonWidgetResult holds a found widget and its parent context.
 type bsonWidgetResult struct {
-	widget    map[string]any // the widget map itself
-	parentArr []any          // the parent array containing the widget
-	parentKey string         // key in the parent map that holds this array
-	parentMap map[string]any // the map containing parentKey
-	index     int            // index in parentArr
+	widget    bson.D // the widget document itself
+	parentArr []any  // the parent array elements (without marker)
+	parentKey string // key in the parent doc that holds this array
+	parentDoc bson.D // the doc containing parentKey
+	index     int    // index in parentArr
 }
 
 // widgetFinder is a function type for locating widgets in a raw BSON tree.
-type widgetFinder func(rawData map[string]any, widgetName string) *bsonWidgetResult
+type widgetFinder func(rawData bson.D, widgetName string) *bsonWidgetResult
 
 // findBsonWidget searches the raw BSON page tree for a widget by name.
 // Page format: FormCall.Arguments[].Widgets[]
-func findBsonWidget(rawData map[string]any, widgetName string) *bsonWidgetResult {
-	formCall, ok := rawData["FormCall"].(map[string]any)
-	if !ok {
+func findBsonWidget(rawData bson.D, widgetName string) *bsonWidgetResult {
+	formCall := dGetDoc(rawData, "FormCall")
+	if formCall == nil {
 		return nil
 	}
 
-	args := getBsonArrayElements(formCall["Arguments"])
+	args := dGetArrayElements(dGet(formCall, "Arguments"))
 	for _, arg := range args {
-		argMap, ok := arg.(map[string]any)
+		argDoc, ok := arg.(bson.D)
 		if !ok {
 			continue
 		}
-		if result := findInWidgetArray(argMap, "Widgets", widgetName); result != nil {
+		if result := findInWidgetArray(argDoc, "Widgets", widgetName); result != nil {
 			return result
 		}
 	}
@@ -142,13 +250,13 @@ func findBsonWidget(rawData map[string]any, widgetName string) *bsonWidgetResult
 
 // findBsonWidgetInSnippet searches the raw BSON snippet tree for a widget by name.
 // Snippet format: Widgets[] (Studio Pro) or Widget.Widgets[] (mxcli).
-func findBsonWidgetInSnippet(rawData map[string]any, widgetName string) *bsonWidgetResult {
+func findBsonWidgetInSnippet(rawData bson.D, widgetName string) *bsonWidgetResult {
 	// Studio Pro format: top-level "Widgets" array
 	if result := findInWidgetArray(rawData, "Widgets", widgetName); result != nil {
 		return result
 	}
 	// mxcli format: "Widget" (singular) container with "Widgets" inside
-	if widgetContainer, ok := rawData["Widget"].(map[string]any); ok {
+	if widgetContainer := dGetDoc(rawData, "Widget"); widgetContainer != nil {
 		if result := findInWidgetArray(widgetContainer, "Widgets", widgetName); result != nil {
 			return result
 		}
@@ -156,26 +264,25 @@ func findBsonWidgetInSnippet(rawData map[string]any, widgetName string) *bsonWid
 	return nil
 }
 
-// findInWidgetArray searches a widget array (by key in parentMap) for a named widget.
-func findInWidgetArray(parentMap map[string]any, key string, widgetName string) *bsonWidgetResult {
-	elements := getBsonArrayElements(parentMap[key])
+// findInWidgetArray searches a widget array (by key in parentDoc) for a named widget.
+func findInWidgetArray(parentDoc bson.D, key string, widgetName string) *bsonWidgetResult {
+	elements := dGetArrayElements(dGet(parentDoc, key))
 	for i, elem := range elements {
-		wMap, ok := elem.(map[string]any)
+		wDoc, ok := elem.(bson.D)
 		if !ok {
 			continue
 		}
-		name, _ := wMap["Name"].(string)
-		if name == widgetName {
+		if dGetString(wDoc, "Name") == widgetName {
 			return &bsonWidgetResult{
-				widget:    wMap,
+				widget:    wDoc,
 				parentArr: elements,
 				parentKey: key,
-				parentMap: parentMap,
+				parentDoc: parentDoc,
 				index:     i,
 			}
 		}
 		// Recurse into children
-		if result := findInWidgetChildren(wMap, widgetName); result != nil {
+		if result := findInWidgetChildren(wDoc, widgetName); result != nil {
 			return result
 		}
 	}
@@ -183,34 +290,34 @@ func findInWidgetArray(parentMap map[string]any, key string, widgetName string) 
 }
 
 // findInWidgetChildren recursively searches widget children for a named widget.
-func findInWidgetChildren(wMap map[string]any, widgetName string) *bsonWidgetResult {
-	typeName, _ := wMap["$Type"].(string)
+func findInWidgetChildren(wDoc bson.D, widgetName string) *bsonWidgetResult {
+	typeName := dGetString(wDoc, "$Type")
 
 	// Direct Widgets[] children (Container, DataView body, TabPage, GroupBox, etc.)
-	if result := findInWidgetArray(wMap, "Widgets", widgetName); result != nil {
+	if result := findInWidgetArray(wDoc, "Widgets", widgetName); result != nil {
 		return result
 	}
 
 	// FooterWidgets[] (DataView footer)
-	if result := findInWidgetArray(wMap, "FooterWidgets", widgetName); result != nil {
+	if result := findInWidgetArray(wDoc, "FooterWidgets", widgetName); result != nil {
 		return result
 	}
 
 	// LayoutGrid: Rows[].Columns[].Widgets[]
 	if strings.Contains(typeName, "LayoutGrid") {
-		rows := getBsonArrayElements(wMap["Rows"])
+		rows := dGetArrayElements(dGet(wDoc, "Rows"))
 		for _, row := range rows {
-			rowMap, ok := row.(map[string]any)
+			rowDoc, ok := row.(bson.D)
 			if !ok {
 				continue
 			}
-			cols := getBsonArrayElements(rowMap["Columns"])
+			cols := dGetArrayElements(dGet(rowDoc, "Columns"))
 			for _, col := range cols {
-				colMap, ok := col.(map[string]any)
+				colDoc, ok := col.(bson.D)
 				if !ok {
 					continue
 				}
-				if result := findInWidgetArray(colMap, "Widgets", widgetName); result != nil {
+				if result := findInWidgetArray(colDoc, "Widgets", widgetName); result != nil {
 					return result
 				}
 			}
@@ -218,26 +325,26 @@ func findInWidgetChildren(wMap map[string]any, widgetName string) *bsonWidgetRes
 	}
 
 	// TabContainer: TabPages[].Widgets[]
-	if result := findInTabPages(wMap, widgetName); result != nil {
+	if result := findInTabPages(wDoc, widgetName); result != nil {
 		return result
 	}
 
 	// ControlBar widgets
-	if result := findInControlBar(wMap, widgetName); result != nil {
+	if result := findInControlBar(wDoc, widgetName); result != nil {
 		return result
 	}
 
 	// CustomWidget (pluggable): Object.Properties[].Value.Widgets[]
 	if strings.Contains(typeName, "CustomWidget") {
-		if obj, ok := wMap["Object"].(map[string]any); ok {
-			props := getBsonArrayElements(obj["Properties"])
+		if obj := dGetDoc(wDoc, "Object"); obj != nil {
+			props := dGetArrayElements(dGet(obj, "Properties"))
 			for _, prop := range props {
-				propMap, ok := prop.(map[string]any)
+				propDoc, ok := prop.(bson.D)
 				if !ok {
 					continue
 				}
-				if valMap, ok := propMap["Value"].(map[string]any); ok {
-					if result := findInWidgetArray(valMap, "Widgets", widgetName); result != nil {
+				if valDoc := dGetDoc(propDoc, "Value"); valDoc != nil {
+					if result := findInWidgetArray(valDoc, "Widgets", widgetName); result != nil {
 						return result
 					}
 				}
@@ -249,14 +356,14 @@ func findInWidgetChildren(wMap map[string]any, widgetName string) *bsonWidgetRes
 }
 
 // findInTabPages searches TabPages[].Widgets[] for a named widget.
-func findInTabPages(wMap map[string]any, widgetName string) *bsonWidgetResult {
-	tabPages := getBsonArrayElements(wMap["TabPages"])
+func findInTabPages(wDoc bson.D, widgetName string) *bsonWidgetResult {
+	tabPages := dGetArrayElements(dGet(wDoc, "TabPages"))
 	for _, tp := range tabPages {
-		tpMap, ok := tp.(map[string]any)
+		tpDoc, ok := tp.(bson.D)
 		if !ok {
 			continue
 		}
-		if result := findInWidgetArray(tpMap, "Widgets", widgetName); result != nil {
+		if result := findInWidgetArray(tpDoc, "Widgets", widgetName); result != nil {
 			return result
 		}
 	}
@@ -264,34 +371,12 @@ func findInTabPages(wMap map[string]any, widgetName string) *bsonWidgetResult {
 }
 
 // findInControlBar searches ControlBarItems within a ControlBar for a named widget.
-func findInControlBar(wMap map[string]any, widgetName string) *bsonWidgetResult {
-	controlBar, ok := wMap["ControlBar"].(map[string]any)
-	if !ok {
+func findInControlBar(wDoc bson.D, widgetName string) *bsonWidgetResult {
+	controlBar := dGetDoc(wDoc, "ControlBar")
+	if controlBar == nil {
 		return nil
 	}
 	return findInWidgetArray(controlBar, "Items", widgetName)
-}
-
-// setBsonArray sets a BSON array with the type marker preserved.
-// BSON arrays have format [int32(marker), item1, item2, ...].
-func setBsonArray(parentMap map[string]any, key string, elements []any) {
-	existing := toBsonArray(parentMap[key])
-	var marker any
-	if len(existing) > 0 {
-		if _, ok := existing[0].(int32); ok {
-			marker = existing[0]
-		} else if _, ok := existing[0].(int); ok {
-			marker = existing[0]
-		}
-	}
-	if marker != nil {
-		result := make([]any, 0, len(elements)+1)
-		result = append(result, marker)
-		result = append(result, elements...)
-		parentMap[key] = result
-	} else {
-		parentMap[key] = elements
-	}
 }
 
 // ============================================================================
@@ -299,12 +384,12 @@ func setBsonArray(parentMap map[string]any, key string, elements []any) {
 // ============================================================================
 
 // applySetProperty modifies widget properties in the raw BSON tree (page format).
-func applySetProperty(rawData map[string]any, op *ast.SetPropertyOp) error {
+func applySetProperty(rawData bson.D, op *ast.SetPropertyOp) error {
 	return applySetPropertyWith(rawData, op, findBsonWidget)
 }
 
 // applySetPropertyWith modifies widget properties using the given widget finder.
-func applySetPropertyWith(rawData map[string]any, op *ast.SetPropertyOp, find widgetFinder) error {
+func applySetPropertyWith(rawData bson.D, op *ast.SetPropertyOp, find widgetFinder) error {
 	if op.WidgetName == "" {
 		// Page/snippet-level SET
 		return applyPageLevelSet(rawData, op.Properties)
@@ -326,12 +411,12 @@ func applySetPropertyWith(rawData map[string]any, op *ast.SetPropertyOp, find wi
 }
 
 // applyPageLevelSet handles page-level SET (e.g., SET Title = 'New Title').
-func applyPageLevelSet(rawData map[string]any, properties map[string]interface{}) error {
+func applyPageLevelSet(rawData bson.D, properties map[string]interface{}) error {
 	for propName, value := range properties {
 		switch propName {
 		case "Title":
 			// Title is stored as FormCall.Title or at the top level
-			if formCall, ok := rawData["FormCall"].(map[string]any); ok {
+			if formCall := dGetDoc(rawData, "FormCall"); formCall != nil {
 				setTranslatableText(formCall, "Title", value)
 			} else {
 				setTranslatableText(rawData, "Title", value)
@@ -343,8 +428,8 @@ func applyPageLevelSet(rawData map[string]any, properties map[string]interface{}
 	return nil
 }
 
-// setRawWidgetProperty sets a property on a raw BSON widget map.
-func setRawWidgetProperty(widget map[string]any, propName string, value interface{}) error {
+// setRawWidgetProperty sets a property on a raw BSON widget document.
+func setRawWidgetProperty(widget bson.D, propName string, value interface{}) error {
 	// Handle known standard BSON properties
 	switch propName {
 	case "Caption":
@@ -355,42 +440,42 @@ func setRawWidgetProperty(widget map[string]any, propName string, value interfac
 		return setWidgetLabel(widget, value)
 	case "ButtonStyle":
 		if s, ok := value.(string); ok {
-			widget["ButtonStyle"] = s
+			dSet(widget, "ButtonStyle", s)
 		}
 		return nil
 	case "Class":
-		if appearance, ok := widget["Appearance"].(map[string]any); ok {
+		if appearance := dGetDoc(widget, "Appearance"); appearance != nil {
 			if s, ok := value.(string); ok {
-				appearance["Class"] = s
+				dSet(appearance, "Class", s)
 			}
 		}
 		return nil
 	case "Style":
-		if appearance, ok := widget["Appearance"].(map[string]any); ok {
+		if appearance := dGetDoc(widget, "Appearance"); appearance != nil {
 			if s, ok := value.(string); ok {
-				appearance["Style"] = s
+				dSet(appearance, "Style", s)
 			}
 		}
 		return nil
 	case "Editable":
 		if s, ok := value.(string); ok {
-			widget["Editable"] = s
+			dSet(widget, "Editable", s)
 		}
 		return nil
 	case "Visible":
 		if s, ok := value.(string); ok {
-			widget["Visible"] = s
+			dSet(widget, "Visible", s)
 		} else if b, ok := value.(bool); ok {
 			if b {
-				widget["Visible"] = "True"
+				dSet(widget, "Visible", "True")
 			} else {
-				widget["Visible"] = "False"
+				dSet(widget, "Visible", "False")
 			}
 		}
 		return nil
 	case "Name":
 		if s, ok := value.(string); ok {
-			widget["Name"] = s
+			dSet(widget, "Name", s)
 		}
 		return nil
 	default:
@@ -400,9 +485,9 @@ func setRawWidgetProperty(widget map[string]any, propName string, value interfac
 }
 
 // setWidgetCaption sets the Caption property on a button or text widget.
-func setWidgetCaption(widget map[string]any, value interface{}) error {
-	caption, ok := widget["Caption"].(map[string]any)
-	if !ok {
+func setWidgetCaption(widget bson.D, value interface{}) error {
+	caption := dGetDoc(widget, "Caption")
+	if caption == nil {
 		// Try direct caption text
 		setTranslatableText(widget, "Caption", value)
 		return nil
@@ -412,9 +497,9 @@ func setWidgetCaption(widget map[string]any, value interface{}) error {
 }
 
 // setWidgetLabel sets the Label.Caption text on input widgets.
-func setWidgetLabel(widget map[string]any, value interface{}) error {
-	label, ok := widget["Label"].(map[string]any)
-	if !ok {
+func setWidgetLabel(widget bson.D, value interface{}) error {
+	label := dGetDoc(widget, "Label")
+	if label == nil {
 		return nil
 	}
 	setTranslatableText(label, "Caption", value)
@@ -424,23 +509,23 @@ func setWidgetLabel(widget map[string]any, value interface{}) error {
 // setWidgetContent sets the Content property on a DYNAMICTEXT widget.
 // Content is stored as Forms$ClientTemplate → Template (Forms$Text) → Items[] → Translation{Text}.
 // This mirrors extractTextContent which reads Content.Template.Items[].Text.
-func setWidgetContent(widget map[string]any, value interface{}) error {
+func setWidgetContent(widget bson.D, value interface{}) error {
 	strVal, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("Content value must be a string")
 	}
-	content, ok := widget["Content"].(map[string]any)
-	if !ok {
+	content := dGetDoc(widget, "Content")
+	if content == nil {
 		return fmt.Errorf("widget has no Content property")
 	}
-	template, ok := content["Template"].(map[string]any)
-	if !ok {
+	template := dGetDoc(content, "Template")
+	if template == nil {
 		return fmt.Errorf("Content has no Template")
 	}
-	items := getBsonArrayElements(template["Items"])
+	items := dGetArrayElements(dGet(template, "Items"))
 	if len(items) > 0 {
-		if itemMap, ok := items[0].(map[string]any); ok {
-			itemMap["Text"] = strVal
+		if itemDoc, ok := items[0].(bson.D); ok {
+			dSet(itemDoc, "Text", strVal)
 			return nil
 		}
 	}
@@ -448,8 +533,8 @@ func setWidgetContent(widget map[string]any, value interface{}) error {
 }
 
 // setTranslatableText sets a translatable text value in BSON.
-// If key is empty, modifies the map directly; otherwise navigates to map[key].
-func setTranslatableText(parent map[string]any, key string, value interface{}) {
+// If key is empty, modifies the doc directly; otherwise navigates to doc[key].
+func setTranslatableText(parent bson.D, key string, value interface{}) {
 	strVal, ok := value.(string)
 	if !ok {
 		return
@@ -457,89 +542,88 @@ func setTranslatableText(parent map[string]any, key string, value interface{}) {
 
 	target := parent
 	if key != "" {
-		if nested, ok := parent[key].(map[string]any); ok {
+		if nested := dGetDoc(parent, key); nested != nil {
 			target = nested
 		} else {
 			// Try to set directly
-			parent[key] = strVal
+			dSet(parent, key, strVal)
 			return
 		}
 	}
 
 	// Navigate to Translations[].Text
-	translations := getBsonArrayElements(target["Translations"])
+	translations := dGetArrayElements(dGet(target, "Translations"))
 	if len(translations) > 0 {
-		if tMap, ok := translations[0].(map[string]any); ok {
-			tMap["Text"] = strVal
+		if tDoc, ok := translations[0].(bson.D); ok {
+			dSet(tDoc, "Text", strVal)
 			return
 		}
 	}
 
 	// Direct text value
-	target["Text"] = strVal
+	dSet(target, "Text", strVal)
 }
 
 // setPluggableWidgetProperty sets a property on a pluggable widget's Object.Properties[].
 // Properties are identified by TypePointer referencing a PropertyType entry in the widget's
 // Type.ObjectType.PropertyTypes array, NOT by a "Key" field on the property itself.
-func setPluggableWidgetProperty(widget map[string]any, propName string, value interface{}) error {
-	obj, ok := widget["Object"].(map[string]any)
-	if !ok {
+func setPluggableWidgetProperty(widget bson.D, propName string, value interface{}) error {
+	obj := dGetDoc(widget, "Object")
+	if obj == nil {
 		return fmt.Errorf("property %q not found (widget has no pluggable Object)", propName)
 	}
 
 	// Build TypePointer ID -> PropertyKey map from Type.ObjectType.PropertyTypes
 	propTypeKeyMap := make(map[string]string)
-	if widgetType, ok := widget["Type"].(map[string]any); ok {
-		var propTypes []any
-		if objType, ok := widgetType["ObjectType"].(map[string]any); ok {
-			propTypes = getBsonArrayElements(objType["PropertyTypes"])
-		}
-		for _, pt := range propTypes {
-			ptMap, ok := pt.(map[string]any)
-			if !ok {
-				continue
-			}
-			key := extractString(ptMap["PropertyKey"])
-			if key == "" {
-				continue
-			}
-			id := extractBinaryID(ptMap["$ID"])
-			if id != "" {
-				propTypeKeyMap[id] = key
+	if widgetType := dGetDoc(widget, "Type"); widgetType != nil {
+		if objType := dGetDoc(widgetType, "ObjectType"); objType != nil {
+			propTypes := dGetArrayElements(dGet(objType, "PropertyTypes"))
+			for _, pt := range propTypes {
+				ptDoc, ok := pt.(bson.D)
+				if !ok {
+					continue
+				}
+				key := dGetString(ptDoc, "PropertyKey")
+				if key == "" {
+					continue
+				}
+				id := extractBinaryIDFromDoc(dGet(ptDoc, "$ID"))
+				if id != "" {
+					propTypeKeyMap[id] = key
+				}
 			}
 		}
 	}
 
-	props := getBsonArrayElements(obj["Properties"])
+	props := dGetArrayElements(dGet(obj, "Properties"))
 	for _, prop := range props {
-		propMap, ok := prop.(map[string]any)
+		propDoc, ok := prop.(bson.D)
 		if !ok {
 			continue
 		}
 		// Resolve property key via TypePointer
-		typePointerID := extractBinaryID(propMap["TypePointer"])
+		typePointerID := extractBinaryIDFromDoc(dGet(propDoc, "TypePointer"))
 		propKey := propTypeKeyMap[typePointerID]
 		if propKey != propName {
 			continue
 		}
 		// Set the value
-		if valMap, ok := propMap["Value"].(map[string]any); ok {
+		if valDoc := dGetDoc(propDoc, "Value"); valDoc != nil {
 			switch v := value.(type) {
 			case string:
-				valMap["PrimitiveValue"] = v
+				dSet(valDoc, "PrimitiveValue", v)
 			case bool:
 				if v {
-					valMap["PrimitiveValue"] = "yes"
+					dSet(valDoc, "PrimitiveValue", "yes")
 				} else {
-					valMap["PrimitiveValue"] = "no"
+					dSet(valDoc, "PrimitiveValue", "no")
 				}
 			case int:
-				valMap["PrimitiveValue"] = fmt.Sprintf("%d", v)
+				dSet(valDoc, "PrimitiveValue", fmt.Sprintf("%d", v))
 			case float64:
-				valMap["PrimitiveValue"] = fmt.Sprintf("%g", v)
+				dSet(valDoc, "PrimitiveValue", fmt.Sprintf("%g", v))
 			default:
-				valMap["PrimitiveValue"] = fmt.Sprintf("%v", v)
+				dSet(valDoc, "PrimitiveValue", fmt.Sprintf("%v", v))
 			}
 			return nil
 		}
@@ -553,12 +637,12 @@ func setPluggableWidgetProperty(widget map[string]any, propName string, value in
 // ============================================================================
 
 // applyInsertWidget inserts new widgets before or after a target widget (page format).
-func (e *Executor) applyInsertWidget(rawData map[string]any, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID) error {
+func (e *Executor) applyInsertWidget(rawData bson.D, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID) error {
 	return e.applyInsertWidgetWith(rawData, op, moduleName, moduleID, findBsonWidget)
 }
 
 // applyInsertWidgetWith inserts new widgets using the given widget finder.
-func (e *Executor) applyInsertWidgetWith(rawData map[string]any, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
+func (e *Executor) applyInsertWidgetWith(rawData bson.D, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
 	result := find(rawData, op.TargetName)
 	if result == nil {
 		return fmt.Errorf("widget %q not found", op.TargetName)
@@ -593,7 +677,7 @@ func (e *Executor) applyInsertWidgetWith(rawData map[string]any, op *ast.InsertW
 	newArr = append(newArr, result.parentArr[insertIdx:]...)
 
 	// Update parent
-	setBsonArray(result.parentMap, result.parentKey, newArr)
+	dSetArray(result.parentDoc, result.parentKey, newArr)
 
 	return nil
 }
@@ -603,12 +687,12 @@ func (e *Executor) applyInsertWidgetWith(rawData map[string]any, op *ast.InsertW
 // ============================================================================
 
 // applyDropWidget removes widgets from the raw BSON tree (page format).
-func applyDropWidget(rawData map[string]any, op *ast.DropWidgetOp) error {
+func applyDropWidget(rawData bson.D, op *ast.DropWidgetOp) error {
 	return applyDropWidgetWith(rawData, op, findBsonWidget)
 }
 
 // applyDropWidgetWith removes widgets using the given widget finder.
-func applyDropWidgetWith(rawData map[string]any, op *ast.DropWidgetOp, find widgetFinder) error {
+func applyDropWidgetWith(rawData bson.D, op *ast.DropWidgetOp, find widgetFinder) error {
 	for _, name := range op.WidgetNames {
 		result := find(rawData, name)
 		if result == nil {
@@ -621,7 +705,7 @@ func applyDropWidgetWith(rawData map[string]any, op *ast.DropWidgetOp, find widg
 		newArr = append(newArr, result.parentArr[result.index+1:]...)
 
 		// Update parent
-		setBsonArray(result.parentMap, result.parentKey, newArr)
+		dSetArray(result.parentDoc, result.parentKey, newArr)
 	}
 	return nil
 }
@@ -631,12 +715,12 @@ func applyDropWidgetWith(rawData map[string]any, op *ast.DropWidgetOp, find widg
 // ============================================================================
 
 // applyReplaceWidget replaces a widget with new widgets (page format).
-func (e *Executor) applyReplaceWidget(rawData map[string]any, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID) error {
+func (e *Executor) applyReplaceWidget(rawData bson.D, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID) error {
 	return e.applyReplaceWidgetWith(rawData, op, moduleName, moduleID, findBsonWidget)
 }
 
 // applyReplaceWidgetWith replaces a widget using the given widget finder.
-func (e *Executor) applyReplaceWidgetWith(rawData map[string]any, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
+func (e *Executor) applyReplaceWidgetWith(rawData bson.D, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
 	result := find(rawData, op.WidgetName)
 	if result == nil {
 		return fmt.Errorf("widget %q not found", op.WidgetName)
@@ -665,7 +749,7 @@ func (e *Executor) applyReplaceWidgetWith(rawData map[string]any, op *ast.Replac
 	newArr = append(newArr, result.parentArr[result.index+1:]...)
 
 	// Update parent
-	setBsonArray(result.parentMap, result.parentKey, newArr)
+	dSetArray(result.parentDoc, result.parentKey, newArr)
 
 	return nil
 }
@@ -678,16 +762,16 @@ func (e *Executor) applyReplaceWidgetWith(rawData map[string]any, op *ast.Replac
 // ListView, or Gallery ancestor of a target widget and extracts the entity name.
 // This is needed for INSERT/REPLACE operations so that input widget Binds can be
 // resolved to fully qualified attribute paths.
-func findEnclosingEntityContext(rawData map[string]any, widgetName string) string {
+func findEnclosingEntityContext(rawData bson.D, widgetName string) string {
 	// Start from FormCall.Arguments[].Widgets[] (page format)
-	if formCall, ok := rawData["FormCall"].(map[string]any); ok {
-		args := getBsonArrayElements(formCall["Arguments"])
+	if formCall := dGetDoc(rawData, "FormCall"); formCall != nil {
+		args := dGetArrayElements(dGet(formCall, "Arguments"))
 		for _, arg := range args {
-			argMap, ok := arg.(map[string]any)
+			argDoc, ok := arg.(bson.D)
 			if !ok {
 				continue
 			}
-			if ctx := findEntityContextInWidgets(argMap, "Widgets", widgetName, ""); ctx != "" {
+			if ctx := findEntityContextInWidgets(argDoc, "Widgets", widgetName, ""); ctx != "" {
 				return ctx
 			}
 		}
@@ -696,7 +780,7 @@ func findEnclosingEntityContext(rawData map[string]any, widgetName string) strin
 	if ctx := findEntityContextInWidgets(rawData, "Widgets", widgetName, ""); ctx != "" {
 		return ctx
 	}
-	if widgetContainer, ok := rawData["Widget"].(map[string]any); ok {
+	if widgetContainer := dGetDoc(rawData, "Widget"); widgetContainer != nil {
 		if ctx := findEntityContextInWidgets(widgetContainer, "Widgets", widgetName, ""); ctx != "" {
 			return ctx
 		}
@@ -706,24 +790,23 @@ func findEnclosingEntityContext(rawData map[string]any, widgetName string) strin
 
 // findEntityContextInWidgets searches a widget array for the target widget,
 // tracking entity context from DataView/DataGrid/ListView/Gallery ancestors.
-func findEntityContextInWidgets(parentMap map[string]any, key string, widgetName string, currentEntity string) string {
-	elements := getBsonArrayElements(parentMap[key])
+func findEntityContextInWidgets(parentDoc bson.D, key string, widgetName string, currentEntity string) string {
+	elements := dGetArrayElements(dGet(parentDoc, key))
 	for _, elem := range elements {
-		wMap, ok := elem.(map[string]any)
+		wDoc, ok := elem.(bson.D)
 		if !ok {
 			continue
 		}
-		name, _ := wMap["Name"].(string)
-		if name == widgetName {
+		if dGetString(wDoc, "Name") == widgetName {
 			return currentEntity
 		}
 		// Update entity context if this is a data container
 		entityCtx := currentEntity
-		if ent := extractEntityFromDataSource(wMap); ent != "" {
+		if ent := extractEntityFromDataSource(wDoc); ent != "" {
 			entityCtx = ent
 		}
 		// Recurse into children
-		if ctx := findEntityContextInChildren(wMap, widgetName, entityCtx); ctx != "" {
+		if ctx := findEntityContextInChildren(wDoc, widgetName, entityCtx); ctx != "" {
 			return ctx
 		}
 	}
@@ -732,65 +815,65 @@ func findEntityContextInWidgets(parentMap map[string]any, key string, widgetName
 
 // findEntityContextInChildren recursively searches widget children for the target,
 // tracking entity context. Mirrors the traversal logic of findInWidgetChildren.
-func findEntityContextInChildren(wMap map[string]any, widgetName string, currentEntity string) string {
-	typeName, _ := wMap["$Type"].(string)
+func findEntityContextInChildren(wDoc bson.D, widgetName string, currentEntity string) string {
+	typeName := dGetString(wDoc, "$Type")
 
 	// Direct Widgets[] children
-	if ctx := findEntityContextInWidgets(wMap, "Widgets", widgetName, currentEntity); ctx != "" {
+	if ctx := findEntityContextInWidgets(wDoc, "Widgets", widgetName, currentEntity); ctx != "" {
 		return ctx
 	}
 	// FooterWidgets[]
-	if ctx := findEntityContextInWidgets(wMap, "FooterWidgets", widgetName, currentEntity); ctx != "" {
+	if ctx := findEntityContextInWidgets(wDoc, "FooterWidgets", widgetName, currentEntity); ctx != "" {
 		return ctx
 	}
 	// LayoutGrid: Rows[].Columns[].Widgets[]
 	if strings.Contains(typeName, "LayoutGrid") {
-		rows := getBsonArrayElements(wMap["Rows"])
+		rows := dGetArrayElements(dGet(wDoc, "Rows"))
 		for _, row := range rows {
-			rowMap, ok := row.(map[string]any)
+			rowDoc, ok := row.(bson.D)
 			if !ok {
 				continue
 			}
-			cols := getBsonArrayElements(rowMap["Columns"])
+			cols := dGetArrayElements(dGet(rowDoc, "Columns"))
 			for _, col := range cols {
-				colMap, ok := col.(map[string]any)
+				colDoc, ok := col.(bson.D)
 				if !ok {
 					continue
 				}
-				if ctx := findEntityContextInWidgets(colMap, "Widgets", widgetName, currentEntity); ctx != "" {
+				if ctx := findEntityContextInWidgets(colDoc, "Widgets", widgetName, currentEntity); ctx != "" {
 					return ctx
 				}
 			}
 		}
 	}
 	// TabContainer: TabPages[].Widgets[]
-	tabPages := getBsonArrayElements(wMap["TabPages"])
+	tabPages := dGetArrayElements(dGet(wDoc, "TabPages"))
 	for _, tp := range tabPages {
-		tpMap, ok := tp.(map[string]any)
+		tpDoc, ok := tp.(bson.D)
 		if !ok {
 			continue
 		}
-		if ctx := findEntityContextInWidgets(tpMap, "Widgets", widgetName, currentEntity); ctx != "" {
+		if ctx := findEntityContextInWidgets(tpDoc, "Widgets", widgetName, currentEntity); ctx != "" {
 			return ctx
 		}
 	}
 	// ControlBar
-	if controlBar, ok := wMap["ControlBar"].(map[string]any); ok {
+	if controlBar := dGetDoc(wDoc, "ControlBar"); controlBar != nil {
 		if ctx := findEntityContextInWidgets(controlBar, "Items", widgetName, currentEntity); ctx != "" {
 			return ctx
 		}
 	}
 	// CustomWidget (pluggable): Object.Properties[].Value.Widgets[]
 	if strings.Contains(typeName, "CustomWidget") {
-		if obj, ok := wMap["Object"].(map[string]any); ok {
-			props := getBsonArrayElements(obj["Properties"])
+		if obj := dGetDoc(wDoc, "Object"); obj != nil {
+			props := dGetArrayElements(dGet(obj, "Properties"))
 			for _, prop := range props {
-				propMap, ok := prop.(map[string]any)
+				propDoc, ok := prop.(bson.D)
 				if !ok {
 					continue
 				}
-				if valMap, ok := propMap["Value"].(map[string]any); ok {
-					if ctx := findEntityContextInWidgets(valMap, "Widgets", widgetName, currentEntity); ctx != "" {
+				if valDoc := dGetDoc(propDoc, "Value"); valDoc != nil {
+					if ctx := findEntityContextInWidgets(valDoc, "Widgets", widgetName, currentEntity); ctx != "" {
 						return ctx
 					}
 				}
@@ -802,14 +885,14 @@ func findEntityContextInChildren(wMap map[string]any, widgetName string, current
 
 // extractEntityFromDataSource extracts the entity qualified name from a widget's
 // DataSource BSON. Handles DataView, DataGrid, ListView, and Gallery data sources.
-func extractEntityFromDataSource(wMap map[string]any) string {
-	ds, ok := wMap["DataSource"].(map[string]any)
-	if !ok {
+func extractEntityFromDataSource(wDoc bson.D) string {
+	ds := dGetDoc(wDoc, "DataSource")
+	if ds == nil {
 		return ""
 	}
 	// EntityRef.Entity contains the qualified name (e.g., "Module.Entity")
-	if entityRef, ok := ds["EntityRef"].(map[string]any); ok {
-		if entity, ok := entityRef["Entity"].(string); ok {
+	if entityRef := dGetDoc(ds, "EntityRef"); entityRef != nil {
+		if entity := dGetString(entityRef, "Entity"); entity != "" {
 			return entity
 		}
 	}
@@ -820,7 +903,8 @@ func extractEntityFromDataSource(wMap map[string]any) string {
 // Widget BSON building
 // ============================================================================
 
-// buildWidgetsBson converts AST widgets to raw BSON map[string]any values.
+// buildWidgetsBson converts AST widgets to ordered BSON documents.
+// Returns bson.D elements (not map[string]any) to preserve field ordering.
 func (e *Executor) buildWidgetsBson(widgets []*ast.WidgetV3, moduleName string, moduleID model.ID, entityContext string) ([]any, error) {
 	pb := &pageBuilder{
 		writer:           e.writer,
@@ -845,25 +929,9 @@ func (e *Executor) buildWidgetsBson(widgets []*ast.WidgetV3, moduleName string, 
 			continue
 		}
 
-		// Convert bson.D → map[string]any via marshal/unmarshal round-trip
-		rawMap, err := bsonDToMap(bsonD)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert widget BSON: %w", err)
-		}
-		result = append(result, rawMap)
-	}
-	return result, nil
-}
-
-// bsonDToMap converts a bson.D to map[string]any via marshal/unmarshal.
-func bsonDToMap(d bson.D) (map[string]any, error) {
-	bytes, err := bson.Marshal(d)
-	if err != nil {
-		return nil, err
-	}
-	var result map[string]any
-	if err := bson.Unmarshal(bytes, &result); err != nil {
-		return nil, err
+		// Keep as bson.D (ordered document) - no conversion to map[string]any needed.
+		// This preserves field ordering when marshaled back to BSON bytes.
+		result = append(result, bsonD)
 	}
 	return result, nil
 }
