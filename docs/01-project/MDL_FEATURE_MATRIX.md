@@ -10,34 +10,34 @@ When adding a new MDL feature, use this matrix as a checklist to ensure complete
 | Feature | SHOW | DESCRIBE | CREATE | OR MODIFY | DROP | ALTER | Examples | Tests | Catalog | REFS | LSP | Skills | Help | Viz | REPL | Syntax | Starlark |
 |---------|------|----------|--------|-----------|------|-------|----------|-------|---------|------|-----|--------|------|-----|------|--------|----------|
 | **Entities** | Y | Y | Y | Y | Y | Y | 01 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| **Associations** | Y | Y | Y | N | Y | N | 01 | Y | N | Y | Y | Y | Y | Y | Y | Y | N |
-| **Enumerations** | Y | Y | Y | Y | Y | Y | 01 | Y | Y | Y | Y | Y | Y | N | Y | Y | Y |
+| **Associations** | Y | Y | Y | N | Y | Y | 01 | Y | N | Y | Y | Y | Y | Y | Y | Y | N |
+| **Enumerations** | Y | Y | Y | Y | Y | Y | 01 | Y | Y | N | Y | Y | Y | N | Y | Y | Y |
 | **Microflows** | Y | Y | Y | Y | Y | N | 02 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| **Nanoflows** | Y | Y | N | N | Y | N | N | N | Y | Y | Y | N | Y | N | P | N | N |
-| **Pages** | Y | Y | Y | Y | Y | N | 03 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| **Snippets** | Y | Y | Y | Y | Y | N | 03 | Y | Y | Y | Y | Y | Y | N | Y | Y | Y |
+| **Nanoflows** | Y | N | N | N | N | N | N | N | Y | Y | Y | N | Y | N | P | N | N |
+| **Pages** | Y | Y | Y | N | Y | Y | 03 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
+| **Snippets** | Y | Y | Y | N | Y | Y | 03 | Y | Y | Y | Y | Y | Y | N | Y | Y | Y |
 | **Layouts** | Y | Y | N | N | N | N | N | N | Y | Y | Y | N | Y | N | Y | N | N |
-| **Java Actions** | Y | Y | Y | N | Y | N | 07 | P | N | Y | Y | Y | Y | N | Y | Y | N |
+| **Java Actions** | Y | Y | Y | N | Y | N | 07 | Y | Y | Y | Y | Y | Y | N | Y | Y | N |
 | **Constants** | Y | Y | Y | Y | Y | N | 09 | Y | N | P | Y | N | Y | N | P | N | N |
 | **OData Clients** | Y | Y | Y | Y | Y | Y | 10 | Y | Y | P | Y | Y | Y | N | Y | Y | N |
 | **OData Services** | Y | Y | Y | Y | Y | Y | 10 | Y | Y | Y | Y | Y | Y | N | Y | Y | N |
 | **External Entities** | Y | Y | Y | Y | N | N | 10 | Y | Y | Y | Y | Y | Y | N | P | Y | N |
 | **Modules** | Y | Y | Y | N | Y | N | all | Y | Y | Y | Y | Y | Y | N | Y | N | N |
-| **Navigation** | Y | Y | Y | - | - | - | 11 | N | P | Y | Y | Y | Y | N | N | Y | N |
-| **Business Events** | Y | Y | Y | N | Y | N | N | N | N | N | Y | N | Y | N | N | Y | N |
+| **Navigation** | Y | Y | Y | - | - | Y | 11 | N | Y | Y | Y | Y | Y | N | N | Y | N |
+| **Business Events** | Y | Y | Y | N | Y | N | 13 | N | Y | N | Y | N | Y | N | Y | Y | N |
 | **Project Settings** | Y | Y | - | - | - | Y | N | N | Y | Y | Y | N | Y | N | N | Y | P |
 
 ## Security Features
 
 | Feature | SHOW | DESCRIBE | CREATE | OR MODIFY | DROP | ALTER | Examples | Tests | Catalog | REFS | LSP | Skills | Help | Viz | REPL | Syntax | Starlark |
 |---------|------|----------|--------|-----------|------|-------|----------|-------|---------|------|-----|--------|------|-----|------|--------|----------|
-| **Module Roles** | Y | Y | Y | N | Y | N | 08 | Y | N | Y | Y | Y | Y | N | N | Y | N |
+| **Module Roles** | Y | Y | Y | N | Y | N | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
 | **User Roles** | Y | Y | Y | N | Y | Y | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
 | **Demo Users** | Y | Y | Y | N | Y | N | 08 | Y | N | N | Y | Y | Y | N | N | Y | N |
 | **Project Security** | Y | - | - | - | - | Y | 08 | Y | Y | Y | Y | Y | Y | N | N | Y | Y |
 | **Entity Access** | P | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
-| **Microflow Access** | Y | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | N |
-| **Page Access** | Y | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | N |
+| **Microflow Access** | Y | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
+| **Page Access** | Y | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
 
 ## Project Organization
 
@@ -99,6 +99,8 @@ When adding a new MDL feature, use this matrix as a checklist to ensure complete
 These types support CREATE but not the idempotent OR MODIFY variant:
 
 - **Associations** — Would allow idempotent association creation
+- **Pages** — No OR MODIFY; use ALTER PAGE for modifications
+- **Snippets** — No OR MODIFY; use ALTER SNIPPET for modifications
 - **Java Actions** — Would allow updating parameter signatures
 - **Module Roles** — Would allow updating description
 - **User Roles** — Has ALTER but not OR MODIFY
@@ -110,7 +112,6 @@ These types support CREATE but not the idempotent OR MODIFY variant:
 These types have no dedicated catalog table for SQL querying:
 
 - **Associations** — Queryable only via entity relationships
-- **Java Actions** — Not queryable via SELECT
 - **Constants** — Not queryable via SELECT
 - **Module Roles / User Roles / Demo Users** — User/module role mappings in `CATALOG.ROLE_MAPPINGS`; demo users not in catalog
 
@@ -140,9 +141,9 @@ These types are not covered in `help.go` output:
 
 - **Constants** — DESCRIBE CONSTANT exists but no dynamic name completion function
 - **Navigation** — No REPL autocomplete for navigation profiles
-- **Business Events** — No dynamic name completion
 - **Project Settings** — Static commands only, no element completion
 - **Security features** — No REPL autocomplete for roles, access grants
+- **Nanoflows** — No dedicated GetNanoflowNames completer (only keyword completion)
 
 ### Missing Syntax Topics
 
@@ -159,6 +160,8 @@ These types are not covered in `help.go` output:
 - **OData Clients/Services** — Not queryable from Starlark rules
 - **Navigation** — Not queryable from Starlark rules
 - **Business Events** — Not queryable from Starlark rules
+- **Nanoflows** — Not independently queryable (included in `microflows()` results)
+- **Layouts** — Not queryable from Starlark rules
 - **Modules** — Module dependencies available in Go context but not exposed to Starlark
 
 ### Missing Visualizations
@@ -183,7 +186,7 @@ Document types that exist in Mendix but have no MDL support:
 
 | Feature | SHOW | DESCRIBE | CREATE | OR MODIFY | DROP | ALTER | Examples | Tests | Catalog | REFS | LSP | Skills | Help | Viz | REPL | Syntax | Starlark | Notes |
 |---------|------|----------|--------|-----------|------|-------|----------|-------|---------|------|-----|--------|------|-----|------|--------|----------|-------|
-| **Nanoflow CREATE** | Y | Y | **N** | N | Y | N | N | N | Y | Y | Y | N | Y | N | P | N | N | SHOW/DESCRIBE/DROP work; CREATE body not implemented |
+| **Nanoflow CREATE** | Y | N | **N** | N | N | N | N | N | Y | Y | Y | N | Y | N | P | N | N | SHOW works; DESCRIBE/CREATE/DROP not implemented |
 | **Microflow activities** | - | - | P | - | - | - | 02 | Y | P | P | P | Y | Y | - | - | - | P | 60+ activities supported; some edge cases missing |
 | **Mobile nanoflows** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Mobile-specific nanoflow features |
 | **Building blocks** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Reusable page building blocks |
@@ -201,7 +204,7 @@ Document types that exist in Mendix but have no MDL support:
 | **JSON transformations** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | JSON structure definitions |
 | **Message definitions** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Message definition documents |
 | **XML schemas** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Imported XML schema documents |
-| **Workflows** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Y | N | Workflow definitions |
+| **Workflows** | Y | Y | N | N | N | N | N | N | Y | Y | N | N | Y | N | N | Y | N | SHOW/DESCRIBE work; CREATE/DROP not implemented |
 | **Module settings** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Module-level configuration |
 | **Image collection** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Image document collections |
 | **Icon collection** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Icon/glyph collections |
