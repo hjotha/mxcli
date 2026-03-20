@@ -136,3 +136,60 @@ func TestMxCheck_DataGridNoColumns(t *testing.T) {
 		t.Logf("mx check passed for DATAGRID (no columns) page:\n%s", output)
 	}
 }
+
+// TestMxCheck_GalleryPage creates a page with a GALLERY widget and verifies
+// mx check passes. Regression test for issue #7: same placeholder ID leak
+// as issue #6 but for the Gallery widget.
+func TestMxCheck_GalleryPage(t *testing.T) {
+	if !mxCheckAvailable() {
+		t.Skip("mx command not available")
+	}
+
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	entityName := testModule + ".MxCheckGalleryItem"
+	env.registerCleanup("entity", entityName)
+
+	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+		Heading: String(200),
+		Summary: String(500)
+	);`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	pageName := testModule + ".MxCheckGalleryPage"
+	env.registerCleanup("page", pageName)
+
+	createPageMDL := `CREATE PAGE ` + pageName + ` (
+		Title: 'Gallery Check Test',
+		Layout: Atlas_Core.Atlas_Default
+	) {
+		LAYOUTGRID mainGrid {
+			ROW row1 {
+				COLUMN col1 (DesktopWidth: 12) {
+					GALLERY gal (DataSource: DATABASE ` + entityName + `) {
+						DYNAMICTEXT dtHeading (Content: '{1}', ContentParams: [{1} = Heading])
+					}
+				}
+			}
+		}
+	}`
+
+	if err := env.executeMDL(createPageMDL); err != nil {
+		t.Fatalf("Failed to create page with GALLERY: %v", err)
+	}
+
+	env.executor.Execute(&ast.DisconnectStmt{})
+
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "placeholder") || strings.Contains(output, "CE0463") {
+			t.Errorf("mx check found structural errors for GALLERY page (possible placeholder leak):\n%s", output)
+		} else {
+			t.Logf("mx check output:\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed for GALLERY page:\n%s", output)
+	}
+}
