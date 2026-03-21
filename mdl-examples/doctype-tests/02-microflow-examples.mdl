@@ -781,6 +781,8 @@ END;
  * Example 6.7: WHILE loop with nested IF
  *
  * Demonstrates WHILE with conditional logic inside the loop body.
+ * Note: RETURN inside a loop is not allowed in Mendix (CE0068),
+ * so we use a flag variable to exit early.
  */
 CREATE MICROFLOW MfTest.M024_4_WhileWithCondition (
   $Number: Integer
@@ -792,16 +794,17 @@ BEGIN
   END IF;
 
   DECLARE $Divisor Integer = 2;
+  DECLARE $IsPrime Boolean = true;
 
-  WHILE $Divisor * $Divisor <= $Number
+  WHILE $Divisor * $Divisor <= $Number AND $IsPrime
   BEGIN
     IF $Number mod $Divisor = 0 THEN
-      RETURN false;
+      SET $IsPrime = false;
     END IF;
     SET $Divisor = $Divisor + 1;
   END WHILE;
 
-  RETURN true;
+  RETURN $IsPrime;
 END;
 /
 
@@ -943,7 +946,7 @@ CREATE MICROFLOW MfTest.M028_RetrieveWithDateTimeToken ()
 RETURNS List of MfTest.Order AS $OverdueOrders
 BEGIN
   RETRIEVE $OverdueOrders FROM MfTest.Order
-    WHERE ShipDate < [%CurrentDateTime%];
+    WHERE OrderDate < [%CurrentDateTime%];
   RETURN $OverdueOrders;
 END;
 /
