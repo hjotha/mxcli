@@ -11,7 +11,7 @@
 --
 -- ============================================================================
 
-create module Math;
+create module MathTest;
 
 /**
  * Determine if the input number is a prime number.
@@ -28,7 +28,7 @@ create module Math;
  * @param $Number The integer to test for primality
  * @returns true if the number is prime, false otherwise
  */
-CREATE MICROFLOW Math.IsPrime (
+CREATE MICROFLOW MathTest.IsPrime (
   $Number: Integer
 ) RETURNS Boolean AS $IsPrime
 FOLDER 'Math'
@@ -54,28 +54,32 @@ BEGIN
   -- Initialize trial division variables
   -- Start checking odd divisors from 3
   DECLARE $Divisor Integer = 3;
+  DECLARE $IsPrime Boolean = true;
 
   -- Only need to check up to sqrt(N)
   -- Mathematical insight: if N = a*b, one factor must be <= sqrt(N)
   DECLARE $MaxDivisor Integer = round(sqrt($Number));
 
   -- Main trial division loop
-  WHILE $Divisor <= $MaxDivisor
+  -- Note: RETURN inside a loop is not allowed in Mendix (CE0068),
+  -- so we use a flag variable and BREAK instead.
+  WHILE $Divisor <= $MaxDivisor AND $IsPrime
   BEGIN
     -- Test if current divisor divides the number evenly
     IF $Number mod $Divisor = 0 THEN
-      LOG INFO NODE 'Math' 'Found divisor: {1}, not prime' WITH ({1} = $Divisor);
-      RETURN false;
+      LOG INFO NODE 'Math' 'Found divisor: {1}, not prime' WITH ({1} = toString($Divisor));
+      SET $IsPrime = false;
     END IF;
 
     -- Increment by 2 to skip even numbers (optimization)
     SET $Divisor = $Divisor + 2;
   END WHILE;
 
-  -- No divisors found - number is prime
-  LOG INFO NODE 'Math' 'Number {1} is prime' WITH ({1} = $Number);
+  IF $IsPrime THEN
+    LOG INFO NODE 'Math' 'Number {1} is prime' WITH ({1} = toString($Number));
+  END IF;
 
-  RETURN true;
+  RETURN $IsPrime;
 END;
 /
 
@@ -93,7 +97,7 @@ END;
  * @param $N The position in the Fibonacci sequence (0-based index)
  * @returns The Nth Fibonacci number as a Long integer
  */
-CREATE MICROFLOW Math.Fibonacci (
+CREATE MICROFLOW MathTest.Fibonacci (
   $N: Integer
 ) RETURNS Long AS $Result
 FOLDER 'Math'
@@ -118,11 +122,12 @@ BEGIN
 
   -- Initialize sliding window variables for iterative calculation
   -- Previous two values: F(i-2) and F(i-1)
+  DECLARE $Result Long = 0;
   DECLARE $Previous2 Long = 0;
   DECLARE $Previous1 Long = 1;
   DECLARE $Current Long = 0;
   DECLARE $Counter Integer = 2;
-  LOG INFO NODE 'Math' 'Calculating Fibonacci({1})' WITH ({1} = $N);
+  LOG INFO NODE 'Math' 'Calculating Fibonacci({1})' WITH ({1} = toString($N));
 
   -- Main iteration loop: Calculate F(2) through F(N)
   -- Uses sliding window: shift values after each calculation
@@ -130,7 +135,7 @@ BEGIN
   BEGIN
     -- Calculate current Fibonacci number using recurrence relation
     SET $Current = $Previous1 + $Previous2;
-    LOG DEBUG NODE 'Math' 'F({1}) = {2}' WITH ({1} = $Counter, {2} = $Current);
+    LOG DEBUG NODE 'Math' 'F({1}) = {2}' WITH ({1} = toString($Counter), {2} = toString($Current));
 
     -- Slide the window: shift values for next iteration
     SET $Previous2 = $Previous1;
@@ -140,7 +145,7 @@ BEGIN
 
   -- Store final result and return
   SET $Result = $Current;
-  LOG INFO NODE 'Math' 'Fibonacci({1}) = {2}' WITH ({1} = $N, {2} = $Result);
+  LOG INFO NODE 'Math' 'Fibonacci({1}) = {2}' WITH ({1} = toString($N), {2} = toString($Result));
   RETURN $Result;
 END;
 /
