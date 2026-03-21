@@ -989,6 +989,9 @@ func hexByte(c byte) byte {
 func bytesToHex(b []byte) string {
 	if len(b) != 16 {
 		// Fallback for non-standard lengths
+		if len(b) > 1024 {
+			return "" // reject unreasonably large inputs
+		}
 		const hexChars = "0123456789abcdef"
 		result := make([]byte, len(b)*2)
 		for i, v := range b {

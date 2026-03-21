@@ -10,9 +10,34 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mendixlabs/mxcli"
 )
+
+// redactSensitiveFields recursively walks a JSON map and replaces values
+// for keys containing "Password" or "Secret" with "***".
+func redactSensitiveFields(m map[string]any) {
+	for key, val := range m {
+		lk := strings.ToLower(key)
+		if strings.Contains(lk, "password") || strings.Contains(lk, "secret") {
+			if _, ok := val.(string); ok {
+				m[key] = "***"
+			}
+			continue
+		}
+		switch v := val.(type) {
+		case map[string]any:
+			redactSensitiveFields(v)
+		case []any:
+			for _, item := range v {
+				if nested, ok := item.(map[string]any); ok {
+					redactSensitiveFields(nested)
+				}
+			}
+		}
+	}
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -239,6 +264,7 @@ func main() {
 		} else {
 			var prettyJSON map[string]any
 			json.Unmarshal(jsonData, &prettyJSON)
+			redactSensitiveFields(prettyJSON)
 			output, _ := json.MarshalIndent(prettyJSON, "", "  ")
 			fmt.Println(string(output))
 		}
