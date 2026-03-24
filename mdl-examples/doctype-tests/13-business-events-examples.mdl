@@ -23,7 +23,7 @@ CREATE MODULE BusinessEvents;
 CREATE OR MODIFY PERSISTENT ENTITY BusinessEvents.PublishedBusinessEvent (
   EventId: Long
 );
-CREATE CONSTANT BusinessEvents.ServerUrl
+CREATE OR MODIFY CONSTANT BusinessEvents.ServerUrl
 TYPE String
 DEFAULT 'localhost:9092';
 /
