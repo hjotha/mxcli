@@ -62,6 +62,13 @@ var (
 		{Key: "d", Label: "diff"},
 		{Key: "q", Label: "close"},
 	}
+	DiffViewHints = []Hint{
+		{Key: "j/k", Label: "scroll"},
+		{Key: "Tab", Label: "mode"},
+		{Key: "]c/[c", Label: "hunk"},
+		{Key: "/", Label: "search"},
+		{Key: "q", Label: "close"},
+	}
 )
 
 // View renders the hint bar to fit within the given width.

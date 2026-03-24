@@ -28,6 +28,7 @@ type App struct {
 
 	overlay  Overlay
 	compare  CompareView
+	diffView *DiffView
 	showHelp bool
 	picker   *PickerModel // non-nil when cross-project picker is open
 
@@ -100,7 +101,9 @@ func (a *App) syncStatusBar() {
 }
 
 func (a *App) syncHintBar() {
-	if a.overlay.IsVisible() {
+	if a.diffView != nil {
+		a.hintBar.SetHints(DiffViewHints)
+	} else if a.overlay.IsVisible() {
 		a.hintBar.SetHints(OverlayHints)
 	} else if a.compare.IsVisible() {
 		a.hintBar.SetHints(CompareHints)
@@ -165,6 +168,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return LoadTreeMsg{TabID: tabID, Nodes: nodes, Err: parseErr}
 			}
 		}
+		a.syncHintBar()
+		return a, nil
+
+	case DiffOpenMsg:
+		dv := NewDiffView(msg, a.width, a.height)
+		a.diffView = &dv
+		a.syncHintBar()
+		return a, nil
+
+	case DiffCloseMsg:
+		a.diffView = nil
 		a.syncHintBar()
 		return a, nil
 
@@ -240,6 +254,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Fullscreen modes
+		if a.diffView != nil {
+			var cmd tea.Cmd
+			*a.diffView, cmd = a.diffView.Update(msg)
+			return a, cmd
+		}
 		if a.compare.IsVisible() {
 			var cmd tea.Cmd
 			a.compare, cmd = a.compare.Update(msg)
@@ -273,6 +292,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.MouseMsg:
 		Trace("app: mouse x=%d y=%d btn=%v action=%v", msg.X, msg.Y, msg.Button, msg.Action)
+		if a.diffView != nil {
+			var cmd tea.Cmd
+			*a.diffView, cmd = a.diffView.Update(msg)
+			return a, cmd
+		}
 		if a.picker != nil || a.compare.IsVisible() || a.overlay.IsVisible() {
 			return a, nil
 		}
@@ -302,6 +326,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		Trace("app: resize %dx%d", msg.Width, msg.Height)
 		a.width = msg.Width
 		a.height = msg.Height
+		if a.diffView != nil {
+			a.diffView.SetSize(msg.Width, msg.Height)
+		}
 		a.resizeAll()
 		return a, nil
 
@@ -527,6 +554,9 @@ func (a App) View() string {
 
 	if a.picker != nil {
 		return a.picker.View()
+	}
+	if a.diffView != nil {
+		return a.diffView.View()
 	}
 	if a.compare.IsVisible() {
 		return a.compare.View()

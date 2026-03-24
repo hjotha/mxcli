@@ -338,6 +338,24 @@ func (c CompareView) updateNormal(msg tea.KeyMsg) (CompareView, tea.Cmd) {
 		c.kind = CompareMDL
 		return c, c.emitReload()
 
+	// Diff view — open DiffView with left vs right content
+	case "D":
+		leftText := c.left.content.PlainText()
+		rightText := c.right.content.PlainText()
+		if leftText != "" && rightText != "" {
+			leftTitle := c.left.title
+			rightTitle := c.right.title
+			return c, func() tea.Msg {
+				return DiffOpenMsg{
+					OldText:  leftText,
+					NewText:  rightText,
+					Language: "",
+					Title:    fmt.Sprintf("Diff: %s vs %s", leftTitle, rightTitle),
+				}
+			}
+		}
+		return c, nil
+
 	// Refresh both panes
 	case "r":
 		return c, c.emitReload()
@@ -499,6 +517,7 @@ func (c CompareView) renderStatusBar() string {
 	if si := c.focusedPane().content.SearchInfo(); si != "" {
 		parts = append(parts, key.Render("n/N")+" "+active.Render(si))
 	}
+	parts = append(parts, key.Render("D")+" "+dim.Render("diff"))
 	parts = append(parts, key.Render("r")+" "+dim.Render("reload"))
 	parts = append(parts, key.Render("j/k")+" "+dim.Render("scroll"))
 	if c.copiedFlash {
