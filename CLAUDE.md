@@ -167,6 +167,23 @@ The MDL visitor (`buildDataType` in `visitor_helpers.go`) cannot distinguish bet
 
 When generating Mendix expression strings (e.g., in `expressionToString()`), single quotes within string literals must be escaped by doubling them: `'it''s here'`. Do NOT use backslash escaping (`\'`). This matches Mendix Studio Pro's expression syntax.
 
+### Association Parent/Child Pointer Semantics (Counter-Intuitive)
+
+**CRITICAL**: Mendix BSON uses inverted naming for association pointers:
+
+| BSON Field | Points To | MDL Keyword |
+|------------|-----------|-------------|
+| `ParentPointer` | **FROM** entity (FK owner) | `FROM Module.Child` |
+| `ChildPointer` | **TO** entity (referenced) | `TO Module.Parent` |
+
+`CREATE ASSOCIATION Mod.Child_Parent FROM Mod.Child TO Mod.Parent` stores:
+- `ParentPointer = Child.$ID` (the FROM entity owns the foreign key)
+- `ChildPointer = Parent.$ID` (the TO entity is being referenced)
+
+This affects **entity access rules**: MemberAccess entries for associations must only be added to the **FROM** entity (the one stored in `ParentPointer`). Adding them to the TO entity triggers CE0066 "Entity access is out of date".
+
+The same convention applies in `domainmodel.Association`: `ParentID` = FROM entity, `ChildID` = TO entity.
+
 ### Public API Pattern
 ```go
 // Read-only access
