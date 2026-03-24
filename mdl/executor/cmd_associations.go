@@ -126,6 +126,15 @@ func (e *Executor) execCreateAssociation(s *ast.CreateAssociationStmt) error {
 
 	// Invalidate hierarchy cache so the new association's container is visible
 	e.invalidateHierarchy()
+	e.invalidateDomainModelsCache()
+
+	// Reconcile MemberAccesses immediately — existing access rules on entities
+	// in this DM need MemberAccess entries for the new association (CE0066).
+	if freshDM, err := e.reader.GetDomainModel(module.ID); err == nil {
+		if count, err := e.writer.ReconcileMemberAccesses(freshDM.ID, module.Name); err == nil && count > 0 {
+			fmt.Fprintf(e.output, "Reconciled %d access rule(s) for new association\n", count)
+		}
+	}
 
 	e.trackModifiedDomainModel(module.ID, module.Name)
 	fmt.Fprintf(e.output, "Created association: %s\n", s.Name)
