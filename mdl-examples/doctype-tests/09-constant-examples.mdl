@@ -105,6 +105,29 @@ SHOW CONSTANTS IN CoTest;
 DESCRIBE CONSTANT CoTest.ServiceEndpoint;
 /
 
+-- MARK: - Create Or Modify Constants
+
+/**
+ * Level 3.2: Create or modify a constant (upsert)
+ * Creates the constant if it does not exist, or updates it if it does.
+ * Use this when you want to ensure a constant has a specific value
+ * regardless of whether it was previously created.
+ */
+CREATE OR MODIFY CONSTANT CoTest.ServiceEndpoint
+TYPE String
+DEFAULT 'https://api.staging.example.com/v2'
+COMMENT 'Updated endpoint for staging environment';
+/
+
+/**
+ * Level 3.3: Create or modify a boolean constant
+ * Useful for toggling feature flags idempotently in scripts.
+ */
+CREATE OR MODIFY CONSTANT CoTest.EnableDebugLogging
+TYPE Boolean
+DEFAULT true;
+/
+
 -- MARK: - Drop Constants
 
 /**

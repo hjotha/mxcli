@@ -143,6 +143,7 @@ var mdlCreateSnippets = []protocol.CompletionItem{
 	snippet("CREATE MICROFLOW (with params)", "CREATE MICROFLOW ${1:Module}.${2:MicroflowName}\n(\n\t$$${3:Param}: ${4:Module.Entity}\n)\nRETURNS ${5:Boolean} AS $$${6:Result}\nBEGIN\n\t$0\nEND;", "Create microflow with parameters"),
 	snippet("CREATE NANOFLOW", "CREATE NANOFLOW ${1:Module}.${2:NanoflowName}\nBEGIN\n\t$0\nEND;", "Create a new nanoflow"),
 	snippet("CREATE ENUMERATION", "CREATE ENUMERATION ${1:Module}.${2:EnumName}\n(\n\t'${3:Value1}' '${4:Caption1}',\n\t'${5:Value2}' '${6:Caption2}'\n);", "Create a new enumeration"),
+	snippet("CREATE CONSTANT", "CREATE CONSTANT ${1:Module}.${2:ConstantName}\nTYPE ${3|String,Integer,Long,Decimal,Boolean,DateTime|}\nDEFAULT ${4:'value'};", "Create a new constant"),
 	snippet("CREATE PAGE", "CREATE PAGE ${1:Module}.${2:PageName}\n(\n\tTitle: '${3:Page Title}',\n\tLayout: ${4:Atlas_Core.Atlas_Default}\n)\n{\n\t$0\n}", "Create a new page"),
 	snippet("CREATE SNIPPET", "CREATE SNIPPET ${1:Module}.${2:SnippetName}\n{\n\t$0\n}", "Create a new snippet"),
 	snippet("CREATE ASSOCIATION", "CREATE ASSOCIATION ${1:Module}.${2:AssocName}\nFROM ${1:Module}.${3:ChildEntity}\nTO ${1:Module}.${4:ParentEntity}\nTYPE ${5|Reference,ReferenceSet|};", "Create a new association"),

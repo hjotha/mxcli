@@ -158,6 +158,7 @@ Available topics:
   delete      - List valid DELETE_BEHAVIOR options
   entity      - Show entity creation syntax
   enumeration - Show enumeration creation syntax
+  constant    - Show constant creation syntax (CREATE/SHOW/DESCRIBE/DROP)
   association - Show association creation syntax
   microflow   - Show microflow creation syntax
   page        - Show page creation syntax
@@ -199,6 +200,8 @@ Example:
 			showTopicHelp("entity")
 		case "enumeration", "enum", "enumerations":
 			showTopicHelp("enumeration")
+		case "constant", "constants":
+			showTopicHelp("constant")
 		case "association", "associations":
 			showTopicHelp("association")
 		case "microflow", "microflows":
