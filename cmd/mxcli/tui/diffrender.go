@@ -22,6 +22,110 @@ var (
 	diffGutterRemovedFg = lipgloss.Color("#FF5F87")
 )
 
+// RenderPlainUnifiedDiff generates a standard unified diff string (no ANSI colors).
+// This format is directly understood by LLMs and tools like patch/git.
+func RenderPlainUnifiedDiff(result *DiffResult, oldTitle, newTitle string) string {
+	if result == nil || len(result.Lines) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("--- a/%s\n", oldTitle))
+	sb.WriteString(fmt.Sprintf("+++ b/%s\n", newTitle))
+
+	// Generate hunks with context
+	lines := result.Lines
+	total := len(lines)
+	const contextLines = 3
+
+	// Find hunk boundaries: groups of changes with context
+	type hunkRange struct{ start, end int }
+	var hunks []hunkRange
+
+	i := 0
+	for i < total {
+		// Skip equal lines until we find a change
+		if lines[i].Type == DiffEqual {
+			i++
+			continue
+		}
+		// Found a change — expand to include context
+		start := max(0, i-contextLines)
+		// Find end of this change group (including bridged gaps)
+		for i < total {
+			if lines[i].Type != DiffEqual {
+				i++
+				continue
+			}
+			// Count consecutive equal lines
+			eqStart := i
+			for i < total && lines[i].Type == DiffEqual {
+				i++
+			}
+			eqCount := i - eqStart
+			if i >= total || eqCount > contextLines*2 {
+				// Gap too large or end of file — close hunk
+				end := min(total, eqStart+contextLines)
+				hunks = append(hunks, hunkRange{start, end})
+				break
+			}
+			// Small gap — bridge and continue
+		}
+		if len(hunks) == 0 || hunks[len(hunks)-1].end < i {
+			end := min(total, i+contextLines)
+			hunks = append(hunks, hunkRange{start, end})
+		}
+	}
+
+	// If no hunks (all equal), nothing to output
+	if len(hunks) == 0 {
+		return sb.String() + "@@ no differences @@\n"
+	}
+
+	for _, h := range hunks {
+		// Count old/new lines in this hunk
+		oldStart, newStart := 0, 0
+		oldCount, newCount := 0, 0
+		for j := h.start; j < h.end; j++ {
+			dl := lines[j]
+			if j == h.start {
+				oldStart = max(1, dl.OldLineNo)
+				newStart = max(1, dl.NewLineNo)
+				if dl.Type == DiffInsert {
+					oldStart = max(1, dl.NewLineNo) // approximate
+				}
+				if dl.Type == DiffDelete {
+					newStart = max(1, dl.OldLineNo)
+				}
+			}
+			switch dl.Type {
+			case DiffEqual:
+				oldCount++
+				newCount++
+			case DiffDelete:
+				oldCount++
+			case DiffInsert:
+				newCount++
+			}
+		}
+
+		sb.WriteString(fmt.Sprintf("@@ -%d,%d +%d,%d @@\n", oldStart, oldCount, newStart, newCount))
+		for j := h.start; j < h.end; j++ {
+			dl := lines[j]
+			switch dl.Type {
+			case DiffEqual:
+				sb.WriteString(" " + dl.Content + "\n")
+			case DiffDelete:
+				sb.WriteString("-" + dl.Content + "\n")
+			case DiffInsert:
+				sb.WriteString("+" + dl.Content + "\n")
+			}
+		}
+	}
+
+	return sb.String()
+}
+
 // DiffRenderedLine holds the sticky prefix (gutter + line numbers) and scrollable content separately.
 type DiffRenderedLine struct {
 	Prefix  string // gutter char + line numbers (sticky, never scrolled)

@@ -15,6 +15,7 @@ type DiffViewMode int
 const (
 	DiffViewUnified    DiffViewMode = iota
 	DiffViewSideBySide
+	DiffViewPlainDiff // standard unified diff text (LLM-friendly)
 )
 
 // DiffOpenMsg requests opening a diff view.
@@ -41,6 +42,7 @@ type DiffView struct {
 	unified    []DiffRenderedLine       // pre-rendered unified lines
 	sideLeft   []SideBySideRenderedLine // pre-rendered side-by-side left
 	sideRight  []SideBySideRenderedLine // pre-rendered side-by-side right
+	plainLines []string                 // standard unified diff text lines (LLM-friendly)
 	hunkStarts []int                    // line indices where hunks begin
 
 	// View state
@@ -91,6 +93,11 @@ func NewDiffView(msg DiffOpenMsg, width, height int) DiffView {
 func (dv *DiffView) renderAll() {
 	dv.unified = RenderUnifiedDiff(dv.result, dv.language)
 	dv.sideLeft, dv.sideRight = RenderSideBySideDiff(dv.result, dv.language)
+	plain := RenderPlainUnifiedDiff(dv.result, "old", "new")
+	dv.plainLines = strings.Split(plain, "\n")
+	if len(dv.plainLines) > 0 && dv.plainLines[len(dv.plainLines)-1] == "" {
+		dv.plainLines = dv.plainLines[:len(dv.plainLines)-1]
+	}
 }
 
 func (dv *DiffView) computeHunkStarts() {
@@ -118,10 +125,14 @@ func (dv *DiffView) SetSize(w, h int) {
 func (dv DiffView) IsVisible() bool { return true }
 
 func (dv DiffView) totalLines() int {
-	if dv.viewMode == DiffViewSideBySide {
+	switch dv.viewMode {
+	case DiffViewSideBySide:
 		return len(dv.sideLeft)
+	case DiffViewPlainDiff:
+		return len(dv.plainLines)
+	default:
+		return len(dv.unified)
 	}
-	return len(dv.unified)
 }
 
 func (dv DiffView) contentHeight() int {
@@ -221,17 +232,25 @@ func (dv DiffView) updateNormal(msg tea.KeyMsg) (DiffView, tea.Cmd) {
 	case "l", "right":
 		dv.xOffset += 8
 
-	// View mode toggle
+	// View mode toggle: Unified → Side-by-Side → Plain Diff → Unified
 	case "tab":
-		if dv.viewMode == DiffViewUnified {
+		switch dv.viewMode {
+		case DiffViewUnified:
 			dv.viewMode = DiffViewSideBySide
-		} else {
+		case DiffViewSideBySide:
+			dv.viewMode = DiffViewPlainDiff
+		case DiffViewPlainDiff:
 			dv.viewMode = DiffViewUnified
 		}
 		dv.yOffset = 0
 		dv.xOffset = 0
 		dv.leftOffset = 0
 		dv.rightOffset = 0
+
+	// Yank unified diff to clipboard
+	case "y":
+		plain := RenderPlainUnifiedDiff(dv.result, "old", "new")
+		_ = writeClipboard(plain)
 
 	// Search
 	case "/":
@@ -371,9 +390,14 @@ func (dv DiffView) View() string {
 	delSt := lipgloss.NewStyle().Foreground(diffRemovedFg).Bold(true)
 
 	// Title bar
-	modeLabel := "Unified"
-	if dv.viewMode == DiffViewSideBySide {
+	var modeLabel string
+	switch dv.viewMode {
+	case DiffViewUnified:
+		modeLabel = "Unified"
+	case DiffViewSideBySide:
 		modeLabel = "Side-by-Side"
+	case DiffViewPlainDiff:
+		modeLabel = "Plain Diff (LLM)"
 	}
 	stats := ""
 	if dv.result != nil {
@@ -391,9 +415,12 @@ func (dv DiffView) View() string {
 	// Content
 	viewH := dv.contentHeight()
 	var content string
-	if dv.viewMode == DiffViewSideBySide {
+	switch dv.viewMode {
+	case DiffViewSideBySide:
 		content = dv.renderSideBySide(viewH)
-	} else {
+	case DiffViewPlainDiff:
+		content = dv.renderPlainDiff(viewH)
+	default:
 		content = dv.renderUnified(viewH)
 	}
 
@@ -551,6 +578,68 @@ func (dv DiffView) renderSideBySide(viewH int) string {
 		}
 
 		line := leftStr + dividerSt.Render(" │ ") + rightStr
+
+		if showScrollbar {
+			if vi >= thumbStart && vi < thumbEnd {
+				line += thumbSt.Render("█")
+			} else {
+				line += trackSt.Render("│")
+			}
+		}
+
+		sb.WriteString(line)
+		if vi < viewH-1 {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+func (dv DiffView) renderPlainDiff(viewH int) string {
+	lines := dv.plainLines
+	total := len(lines)
+	showScrollbar := total > viewH
+
+	trackSt := lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+	thumbSt := lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
+
+	var thumbStart, thumbEnd int
+	if showScrollbar {
+		thumbSize := max(1, viewH*viewH/total)
+		if m := dv.maxOffset(); m > 0 {
+			thumbStart = dv.yOffset * (viewH - thumbSize) / m
+		}
+		thumbEnd = thumbStart + thumbSize
+	}
+
+	scrollW := 0
+	if showScrollbar {
+		scrollW = 1
+	}
+	contentW := dv.width - scrollW
+
+	var sb strings.Builder
+	for vi := range viewH {
+		lineIdx := dv.yOffset + vi
+		var line string
+		if lineIdx < total {
+			line = lines[lineIdx]
+			// Apply horizontal scroll
+			if dv.xOffset > 0 && len(line) > dv.xOffset {
+				line = line[dv.xOffset:]
+			} else if dv.xOffset > 0 {
+				line = ""
+			}
+			// Truncate to width
+			if len(line) > contentW {
+				line = line[:contentW]
+			}
+		}
+
+		// Pad to fill width
+		if pad := contentW - len(line); pad > 0 {
+			line += strings.Repeat(" ", pad)
+		}
 
 		if showScrollbar {
 			if vi >= thumbStart && vi < thumbEnd {
