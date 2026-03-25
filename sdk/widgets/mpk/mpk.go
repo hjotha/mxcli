@@ -17,16 +17,17 @@ import (
 
 // PropertyDef describes a single property from a widget XML definition.
 type PropertyDef struct {
-	Key          string // e.g. "staticDataSourceCaption"
-	Type         string // XML type: "attribute", "expression", "textTemplate", "widgets", etc.
+	Key          string        // e.g. "staticDataSourceCaption"
+	Type         string        // XML type: "attribute", "expression", "textTemplate", "widgets", etc.
 	Caption      string
 	Description  string
-	Category     string // from enclosing propertyGroup captions, joined with "::"
+	Category     string        // from enclosing propertyGroup captions, joined with "::"
 	Required     bool
-	DefaultValue string // for enumeration/boolean/integer types
+	DefaultValue string        // for enumeration/boolean/integer types
 	IsList       bool
-	IsSystem     bool   // true for <systemProperty> elements
-	DataSource   string // dataSource attribute reference
+	IsSystem     bool          // true for <systemProperty> elements
+	DataSource   string        // dataSource attribute reference
+	Children     []PropertyDef // nested properties for object-type properties
 }
 
 // WidgetDefinition holds the parsed definition of a pluggable widget from an .mpk file.
@@ -212,6 +213,14 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,
 		}
+
+		// Parse nested properties for object-type properties
+		if p.Type == "object" && len(p.NestedProps) > 0 {
+			for _, npg := range p.NestedProps {
+				collectNestedProperties(npg, &prop)
+			}
+		}
+
 		def.Properties = append(def.Properties, prop)
 	}
 
@@ -227,6 +236,28 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 	// Recurse into subgroups
 	for _, sub := range pg.SubGroups {
 		walkPropertyGroup(sub, category, def)
+	}
+}
+
+// collectNestedProperties extracts child properties from nested propertyGroups
+// within an object-type property and appends them to the parent PropertyDef.
+func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
+	for _, p := range pg.Properties {
+		child := PropertyDef{
+			Key:          p.Key,
+			Type:         p.Type,
+			Caption:      p.Caption,
+			Description:  p.Description,
+			Required:     p.Required == "true",
+			DefaultValue: p.DefaultValue,
+			IsList:       p.IsList == "true",
+			DataSource:   p.DataSource,
+		}
+		parent.Children = append(parent.Children, child)
+	}
+
+	for _, sub := range pg.SubGroups {
+		collectNestedProperties(sub, parent)
 	}
 }
 

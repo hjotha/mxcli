@@ -224,9 +224,11 @@ func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.P
 			vt["EnumerationValues"] = []any{float64(2)}
 		}
 
-		// Clear ObjectType for non-object types
+		// Clear ObjectType for non-object types; build nested ObjectType for object types with children
 		if vtType != "Object" {
 			vt["ObjectType"] = nil
+		} else if len(p.Children) > 0 {
+			vt["ObjectType"] = buildNestedObjectType(p.Children)
 		}
 
 		// Clear ReturnType for non-expression types
@@ -345,6 +347,11 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 
 	if p.DataSource != "" {
 		vt["DataSourceProperty"] = p.DataSource
+	}
+
+	// Build nested ObjectType for object-type properties with children
+	if bsonType == "Object" && len(p.Children) > 0 {
+		vt["ObjectType"] = buildNestedObjectType(p.Children)
 	}
 
 	return vt
@@ -514,6 +521,40 @@ func xmlTypeToBSONType(xmlType string) string {
 		return "File"
 	default:
 		return ""
+	}
+}
+
+// buildNestedObjectType creates a WidgetObjectType with PropertyTypes for nested children
+// of an object-type property. This is needed for properties like filterList and sortList
+// that contain sub-properties (e.g., filter, attribute, caption).
+func buildNestedObjectType(children []mpk.PropertyDef) map[string]any {
+	propTypes := []any{float64(2)} // version marker
+
+	for _, child := range children {
+		childBsonType := xmlTypeToBSONType(child.Type)
+		if childBsonType == "" {
+			continue
+		}
+
+		childVTID := placeholderID()
+		childPT := map[string]any{
+			"$ID":         placeholderID(),
+			"$Type":       "CustomWidgets$WidgetPropertyType",
+			"Caption":     child.Caption,
+			"Category":    "General",
+			"Description": child.Description,
+			"IsDefault":   false,
+			"PropertyKey": child.Key,
+			"ValueType":   createDefaultValueType(childVTID, childBsonType, child),
+		}
+
+		propTypes = append(propTypes, childPT)
+	}
+
+	return map[string]any{
+		"$ID":           placeholderID(),
+		"$Type":         "CustomWidgets$WidgetObjectType",
+		"PropertyTypes": propTypes,
 	}
 }
 
