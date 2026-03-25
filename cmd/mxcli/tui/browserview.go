@@ -95,7 +95,7 @@ func (bv BrowserView) Render(width, height int) string {
 // so App can handle them.
 func (bv BrowserView) Update(msg tea.Msg) (View, tea.Cmd) {
 	switch msg := msg.(type) {
-	case PreviewReadyMsg, PreviewLoadingMsg, CursorChangedMsg, animTickMsg:
+	case PreviewReadyMsg, PreviewLoadingMsg, CursorChangedMsg, animTickMsg, previewDebounceMsg:
 		var cmd tea.Cmd
 		bv.miller, cmd = bv.miller.Update(msg)
 		return bv, cmd

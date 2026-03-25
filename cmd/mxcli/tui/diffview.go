@@ -61,6 +61,12 @@ type DiffView struct {
 	searchQuery string
 	matchLines  []int
 	matchIdx    int
+
+	// Two-key sequence state (e.g. ]c / [c for Vim hunk navigation)
+	pendingKey rune // ']' or '[' waiting for 'c', 0 if none
+
+	// Mode-specific hunk starts
+	plainHunkStarts []int // hunk header indices in plainLines
 }
 
 // NewDiffView creates a DiffView from a DiffOpenMsg.
@@ -99,15 +105,23 @@ func (dv *DiffView) renderAll() {
 
 func (dv *DiffView) computeHunkStarts() {
 	dv.hunkStarts = nil
+	dv.plainHunkStarts = nil
 	if dv.result == nil {
 		return
 	}
+	// Unified and Side-by-Side: 1:1 mapping with result.Lines
 	for i, dl := range dv.result.Lines {
 		if dl.Type == DiffEqual {
 			continue
 		}
 		if i == 0 || dv.result.Lines[i-1].Type == DiffEqual {
 			dv.hunkStarts = append(dv.hunkStarts, i)
+		}
+	}
+	// Plain Diff: find @@ hunk header lines
+	for i, line := range dv.plainLines {
+		if strings.HasPrefix(line, "@@") {
+			dv.plainHunkStarts = append(dv.plainHunkStarts, i)
 		}
 	}
 }
@@ -194,7 +208,24 @@ func (dv DiffView) updateSearch(msg tea.KeyMsg) (DiffView, tea.Cmd) {
 }
 
 func (dv DiffView) updateNormal(msg tea.KeyMsg) (DiffView, tea.Cmd) {
-	switch msg.String() {
+	key := msg.String()
+
+	// Handle two-key sequence: ]c / [c (Vim hunk navigation)
+	if dv.pendingKey != 0 {
+		pending := dv.pendingKey
+		dv.pendingKey = 0
+		if key == "c" {
+			if pending == ']' {
+				dv.nextHunk()
+			} else {
+				dv.prevHunk()
+			}
+			return dv, nil
+		}
+		// Not 'c' — discard pending and fall through to handle this key normally
+	}
+
+	switch key {
 	case "q", "esc":
 		return dv, func() tea.Msg { return PopViewMsg{} }
 
@@ -256,11 +287,11 @@ func (dv DiffView) updateNormal(msg tea.KeyMsg) (DiffView, tea.Cmd) {
 	case "N":
 		dv.prevMatch()
 
-	// Hunk navigation
+	// Hunk navigation: first key of ]c / [c sequence
 	case "]":
-		dv.nextHunk()
+		dv.pendingKey = ']'
 	case "[":
-		dv.prevHunk()
+		dv.pendingKey = '['
 	}
 
 	return dv, nil
@@ -284,30 +315,40 @@ func (dv *DiffView) scroll(delta int) {
 
 // --- Hunk navigation ---
 
+// activeHunkStarts returns the hunk start indices appropriate for the current view mode.
+func (dv *DiffView) activeHunkStarts() []int {
+	if dv.viewMode == DiffViewPlainDiff {
+		return dv.plainHunkStarts
+	}
+	return dv.hunkStarts
+}
+
 func (dv *DiffView) nextHunk() {
-	if len(dv.hunkStarts) == 0 {
+	starts := dv.activeHunkStarts()
+	if len(starts) == 0 {
 		return
 	}
-	for _, hs := range dv.hunkStarts {
+	for _, hs := range starts {
 		if hs > dv.yOffset {
 			dv.yOffset = clamp(hs, 0, dv.maxOffset())
 			return
 		}
 	}
-	dv.yOffset = clamp(dv.hunkStarts[0], 0, dv.maxOffset())
+	dv.yOffset = clamp(starts[0], 0, dv.maxOffset())
 }
 
 func (dv *DiffView) prevHunk() {
-	if len(dv.hunkStarts) == 0 {
+	starts := dv.activeHunkStarts()
+	if len(starts) == 0 {
 		return
 	}
-	for i := len(dv.hunkStarts) - 1; i >= 0; i-- {
-		if dv.hunkStarts[i] < dv.yOffset {
-			dv.yOffset = clamp(dv.hunkStarts[i], 0, dv.maxOffset())
+	for i := len(starts) - 1; i >= 0; i-- {
+		if starts[i] < dv.yOffset {
+			dv.yOffset = clamp(starts[i], 0, dv.maxOffset())
 			return
 		}
 	}
-	dv.yOffset = clamp(dv.hunkStarts[len(dv.hunkStarts)-1], 0, dv.maxOffset())
+	dv.yOffset = clamp(starts[len(starts)-1], 0, dv.maxOffset())
 }
 
 // --- Search ---
@@ -423,7 +464,7 @@ func (dv DiffView) View() string {
 	hints = append(hints, keySt.Render("j/k")+" "+dimSt.Render("vert"))
 	hints = append(hints, keySt.Render("h/l")+" "+dimSt.Render("horiz"))
 	hints = append(hints, keySt.Render("Tab")+" "+dimSt.Render("mode"))
-	hints = append(hints, keySt.Render("]/[")+" "+dimSt.Render("hunk"))
+	hints = append(hints, keySt.Render("]c/[c")+" "+dimSt.Render("hunk"))
 	hints = append(hints, keySt.Render("/")+" "+dimSt.Render("search"))
 	if si := dv.searchInfo(); si != "" {
 		hints = append(hints, keySt.Render("n/N")+" "+activeSt.Render(si))
@@ -617,21 +658,11 @@ func (dv DiffView) renderPlainDiff(viewH int) string {
 		lineIdx := dv.yOffset + vi
 		var line string
 		if lineIdx < total {
-			line = lines[lineIdx]
-			// Apply horizontal scroll
-			if dv.xOffset > 0 && len(line) > dv.xOffset {
-				line = line[dv.xOffset:]
-			} else if dv.xOffset > 0 {
-				line = ""
-			}
-			// Truncate to width
-			if len(line) > contentW {
-				line = line[:contentW]
-			}
+			line = hslice(lines[lineIdx], dv.xOffset, contentW)
 		}
 
-		// Pad to fill width
-		if pad := contentW - len(line); pad > 0 {
+		// Pad to fill width (use visual width for multi-byte safety)
+		if pad := contentW - lipgloss.Width(line); pad > 0 {
 			line += strings.Repeat(" ", pad)
 		}
 

@@ -89,6 +89,12 @@ func (a *App) syncBrowserView() {
 	bv := NewBrowserView(tab, a.mxcliPath, a.previewEngine)
 	bv.allNodes = tab.AllNodes
 	bv.compareItems = flattenQualifiedNames(tab.AllNodes)
+	// Ensure miller has current dimensions so scroll calculations in
+	// Update() work correctly (Render operates on a value copy).
+	if a.height > 0 {
+		contentH := max(5, a.height-chromeHeight)
+		bv.miller.SetSize(a.width, contentH)
+	}
 	a.views.base = bv
 }
 
@@ -362,6 +368,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		Trace("app: resize %dx%d", msg.Width, msg.Height)
 		a.width = msg.Width
 		a.height = msg.Height
+		// Propagate content dimensions to the browser view so that
+		// subsequent Update() calls use correct column heights for
+		// scroll calculations (Render operates on a copy and cannot
+		// persist dimensions back).
+		if bv, ok := a.views.Active().(BrowserView); ok {
+			contentH := a.height - chromeHeight
+			if contentH < 5 {
+				contentH = 5
+			}
+			bv.miller.SetSize(a.width, contentH)
+			a.views.SetActive(bv)
+		}
 		return a, nil
 
 	case LoadTreeMsg:
@@ -377,13 +395,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					bv.allNodes = msg.Nodes
 					bv.compareItems = flattenQualifiedNames(msg.Nodes)
 					bv.miller = tab.Miller
+					if a.height > 0 {
+						contentH := max(5, a.height-chromeHeight)
+						bv.miller.SetSize(a.width, contentH)
+					}
 					a.views.base = bv
 				}
 			}
 		}
 		return a, nil
 
-	case PreviewReadyMsg, PreviewLoadingMsg, CursorChangedMsg, animTickMsg:
+	case PreviewReadyMsg, PreviewLoadingMsg, CursorChangedMsg, animTickMsg, previewDebounceMsg:
 		if a.views.Active().Mode() == ModeBrowser {
 			updated, cmd := a.views.Active().Update(msg)
 			a.views.SetActive(updated)

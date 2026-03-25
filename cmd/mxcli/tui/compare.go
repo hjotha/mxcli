@@ -83,13 +83,10 @@ type CompareView struct {
 	copiedFlash  bool
 
 	// Fuzzy picker
-	picker        bool
-	pickerInput   textinput.Model
-	pickerItems   []PickerItem
-	pickerMatches []pickerMatch
-	pickerCursor  int
-	pickerOffset  int
-	pickerSide    CompareFocus
+	picker      bool
+	pickerInput textinput.Model
+	pickerList  FuzzyList
+	pickerSide  CompareFocus
 
 	// Self-contained operation (for View interface)
 	mxcliPath   string
@@ -134,7 +131,7 @@ func (c CompareView) paneDimensions() (int, int) {
 	return pw, ph
 }
 
-func (c *CompareView) SetItems(items []PickerItem) { c.pickerItems = items }
+func (c *CompareView) SetItems(items []PickerItem) { c.pickerList = NewFuzzyList(items, pickerMaxShow) }
 
 func (c *CompareView) SetContent(side CompareFocus, title, nodeType, content string) {
 	p := c.pane(side)
@@ -175,69 +172,12 @@ func (c *CompareView) openPicker() {
 	c.pickerSide = c.focus
 	c.pickerInput.SetValue("")
 	c.pickerInput.Focus()
-	c.pickerCursor = 0
-	c.pickerOffset = 0
-	c.filterPicker()
+	c.pickerList.Cursor = 0
+	c.pickerList.Offset = 0
+	c.pickerList.Filter("")
 }
 
 func (c *CompareView) closePicker() { c.picker = false; c.pickerInput.Blur() }
-
-func (c *CompareView) filterPicker() {
-	query := strings.TrimSpace(c.pickerInput.Value())
-	c.pickerMatches = nil
-	for _, it := range c.pickerItems {
-		if query == "" {
-			c.pickerMatches = append(c.pickerMatches, pickerMatch{item: it})
-			continue
-		}
-		if ok, sc := fuzzyScore(it.QName, query); ok {
-			c.pickerMatches = append(c.pickerMatches, pickerMatch{item: it, score: sc})
-		}
-	}
-	// Sort by score descending (insertion sort, small n)
-	for i := 1; i < len(c.pickerMatches); i++ {
-		for j := i; j > 0 && c.pickerMatches[j].score > c.pickerMatches[j-1].score; j-- {
-			c.pickerMatches[j], c.pickerMatches[j-1] = c.pickerMatches[j-1], c.pickerMatches[j]
-		}
-	}
-	if c.pickerCursor >= len(c.pickerMatches) {
-		c.pickerCursor = max(0, len(c.pickerMatches)-1)
-	}
-	c.pickerOffset = 0
-}
-
-func (c *CompareView) pickerDown() {
-	if len(c.pickerMatches) == 0 {
-		return
-	}
-	c.pickerCursor++
-	if c.pickerCursor >= len(c.pickerMatches) {
-		c.pickerCursor = 0
-		c.pickerOffset = 0
-	} else if c.pickerCursor >= c.pickerOffset+pickerMaxShow {
-		c.pickerOffset = c.pickerCursor - pickerMaxShow + 1
-	}
-}
-
-func (c *CompareView) pickerUp() {
-	if len(c.pickerMatches) == 0 {
-		return
-	}
-	c.pickerCursor--
-	if c.pickerCursor < 0 {
-		c.pickerCursor = len(c.pickerMatches) - 1
-		c.pickerOffset = max(0, c.pickerCursor-pickerMaxShow+1)
-	} else if c.pickerCursor < c.pickerOffset {
-		c.pickerOffset = c.pickerCursor
-	}
-}
-
-func (c CompareView) pickerSelected() PickerItem {
-	if len(c.pickerMatches) == 0 || c.pickerCursor >= len(c.pickerMatches) {
-		return PickerItem{}
-	}
-	return c.pickerMatches[c.pickerCursor].item
-}
 
 // --- Update ---
 
@@ -275,7 +215,7 @@ func (c CompareView) updatePicker(msg tea.KeyMsg) (CompareView, tea.Cmd) {
 		c.closePicker()
 		return c, nil
 	case "enter":
-		selected := c.pickerSelected()
+		selected := c.pickerList.Selected()
 		c.closePicker()
 		if selected.QName != "" {
 			return c, func() tea.Msg {
@@ -284,13 +224,13 @@ func (c CompareView) updatePicker(msg tea.KeyMsg) (CompareView, tea.Cmd) {
 		}
 		return c, nil
 	case "up", "ctrl+p":
-		c.pickerUp()
+		c.pickerList.MoveUp()
 	case "down", "ctrl+n":
-		c.pickerDown()
+		c.pickerList.MoveDown()
 	default:
 		var cmd tea.Cmd
 		c.pickerInput, cmd = c.pickerInput.Update(msg)
-		c.filterPicker()
+		c.pickerList.Filter(c.pickerInput.Value())
 		return c, cmd
 	}
 	return c, nil
@@ -556,27 +496,29 @@ func (c CompareView) renderPicker() string {
 		sideLabel = "RIGHT"
 	}
 
+	fl := &c.pickerList
+
 	var sb strings.Builder
 	sb.WriteString(titleSt.Render(fmt.Sprintf("Pick object (%s)", sideLabel)) + "\n\n")
 	sb.WriteString(c.pickerInput.View() + "\n\n")
 
-	end := min(c.pickerOffset+pickerMaxShow, len(c.pickerMatches))
-	if c.pickerOffset > 0 {
+	end := fl.VisibleEnd()
+	if fl.Offset > 0 {
 		sb.WriteString(dimSt.Render("  ↑ more") + "\n")
 	}
 	typeSt := lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
-	for i := c.pickerOffset; i < end; i++ {
-		it := c.pickerMatches[i].item
-		if i == c.pickerCursor {
+	for i := fl.Offset; i < end; i++ {
+		it := fl.Matches[i].item
+		if i == fl.Cursor {
 			sb.WriteString(selSt.Render("▸ "+it.QName) + " " + typeSt.Render(it.NodeType) + "\n")
 		} else {
 			sb.WriteString(normSt.Render("  "+it.QName) + " " + dimSt.Render(it.NodeType) + "\n")
 		}
 	}
-	if end < len(c.pickerMatches) {
+	if end < len(fl.Matches) {
 		sb.WriteString(dimSt.Render("  ↓ more") + "\n")
 	}
-	sb.WriteString("\n" + dimSt.Render(fmt.Sprintf("  %d/%d matches", len(c.pickerMatches), len(c.pickerItems))))
+	sb.WriteString("\n" + dimSt.Render(fmt.Sprintf("  %d/%d matches", len(fl.Matches), len(fl.Items))))
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
