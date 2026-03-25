@@ -6,7 +6,7 @@
   "defaultSelection": "Single",
   "propertyMappings": [
     {"propertyKey": "datasource", "source": "DataSource", "operation": "datasource"},
-    {"propertyKey": "itemSelection", "source": "Selection", "operation": "primitive", "default": "Single"}
+    {"propertyKey": "itemSelection", "source": "Selection", "operation": "selection", "default": "Single"}
   ],
   "childSlots": [
     {"propertyKey": "content", "mdlContainer": "TEMPLATE", "operation": "widgets"},

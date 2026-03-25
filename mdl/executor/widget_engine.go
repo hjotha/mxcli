@@ -78,7 +78,7 @@ type OperationRegistry struct {
 	operations map[string]OperationFunc
 }
 
-// NewOperationRegistry creates a registry pre-loaded with the 5 built-in operations.
+// NewOperationRegistry creates a registry pre-loaded with the 6 built-in operations.
 func NewOperationRegistry() *OperationRegistry {
 	reg := &OperationRegistry{
 		operations: make(map[string]OperationFunc),
@@ -86,6 +86,7 @@ func NewOperationRegistry() *OperationRegistry {
 	reg.Register("attribute", opAttribute)
 	reg.Register("association", opAssociation)
 	reg.Register("primitive", opPrimitive)
+	reg.Register("selection", opSelection)
 	reg.Register("datasource", opDatasource)
 	reg.Register("widgets", opWidgets)
 	return reg
@@ -132,6 +133,25 @@ func opPrimitive(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, p
 	}
 	return updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
 		return setPrimitiveValue(val, ctx.PrimitiveVal)
+	})
+}
+
+// opSelection sets a selection mode on a widget property, updating the Selection field
+// inside the WidgetValue (which requires a deeper update than opPrimitive's PrimitiveValue).
+func opSelection(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDEntry, propertyKey string, ctx *BuildContext) bson.D {
+	if ctx.PrimitiveVal == "" {
+		return obj
+	}
+	return updateWidgetPropertyValue(obj, propTypeIDs, propertyKey, func(val bson.D) bson.D {
+		result := make(bson.D, 0, len(val))
+		for _, elem := range val {
+			if elem.Key == "Selection" {
+				result = append(result, bson.E{Key: "Selection", Value: ctx.PrimitiveVal})
+			} else {
+				result = append(result, elem)
+			}
+		}
+		return result
 	})
 }
 
@@ -193,6 +213,10 @@ func NewPluggableWidgetEngine(ops *OperationRegistry, pb *pageBuilder) *Pluggabl
 
 // Build constructs a CustomWidget from a definition and AST widget node.
 func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*pages.CustomWidget, error) {
+	// Save and restore entity context (DataSource mappings may change it)
+	oldEntityContext := e.pageBuilder.entityContext
+	defer func() { e.pageBuilder.entityContext = oldEntityContext }()
+
 	// 1. Load template
 	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err :=
 		widgets.GetTemplateFullBSON(def.WidgetID, mpr.GenerateID, e.pageBuilder.reader.Path())

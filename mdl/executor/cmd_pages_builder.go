@@ -32,6 +32,10 @@ type pageBuilder struct {
 	fragments        map[string]*ast.DefineFragmentStmt // Fragment registry from executor
 	themeRegistry    *ThemeRegistry                     // Theme design property definitions (may be nil)
 
+	// Pluggable widget engine (lazily initialized)
+	widgetRegistry  *WidgetRegistry
+	pluggableEngine *PluggableWidgetEngine
+
 	// Per-operation caches (may change during execution)
 	layoutsCache    []*pages.Layout
 	pagesCache      []*pages.Page
@@ -40,6 +44,23 @@ type pageBuilder struct {
 
 	// Entity context for resolving short attribute names inside DataViews
 	entityContext string // Qualified entity name (e.g., "Module.Entity")
+}
+
+// initPluggableEngine lazily initializes the pluggable widget engine.
+func (pb *pageBuilder) initPluggableEngine() {
+	if pb.pluggableEngine != nil {
+		return
+	}
+	registry, err := NewWidgetRegistry()
+	if err != nil {
+		// Non-fatal: engine won't be available, fall through to error
+		return
+	}
+	if pb.reader != nil {
+		_ = registry.LoadUserDefinitions(pb.reader.Path())
+	}
+	pb.widgetRegistry = registry
+	pb.pluggableEngine = NewPluggableWidgetEngine(NewOperationRegistry(), pb)
 }
 
 // registerWidgetName registers a widget name and returns an error if it's already used.

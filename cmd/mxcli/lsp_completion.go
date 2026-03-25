@@ -5,7 +5,9 @@ package main
 import (
 	"context"
 	"strings"
+	"sync"
 
+	"github.com/mendixlabs/mxcli/mdl/executor"
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 )
@@ -67,12 +69,36 @@ func mdlCompletionItems(linePrefixUpper string) []protocol.CompletionItem {
 		return items
 	}
 
-	// General context: all generated keywords + snippets
+	// General context: all generated keywords + snippets + widget types
 	items = append(items, mdlGeneratedKeywords...)
 	items = append(items, mdlStatementSnippets...)
 	items = append(items, mdlCreateSnippets...)
+	items = append(items, widgetRegistryCompletions()...)
 
 	return items
+}
+
+// widgetRegistryCompletions returns completion items for registered widget types.
+var (
+	widgetCompletionsOnce sync.Once
+	widgetCompletionItems []protocol.CompletionItem
+)
+
+func widgetRegistryCompletions() []protocol.CompletionItem {
+	widgetCompletionsOnce.Do(func() {
+		registry, err := executor.NewWidgetRegistry()
+		if err != nil {
+			return
+		}
+		for _, def := range registry.All() {
+			widgetCompletionItems = append(widgetCompletionItems, protocol.CompletionItem{
+				Label:  def.MDLName,
+				Kind:   protocol.CompletionItemKindClass,
+				Detail: "Pluggable widget: " + def.WidgetID,
+			})
+		}
+	})
+	return widgetCompletionItems
 }
 
 // mdlCreateContextKeywords are object types suggested after CREATE.

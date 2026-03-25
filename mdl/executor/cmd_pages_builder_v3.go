@@ -292,12 +292,8 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 		return nil, fmt.Errorf("TABPAGE must be a direct child of TABCONTAINER")
 	case "GROUPBOX":
 		widget, err = pb.buildGroupBoxV3(w)
-	case "COMBOBOX":
-		widget, err = pb.buildComboBoxV3(w)
 	case "RADIOBUTTONS":
 		widget, err = pb.buildRadioButtonsV3(w)
-	case "GALLERY":
-		widget, err = pb.buildGalleryV3(w)
 	case "NAVIGATIONLIST":
 		widget, err = pb.buildNavigationListV3(w)
 	case "ITEM":
@@ -328,6 +324,14 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 	case "DYNAMICIMAGE":
 		widget, err = pb.buildDynamicImageV3(w)
 	default:
+		// Try pluggable widget engine for registered widget types
+		pb.initPluggableEngine()
+		if pb.widgetRegistry != nil {
+			if def, ok := pb.widgetRegistry.Get(strings.ToUpper(w.Type)); ok {
+				widget, err = pb.pluggableEngine.Build(def, w)
+				break
+			}
+		}
 		return nil, fmt.Errorf("unsupported V3 widget type: %s", w.Type)
 	}
 
