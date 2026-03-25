@@ -104,6 +104,50 @@ Playwright Testing ◄──── Playwright CLI
 | [Bulk Widget Property Updates](PROPOSAL_bulk_widget_property_updates.md) | Draft | Bulk find/modify custom widget properties across pages and snippets | — |
 | [Structure Command](mxcli-structure-proposal.md) | Partial | Token-efficient project structure overview. SHOW STRUCTURE exists but some gaps remain | — |
 
+### SHOW/DESCRIBE for Missing Document Types
+
+Add read-only SHOW and DESCRIBE commands for Mendix document types that lack MDL support. Prioritized by prevalence across real-world projects. All follow the same implementation pattern (AST constant, grammar rule, visitor, executor handler).
+
+**Tier 1 — High Priority** (heavily used, present in all analyzed projects):
+
+| Proposal | Status | Summary | Reader Exists |
+|----------|--------|---------|---------------|
+| [JavaScript Actions](show-describe-javascript-actions.md) | Proposed | SHOW/DESCRIBE for `JavaScriptActions$JavaScriptAction` (283 across 3 projects) | Yes |
+| [Building Blocks](show-describe-building-blocks.md) | Proposed | SHOW/DESCRIBE for `Forms$BuildingBlock` (233) | Yes |
+| [Page Templates](show-describe-page-templates.md) | Proposed | SHOW/DESCRIBE for `Forms$PageTemplate` (215) | Yes |
+| [Nanoflow DESCRIBE](show-describe-nanoflows.md) | Proposed | Enhanced DESCRIBE for `Microflows$Nanoflow` (227). Very low complexity — pure wiring | Yes (full) |
+| [JSON Structures](show-describe-json-structures.md) | Proposed | SHOW/DESCRIBE for `JsonStructures$JsonStructure` (96). Recursive element tree | No |
+| [Import Mappings](show-describe-import-mappings.md) | Proposed | SHOW/DESCRIBE for `ImportMappings$ImportMapping` (83). High complexity | No |
+| [Export Mappings](show-describe-export-mappings.md) | Proposed | SHOW/DESCRIBE for `ExportMappings$ExportMapping` (67). Shares impl with Import Mappings | No |
+| [Published REST Services](show-describe-published-rest-services.md) | Proposed | SHOW/DESCRIBE for `Rest$PublishedRestService` (16) | Yes |
+
+**Tier 2 — Medium Priority** (common, useful for project understanding):
+
+| Proposal | Status | Summary | Reader Exists |
+|----------|--------|---------|---------------|
+| [Module Settings](show-describe-module-settings.md) | Proposed | SHOW/DESCRIBE for `Projects$ModuleSettings` (97). Low complexity | No |
+| [Image Collections](show-describe-image-collections.md) | Proposed | SHOW/DESCRIBE for `Images$ImageCollection` (65) | Yes |
+| [Rules](show-describe-rules.md) | Proposed | SHOW/DESCRIBE for `Microflows$Rule` (49). Reuses microflow parsing | No |
+| [Message Definitions](show-describe-message-definitions.md) | Proposed | SHOW/DESCRIBE for `MessageDefinitions$MessageDefinitionCollection` (28) | No |
+| [Scheduled Events](show-describe-scheduled-events.md) | Proposed | SHOW/DESCRIBE for `ScheduledEvents$ScheduledEvent` (19) | Yes |
+| [Consumed REST Services](show-describe-consumed-rest-services.md) | Proposed | SHOW/DESCRIBE for `Rest$ConsumedRestService` (2) | No |
+
+**Tier 3 — Low Priority** (small counts, simple types):
+
+| Proposal | Status | Summary | Reader Exists |
+|----------|--------|---------|---------------|
+| [Regular Expressions](show-describe-regular-expressions.md) | Proposed | SHOW/DESCRIBE for `RegularExpressions$RegularExpression` (13). Very low complexity | No |
+| [Custom Icon Collections](show-describe-custom-icon-collections.md) | Proposed | SHOW/DESCRIBE for `CustomIcons$CustomIconCollection` (8) | No |
+| [Menu Documents](show-describe-menu-documents.md) | Proposed | SHOW/DESCRIBE for `Menus$MenuDocument` (6). Recursive menu items | No |
+| [Queues](show-describe-queues.md) | Proposed | SHOW/DESCRIBE for `Queues$Queue` (5). Very low complexity | No |
+| [Pluggable Widgets](show-describe-pluggable-widgets.md) | Proposed | Improve DESCRIBE output for pluggable (React) widgets that fall through to generic formatting | Yes |
+
+### Linting
+
+| Proposal | Status | Summary | Depends On |
+|----------|--------|---------|------------|
+| [Linter Framework](PROPOSAL_mxcli_linter.md) | Partial | Built-in Go rules (14) + Starlark extensible engine done. Some advanced rules remain | — |
+
 ### Documentation & Analysis
 
 | Proposal | Status | Summary | Depends On |
