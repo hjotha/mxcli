@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -157,6 +159,319 @@ func TestOperationRegistryCustomRegistration(t *testing.T) {
 	fn(bson.D{}, nil, "test", &BuildContext{})
 	if !called {
 		t.Error("custom operation was not called")
+	}
+}
+
+// =============================================================================
+// PluggableWidgetEngine Tests
+// =============================================================================
+
+func TestEvaluateCondition(t *testing.T) {
+	engine := &PluggableWidgetEngine{
+		operations: NewOperationRegistry(),
+	}
+
+	tests := []struct {
+		name      string
+		condition string
+		widget    *ast.WidgetV3
+		expected  bool
+	}{
+		{
+			name:      "hasDataSource with datasource present",
+			condition: "hasDataSource",
+			widget: &ast.WidgetV3{
+				Properties: map[string]any{
+					"DataSource": &ast.DataSourceV3{Type: "database", Reference: "Module.Entity"},
+				},
+			},
+			expected: true,
+		},
+		{
+			name:      "hasDataSource without datasource",
+			condition: "hasDataSource",
+			widget:    &ast.WidgetV3{Properties: map[string]any{}},
+			expected:  false,
+		},
+		{
+			name:      "hasAttribute with attribute present",
+			condition: "hasAttribute",
+			widget:    &ast.WidgetV3{Properties: map[string]any{"Attribute": "Name"}},
+			expected:  true,
+		},
+		{
+			name:      "hasAttribute without attribute",
+			condition: "hasAttribute",
+			widget:    &ast.WidgetV3{Properties: map[string]any{}},
+			expected:  false,
+		},
+		{
+			name:      "hasProp with matching prop",
+			condition: "hasProp:CaptionAttribute",
+			widget:    &ast.WidgetV3{Properties: map[string]any{"CaptionAttribute": "DisplayName"}},
+			expected:  true,
+		},
+		{
+			name:      "hasProp without matching prop",
+			condition: "hasProp:CaptionAttribute",
+			widget:    &ast.WidgetV3{Properties: map[string]any{}},
+			expected:  false,
+		},
+		{
+			name:      "unknown condition returns false",
+			condition: "unknownCondition",
+			widget:    &ast.WidgetV3{Properties: map[string]any{}},
+			expected:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := engine.evaluateCondition(tc.condition, tc.widget)
+			if result != tc.expected {
+				t.Errorf("evaluateCondition(%q) = %v, want %v", tc.condition, result, tc.expected)
+			}
+		})
+	}
+}
+
+func TestSelectMappings_NoModes(t *testing.T) {
+	engine := &PluggableWidgetEngine{operations: NewOperationRegistry()}
+
+	def := &WidgetDefinition{
+		PropertyMappings: []PropertyMapping{
+			{PropertyKey: "attr", Source: "Attribute", Operation: "attribute"},
+		},
+		ChildSlots: []ChildSlotMapping{
+			{PropertyKey: "content", MDLContainer: "TEMPLATE", Operation: "widgets"},
+		},
+	}
+	w := &ast.WidgetV3{Properties: map[string]any{}}
+
+	mappings, slots, err := engine.selectMappings(def, w)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mappings) != 1 || mappings[0].PropertyKey != "attr" {
+		t.Errorf("expected 1 mapping with key 'attr', got %v", mappings)
+	}
+	if len(slots) != 1 || slots[0].PropertyKey != "content" {
+		t.Errorf("expected 1 slot with key 'content', got %v", slots)
+	}
+}
+
+func TestSelectMappings_WithModes(t *testing.T) {
+	engine := &PluggableWidgetEngine{operations: NewOperationRegistry()}
+
+	def := &WidgetDefinition{
+		Modes: map[string]WidgetMode{
+			"association": {
+				Condition:        "hasDataSource",
+				PropertyMappings: []PropertyMapping{{PropertyKey: "assoc", Operation: "association"}},
+			},
+			"default": {
+				PropertyMappings: []PropertyMapping{{PropertyKey: "enum", Operation: "attribute"}},
+			},
+		},
+	}
+
+	t.Run("matches association mode", func(t *testing.T) {
+		w := &ast.WidgetV3{
+			Properties: map[string]any{
+				"DataSource": &ast.DataSourceV3{Type: "database"},
+			},
+		}
+		mappings, _, err := engine.selectMappings(def, w)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(mappings) != 1 || mappings[0].PropertyKey != "assoc" {
+			t.Errorf("expected association mode, got %v", mappings)
+		}
+	})
+
+	t.Run("falls back to default mode", func(t *testing.T) {
+		w := &ast.WidgetV3{Properties: map[string]any{}}
+		mappings, _, err := engine.selectMappings(def, w)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(mappings) != 1 || mappings[0].PropertyKey != "enum" {
+			t.Errorf("expected default mode, got %v", mappings)
+		}
+	})
+}
+
+func TestResolveMapping_StaticValue(t *testing.T) {
+	engine := &PluggableWidgetEngine{operations: NewOperationRegistry()}
+
+	mapping := PropertyMapping{
+		PropertyKey: "optionsSourceType",
+		Value:       "association",
+		Operation:   "primitive",
+	}
+	w := &ast.WidgetV3{Properties: map[string]any{}}
+
+	ctx, err := engine.resolveMapping(mapping, w)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.PrimitiveVal != "association" {
+		t.Errorf("expected PrimitiveVal='association', got %q", ctx.PrimitiveVal)
+	}
+}
+
+func TestResolveMapping_AttributeSource(t *testing.T) {
+	pb := &pageBuilder{
+		entityContext:    "Module.Entity",
+		paramEntityNames: map[string]string{},
+		widgetScope:      map[string]model.ID{},
+	}
+	engine := &PluggableWidgetEngine{
+		operations:  NewOperationRegistry(),
+		pageBuilder: pb,
+	}
+
+	mapping := PropertyMapping{
+		PropertyKey: "attributeEnumeration",
+		Source:      "Attribute",
+		Operation:   "attribute",
+	}
+	w := &ast.WidgetV3{Properties: map[string]any{"Attribute": "Name"}}
+
+	ctx, err := engine.resolveMapping(mapping, w)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.AttributePath != "Module.Entity.Name" {
+		t.Errorf("expected AttributePath='Module.Entity.Name', got %q", ctx.AttributePath)
+	}
+}
+
+func TestResolveMapping_SelectionWithDefault(t *testing.T) {
+	engine := &PluggableWidgetEngine{operations: NewOperationRegistry()}
+
+	mapping := PropertyMapping{
+		PropertyKey: "itemSelection",
+		Source:      "Selection",
+		Operation:   "primitive",
+		Default:     "Single",
+	}
+
+	t.Run("uses AST value when present", func(t *testing.T) {
+		w := &ast.WidgetV3{Properties: map[string]any{"Selection": "Multiple"}}
+		ctx, err := engine.resolveMapping(mapping, w)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ctx.PrimitiveVal != "Multiple" {
+			t.Errorf("expected PrimitiveVal='Multiple', got %q", ctx.PrimitiveVal)
+		}
+	})
+
+	t.Run("uses default when AST value empty", func(t *testing.T) {
+		w := &ast.WidgetV3{Properties: map[string]any{}}
+		ctx, err := engine.resolveMapping(mapping, w)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ctx.PrimitiveVal != "Single" {
+			t.Errorf("expected PrimitiveVal='Single', got %q", ctx.PrimitiveVal)
+		}
+	})
+}
+
+func TestResolveMapping_GenericProp(t *testing.T) {
+	engine := &PluggableWidgetEngine{operations: NewOperationRegistry()}
+
+	mapping := PropertyMapping{
+		PropertyKey: "customProp",
+		Source:      "MyCustomProp",
+		Operation:   "primitive",
+	}
+	w := &ast.WidgetV3{Properties: map[string]any{"MyCustomProp": "customValue"}}
+
+	ctx, err := engine.resolveMapping(mapping, w)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.PrimitiveVal != "customValue" {
+		t.Errorf("expected PrimitiveVal='customValue', got %q", ctx.PrimitiveVal)
+	}
+}
+
+func TestResolveMapping_EmptySource(t *testing.T) {
+	engine := &PluggableWidgetEngine{operations: NewOperationRegistry()}
+
+	mapping := PropertyMapping{
+		PropertyKey: "someProp",
+		Operation:   "primitive",
+	}
+	w := &ast.WidgetV3{Properties: map[string]any{}}
+
+	ctx, err := engine.resolveMapping(mapping, w)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.PrimitiveVal != "" || ctx.AttributePath != "" {
+		t.Errorf("expected empty context, got %+v", ctx)
+	}
+}
+
+func TestResolveMapping_CaptionAttribute(t *testing.T) {
+	pb := &pageBuilder{
+		entityContext:    "Module.Customer",
+		paramEntityNames: map[string]string{},
+		widgetScope:      map[string]model.ID{},
+	}
+	engine := &PluggableWidgetEngine{
+		operations:  NewOperationRegistry(),
+		pageBuilder: pb,
+	}
+
+	mapping := PropertyMapping{
+		PropertyKey: "captionAttr",
+		Source:      "CaptionAttribute",
+		Operation:   "attribute",
+	}
+	w := &ast.WidgetV3{Properties: map[string]any{"CaptionAttribute": "FullName"}}
+
+	ctx, err := engine.resolveMapping(mapping, w)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.AttributePath != "Module.Customer.FullName" {
+		t.Errorf("expected 'Module.Customer.FullName', got %q", ctx.AttributePath)
+	}
+}
+
+func TestResolveMapping_Association(t *testing.T) {
+	pb := &pageBuilder{
+		entityContext:    "Module.Order",
+		paramEntityNames: map[string]string{},
+		widgetScope:      map[string]model.ID{},
+	}
+	engine := &PluggableWidgetEngine{
+		operations:  NewOperationRegistry(),
+		pageBuilder: pb,
+	}
+
+	mapping := PropertyMapping{
+		PropertyKey: "attributeAssociation",
+		Source:      "Association",
+		Operation:   "association",
+	}
+	w := &ast.WidgetV3{Properties: map[string]any{"Attribute": "Order_Customer"}}
+
+	ctx, err := engine.resolveMapping(mapping, w)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ctx.AssocPath != "Module.Order_Customer" {
+		t.Errorf("expected AssocPath='Module.Order_Customer', got %q", ctx.AssocPath)
+	}
+	if ctx.EntityName != "Module.Order" {
+		t.Errorf("expected EntityName='Module.Order', got %q", ctx.EntityName)
 	}
 }
 

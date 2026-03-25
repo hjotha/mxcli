@@ -3,7 +3,14 @@
 package executor
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/sdk/widgets"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -164,4 +171,266 @@ func setChildWidgets(val bson.D, childWidgets []bson.D) bson.D {
 		}
 	}
 	return result
+}
+
+// =============================================================================
+// Pluggable Widget Engine
+// =============================================================================
+
+// PluggableWidgetEngine builds CustomWidget instances from WidgetDefinition + AST.
+type PluggableWidgetEngine struct {
+	operations  *OperationRegistry
+	pageBuilder *pageBuilder
+}
+
+// NewPluggableWidgetEngine creates a new engine with the given registry and page builder.
+func NewPluggableWidgetEngine(ops *OperationRegistry, pb *pageBuilder) *PluggableWidgetEngine {
+	return &PluggableWidgetEngine{
+		operations:  ops,
+		pageBuilder: pb,
+	}
+}
+
+// Build constructs a CustomWidget from a definition and AST widget node.
+func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*pages.CustomWidget, error) {
+	// 1. Load template
+	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err :=
+		widgets.GetTemplateFullBSON(def.WidgetID, mpr.GenerateID, e.pageBuilder.reader.Path())
+	if err != nil {
+		return nil, fmt.Errorf("failed to load %s template: %w", def.MDLName, err)
+	}
+	if embeddedType == nil || embeddedObject == nil {
+		return nil, fmt.Errorf("%s template not found", def.MDLName)
+	}
+
+	propertyTypeIDs := convertPropertyTypeIDs(embeddedIDs)
+	updatedObject := embeddedObject
+
+	// 2. Select mode and get mappings/slots
+	mappings, slots, err := e.selectMappings(def, w)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Apply property mappings
+	for _, mapping := range mappings {
+		ctx, err := e.resolveMapping(mapping, w)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve mapping for %s: %w", mapping.PropertyKey, err)
+		}
+
+		op := e.operations.Lookup(mapping.Operation)
+		if op == nil {
+			return nil, fmt.Errorf("unknown operation %q for property %s", mapping.Operation, mapping.PropertyKey)
+		}
+
+		updatedObject = op(updatedObject, propertyTypeIDs, mapping.PropertyKey, ctx)
+	}
+
+	// 4. Apply child slots
+	if err := e.applyChildSlots(slots, w, propertyTypeIDs, &updatedObject); err != nil {
+		return nil, err
+	}
+
+	// 5. Build CustomWidget
+	widgetID := model.ID(mpr.GenerateID())
+	cw := &pages.CustomWidget{
+		BaseWidget: pages.BaseWidget{
+			BaseElement: model.BaseElement{
+				ID:       widgetID,
+				TypeName: "CustomWidgets$CustomWidget",
+			},
+			Name: w.Name,
+		},
+		Label:             w.GetLabel(),
+		Editable:          def.DefaultEditable,
+		RawType:           embeddedType,
+		RawObject:         updatedObject,
+		PropertyTypeIDMap: propertyTypeIDs,
+		ObjectTypeID:      embeddedObjectTypeID,
+	}
+
+	if err := e.pageBuilder.registerWidgetName(w.Name, cw.ID); err != nil {
+		return nil, err
+	}
+
+	return cw, nil
+}
+
+// selectMappings selects the active PropertyMappings and ChildSlotMappings based on mode.
+func (e *PluggableWidgetEngine) selectMappings(def *WidgetDefinition, w *ast.WidgetV3) ([]PropertyMapping, []ChildSlotMapping, error) {
+	// No modes defined — use top-level mappings directly
+	if len(def.Modes) == 0 {
+		return def.PropertyMappings, def.ChildSlots, nil
+	}
+
+	// Evaluate each mode's condition, pick first match
+	for name, mode := range def.Modes {
+		if name == "default" {
+			continue // evaluated as fallback
+		}
+		if e.evaluateCondition(mode.Condition, w) {
+			return mode.PropertyMappings, mode.ChildSlots, nil
+		}
+	}
+
+	// Fallback to "default" mode
+	if defaultMode, ok := def.Modes["default"]; ok {
+		return defaultMode.PropertyMappings, defaultMode.ChildSlots, nil
+	}
+
+	return nil, nil, fmt.Errorf("no matching mode for widget %s", def.MDLName)
+}
+
+// evaluateCondition checks a built-in condition string against the AST widget.
+func (e *PluggableWidgetEngine) evaluateCondition(condition string, w *ast.WidgetV3) bool {
+	switch {
+	case condition == "hasDataSource":
+		return w.GetDataSource() != nil
+	case condition == "hasAttribute":
+		return w.GetAttribute() != ""
+	case strings.HasPrefix(condition, "hasProp:"):
+		propName := strings.TrimPrefix(condition, "hasProp:")
+		return w.GetStringProp(propName) != ""
+	default:
+		return false
+	}
+}
+
+// resolveMapping resolves a PropertyMapping's source into a BuildContext.
+func (e *PluggableWidgetEngine) resolveMapping(mapping PropertyMapping, w *ast.WidgetV3) (*BuildContext, error) {
+	ctx := &BuildContext{}
+
+	// Static value takes priority
+	if mapping.Value != "" {
+		ctx.PrimitiveVal = mapping.Value
+		return ctx, nil
+	}
+
+	source := mapping.Source
+	if source == "" {
+		return ctx, nil
+	}
+
+	switch source {
+	case "Attribute":
+		if attr := w.GetAttribute(); attr != "" {
+			ctx.AttributePath = e.pageBuilder.resolveAttributePath(attr)
+		}
+
+	case "DataSource":
+		if ds := w.GetDataSource(); ds != nil {
+			dataSource, entityName, err := e.pageBuilder.buildDataSourceV3(ds)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build datasource: %w", err)
+			}
+			ctx.DataSource = dataSource
+			ctx.EntityName = entityName
+			if entityName != "" {
+				e.pageBuilder.entityContext = entityName
+				if w.Name != "" {
+					e.pageBuilder.paramEntityNames[w.Name] = entityName
+				}
+			}
+		}
+
+	case "Selection":
+		val := w.GetSelection()
+		if val == "" && mapping.Default != "" {
+			val = mapping.Default
+		}
+		ctx.PrimitiveVal = val
+
+	case "CaptionAttribute":
+		if captionAttr := w.GetStringProp("CaptionAttribute"); captionAttr != "" {
+			// Resolve relative to entity context
+			if !strings.Contains(captionAttr, ".") && e.pageBuilder.entityContext != "" {
+				captionAttr = e.pageBuilder.entityContext + "." + captionAttr
+			}
+			ctx.AttributePath = captionAttr
+		}
+
+	case "Association":
+		// For association operation: resolve both assoc path AND entity name from DataSource
+		if attr := w.GetAttribute(); attr != "" {
+			ctx.AssocPath = e.pageBuilder.resolveAssociationPath(attr)
+		}
+		// Entity name comes from DataSource context (must be resolved first by a DataSource mapping)
+		ctx.EntityName = e.pageBuilder.entityContext
+
+	default:
+		// Generic fallback: treat source as a property name on the AST widget
+		val := w.GetStringProp(source)
+		if val == "" && mapping.Default != "" {
+			val = mapping.Default
+		}
+		ctx.PrimitiveVal = val
+	}
+
+	return ctx, nil
+}
+
+// applyChildSlots processes child slot mappings, building child widgets and embedding them.
+func (e *PluggableWidgetEngine) applyChildSlots(slots []ChildSlotMapping, w *ast.WidgetV3, propertyTypeIDs map[string]pages.PropertyTypeIDEntry, updatedObject *bson.D) error {
+	if len(slots) == 0 {
+		return nil
+	}
+
+	// Build a set of slot container names for matching
+	slotContainers := make(map[string]*ChildSlotMapping, len(slots))
+	for i := range slots {
+		slotContainers[slots[i].MDLContainer] = &slots[i]
+	}
+
+	// Group children by slot
+	slotWidgets := make(map[string][]bson.D)
+	var defaultWidgets []bson.D
+
+	for _, child := range w.Children {
+		upperType := strings.ToUpper(child.Type)
+		if slot, ok := slotContainers[upperType]; ok {
+			// Container matches a slot — build its children
+			for _, slotChild := range child.Children {
+				widgetBSON, err := e.pageBuilder.buildWidgetV3ToBSON(slotChild)
+				if err != nil {
+					return err
+				}
+				if widgetBSON != nil {
+					slotWidgets[slot.PropertyKey] = append(slotWidgets[slot.PropertyKey], widgetBSON)
+				}
+			}
+		} else {
+			// Direct child — default content
+			widgetBSON, err := e.pageBuilder.buildWidgetV3ToBSON(child)
+			if err != nil {
+				return err
+			}
+			if widgetBSON != nil {
+				defaultWidgets = append(defaultWidgets, widgetBSON)
+			}
+		}
+	}
+
+	// Apply each slot's widgets via its operation
+	for _, slot := range slots {
+		childBSONs := slotWidgets[slot.PropertyKey]
+		// If no explicit container children, use default widgets for the first slot
+		if len(childBSONs) == 0 && len(defaultWidgets) > 0 && slot.MDLContainer == "TEMPLATE" {
+			childBSONs = defaultWidgets
+			defaultWidgets = nil // consume once
+		}
+		if len(childBSONs) == 0 {
+			continue
+		}
+
+		op := e.operations.Lookup(slot.Operation)
+		if op == nil {
+			return fmt.Errorf("unknown operation %q for child slot %s", slot.Operation, slot.PropertyKey)
+		}
+
+		ctx := &BuildContext{ChildWidgets: childBSONs}
+		*updatedObject = op(*updatedObject, propertyTypeIDs, slot.PropertyKey, ctx)
+	}
+
+	return nil
 }
