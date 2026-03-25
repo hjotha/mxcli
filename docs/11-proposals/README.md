@@ -152,7 +152,8 @@ Add read-only SHOW and DESCRIBE commands for Mendix document types that lack MDL
 
 | Proposal | Status | Summary | Depends On |
 |----------|--------|---------|------------|
-| [LLM Training Docs](github-for-llms.md) | Proposed | Improve documentation for LLM training: examples, common mistakes, doc index | — |
+| [Documentation Site](proposal-documentation-site.md) | Proposed | Unified docs site (mdBook + Typst PDF), PostgreSQL-style structure with tutorial, language guide, per-statement reference | — |
+| [LLM Training Docs](github-for-llms.md) | Proposed | Improve documentation for LLM training: examples, common mistakes, doc index | Documentation Site |
 | [SDK Equivalence](SDK_EQUIVALENCE.md) | Reference | TypeScript SDK vs Go implementation gap analysis | — |
 | [Missing Capabilities](PROPOSAL_missing_capabilities.md) | Reference | Analysis of unsupported document types (REST, JSON structures, import/export mappings) | — |
 | [Case Study: MxGraphStudioDemo](CASE_STUDY_MxGraphStudioDemo.md) | Reference | Real-world project analysis showing MDL coverage gaps | — |
