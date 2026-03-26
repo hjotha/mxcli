@@ -60,34 +60,30 @@ CREATE IMAGE COLLECTION ImgTest.BrandAssets
 /
 
 -- ============================================================================
--- LEVEL 2: Create with Image Files
+-- LEVEL 2: Create with Image Files (syntax reference)
 -- ============================================================================
-
-/**
- * Level 2.1: Create a collection with images from files
- *
- * IMAGE 'name' FROM FILE 'path' loads an image from the filesystem.
- * The image format is detected from the file extension.
- * Relative paths are resolved from the current working directory.
- *
- * Supported formats: PNG, SVG, GIF, JPEG, BMP, WebP
- */
-CREATE IMAGE COLLECTION ImgTest.NavigationIcons (
-  IMAGE 'home' FROM FILE 'assets/home.png',
-  IMAGE 'settings' FROM FILE 'assets/settings.svg'
-);
-/
-
-/**
- * Level 2.2: Create with both options and images
- */
-CREATE IMAGE COLLECTION ImgTest.AppLogos
-  EXPORT LEVEL 'Public'
-  COMMENT 'Application logos for branding' (
-  IMAGE 'logo-dark' FROM FILE 'assets/logo-dark.png',
-  IMAGE 'logo-light' FROM FILE 'assets/logo-light.png'
-);
-/
+--
+-- IMAGE 'name' FROM FILE 'path' loads an image from the filesystem.
+-- The image format is detected from the file extension.
+-- Relative paths are resolved from the current working directory.
+-- Supported formats: PNG, SVG, GIF, JPEG, BMP, WebP
+--
+-- Example (requires actual image files on disk):
+--
+--   CREATE IMAGE COLLECTION ImgTest.NavigationIcons (
+--     IMAGE 'home' FROM FILE 'assets/home.png',
+--     IMAGE 'settings' FROM FILE 'assets/settings.svg'
+--   );
+--
+-- With options and images combined:
+--
+--   CREATE IMAGE COLLECTION ImgTest.AppLogos
+--     EXPORT LEVEL 'Public'
+--     COMMENT 'Application logos for branding' (
+--     IMAGE 'logo-dark' FROM FILE 'assets/logo-dark.png',
+--     IMAGE 'logo-light' FROM FILE 'assets/logo-light.png'
+--   );
+--
 
 -- MARK: Show
 
@@ -141,8 +137,8 @@ SHOW IMAGE COLLECTION IN ImgTest;
 -- ✅ CREATE IMAGE COLLECTION Module.Name
 -- ✅ CREATE IMAGE COLLECTION with EXPORT LEVEL 'Public'|'Hidden'
 -- ✅ CREATE IMAGE COLLECTION with COMMENT 'description'
--- ✅ CREATE IMAGE COLLECTION with IMAGE 'name' FROM FILE 'path'
--- ✅ CREATE IMAGE COLLECTION with options + images combined
+-- ✅ CREATE IMAGE COLLECTION with IMAGE 'name' FROM FILE 'path' (syntax ref)
+-- ✅ CREATE IMAGE COLLECTION with options + images combined (syntax ref)
 -- ✅ SHOW IMAGE COLLECTION [IN Module] — list all collections
 -- ✅ DESCRIBE IMAGE COLLECTION Module.Name — show full definition
 -- ✅ DROP IMAGE COLLECTION Module.Name — remove collection

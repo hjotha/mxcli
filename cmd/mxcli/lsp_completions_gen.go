@@ -237,7 +237,6 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "FILTERTYPE", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "IMAGE", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "COLLECTION", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
-	{Label: "FILE", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "STATICIMAGE", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "DYNAMICIMAGE", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},
 	{Label: "CUSTOMCONTAINER", Kind: protocol.CompletionItemKindKeyword, Detail: "Widget keyword"},

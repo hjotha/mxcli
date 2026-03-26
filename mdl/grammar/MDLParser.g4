@@ -792,7 +792,7 @@ imageCollectionBody
     ;
 
 imageCollectionItem
-    : IMAGE name=STRING_LITERAL FROM FILE path=STRING_LITERAL   // IMAGE 'name' FROM FILE '/path/to/file.png'
+    : IMAGE name=STRING_LITERAL FROM FILE_KW path=STRING_LITERAL   // IMAGE 'name' FROM FILE '/path/to/file.png'
     ;
 
 // =============================================================================
