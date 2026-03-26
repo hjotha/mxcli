@@ -132,7 +132,7 @@ func (a *App) syncBrowserView() {
 	// Ensure miller has current dimensions so scroll calculations in
 	// Update() work correctly (Render operates on a value copy).
 	if a.height > 0 {
-		contentH := max(5, a.height-chromeHeight)
+		contentH := max(5, a.height-chromeHeight-1) // -1 for LLM anchor line
 		bv.miller.SetSize(a.width, contentH)
 	}
 	a.views.SetBase(bv)
@@ -168,6 +168,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case PopViewMsg:
 		a.views.Pop()
+		return a, nil
+
+	case PaletteExecMsg:
+		a.views.Pop()
+		if msg.Key != "" {
+			return a, a.dispatchPaletteKey(msg.Key)
+		}
 		return a, nil
 
 	// --- View creation messages ---
@@ -452,7 +459,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// scroll calculations (Render operates on a copy and cannot
 		// persist dimensions back).
 		if bv, ok := a.views.Active().(BrowserView); ok {
-			contentH := a.height - chromeHeight
+			contentH := a.height - chromeHeight - 1 // -1 for LLM anchor line
 			if contentH < 5 {
 				contentH = 5
 			}
@@ -474,7 +481,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					bv.allNodes = msg.Nodes
 					bv.miller = tab.Miller
 					if a.height > 0 {
-						contentH := max(5, a.height-chromeHeight)
+						contentH := max(5, a.height-chromeHeight-1) // -1 for LLM anchor line
 						bv.miller.SetSize(a.width, contentH)
 					}
 					a.views.SetBase(bv)
@@ -727,6 +734,11 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		a.views.Push(ov)
 		return handledCmd
 
+	case ":":
+		cp := NewCommandPaletteView(a.width, a.height)
+		a.views.Push(cp)
+		return handledCmd
+
 	case "c":
 		cv := NewCompareView()
 		cv.mxcliPath = a.mxcliPath
@@ -820,8 +832,8 @@ func (a App) View() string {
 		}
 	}
 
-	// Content area
-	contentH := a.height - chromeHeight
+	// Content area (chromeHeight + 1 for the LLM anchor line)
+	contentH := a.height - chromeHeight - 1
 	if contentH < 5 {
 		contentH = 5
 	}
@@ -849,7 +861,11 @@ func (a App) View() string {
 	a.statusBar.SetViewDepth(a.views.Depth(), viewModeNames)
 	statusLine := StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))
 
-	rendered := tabLine + "\n" + content + "\n" + hintLine + "\n" + statusLine
+	// LLM anchor: machine-readable command list (Faint, not visible to users in practice)
+	anchorStyle := lipgloss.NewStyle().Foreground(MutedColor).Faint(true)
+	anchorLine := anchorStyle.Render("[mxcli:commands] h:back l:open Space:jump /:filter b:bson c:compare d:diagram z:zen Tab:toggle x:exec r:refresh y:copy !:check ]e:next-error [e:prev-error t:tab T:new-tab W:close-tab 1-9:switch ?:help ::palette")
+
+	rendered := anchorLine + "\n" + tabLine + "\n" + content + "\n" + hintLine + "\n" + statusLine
 
 	if a.showHelp {
 		helpView := renderHelp(a.width, a.height)
@@ -937,6 +953,21 @@ func renderContextSummary(nodes []*TreeNode) string {
 // collectViewModeNames returns the mode names for all views in the stack.
 func (a App) collectViewModeNames() []string {
 	return a.views.ModeNames()
+}
+
+// dispatchPaletteKey converts a palette command key string into a synthetic
+// tea.KeyMsg and re-dispatches it through Update.
+func (a App) dispatchPaletteKey(key string) tea.Cmd {
+	var keyMsg tea.KeyMsg
+	switch key {
+	case " ":
+		keyMsg = tea.KeyMsg{Type: tea.KeySpace}
+	case "Tab":
+		keyMsg = tea.KeyMsg{Type: tea.KeyTab}
+	default:
+		keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
+	}
+	return func() tea.Msg { return keyMsg }
 }
 
 // inferBsonType maps tree node types to valid bson object types.

@@ -66,6 +66,7 @@ const helpText = `
     q       close
 
   OTHER
+    :    command palette
     ?    show/hide this help
     q    quit
 `
