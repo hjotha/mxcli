@@ -111,24 +111,15 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 	}
 	r.projectVersion = pv
 
-	// Reconcile version detection: the database _FormatVersion is authoritative.
-	// The folder-based check can fail if the .mpr file was copied without the
-	// mprcontents/ folder, but the schema still won't have the Contents column.
-	if pv.FormatVersion >= 2 && r.version == MPRVersionV1 {
-		// DB says v2 but mprcontents folder wasn't found — try harder to locate it
+	// Reconcile version detection: the folder-based check can fail if the .mpr
+	// file was copied without the mprcontents/ folder. Check the actual DB schema
+	// to determine whether the Unit table has a Contents column. If it doesn't,
+	// we must use v2 code paths to avoid "no such column: Contents" errors.
+	if r.version == MPRVersionV1 && !r.unitTableHasContents() {
 		dir := filepath.Dir(path)
 		contentsDir := filepath.Join(dir, "mprcontents")
-		if stat, err := os.Stat(contentsDir); err == nil && stat.IsDir() {
-			r.version = MPRVersionV2
-			r.contentsDir = contentsDir
-		} else {
-			// Format is v2 (no Contents column in Unit table) but mprcontents
-			// folder is missing — set version to v2 to avoid querying the
-			// non-existent Contents column. Content reads will fail individually
-			// with clear errors instead of a blanket schema error.
-			r.version = MPRVersionV2
-			r.contentsDir = contentsDir // best-guess path
-		}
+		r.version = MPRVersionV2
+		r.contentsDir = contentsDir
 	}
 
 	// Verify it's a valid MPR file
@@ -146,6 +137,29 @@ func (r *Reader) Close() error {
 		return r.db.Close()
 	}
 	return nil
+}
+
+// unitTableHasContents checks whether the Unit table has a Contents column.
+// MPR v2 schemas (Mendix 10.18+) drop this column; v1 schemas have it.
+func (r *Reader) unitTableHasContents() bool {
+	rows, err := r.db.Query("PRAGMA table_info(Unit)")
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var dfltValue *string
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+			continue
+		}
+		if name == "Contents" {
+			return true
+		}
+	}
+	return false
 }
 
 // Path returns the path to the MPR file.
