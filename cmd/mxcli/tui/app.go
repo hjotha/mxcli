@@ -1417,11 +1417,13 @@ func agentBuildState(a App) agentStateInfo {
 // agentExecChanges is a structured summary of exec output changes.
 type agentExecChange struct {
 	Action string `json:"action"` // "created", "modified", "dropped"
-	Target string `json:"target"` // e.g. "entity: Module.Entity"
+	Target string `json:"target"` // e.g. "entity Module.Entity"
 }
 
-// agentChangePattern matches lines like "Created entity: Module.Entity"
-var agentChangePattern = regexp.MustCompile(`(?im)^(Created|Modified|Dropped|Deleted|Added|Removed)\s+(.+)$`)
+// agentChangePattern matches exec output lines like "Created entity MyModule.Customer".
+// Requires a known Mendix type keyword after the verb to avoid matching log noise
+// such as "Removed trailing whitespace".
+var agentChangePattern = regexp.MustCompile(`(?im)^(Created|Modified|Dropped|Deleted|Added|Removed)\s+(entity|association|attribute|enumeration|microflow|nanoflow|page|layout|snippet|module|folder|constant|workflow|image collection|java action|user role|module role|demo user|business event service)\s+(.+)$`)
 
 // agentParseChanges extracts structured changes from exec output.
 func agentParseChanges(output string) []agentExecChange {
@@ -1433,7 +1435,7 @@ func agentParseChanges(output string) []agentExecChange {
 	for _, m := range matches {
 		changes = append(changes, agentExecChange{
 			Action: strings.ToLower(m[1]),
-			Target: strings.TrimSpace(m[2]),
+			Target: strings.ToLower(m[2]) + " " + strings.TrimSpace(m[3]),
 		})
 	}
 	return changes
