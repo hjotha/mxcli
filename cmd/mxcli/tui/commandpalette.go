@@ -163,39 +163,60 @@ func (cp CommandPaletteView) Render(width, height int) string {
 	keyStyle := lipgloss.NewStyle().Foreground(MutedColor)
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor)
 
-	boxWidth := max(30, min(60, width-10))
+	contentWidth := max(30, min(56, width-14)) // inner content width (box adds border+padding)
 
 	var sb strings.Builder
 	sb.WriteString(titleStyle.Render("Commands") + "\n")
 	sb.WriteString(cp.input.View() + "\n\n")
 
-	// Build visible entries with scroll
+	// Determine scroll window
+	maxVisibleLines := max(6, min(paletteMaxVisible, height-10))
 	entries := cp.filtered
-	selectableIdx := 0
 
-	for _, entry := range entries {
+	// Find scroll offset to keep selected item visible
+	scrollOffset := cp.computeScrollOffset(maxVisibleLines)
+
+	selectableIdx := 0
+	visibleLines := 0
+
+	for i, entry := range entries {
+		if i < scrollOffset {
+			if !entry.isHeader {
+				selectableIdx++
+			}
+			continue
+		}
+		if visibleLines >= maxVisibleLines {
+			break
+		}
+
 		if entry.isHeader {
 			sb.WriteString(catStyle.Render("  "+entry.category) + "\n")
+			visibleLines++
 			continue
 		}
 
-		prefix := "    "
 		shortcut := entry.command.Key
 		name := entry.command.Name
 
+		// Calculate padding between name and shortcut
+		shortcutWidth := len(shortcut)
+		nameMaxWidth := contentWidth - 6 - shortcutWidth // "  > " prefix + spacing
+		if len(name) > nameMaxWidth {
+			name = name[:nameMaxWidth-1] + "~"
+		}
+		pad := contentWidth - 4 - len(name) - shortcutWidth
+		if pad < 1 {
+			pad = 1
+		}
+
 		if selectableIdx == cp.selectedIdx {
-			line := fmt.Sprintf("%s> %-*s %s",
-				"  ", boxWidth-12, name, shortcut)
-			sb.WriteString(selStyle.Render(line) + "\n")
+			sb.WriteString(selStyle.Render("  > "+name) + strings.Repeat(" ", pad) + selStyle.Render(shortcut) + "\n")
 		} else {
-			label := prefix + normStyle.Render(name)
-			pad := boxWidth - 8 - lipgloss.Width(name)
-			if pad < 1 {
-				pad = 1
-			}
-			sb.WriteString(label + strings.Repeat(" ", pad) + keyStyle.Render(shortcut) + "\n")
+			sb.WriteString("    " + normStyle.Render(name) + strings.Repeat(" ", pad) + keyStyle.Render(shortcut) + "\n")
 		}
 		selectableIdx++
+		visibleLines++
 	}
 
 	selectableCount := cp.countSelectable()
@@ -205,13 +226,42 @@ func (cp CommandPaletteView) Render(width, height int) string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(AccentColor).
 		Padding(1, 2).
-		Width(boxWidth).
 		Render(sb.String())
 
 	return lipgloss.Place(width, height,
 		lipgloss.Center, lipgloss.Center,
-		box,
-		lipgloss.WithWhitespaceBackground(lipgloss.Color("0")))
+		box)
+}
+
+// computeScrollOffset returns the first entry index to render, keeping selectedIdx visible.
+func (cp *CommandPaletteView) computeScrollOffset(maxVisible int) int {
+	if len(cp.filtered) <= maxVisible {
+		return 0
+	}
+
+	// Find the line index of the selected command
+	targetLine := 0
+	selectableIdx := 0
+	for i, entry := range cp.filtered {
+		if !entry.isHeader {
+			if selectableIdx == cp.selectedIdx {
+				targetLine = i
+				break
+			}
+			selectableIdx++
+		}
+	}
+
+	// Ensure selected item is within visible window
+	// Show a few lines of context above
+	offset := targetLine - maxVisible/3
+	if offset < 0 {
+		offset = 0
+	}
+	if offset+maxVisible > len(cp.filtered) {
+		offset = max(0, len(cp.filtered)-maxVisible)
+	}
+	return offset
 }
 
 // refilter rebuilds the filtered entries based on the current input.

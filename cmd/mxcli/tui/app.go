@@ -50,6 +50,8 @@ type App struct {
 	watcher       *Watcher
 	checkErrors   []CheckError // nil = no check run yet, empty = pass
 	checkRunning  bool
+
+	pendingSession *TUISession // session to restore after tree loads
 }
 
 // NewApp creates the root App model.
@@ -405,8 +407,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 
-		// Tab bar clicks (row 0) — only when in browser mode
-		if msg.Y == 0 && a.views.Active().Mode() == ModeBrowser &&
+		// Tab bar clicks (row 1, after LLM anchor line) — only when in browser mode
+		if msg.Y == 1 && a.views.Active().Mode() == ModeBrowser &&
 			msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			if clickMsg := a.tabBar.HandleClick(msg.X); clickMsg != nil {
 				if tc, ok := clickMsg.(TabClickMsg); ok {
@@ -434,10 +436,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Offset Y by -1 for tab bar when in browser mode
+		// Offset Y by -2 (LLM anchor line + tab bar) when in browser mode
 		if a.views.Active().Mode() == ModeBrowser {
 			offsetMsg := tea.MouseMsg{
-				X: msg.X, Y: msg.Y - 1,
+				X: msg.X, Y: msg.Y - 2,
 				Button: msg.Button, Action: msg.Action,
 			}
 			updated, cmd := a.views.Active().Update(offsetMsg)
@@ -486,6 +488,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					a.views.SetBase(bv)
 				}
+			}
+
+			// Apply pending session restore after tree is loaded
+			if a.pendingSession != nil {
+				applySessionRestore(&a)
 			}
 		}
 		return a, nil
@@ -630,6 +637,10 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 
 	switch msg.String() {
 	case "q":
+		// Save session state before quitting
+		if session := ExtractSession(a); session != nil {
+			_ = SaveSession(session)
+		}
 		if a.watcher != nil {
 			a.watcher.Close()
 		}
@@ -743,13 +754,17 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		cv := NewCompareView()
 		cv.mxcliPath = a.mxcliPath
 		cv.projectPath = a.activeTabProjectPath()
-		cv.Show(CompareNDSL, a.width, a.height)
+		cv.Show(CompareNDSLMDL, a.width, a.height)
 		if tab != nil {
 			cv.SetItems(flattenQualifiedNames(tab.AllNodes))
 			if node := tab.Miller.SelectedNode(); node != nil && node.QualifiedName != "" {
 				cv.SetLoading(CompareFocusLeft)
+				cv.SetLoading(CompareFocusRight)
 				a.views.Push(cv)
-				return cv.loadBsonNDSL(node.QualifiedName, node.Type, CompareFocusLeft)
+				return tea.Batch(
+					cv.loadBsonNDSL(node.QualifiedName, node.Type, CompareFocusLeft),
+					cv.loadMDL(node.QualifiedName, node.Type, CompareFocusRight),
+				)
 			}
 		}
 		a.views.Push(cv)
@@ -777,6 +792,102 @@ func (a *App) switchToTabByID(id int) {
 			return
 		}
 	}
+}
+
+// SetPendingSession stores a session to be restored after the project tree loads.
+func (a *App) SetPendingSession(session *TUISession) {
+	a.pendingSession = session
+}
+
+// applySessionRestore applies the pending session state to the loaded app.
+// Called after LoadTreeMsg delivers nodes so navigation paths can be resolved.
+// Takes *App because it's called from Update (value receiver) via &a.
+func applySessionRestore(a *App) {
+	session := a.pendingSession
+	if session == nil {
+		return
+	}
+	a.pendingSession = nil
+
+	if len(session.Tabs) == 0 {
+		return
+	}
+
+	// Restore the first tab's navigation (multi-tab restore: only the
+	// primary tab is restored since additional tabs need separate
+	// project-tree loads which are not wired yet).
+	ts := session.Tabs[0]
+	tab := a.activeTabPtr()
+	if tab == nil || len(tab.AllNodes) == 0 {
+		return
+	}
+
+	// Navigate to the selected node if available
+	if ts.SelectedNode != "" {
+		if bv, ok := a.views.Base().(BrowserView); ok {
+			bv.allNodes = tab.AllNodes
+			bv.navigateToNode(ts.SelectedNode)
+			// Set preview mode after navigation (navigateToNode resets miller)
+			setPreviewMode(&bv.miller, ts.PreviewMode)
+			tab.Miller = bv.miller
+			tab.UpdateLabel()
+			a.views.SetBase(bv)
+			a.syncTabBar()
+			Trace("app: session restored — navigated to %q", ts.SelectedNode)
+			return
+		}
+	}
+
+	// Fallback: navigate the miller path breadcrumb
+	if len(ts.MillerPath) > 0 {
+		restoreMillerPath(a, tab, ts.MillerPath)
+	}
+
+	// Set preview mode (for path-based or no-navigation restore)
+	setPreviewMode(&tab.Miller, ts.PreviewMode)
+}
+
+// setPreviewMode sets the miller preview mode from a string value.
+func setPreviewMode(miller *MillerView, mode string) {
+	if mode == "NDSL" {
+		miller.preview.mode = PreviewNDSL
+	} else {
+		miller.preview.mode = PreviewMDL
+	}
+}
+
+// restoreMillerPath drills the miller view through a breadcrumb path.
+func restoreMillerPath(a *App, tab *Tab, millerPath []string) {
+	bv, ok := a.views.Base().(BrowserView)
+	if !ok {
+		return
+	}
+	bv.allNodes = tab.AllNodes
+	bv.miller.SetRootNodes(tab.AllNodes)
+
+	for _, segment := range millerPath {
+		found := false
+		for j, item := range bv.miller.current.items {
+			if item.Label == segment {
+				bv.miller.current.SetCursor(j)
+				if item.Node != nil && len(item.Node.Children) > 0 {
+					bv.miller, _ = bv.miller.drillIn()
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			Trace("app: session restore — path segment %q not found, stopping", segment)
+			break
+		}
+	}
+
+	tab.Miller = bv.miller
+	tab.UpdateLabel()
+	a.views.SetBase(bv)
+	a.syncTabBar()
+	Trace("app: session restored via miller path %v", millerPath)
 }
 
 // --- View ---
