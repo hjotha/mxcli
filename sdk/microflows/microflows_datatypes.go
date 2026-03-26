@@ -63,6 +63,15 @@ type DateTimeType struct {
 func (DateTimeType) isDataType()         {}
 func (DateTimeType) GetTypeName() string { return "DateTime" }
 
+// DateType represents a date-only type (no time component).
+// Stored as DataTypes$DateTimeType in BSON.
+type DateType struct {
+	model.BaseElement
+}
+
+func (DateType) isDataType()         {}
+func (DateType) GetTypeName() string { return "Date" }
+
 // ObjectType represents an object type.
 type ObjectType struct {
 	model.BaseElement

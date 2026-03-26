@@ -27,8 +27,10 @@ func convertASTToMicroflowDataType(dt ast.DataType, entityResolver func(ast.Qual
 		return &microflows.DecimalType{}
 	case ast.TypeString:
 		return &microflows.StringType{}
-	case ast.TypeDateTime, ast.TypeDate:
+	case ast.TypeDateTime:
 		return &microflows.DateTimeType{}
+	case ast.TypeDate:
+		return &microflows.DateType{}
 	case ast.TypeBinary:
 		return &microflows.BinaryType{}
 	case ast.TypeVoid:

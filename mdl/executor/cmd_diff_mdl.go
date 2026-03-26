@@ -638,7 +638,7 @@ func (e *Executor) dataTypeToString(dt ast.DataType) string {
 	case ast.TypeDateTime:
 		return "DateTime"
 	case ast.TypeDate:
-		return "DateTime"
+		return "Date"
 	case ast.TypeAutoNumber:
 		return "AutoNumber"
 	case ast.TypeBinary:

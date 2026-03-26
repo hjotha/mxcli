@@ -299,12 +299,16 @@ func parseAttributeType(raw map[string]any) domainmodel.AttributeType {
 		t.ID = typeID
 		return t
 	case "DomainModels$DateTimeAttributeType":
-		t := &domainmodel.DateTimeAttributeType{}
-		t.ID = typeID
-		if localize, ok := raw["LocalizeDate"].(bool); ok {
-			t.LocalizeDate = localize
+		localize, _ := raw["LocalizeDate"].(bool)
+		if localize {
+			t := &domainmodel.DateTimeAttributeType{LocalizeDate: true}
+			t.ID = typeID
+			return t
 		}
-		return t
+		// LocalizeDate=false means date-only type
+		dt := &domainmodel.DateAttributeType{}
+		dt.ID = typeID
+		return dt
 	case "DomainModels$EnumerationAttributeType":
 		t := &domainmodel.EnumerationAttributeType{}
 		t.ID = typeID

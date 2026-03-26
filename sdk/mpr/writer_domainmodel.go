@@ -794,7 +794,13 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 	// Attribute type with its own ID - use bson.D for ordered fields
 	typeName := "DomainModels$StringAttributeType"
 	if a.Type != nil {
-		typeName = "DomainModels$" + a.Type.GetTypeName() + "AttributeType"
+		switch a.Type.(type) {
+		case *domainmodel.DateAttributeType:
+			// Date is stored as DateTimeAttributeType with LocalizeDate=false
+			typeName = "DomainModels$DateTimeAttributeType"
+		default:
+			typeName = "DomainModels$" + a.Type.GetTypeName() + "AttributeType"
+		}
 	}
 
 	attrTypeID := generateUUID()
@@ -812,6 +818,10 @@ func serializeAttribute(a *domainmodel.Attribute) bson.D {
 		switch t := a.Type.(type) {
 		case *domainmodel.StringAttributeType:
 			attrType = append(attrType, bson.E{Key: "Length", Value: t.Length})
+		case *domainmodel.DateTimeAttributeType:
+			attrType = append(attrType, bson.E{Key: "LocalizeDate", Value: t.LocalizeDate})
+		case *domainmodel.DateAttributeType:
+			attrType = append(attrType, bson.E{Key: "LocalizeDate", Value: false})
 		case *domainmodel.EnumerationAttributeType:
 			// Enumeration uses BY_NAME_REFERENCE - store as qualified name string
 			enumRef := t.EnumerationRef

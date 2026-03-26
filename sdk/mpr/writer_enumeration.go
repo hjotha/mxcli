@@ -175,7 +175,7 @@ func serializeConstantDataType(dt model.ConstantDataType) bson.D {
 			{Key: "$ID", Value: typeID},
 			{Key: "$Type", Value: "DataTypes$BooleanType"},
 		}
-	case "DateTime":
+	case "DateTime", "Date":
 		return bson.D{
 			{Key: "$ID", Value: typeID},
 			{Key: "$Type", Value: "DataTypes$DateTimeType"},

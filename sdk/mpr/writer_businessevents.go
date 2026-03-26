@@ -173,7 +173,7 @@ func attributeTypeToBsonType(typeName string) string {
 		return "DomainModels$IntegerAttributeType"
 	case "Boolean":
 		return "DomainModels$BooleanAttributeType"
-	case "DateTime":
+	case "DateTime", "Date":
 		return "DomainModels$DateTimeAttributeType"
 	case "Decimal":
 		return "DomainModels$DecimalAttributeType"

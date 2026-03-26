@@ -525,6 +525,8 @@ func (e *Executor) formatMicroflowDataType(dt microflows.DataType, entityNames m
 		return "String"
 	case *microflows.DateTimeType:
 		return "DateTime"
+	case *microflows.DateType:
+		return "Date"
 	case *microflows.BinaryType:
 		return "Binary"
 	case *microflows.VoidType:

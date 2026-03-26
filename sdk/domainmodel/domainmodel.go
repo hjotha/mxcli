@@ -229,6 +229,17 @@ func (t *DateTimeAttributeType) GetTypeName() string {
 	return "DateTime"
 }
 
+// DateAttributeType represents a date-only attribute type (no time component).
+// Stored as DomainModels$DateTimeAttributeType with LocalizeDate=false in BSON.
+type DateAttributeType struct {
+	model.BaseElement
+}
+
+// GetTypeName returns the type name.
+func (t *DateAttributeType) GetTypeName() string {
+	return "Date"
+}
+
 // EnumerationAttributeType represents an enumeration attribute type.
 type EnumerationAttributeType struct {
 	model.BaseElement

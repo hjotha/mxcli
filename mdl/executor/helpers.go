@@ -472,9 +472,9 @@ func convertDataType(dt ast.DataType) domainmodel.AttributeType {
 	case ast.TypeBoolean:
 		return &domainmodel.BooleanAttributeType{}
 	case ast.TypeDateTime:
-		return &domainmodel.DateTimeAttributeType{}
+		return &domainmodel.DateTimeAttributeType{LocalizeDate: true}
 	case ast.TypeDate:
-		return &domainmodel.DateTimeAttributeType{} // Date is a DateTime variant
+		return &domainmodel.DateAttributeType{}
 	case ast.TypeAutoNumber:
 		return &domainmodel.AutoNumberAttributeType{}
 	case ast.TypeBinary:
@@ -510,6 +510,8 @@ func getAttributeTypeName(at domainmodel.AttributeType) string {
 		return "Boolean"
 	case *domainmodel.DateTimeAttributeType:
 		return "DateTime"
+	case *domainmodel.DateAttributeType:
+		return "Date"
 	case *domainmodel.AutoNumberAttributeType:
 		return "AutoNumber"
 	case *domainmodel.BinaryAttributeType:

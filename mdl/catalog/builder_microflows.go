@@ -318,6 +318,8 @@ func getDataTypeName(dt microflows.DataType) string {
 		return "String"
 	case *microflows.DateTimeType:
 		return "DateTime"
+	case *microflows.DateType:
+		return "Date"
 	case *microflows.ObjectType:
 		return "Object:" + t.EntityQualifiedName
 	case *microflows.ListType:

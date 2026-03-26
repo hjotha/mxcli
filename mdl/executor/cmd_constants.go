@@ -178,6 +178,8 @@ func formatConstantType(dt model.ConstantDataType) string {
 		return "Boolean"
 	case "DateTime":
 		return "DateTime"
+	case "Date":
+		return "Date"
 	case "Binary":
 		return "Binary"
 	case "Enumeration":
@@ -218,6 +220,8 @@ func formatConstantTypeForMDL(dt model.ConstantDataType) string {
 		return "Boolean"
 	case "DateTime":
 		return "DateTime"
+	case "Date":
+		return "Date"
 	case "Binary":
 		return "Binary"
 	case "Enumeration":
@@ -397,6 +401,8 @@ func astDataTypeToConstantDataType(dt ast.DataType) model.ConstantDataType {
 		return model.ConstantDataType{Kind: "Boolean"}
 	case ast.TypeDateTime:
 		return model.ConstantDataType{Kind: "DateTime"}
+	case ast.TypeDate:
+		return model.ConstantDataType{Kind: "Date"}
 	case ast.TypeBinary:
 		return model.ConstantDataType{Kind: "Binary"}
 	case ast.TypeEnumeration:
