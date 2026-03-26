@@ -428,6 +428,29 @@ func renderCheckResults(errors []CheckError, filter string) string {
 	return sb.String()
 }
 
+// renderCheckResultsPlain produces a plain-text summary of check errors for agent responses.
+func renderCheckResultsPlain(errors []CheckError) string {
+	if len(errors) == 0 {
+		return "Project check passed — no errors or warnings"
+	}
+	var sb strings.Builder
+	ec, wc, dc := countBySeverity(errors)
+	sb.WriteString(fmt.Sprintf("%d errors, %d warnings, %d deprecations\n\n", ec, wc, dc))
+	groups := groupCheckErrors(errors)
+	for _, g := range groups {
+		sb.WriteString(g.Code + " [" + g.Severity + "] " + g.Message + "\n")
+		for _, item := range g.Items {
+			countSuffix := ""
+			if item.Count > 1 {
+				countSuffix = fmt.Sprintf(" (x%d)", item.Count)
+			}
+			sb.WriteString("  " + item.DocLocation + countSuffix + "\n")
+		}
+		sb.WriteString("\n")
+	}
+	return sb.String()
+}
+
 // formatDocLocation converts mx JSON document-name (e.g. "Page 'P_ComboBox'")
 // into a qualified name like "MyModule.P_ComboBox (Page)".
 func formatDocLocation(moduleName, documentName string) string {

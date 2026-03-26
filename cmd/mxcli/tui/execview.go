@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mendixlabs/mxcli/mdl/formatter"
 )
 
 // ExecDoneMsg carries the result of MDL execution.
@@ -22,6 +23,11 @@ type ExecDoneMsg struct {
 type execShowResultMsg struct {
 	Content string
 	Success bool
+}
+
+// OpenExecWithContentMsg requests opening ExecView pre-filled with content.
+type OpenExecWithContentMsg struct {
+	Content string
 }
 
 // execFileLoadedMsg carries the content of a loaded MDL file.
@@ -93,6 +99,13 @@ func NewExecView(mxcliPath, projectPath string, width, height int) ExecView {
 		width:       width,
 		height:      height,
 	}
+}
+
+// NewExecViewWithContent creates an ExecView pre-filled with content.
+func NewExecViewWithContent(mxcliPath, projectPath string, width, height int, content string) ExecView {
+	ev := NewExecView(mxcliPath, projectPath, width, height)
+	ev.textarea.SetValue(content)
+	return ev
 }
 
 // Mode returns ModeExec.
@@ -284,6 +297,17 @@ func (ev ExecView) updateEditor(msg tea.KeyMsg) (View, tea.Cmd) {
 		}
 		ev.executing = true
 		return ev, ev.executeMDL(mdlText)
+
+	case "ctrl+f":
+		content := ev.textarea.Value()
+		if strings.TrimSpace(content) == "" {
+			ev.flash = "Nothing to format"
+			return ev, nil
+		}
+		formatted := formatter.Format(content)
+		ev.textarea.SetValue(formatted)
+		ev.flash = "Formatted"
+		return ev, nil
 
 	case "ctrl+o":
 		ev.picking = true

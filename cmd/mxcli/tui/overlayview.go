@@ -144,6 +144,14 @@ func (ov OverlayView) Update(msg tea.Msg) (View, tea.Cmd) {
 			}
 		}
 
+		// 'e' opens ExecView with overlay content (non-check overlays only)
+		if msg.String() == "e" && len(ov.checkNavLocs) == 0 && ov.pendingKey == 0 {
+			if ov.qname != "" && !ov.isNDSL {
+				raw := ov.overlay.content.PlainText()
+				return ov, func() tea.Msg { return OpenExecWithContentMsg{Content: raw} }
+			}
+		}
+
 		// j/k move cursor, ]e/[e jump between errors in check overlay
 		if len(ov.checkNavLocs) > 0 {
 			switch msg.String() {

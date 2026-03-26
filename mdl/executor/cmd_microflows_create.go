@@ -27,8 +27,8 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		return fmt.Errorf("not connected to a project")
 	}
 
-	// Find the module
-	module, err := e.findModule(s.Name.Module)
+	// Find or auto-create module
+	module, err := e.findOrCreateModule(s.Name.Module)
 	if err != nil {
 		return err
 	}

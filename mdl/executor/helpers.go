@@ -62,6 +62,24 @@ func (e *Executor) findModule(name string) (*model.Module, error) {
 	return nil, fmt.Errorf("module not found: %s", name)
 }
 
+// findOrCreateModule looks up a module by name, auto-creating it if it doesn't exist
+// and the executor has write access. Used by CREATE operations to avoid requiring
+// manual module creation.
+func (e *Executor) findOrCreateModule(name string) (*model.Module, error) {
+	m, err := e.findModule(name)
+	if err == nil {
+		return m, nil
+	}
+	if e.writer == nil || name == "" {
+		return nil, err
+	}
+	// Auto-create the module
+	if createErr := e.execCreateModule(&ast.CreateModuleStmt{Name: name}); createErr != nil {
+		return nil, fmt.Errorf("auto-create module %s failed: %w", name, createErr)
+	}
+	return e.findModule(name)
+}
+
 func (e *Executor) findModuleByID(id model.ID) (*model.Module, error) {
 	modules, err := e.getModulesFromCache()
 	if err != nil {

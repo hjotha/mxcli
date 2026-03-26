@@ -29,8 +29,8 @@ func (e *Executor) execCreateEnumeration(s *ast.CreateEnumerationStmt) error {
 			s.Name.String(), strings.Join(msgs, "\n  - "))
 	}
 
-	// Find module
-	module, err := e.findModule(s.Name.Module)
+	// Find or auto-create module
+	module, err := e.findOrCreateModule(s.Name.Module)
 	if err != nil {
 		return err
 	}

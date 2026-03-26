@@ -31,10 +31,12 @@ type ColumnItem struct {
 
 // FilterState manages the inline filter for a Column.
 type FilterState struct {
-	active  bool
-	input   textinput.Model
-	query   string
-	matches []int // indices into items that match the query
+	active        bool
+	input         textinput.Model
+	query         string
+	matches       []int // indices into items that match the query
+	historyCursor int   // -1 = editing new query, 0..n = browsing history
+	draft         string // user's typed text before browsing history
 }
 
 // CursorChangedMsg is emitted when the cursor moves to a different item.
@@ -178,16 +180,46 @@ func (c Column) updateFilter(msg tea.KeyMsg) (Column, tea.Cmd) {
 		return c, nil
 	case "enter":
 		// Lock filter results, exit input mode
+		AddFilterHistoryEntry(c.filter.query)
 		c.filter.active = false
 		c.filter.input.Blur()
 		return c, nil
 	case "up":
+		// Browse filter history when input is focused
+		entries := LoadFilterHistory()
+		if len(entries) > 0 && c.filter.historyCursor < len(entries)-1 {
+			if c.filter.historyCursor == -1 {
+				c.filter.draft = c.filter.input.Value()
+			}
+			c.filter.historyCursor++
+			c.filter.input.SetValue(entries[c.filter.historyCursor])
+			c.filter.query = entries[c.filter.historyCursor]
+			c.rebuildFiltered()
+			return c, nil
+		}
+		// Fall through to cursor movement if no more history
 		c.moveCursorUp()
 		return c, nil
 	case "down":
+		if c.filter.historyCursor > 0 {
+			c.filter.historyCursor--
+			entries := LoadFilterHistory()
+			c.filter.input.SetValue(entries[c.filter.historyCursor])
+			c.filter.query = entries[c.filter.historyCursor]
+			c.rebuildFiltered()
+			return c, nil
+		} else if c.filter.historyCursor == 0 {
+			c.filter.historyCursor = -1
+			c.filter.input.SetValue(c.filter.draft)
+			c.filter.query = c.filter.draft
+			c.rebuildFiltered()
+			return c, nil
+		}
 		c.moveCursorDown()
 		return c, nil
 	default:
+		// Reset history browsing on any text input
+		c.filter.historyCursor = -1
 		var cmd tea.Cmd
 		c.filter.input, cmd = c.filter.input.Update(msg)
 		c.filter.query = c.filter.input.Value()
@@ -519,6 +551,8 @@ func (c *Column) activateFilter() {
 	c.filter.active = true
 	c.filter.input.SetValue("")
 	c.filter.query = ""
+	c.filter.historyCursor = -1
+	c.filter.draft = ""
 	c.filter.input.Focus()
 	c.rebuildFiltered()
 }
@@ -526,6 +560,8 @@ func (c *Column) activateFilter() {
 func (c *Column) deactivateFilter() {
 	c.filter.active = false
 	c.filter.query = ""
+	c.filter.historyCursor = -1
+	c.filter.draft = ""
 	c.filter.input.SetValue("")
 	c.filter.input.Blur()
 	c.rebuildFiltered()

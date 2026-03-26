@@ -112,6 +112,9 @@ func (h *ContainerHierarchy) GetQualifiedName(containerID model.ID, name string)
 // getHierarchy returns a cached ContainerHierarchy or creates a new one.
 func (e *Executor) getHierarchy() (*ContainerHierarchy, error) {
 	// Ensure cache exists
+	if e.reader == nil {
+		return nil, nil
+	}
 	if e.cache == nil {
 		e.cache = &executorCache{}
 	}

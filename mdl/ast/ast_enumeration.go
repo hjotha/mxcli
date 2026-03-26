@@ -76,6 +76,7 @@ type CreateConstantStmt struct {
 	DefaultValue    any // The default value (can be string, number, boolean, etc.)
 	Documentation   string
 	Comment         string
+	Folder          string // Folder path within module (e.g., "Resources/Constants")
 	ExposedToClient bool
 	CreateOrModify  bool // True if CREATE OR MODIFY was used
 }

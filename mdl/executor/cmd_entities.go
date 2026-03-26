@@ -20,8 +20,8 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 		return fmt.Errorf("not connected to a project")
 	}
 
-	// Find module
-	module, err := e.findModule(s.Name.Module)
+	// Find or auto-create module
+	module, err := e.findOrCreateModule(s.Name.Module)
 	if err != nil {
 		return err
 	}

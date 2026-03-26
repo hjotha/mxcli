@@ -28,20 +28,18 @@ type AgentNavigateMsg struct {
 	ResponseCh chan<- AgentResponse
 }
 
-// agentExecDoneMsg carries exec result back to App for agent response.
-type agentExecDoneMsg struct {
+// AgentDeleteMsg requests deletion of an element via DROP command.
+type AgentDeleteMsg struct {
 	RequestID  int
-	Output     string
-	Success    bool
+	Target     string // "entity:Module.Entity"
 	ResponseCh chan<- AgentResponse
 }
 
-// agentConfirmedMsg is sent when user presses q to confirm agent result.
-type agentConfirmedMsg struct {
+// AgentCreateModuleMsg requests creation of a new module.
+type AgentCreateModuleMsg struct {
 	RequestID  int
+	Name       string
 	ResponseCh chan<- AgentResponse
-	Output     string
-	Success    bool
 }
 
 // Ensure messages satisfy tea.Msg.
@@ -50,6 +48,6 @@ var (
 	_ tea.Msg = AgentCheckMsg{}
 	_ tea.Msg = AgentStateMsg{}
 	_ tea.Msg = AgentNavigateMsg{}
-	_ tea.Msg = agentExecDoneMsg{}
-	_ tea.Msg = agentConfirmedMsg{}
+	_ tea.Msg = AgentDeleteMsg{}
+	_ tea.Msg = AgentCreateModuleMsg{}
 )

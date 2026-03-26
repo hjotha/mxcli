@@ -148,6 +148,14 @@ func (e *Executor) outputConstantMDL(c *model.Constant, moduleName string) error
 	fmt.Fprintf(e.output, "  TYPE %s\n", formatConstantTypeForMDL(c.Type))
 	fmt.Fprintf(e.output, "  DEFAULT %s", defaultValueStr)
 
+	// Add folder if present
+	h, _ := e.getHierarchy()
+	if h != nil {
+		if folderPath := h.BuildFolderPath(c.ContainerID); folderPath != "" {
+			fmt.Fprintf(e.output, "\n  FOLDER '%s'", folderPath)
+		}
+	}
+
 	// Add options if present
 	if c.Documentation != "" {
 		escaped := strings.ReplaceAll(c.Documentation, "'", "''")
@@ -284,8 +292,8 @@ func (e *Executor) createConstant(stmt *ast.CreateConstantStmt) error {
 		return fmt.Errorf("module name required for constant: use CREATE CONSTANT Module.ConstantName")
 	}
 
-	// Find the module
-	module, err := e.findModule(stmt.Name.Module)
+	// Find or auto-create module
+	module, err := e.findOrCreateModule(stmt.Name.Module)
 	if err != nil {
 		return err
 	}
@@ -335,8 +343,17 @@ func (e *Executor) createConstant(stmt *ast.CreateConstantStmt) error {
 		doc = stmt.Documentation
 	}
 
+	containerID := module.ID
+	if stmt.Folder != "" {
+		folderID, err := e.resolveFolder(module.ID, stmt.Folder)
+		if err != nil {
+			return fmt.Errorf("failed to resolve folder %s: %w", stmt.Folder, err)
+		}
+		containerID = folderID
+	}
+
 	constant := &model.Constant{
-		ContainerID:     module.ID,
+		ContainerID:     containerID,
 		Name:            stmt.Name.Name,
 		Documentation:   doc,
 		Type:            constType,

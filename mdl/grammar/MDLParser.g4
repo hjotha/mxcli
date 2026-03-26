@@ -2007,6 +2007,8 @@ constantOptions
 
 constantOption
     : COMMENT STRING_LITERAL
+    | FOLDER STRING_LITERAL
+    | EXPOSED TO CLIENT
     ;
 
 /**

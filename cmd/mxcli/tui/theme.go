@@ -79,4 +79,7 @@ var (
 	CheckLocStyle     = lipgloss.NewStyle().Foreground(MutedColor)
 	CheckHeaderStyle  = lipgloss.NewStyle().Bold(true)
 	CheckRunningStyle = lipgloss.NewStyle().Foreground(MutedColor).Italic(true)
+
+	// Agent activity badge style
+	AgentBadgeStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "33", Dark: "39"}).Bold(true)
 )

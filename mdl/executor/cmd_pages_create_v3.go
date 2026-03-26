@@ -19,8 +19,8 @@ func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 		return fmt.Errorf("not connected to a project")
 	}
 
-	// Find module
-	module, err := e.findModule(s.Name.Module)
+	// Find or auto-create module
+	module, err := e.findOrCreateModule(s.Name.Module)
 	if err != nil {
 		return fmt.Errorf("failed to find module %s: %w", s.Name.Module, err)
 	}
@@ -87,8 +87,8 @@ func (e *Executor) execCreateSnippetV3(s *ast.CreateSnippetStmtV3) error {
 		return fmt.Errorf("not connected to a project")
 	}
 
-	// Find module
-	module, err := e.findModule(s.Name.Module)
+	// Find or auto-create module
+	module, err := e.findOrCreateModule(s.Name.Module)
 	if err != nil {
 		return fmt.Errorf("failed to find module %s: %w", s.Name.Module, err)
 	}

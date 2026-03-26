@@ -98,13 +98,17 @@ func (b *Builder) ExitCreateConstantStatement(ctx *parser.CreateConstantStatemen
 		stmt.DefaultValue = extractLiteralValue(lit)
 	}
 
-	// Handle options (COMMENT, etc.)
+	// Handle options (COMMENT, FOLDER, EXPOSED TO CLIENT)
 	if opts := ctx.ConstantOptions(); opts != nil {
 		optsCtx := opts.(*parser.ConstantOptionsContext)
 		for _, opt := range optsCtx.AllConstantOption() {
 			optCtx := opt.(*parser.ConstantOptionContext)
 			if optCtx.COMMENT() != nil && optCtx.STRING_LITERAL() != nil {
 				stmt.Comment = unquoteString(optCtx.STRING_LITERAL().GetText())
+			} else if optCtx.FOLDER() != nil && optCtx.STRING_LITERAL() != nil {
+				stmt.Folder = unquoteString(optCtx.STRING_LITERAL().GetText())
+			} else if optCtx.EXPOSED() != nil {
+				stmt.ExposedToClient = true
 			}
 		}
 	}

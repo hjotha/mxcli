@@ -20,7 +20,7 @@ func (e *Executor) execCreateWorkflow(s *ast.CreateWorkflowStmt) error {
 		return fmt.Errorf("not connected to a project")
 	}
 
-	module, err := e.findModule(s.Name.Module)
+	module, err := e.findOrCreateModule(s.Name.Module)
 	if err != nil {
 		return err
 	}

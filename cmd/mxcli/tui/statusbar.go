@@ -19,6 +19,7 @@ type StatusBar struct {
 	position   string // e.g. "3/4"
 	mode       string // e.g. "MDL" or "NDSL"
 	checkBadge string // e.g. "✗ 3E 2W" or "✓" (pre-styled)
+	agentBadge string // e.g. "⚡agent:exec" (pre-styled)
 	viewDepth  int
 	viewModes  []string
 	zones      []breadcrumbZone // clickable breadcrumb zones
@@ -47,6 +48,11 @@ func (s *StatusBar) SetMode(mode string) {
 // SetCheckBadge sets the mx check status badge (pre-styled string).
 func (s *StatusBar) SetCheckBadge(badge string) {
 	s.checkBadge = badge
+}
+
+// SetAgentBadge sets the agent activity badge (pre-styled string).
+func (s *StatusBar) SetAgentBadge(badge string) {
+	s.agentBadge = badge
 }
 
 // SetViewDepth sets the view stack depth and mode names for breadcrumb display.
@@ -107,8 +113,11 @@ func (s *StatusBar) View(width int) string {
 	}
 	left := " " + strings.Join(crumbParts, sep)
 
-	// Build right side: check badge + position + mode
+	// Build right side: agent badge + check badge + position + mode
 	var rightParts []string
+	if s.agentBadge != "" {
+		rightParts = append(rightParts, s.agentBadge)
+	}
 	if s.checkBadge != "" {
 		rightParts = append(rightParts, s.checkBadge)
 	}

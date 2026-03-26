@@ -150,6 +150,27 @@ func (bv BrowserView) handleKey(msg tea.KeyMsg) (View, tea.Cmd) {
 		bv.miller.zenMode = !bv.miller.zenMode
 		bv.miller.relayout()
 		return bv, nil
+
+	case "D":
+		node := bv.miller.SelectedNode()
+		if node != nil && node.QualifiedName != "" {
+			dropCmd := buildDropCmd(node.Type, node.QualifiedName)
+			if dropCmd == "" {
+				return bv, nil
+			}
+			msg := buildDeleteMessage(node.Type, node.QualifiedName)
+			cv := NewConfirmView("Delete", msg, dropCmd, bv.mxcliPath, bv.projectPath)
+			return bv, func() tea.Msg { return PushViewMsg{View: cv} }
+		}
+		return bv, nil
+
+	case "e":
+		node := bv.miller.SelectedNode()
+		if node != nil && node.QualifiedName != "" && bv.miller.preview.content != "" {
+			raw := stripAnsi(bv.miller.preview.content)
+			return bv, func() tea.Msg { return OpenExecWithContentMsg{Content: raw} }
+		}
+		return bv, nil
 	}
 
 	// Navigation keys: forward to miller
