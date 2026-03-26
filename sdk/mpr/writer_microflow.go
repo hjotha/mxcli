@@ -268,7 +268,7 @@ func serializeMicroflowDataType(dt microflows.DataType) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "DataTypes$StringType"},
 		}
-	case *microflows.DateTimeType, *microflows.DateType:
+	case *microflows.DateTimeType, *microflows.DateType: // Both map to DataTypes$DateTimeType in BSON; Date is distinguished by LocalizeDate=false at the attribute level
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "DataTypes$DateTimeType"},

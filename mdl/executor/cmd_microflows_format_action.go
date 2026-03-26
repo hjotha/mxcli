@@ -860,5 +860,5 @@ func isMendixKeyword(s string) bool {
 // isQualifiedEnumLiteral returns true for qualified enum literals (e.g., "Module.Enum.Value")
 // that must not be prefixed with "$" when serialized as a RETURN value.
 func isQualifiedEnumLiteral(s string) bool {
-	return strings.Contains(s, ".")
+	return strings.Count(s, ".") >= 2
 }
