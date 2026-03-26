@@ -247,6 +247,12 @@ type MDLParserListener interface {
 	// EnterImageCollectionOption is called when entering the imageCollectionOption production.
 	EnterImageCollectionOption(c *ImageCollectionOptionContext)
 
+	// EnterImageCollectionBody is called when entering the imageCollectionBody production.
+	EnterImageCollectionBody(c *ImageCollectionBodyContext)
+
+	// EnterImageCollectionItem is called when entering the imageCollectionItem production.
+	EnterImageCollectionItem(c *ImageCollectionItemContext)
+
 	// EnterCreateValidationRuleStatement is called when entering the createValidationRuleStatement production.
 	EnterCreateValidationRuleStatement(c *CreateValidationRuleStatementContext)
 
@@ -1344,6 +1350,12 @@ type MDLParserListener interface {
 
 	// ExitImageCollectionOption is called when exiting the imageCollectionOption production.
 	ExitImageCollectionOption(c *ImageCollectionOptionContext)
+
+	// ExitImageCollectionBody is called when exiting the imageCollectionBody production.
+	ExitImageCollectionBody(c *ImageCollectionBodyContext)
+
+	// ExitImageCollectionItem is called when exiting the imageCollectionItem production.
+	ExitImageCollectionItem(c *ImageCollectionItemContext)
 
 	// ExitCreateValidationRuleStatement is called when exiting the createValidationRuleStatement production.
 	ExitCreateValidationRuleStatement(c *CreateValidationRuleStatementContext)

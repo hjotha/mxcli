@@ -39,6 +39,28 @@ func (e *Executor) execCreateImageCollection(s *ast.CreateImageCollectionStmt) e
 		Documentation: s.Comment,
 	}
 
+	// Load image files
+	for _, item := range s.Images {
+		filePath := item.FilePath
+		if !filepath.IsAbs(filePath) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get working directory: %w", err)
+			}
+			filePath = filepath.Join(cwd, filePath)
+		}
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to read image file %q: %w", item.FilePath, err)
+		}
+		format := extToImageFormat(filepath.Ext(filePath))
+		ic.Images = append(ic.Images, mpr.Image{
+			Name:   item.Name,
+			Data:   data,
+			Format: format,
+		})
+	}
+
 	if err := e.writer.CreateImageCollection(ic); err != nil {
 		return fmt.Errorf("failed to create image collection: %w", err)
 	}
@@ -129,7 +151,7 @@ func (e *Executor) describeImageCollection(name ast.QualifiedName) error {
 		if i == len(ic.Images)-1 {
 			comma = ""
 		}
-		fmt.Fprintf(e.output, "    IMAGE \"%s\" FROM FILE '%s'%s\n", img.Name, filePath, comma)
+		fmt.Fprintf(e.output, "    IMAGE '%s' FROM FILE '%s'%s\n", img.Name, filePath, comma)
 	}
 
 	fmt.Fprintln(e.output, ");")
@@ -152,6 +174,24 @@ func imageFormatToExt(format string) string {
 		return ".webp"
 	default:
 		return ".png"
+	}
+}
+
+// extToImageFormat converts a file extension to a Mendix ImageFormat value.
+func extToImageFormat(ext string) string {
+	switch strings.ToLower(ext) {
+	case ".svg":
+		return "Svg"
+	case ".gif":
+		return "Gif"
+	case ".jpg", ".jpeg":
+		return "Jpg"
+	case ".bmp":
+		return "Bmp"
+	case ".webp":
+		return "Webp"
+	default:
+		return "Png"
 	}
 }
 

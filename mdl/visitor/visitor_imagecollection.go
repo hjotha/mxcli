@@ -14,6 +14,9 @@ func (b *Builder) ExitCreateImageCollectionStatement(ctx *parser.CreateImageColl
 		ExportLevel: "Hidden",
 	}
 
+	// Extract /** ... */ doc comment (same as other create statements)
+	stmt.Comment = findDocCommentText(ctx)
+
 	if opts := ctx.ImageCollectionOptions(); opts != nil {
 		optsCtx := opts.(*parser.ImageCollectionOptionsContext)
 		for _, opt := range optsCtx.AllImageCollectionOption() {
@@ -24,6 +27,17 @@ func (b *Builder) ExitCreateImageCollectionStatement(ctx *parser.CreateImageColl
 			if optCtx.COMMENT() != nil && optCtx.STRING_LITERAL() != nil {
 				stmt.Comment = unquoteString(optCtx.STRING_LITERAL().GetText())
 			}
+		}
+	}
+
+	if body := ctx.ImageCollectionBody(); body != nil {
+		bodyCtx := body.(*parser.ImageCollectionBodyContext)
+		for _, item := range bodyCtx.AllImageCollectionItem() {
+			itemCtx := item.(*parser.ImageCollectionItemContext)
+			stmt.Images = append(stmt.Images, ast.ImageItem{
+				Name:     unquoteString(itemCtx.GetName().GetText()),
+				FilePath: unquoteString(itemCtx.GetPath().GetText()),
+			})
 		}
 	}
 

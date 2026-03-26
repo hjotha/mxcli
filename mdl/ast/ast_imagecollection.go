@@ -2,13 +2,20 @@
 
 package ast
 
+// ImageItem represents an image to add to a collection: IMAGE "name" FROM FILE 'path'.
+type ImageItem struct {
+	Name     string // Image name (e.g. "logo")
+	FilePath string // Path to image file on disk
+}
+
 // CreateImageCollectionStmt represents:
 //
-//	CREATE IMAGE COLLECTION Module.Name [EXPORT LEVEL 'Public'] [COMMENT '...']
+//	CREATE IMAGE COLLECTION Module.Name [EXPORT LEVEL 'Public'] [COMMENT '...'] [(IMAGE "name" FROM FILE 'path', ...)]
 type CreateImageCollectionStmt struct {
 	Name        QualifiedName
 	ExportLevel string // "Hidden" (default) or "Public"
 	Comment     string
+	Images      []ImageItem
 }
 
 func (s *CreateImageCollectionStmt) isStatement() {}

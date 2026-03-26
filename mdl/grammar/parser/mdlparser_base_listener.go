@@ -528,6 +528,18 @@ func (s *BaseMDLParserListener) EnterImageCollectionOption(ctx *ImageCollectionO
 // ExitImageCollectionOption is called when production imageCollectionOption is exited.
 func (s *BaseMDLParserListener) ExitImageCollectionOption(ctx *ImageCollectionOptionContext) {}
 
+// EnterImageCollectionBody is called when production imageCollectionBody is entered.
+func (s *BaseMDLParserListener) EnterImageCollectionBody(ctx *ImageCollectionBodyContext) {}
+
+// ExitImageCollectionBody is called when production imageCollectionBody is exited.
+func (s *BaseMDLParserListener) ExitImageCollectionBody(ctx *ImageCollectionBodyContext) {}
+
+// EnterImageCollectionItem is called when production imageCollectionItem is entered.
+func (s *BaseMDLParserListener) EnterImageCollectionItem(ctx *ImageCollectionItemContext) {}
+
+// ExitImageCollectionItem is called when production imageCollectionItem is exited.
+func (s *BaseMDLParserListener) ExitImageCollectionItem(ctx *ImageCollectionItemContext) {}
+
 // EnterCreateValidationRuleStatement is called when production createValidationRuleStatement is entered.
 func (s *BaseMDLParserListener) EnterCreateValidationRuleStatement(ctx *CreateValidationRuleStatementContext) {
 }

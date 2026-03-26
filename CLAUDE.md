@@ -353,6 +353,7 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - EXECUTE DATABASE QUERY microflow action (static, dynamic SQL, parameterized, runtime connection override)
 - CREATE/DROP WORKFLOW with user tasks, decisions, parallel splits, and other activity types
 - CALCULATED BY microflow syntax for calculated attributes
+- Image collections (SHOW/DESCRIBE/CREATE/DROP)
 
 **Not Yet Implemented:**
 - 47 of 52 metamodel domains (REST, etc.)

@@ -81,6 +81,7 @@
 - [Business Events](language/business-events.md)
   - [Event Services](language/event-services.md)
   - [Publishing and Consuming Events](language/pub-sub-events.md)
+- [Image Collections](language/image-collections.md)
 
 ---
 
@@ -180,6 +181,7 @@
   - [SHOW CONSTANTS](reference/query/show-constants.md)
   - [SHOW WORKFLOWS](reference/query/show-workflows.md)
   - [SHOW BUSINESS EVENTS](reference/query/show-business-events.md)
+  - [SHOW IMAGE COLLECTION](reference/query/show-image-collection.md)
   - [SHOW STRUCTURE](reference/query/show-structure.md)
   - [SHOW WIDGETS](reference/query/show-widgets.md)
   - [DESCRIBE ENTITY](reference/query/describe-entity.md)
@@ -223,6 +225,10 @@
 - [Business Event Statements](reference/business-event/README.md)
   - [CREATE BUSINESS EVENT SERVICE](reference/business-event/create-business-event-service.md)
   - [DROP BUSINESS EVENT SERVICE](reference/business-event/drop-business-event-service.md)
+- [Image Collection Statements](reference/image-collection/README.md)
+  - [CREATE IMAGE COLLECTION](reference/image-collection/create-image-collection.md)
+  - [DROP IMAGE COLLECTION](reference/image-collection/drop-image-collection.md)
+  - [SHOW / DESCRIBE IMAGE COLLECTION](reference/image-collection/show-describe-image-collection.md)
 - [Catalog Statements](reference/catalog/README.md)
   - [REFRESH CATALOG](reference/catalog/refresh-catalog.md)
   - [SELECT FROM CATALOG](reference/catalog/select-from-catalog.md)

@@ -775,7 +775,7 @@ enumerationOption
 // =============================================================================
 
 createImageCollectionStatement
-    : IMAGE COLLECTION qualifiedName imageCollectionOptions?
+    : IMAGE COLLECTION qualifiedName imageCollectionOptions? imageCollectionBody?
     ;
 
 imageCollectionOptions
@@ -785,6 +785,14 @@ imageCollectionOptions
 imageCollectionOption
     : EXPORT LEVEL STRING_LITERAL   // e.g. EXPORT LEVEL 'Public'
     | COMMENT STRING_LITERAL
+    ;
+
+imageCollectionBody
+    : LPAREN imageCollectionItem (COMMA imageCollectionItem)* RPAREN
+    ;
+
+imageCollectionItem
+    : IMAGE name=STRING_LITERAL FROM FILE path=STRING_LITERAL   // IMAGE 'name' FROM FILE '/path/to/file.png'
     ;
 
 // =============================================================================

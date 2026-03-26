@@ -9,6 +9,7 @@
 -- Features demonstrated:
 --   - CREATE IMAGE COLLECTION (empty)
 --   - CREATE IMAGE COLLECTION with EXPORT LEVEL and COMMENT
+--   - CREATE IMAGE COLLECTION with images from files
 --   - SHOW IMAGE COLLECTION [IN Module]
 --   - DESCRIBE IMAGE COLLECTION
 --   - DROP IMAGE COLLECTION
@@ -58,10 +59,40 @@ CREATE IMAGE COLLECTION ImgTest.BrandAssets
   COMMENT 'Company branding assets: logos, favicons, and splash screens';
 /
 
+-- ============================================================================
+-- LEVEL 2: Create with Image Files
+-- ============================================================================
+
+/**
+ * Level 2.1: Create a collection with images from files
+ *
+ * IMAGE 'name' FROM FILE 'path' loads an image from the filesystem.
+ * The image format is detected from the file extension.
+ * Relative paths are resolved from the current working directory.
+ *
+ * Supported formats: PNG, SVG, GIF, JPEG, BMP, WebP
+ */
+CREATE IMAGE COLLECTION ImgTest.NavigationIcons (
+  IMAGE 'home' FROM FILE 'assets/home.png',
+  IMAGE 'settings' FROM FILE 'assets/settings.svg'
+);
+/
+
+/**
+ * Level 2.2: Create with both options and images
+ */
+CREATE IMAGE COLLECTION ImgTest.AppLogos
+  EXPORT LEVEL 'Public'
+  COMMENT 'Application logos for branding' (
+  IMAGE 'logo-dark' FROM FILE 'assets/logo-dark.png',
+  IMAGE 'logo-light' FROM FILE 'assets/logo-light.png'
+);
+/
+
 -- MARK: Show
 
 -- ============================================================================
--- LEVEL 2: List Image Collections
+-- LEVEL 3: List Image Collections
 -- ============================================================================
 
 -- Show all image collections across all modules
@@ -75,7 +106,7 @@ SHOW IMAGE COLLECTION IN ImgTest;
 -- MARK: Describe
 
 -- ============================================================================
--- LEVEL 3: Describe Image Collection
+-- LEVEL 4: Describe Image Collection
 -- ============================================================================
 
 -- Describe shows the full MDL definition including any embedded images
@@ -86,7 +117,7 @@ DESCRIBE IMAGE COLLECTION ImgTest.BrandAssets;
 -- MARK: Drop
 
 -- ============================================================================
--- LEVEL 4: Drop Image Collection
+-- LEVEL 5: Drop Image Collection
 -- ============================================================================
 
 /**
@@ -110,6 +141,8 @@ SHOW IMAGE COLLECTION IN ImgTest;
 -- ✅ CREATE IMAGE COLLECTION Module.Name
 -- ✅ CREATE IMAGE COLLECTION with EXPORT LEVEL 'Public'|'Hidden'
 -- ✅ CREATE IMAGE COLLECTION with COMMENT 'description'
+-- ✅ CREATE IMAGE COLLECTION with IMAGE 'name' FROM FILE 'path'
+-- ✅ CREATE IMAGE COLLECTION with options + images combined
 -- ✅ SHOW IMAGE COLLECTION [IN Module] — list all collections
 -- ✅ DESCRIBE IMAGE COLLECTION Module.Name — show full definition
 -- ✅ DROP IMAGE COLLECTION Module.Name — remove collection

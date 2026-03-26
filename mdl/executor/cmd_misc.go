@@ -299,6 +299,17 @@ Import from External DB into Mendix App DB:
     MXCLI_DB_TYPE, MXCLI_DB_HOST, MXCLI_DB_PORT,
     MXCLI_DB_NAME, MXCLI_DB_USER, MXCLI_DB_PASSWORD
 
+Image Collections:
+  CREATE IMAGE COLLECTION Module.Name
+    [EXPORT LEVEL 'Hidden'|'Public']
+    [COMMENT 'description']
+    [(IMAGE 'name' FROM FILE 'path', ...)];
+  /
+
+  DROP IMAGE COLLECTION Module.Name;
+  SHOW IMAGE COLLECTION [IN Module];
+  DESCRIBE IMAGE COLLECTION Module.Name;
+
 Other:
   COMMIT [MESSAGE 'message'];
   SET key = value;

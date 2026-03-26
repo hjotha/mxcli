@@ -303,6 +303,17 @@ CREATE OR REPLACE NAVIGATION Responsive
 | Create service | `CREATE BUSINESS EVENT SERVICE Module.Name (...) { MESSAGE ... };` | See help topic for full syntax |
 | Drop service | `DROP BUSINESS EVENT SERVICE Module.Name;` | Delete a service |
 
+## Image Collections
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Show collections | `SHOW IMAGE COLLECTION [IN Module];` | List all or filter by module |
+| Describe collection | `DESCRIBE IMAGE COLLECTION Module.Name;` | Full MDL output with embedded images |
+| Create collection | `CREATE IMAGE COLLECTION Module.Name [EXPORT LEVEL 'Hidden'\|'Public'] [COMMENT 'text'] [(IMAGE 'name' FROM FILE 'path', ...)];` | With or without images |
+| Drop collection | `DROP IMAGE COLLECTION Module.Name;` | Removes collection and all embedded images |
+
+**Export levels:** `'Hidden'` (default, internal to module), `'Public'` (accessible from other modules).
+
 ## Java Actions
 
 | Statement | Syntax | Notes |
