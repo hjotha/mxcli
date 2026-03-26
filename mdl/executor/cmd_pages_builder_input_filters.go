@@ -24,7 +24,7 @@ func (pb *pageBuilder) getFilterWidgetIDForAttribute(attrPath string) string {
 	case *domainmodel.IntegerAttributeType, *domainmodel.LongAttributeType,
 		*domainmodel.DecimalAttributeType, *domainmodel.AutoNumberAttributeType:
 		return pages.WidgetIDDataGridNumberFilter
-	case *domainmodel.DateTimeAttributeType:
+	case *domainmodel.DateTimeAttributeType, *domainmodel.DateAttributeType:
 		return pages.WidgetIDDataGridDateFilter
 	case *domainmodel.BooleanAttributeType, *domainmodel.EnumerationAttributeType:
 		return pages.WidgetIDDataGridDropdownFilter

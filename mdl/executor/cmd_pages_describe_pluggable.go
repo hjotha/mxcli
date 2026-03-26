@@ -7,30 +7,13 @@ import (
 )
 
 // extractCustomWidgetAttribute extracts the attribute from a CustomWidget (e.g., ComboBox).
+// Specifically looks for attributeAssociation or attributeEnumeration properties by key,
+// avoiding false matches from other properties that also have AttributeRef (e.g., CaptionAttribute).
 func (e *Executor) extractCustomWidgetAttribute(w map[string]any) string {
-	obj, ok := w["Object"].(map[string]any)
-	if !ok {
-		return ""
-	}
-
-	// Search through properties for attributeEnumeration or attributeAssociation
-	props := getBsonArrayElements(obj["Properties"])
-	for _, prop := range props {
-		propMap, ok := prop.(map[string]any)
-		if !ok {
-			continue
-		}
-		value, ok := propMap["Value"].(map[string]any)
-		if !ok {
-			continue
-		}
-		// Check for AttributeRef
-		attrRef, ok := value["AttributeRef"].(map[string]any)
-		if !ok {
-			continue
-		}
-		if attr, ok := attrRef["Attribute"].(string); ok && attr != "" {
-			return shortAttributeName(attr)
+	// Try association attribute first, then enumeration attribute
+	for _, key := range []string{"attributeAssociation", "attributeEnumeration"} {
+		if attr := e.extractCustomWidgetPropertyAttributeRef(w, key); attr != "" {
+			return attr
 		}
 	}
 	return ""

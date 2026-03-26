@@ -334,6 +334,11 @@ func buildPrimaryExpression(ctx parser.IPrimaryExpressionContext) ast.Expression
 		return &ast.ParenExpr{Inner: inner}
 	}
 
+	// Inline if-then-else expression
+	if ifExpr := primCtx.IfThenElseExpression(); ifExpr != nil {
+		return buildIfThenElseExpression(ifExpr)
+	}
+
 	// Aggregate function (COUNT, SUM, AVG, MIN, MAX for SQL/OQL)
 	// This matches before listAggregateOperation, so we convert it to FunctionCallExpr
 	if aggrFunc := primCtx.AggregateFunction(); aggrFunc != nil {
@@ -517,6 +522,25 @@ func buildListAggregateAsFunction(ctx parser.IListAggregateOperationContext) ast
 	}
 
 	return funcExpr
+}
+
+// buildIfThenElseExpression converts an inline if-then-else expression to an AST node.
+func buildIfThenElseExpression(ctx parser.IIfThenElseExpressionContext) ast.Expression {
+	if ctx == nil {
+		return nil
+	}
+	ifCtx := ctx.(*parser.IfThenElseExpressionContext)
+
+	exprs := ifCtx.AllExpression()
+	if len(exprs) < 3 {
+		return nil
+	}
+
+	return &ast.IfThenElseExpr{
+		Condition: buildExpression(exprs[0]),
+		ThenExpr:  buildExpression(exprs[1]),
+		ElseExpr:  buildExpression(exprs[2]),
+	}
 }
 
 // buildFunctionCall handles function call expressions.

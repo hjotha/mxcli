@@ -326,12 +326,12 @@ func astDataTypeToDBType(dt ast.DataType) string {
 	case ast.TypeInteger:
 		return "DataTypes$IntegerType"
 	case ast.TypeLong:
-		return "DataTypes$IntegerType"
+		return "DataTypes$LongType"
 	case ast.TypeDecimal:
 		return "DataTypes$DecimalType"
 	case ast.TypeBoolean:
 		return "DataTypes$BooleanType"
-	case ast.TypeDateTime:
+	case ast.TypeDateTime, ast.TypeDate:
 		return "DataTypes$DateTimeType"
 	default:
 		return "DataTypes$StringType"

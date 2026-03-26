@@ -1048,6 +1048,9 @@ type MDLParserListener interface {
 	// EnterCaseExpression is called when entering the caseExpression production.
 	EnterCaseExpression(c *CaseExpressionContext)
 
+	// EnterIfThenElseExpression is called when entering the ifThenElseExpression production.
+	EnterIfThenElseExpression(c *IfThenElseExpressionContext)
+
 	// EnterCastExpression is called when entering the castExpression production.
 	EnterCastExpression(c *CastExpressionContext)
 
@@ -2151,6 +2154,9 @@ type MDLParserListener interface {
 
 	// ExitCaseExpression is called when exiting the caseExpression production.
 	ExitCaseExpression(c *CaseExpressionContext)
+
+	// ExitIfThenElseExpression is called when exiting the ifThenElseExpression production.
+	ExitIfThenElseExpression(c *IfThenElseExpressionContext)
 
 	// ExitCastExpression is called when exiting the castExpression production.
 	ExitCastExpression(c *CastExpressionContext)

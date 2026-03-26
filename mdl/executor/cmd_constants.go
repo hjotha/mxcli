@@ -141,16 +141,6 @@ func (e *Executor) describeConstant(name ast.QualifiedName) error {
 
 // outputConstantMDL outputs a constant definition in MDL format.
 func (e *Executor) outputConstantMDL(c *model.Constant, moduleName string) error {
-	// Output documentation if present
-	if c.Documentation != "" {
-		lines := strings.Split(c.Documentation, "\n")
-		fmt.Fprintln(e.output, "/**")
-		for _, line := range lines {
-			fmt.Fprintf(e.output, " * %s\n", line)
-		}
-		fmt.Fprintln(e.output, " */")
-	}
-
 	// Format default value based on type
 	defaultValueStr := formatDefaultValue(c.Type, c.DefaultValue)
 
@@ -159,6 +149,10 @@ func (e *Executor) outputConstantMDL(c *model.Constant, moduleName string) error
 	fmt.Fprintf(e.output, "  DEFAULT %s", defaultValueStr)
 
 	// Add options if present
+	if c.Documentation != "" {
+		escaped := strings.ReplaceAll(c.Documentation, "'", "''")
+		fmt.Fprintf(e.output, "\n  COMMENT '%s'", escaped)
+	}
 	if c.ExposedToClient {
 		fmt.Fprintf(e.output, "\n  EXPOSED TO CLIENT")
 	}
@@ -184,6 +178,8 @@ func formatConstantType(dt model.ConstantDataType) string {
 		return "Boolean"
 	case "DateTime":
 		return "DateTime"
+	case "Date":
+		return "Date"
 	case "Binary":
 		return "Binary"
 	case "Enumeration":
@@ -224,6 +220,8 @@ func formatConstantTypeForMDL(dt model.ConstantDataType) string {
 		return "Boolean"
 	case "DateTime":
 		return "DateTime"
+	case "Date":
+		return "Date"
 	case "Binary":
 		return "Binary"
 	case "Enumeration":
@@ -310,8 +308,12 @@ func (e *Executor) createConstant(stmt *ast.CreateConstantStmt) error {
 			modName := h.GetModuleName(modID)
 			if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(c.Name, stmt.Name.Name) {
 				if stmt.CreateOrModify {
-					// Update existing constant
-					c.Documentation = stmt.Documentation
+					// Update existing constant — COMMENT takes precedence over doc-comment
+					if stmt.Comment != "" {
+						c.Documentation = stmt.Comment
+					} else {
+						c.Documentation = stmt.Documentation
+					}
 					c.Type = constType
 					c.DefaultValue = defaultValue
 					c.ExposedToClient = stmt.ExposedToClient
@@ -327,10 +329,16 @@ func (e *Executor) createConstant(stmt *ast.CreateConstantStmt) error {
 		}
 	}
 
+	// COMMENT 'text' takes precedence; fall back to /** */ doc-comment
+	doc := stmt.Comment
+	if doc == "" {
+		doc = stmt.Documentation
+	}
+
 	constant := &model.Constant{
 		ContainerID:     module.ID,
 		Name:            stmt.Name.Name,
-		Documentation:   stmt.Documentation,
+		Documentation:   doc,
 		Type:            constType,
 		DefaultValue:    defaultValue,
 		ExposedToClient: stmt.ExposedToClient,
@@ -393,6 +401,8 @@ func astDataTypeToConstantDataType(dt ast.DataType) model.ConstantDataType {
 		return model.ConstantDataType{Kind: "Boolean"}
 	case ast.TypeDateTime:
 		return model.ConstantDataType{Kind: "DateTime"}
+	case ast.TypeDate:
+		return model.ConstantDataType{Kind: "Date"}
 	case ast.TypeBinary:
 		return model.ConstantDataType{Kind: "Binary"}
 	case ast.TypeEnumeration:

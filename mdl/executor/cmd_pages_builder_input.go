@@ -172,14 +172,24 @@ func setDataSource(val bson.D, ds pages.DataSource) bson.D {
 	return result
 }
 
-// setAssociationRef sets the EntityRef field in a WidgetValue for an association binding
-// on a pluggable widget. Uses DomainModels$IndirectEntityRef with a Steps array containing
+// setAssociationRef sets both the AttributeRef and EntityRef fields in a WidgetValue
+// for an association binding on a pluggable widget.
+// AttributeRef stores the association qualified name (e.g., "Module.Order_Customer").
+// EntityRef uses DomainModels$IndirectEntityRef with a Steps array containing
 // a DomainModels$EntityRefStep that specifies the association and destination entity.
-// MxBuild requires the EntityRef to resolve the association target (CE0642, CE8812).
+// MxBuild requires both: association path in AttributeRef (CE8812) and
+// target entity in EntityRef (CE0642).
 func setAssociationRef(val bson.D, assocPath string, entityName string) bson.D {
 	result := make(bson.D, 0, len(val))
 	for _, elem := range val {
-		if elem.Key == "EntityRef" && entityName != "" {
+		if elem.Key == "AttributeRef" && assocPath != "" {
+			result = append(result, bson.E{Key: "AttributeRef", Value: bson.D{
+				{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
+				{Key: "$Type", Value: "DomainModels$AttributeRef"},
+				{Key: "Attribute", Value: assocPath},
+				{Key: "EntityRef", Value: nil},
+			}})
+		} else if elem.Key == "EntityRef" && entityName != "" {
 			result = append(result, bson.E{Key: "EntityRef", Value: bson.D{
 				{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
 				{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},

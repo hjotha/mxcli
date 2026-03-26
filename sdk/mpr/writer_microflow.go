@@ -254,10 +254,9 @@ func serializeMicroflowDataType(dt microflows.DataType) bson.D {
 			{Key: "$Type", Value: "DataTypes$IntegerType"},
 		}
 	case *microflows.LongType:
-		// Mendix uses IntegerType for 64-bit integers (Long in Java)
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-			{Key: "$Type", Value: "DataTypes$IntegerType"},
+			{Key: "$Type", Value: "DataTypes$LongType"},
 		}
 	case *microflows.DecimalType:
 		return bson.D{
@@ -269,7 +268,7 @@ func serializeMicroflowDataType(dt microflows.DataType) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "DataTypes$StringType"},
 		}
-	case *microflows.DateTimeType:
+	case *microflows.DateTimeType, *microflows.DateType: // Both map to DataTypes$DateTimeType in BSON; Date is distinguished by LocalizeDate=false at the attribute level
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "DataTypes$DateTimeType"},

@@ -354,10 +354,9 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 					}
 					fmt.Fprintf(e.output, "%s  }\n", prefix)
 				}
-				// Output columns
+				// Output columns — derive name from attribute or caption, fall back to col%d
 				for i, col := range w.DataGridColumns {
-					// Generate synthetic column name since Mendix doesn't store it
-					colName := fmt.Sprintf("col%d", i+1)
+					colName := deriveColumnName(col, i)
 					e.outputDataGrid2ColumnV3(prefix+"  ", colName, col)
 				}
 				fmt.Fprintf(e.output, "%s}\n", prefix)
@@ -574,6 +573,31 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		}
 		fmt.Fprint(e.output, "\n")
 	}
+}
+
+// deriveColumnName produces a semantic column name from the column's attribute
+// or caption. Falls back to "col%d" when neither is available.
+func deriveColumnName(col rawDataGridColumn, index int) string {
+	if col.Attribute != "" {
+		// Use the short attribute name (last segment after dot)
+		parts := strings.Split(col.Attribute, ".")
+		return parts[len(parts)-1]
+	}
+	if col.Caption != "" {
+		// Sanitize caption to a valid identifier: keep alphanumeric, replace rest with underscore
+		sanitized := strings.Map(func(r rune) rune {
+			if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' {
+				return r
+			}
+			return '_'
+		}, col.Caption)
+		// Trim leading/trailing underscores and collapse multiples
+		result := strings.TrimFunc(sanitized, func(r rune) bool { return r == '_' })
+		if result != "" {
+			return result
+		}
+	}
+	return fmt.Sprintf("col%d", index+1)
 }
 
 // outputDataGrid2ColumnV3 outputs a single DataGrid2 column in V3 MDL syntax.

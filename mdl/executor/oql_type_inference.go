@@ -704,6 +704,8 @@ func convertDomainModelTypeToAST(attrType domainmodel.AttributeType) ast.DataTyp
 		return ast.DataType{Kind: ast.TypeBoolean}
 	case *domainmodel.DateTimeAttributeType:
 		return ast.DataType{Kind: ast.TypeDateTime}
+	case *domainmodel.DateAttributeType:
+		return ast.DataType{Kind: ast.TypeDate}
 	case *domainmodel.AutoNumberAttributeType:
 		return ast.DataType{Kind: ast.TypeAutoNumber}
 	case *domainmodel.BinaryAttributeType:
@@ -786,6 +788,8 @@ func formatDataTypeForError(dt ast.DataType) string {
 		return "Boolean"
 	case ast.TypeDateTime:
 		return "DateTime"
+	case ast.TypeDate:
+		return "Date"
 	case ast.TypeAutoNumber:
 		return "AutoNumber"
 	case ast.TypeEnumeration:
@@ -816,6 +820,8 @@ func formatDataTypeForMDL(dt ast.DataType) string {
 		return "Boolean"
 	case ast.TypeDateTime:
 		return "DateTime"
+	case ast.TypeDate:
+		return "Date"
 	case ast.TypeAutoNumber:
 		return "AutoNumber"
 	case ast.TypeEnumeration:

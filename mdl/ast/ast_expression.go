@@ -108,6 +108,16 @@ type QualifiedNameExpr struct {
 
 func (e *QualifiedNameExpr) isExpression() {}
 
+// IfThenElseExpr represents an inline if-then-else expression:
+// if condition then trueExpr else falseExpr
+type IfThenElseExpr struct {
+	Condition Expression // Condition expression
+	ThenExpr  Expression // Expression when condition is true
+	ElseExpr  Expression // Expression when condition is false
+}
+
+func (e *IfThenElseExpr) isExpression() {}
+
 // ============================================================================
 // XPath-Specific Expression Types
 // ============================================================================

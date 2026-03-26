@@ -2944,6 +2944,7 @@ primaryExpression
     : LPAREN expression RPAREN
     | LPAREN oqlQuery RPAREN          // Scalar subquery
     | EXISTS LPAREN oqlQuery RPAREN   // EXISTS / NOT EXISTS subquery
+    | ifThenElseExpression            // Inline if...then...else (Mendix expression)
     | caseExpression
     | castExpression                  // CAST(expr AS type) for OQL type conversion
     | listAggregateOperation          // COUNT, SUM, etc. on lists as expressions (must be before aggregateFunction)
@@ -2958,6 +2959,17 @@ caseExpression
       (WHEN expression THEN expression)+
       (ELSE expression)?
       END
+    ;
+
+/** Inline if-then-else expression (Mendix expression syntax):
+ *  if condition then trueExpr else falseExpr
+ *  Distinguished from statement-level IF...THEN...END IF by:
+ *  - appearing inside an expression context (RHS of SET, DECLARE, etc.)
+ *  - requiring ELSE clause (no standalone if-then)
+ *  - no END IF terminator
+ */
+ifThenElseExpression
+    : IF condition=expression THEN thenExpr=expression ELSE elseExpr=expression
     ;
 
 /** CAST expression for OQL type conversion: CAST(expr AS type) */

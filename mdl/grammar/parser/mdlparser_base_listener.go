@@ -2164,6 +2164,12 @@ func (s *BaseMDLParserListener) EnterCaseExpression(ctx *CaseExpressionContext) 
 // ExitCaseExpression is called when production caseExpression is exited.
 func (s *BaseMDLParserListener) ExitCaseExpression(ctx *CaseExpressionContext) {}
 
+// EnterIfThenElseExpression is called when production ifThenElseExpression is entered.
+func (s *BaseMDLParserListener) EnterIfThenElseExpression(ctx *IfThenElseExpressionContext) {}
+
+// ExitIfThenElseExpression is called when production ifThenElseExpression is exited.
+func (s *BaseMDLParserListener) ExitIfThenElseExpression(ctx *IfThenElseExpressionContext) {}
+
 // EnterCastExpression is called when production castExpression is entered.
 func (s *BaseMDLParserListener) EnterCastExpression(ctx *CastExpressionContext) {}
 

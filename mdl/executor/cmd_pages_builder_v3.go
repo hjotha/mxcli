@@ -967,7 +967,7 @@ func mdlTypeToBsonType(mdlType string) string {
 		return "DataTypes$LongType"
 	case "decimal":
 		return "DataTypes$DecimalType"
-	case "datetime":
+	case "datetime", "date":
 		return "DataTypes$DateTimeType"
 	default:
 		// Could be an entity type - use ObjectType

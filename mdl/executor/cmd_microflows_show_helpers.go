@@ -245,7 +245,7 @@ func (e *Executor) traverseFlow(
 
 		e.emitLoopBody(loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
-		*lines = append(*lines, indentStr+"END LOOP;")
+		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
 		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
 		// Continue after the loop
@@ -399,7 +399,7 @@ func (e *Executor) traverseLoopBody(
 
 		e.emitLoopBody(loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
-		*lines = append(*lines, indentStr+"END LOOP;")
+		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
 		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
 		// Continue after the nested loop within the parent loop body
@@ -449,11 +449,19 @@ func (e *Executor) emitLoopBody(
 		loopActivityMap[loopObj.GetID()] = loopObj
 	}
 
-	// Find flows that connect loop body objects
+	// Build flow graph from the loop's own ObjectCollection flows
 	loopFlowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
+	if loop.ObjectCollection != nil {
+		for _, flow := range loop.ObjectCollection.Flows {
+			loopFlowsByOrigin[flow.OriginID] = append(loopFlowsByOrigin[flow.OriginID], flow)
+		}
+	}
+	// Also include parent flows that originate from loop body objects (for backward compatibility)
 	for originID, flows := range flowsByOrigin {
 		if _, inLoop := loopActivityMap[originID]; inLoop {
-			loopFlowsByOrigin[originID] = flows
+			if _, exists := loopFlowsByOrigin[originID]; !exists {
+				loopFlowsByOrigin[originID] = flows
+			}
 		}
 	}
 
@@ -641,4 +649,12 @@ func (e *Executor) collectErrorHandlerStatements(
 
 	traverse(startID)
 	return statements
+}
+
+// loopEndKeyword returns "END WHILE" for WHILE loops and "END LOOP" for FOR-EACH loops.
+func loopEndKeyword(loop *microflows.LoopedActivity) string {
+	if _, isWhile := loop.LoopSource.(*microflows.WhileLoopCondition); isWhile {
+		return "END WHILE"
+	}
+	return "END LOOP"
 }
