@@ -24,7 +24,7 @@ func (e *Executor) formatActivity(
 	case *microflows.EndEvent:
 		if activity.ReturnValue != "" {
 			returnVal := strings.TrimSuffix(activity.ReturnValue, "\n")
-			if !strings.HasPrefix(returnVal, "$") && !isMendixKeyword(returnVal) {
+			if !strings.HasPrefix(returnVal, "$") && !isMendixKeyword(returnVal) && !isQualifiedEnumLiteral(returnVal) {
 				returnVal = "$" + returnVal
 			}
 			return fmt.Sprintf("RETURN %s;", returnVal)
@@ -855,4 +855,10 @@ func isMendixKeyword(s string) bool {
 		return true
 	}
 	return false
+}
+
+// isQualifiedEnumLiteral returns true for qualified enum literals (e.g., "Module.Enum.Value")
+// that must not be prefixed with "$" when serialized as a RETURN value.
+func isQualifiedEnumLiteral(s string) bool {
+	return strings.Contains(s, ".")
 }
