@@ -30,6 +30,26 @@ const (
 	RefKindMenuItem   = "menu_item"  // Navigation menu item page reference
 )
 
+// collectActionActivities returns all ActionActivity objects from an ObjectCollection,
+// recursing into LoopedActivity bodies to find nested actions.
+func collectActionActivities(oc *microflows.MicroflowObjectCollection) []*microflows.ActionActivity {
+	if oc == nil {
+		return nil
+	}
+	var result []*microflows.ActionActivity
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			if o.Action != nil {
+				result = append(result, o)
+			}
+		case *microflows.LoopedActivity:
+			result = append(result, collectActionActivities(o.ObjectCollection)...)
+		}
+	}
+	return result
+}
+
 // buildReferences extracts cross-references from all documents.
 // This is only run in full mode as it requires parsing all documents.
 func (b *Builder) buildReferences() error {
@@ -66,12 +86,7 @@ func (b *Builder) buildReferences() error {
 			continue
 		}
 
-		for _, obj := range mf.ObjectCollection.Objects {
-			act, ok := obj.(*microflows.ActionActivity)
-			if !ok || act.Action == nil {
-				continue
-			}
-
+		for _, act := range collectActionActivities(mf.ObjectCollection) {
 			switch a := act.Action.(type) {
 			case *microflows.MicroflowCallAction:
 				if a.MicroflowCall != nil && a.MicroflowCall.Microflow != "" {
