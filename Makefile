@@ -10,6 +10,8 @@
 #   make lint-go   - Lint Go code (fmt + vet)
 #   make lint-ts   - Lint TypeScript code (tsc --noEmit)
 #   make grammar   - Regenerate ANTLR parser
+#   make docs-site - Build documentation site (mdbook)
+#   make docs-serve - Serve docs site locally with live reload
 #   make sbom      - Generate CycloneDX SBOM (Go + TypeScript)
 #   make sbom-report - Generate Markdown dependency report
 #   make clean     - Remove build artifacts
@@ -23,7 +25,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
-.PHONY: build build-debug release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation vscode-ext vscode-install source-tree sbom sbom-report lint lint-go lint-ts fmt vet
+.PHONY: build build-debug release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve vscode-ext vscode-install source-tree sbom sbom-report lint lint-go lint-ts fmt vet
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
@@ -205,6 +207,14 @@ documentation:
 		-output docs/06-mdl-reference/grammar-reference.md \
 		-title "MDL Grammar Reference"
 	@echo "Documentation generated at docs/06-mdl-reference/grammar-reference.md"
+
+# Build documentation site with mdbook
+docs-site:
+	mdbook build docs-site
+
+# Serve documentation site locally with live reload
+docs-serve:
+	mdbook serve docs-site
 
 # Generate CycloneDX SBOM (Go + TypeScript dependencies)
 sbom:
