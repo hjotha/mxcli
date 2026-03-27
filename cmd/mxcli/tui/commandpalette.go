@@ -56,8 +56,11 @@ func BrowserPaletteCommands() []PaletteCommand {
 		{Name: "Zen Mode", Key: "z", Category: "View"},
 		{Name: "Toggle MDL/NDSL", Key: "Tab", Category: "View"},
 
+		{Name: "Create Module", Key: "C", Category: "Action"},
 		{Name: "Execute MDL Script", Key: "x", Category: "Action"},
+		{Name: "Edit in Exec", Key: "e", Category: "Action"},
 		{Name: "Refresh Tree", Key: "r", Category: "Action"},
+		{Name: "Hard Reload (clear cache)", Key: "R", Category: "Action"},
 		{Name: "Copy to Clipboard", Key: "y", Category: "Action"},
 
 		{Name: "Show Check Results", Key: "!", Category: "Check"},

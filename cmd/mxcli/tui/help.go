@@ -18,8 +18,10 @@ const helpText = `
     b     BSON dump (overlay)
     c     compare view (side-by-side)
     d     diagram in browser
+    e     edit selected element in exec
     y     copy to clipboard
     r     refresh project tree
+    R     hard reload (clear preview cache)
     z     zen mode (zoom panel)
     x     execute MDL script
     Tab   switch MDL / NDSL preview

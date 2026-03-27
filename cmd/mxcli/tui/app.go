@@ -396,6 +396,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.views.Push(ov)
 		return a, nil
 
+	case discardDoneMsg:
+		// Clear preview cache so stale data isn't shown after discard
+		a.previewEngine.ClearCache()
+		return a, func() tea.Msg {
+			return execShowResultMsg{Content: msg.Output, Success: msg.Success}
+		}
+
 	case execShowResultMsg:
 		// Pop the ExecView (or ConfirmView)
 		a.views.Pop()
@@ -975,6 +982,15 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 
 	case "r":
 		return a.Init()
+
+	case "R":
+		projectPath := a.activeTabProjectPath()
+		if projectPath == "" {
+			return handledCmd
+		}
+		cv := NewDiscardConfirmView(projectPath, a.mxcliPath)
+		a.views.Push(cv)
+		return handledCmd
 
 	case " ":
 		if tab != nil {

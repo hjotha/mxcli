@@ -19,10 +19,12 @@ type JumpToNodeMsg struct {
 
 // JumperView is a fuzzy-search modal for jumping to any node in the project.
 type JumperView struct {
-	input  textinput.Model
-	list   FuzzyList
-	width  int
-	height int
+	input      textinput.Model
+	list       FuzzyList
+	width      int
+	height     int
+	history    []string
+	historyIdx int // -1 = not browsing history
 }
 
 // NewJumperView creates a JumperView populated with the given items.
@@ -34,10 +36,12 @@ func NewJumperView(items []PickerItem, width, height int) JumperView {
 	ti.Focus()
 
 	jv := JumperView{
-		input:  ti,
-		list:   NewFuzzyList(items, jumperMaxShow),
-		width:  width,
-		height: height,
+		input:      ti,
+		list:       NewFuzzyList(items, jumperMaxShow),
+		width:      width,
+		height:     height,
+		history:    LoadJumperHistory(),
+		historyIdx: -1,
 	}
 	return jv
 }
@@ -54,16 +58,49 @@ func (jv JumperView) Update(msg tea.Msg) (View, tea.Cmd) {
 		case "enter":
 			sel := jv.list.Selected()
 			if sel.QName != "" {
+				query := strings.TrimSpace(jv.input.Value())
+				AddJumperHistoryEntry(query)
 				qname := sel.QName
 				nodeType := sel.NodeType
 				return jv, func() tea.Msg { return JumpToNodeMsg{QName: qname, NodeType: nodeType} }
 			}
 			return jv, func() tea.Msg { return PopViewMsg{} }
 		case "up", "ctrl+p":
-			jv.list.MoveUp()
+			inputVal := strings.TrimSpace(jv.input.Value())
+			if (inputVal == "" || jv.historyIdx >= 0) && len(jv.history) > 0 {
+				// Navigate history upward (older entries)
+				nextIdx := jv.historyIdx + 1
+				if nextIdx >= len(jv.history) {
+					nextIdx = len(jv.history) - 1
+				}
+				jv.historyIdx = nextIdx
+				jv.input.SetValue(jv.history[jv.historyIdx])
+				jv.input.CursorEnd()
+				jv.list.Filter(jv.history[jv.historyIdx])
+			} else {
+				jv.list.MoveUp()
+			}
 		case "down", "ctrl+n":
-			jv.list.MoveDown()
+			if jv.historyIdx >= 0 {
+				// Navigate history downward (newer entries)
+				nextIdx := jv.historyIdx - 1
+				if nextIdx < 0 {
+					// Past the newest entry — clear input, exit history mode
+					jv.historyIdx = -1
+					jv.input.SetValue("")
+					jv.list.Filter("")
+				} else {
+					jv.historyIdx = nextIdx
+					jv.input.SetValue(jv.history[jv.historyIdx])
+					jv.input.CursorEnd()
+					jv.list.Filter(jv.history[jv.historyIdx])
+				}
+			} else {
+				jv.list.MoveDown()
+			}
 		default:
+			// Any regular keystroke exits history browsing mode
+			jv.historyIdx = -1
 			var cmd tea.Cmd
 			jv.input, cmd = jv.input.Update(msg)
 			jv.list.Filter(jv.input.Value())

@@ -36,6 +36,7 @@ var (
 		{Key: "C", Label: "create module"},
 		{Key: "D", Label: "delete"},
 		{Key: "e", Label: "edit mdl"},
+		{Key: "R", Label: "discard"},
 		{Key: "!", Label: "check"},
 		{Key: ":", Label: "commands"},
 		{Key: "?", Label: "help"},
@@ -64,6 +65,7 @@ var (
 		{Key: "Ctrl+E", Label: "execute"},
 		{Key: "Ctrl+F", Label: "format"},
 		{Key: "Ctrl+O", Label: "open file"},
+		{Key: "Ctrl+P", Label: "preview"},
 		{Key: "Esc", Label: "close"},
 	}
 	DiffViewHints = []Hint{

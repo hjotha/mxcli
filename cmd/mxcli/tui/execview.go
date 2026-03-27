@@ -40,7 +40,8 @@ type execFileLoadedMsg struct {
 const execPickerMaxVisible = 10
 
 // ExecView provides a textarea for entering/pasting MDL scripts and executing them.
-// It has two modes: editor mode (textarea) and file picker mode (path input with completion).
+// It has three modes: editor mode (textarea), file picker mode (path input with completion),
+// and preview mode (read-only syntax-highlighted ContentView).
 type ExecView struct {
 	textarea    textarea.Model
 	mxcliPath   string
@@ -50,6 +51,10 @@ type ExecView struct {
 	executing   bool
 	flash       string
 	loadedPath  string // path of the currently loaded file (for status display)
+
+	// Preview mode (Ctrl+P toggle)
+	previewing     bool
+	previewContent ContentView
 
 	// File picker state (inline, not a separate View)
 	picking        bool
@@ -122,6 +127,16 @@ func (ev ExecView) Hints() []Hint {
 			{Key: "Esc", Label: "back"},
 		}
 	}
+	if ev.previewing {
+		return []Hint{
+			{Key: "Ctrl+P", Label: "edit"},
+			{Key: "Ctrl+E", Label: "execute"},
+			{Key: "Ctrl+F", Label: "format"},
+			{Key: "j/k", Label: "scroll"},
+			{Key: "/", Label: "search"},
+			{Key: "Esc", Label: "close"},
+		}
+	}
 	return ExecViewHints
 }
 
@@ -131,6 +146,18 @@ func (ev ExecView) StatusInfo() StatusInfo {
 		return StatusInfo{
 			Breadcrumb: []string{"Execute MDL", "Open File"},
 			Mode:       "Exec",
+		}
+	}
+	if ev.previewing {
+		extra := ""
+		if ev.loadedPath != "" {
+			extra = filepath.Base(ev.loadedPath)
+		}
+		return StatusInfo{
+			Breadcrumb: []string{"Execute MDL", "Preview"},
+			Position:   fmt.Sprintf("L%d/%d", ev.previewContent.YOffset()+1, ev.previewContent.TotalLines()),
+			Mode:       "Preview",
+			Extra:      extra,
 		}
 	}
 	lines := strings.Count(ev.textarea.Value(), "\n") + 1
@@ -153,6 +180,9 @@ func (ev ExecView) Render(width, height int) string {
 	if ev.picking {
 		return ev.renderPicker(width, height)
 	}
+	if ev.previewing {
+		return ev.renderPreview(width, height)
+	}
 
 	ev.textarea.SetWidth(width - 4)
 	ev.textarea.SetHeight(height - 6)
@@ -171,6 +201,26 @@ func (ev ExecView) Render(width, height int) string {
 		title,
 		ev.textarea.View(),
 		statusLine,
+	)
+
+	return lipgloss.NewStyle().Padding(1, 2).Render(content)
+}
+
+func (ev ExecView) renderPreview(width, height int) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor).Padding(0, 1)
+	modeStyle := lipgloss.NewStyle().Foreground(MutedColor).Italic(true)
+
+	titleLine := lipgloss.JoinHorizontal(lipgloss.Top,
+		titleStyle.Render("Execute MDL"),
+		modeStyle.Render(" — PREVIEW (Ctrl+P to edit)"),
+	)
+
+	previewH := height - 6
+	ev.previewContent.SetSize(width-4, previewH)
+
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		titleLine,
+		ev.previewContent.View(),
 	)
 
 	return lipgloss.NewStyle().Padding(1, 2).Render(content)
@@ -272,6 +322,9 @@ func (ev ExecView) Update(msg tea.Msg) (View, tea.Cmd) {
 		if ev.picking {
 			return ev.updatePicker(msg)
 		}
+		if ev.previewing {
+			return ev.updatePreview(msg)
+		}
 		return ev.updateEditor(msg)
 	}
 
@@ -323,11 +376,63 @@ func (ev ExecView) updateEditor(msg tea.KeyMsg) (View, tea.Cmd) {
 		ev.pathInput.Focus()
 		ev.refreshMDLCandidates()
 		return ev, nil
+
+	case "ctrl+p":
+		content := ev.textarea.Value()
+		highlighted := HighlightMDL(content)
+		ev.previewContent = NewContentView(ev.width-4, ev.height-6)
+		ev.previewContent.SetContent(highlighted)
+		ev.previewing = true
+		ev.textarea.Blur()
+		return ev, nil
 	}
 
 	var cmd tea.Cmd
 	ev.textarea, cmd = ev.textarea.Update(msg)
 	return ev, cmd
+}
+
+func (ev ExecView) updatePreview(msg tea.KeyMsg) (View, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+p":
+		ev.previewing = false
+		ev.textarea.Focus()
+		return ev, nil
+
+	case "esc":
+		return ev, func() tea.Msg { return PopViewMsg{} }
+
+	case "ctrl+e":
+		mdlText := strings.TrimSpace(ev.textarea.Value())
+		if mdlText == "" {
+			ev.flash = "Nothing to execute"
+			ev.previewing = false
+			ev.textarea.Focus()
+			return ev, nil
+		}
+		ev.executing = true
+		ev.previewing = false
+		ev.textarea.Focus()
+		return ev, ev.executeMDL(mdlText)
+
+	case "ctrl+f":
+		content := ev.textarea.Value()
+		if strings.TrimSpace(content) == "" {
+			return ev, nil
+		}
+		formatted := formatter.Format(content)
+		ev.textarea.SetValue(formatted)
+		highlighted := HighlightMDL(formatted)
+		ev.previewContent = NewContentView(ev.width-4, ev.height-6)
+		ev.previewContent.SetContent(highlighted)
+		ev.flash = "Formatted"
+		return ev, nil
+
+	default:
+		var cmd tea.Cmd
+		ev.previewContent, cmd = ev.previewContent.Update(msg)
+		return ev, cmd
+	}
 }
 
 func (ev ExecView) updatePicker(msg tea.KeyMsg) (View, tea.Cmd) {

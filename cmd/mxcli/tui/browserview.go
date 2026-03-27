@@ -166,11 +166,25 @@ func (bv BrowserView) handleKey(msg tea.KeyMsg) (View, tea.Cmd) {
 
 	case "e":
 		node := bv.miller.SelectedNode()
-		if node != nil && node.QualifiedName != "" && bv.miller.preview.content != "" {
+		if node == nil || node.QualifiedName == "" {
+			return bv, nil
+		}
+		if bv.miller.preview.content != "" {
 			raw := stripAnsi(bv.miller.preview.content)
 			return bv, func() tea.Msg { return OpenExecWithContentMsg{Content: raw} }
 		}
-		return bv, nil
+		// No cached preview — fetch MDL describe on-the-fly and open exec
+		mdlCmd := buildDescribeCmd(node.Type, node.QualifiedName)
+		if mdlCmd == "" {
+			return bv, nil
+		}
+		mxcliPath := bv.mxcliPath
+		projectPath := bv.projectPath
+		return bv, func() tea.Msg {
+			out, _ := runMxcli(mxcliPath, "-p", projectPath, "-c", mdlCmd)
+			out = StripBanner(out)
+			return OpenExecWithContentMsg{Content: out}
+		}
 	}
 
 	// Navigation keys: forward to miller

@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mendixlabs/mxcli/mdl/formatter"
 )
 
 // overlayContentMsg carries reloaded content for an OverlayView after Tab switch.
@@ -144,6 +145,15 @@ func (ov OverlayView) Update(msg tea.Msg) (View, tea.Cmd) {
 			}
 		}
 
+		// 'f' formats MDL content (non-NDSL, non-check overlays only)
+		if msg.String() == "f" && !ov.isNDSL && len(ov.checkNavLocs) == 0 {
+			raw := ov.overlay.content.PlainText()
+			formatted := formatter.Format(raw)
+			highlighted := DetectAndHighlight(formatted)
+			ov.overlay.Show(ov.overlay.title, highlighted, ov.overlay.width, ov.overlay.height)
+			return ov, nil
+		}
+
 		// 'e' opens ExecView with overlay content (non-check overlays only)
 		if msg.String() == "e" && len(ov.checkNavLocs) == 0 && ov.pendingKey == 0 {
 			if ov.qname != "" && !ov.isNDSL {
@@ -238,6 +248,9 @@ func (ov OverlayView) Hints() []Hint {
 	}
 	if len(ov.checkNavLocs) > 0 {
 		hints = append(hints, Hint{Key: "Enter", Label: "go to"})
+	}
+	if !ov.isNDSL && len(ov.checkNavLocs) == 0 {
+		hints = append(hints, Hint{Key: "f", Label: "format"})
 	}
 	if ov.switchable {
 		hints = append(hints, Hint{Key: "Tab", Label: "mdl/ndsl"})

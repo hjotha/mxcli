@@ -428,9 +428,38 @@ func (m *MillerView) View() string {
 }
 
 func (m *MillerView) viewZen() string {
-	col := m.focusedColumn()
-	col.SetSize(m.width, m.height)
-	return col.View()
+	// Build separator
+	sepLines := make([]string, m.height)
+	sepChar := SeparatorStyle.Render(SeparatorChar)
+	for i := range sepLines {
+		sepLines[i] = sepChar
+	}
+	sep := strings.Join(sepLines, "\n")
+
+	// Allocate widths: current ~40%, preview ~60% (1 sep char)
+	usable := m.width - 1
+	currentW := usable * 40 / 100
+	if currentW < minCurrentWidth {
+		currentW = minCurrentWidth
+	}
+	previewW := usable - currentW
+
+	var col *Column
+	if m.focus == MillerFocusParent {
+		col = &m.parent
+	} else {
+		col = &m.current
+	}
+	col.SetSize(currentW, m.height)
+
+	previewContent := m.renderPreview(previewW)
+	rendered := lipgloss.JoinHorizontal(lipgloss.Top, col.View(), sep, previewContent)
+
+	outLines := strings.Split(rendered, "\n")
+	if len(outLines) > m.height {
+		outLines = outLines[:m.height]
+	}
+	return strings.Join(outLines, "\n")
 }
 
 func (m MillerView) renderPreview(previewWidth int) string {
