@@ -315,6 +315,14 @@ func (ev ExecView) Update(msg tea.Msg) (View, tea.Cmd) {
 		ev.textarea.SetHeight(msg.Height - 6)
 		return ev, nil
 
+	case AgentAutoExecMsg:
+		mdlText := strings.TrimSpace(ev.textarea.Value())
+		if mdlText == "" {
+			return ev, nil
+		}
+		ev.executing = true
+		return ev, ev.executeMDL(mdlText)
+
 	case tea.KeyMsg:
 		if ev.executing {
 			return ev, nil

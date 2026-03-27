@@ -149,7 +149,7 @@ func (a *App) StartAgentListener(prog *tea.Program, socketPath string, autoProce
 }
 
 // CloseAgentListener stops the agent listener if running.
-func (a App) CloseAgentListener() {
+func (a *App) CloseAgentListener() {
 	if a.agentListener != nil {
 		a.agentListener.Close()
 	}
@@ -469,10 +469,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ev := NewExecViewWithContent(a.mxcliPath, a.activeTabProjectPath(), a.width, a.height, msg.MDL)
 		a.views.Push(ev)
 		if a.agentAutoProceed {
-			// Auto-trigger execution (like pressing Ctrl+E)
-			return a, func() tea.Msg {
-				return tea.KeyMsg{Type: tea.KeyCtrlE}
-			}
+			return a, func() tea.Msg { return AgentAutoExecMsg{} }
 		}
 		return a, nil
 

@@ -36,6 +36,11 @@ func NewAgentListener(socketPath string, sendMsg func(tea.Msg), autoProceed bool
 	if err != nil {
 		return nil, err
 	}
+	// Restrict socket access to current user only
+	if err := os.Chmod(socketPath, 0600); err != nil {
+		ln.Close()
+		return nil, fmt.Errorf("chmod socket: %w", err)
+	}
 
 	al := &AgentListener{
 		socketPath:  socketPath,
@@ -150,7 +155,7 @@ func (al *AgentListener) handleConnection(conn net.Conn) {
 		select {
 		case resp := <-responseCh:
 			encoder.Encode(resp)
-		case <-time.After(60 * time.Second):
+		case <-time.After(120 * time.Second):
 			encoder.Encode(AgentResponse{ID: req.ID, OK: false, Error: "timeout waiting for TUI response"})
 		}
 	}

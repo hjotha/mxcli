@@ -12,13 +12,23 @@ import (
 
 const maxFilterHistory = 50
 
+// filterHistoryCache holds the in-memory cache of filter history entries.
+// Loaded once from disk, updated in memory and written back on mutation.
+var filterHistoryCache []string
+var filterHistoryCacheLoaded bool
+
 func filterHistoryPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".mxcli", "tui-filter-history.json")
 }
 
 // LoadFilterHistory returns recent filter queries, most recent first.
+// Uses an in-memory cache to avoid disk reads on every keystroke.
 func LoadFilterHistory() []string {
+	if filterHistoryCacheLoaded {
+		return filterHistoryCache
+	}
+	filterHistoryCacheLoaded = true
 	data, err := os.ReadFile(filterHistoryPath())
 	if err != nil {
 		return nil
@@ -28,6 +38,7 @@ func LoadFilterHistory() []string {
 		Trace("filterhistory: unmarshal error: %v", err)
 		return nil
 	}
+	filterHistoryCache = entries
 	return entries
 }
 
@@ -43,6 +54,9 @@ func AddFilterHistoryEntry(query string) {
 	if len(entries) > maxFilterHistory {
 		entries = entries[:maxFilterHistory]
 	}
+	// Update in-memory cache
+	filterHistoryCache = entries
+	// Persist to disk
 	if err := os.MkdirAll(filepath.Dir(filterHistoryPath()), 0755); err != nil {
 		Trace("filterhistory: mkdir error: %v", err)
 		return

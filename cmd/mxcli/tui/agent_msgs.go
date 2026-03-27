@@ -42,6 +42,10 @@ type AgentCreateModuleMsg struct {
 	ResponseCh chan<- AgentResponse
 }
 
+// AgentAutoExecMsg triggers automatic MDL execution in ExecView
+// without simulating a keystroke. Used by auto-proceed mode.
+type AgentAutoExecMsg struct{}
+
 // Ensure messages satisfy tea.Msg.
 var (
 	_ tea.Msg = AgentExecMsg{}
@@ -50,4 +54,5 @@ var (
 	_ tea.Msg = AgentNavigateMsg{}
 	_ tea.Msg = AgentDeleteMsg{}
 	_ tea.Msg = AgentCreateModuleMsg{}
+	_ tea.Msg = AgentAutoExecMsg{}
 )
