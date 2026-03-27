@@ -25,6 +25,9 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
+# Clean version for VS Code extension (must be valid semver: major.minor.patch)
+VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
+
 .PHONY: build build-debug release clean test test-mdl grammar completions sync-skills sync-commands sync-lint-rules sync-changelog sync-all docs documentation docs-site docs-serve vscode-ext vscode-install source-tree sbom sbom-report lint lint-go lint-ts fmt vet
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
@@ -182,13 +185,16 @@ clean:
 
 # Build VS Code extension (.vsix) with build-time version info
 vscode-ext:
-	@echo "Building VS Code extension..."
+	@echo "Building VS Code extension (version $(VSCE_VERSION))..."
 	cd vscode-mdl && bun install && \
+		cp package.json package.json.bak && \
+		sed -i 's/"version": "[^"]*"/"version": "$(VSCE_VERSION)"/' package.json && \
 		bunx esbuild src/extension.ts --bundle --outfile=dist/extension.js \
 			--external:vscode --format=cjs --platform=node \
 			--define:__BUILD_TIME__="'$(BUILD_TIME)'" \
 			--define:__GIT_COMMIT__="'$(VERSION)'" && \
-		bunx @vscode/vsce package --no-dependencies
+		bunx @vscode/vsce package --no-dependencies; \
+		status=$$?; mv package.json.bak package.json; exit $$status
 	@echo "Built vscode-mdl/$$(ls vscode-mdl/*.vsix)"
 
 # Install VS Code extension
