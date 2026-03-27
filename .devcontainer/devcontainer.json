@@ -4,7 +4,8 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "forwardPorts": [8080, 8090, 5432],
   "portsAttributes": {
@@ -33,6 +34,8 @@
   "postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && go mod download",
   "remoteUser": "vscode",
   "remoteEnv": {
-    "CGO_ENABLED": "1"
+    "CGO_ENABLED": "0",
+    "LANG": "en_US.UTF-8",
+    "LC_ALL": "en_US.UTF-8"
   }
 }
