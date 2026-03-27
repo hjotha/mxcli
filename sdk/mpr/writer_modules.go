@@ -209,6 +209,11 @@ func (w *Writer) DeleteFolder(id model.ID) error {
 	return w.deleteUnit(idStr)
 }
 
+// MoveFolder moves a folder to a new container (folder or module root).
+func (w *Writer) MoveFolder(id model.ID, newContainerID model.ID) error {
+	return w.moveUnitByID(string(id), string(newContainerID))
+}
+
 func (w *Writer) serializeModuleSecurity(id string) ([]byte, error) {
 	doc := bson.M{
 		"$ID":         idToBsonBinary(id),

@@ -291,6 +291,8 @@ moveStatement
     : MOVE (PAGE | MICROFLOW | SNIPPET | NANOFLOW | ENUMERATION | CONSTANT | DATABASE CONNECTION) qualifiedName TO FOLDER STRING_LITERAL (IN (qualifiedName | IDENTIFIER))?
     | MOVE (PAGE | MICROFLOW | SNIPPET | NANOFLOW | ENUMERATION | CONSTANT | DATABASE CONNECTION) qualifiedName TO (qualifiedName | IDENTIFIER)
     | MOVE ENTITY qualifiedName TO (qualifiedName | IDENTIFIER)
+    | MOVE FOLDER qualifiedName TO FOLDER STRING_LITERAL (IN (qualifiedName | IDENTIFIER))?
+    | MOVE FOLDER qualifiedName TO (qualifiedName | IDENTIFIER)
     ;
 
 // =============================================================================

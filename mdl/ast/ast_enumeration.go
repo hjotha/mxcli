@@ -35,6 +35,15 @@ type DropFolderStmt struct {
 
 func (s *DropFolderStmt) isStatement() {}
 
+// MoveFolderStmt represents: MOVE FOLDER Module.FolderName TO ...
+type MoveFolderStmt struct {
+	Name         QualifiedName // Source: Module.FolderName (Name may be "Parent/Child" for nested)
+	TargetFolder string        // Target folder path (empty = module root)
+	TargetModule string        // Target module name (empty = same module)
+}
+
+func (s *MoveFolderStmt) isStatement() {}
+
 // CreateEnumerationStmt represents: CREATE ENUMERATION Module.Name (values) COMMENT '...'
 type CreateEnumerationStmt struct {
 	Name           QualifiedName

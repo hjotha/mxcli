@@ -53,4 +53,4 @@ DROP FOLDER 'Processing' IN MyModule;
 
 ## See Also
 
-[CREATE FOLDER](create-folder.md), [CREATE MODULE](create-module.md), [MOVE](move.md)
+[CREATE FOLDER](create-folder.md), [CREATE MODULE](create-module.md), [MOVE](move.md), [MOVE FOLDER](move-folder.md)

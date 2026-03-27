@@ -688,6 +688,15 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 		return
 	}
 
+	// Handle MOVE FOLDER separately — different AST type
+	// MOVE FOLDER is identified by having FOLDER as the first token after MOVE (no document type keyword)
+	if len(ctx.AllFOLDER()) > 0 && ctx.PAGE() == nil && ctx.MICROFLOW() == nil &&
+		ctx.SNIPPET() == nil && ctx.NANOFLOW() == nil && ctx.ENTITY() == nil &&
+		ctx.ENUMERATION() == nil && ctx.CONSTANT() == nil && ctx.DATABASE() == nil {
+		b.exitMoveFolderStatement(ctx, names)
+		return
+	}
+
 	stmt := &ast.MoveStmt{
 		Name: buildQualifiedName(names[0]),
 	}
@@ -712,7 +721,7 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 	}
 
 	// Parse folder path if specified
-	if ctx.FOLDER() != nil && ctx.STRING_LITERAL() != nil {
+	if len(ctx.AllFOLDER()) > 0 && ctx.STRING_LITERAL() != nil {
 		stmt.Folder = unquoteString(ctx.STRING_LITERAL().GetText())
 	}
 
@@ -723,9 +732,34 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 	} else if ctx.IDENTIFIER() != nil {
 		// MOVE ... TO FOLDER 'path' IN ModuleName (identifier)
 		stmt.TargetModule = ctx.IDENTIFIER().GetText()
-	} else if ctx.FOLDER() == nil && len(names) > 1 {
+	} else if len(ctx.AllFOLDER()) == 0 && len(names) > 1 {
 		// MOVE ... TO Module (no folder, just target module)
 		stmt.TargetModule = getQualifiedNameText(names[1])
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
+// exitMoveFolderStatement handles MOVE FOLDER Module.FolderName TO ...
+func (b *Builder) exitMoveFolderStatement(ctx *parser.MoveStatementContext, names []parser.IQualifiedNameContext) {
+	stmt := &ast.MoveFolderStmt{
+		Name: buildQualifiedName(names[0]),
+	}
+
+	// Parse target: either FOLDER 'path' [IN Module] or just Module
+	if ctx.STRING_LITERAL() != nil {
+		// MOVE FOLDER ... TO FOLDER 'path' [IN Module]
+		stmt.TargetFolder = unquoteString(ctx.STRING_LITERAL().GetText())
+		if len(names) > 1 {
+			stmt.TargetModule = getQualifiedNameText(names[1])
+		} else if ctx.IDENTIFIER() != nil {
+			stmt.TargetModule = ctx.IDENTIFIER().GetText()
+		}
+	} else if len(names) > 1 {
+		// MOVE FOLDER ... TO Module
+		stmt.TargetModule = getQualifiedNameText(names[1])
+	} else if ctx.IDENTIFIER() != nil {
+		stmt.TargetModule = ctx.IDENTIFIER().GetText()
 	}
 
 	b.statements = append(b.statements, stmt)

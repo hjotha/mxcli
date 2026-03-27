@@ -57,6 +57,17 @@ EXAMPLES
   SHOW IMPACT OF OldModule.CustomerPage;
   MOVE PAGE OldModule.CustomerPage TO NewModule;
 
+MOVE FOLDER
+-----------
+
+Move a folder to another location:
+  MOVE FOLDER Module.FolderName TO FOLDER 'TargetPath';
+  MOVE FOLDER Module.FolderName TO TargetModule;
+  MOVE FOLDER Module.FolderName TO FOLDER 'TargetPath' IN TargetModule;
+
+For nested folder paths, use double quotes:
+  MOVE FOLDER Module."Parent/Child" TO TargetModule;
+
 DROP FOLDER
 -----------
 

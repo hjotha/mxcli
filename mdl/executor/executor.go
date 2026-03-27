@@ -229,6 +229,8 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 		return e.execCreateJavaAction(s)
 	case *ast.DropFolderStmt:
 		return e.execDropFolder(s)
+	case *ast.MoveFolderStmt:
+		return e.execMoveFolder(s)
 	case *ast.MoveStmt:
 		return e.execMove(s)
 

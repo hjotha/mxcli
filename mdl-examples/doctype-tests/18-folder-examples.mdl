@@ -53,6 +53,20 @@ MOVE MICROFLOW FolderTest.ACT_Process TO FOLDER 'Resources';
 MOVE MICROFLOW FolderTest.ACT_Archive TO FolderTest;
 /
 
+-- MARK: - Move Folders
+
+/**
+ * Level 2.3: Move a folder into another folder
+ */
+MOVE FOLDER FolderTest.Resources TO FOLDER 'Processing';
+/
+
+/**
+ * Level 2.4: Move a nested folder to module root (use quotes for paths with /)
+ */
+MOVE FOLDER FolderTest."Processing/Resources" TO FolderTest;
+/
+
 -- MARK: - Drop Folders
 
 /**

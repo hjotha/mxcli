@@ -202,6 +202,24 @@ MOVE ENTITY CRM.Customer TO CustomerModule;
 MOVE ENUMERATION CRM.OrderStatus TO SharedModule;
 ```
 
+## Moving Folders
+
+Use `MOVE FOLDER` to reorganize folders. Syntax matches document moves: `Module.FolderName`.
+
+```sql
+-- Move a folder into another folder
+MOVE FOLDER MyModule.Resources TO FOLDER 'Archive';
+
+-- Move a nested folder (use double quotes for paths with /)
+MOVE FOLDER MyModule."Orders/Archive" TO MyModule;
+
+-- Move a folder to a different module
+MOVE FOLDER MyModule.SharedWidgets TO CommonModule;
+
+-- Move a folder into a folder in another module
+MOVE FOLDER MyModule.Templates TO FOLDER 'Shared' IN CommonModule;
+```
+
 ## Deleting Folders
 
 Use `DROP FOLDER` to remove empty folders. The folder must not contain any documents or sub-folders.

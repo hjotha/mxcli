@@ -262,6 +262,7 @@
   - [CREATE FOLDER](reference/organization/create-folder.md)
   - [DROP FOLDER](reference/organization/drop-folder.md)
   - [MOVE](reference/organization/move.md)
+  - [MOVE FOLDER](reference/organization/move-folder.md)
 - [Session Statements](reference/session/README.md)
   - [SET](reference/session/set.md)
   - [SHOW STATUS](reference/session/show-status.md)
