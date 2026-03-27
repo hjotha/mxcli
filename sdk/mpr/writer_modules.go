@@ -185,6 +185,30 @@ func (w *Writer) serializeFolder(folder *model.Folder) ([]byte, error) {
 	return bson.Marshal(doc)
 }
 
+// DeleteFolder deletes a folder unit if it is empty.
+// Returns an error if the folder contains any child units.
+func (w *Writer) DeleteFolder(id model.ID) error {
+	idStr := string(id)
+	blob := uuidToBlob(idStr)
+	if blob == nil {
+		return fmt.Errorf("invalid folder ID: %s", idStr)
+	}
+
+	var count int
+	err := w.reader.db.QueryRow(
+		"SELECT COUNT(*) FROM Unit WHERE ContainerID = ? AND UnitID != ContainerID",
+		blob,
+	).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check folder contents: %w", err)
+	}
+	if count > 0 {
+		return fmt.Errorf("folder is not empty: contains %d child unit(s)", count)
+	}
+
+	return w.deleteUnit(idStr)
+}
+
 func (w *Writer) serializeModuleSecurity(id string) ([]byte, error) {
 	doc := bson.M{
 		"$ID":         idToBsonBinary(id),

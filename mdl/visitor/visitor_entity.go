@@ -665,6 +665,19 @@ func (b *Builder) ExitDropStatement(ctx *parser.DropStatementContext) {
 		b.statements = append(b.statements, &ast.DropRestClientStmt{
 			Name: buildQualifiedName(names[0]),
 		})
+	} else if ctx.FOLDER() != nil {
+		folderPath := unquoteString(ctx.STRING_LITERAL().GetText())
+		// Module can be a qualifiedName or IDENTIFIER
+		var moduleName string
+		if len(names) > 0 {
+			moduleName = getQualifiedNameText(names[0])
+		} else if ctx.IDENTIFIER() != nil {
+			moduleName = ctx.IDENTIFIER().GetText()
+		}
+		b.statements = append(b.statements, &ast.DropFolderStmt{
+			FolderPath: folderPath,
+			Module:     moduleName,
+		})
 	}
 }
 

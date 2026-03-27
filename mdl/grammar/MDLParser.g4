@@ -251,6 +251,7 @@ dropStatement
     | DROP WORKFLOW qualifiedName
     | DROP IMAGE COLLECTION qualifiedName
     | DROP REST CLIENT qualifiedName
+    | DROP FOLDER STRING_LITERAL IN (qualifiedName | IDENTIFIER)
     ;
 
 renameStatement

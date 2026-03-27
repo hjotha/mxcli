@@ -27,6 +27,14 @@ type DropModuleStmt struct {
 
 func (s *DropModuleStmt) isStatement() {}
 
+// DropFolderStmt represents: DROP FOLDER 'path' IN Module
+type DropFolderStmt struct {
+	FolderPath string // Folder path (e.g., "Resources/Images")
+	Module     string // Module name
+}
+
+func (s *DropFolderStmt) isStatement() {}
+
 // CreateEnumerationStmt represents: CREATE ENUMERATION Module.Name (values) COMMENT '...'
 type CreateEnumerationStmt struct {
 	Name           QualifiedName
