@@ -32,7 +32,18 @@
 
 ---
 
-# Part II: The MDL Language
+# Part II: Migration
+
+- [Migration Guide](migration/README.md)
+  - [Assessment](migration/assessment.md)
+  - [Transformation Plan](migration/transformation.md)
+  - [Generation](migration/generation.md)
+  - [Data Migration](migration/data-migration.md)
+  - [Validation and Handoff](migration/validation.md)
+
+---
+
+# Part III: The MDL Language
 
 - [MDL Basics](language/basics.md)
   - [Lexical Structure](language/lexical-structure.md)
@@ -86,7 +97,7 @@
 
 ---
 
-# Part III: Project Tools
+# Part IV: Project Tools
 
 - [Code Navigation](tools/code-navigation.md)
   - [SHOW CALLERS / CALLEES](tools/callers-callees.md)
@@ -131,7 +142,7 @@
 
 ---
 
-# Part IV: IDE Integration
+# Part V: IDE Integration
 
 - [VS Code Extension](ide/vscode.md)
   - [Installation](ide/vscode-installation.md)
@@ -150,7 +161,7 @@
 
 ---
 
-# Part V: Go Library
+# Part VI: Go Library
 
 - [Quick Start](library/quickstart.md)
   - [Installation](library/installation.md)
@@ -167,7 +178,7 @@
 
 ---
 
-# Part VI: MDL Statement Reference
+# Part VII: MDL Statement Reference
 
 - [Connection Statements](reference/connection/README.md)
   - [OPEN PROJECT](reference/connection/open-project.md)
@@ -255,7 +266,7 @@
 
 ---
 
-# Part VII: Architecture & Internals
+# Part VIII: Architecture & Internals
 
 - [System Architecture](internals/architecture.md)
   - [Layer Diagram](internals/layers.md)
@@ -277,7 +288,7 @@
 
 ---
 
-# Part VIII: Appendixes
+# Part IX: Appendixes
 
 - [MDL Quick Reference](appendixes/quick-reference.md)
 - [Data Type Mapping Table](appendixes/data-type-mapping.md)
