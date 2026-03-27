@@ -32,6 +32,7 @@ mxcli supports six AI coding assistants out of the box, plus a universal format 
 | **Continue.dev** | `--tool continue` | `.continue/config.json` | Custom commands and slash commands |
 | **Windsurf** | `--tool windsurf` | `.windsurfrules` | Codeium's AI with MDL rules |
 | **Aider** | `--tool aider` | `.aider.conf.yml` | Terminal-based AI pair programming |
+| **GitHub Copilot** | (universal) | `AGENTS.md`, `.ai-context/` | Reads AGENTS.md and project context automatically |
 | **Universal** | (always created) | `AGENTS.md`, `.ai-context/` | Works with all tools |
 
 ```bash
@@ -45,7 +46,7 @@ The workflow is the same regardless of which AI tool you use:
 
 1. **Initialize** -- `mxcli init` creates config files, skills, and a dev container
 2. **Open in dev container** -- sandboxes the AI so it only accesses your project
-3. **Start the AI assistant** -- Claude Code, Cursor, Continue.dev, etc.
+3. **Start the AI assistant** -- Claude Code, GitHub Copilot, Cursor, etc.
 4. **Ask for changes in natural language** -- "Create a Customer entity with name and email"
 5. **The AI explores** -- it runs SHOW, DESCRIBE, and SEARCH commands via mxcli
 6. **The AI writes MDL** -- guided by the skill files installed in your project

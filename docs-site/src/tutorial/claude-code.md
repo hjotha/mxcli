@@ -214,4 +214,4 @@ Claude validates the script, executes it, and reports back. You can then open th
 
 ## Next steps
 
-If you use other AI tools alongside Claude Code, see [Cursor / Continue.dev / Windsurf](other-ai-tools.md). To understand how skills work in detail, see [Skills and CLAUDE.md](skills.md).
+If you use other AI tools alongside Claude Code, see [Other AI tools](other-ai-tools.md) (GitHub Copilot, OpenCode, Cursor, Continue.dev, Windsurf). To understand how skills work in detail, see [Skills and CLAUDE.md](skills.md).

@@ -12,7 +12,7 @@ The Codespace comes with mxcli, a JDK, Docker-in-Docker, Claude Code, and a samp
 
 - **5 example scripts** -- explore, create entities, microflows, pages, and security
 - **Step-by-step tutorials** -- from first steps through linting and testing
-- **AI tool configs** -- pre-configured for Claude Code, Cursor, Windsurf, Continue.dev, and Aider
+- **AI tool configs** -- pre-configured for Claude Code, GitHub Copilot, OpenCode, Cursor, Windsurf, Continue.dev, and Aider
 
 Once the Codespace is running:
 

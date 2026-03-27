@@ -28,7 +28,7 @@ A developer or AI agent writes MDL statements. mxcli parses and validates them, 
 - **Catalog queries** -- SQL-based querying of project metadata (entity counts, microflow complexity, widget usage, cross-references).
 - **Linting and reports** -- 40+ built-in lint rules with SARIF output for CI; scored best-practices reports.
 - **Testing** -- test microflows using MDL syntax with javadoc-style annotations.
-- **AI assistant integration** -- works with Claude Code, Cursor, Continue.dev, Windsurf, and Aider. `mxcli init` sets up project configuration, skills, and a Dev Container for sandboxed AI development.
+- **AI assistant integration** -- works with Claude Code, GitHub Copilot, OpenCode, Cursor, Continue.dev, Windsurf, and Aider. `mxcli init` sets up project configuration, skills, and a Dev Container for sandboxed AI development.
 - **VS Code extension** -- syntax highlighting, diagnostics, code completion, hover, go-to-definition, and context menu commands for `.mdl` files.
 - **External SQL** -- connect to PostgreSQL, Oracle, or SQL Server; query external databases; import data into a running Mendix application.
 

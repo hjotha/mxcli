@@ -4,7 +4,7 @@ mxcli and MDL exist to make Mendix development accessible to coding agents, auto
 
 ## Coding Agents First
 
-The primary audience for mxcli is not a human typing commands -- it is a coding agent (Claude Code, Cursor, Windsurf, or similar) that reads, reasons about, and modifies Mendix projects autonomously. Everything in mxcli is designed with this in mind:
+The primary audience for mxcli is not a human typing commands -- it is a coding agent (Claude Code, GitHub Copilot, OpenCode, Cursor, Windsurf, or similar) that reads, reasons about, and modifies Mendix projects autonomously. Everything in mxcli is designed with this in mind:
 
 - **MDL as machine-readable output.** Every `DESCRIBE` command produces valid MDL that can be fed back as input. Agents can read a microflow, modify it, and write it back without lossy format conversions.
 - **Skills and context files.** `mxcli init` generates structured skill files that teach agents MDL syntax, common patterns, and project conventions -- reducing hallucination and retry loops.
