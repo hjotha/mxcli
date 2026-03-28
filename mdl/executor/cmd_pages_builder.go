@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -32,6 +33,11 @@ type pageBuilder struct {
 	fragments        map[string]*ast.DefineFragmentStmt // Fragment registry from executor
 	themeRegistry    *ThemeRegistry                     // Theme design property definitions (may be nil)
 
+	// Pluggable widget engine (lazily initialized)
+	widgetRegistry      *WidgetRegistry
+	pluggableEngine     *PluggableWidgetEngine
+	pluggableEngineErr  error // stores init failure reason for better error messages
+
 	// Per-operation caches (may change during execution)
 	layoutsCache    []*pages.Layout
 	pagesCache      []*pages.Page
@@ -40,6 +46,26 @@ type pageBuilder struct {
 
 	// Entity context for resolving short attribute names inside DataViews
 	entityContext string // Qualified entity name (e.g., "Module.Entity")
+}
+
+// initPluggableEngine lazily initializes the pluggable widget engine.
+func (pb *pageBuilder) initPluggableEngine() {
+	if pb.pluggableEngine != nil || pb.pluggableEngineErr != nil {
+		return
+	}
+	registry, err := NewWidgetRegistry()
+	if err != nil {
+		pb.pluggableEngineErr = fmt.Errorf("widget registry init failed: %w", err)
+		log.Printf("warning: %v", pb.pluggableEngineErr)
+		return
+	}
+	if pb.reader != nil {
+		if loadErr := registry.LoadUserDefinitions(pb.reader.Path()); loadErr != nil {
+			log.Printf("warning: loading user widget definitions: %v", loadErr)
+		}
+	}
+	pb.widgetRegistry = registry
+	pb.pluggableEngine = NewPluggableWidgetEngine(NewOperationRegistry(), pb)
 }
 
 // registerWidgetName registers a widget name and returns an error if it's already used.

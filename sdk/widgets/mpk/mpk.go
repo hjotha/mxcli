@@ -17,16 +17,17 @@ import (
 
 // PropertyDef describes a single property from a widget XML definition.
 type PropertyDef struct {
-	Key          string // e.g. "staticDataSourceCaption"
-	Type         string // XML type: "attribute", "expression", "textTemplate", "widgets", etc.
+	Key          string        // e.g. "staticDataSourceCaption"
+	Type         string        // XML type: "attribute", "expression", "textTemplate", "widgets", etc.
 	Caption      string
 	Description  string
-	Category     string // from enclosing propertyGroup captions, joined with "::"
+	Category     string        // from enclosing propertyGroup captions, joined with "::"
 	Required     bool
-	DefaultValue string // for enumeration/boolean/integer types
+	DefaultValue string        // for enumeration/boolean/integer types
 	IsList       bool
-	IsSystem     bool   // true for <systemProperty> elements
-	DataSource   string // dataSource attribute reference
+	IsSystem     bool          // true for <systemProperty> elements
+	DataSource   string        // dataSource attribute reference
+	Children     []PropertyDef // nested properties for object-type properties
 }
 
 // WidgetDefinition holds the parsed definition of a pluggable widget from an .mpk file.
@@ -92,6 +93,12 @@ type xmlSystemProp struct {
 	Key string `xml:"key,attr"`
 }
 
+// Zip extraction limits to prevent zip-bomb attacks.
+const (
+	maxFileSize  = 50 << 20  // 50MB per individual file
+	maxTotalSize = 200 << 20 // 200MB total extracted
+)
+
 // --- Caching ---
 
 var (
@@ -122,9 +129,13 @@ func ParseMPK(mpkPath string) (*WidgetDefinition, error) {
 	var pkg xmlPackage
 	var widgetFilePath string
 	var version string
+	var totalExtracted uint64
 
 	for _, f := range r.File {
 		if f.Name == "package.xml" {
+			if f.UncompressedSize64 > maxFileSize {
+				return nil, fmt.Errorf("package.xml exceeds max file size (%d > %d)", f.UncompressedSize64, maxFileSize)
+			}
 			rc, err := f.Open()
 			if err != nil {
 				return nil, fmt.Errorf("failed to open package.xml: %w", err)
@@ -133,6 +144,10 @@ func ParseMPK(mpkPath string) (*WidgetDefinition, error) {
 			rc.Close()
 			if err != nil {
 				return nil, fmt.Errorf("failed to read package.xml: %w", err)
+			}
+			totalExtracted += uint64(len(data))
+			if totalExtracted > maxTotalSize {
+				return nil, fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
 			}
 			if err := xml.Unmarshal(data, &pkg); err != nil {
 				return nil, fmt.Errorf("failed to parse package.xml: %w", err)
@@ -152,6 +167,9 @@ func ParseMPK(mpkPath string) (*WidgetDefinition, error) {
 	// Parse widget XML
 	for _, f := range r.File {
 		if f.Name == widgetFilePath {
+			if f.UncompressedSize64 > maxFileSize {
+				return nil, fmt.Errorf("%s exceeds max file size (%d > %d)", widgetFilePath, f.UncompressedSize64, maxFileSize)
+			}
 			rc, err := f.Open()
 			if err != nil {
 				return nil, fmt.Errorf("failed to open %s: %w", widgetFilePath, err)
@@ -160,6 +178,10 @@ func ParseMPK(mpkPath string) (*WidgetDefinition, error) {
 			rc.Close()
 			if err != nil {
 				return nil, fmt.Errorf("failed to read %s: %w", widgetFilePath, err)
+			}
+			totalExtracted += uint64(len(data))
+			if totalExtracted > maxTotalSize {
+				return nil, fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
 			}
 
 			var widget xmlWidget
@@ -212,6 +234,14 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,
 		}
+
+		// Parse nested properties for object-type properties
+		if p.Type == "object" && len(p.NestedProps) > 0 {
+			for _, npg := range p.NestedProps {
+				collectNestedProperties(npg, &prop)
+			}
+		}
+
 		def.Properties = append(def.Properties, prop)
 	}
 
@@ -227,6 +257,28 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 	// Recurse into subgroups
 	for _, sub := range pg.SubGroups {
 		walkPropertyGroup(sub, category, def)
+	}
+}
+
+// collectNestedProperties extracts child properties from nested propertyGroups
+// within an object-type property and appends them to the parent PropertyDef.
+func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
+	for _, p := range pg.Properties {
+		child := PropertyDef{
+			Key:          p.Key,
+			Type:         p.Type,
+			Caption:      p.Caption,
+			Description:  p.Description,
+			Required:     p.Required == "true",
+			DefaultValue: p.DefaultValue,
+			IsList:       p.IsList == "true",
+			DataSource:   p.DataSource,
+		}
+		parent.Children = append(parent.Children, child)
+	}
+
+	for _, sub := range pg.SubGroups {
+		collectNestedProperties(sub, parent)
 	}
 }
 
@@ -283,8 +335,12 @@ func getWidgetIDFromMPK(mpkPath string) (string, error) {
 
 	// Find package.xml to get widget file path
 	var widgetFilePath string
+	var totalExtracted uint64
 	for _, f := range r.File {
 		if f.Name == "package.xml" {
+			if f.UncompressedSize64 > maxFileSize {
+				return "", fmt.Errorf("package.xml exceeds max file size (%d > %d)", f.UncompressedSize64, maxFileSize)
+			}
 			rc, err := f.Open()
 			if err != nil {
 				return "", err
@@ -293,6 +349,10 @@ func getWidgetIDFromMPK(mpkPath string) (string, error) {
 			rc.Close()
 			if err != nil {
 				return "", err
+			}
+			totalExtracted += uint64(len(data))
+			if totalExtracted > maxTotalSize {
+				return "", fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
 			}
 			var pkg xmlPackage
 			if err := xml.Unmarshal(data, &pkg); err != nil {
@@ -312,6 +372,9 @@ func getWidgetIDFromMPK(mpkPath string) (string, error) {
 	// Read widget XML to get the id attribute
 	for _, f := range r.File {
 		if f.Name == widgetFilePath {
+			if f.UncompressedSize64 > maxFileSize {
+				return "", fmt.Errorf("%s exceeds max file size (%d > %d)", widgetFilePath, f.UncompressedSize64, maxFileSize)
+			}
 			rc, err := f.Open()
 			if err != nil {
 				return "", err
@@ -320,6 +383,10 @@ func getWidgetIDFromMPK(mpkPath string) (string, error) {
 			rc.Close()
 			if err != nil {
 				return "", err
+			}
+			totalExtracted += uint64(len(data))
+			if totalExtracted > maxTotalSize {
+				return "", fmt.Errorf("total extracted size exceeds limit (%d > %d)", totalExtracted, maxTotalSize)
 			}
 
 			// Quick XML parse to just get the id attribute

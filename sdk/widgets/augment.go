@@ -5,6 +5,7 @@ package widgets
 import (
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/mendixlabs/mxcli/sdk/widgets/mpk"
 )
@@ -224,9 +225,11 @@ func clonePropertyPair(propTypes []any, objProps []any, exemplarIdx int, p mpk.P
 			vt["EnumerationValues"] = []any{float64(2)}
 		}
 
-		// Clear ObjectType for non-object types
+		// Clear ObjectType for non-object types; build nested ObjectType for object types with children
 		if vtType != "Object" {
 			vt["ObjectType"] = nil
+		} else if len(p.Children) > 0 {
+			vt["ObjectType"] = buildNestedObjectType(p.Children)
 		}
 
 		// Clear ReturnType for non-expression types
@@ -345,6 +348,11 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 
 	if p.DataSource != "" {
 		vt["DataSourceProperty"] = p.DataSource
+	}
+
+	// Build nested ObjectType for object-type properties with children
+	if bsonType == "Object" && len(p.Children) > 0 {
+		vt["ObjectType"] = buildNestedObjectType(p.Children)
 	}
 
 	return vt
@@ -517,22 +525,56 @@ func xmlTypeToBSONType(xmlType string) string {
 	}
 }
 
+// buildNestedObjectType creates a WidgetObjectType with PropertyTypes for nested children
+// of an object-type property. This is needed for properties like filterList and sortList
+// that contain sub-properties (e.g., filter, attribute, caption).
+func buildNestedObjectType(children []mpk.PropertyDef) map[string]any {
+	propTypes := []any{float64(2)} // version marker
+
+	for _, child := range children {
+		childBsonType := xmlTypeToBSONType(child.Type)
+		if childBsonType == "" {
+			continue
+		}
+
+		childVTID := placeholderID()
+		childPT := map[string]any{
+			"$ID":         placeholderID(),
+			"$Type":       "CustomWidgets$WidgetPropertyType",
+			"Caption":     child.Caption,
+			"Category":    "General",
+			"Description": child.Description,
+			"IsDefault":   false,
+			"PropertyKey": child.Key,
+			"ValueType":   createDefaultValueType(childVTID, childBsonType, child),
+		}
+
+		propTypes = append(propTypes, childPT)
+	}
+
+	return map[string]any{
+		"$ID":           placeholderID(),
+		"$Type":         "CustomWidgets$WidgetObjectType",
+		"PropertyTypes": propTypes,
+	}
+}
+
 // --- Helpers ---
 
-// placeholderCounter generates sequential placeholder IDs.
-var placeholderCounter uint32
+// placeholderCounter generates sequential placeholder IDs (atomic for concurrent safety).
+var placeholderCounter atomic.Uint32
 
 // placeholderID generates a placeholder hex ID. These will be remapped by collectIDs
 // in GetTemplateFullBSON, so exact values don't matter — they just need to be unique
 // 32-char hex strings.
 func placeholderID() string {
-	placeholderCounter++
-	return fmt.Sprintf("aa000000000000000000000000%06x", placeholderCounter)
+	n := placeholderCounter.Add(1)
+	return fmt.Sprintf("aa000000000000000000000000%06x", n)
 }
 
 // ResetPlaceholderCounter resets the counter (for testing).
 func ResetPlaceholderCounter() {
-	placeholderCounter = 0
+	placeholderCounter.Store(0)
 }
 
 // getMapField gets a nested map field from a JSON map.

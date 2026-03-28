@@ -1,6 +1,6 @@
 # Widget Templates
 
-This directory contains JSON templates for Mendix pluggable widgets. These templates are extracted from a reference Mendix project and embedded into the mxcli binary.
+This directory contains JSON templates for Mendix pluggable widgets. These templates are extracted from a reference Mendix project and embedded into the mxcli binary via `go:embed`.
 
 ## Structure
 
@@ -9,11 +9,11 @@ templates/
 ├── mendix-11.6/                    # Templates for Mendix 11.6.x
 │   ├── combobox.json               # com.mendix.widget.web.combobox.Combobox
 │   ├── datagrid.json               # com.mendix.widget.web.datagrid.Datagrid
+│   ├── gallery.json                # com.mendix.widget.web.gallery.Gallery
 │   ├── datagrid-text-filter.json   # DatagridTextFilter
 │   ├── datagrid-date-filter.json   # DatagridDateFilter
 │   ├── datagrid-dropdown-filter.json
 │   └── datagrid-number-filter.json
-├── mendix-10.x/                    # Templates for older versions (if needed)
 └── README.md
 ```
 
@@ -27,8 +27,45 @@ Each template is a JSON file containing **both** the `CustomWidgetType` and `Wid
   "name": "Combo box",
   "version": "11.6.0",
   "extractedFrom": "PageTemplates.Customer_NewEdit",
-  "type": { ... },   // The full CustomWidgetType BSON converted to JSON
-  "object": { ... }  // The default WidgetObject with all property values
+  "type": {
+    "$ID": "aa000000000000000000000000000001",
+    "$Type": "CustomWidgets$CustomWidgetType",
+    "WidgetId": "com.mendix.widget.web.combobox.Combobox",
+    "PropertyTypes": [
+      {
+        "$ID": "aa000000000000000000000000000010",
+        "$Type": "CustomWidgets$WidgetPropertyType",
+        "PropertyKey": "attributeEnumeration",
+        "ValueType": {
+          "$ID": "aa000000000000000000000000000011",
+          "Type": "Attribute",
+          "DefaultValue": ""
+        }
+      }
+    ]
+  },
+  "object": {
+    "$ID": "aa000000000000000000000000000100",
+    "$Type": "CustomWidgets$WidgetObject",
+    "TypePointer": "aa000000000000000000000000000001",
+    "Properties": [
+      2,
+      {
+        "$ID": "aa000000000000000000000000000110",
+        "$Type": "CustomWidgets$WidgetProperty",
+        "TypePointer": "aa000000000000000000000000000010",
+        "Value": {
+          "$ID": "aa000000000000000000000000000111",
+          "$Type": "CustomWidgets$WidgetValue",
+          "AttributeRef": null,
+          "DataSource": null,
+          "PrimitiveValue": "",
+          "Widgets": [2],
+          "Selection": "None"
+        }
+      }
+    ]
+  }
 }
 ```
 
@@ -36,11 +73,59 @@ Each template is a JSON file containing **both** the `CustomWidgetType` and `Wid
 
 The `type` field defines the widget's PropertyTypes (schema), while the `object` field contains the actual property values with correct defaults. Studio Pro expects:
 
-1. **Consistent IDs**: `object.Properties[].TypePointer` must reference valid `type.ObjectType.PropertyTypes[].$ID` values
-2. **All properties present**: Every PropertyType must have a corresponding WidgetProperty in the object
+1. **Consistent cross-references**: `object.Properties[].TypePointer` must reference valid `type.PropertyTypes[].$ID` values; `object.TypePointer` must reference `type.$ID`
+2. **All properties present**: Every PropertyType in the Type must have a corresponding WidgetProperty in the Object
 3. **Correct default values**: Properties like `TextTemplate` need proper `Forms$ClientTemplate` structures, not null
 
-Without the `object` field, mxcli must build the WidgetObject from scratch, which is error-prone and often triggers "widget definition has changed" warnings in Studio Pro.
+Without the `object` field, mxcli must build the WidgetObject from scratch, which is error-prone and often triggers CE0463 "widget definition has changed" in Studio Pro.
+
+### ID Cross-Reference Structure
+
+```
+Type                                    Object
+├─ $ID ◄──────────────────────────── TypePointer (WidgetObject → CustomWidgetType)
+└─ PropertyTypes[]                   └─ Properties[]
+   ├─ $ID ◄──────────────────────────── TypePointer (WidgetProperty → WidgetPropertyType)
+   └─ ValueType                         └─ Value
+      └─ $ID ◄──────────────────────────── TypePointer (WidgetValue → ValueType)
+```
+
+At load time, all `$ID` values are remapped to fresh UUIDs. The same mapping is applied to both Type and Object, preserving these cross-references.
+
+## Runtime Loading Pipeline
+
+`GetTemplateFullBSON()` in `loader.go` executes a 3-phase pipeline:
+
+### Phase 1: Collect IDs
+
+`collectIDs()` recursively walks both `type` and `object` JSON, creates `oldID → newUUID` mapping for every `$ID` field.
+
+### Phase 2: Convert Type JSON → BSON
+
+`jsonToBSONWithMappingAndObjectType()` converts the Type, replacing IDs and simultaneously extracting `PropertyTypeIDMap`:
+
+```
+PropertyTypeIDMap["attributeEnumeration"] = {
+  PropertyTypeID: "newUUID-010",  // remapped $ID of WidgetPropertyType
+  ValueTypeID:    "newUUID-011",  // remapped $ID of ValueType
+  DefaultValue:   "",
+  ValueType:      "Attribute",
+}
+```
+
+This map is the bridge between `.def.json` property keys and the BSON structure — the engine uses it to locate which WidgetProperty to modify for each mapping.
+
+### Phase 3: Convert Object JSON → BSON
+
+`jsonToBSONObjectWithMapping()` converts the Object using the same ID mapping. `TypePointer` fields are specially handled to ensure they point to the new IDs from Phase 2.
+
+### Placeholder Leak Detection
+
+After both phases, `containsPlaceholderID()` checks for any remaining `aa000000`-prefix IDs. If found, the load fails immediately rather than producing a corrupt MPR.
+
+### MPK Augmentation
+
+Before the 3-phase pipeline, `augmentFromMPK()` checks if the project has a newer `.mpk` for the widget (in `project/widgets/`). If found, it deep-clones the template and merges property changes from the `.mpk` XML definition, adding missing properties and removing stale ones. This reduces CE0463 from widget version drift.
 
 ## Extracting New Templates
 
@@ -50,19 +135,23 @@ When extracting templates, **always use widgets that have been created or "fixed
 
 ### Extraction Process
 
-1. **Create the widget in Studio Pro** - Add the widget to a page in Studio Pro and configure it with default settings
+1. **Create the widget in Studio Pro** — Add the widget to a page and configure it with default settings
 
-2. **If updating an existing template** - If Studio Pro shows "widget definition has changed", right-click and select "Update widget" to let Studio Pro fix it
+2. **If updating an existing template** — If Studio Pro shows "widget definition has changed", right-click and select "Update widget" to let Studio Pro fix it
 
-3. **Extract using mxcli** (planned feature):
+3. **Extract the BSON**:
 ```bash
-mxcli extract-templates -p /path/to/project.mpr -o sdk/widgets/templates/mendix-11.6/
+# Dump the page containing the widget
+mxcli bson dump -p App.mpr --type page --object "Module.TestPage" --format json
+
+# Extract the CustomWidget's Type and Object fields from the JSON output
+# Save as templates/mendix-11.6/widgetname.json
 ```
 
-4. **Manual extraction** (current method):
-```go
-// Use reader.GetRawUnit() to get the page, then extract CustomWidget.Type and CustomWidget.Object
-// Convert BSON binary IDs to hex strings for JSON storage
+4. **Extract skeleton .def.json** (for new widgets):
+```bash
+mxcli widget extract --mpk widgets/MyWidget.mpk
+# Generates .mxcli/widgets/mywidget.def.json with auto-inferred mappings
 ```
 
 ### Verifying Templates
@@ -71,10 +160,13 @@ After updating a template, verify it works:
 
 ```bash
 # Create a test page with the widget
-mxcli -p test.mpr -c "CREATE PAGE Test.TestPage ... DATAGRID ..."
+mxcli -p test.mpr -c "CREATE PAGE Test.TestPage ... COMBOBOX ..."
 
 # Check for errors (should have no CE0463 errors)
-mx check test.mpr
+~/.mxcli/mxbuild/*/modeler/mx check test.mpr
+
+# Compare BSON if issues persist
+mxcli bson dump -p test.mpr --type page --object "Test.TestPage" --format ndsl
 ```
 
 ## Usage
@@ -82,39 +174,30 @@ mx check test.mpr
 Templates are automatically used when creating pluggable widgets via MDL:
 
 ```sql
-COMBOBOX myCombo ATTRIBUTE Country;
+COMBOBOX myCombo (Label: 'Country', Attribute: Country)
 ```
 
-### Priority Chain
+### 3-Tier Widget Registry
 
-When creating a pluggable widget, mxcli uses this priority:
+When creating a pluggable widget, mxcli resolves definitions and templates:
 
-1. **Embedded template** (from this directory) - Ensures consistent results across all projects
-2. **Clone from project** - Falls back to extracting from an existing widget in the target project
-3. **Minimal fallback** - Creates a minimal widget definition (may show warnings in Studio Pro)
+| Priority | Location | Scope |
+|----------|----------|-------|
+| 1 (highest) | `<project>/.mxcli/widgets/*.def.json` | Project-specific overrides |
+| 2 | `~/.mxcli/widgets/*.def.json` | Global user definitions |
+| 3 (lowest) | `sdk/widgets/definitions/*.def.json` (embedded) | Built-in definitions |
 
-### Why Templates Are Needed
+Each `.def.json` declares property mappings and child slots; the `PluggableWidgetEngine` applies them to the BSON template at build time. See `docs/plans/2026-03-25-pluggable-widget-engine-design.md` for the full architecture.
 
-Mendix pluggable widgets (like ComboBox, DataGrid2) require a full `CustomWidgetType` definition with 50+ PropertyTypes. These definitions are embedded in each widget instance in the MPR file. Without the complete definition, Mendix will show "widget definition has changed" warnings.
+### Widget Version Drift
 
-By embedding templates extracted from a known-good project, mxcli can create widgets that are fully compatible with Mendix Studio Pro.
+Static templates are tied to the widget version they were extracted from. If the target project has a **newer** `.mpk`, the MPK augmentation mechanism (described above) handles this at runtime by merging property changes from the `.mpk` XML.
 
-### Known Limitation: Widget Version Drift
-
-Static templates are tied to the widget version they were extracted from. If the target project has a **newer** version of the widget `.mpk` (in `widgets/`), Studio Pro will detect that the serialized Type definition doesn't match the installed widget and report CE0463.
-
-For example, the ComboBox template was extracted from a Mendix 11.6.0 project, but a 11.6.3 project may ship ComboBox v2.5.0 which added 3 new properties (`staticDataSourceCaption`, `staticDataSourceCustomContent`, `staticDataSourceValue`). Our template lacks these → CE0463.
-
-**The correct long-term fix**: read the widget definition from the project's actual `widgets/*.mpk` file at runtime instead of relying on static templates. The `.mpk` is a ZIP containing an XML schema (e.g., `Combobox.xml`) that defines all property keys, types, and defaults. Two approaches:
-
-1. **Parse `.mpk` XML, generate full BSON** — map each XML property type (`attribute`, `expression`, `widgets`, `textTemplate`, etc.) to the BSON structure with correct defaults. Eliminates version drift entirely.
-2. **Augment static template from `.mpk` at runtime** — keep the current template for BSON structure patterns, but read the `.mpk` XML to discover which properties should exist, adding missing ones and removing stale ones.
-
-Either way, the `.mpk` in the project's `widgets/` folder is the **source of truth** for what properties a widget should have.
+For cases where augmentation is insufficient, extract a fresh template from a Studio Pro project using the newer widget version.
 
 ## TextTemplate Property Requirements
 
-Properties with `"Type": "TextTemplate"` in the Type definition require special handling. They cannot be `null` in the Object section.
+Properties with `"Type": "TextTemplate"` in the Type definition require special handling. They **cannot** be `null` in the Object section.
 
 ### Problem: CE0463 "widget definition has changed"
 
@@ -170,3 +253,15 @@ Filter widgets commonly have TextTemplate properties:
 - **DateFilter**: `placeholder`, `screenReaderButtonCaption`, `screenReaderCalendarCaption`, `screenReaderInputCaption`
 - **DropdownFilter**: `emptyOptionCaption`, `ariaLabel`, `emptySelectionCaption`, `filterInputPlaceholderCaption`
 - **NumberFilter**: `placeholder`, `screenReaderButtonCaption`, `screenReaderInputCaption`
+
+## Key Source Files
+
+| File | Purpose |
+|------|---------|
+| `sdk/widgets/loader.go` | Template loading, 3-phase ID remapping, MPK augmentation, placeholder detection |
+| `sdk/widgets/mpk/mpk.go` | .mpk ZIP parsing, XML property extraction, FindMPK |
+| `sdk/widgets/definitions/*.def.json` | Built-in widget definition files |
+| `mdl/executor/widget_engine.go` | PluggableWidgetEngine, 6 operations, Build() pipeline |
+| `mdl/executor/widget_registry.go` | 3-tier WidgetRegistry, load-time validation |
+| `mdl/executor/cmd_pages_builder_input.go` | `updateWidgetPropertyValue()`, TypePointer matching |
+| `cmd/mxcli/cmd_widget.go` | `mxcli widget extract/list` CLI commands |

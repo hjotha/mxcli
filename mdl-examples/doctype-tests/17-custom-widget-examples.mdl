@@ -1,0 +1,207 @@
+-- ============================================================================
+-- Custom Widget Examples - GALLERY & COMBOBOX
+-- ============================================================================
+--
+-- Tests for pluggable widget MDL syntax (GALLERY, COMBOBOX).
+--
+-- Test matrix:
+--   1. GALLERY basic       — DATABASE datasource + TEMPLATE (PASS)
+--   2. GALLERY with FILTER — TEXTFILTER in FILTER block    (KNOWN BUG: CE0463)
+--   3. COMBOBOX enum       — Enum attribute                (KNOWN BUG: CE1613)
+--   4. COMBOBOX association — DataSource + CaptionAttribute (FIXED: Issue #21)
+--
+-- Known engine bugs (do not affect MDL syntax correctness):
+--   - CE0463 on TEXTFILTER: embedded template property count mismatch
+--   - CE1613 on COMBOBOX enum: enum attribute written as association pointer (pending)
+--
+-- ============================================================================
+
+-- MARK: Setup
+
+-- ============================================================================
+-- Entities & Enumerations
+-- ============================================================================
+
+CREATE ENUMERATION MyFirstModule.Priority (
+  LOW 'Low',
+  MEDIUM 'Medium',
+  HIGH 'High',
+  CRITICAL 'Critical'
+);
+/
+
+@Position(100,300)
+CREATE PERSISTENT ENTITY MyFirstModule.Category (
+  Name: String(200) NOT NULL,
+  Description: String(500)
+);
+
+@Position(300,300)
+CREATE PERSISTENT ENTITY MyFirstModule.Task (
+  Title: String(200) NOT NULL,
+  Description: String(1000),
+  Priority: Enumeration(MyFirstModule.Priority),
+  DueDate: DateTime,
+  IsCompleted: Boolean DEFAULT false
+);
+
+CREATE ASSOCIATION MyFirstModule.Task_Category
+FROM MyFirstModule.Task TO MyFirstModule.Category
+TYPE Reference
+OWNER Both;
+
+-- MARK: GALLERY basic (PASS)
+
+-- ============================================================================
+-- Test 1: GALLERY basic — DATABASE datasource + TEMPLATE with DYNAMICTEXT
+-- Result: PASS (0 errors)
+-- ============================================================================
+
+/**
+ * Basic Gallery showing Task cards with title and description.
+ * Validates: GALLERY widget, DATABASE datasource, TEMPLATE with DYNAMICTEXT.
+ */
+CREATE PAGE MyFirstModule.P_Gallery_Basic
+(
+  Title: 'Gallery Basic',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'CustomWidgets'
+)
+{
+  LAYOUTGRID lgMain {
+    ROW row1 {
+      COLUMN col1 (DesktopWidth: 12) {
+        GALLERY galTasks (
+          DataSource: DATABASE MyFirstModule.Task SORT BY Title ASC
+        ) {
+          TEMPLATE tpl1 {
+            DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H4)
+            DYNAMICTEXT dtDesc (Content: '{1}', ContentParams: [{1} = Description])
+          }
+        }
+      }
+    }
+  }
+}
+
+-- MARK: GALLERY with FILTER (KNOWN BUG: CE0463)
+
+-- ============================================================================
+-- Test 2: GALLERY with FILTER — TEXTFILTER in FILTER block
+-- Result: CE0463 on TextFilter (template property count mismatch)
+-- ============================================================================
+
+/**
+ * Gallery with filter bar for text search.
+ * KNOWN BUG: CE0463 on TEXTFILTER due to embedded template mismatch.
+ * The MDL syntax is correct; the engine template needs re-extraction.
+ */
+CREATE PAGE MyFirstModule.P_Gallery_Filtered
+(
+  Title: 'Gallery with Filter',
+  Layout: Atlas_Core.Atlas_Default,
+  Folder: 'CustomWidgets'
+)
+{
+  LAYOUTGRID lgMain {
+    ROW row1 {
+      COLUMN col1 (DesktopWidth: 12) {
+        GALLERY galFiltered (
+          DataSource: DATABASE MyFirstModule.Task SORT BY DueDate DESC
+        ) {
+          TEMPLATE tpl1 {
+            DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H4)
+            DYNAMICTEXT dtPriority (Content: 'Priority: {1}', ContentParams: [{1} = Priority])
+          }
+          FILTER flt1 {
+            TEXTFILTER tfSearch (Attribute: Title)
+          }
+        }
+      }
+    }
+  }
+}
+
+-- MARK: COMBOBOX enum (KNOWN BUG: CE1613)
+
+-- ============================================================================
+-- Test 3: COMBOBOX enum mode — Attribute bound to an enumeration
+-- Result: CE1613 (association pointer written instead of attribute reference)
+-- ============================================================================
+
+/**
+ * Task edit form with a COMBOBOX selecting the Priority enumeration.
+ * KNOWN BUG: CE1613 — engine writes enum attribute as association.
+ *
+ * @param $Task The task to edit
+ */
+CREATE PAGE MyFirstModule.P_ComboBox_Enum
+(
+  Params: {
+    $Task: MyFirstModule.Task
+  },
+  Title: 'ComboBox Enum',
+  Layout: Atlas_Core.PopupLayout,
+  Folder: 'CustomWidgets'
+)
+{
+  DATAVIEW dvTask (DataSource: $Task) {
+    LAYOUTGRID lg1 {
+      ROW row1 {
+        COLUMN col1 (DesktopWidth: 12) {
+          TEXTBOX txtTitle (Label: 'Title', Attribute: Title)
+          COMBOBOX cmbPriority (Label: 'Priority', Attribute: Priority)
+          DATEPICKER dpDue (Label: 'Due Date', Attribute: DueDate)
+        }
+      }
+    }
+    FOOTER footer1 {
+      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES CLOSE_PAGE, ButtonStyle: Success)
+      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES CLOSE_PAGE, ButtonStyle: Default)
+    }
+  }
+}
+
+-- MARK: COMBOBOX association (KNOWN BUG: CE1613)
+
+-- ============================================================================
+-- Test 4: COMBOBOX association mode — DataSource + CaptionAttribute
+-- Result: FIXED (Issue #21) — Attribute now correctly reads back as association name
+-- ============================================================================
+
+/**
+ * Task edit form with a COMBOBOX for selecting Category via association.
+ * FIXED (Issue #21): Attribute now correctly roundtrips as association name.
+ *
+ * @param $Task The task to edit
+ */
+CREATE PAGE MyFirstModule.P_ComboBox_Assoc
+(
+  Params: {
+    $Task: MyFirstModule.Task
+  },
+  Title: 'ComboBox Association',
+  Layout: Atlas_Core.PopupLayout,
+  Folder: 'CustomWidgets'
+)
+{
+  DATAVIEW dvTask (DataSource: $Task) {
+    LAYOUTGRID lg1 {
+      ROW row1 {
+        COLUMN col1 (DesktopWidth: 12) {
+          TEXTBOX txtTitle (Label: 'Title', Attribute: Title)
+          COMBOBOX cmbCategory (
+            Label: 'Category',
+            Attribute: Task_Category,
+            DataSource: DATABASE MyFirstModule.Category,
+            CaptionAttribute: Name
+          )
+        }
+      }
+    }
+    FOOTER footer1 {
+      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES CLOSE_PAGE, ButtonStyle: Success)
+      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES CLOSE_PAGE, ButtonStyle: Default)
+    }
+  }
+}

@@ -75,6 +75,7 @@ func runExtractTemplates(cmd *cobra.Command, args []string) error {
 		name     string
 	}{
 		{"com.mendix.widget.web.combobox.Combobox", "combobox.json", "Combo box"},
+		{"com.mendix.widget.web.gallery.Gallery", "gallery.json", "Gallery"},
 		{"com.mendix.widget.web.datagrid.Datagrid", "datagrid.json", "Data grid 2"},
 		{"com.mendix.widget.web.datagridtextfilter.DatagridTextFilter", "datagrid-text-filter.json", "Text filter"},
 		{"com.mendix.widget.web.datagriddatefilter.DatagridDateFilter", "datagrid-date-filter.json", "Date filter"},
