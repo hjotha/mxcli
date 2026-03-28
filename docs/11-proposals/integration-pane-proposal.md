@@ -409,6 +409,50 @@ SQL mydb SHOW TABLES;
 SQL mydb DESCRIBE TABLE orders;
 ```
 
+### Contract Generation for Published Services
+
+Studio Pro can generate/download contracts for published services (OpenAPI for REST, `$metadata` for OData, GraphQL schema for OData, AsyncAPI for business events). We need the same in MDL so users can export a current contract for services defined in their project.
+
+#### Published REST → OpenAPI
+```sql
+-- Generate OpenAPI 3.0 JSON from a published REST service definition
+EXPORT CONTRACT FROM MyModule.CustomerAPI FORMAT openapi;
+EXPORT CONTRACT FROM MyModule.CustomerAPI FORMAT openapi TO '/path/to/openapi.json';
+```
+
+Generate by mapping published REST resources and operations to OpenAPI paths, methods, and parameters. Include microflow return types as response schemas where inferrable.
+
+#### Published OData → `$metadata` / GraphQL
+```sql
+-- Generate OData $metadata XML from a published OData service definition
+EXPORT CONTRACT FROM MyModule.ProductAPI FORMAT odata;
+EXPORT CONTRACT FROM MyModule.ProductAPI FORMAT odata TO '/path/to/metadata.xml';
+
+-- Generate GraphQL schema from a published OData service (optional, OData4 only)
+EXPORT CONTRACT FROM MyModule.ProductAPI FORMAT graphql;
+```
+
+Generate by mapping published entity types, entity sets, exposed members, and CRUD modes to EDMX/CSDL. The GraphQL variant maps entity sets to queries and CUD modes to mutations.
+
+#### Business Event Service → AsyncAPI
+```sql
+-- Generate AsyncAPI YAML from a business event service definition
+EXPORT CONTRACT FROM MyModule.OrderEvents FORMAT asyncapi;
+EXPORT CONTRACT FROM MyModule.OrderEvents FORMAT asyncapi TO '/path/to/asyncapi.yaml';
+```
+
+Generate by mapping channels, messages, and attributes from the structured `Definition` to AsyncAPI 2.x format with CloudEvents headers.
+
+#### Default Behavior
+```sql
+-- Without FORMAT, auto-detect based on service type
+EXPORT CONTRACT FROM MyModule.CustomerAPI;          -- REST → openapi
+EXPORT CONTRACT FROM MyModule.ProductAPI;           -- OData → odata
+EXPORT CONTRACT FROM MyModule.OrderEvents;          -- Business Event → asyncapi
+```
+
+When no `TO` path is given, output the contract to stdout (useful for piping or inspection).
+
 ---
 
 ## Phase 3: SOAP Web Services (Future)
