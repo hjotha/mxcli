@@ -188,7 +188,7 @@ vscode-ext:
 	@echo "Building VS Code extension (version $(VSCE_VERSION))..."
 	cd vscode-mdl && bun install && \
 		cp package.json package.json.bak && \
-		sed -i 's/"version": "[^"]*"/"version": "$(VSCE_VERSION)"/' package.json && \
+		sed 's/"version": "[^"]*"/"version": "$(VSCE_VERSION)"/' package.json.bak > package.json && \
 		bunx esbuild src/extension.ts --bundle --outfile=dist/extension.js \
 			--external:vscode --format=cjs --platform=node \
 			--define:__BUILD_TIME__="'$(BUILD_TIME)'" \
