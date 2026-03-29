@@ -245,7 +245,7 @@ func (e *Executor) describeBusinessEventService(name ast.QualifiedName) error {
 	if found.Documentation != "" {
 		outputJavadoc(e.output, found.Documentation)
 	}
-	fmt.Fprintf(e.output, "CREATE BUSINESS EVENT SERVICE %s.%s\n", foundModule, found.Name)
+	fmt.Fprintf(e.output, "CREATE OR REPLACE BUSINESS EVENT SERVICE %s.%s\n", foundModule, found.Name)
 
 	if found.Definition != nil {
 		fmt.Fprintf(e.output, "(\n")

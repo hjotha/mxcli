@@ -10,7 +10,7 @@ import {
 	ServerOptions,
 } from 'vscode-languageclient/node';
 import { MendixProjectTreeProvider } from './projectTreeProvider';
-import { MdlContentProvider } from './mdlContentProvider';
+import { MdlFileSystemProvider } from './mdlContentProvider';
 import { MdlPreviewProvider } from './previewProvider';
 import { MendixTerminalLinkProvider } from './terminalLinkProvider';
 
@@ -75,10 +75,13 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push({ dispose: () => treeProvider.dispose() });
 
-	// --- MDL Content Provider (virtual documents) ---
-	const contentProvider = new MdlContentProvider();
+	// --- MDL FileSystem Provider (editable virtual documents) ---
+	const fsProvider = new MdlFileSystemProvider();
 	context.subscriptions.push(
-		vscode.workspace.registerTextDocumentContentProvider(MDL_SCHEME, contentProvider)
+		vscode.workspace.registerFileSystemProvider(MDL_SCHEME, fsProvider, {
+			isCaseSensitive: true,
+			isReadonly: false,
+		})
 	);
 
 	// --- Terminal Link Provider (clickable Mendix artifacts in terminal) ---
@@ -89,7 +92,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// --- Commands ---
 	context.subscriptions.push(
 		vscode.commands.registerCommand('mendix.refreshProjectTree', () => {
-			contentProvider.updateConfig();
+			fsProvider.updateConfig();
 			treeProvider.refresh();
 		})
 	);
@@ -118,23 +121,19 @@ export function activate(context: vscode.ExtensionContext) {
 			const typesToTry = [type, ...fallbackTypes.filter(t => t !== type)];
 
 			for (const tryType of typesToTry) {
-				const uri = vscode.Uri.parse(`${MDL_SCHEME}://describe/${tryType}/${name}`);
-				const doc = await vscode.workspace.openTextDocument(uri);
-				const content = doc.getText();
-				// If describe returned an error, try the next type
-				if (content.startsWith('-- Error describing')) {
+				try {
+					const uri = vscode.Uri.parse(`${MDL_SCHEME}://describe/${tryType}/${name}`);
+					const doc = await vscode.workspace.openTextDocument(uri);
+					await vscode.languages.setTextDocumentLanguage(doc, 'mdl');
+					await vscode.window.showTextDocument(doc, { preview: true });
+					return;
+				} catch {
+					// Describe failed for this type — try the next one
 					continue;
 				}
-				await vscode.languages.setTextDocumentLanguage(doc, 'mdl');
-				await vscode.window.showTextDocument(doc, { preview: true });
-				return;
 			}
 
-			// All types failed — show the last error
-			const uri = vscode.Uri.parse(`${MDL_SCHEME}://describe/${type}/${name}`);
-			const doc = await vscode.workspace.openTextDocument(uri);
-			await vscode.languages.setTextDocumentLanguage(doc, 'mdl');
-			await vscode.window.showTextDocument(doc, { preview: true });
+			vscode.window.showWarningMessage(`Could not describe element: ${name}`);
 		})
 	);
 

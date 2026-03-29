@@ -86,7 +86,7 @@ func (e *Executor) describePage(name ast.QualifiedName) error {
 	}
 
 	// V3 syntax: CREATE PAGE Module.Page (Title: '...', Layout: ..., Params: { })
-	header := fmt.Sprintf("CREATE PAGE %s.%s", modName, foundPage.Name)
+	header := fmt.Sprintf("CREATE OR REPLACE PAGE %s.%s", modName, foundPage.Name)
 	props := []string{}
 	if title != "" {
 		props = append(props, fmt.Sprintf("Title: '%s'", title))
@@ -221,7 +221,7 @@ func (e *Executor) describeSnippet(name ast.QualifiedName) error {
 	}
 
 	// Output CREATE SNIPPET statement (V3 syntax)
-	fmt.Fprintf(e.output, "CREATE SNIPPET %s.%s", modName, foundSnippet.Name)
+	fmt.Fprintf(e.output, "CREATE OR REPLACE SNIPPET %s.%s", modName, foundSnippet.Name)
 	folderPath := h.BuildFolderPath(foundSnippet.ContainerID)
 	if len(params) > 0 || folderPath != "" {
 		snippetProps := []string{}

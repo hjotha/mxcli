@@ -117,7 +117,7 @@ func (e *Executor) describeImageCollection(name ast.QualifiedName) error {
 	qualifiedName := fmt.Sprintf("%s.%s", modName, ic.Name)
 
 	if len(ic.Images) == 0 {
-		fmt.Fprintf(e.output, "CREATE IMAGE COLLECTION %s", qualifiedName)
+		fmt.Fprintf(e.output, "CREATE OR REPLACE IMAGE COLLECTION %s", qualifiedName)
 		if exportLevel != "Hidden" {
 			fmt.Fprintf(e.output, " EXPORT LEVEL '%s'", exportLevel)
 		}
@@ -132,7 +132,7 @@ func (e *Executor) describeImageCollection(name ast.QualifiedName) error {
 		return fmt.Errorf("failed to create preview directory: %w", err)
 	}
 
-	fmt.Fprintf(e.output, "CREATE IMAGE COLLECTION %s", qualifiedName)
+	fmt.Fprintf(e.output, "CREATE OR REPLACE IMAGE COLLECTION %s", qualifiedName)
 	if exportLevel != "Hidden" {
 		fmt.Fprintf(e.output, " EXPORT LEVEL '%s'", exportLevel)
 	}

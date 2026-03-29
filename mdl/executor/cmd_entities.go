@@ -1061,9 +1061,9 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 			}
 
 			if entity.GeneralizationRef != "" {
-				fmt.Fprintf(e.output, "CREATE %s ENTITY %s.%s EXTENDS %s (\n", entityType, module.Name, entity.Name, entity.GeneralizationRef)
+				fmt.Fprintf(e.output, "CREATE OR REPLACE %s ENTITY %s.%s EXTENDS %s (\n", entityType, module.Name, entity.Name, entity.GeneralizationRef)
 			} else {
-				fmt.Fprintf(e.output, "CREATE %s ENTITY %s.%s (\n", entityType, module.Name, entity.Name)
+				fmt.Fprintf(e.output, "CREATE OR REPLACE %s ENTITY %s.%s (\n", entityType, module.Name, entity.Name)
 			}
 
 			// Build validation rules map by attribute ID and name

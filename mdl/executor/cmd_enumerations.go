@@ -230,7 +230,7 @@ func (e *Executor) describeEnumeration(name ast.QualifiedName) error {
 				fmt.Fprintf(e.output, "/**\n * %s\n */\n", enum.Documentation)
 			}
 
-			fmt.Fprintf(e.output, "CREATE ENUMERATION %s.%s (\n", modName, enum.Name)
+			fmt.Fprintf(e.output, "CREATE OR REPLACE ENUMERATION %s.%s (\n", modName, enum.Name)
 			for i, v := range enum.Values {
 				comma := ","
 				if i == len(enum.Values)-1 {

@@ -144,7 +144,7 @@ func (e *Executor) outputConstantMDL(c *model.Constant, moduleName string) error
 	// Format default value based on type
 	defaultValueStr := formatDefaultValue(c.Type, c.DefaultValue)
 
-	fmt.Fprintf(e.output, "CREATE CONSTANT %s.%s\n", moduleName, c.Name)
+	fmt.Fprintf(e.output, "CREATE OR REPLACE CONSTANT %s.%s\n", moduleName, c.Name)
 	fmt.Fprintf(e.output, "  TYPE %s\n", formatConstantTypeForMDL(c.Type))
 	fmt.Fprintf(e.output, "  DEFAULT %s", defaultValueStr)
 
