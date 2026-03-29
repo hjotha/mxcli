@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 )
 
 // ToolConfig defines configuration for an AI tool
@@ -100,23 +101,8 @@ var SupportedTools = map[string]ToolConfig{
 				Path:    ".vibe/prompts/mendix-mdl.md",
 				Content: generateVibeSystemPrompt,
 			},
-			{
-				Path:    ".vibe/skills/write-microflows/SKILL.md",
-				Content: generateVibeSkillWriteMicroflows,
-			},
-			{
-				Path:    ".vibe/skills/create-page/SKILL.md",
-				Content: generateVibeSkillCreatePage,
-			},
-			{
-				Path:    ".vibe/skills/check-syntax/SKILL.md",
-				Content: generateVibeSkillCheckSyntax,
-			},
-			{
-				Path:    ".vibe/skills/explore-project/SKILL.md",
-				Content: generateVibeSkillExploreProject,
-			},
 		},
+		// Skills are synced dynamically from the embedded skillsFS in init.go
 	},
 }
 
@@ -425,11 +411,21 @@ MPR file: %s
 `, projectName, mprFile, mprFile, mprFile, mprFile, mprFile, mprFile)
 }
 
-func generateVibeSkillWriteMicroflows(projectName, mprPath string) string {
-	mprFile := filepath.Base(mprPath)
-	return fmt.Sprintf(`---
-name: write-microflows
-description: Write MDL microflows for Mendix projects
+// wrapSkillForVibe wraps a plain markdown skill file with Vibe SKILL.md frontmatter.
+func wrapSkillForVibe(skillName string, content []byte) []byte {
+	// Derive a description from the first markdown heading
+	description := "MDL skill for Mendix development"
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "# ") {
+			description = strings.TrimPrefix(line, "# ")
+			break
+		}
+	}
+
+	frontmatter := fmt.Sprintf(`---
+name: %s
+description: %s
 user-invocable: true
 allowed-tools:
   - read_file
@@ -438,176 +434,9 @@ allowed-tools:
   - grep
 ---
 
-# Write Microflows
+`, skillName, description)
 
-Write MDL microflow scripts for the Mendix project.
-
-## Important
-
-- The mxcli tool is in the project root: `+"`./mxcli`"+`
-- MPR file: `+"`%s`"+`
-- Always validate before presenting: `+"`./mxcli check script.mdl -p %s --references`"+`
-
-## MDL Microflow Syntax
-
-`+"```sql"+`
-CREATE MICROFLOW Module.Name($Param1 Type, $Param2 Module.Entity) RETURNS Boolean
-BEGIN
-  DECLARE $Var Type = value;
-  DECLARE $Entity Module.Entity;
-
-  RETRIEVE $Entity FROM Database WHERE Attr = $Param1 LIMIT 1;
-
-  IF $Entity != empty THEN
-    CHANGE $Entity (Attr = 'value');
-    COMMIT $Entity;
-  END IF;
-
-  RETURN true;
-END;
-/
-`+"```"+`
-
-## Key Rules
-
-1. Variables start with $
-2. Entity declarations: no AS keyword, no = empty
-3. LOOP $item IN $list BEGIN ... END LOOP
-4. IF ... THEN ... END IF (not just END)
-5. CHANGE $obj (Attr = value) — parentheses required
-6. String escaping: double single quotes 'it''s here'
-7. Never create empty list variables as loop sources
-
-## Read .ai-context/skills/write-microflows.md for full reference.
-`, mprFile, mprFile)
-}
-
-func generateVibeSkillCreatePage(projectName, mprPath string) string {
-	mprFile := filepath.Base(mprPath)
-	return fmt.Sprintf(`---
-name: create-page
-description: Create MDL pages and widgets for Mendix projects
-user-invocable: true
-allowed-tools:
-  - read_file
-  - write_file
-  - bash
-  - grep
----
-
-# Create Pages
-
-Create MDL page scripts for the Mendix project.
-
-## Important
-
-- mxcli location: `+"`./mxcli`"+`
-- MPR file: `+"`%s`"+`
-- Validate: `+"`./mxcli check script.mdl -p %s --references`"+`
-
-## MDL Page Syntax
-
-`+"```sql"+`
-CREATE PAGE Module.PageName (Title: 'Page Title', Layout: 'Atlas_Default')
-{
-  DATAVIEW (Entity: Module.Entity, Source: Context) {
-    TABLE {
-      ROW { TEXTBOX (Label: 'Name', Attribute: Name) }
-      ROW { TEXTBOX (Label: 'Email', Attribute: Email) }
-    }
-    ACTIONBUTTON (Caption: 'Save', Action: SaveChanges)
-  }
-};
-/
-`+"```"+`
-
-## Key Rules
-
-1. Widget nesting uses curly braces { }
-2. Properties in parentheses (Key: value)
-3. String values in single quotes
-4. Attribute references without quotes
-
-## Read .ai-context/skills/create-page.md for full reference.
-`, mprFile, mprFile)
-}
-
-func generateVibeSkillCheckSyntax(projectName, mprPath string) string {
-	mprFile := filepath.Base(mprPath)
-	return fmt.Sprintf(`---
-name: check-syntax
-description: Validate MDL script syntax and references
-user-invocable: true
-allowed-tools:
-  - bash
-  - read_file
----
-
-# Check MDL Syntax
-
-Validate MDL scripts before execution.
-
-## Commands
-
-`+"```bash"+`
-# Syntax check only (no project needed)
-./mxcli check script.mdl
-
-# Syntax + reference validation
-./mxcli check script.mdl -p %s --references
-
-# Execute a script
-./mxcli exec script.mdl -p %s
-`+"```"+`
-
-## Checklist
-
-1. Run syntax check first
-2. Fix any parse errors
-3. Run with --references to validate entity/microflow names
-4. Execute against the project
-`, mprFile, mprFile)
-}
-
-func generateVibeSkillExploreProject(projectName, mprPath string) string {
-	mprFile := filepath.Base(mprPath)
-	return fmt.Sprintf(`---
-name: explore-project
-description: Explore and query Mendix project structure
-user-invocable: true
-allowed-tools:
-  - bash
-  - read_file
----
-
-# Explore Project
-
-Query the Mendix project structure using mxcli.
-
-## Common Commands
-
-`+"```bash"+`
-# Show project structure
-./mxcli -p %s -c "SHOW STRUCTURE"
-
-# List modules, entities, microflows, pages
-./mxcli -p %s -c "SHOW MODULES"
-./mxcli -p %s -c "SHOW ENTITIES"
-./mxcli -p %s -c "SHOW MICROFLOWS"
-./mxcli -p %s -c "SHOW PAGES"
-
-# Describe specific elements
-./mxcli -p %s -c "DESCRIBE ENTITY Module.EntityName"
-./mxcli -p %s -c "DESCRIBE MICROFLOW Module.MicroflowName"
-
-# Show constants and their values per configuration
-./mxcli -p %s -c "SHOW CONSTANTS"
-./mxcli -p %s -c "SHOW CONSTANT VALUES"
-
-# Search
-./mxcli search -p %s "keyword"
-`+"```"+`
-`, mprFile, mprFile, mprFile, mprFile, mprFile, mprFile, mprFile, mprFile, mprFile, mprFile)
+	return []byte(frontmatter + string(content))
 }
 
 func generateOpenCodeConfig(projectName, mprPath string) string {

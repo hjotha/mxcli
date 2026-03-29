@@ -229,6 +229,43 @@ Supported Tools:
 			}
 		}
 
+		// Vibe-specific: sync all skills
+		if toolName == "vibe" {
+			vibeSkillsDir := filepath.Join(projectDir, ".vibe", "skills")
+			vibeSkillCount := 0
+			if err := fs.WalkDir(skillsFS, "skills", func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				if d.Name() == "README.md" {
+					return nil
+				}
+				content, err := skillsFS.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				skillName := strings.TrimSuffix(d.Name(), ".md")
+				skillDir := filepath.Join(vibeSkillsDir, skillName)
+				if err := os.MkdirAll(skillDir, 0755); err != nil {
+					return err
+				}
+				targetPath := filepath.Join(skillDir, "SKILL.md")
+				if _, statErr := os.Stat(targetPath); statErr == nil {
+					return nil // skip existing
+				}
+				wrapped := wrapSkillForVibe(skillName, content)
+				if err := os.WriteFile(targetPath, wrapped, 0644); err != nil {
+					return err
+				}
+				vibeSkillCount++
+				return nil
+			}); err != nil {
+				fmt.Fprintf(os.Stderr, "  Error writing Vibe skills: %v\n", err)
+			} else if vibeSkillCount > 0 {
+				fmt.Printf("  Created %d skill directories in .vibe/skills/\n", vibeSkillCount)
+			}
+		}
+
 		fmt.Println("\n✓ Tool support added!")
 		fmt.Printf("\nNext steps:\n")
 		fmt.Printf("  1. Open project in %s\n", toolConfig.Name)
