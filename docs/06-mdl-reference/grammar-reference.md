@@ -4110,8 +4110,19 @@ galleryWidget
     : GALLERY qualifiedName? widgetOptions?
     | gallerySource?
     | (SELECTION (SINGLE | MULTIPLE))?
+    | (DESKTOPCOLUMNS NUMBER)?
+    | (TABLETCOLUMNS NUMBER)?
+    | (PHONECOLUMNS NUMBER)?
     | (BEGIN galleryContent END)?
 ```
+
+**Responsive column properties:**
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `DesktopColumns` | Grid columns on desktop | `1` |
+| `TabletColumns` | Grid columns on tablet | `1` |
+| `PhoneColumns` | Grid columns on phone | `1` |
 
 **Railroad Diagram:**
 

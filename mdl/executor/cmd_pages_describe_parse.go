@@ -170,6 +170,9 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 			widget.Children = e.extractGalleryContent(w)
 			widget.FilterWidgets = e.extractGalleryFilters(w)
 			widget.Selection = e.extractGallerySelection(w)
+			widget.DesktopColumns = e.extractCustomWidgetPropertyString(w, "desktopItems")
+			widget.TabletColumns = e.extractCustomWidgetPropertyString(w, "tabletItems")
+			widget.PhoneColumns = e.extractCustomWidgetPropertyString(w, "phoneItems")
 		}
 		// For filter widgets, extract filter attributes and expression
 		if widget.RenderMode == "TEXTFILTER" || widget.RenderMode == "NUMBERFILTER" || widget.RenderMode == "DROPDOWNFILTER" || widget.RenderMode == "DATEFILTER" {

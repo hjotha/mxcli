@@ -27,17 +27,20 @@
     },
     {
       "propertyKey": "desktopItems",
-      "value": "1",
+      "source": "DesktopColumns",
+      "default": "1",
       "operation": "primitive"
     },
     {
       "propertyKey": "tabletItems",
-      "value": "1",
+      "source": "TabletColumns",
+      "default": "1",
       "operation": "primitive"
     },
     {
       "propertyKey": "phoneItems",
-      "value": "1",
+      "source": "PhoneColumns",
+      "default": "1",
       "operation": "primitive"
     },
     {

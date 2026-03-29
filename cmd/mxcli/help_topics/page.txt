@@ -111,7 +111,10 @@ DATA WIDGETS
 
   GALLERY galleryName (
     DataSource: DATABASE Module.Entity,
-    Selection: Single
+    Selection: Single,
+    DesktopColumns: 3,
+    TabletColumns: 2,
+    PhoneColumns: 1
   ) {
     DYNAMICTEXT txtName (Content: '{1}', ContentParams: [{1} = Name], RenderMode: H4)
   }

@@ -60,7 +60,7 @@ The widget tree inside `{ ... }` defines the page content. Widgets are nested hi
 | `DATAVIEW` | Displays/edits a single object | `DataSource` |
 | `LISTVIEW` | Renders a list of objects | `DataSource`, `PageSize` |
 | `DATAGRID` | Tabular data display with columns | `DataSource`, `PageSize`, `Pagination` |
-| `GALLERY` | Card-based list display | `DataSource`, `PageSize` |
+| `GALLERY` | Card-based list display | `DataSource`, `DesktopColumns`, `TabletColumns`, `PhoneColumns` |
 
 **Input Widgets**
 

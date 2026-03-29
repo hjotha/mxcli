@@ -167,6 +167,25 @@ GALLERY galProducts (DataSource: DATABASE MyModule.Product) {
 }
 ```
 
+**Responsive column properties** control how many columns the grid uses per breakpoint:
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `DesktopColumns` | Number of columns on desktop | `1` |
+| `TabletColumns` | Number of columns on tablet | `1` |
+| `PhoneColumns` | Number of columns on phone | `1` |
+
+```sql
+GALLERY galBoard (
+  DataSource: DATABASE MyModule.Cell,
+  DesktopColumns: 9,
+  TabletColumns: 4,
+  PhoneColumns: 2
+) {
+  DYNAMICTEXT txtVal (Content: '{1}', Attribute: Value)
+}
+```
+
 ## Input Widgets
 
 All input widgets share common properties:

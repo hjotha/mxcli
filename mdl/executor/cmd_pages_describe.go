@@ -517,6 +517,10 @@ type rawWidget struct {
 	Pagination        string // "buttons", "virtualScrolling", "loadMore"
 	PagingPosition    string // "bottom", "top", "both"
 	ShowPagingButtons string // "always", "auto"
+	// Gallery column properties
+	DesktopColumns string // e.g. "9", "4"
+	TabletColumns  string // e.g. "4", "2"
+	PhoneColumns   string // e.g. "2", "1"
 	// ComboBox association mode properties
 	CaptionAttribute string // Display attribute for association-mode ComboBox
 	// GroupBox properties

@@ -14,7 +14,10 @@ Card-layout list with optional template content and filters.
 ```sql
 GALLERY galleryName (
   DataSource: DATABASE FROM Module.Entity SORT BY Name ASC,
-  Selection: Single | Multiple | None
+  Selection: Single | Multiple | None,
+  DesktopColumns: 3,
+  TabletColumns: 2,
+  PhoneColumns: 1
 ) {
   TEMPLATE template1 {
     DYNAMICTEXT title (Content: '{1}', ContentParams: [{1} = Name], RenderMode: H4)
@@ -32,6 +35,7 @@ GALLERY galleryName (
 - `TEMPLATE` block -> mapped to `content` property (child widgets rendered per row)
 - `FILTER` block -> mapped to `filtersPlaceholder` property (shown above list)
 - `Selection: None` omits the selection property (default if omitted)
+- `DesktopColumns`, `TabletColumns`, `PhoneColumns` control responsive grid columns (default: 1 each, omit if default)
 - Children written directly under GALLERY (no container) go to the first slot with `mdlContainer: "TEMPLATE"`
 
 ### COMBOBOX

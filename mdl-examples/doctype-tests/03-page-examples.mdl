@@ -1458,6 +1458,35 @@ CREATE PAGE PgTest.P023_Gallery_MultiSelect
 }
 
 
+/**
+ * Gallery with responsive column properties.
+ * DesktopColumns, TabletColumns, PhoneColumns control the grid layout per breakpoint.
+ */
+CREATE PAGE PgTest.P024_Gallery_Columns
+(
+  Title: 'Gallery with Columns',
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'p024_gallery_columns'
+)
+{
+  LAYOUTGRID mainGrid {
+    ROW row1 {
+      COLUMN col1 (DesktopWidth: 12) {
+        GALLERY cellGrid (
+          DataSource: DATABASE PgTest.Product,
+          DesktopColumns: 4,
+          TabletColumns: 2,
+          PhoneColumns: 1
+        ) {
+          TEMPLATE template1 {
+            DYNAMICTEXT prodName (Content: '{1}', ContentParams: [{1} = Name], RenderMode: H4)
+          }
+        }
+      }
+    }
+  }
+}
+
 -- MARK: Microflow Actions with Parameters
 
 -- ============================================================================

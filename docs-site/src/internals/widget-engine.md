@@ -82,6 +82,9 @@ Each pluggable widget has a definition file that maps MDL syntax to template pro
   "propertyMappings": [
     {"propertyKey": "datasource", "source": "DataSource", "operation": "datasource"},
     {"propertyKey": "itemSelection", "source": "Selection", "operation": "selection", "default": "Single"},
+    {"propertyKey": "desktopItems", "source": "DesktopColumns", "default": "1", "operation": "primitive"},
+    {"propertyKey": "tabletItems", "source": "TabletColumns", "default": "1", "operation": "primitive"},
+    {"propertyKey": "phoneItems", "source": "PhoneColumns", "default": "1", "operation": "primitive"},
     {"propertyKey": "pageSize", "value": "20", "operation": "primitive"}
   ],
   "childSlots": [

@@ -462,12 +462,15 @@ DATAVIEW dataView1 (DataSource: $Customer) {
 
 ### GALLERY Widget
 
-Display items in card layout with selection:
+Display items in card layout with selection and responsive columns:
 
 ```sql
 GALLERY galleryName (
   DataSource: DATABASE FROM Module.Entity SORT BY Name ASC,
-  Selection: Single|Multiple|None
+  Selection: Single|Multiple|None,
+  DesktopColumns: 3,
+  TabletColumns: 2,
+  PhoneColumns: 1
 ) {
   TEMPLATE template1 {
     DYNAMICTEXT name (Content: '{1}', ContentParams: [{1} = Name], RenderMode: H4)

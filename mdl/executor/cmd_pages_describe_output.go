@@ -391,6 +391,16 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 					props = append(props, fmt.Sprintf("DataSource: MICROFLOW %s", w.DataSource.Reference))
 				}
 			}
+			// Add column counts if non-default
+			if w.DesktopColumns != "" && w.DesktopColumns != "1" {
+				props = append(props, fmt.Sprintf("DesktopColumns: %s", w.DesktopColumns))
+			}
+			if w.TabletColumns != "" && w.TabletColumns != "1" {
+				props = append(props, fmt.Sprintf("TabletColumns: %s", w.TabletColumns))
+			}
+			if w.PhoneColumns != "" && w.PhoneColumns != "1" {
+				props = append(props, fmt.Sprintf("PhoneColumns: %s", w.PhoneColumns))
+			}
 			// Add Selection mode if specified
 			if w.Selection != "" {
 				props = append(props, fmt.Sprintf("Selection: %s", w.Selection))
