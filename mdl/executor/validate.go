@@ -70,6 +70,85 @@ func (sc *scriptContext) collectDefinitions(prog *ast.Program) {
 	}
 }
 
+// collectSingle records the object defined by a single statement.
+func (sc *scriptContext) collectSingle(stmt ast.Statement) {
+	switch s := stmt.(type) {
+	case *ast.CreateModuleStmt:
+		sc.modules[s.Name] = true
+	case *ast.CreateEntityStmt:
+		if s.Name.Module != "" {
+			sc.entities[s.Name.String()] = true
+		}
+	case *ast.CreateViewEntityStmt:
+		if s.Name.Module != "" {
+			sc.entities[s.Name.String()] = true
+		}
+	case *ast.CreateExternalEntityStmt:
+		if s.Name.Module != "" {
+			sc.entities[s.Name.String()] = true
+		}
+	case *ast.CreateEnumerationStmt:
+		if s.Name.Module != "" {
+			sc.enumerations[s.Name.String()] = true
+		}
+	case *ast.CreateMicroflowStmt:
+		if s.Name.Module != "" {
+			sc.microflows[s.Name.String()] = true
+		}
+	case *ast.CreatePageStmtV3:
+		if s.Name.Module != "" {
+			sc.pages[s.Name.String()] = true
+		}
+	case *ast.CreateSnippetStmtV3:
+		if s.Name.Module != "" {
+			sc.snippets[s.Name.String()] = true
+		}
+	}
+}
+
+// allNames returns all defined names across all categories.
+func (sc *scriptContext) allNames() []string {
+	var names []string
+	for n := range sc.entities {
+		names = append(names, n)
+	}
+	for n := range sc.enumerations {
+		names = append(names, n)
+	}
+	for n := range sc.microflows {
+		names = append(names, n)
+	}
+	for n := range sc.pages {
+		names = append(names, n)
+	}
+	for n := range sc.snippets {
+		names = append(names, n)
+	}
+	return names
+}
+
+// annotateForwardRef checks if a failed statement's error references an object
+// that is defined later in the script. If so, it appends a hint to reorder.
+func annotateForwardRef(err error, _ ast.Statement, created, allDefined *scriptContext) error {
+	msg := err.Error()
+	// Check each name that is defined in the script but not yet created.
+	for _, name := range allDefined.allNames() {
+		if created.has(name) {
+			continue // already created before this statement
+		}
+		if strings.Contains(msg, name) {
+			return fmt.Errorf("%w\n  hint: %s is defined later in this script — move its CREATE statement before this one", err, name)
+		}
+	}
+	return err
+}
+
+// has returns true if the name exists in any category.
+func (sc *scriptContext) has(name string) bool {
+	return sc.modules[name] || sc.entities[name] || sc.enumerations[name] ||
+		sc.microflows[name] || sc.pages[name] || sc.snippets[name]
+}
+
 // ValidateProgram validates all statements in a program, skipping references
 // to objects that are defined within the script itself.
 func (e *Executor) ValidateProgram(prog *ast.Program) []error {

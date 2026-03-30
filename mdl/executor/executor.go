@@ -413,10 +413,18 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 
 // ExecuteProgram runs all statements in a program.
 func (e *Executor) ExecuteProgram(prog *ast.Program) error {
+	// Collect all names defined in the script for forward-reference hints.
+	allDefined := newScriptContext()
+	allDefined.collectDefinitions(prog)
+
+	// Track which names have been created so far.
+	created := newScriptContext()
+
 	for _, stmt := range prog.Statements {
 		if err := e.Execute(stmt); err != nil {
-			return err
+			return annotateForwardRef(err, stmt, created, allDefined)
 		}
+		created.collectSingle(stmt)
 	}
 	return e.finalizeProgramExecution()
 }
