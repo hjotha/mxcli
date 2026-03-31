@@ -10,7 +10,7 @@
 --   3. COMBOBOX enum       — Enum attribute                (KNOWN BUG: CE1613)
 --   4. COMBOBOX association — DataSource + CaptionAttribute (FIXED: Issue #21)
 --   5. IMAGE basic         — Default pluggable Image widget
---   6. IMAGE with URL      — ImageUrl mode with dimensions
+--   6. IMAGE dimensions    — Custom pixel dimensions + alt text
 --   7. IMAGE with OnClick  — Action binding on click
 --
 -- Known engine bugs (do not affect MDL syntax correctness):
@@ -238,20 +238,22 @@ CREATE PAGE CWTest.P_Image_Basic
   }
 }
 
--- MARK: IMAGE with URL
+-- MARK: IMAGE with dimensions
 
 -- ============================================================================
--- Test 6: IMAGE with URL — ImageUrl mode with custom dimensions
+-- Test 6: IMAGE with custom dimensions
 -- Result: Pending validation
 -- ============================================================================
 
 /**
- * Page with an Image widget configured in imageUrl mode,
- * displaying an external URL with fixed pixel dimensions.
+ * Page with an Image widget with custom pixel dimensions.
+ * Note: ImageUrl mode (imageUrl TextTemplate) is not yet supported —
+ * the template's imageUrl property is null and cannot be created from
+ * scratch without triggering CE0463.
  */
-CREATE PAGE CWTest.P_Image_Url
+CREATE PAGE CWTest.P_Image_Dimensions
 (
-  Title: 'Image URL',
+  Title: 'Image Dimensions',
   Layout: Atlas_Core.Atlas_Default,
   Folder: 'CustomWidgets'
 )
@@ -260,8 +262,6 @@ CREATE PAGE CWTest.P_Image_Url
     ROW row1 {
       COLUMN col1 (DesktopWidth: 12) {
         IMAGE imgBanner (
-          ImageType: imageUrl,
-          ImageUrl: 'https://example.com/banner.png',
           AlternativeText: 'Company banner',
           WidthUnit: pixels,
           Width: 800,
