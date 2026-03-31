@@ -2264,6 +2264,16 @@ ALTER PAGE PgTest.P033b_DataGrid_ColumnProperties {
 -- LEVEL 9: Conditional Visibility, Editability, and Responsive Column Widths
 -- =============================================================================
 
+CREATE MICROFLOW PgTest.DS_GetFirstCustomer ()
+  RETURNS PgTest.Customer  
+FOLDER 'DataSources'
+BEGIN
+  RETRIEVE $Customer FROM PgTest.Customer LIMIT 1;
+  RETURN $Customer;
+END;
+/
+
+
 /**
  * Level 9.1: Page with conditional visibility and editability
  */
@@ -2276,9 +2286,9 @@ CREATE PAGE PgTest.P040_ConditionalProps
   LAYOUTGRID lg1 {
     ROW row1 {
       COLUMN col1 (DesktopWidth: 8, TabletWidth: 6, PhoneWidth: 12) {
-        DATAVIEW dv1 (DataSource: MICROFLOW PgTest.DS_GetFirst) {
+        DATAVIEW dv1 (DataSource: MICROFLOW PgTest.DS_GetFirstCustomer) {
           TEXTBOX txtName (Label: 'Name', Attribute: Name, Visible: [$currentObject/Name != empty])
-          TEXTBOX txtCountry (Label: 'Country', Attribute: Country, Editable: [true])
+          TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone, Editable: [true])
         }
       }
       COLUMN col2 (DesktopWidth: 4, TabletWidth: 6, PhoneWidth: 12) {
