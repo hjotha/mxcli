@@ -227,30 +227,12 @@ func setTextTemplateValue(val bson.D, text string) bson.D {
 			if tmpl, ok := elem.Value.(bson.D); ok && tmpl != nil {
 				result = append(result, bson.E{Key: "TextTemplate", Value: updateTemplateText(tmpl, text)})
 			} else {
-				// TextTemplate was null — create a new one
-				result = append(result, bson.E{Key: "TextTemplate", Value: bson.D{
-					{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
-					{Key: "$Type", Value: "Forms$ClientTemplate"},
-					{Key: "Fallback", Value: bson.D{
-						{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
-						{Key: "$Type", Value: "Texts$Text"},
-						{Key: "Items", Value: bson.A{int32(3)}},
-					}},
-					{Key: "Parameters", Value: bson.A{int32(2)}},
-					{Key: "Template", Value: bson.D{
-						{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
-						{Key: "$Type", Value: "Texts$Text"},
-						{Key: "Items", Value: bson.A{
-							int32(3),
-							bson.D{
-								{Key: "$ID", Value: mpr.IDToBsonBinary(mpr.GenerateID())},
-								{Key: "$Type", Value: "Texts$Translation"},
-								{Key: "LanguageCode", Value: "en_US"},
-								{Key: "Text", Value: text},
-							},
-						}},
-					}},
-				}})
+				// TextTemplate was null in the template — skip.
+				// Creating a TextTemplate from null triggers CE0463 because Studio Pro
+				// detects the structural change. The template must be extracted from a
+				// widget that already has this property configured in Studio Pro.
+				log.Printf("warning: opTextTemplate: skipping null TextTemplate (cannot create from scratch without CE0463)")
+				result = append(result, elem)
 			}
 		} else {
 			result = append(result, elem)
