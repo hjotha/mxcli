@@ -20,6 +20,7 @@ go.work.sum
 .vscode/
 *.swp
 *.swo
+.antlr/
 
 # OS
 .DS_Store
