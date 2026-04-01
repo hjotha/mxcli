@@ -5,6 +5,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/sdk/mpr/version"
