@@ -13,6 +13,17 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
+// updateTransactionID updates the _Transaction table with a new UUID.
+// Studio Pro uses this to detect external changes during F4 sync.
+// Only applies to MPR v2 projects (Mendix >= 10.18).
+func (w *Writer) updateTransactionID() {
+	if w.reader.version != MPRVersionV2 {
+		return
+	}
+	newID := generateUUID()
+	_, _ = w.reader.db.Exec(`UPDATE _Transaction SET LastTransactionID = ?`, newID)
+}
+
 // placeholderBinaryPrefix is the GUID-swapped byte pattern for placeholder IDs generated
 // by sdk/widgets/augment.go placeholderID(). These are "aa000000000000000000000000XXXXXX"
 // hex strings which, after hex decode + GUID byte-swap, produce 16-byte blobs whose first
@@ -70,6 +81,7 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 		`, unitIDBlob, containerIDBlob, containmentName, contentsHash)
 		if err == nil {
 			w.reader.InvalidateCache()
+			w.updateTransactionID()
 		}
 		return err
 	}
@@ -126,6 +138,7 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 		`, contentsHash, unitIDBlob)
 		if err == nil {
 			w.reader.InvalidateCache()
+			w.updateTransactionID()
 		}
 		return err
 	}
@@ -182,6 +195,7 @@ func (w *Writer) deleteUnit(unitID string) error {
 	}
 
 	w.reader.InvalidateCache()
+	w.updateTransactionID()
 	return nil
 }
 
