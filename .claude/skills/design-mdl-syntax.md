@@ -115,6 +115,30 @@ Rules:
 - Trailing comma allowed
 - One property per line (single line acceptable for 1-2 properties)
 
+#### Colon `:` vs `AS` — When to Use Each
+
+Use **colon** for property definitions (assigning a value to a named property):
+
+```mdl
+CREATE ENTITY Shop.Product (
+    Name: String(200),          -- property: type/value
+    Price: Decimal,
+);
+TEXTBOX txtName (Label: 'Name', Attribute: Title)
+```
+
+Use **`AS`** for name-to-name mappings (renaming, aliasing, mapping one name to another):
+
+```mdl
+CUSTOM NAME MAP (
+    'kvkNummer' AS 'ChamberOfCommerceNumber',   -- old name AS new name
+    'naam' AS 'CompanyName',
+)
+ALTER ENTITY Shop.Product RENAME Code AS ProductCode   -- old attr AS new attr
+```
+
+**Rule of thumb**: if the left side is a *fixed property key* defined by the syntax, use `:`. If the left side is a *user-provided name* being mapped to another name, use `AS`.
+
 ### Step 5: Validate
 
 Run these checks before finalizing syntax design:

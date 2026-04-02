@@ -107,6 +107,7 @@ jobs:
           - Follows standard CREATE/ALTER/DROP/SHOW/DESCRIBE pattern — no custom verbs for CRUD operations
           - Uses Module.Element qualified names everywhere — no bare names, no implicit module context
           - Property lists use ( Key: value, ... ) format with colon separators, one per line
+          - Colon for property definitions (Key: value), AS for name-to-name mappings ('oldName' AS 'newName') — do not flag AS in mapping/renaming contexts as wrong
           - Keywords are full English words — no abbreviations, no symbols for domain operations
           - Statement reads as English — a business analyst can understand the intent
           - No keyword overloading — each keyword has one consistent meaning
@@ -164,7 +165,7 @@ jobs:
             messages: [
               {
                 role: "system",
-                content: "You are a code reviewer for a Go CLI project (mxcli) that reads/modifies Mendix application projects. Key patterns: ANTLR4 grammar → AST → visitor → executor → BSON writer. New MDL features MUST be wired through the full pipeline (grammar → AST → visitor → executor → LSP → DESCRIBE roundtrip). New MDL syntax must follow design guidelines: reads as English (target audience is citizen developers), uses standard CRUD verbs (CREATE/ALTER/DROP/SHOW/DESCRIBE), consistent property format (Key: value), qualified names (Module.Element), no keyword overloading, no symbolic syntax. Generated ANTLR parser files (mdl/grammar/parser/) are noise — note but skip. The project context includes the full CLAUDE.md with architecture details and the review checklist. Review against the checklist thoroughly but concisely."
+                content: "You are a code reviewer for a Go CLI project (mxcli) that reads/modifies Mendix application projects. Key patterns: ANTLR4 grammar → AST → visitor → executor → BSON writer. New MDL features MUST be wired through the full pipeline (grammar → AST → visitor → executor → LSP → DESCRIBE roundtrip). New MDL syntax must follow design guidelines: reads as English (target audience is citizen developers), uses standard CRUD verbs (CREATE/ALTER/DROP/SHOW/DESCRIBE), consistent property format (Key: value) for property definitions, AS for name-to-name mappings ('old' AS 'new'), qualified names (Module.Element), no keyword overloading, no symbolic syntax. IMPORTANT: colon is for property definitions (Key: value), AS is for name mappings/renaming — do not flag AS in mapping contexts as a syntax violation. Generated ANTLR parser files (mdl/grammar/parser/) are noise — note but skip. The project context includes the full CLAUDE.md with architecture details and the review checklist. Review against the checklist thoroughly but concisely."
               },
               {
                 role: "user",
