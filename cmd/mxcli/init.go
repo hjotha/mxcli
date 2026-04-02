@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -1163,8 +1164,18 @@ func installVSCodeExtension(projectDir string) {
 	// Try to find the VS Code CLI
 	codeCLI := findCodeCLI()
 	if codeCLI == "" {
-		fmt.Printf("  Extracted VS Code extension to .claude/vscode-mdl.vsix\n")
-		fmt.Printf("  Install manually: code --install-extension %s\n", vsixPath)
+		fmt.Println()
+		fmt.Println("  ┌─────────────────────────────────────────────────────────────┐")
+		fmt.Println("  │  VS Code MDL extension extracted but could not auto-install │")
+		fmt.Println("  │  ('code' command not found on PATH)                         │")
+		fmt.Println("  │                                                             │")
+		fmt.Println("  │  To install, either:                                        │")
+		fmt.Println("  │  1. Run in terminal:                                        │")
+		fmt.Printf("  │     code --install-extension %s\n", vsixPath)
+		fmt.Println("  │  2. Or in VS Code: Ctrl+Shift+X → ··· → Install from VSIX  │")
+		fmt.Printf("  │     Select: %s\n", vsixPath)
+		fmt.Println("  └─────────────────────────────────────────────────────────────┘")
+		fmt.Println()
 		return
 	}
 
@@ -1187,11 +1198,50 @@ func installVSCodeExtension(projectDir string) {
 
 // findCodeCLI looks for the VS Code CLI executable.
 func findCodeCLI() string {
+	// 1. Check PATH (works on all platforms when VS Code added to PATH)
 	for _, name := range []string{"code", "code-insiders"} {
 		if path, err := exec.LookPath(name); err == nil {
 			return path
 		}
 	}
+
+	// 2. Windows: check common install locations
+	if runtime.GOOS == "windows" {
+		localAppData := os.Getenv("LOCALAPPDATA")
+		programFiles := os.Getenv("ProgramFiles")
+		candidates := []string{}
+		if localAppData != "" {
+			candidates = append(candidates,
+				filepath.Join(localAppData, "Programs", "Microsoft VS Code", "bin", "code.cmd"),
+				filepath.Join(localAppData, "Programs", "Microsoft VS Code Insiders", "bin", "code-insiders.cmd"),
+			)
+		}
+		if programFiles != "" {
+			candidates = append(candidates,
+				filepath.Join(programFiles, "Microsoft VS Code", "bin", "code.cmd"),
+				filepath.Join(programFiles, "Microsoft VS Code Insiders", "bin", "code-insiders.cmd"),
+			)
+		}
+		for _, path := range candidates {
+			if _, err := os.Stat(path); err == nil {
+				return path
+			}
+		}
+	}
+
+	// 3. macOS: check standard application path
+	if runtime.GOOS == "darwin" {
+		candidates := []string{
+			"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+			"/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code-insiders",
+		}
+		for _, path := range candidates {
+			if _, err := os.Stat(path); err == nil {
+				return path
+			}
+		}
+	}
+
 	return ""
 }
 
