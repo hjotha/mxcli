@@ -214,7 +214,7 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
-	} else if ctx.VERSION() != nil {
+	} else if ctx.VERSION() != nil && ctx.FEATURES() == nil {
 		b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowVersion})
 	} else if ctx.CATALOG() != nil {
 		// Check for SHOW CATALOG STATUS
@@ -481,6 +481,23 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 	} else if ctx.LANGUAGES() != nil {
 		// SHOW LANGUAGES
 		b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowLanguages})
+	} else if ctx.FEATURES() != nil {
+		// SHOW FEATURES [IN area] | SHOW FEATURES FOR VERSION x.y | SHOW FEATURES ADDED SINCE x.y
+		stmt := &ast.ShowFeaturesStmt{}
+		if ctx.ADDED() != nil && ctx.SINCE() != nil {
+			if nl := ctx.NUMBER_LITERAL(); nl != nil {
+				stmt.AddedSince = nl.GetText()
+			}
+		} else if ctx.FOR() != nil && ctx.VERSION() != nil {
+			if nl := ctx.NUMBER_LITERAL(); nl != nil {
+				stmt.ForVersion = nl.GetText()
+			}
+		} else if ctx.IN() != nil {
+			if id := ctx.IDENTIFIER(); id != nil {
+				stmt.InArea = id.GetText()
+			}
+		}
+		b.statements = append(b.statements, stmt)
 	} else if ctx.REST() != nil && ctx.CLIENTS() != nil {
 		// SHOW REST CLIENTS [IN module]
 		stmt := &ast.ShowStmt{ObjectType: ast.ShowRestClients}

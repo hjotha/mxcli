@@ -207,6 +207,23 @@ func (t ShowObjectType) String() string {
 	}
 }
 
+// ShowFeaturesStmt represents SHOW FEATURES commands against the version registry.
+type ShowFeaturesStmt struct {
+	// InArea filters by feature area (e.g., "domain_model", "microflows").
+	// Empty means show all areas.
+	InArea string
+
+	// ForVersion queries features for a specific version (SHOW FEATURES FOR VERSION x.y).
+	// Empty means use the connected project's version.
+	ForVersion string
+
+	// AddedSince shows features added after this version (SHOW FEATURES ADDED SINCE x.y).
+	// Empty means show all features (not just new ones).
+	AddedSince string
+}
+
+func (s *ShowFeaturesStmt) isStatement() {}
+
 // SelectStmt represents a SELECT query against catalog tables.
 type SelectStmt struct {
 	Query string // The raw SQL query

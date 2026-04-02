@@ -2540,6 +2540,9 @@ showStatement
     | SHOW REST CLIENTS (IN (qualifiedName | IDENTIFIER))?           // SHOW REST CLIENTS [IN module]
     | SHOW PUBLISHED REST SERVICES (IN (qualifiedName | IDENTIFIER))? // SHOW PUBLISHED REST SERVICES [IN module]
     | SHOW LANGUAGES                                                 // SHOW LANGUAGES
+    | SHOW FEATURES (IN IDENTIFIER)?                                 // SHOW FEATURES [IN area]
+    | SHOW FEATURES FOR VERSION NUMBER_LITERAL                       // SHOW FEATURES FOR VERSION 10.24
+    | SHOW FEATURES ADDED SINCE NUMBER_LITERAL                       // SHOW FEATURES ADDED SINCE 10.24
     ;
 
 /**

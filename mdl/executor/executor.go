@@ -329,6 +329,8 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	// Query statements
 	case *ast.ShowStmt:
 		return e.execShow(s)
+	case *ast.ShowFeaturesStmt:
+		return e.execShowFeatures(s)
 	case *ast.ShowWidgetsStmt:
 		return e.execShowWidgets(s)
 	case *ast.UpdateWidgetsStmt:
