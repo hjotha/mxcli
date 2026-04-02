@@ -629,7 +629,7 @@ func TestMxCheck_ViewEntitySimple(t *testing.T) {
 
 	env := setupTestEnv(t)
 	defer env.teardown()
-	env.requireMinVersion(t, 11, 0) // VIEW ENTITY BSON format requires 11.0+
+	env.requireMinVersion(t, 10, 18) // VIEW ENTITY requires 10.18+
 
 	mod := testModule
 
@@ -684,7 +684,7 @@ func TestMxCheck_ViewEntityWithAggregates(t *testing.T) {
 
 	env := setupTestEnv(t)
 	defer env.teardown()
-	env.requireMinVersion(t, 11, 0) // VIEW ENTITY BSON format requires 11.0+
+	env.requireMinVersion(t, 10, 18) // VIEW ENTITY requires 10.18+
 
 	mod := testModule
 

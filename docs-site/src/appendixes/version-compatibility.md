@@ -63,7 +63,7 @@ These features use BSON structures that changed in Mendix 11.0 and are **not com
 
 | Feature | Minimum Version | Error on 10.x |
 |---------|----------------|---------------|
-| View entities (CREATE VIEW ENTITY) | 11.0 | CE6775: "A view entity requires an OQL query" |
+| View entities (CREATE VIEW ENTITY) | 10.18 | Version-aware serialization (inline OQL on 10.x) |
 | Page parameters (Params: { ... }) | 11.0 | InvalidOperationException on 'Variable' property |
 | Design properties (Atlas v3) | 11.0 | CE6083: "Design property not supported by your theme" |
 | REST client (CREATE REST CLIENT) | 11.0 | BSON format incompatibility |
@@ -82,7 +82,7 @@ The Mendix metamodel evolves across versions. The reflection data shows ~42% typ
 
 ### View Entities (10.x vs 11.x)
 
-View entities exist in both 10.18+ and 11.x, but the BSON structure differs. Mendix 10.x stores view entities without the OQL query field that 11.x requires. Writing a view entity with 11.x BSON to a 10.x project causes CE6775.
+View entities exist in both 10.18+ and 11.x, but the BSON structure differs. In Mendix 10.x, the `OqlViewEntitySource` object has an `Oql` field that stores the OQL query inline (in addition to the separate `ViewEntitySourceDocument`). Mendix 11.0 removed the inline `Oql` field. The writer detects the project version and includes the inline field for 10.x projects.
 
 ### Page Parameters (10.x vs 11.x)
 
