@@ -132,7 +132,7 @@ func (e *Executor) describeExportMapping(name ast.QualifiedName) error {
 		fmt.Fprintln(e.output, "{")
 		for _, elem := range em.Elements {
 			printExportMappingElement(e, elem, 1)
-			fmt.Fprintln(e.output, ";")
+			fmt.Fprintln(e.output)
 		}
 		fmt.Fprintln(e.output, "};")
 	}
@@ -148,9 +148,13 @@ func printExportMappingElement(e *Executor, elem *model.ExportMappingElement, de
 		}
 		if len(elem.Children) > 0 {
 			fmt.Fprintf(e.output, "%s%s%s AS %s {\n", indent, elem.Entity, via, elem.ExposedName)
-			for _, child := range elem.Children {
+			for i, child := range elem.Children {
 				printExportMappingElement(e, child, depth+1)
-				fmt.Fprintln(e.output, ";")
+				if i < len(elem.Children)-1 {
+					fmt.Fprintln(e.output, ",")
+				} else {
+					fmt.Fprintln(e.output)
+				}
 			}
 			fmt.Fprintf(e.output, "%s}", indent)
 		} else {

@@ -69,10 +69,10 @@ CREATE IMPORT MAPPING Module.IMM_MyMapping
 {
   "" AS Module.MyRootObject (Create) {
     nestedKey AS Module.MyNestedObject (Create) VIA Module.MyRootObject_MyNestedObject {
-      name AS name (String)
+      name AS name (String),
       code AS code (String)
-    }
-    stringField AS stringField (String)
+    },
+    stringField AS stringField (String),
     intField    AS intField    (Integer)
   }
 };
@@ -170,17 +170,17 @@ CREATE IMPORT MAPPING Integrations.IMM_BibleVerse
 {
   "" AS Integrations.BibleApiResponse (Create) {
     translation AS Integrations.BibleTranslation (Create) VIA Integrations.BibleApiResponse_BibleTranslation {
-      identifier    AS identifier    (String)
-      language      AS language      (String)
-      language_code AS language_code (String)
-      license       AS license       (String)
+      identifier    AS identifier    (String),
+      language      AS language      (String),
+      language_code AS language_code (String),
+      license       AS license       (String),
       name          AS name          (String)
-    }
+    },
     random_verse AS Integrations.BibleVerse (Create) VIA Integrations.BibleApiResponse_BibleVerse {
-      book    AS book    (String)
-      book_id AS book_id (String)
-      chapter AS chapter (Integer)
-      text    AS text    (String)
+      book    AS book    (String),
+      book_id AS book_id (String),
+      chapter AS chapter (Integer),
+      text    AS text    (String),
       verse   AS verse   (Integer)
     }
   }

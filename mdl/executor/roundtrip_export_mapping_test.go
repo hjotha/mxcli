@@ -25,9 +25,9 @@ func TestRoundtripExportMapping_NoSchema(t *testing.T) {
 
 	createMDL := `CREATE EXPORT MAPPING ` + testModule + `.ExportPetBasic {
   ` + testModule + `.EMPet AS Root {
-    Id AS id (Integer);
-    Name AS name (String);
-  };
+    Id AS id (Integer),
+    Name AS name (String)
+  }
 };`
 
 	env.assertContains(createMDL, []string{
@@ -58,9 +58,9 @@ SNIPPET '{"orderId": 1, "total": 99.99}';`); err != nil {
   TO JSON STRUCTURE ` + testModule + `.EMOrderJS
 {
   ` + testModule + `.EMOrder AS Root {
-    OrderId AS orderId (Integer);
-    Total AS total (Decimal);
-  };
+    OrderId AS orderId (Integer),
+    Total AS total (Decimal)
+  }
 };`
 
 	env.assertContains(createMDL, []string{
@@ -87,8 +87,8 @@ func TestRoundtripExportMapping_NullValueOption(t *testing.T) {
   NULL VALUES SendAsNil
 {
   ` + testModule + `.EMNullPet AS Root {
-    Id AS id (Integer);
-  };
+    Id AS id (Integer)
+  }
 };`); err != nil {
 		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
 	}
@@ -115,8 +115,8 @@ func TestRoundtripExportMapping_Drop(t *testing.T) {
 
 	if err := env.executeMDL(`CREATE EXPORT MAPPING ` + testModule + `.ToDropEM {
   ` + testModule + `.EMDropPet AS Root {
-    Id AS id (Integer);
-  };
+    Id AS id (Integer)
+  }
 };`); err != nil {
 		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
 	}
@@ -146,8 +146,8 @@ func TestRoundtripExportMapping_ShowAppearsInList(t *testing.T) {
 
 	if err := env.executeMDL(`CREATE EXPORT MAPPING ` + testModule + `.ListableEM {
   ` + testModule + `.EMListPet AS Root {
-    Id AS id (Integer);
-  };
+    Id AS id (Integer)
+  }
 };`); err != nil {
 		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
 	}
@@ -181,9 +181,9 @@ func TestMxCheck_ExportMapping_Basic(t *testing.T) {
 
 	if err := env.executeMDL(`CREATE EXPORT MAPPING ` + testModule + `.MxCheckExportPet {
   ` + testModule + `.MxCheckEMPet AS Root {
-    Id AS id (Integer);
-    Name AS name (String);
-  };
+    Id AS id (Integer),
+    Name AS name (String)
+  }
 };`); err != nil {
 		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
 	}

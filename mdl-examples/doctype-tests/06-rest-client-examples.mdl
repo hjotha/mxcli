@@ -1199,19 +1199,21 @@ SNIPPET '{"orderId": 100, "customer": {"name": "Alice", "email": "alice@example.
 --
 -- Maps a flat JSON structure to a single non-persistent entity.
 
-CREATE ENTITY RestTest.PetResponse (NON_PERSISTENT)
-  PetId: Integer;
-  Name: String;
-  Status: String;
+CREATE NON-PERSISTENT ENTITY RestTest.PetResponse (
+  PetId: Integer,
+  Name: String,
+  Status: String
+);
+/
 
 CREATE IMPORT MAPPING RestTest.IMM_Pet
   FROM JSON STRUCTURE RestTest.JSON_Pet
 {
   "" AS RestTest.PetResponse (Create) {
-    id AS PetId (Integer, KEY);
-    name AS Name (String);
-    status AS Status (String);
-  };
+    id AS PetId (Integer, KEY),
+    name AS Name (String),
+    status AS Status (String)
+  }
 };
 
 -- ============================================================================
@@ -1220,41 +1222,49 @@ CREATE IMPORT MAPPING RestTest.IMM_Pet
 --
 -- Maps a nested JSON structure to multiple entities linked by associations.
 
-CREATE ENTITY RestTest.OrderResponse (NON_PERSISTENT)
-  OrderId: Integer;
+CREATE NON-PERSISTENT ENTITY RestTest.OrderResponse (
+  OrderId: Integer
+);
+/
 
-CREATE ENTITY RestTest.CustomerInfo (NON_PERSISTENT)
-  Name: String;
-  Email: String;
+CREATE NON-PERSISTENT ENTITY RestTest.CustomerInfo (
+  Name: String,
+  Email: String
+);
+/
 
-CREATE ENTITY RestTest.OrderItem (NON_PERSISTENT)
-  Sku: String;
-  Quantity: Integer;
-  Price: Decimal;
+CREATE NON-PERSISTENT ENTITY RestTest.OrderItem (
+  Sku: String,
+  Quantity: Integer,
+  Price: Decimal
+);
+/
 
 CREATE ASSOCIATION RestTest.OrderResponse_CustomerInfo
   FROM RestTest.OrderResponse
   TO RestTest.CustomerInfo;
+/
 
 CREATE ASSOCIATION RestTest.OrderResponse_OrderItem
   FROM RestTest.OrderResponse
   TO RestTest.OrderItem;
+/
 
 CREATE IMPORT MAPPING RestTest.IMM_Order
   FROM JSON STRUCTURE RestTest.JSON_Order
 {
   "" AS RestTest.OrderResponse (Create) {
-    orderId AS OrderId (Integer, KEY);
+    orderId AS OrderId (Integer, KEY),
     customer AS RestTest.CustomerInfo (Create) VIA RestTest.OrderResponse_CustomerInfo {
-      email AS Email (String);
-      name AS Name (String);
-    };
+      email AS Email (String),
+      name AS Name (String)
+    },
     items AS RestTest.OrderItem (Create) VIA RestTest.OrderResponse_OrderItem {
-      price AS Price (Decimal);
-      quantity AS Quantity (Integer);
-      sku AS Sku (String);
-    };
-  };
+      price AS Price (Decimal),
+      quantity AS Quantity (Integer),
+      sku AS Sku (String)
+    }
+  }
 };
 
 -- ############################################################################
@@ -1273,10 +1283,10 @@ CREATE EXPORT MAPPING RestTest.EMM_Pet
   TO JSON STRUCTURE RestTest.JSON_Pet
 {
   RestTest.PetResponse AS root {
-    PetId AS id (Integer);
-    Name AS name (String);
-    Status AS status (String);
-  };
+    PetId AS id (Integer),
+    Name AS name (String),
+    Status AS status (String)
+  }
 };
 
 -- ============================================================================
@@ -1290,17 +1300,17 @@ CREATE EXPORT MAPPING RestTest.EMM_Order
   NULL VALUES LeaveOutElement
 {
   RestTest.OrderResponse AS root {
-    OrderId AS orderId (Integer);
+    OrderId AS orderId (Integer),
     RestTest.CustomerInfo VIA RestTest.OrderResponse_CustomerInfo AS customer {
-      Email AS email (String);
-      Name AS name (String);
-    };
+      Email AS email (String),
+      Name AS name (String)
+    },
     RestTest.OrderItem VIA RestTest.OrderResponse_OrderItem AS items {
-      Price AS price (Decimal);
-      Quantity AS quantity (Integer);
-      Sku AS sku (String);
-    };
-  };
+      Price AS price (Decimal),
+      Quantity AS quantity (Integer),
+      Sku AS sku (String)
+    }
+  }
 };
 
 -- ############################################################################

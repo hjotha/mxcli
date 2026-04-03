@@ -128,7 +128,7 @@ func (e *Executor) describeImportMapping(name ast.QualifiedName) error {
 		fmt.Fprintln(e.output, "{")
 		for _, elem := range im.Elements {
 			printImportMappingElement(e, elem, 1)
-			fmt.Fprintln(e.output, ";")
+			fmt.Fprintln(e.output)
 		}
 		fmt.Fprintln(e.output, "};")
 	}
@@ -155,9 +155,13 @@ func printImportMappingElement(e *Executor, elem *model.ImportMappingElement, de
 		}
 		if len(elem.Children) > 0 {
 			fmt.Fprintf(e.output, "%s%s AS %s (%s)%s {\n", indent, jsonKey, entityOrName, handling, via)
-			for _, child := range elem.Children {
+			for i, child := range elem.Children {
 				printImportMappingElement(e, child, depth+1)
-				fmt.Fprintln(e.output, ";")
+				if i < len(elem.Children)-1 {
+					fmt.Fprintln(e.output, ",")
+				} else {
+					fmt.Fprintln(e.output)
+				}
 			}
 			fmt.Fprintf(e.output, "%s}", indent)
 		} else {

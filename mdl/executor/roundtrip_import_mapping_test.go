@@ -25,9 +25,9 @@ func TestRoundtripImportMapping_NoSchema(t *testing.T) {
 
 	createMDL := `CREATE IMPORT MAPPING ` + testModule + `.ImportPetBasic {
   "" AS ` + testModule + `.IMPet (Create) {
-    id AS Id (Integer, KEY);
-    name AS Name (String);
-  };
+    id AS Id (Integer, KEY),
+    name AS Name (String)
+  }
 };`
 
 	env.assertContains(createMDL, []string{
@@ -59,9 +59,9 @@ SNIPPET '{"orderId": 1, "total": 99.99}';`); err != nil {
   FROM JSON STRUCTURE ` + testModule + `.OrderJS
 {
   "" AS ` + testModule + `.IMOrder (Create) {
-    orderId AS OrderId (Integer, KEY);
-    total AS Total (Decimal);
-  };
+    orderId AS OrderId (Integer, KEY),
+    total AS Total (Decimal)
+  }
 };`
 
 	env.assertContains(createMDL, []string{
@@ -89,11 +89,11 @@ func TestRoundtripImportMapping_ValueTypes(t *testing.T) {
 
 	createMDL := `CREATE IMPORT MAPPING ` + testModule + `.ImportAllTypes {
   "" AS ` + testModule + `.IMAllTypes (Create) {
-    intVal AS IntVal (Integer, KEY);
-    decVal AS DecVal (Decimal);
-    boolVal AS BoolVal (Boolean);
-    dateVal AS DateVal (DateTime);
-  };
+    intVal AS IntVal (Integer, KEY),
+    decVal AS DecVal (Decimal),
+    boolVal AS BoolVal (Boolean),
+    dateVal AS DateVal (DateTime)
+  }
 };`
 
 	env.assertContains(createMDL, []string{
@@ -116,8 +116,8 @@ func TestRoundtripImportMapping_Drop(t *testing.T) {
 
 	if err := env.executeMDL(`CREATE IMPORT MAPPING ` + testModule + `.ToDropIM {
   "" AS ` + testModule + `.IMDropPet (Create) {
-    id AS Id (Integer, KEY);
-  };
+    id AS Id (Integer, KEY)
+  }
 };`); err != nil {
 		t.Fatalf("CREATE IMPORT MAPPING failed: %v", err)
 	}
@@ -147,8 +147,8 @@ func TestRoundtripImportMapping_ShowAppearsInList(t *testing.T) {
 
 	if err := env.executeMDL(`CREATE IMPORT MAPPING ` + testModule + `.ListableIM {
   "" AS ` + testModule + `.IMListPet (Create) {
-    id AS Id (Integer, KEY);
-  };
+    id AS Id (Integer, KEY)
+  }
 };`); err != nil {
 		t.Fatalf("CREATE IMPORT MAPPING failed: %v", err)
 	}
@@ -182,9 +182,9 @@ func TestMxCheck_ImportMapping_Basic(t *testing.T) {
 
 	if err := env.executeMDL(`CREATE IMPORT MAPPING ` + testModule + `.MxCheckImportPet {
   "" AS ` + testModule + `.MxCheckIMPet (Create) {
-    id AS Id (Integer, KEY);
-    name AS Name (String);
-  };
+    id AS Id (Integer, KEY),
+    name AS Name (String)
+  }
 };`); err != nil {
 		t.Fatalf("CREATE IMPORT MAPPING failed: %v", err)
 	}

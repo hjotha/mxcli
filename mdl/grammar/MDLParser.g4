@@ -837,12 +837,9 @@ customNameMapping
  *   FROM JSON STRUCTURE Module.JsonStructure
  * {
  *   root AS Module.Entity (Create) {
- *     id AS Id (Integer, KEY);
- *     name AS Name (String);
- *     items AS Module.Item (Create) VIA Module.Entity_Item {
- *       itemId AS Id (Integer, KEY);
- *     };
- *   };
+ *     id AS Id (Integer, KEY),
+ *     name AS Name (String)
+ *   }
  * };
  */
 createImportMappingStatement
@@ -859,7 +856,7 @@ importMappingSchemaClause
 importMappingElement
     : identifierOrKeyword AS qualifiedName LPAREN importMappingHandling RPAREN
       (VIA qualifiedName)?
-      (LBRACE importMappingElement* RBRACE)?
+      (LBRACE importMappingElement (COMMA importMappingElement)* RBRACE)?
     | identifierOrKeyword AS identifierOrKeyword
       LPAREN importMappingValueType (COMMA KEY)? RPAREN
     ;
@@ -888,7 +885,7 @@ importMappingValueType
  *   [NULL VALUES LeaveOutElement]
  * {
  *   Module.Customer AS root {
- *     Name AS name (String)
+ *     Name AS name (String),
  *     Module.Address VIA Module.Customer_Address AS addresses {
  *       Street AS street (String)
  *     }
@@ -913,7 +910,7 @@ exportMappingNullValuesClause
 
 exportMappingElement
     : qualifiedName (VIA qualifiedName)? AS identifierOrKeyword
-      (LBRACE exportMappingElement* RBRACE)?
+      (LBRACE exportMappingElement (COMMA exportMappingElement)* RBRACE)?
     | identifierOrKeyword AS identifierOrKeyword
       LPAREN importMappingValueType RPAREN
     ;
