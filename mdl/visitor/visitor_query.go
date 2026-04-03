@@ -825,6 +825,11 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 			ObjectType: ast.DescribeMicroflow,
 			Name:       name,
 		})
+	} else if ctx.NANOFLOW() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeNanoflow,
+			Name:       name,
+		})
 	} else if ctx.WORKFLOW() != nil {
 		b.statements = append(b.statements, &ast.DescribeStmt{
 			ObjectType: ast.DescribeWorkflow,

@@ -284,6 +284,7 @@ const (
 	DescribeContractAction       // DESCRIBE CONTRACT ACTION Service.ActionName [FORMAT mdl]
 	DescribeContractMessage      // DESCRIBE CONTRACT MESSAGE Service.MessageName
 	DescribeJsonStructure        // DESCRIBE JSON STRUCTURE Module.Name
+	DescribeNanoflow             // DESCRIBE NANOFLOW Module.Name
 	DescribeImportMapping        // DESCRIBE IMPORT MAPPING Module.Name
 	DescribeExportMapping        // DESCRIBE EXPORT MAPPING Module.Name
 )
@@ -351,6 +352,8 @@ func (t DescribeObjectType) String() string {
 		return "CONTRACT MESSAGE"
 	case DescribeJsonStructure:
 		return "JSON STRUCTURE"
+	case DescribeNanoflow:
+		return "NANOFLOW"
 	case DescribeImportMapping:
 		return "IMPORT MAPPING"
 	case DescribeExportMapping:

@@ -395,6 +395,122 @@ func (e *Executor) describeMicroflow(name ast.QualifiedName) error {
 	return nil
 }
 
+// describeNanoflow generates re-executable CREATE OR REPLACE NANOFLOW MDL output
+// with activities and control flows listed as comments.
+func (e *Executor) describeNanoflow(name ast.QualifiedName) error {
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	// Build entity name lookup
+	entityNames := make(map[model.ID]string)
+	domainModels, _ := e.reader.ListDomainModels()
+	for _, dm := range domainModels {
+		modName := h.GetModuleName(dm.ContainerID)
+		for _, entity := range dm.Entities {
+			entityNames[entity.ID] = modName + "." + entity.Name
+		}
+	}
+
+	// Build microflow/nanoflow name lookup (used for call actions)
+	microflowNames := make(map[model.ID]string)
+	allMicroflows, _ := e.reader.ListMicroflows()
+	for _, mf := range allMicroflows {
+		microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+	}
+
+	// Find the nanoflow
+	allNanoflows, err := e.reader.ListNanoflows()
+	if err != nil {
+		return fmt.Errorf("failed to list nanoflows: %w", err)
+	}
+
+	for _, nf := range allNanoflows {
+		microflowNames[nf.ID] = h.GetQualifiedName(nf.ContainerID, nf.Name)
+	}
+
+	var targetNf *microflows.Nanoflow
+	for _, nf := range allNanoflows {
+		modID := h.FindModuleID(nf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName == name.Module && nf.Name == name.Name {
+			targetNf = nf
+			break
+		}
+	}
+
+	if targetNf == nil {
+		return fmt.Errorf("nanoflow not found: %s", name)
+	}
+
+	var lines []string
+
+	// Documentation
+	if targetNf.Documentation != "" {
+		lines = append(lines, "/**")
+		for docLine := range strings.SplitSeq(targetNf.Documentation, "\n") {
+			lines = append(lines, " * "+docLine)
+		}
+		lines = append(lines, " */")
+	}
+
+	// CREATE NANOFLOW header
+	qualifiedName := name.Module + "." + name.Name
+	if len(targetNf.Parameters) > 0 {
+		lines = append(lines, fmt.Sprintf("CREATE OR REPLACE NANOFLOW %s (", qualifiedName))
+		for i, param := range targetNf.Parameters {
+			paramType := "Object"
+			if param.Type != nil {
+				paramType = e.formatMicroflowDataType(param.Type, entityNames)
+			}
+			comma := ","
+			if i == len(targetNf.Parameters)-1 {
+				comma = ""
+			}
+			lines = append(lines, fmt.Sprintf("  $%s: %s%s", param.Name, paramType, comma))
+		}
+		lines = append(lines, ")")
+	} else {
+		lines = append(lines, fmt.Sprintf("CREATE OR REPLACE NANOFLOW %s ()", qualifiedName))
+	}
+
+	// Return type
+	if targetNf.ReturnType != nil {
+		returnType := e.formatMicroflowDataType(targetNf.ReturnType, entityNames)
+		if returnType != "Void" && returnType != "" {
+			lines = append(lines, fmt.Sprintf("RETURNS %s", returnType))
+		}
+	}
+
+	// Folder
+	if folderPath := h.BuildFolderPath(targetNf.ContainerID); folderPath != "" {
+		lines = append(lines, fmt.Sprintf("FOLDER '%s'", folderPath))
+	}
+
+	// BEGIN block with activities
+	lines = append(lines, "BEGIN")
+
+	// Wrap nanoflow in a Microflow to reuse formatMicroflowActivities
+	if targetNf.ObjectCollection != nil && len(targetNf.ObjectCollection.Objects) > 0 {
+		wrapperMf := &microflows.Microflow{
+			ObjectCollection: targetNf.ObjectCollection,
+		}
+		activityLines := e.formatMicroflowActivities(wrapperMf, entityNames, microflowNames)
+		for _, line := range activityLines {
+			lines = append(lines, "  "+line)
+		}
+	} else {
+		lines = append(lines, "  -- No activities")
+	}
+
+	lines = append(lines, "END;")
+	lines = append(lines, "/")
+
+	fmt.Fprintln(e.output, strings.Join(lines, "\n"))
+	return nil
+}
+
 // describeMicroflowToString generates MDL source for a microflow and returns it as a string
 // along with a source map mapping node IDs to line ranges.
 func (e *Executor) describeMicroflowToString(name ast.QualifiedName) (string, map[string]elkSourceRange, error) {

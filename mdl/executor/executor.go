@@ -837,6 +837,8 @@ func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
 		return e.describeAssociation(s.Name)
 	case ast.DescribeMicroflow:
 		return e.describeMicroflow(s.Name)
+	case ast.DescribeNanoflow:
+		return e.describeNanoflow(s.Name)
 	case ast.DescribeModule:
 		return e.describeModule(s.Name.Module, s.WithAll)
 	case ast.DescribePage:
