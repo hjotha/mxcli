@@ -261,6 +261,7 @@ New MDL commands or language features must be wired through the full pipeline:
 ### Test coverage
 - [ ] New packages have test files
 - [ ] New executor commands have MDL examples in `mdl-examples/doctype-tests/`
+- [ ] **MDL syntax changes** — any PR that adds or modifies MDL syntax must include working examples in `mdl-examples/doctype-tests/`
 - [ ] Integration paths (not just helpers) are tested
 - [ ] Tests don't rely on `time.Sleep` for synchronization — use channels or polling with timeout
 
