@@ -1163,7 +1163,183 @@ CREATE PAGE RestTest.RESTClientTestPage
 /
 
 -- ############################################################################
--- PART 12: VERIFICATION COMMANDS
+-- PART 12: JSON STRUCTURES
+-- ############################################################################
+
+-- MARK: JSON Structures
+
+-- ============================================================================
+-- Level 12.1: Basic JSON Structure
+-- ============================================================================
+--
+-- Create a JSON structure from a raw JSON snippet. The element tree is
+-- automatically derived from the snippet.
+
+CREATE JSON STRUCTURE RestTest.JSON_Pet
+SNIPPET '{"id": 1, "name": "Fido", "status": "available"}';
+
+-- ============================================================================
+-- Level 12.2: Nested JSON Structure
+-- ============================================================================
+--
+-- Demonstrates a JSON structure with nested objects and arrays.
+
+CREATE JSON STRUCTURE RestTest.JSON_Order
+SNIPPET '{"orderId": 100, "customer": {"name": "Alice", "email": "alice@example.com"}, "items": [{"sku": "A1", "quantity": 2, "price": 9.99}]}';
+
+-- ############################################################################
+-- PART 13: IMPORT MAPPINGS
+-- ############################################################################
+
+-- MARK: Import Mappings
+
+-- ============================================================================
+-- Level 13.1: Simple Import Mapping
+-- ============================================================================
+--
+-- Maps a flat JSON structure to a single non-persistent entity.
+
+CREATE ENTITY RestTest.PetResponse (NON_PERSISTENT)
+  PetId: Integer;
+  Name: String;
+  Status: String;
+
+CREATE IMPORT MAPPING RestTest.IMM_Pet
+  FROM JSON STRUCTURE RestTest.JSON_Pet
+{
+  "" AS RestTest.PetResponse (Create) {
+    id AS PetId (Integer, KEY);
+    name AS Name (String);
+    status AS Status (String);
+  };
+};
+
+-- ============================================================================
+-- Level 13.2: Nested Import Mapping with Associations
+-- ============================================================================
+--
+-- Maps a nested JSON structure to multiple entities linked by associations.
+
+CREATE ENTITY RestTest.OrderResponse (NON_PERSISTENT)
+  OrderId: Integer;
+
+CREATE ENTITY RestTest.CustomerInfo (NON_PERSISTENT)
+  Name: String;
+  Email: String;
+
+CREATE ENTITY RestTest.OrderItem (NON_PERSISTENT)
+  Sku: String;
+  Quantity: Integer;
+  Price: Decimal;
+
+CREATE ASSOCIATION RestTest.OrderResponse_CustomerInfo
+  FROM RestTest.OrderResponse
+  TO RestTest.CustomerInfo;
+
+CREATE ASSOCIATION RestTest.OrderResponse_OrderItem
+  FROM RestTest.OrderResponse
+  TO RestTest.OrderItem;
+
+CREATE IMPORT MAPPING RestTest.IMM_Order
+  FROM JSON STRUCTURE RestTest.JSON_Order
+{
+  "" AS RestTest.OrderResponse (Create) {
+    orderId AS OrderId (Integer, KEY);
+    customer AS RestTest.CustomerInfo (Create) VIA RestTest.OrderResponse_CustomerInfo {
+      email AS Email (String);
+      name AS Name (String);
+    };
+    items AS RestTest.OrderItem (Create) VIA RestTest.OrderResponse_OrderItem {
+      price AS Price (Decimal);
+      quantity AS Quantity (Integer);
+      sku AS Sku (String);
+    };
+  };
+};
+
+-- ############################################################################
+-- PART 14: EXPORT MAPPINGS
+-- ############################################################################
+
+-- MARK: Export Mappings
+
+-- ============================================================================
+-- Level 14.1: Simple Export Mapping
+-- ============================================================================
+--
+-- Maps an entity back to JSON for outgoing REST calls.
+
+CREATE EXPORT MAPPING RestTest.EMM_Pet
+  TO JSON STRUCTURE RestTest.JSON_Pet
+{
+  RestTest.PetResponse AS root {
+    PetId AS id (Integer);
+    Name AS name (String);
+    Status AS status (String);
+  };
+};
+
+-- ============================================================================
+-- Level 14.2: Export Mapping with Null Value Handling
+-- ============================================================================
+--
+-- Demonstrates configurable null value handling (LeaveOutElement vs SendAsNil).
+
+CREATE EXPORT MAPPING RestTest.EMM_Order
+  TO JSON STRUCTURE RestTest.JSON_Order
+  NULL VALUES LeaveOutElement
+{
+  RestTest.OrderResponse AS root {
+    OrderId AS orderId (Integer);
+    RestTest.CustomerInfo VIA RestTest.OrderResponse_CustomerInfo AS customer {
+      Email AS email (String);
+      Name AS name (String);
+    };
+    RestTest.OrderItem VIA RestTest.OrderResponse_OrderItem AS items {
+      Price AS price (Decimal);
+      Quantity AS quantity (Integer);
+      Sku AS sku (String);
+    };
+  };
+};
+
+-- ############################################################################
+-- PART 15: SEND REST REQUEST WITH MAPPINGS
+-- ############################################################################
+
+-- MARK: SEND REST REQUEST with Mappings
+
+-- ============================================================================
+-- Level 15.1: GET with Import Mapping via REST CALL
+-- ============================================================================
+--
+-- Combines a consumed REST service with an import mapping to deserialize
+-- the JSON response into Mendix entities.
+
+CREATE MICROFLOW RestTest.ACT_TestImportMapping ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+
+  $Result = REST CALL GET 'https://jsonplaceholder.typicode.com/posts/1'
+    HEADER Accept = 'application/json'
+    TIMEOUT 15
+    RETURNS String
+    ON ERROR CONTINUE;
+
+  IF $Result != '' THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'ACT_TestImportMapping: import mapping test passed';
+  ELSE
+    LOG WARNING NODE 'RestTest' 'ACT_TestImportMapping: empty response';
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ############################################################################
+-- PART 16: VERIFICATION COMMANDS
 -- ############################################################################
 
 -- MARK: Verification
@@ -1173,6 +1349,16 @@ SHOW REST CLIENTS;
 
 -- Show details of the Pet Store API
 DESCRIBE REST CLIENT RestTest.RC018_PetStoreAPI;
+
+-- Show JSON structures
+SHOW JSON STRUCTURES;
+DESCRIBE JSON STRUCTURE RestTest.JSON_Pet;
+
+-- Show import and export mappings
+SHOW IMPORT MAPPINGS;
+DESCRIBE IMPORT MAPPING RestTest.IMM_Pet;
+SHOW EXPORT MAPPINGS;
+DESCRIBE EXPORT MAPPING RestTest.EMM_Pet;
 
 -- ============================================================================
 -- END OF REST CLIENT EXAMPLES

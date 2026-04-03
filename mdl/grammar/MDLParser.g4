@@ -99,6 +99,8 @@ createStatement
       | createDemoUserStatement
       | createImageCollectionStatement
       | createJsonStructureStatement
+      | createImportMappingStatement
+      | createExportMappingStatement
       | createConfigurationStatement
       )
     ;
@@ -258,6 +260,8 @@ dropStatement
     | DROP WORKFLOW qualifiedName
     | DROP IMAGE COLLECTION qualifiedName
     | DROP JSON STRUCTURE qualifiedName
+    | DROP IMPORT MAPPING qualifiedName
+    | DROP EXPORT MAPPING qualifiedName
     | DROP REST CLIENT qualifiedName
     | DROP CONFIGURATION STRING_LITERAL
     | DROP FOLDER STRING_LITERAL IN (qualifiedName | IDENTIFIER)
@@ -826,6 +830,92 @@ createJsonStructureStatement
 
 customNameMapping
     : STRING_LITERAL AS STRING_LITERAL   // 'jsonKey' AS 'CustomName'
+    ;
+
+/**
+ * CREATE IMPORT MAPPING Module.Name
+ *   FROM JSON STRUCTURE Module.JsonStructure
+ * {
+ *   root AS Module.Entity (Create) {
+ *     id AS Id (Integer, KEY);
+ *     name AS Name (String);
+ *     items AS Module.Item (Create) VIA Module.Entity_Item {
+ *       itemId AS Id (Integer, KEY);
+ *     };
+ *   };
+ * };
+ */
+createImportMappingStatement
+    : IMPORT MAPPING qualifiedName
+      importMappingSchemaClause?
+      LBRACE importMappingElement RBRACE
+    ;
+
+importMappingSchemaClause
+    : FROM JSON STRUCTURE qualifiedName
+    | FROM XML SCHEMA qualifiedName
+    ;
+
+importMappingElement
+    : identifierOrKeyword AS qualifiedName LPAREN importMappingHandling RPAREN
+      (VIA qualifiedName)?
+      (LBRACE importMappingElement* RBRACE)?
+    | identifierOrKeyword AS identifierOrKeyword
+      LPAREN importMappingValueType (COMMA KEY)? RPAREN
+    ;
+
+importMappingHandling
+    : CREATE
+    | FIND
+    | UPDATE
+    | IDENTIFIER
+    ;
+
+importMappingValueType
+    : STRING_TYPE
+    | INTEGER_TYPE
+    | LONG_TYPE
+    | DECIMAL_TYPE
+    | BOOLEAN_TYPE
+    | DATETIME_TYPE
+    | DATE_TYPE
+    | BINARY_TYPE
+    ;
+
+/**
+ * CREATE EXPORT MAPPING Module.Name
+ *   [TO JSON STRUCTURE Module.JsonStructure]
+ *   [NULL VALUES LeaveOutElement]
+ * {
+ *   Module.Customer AS root {
+ *     Name AS name (String)
+ *     Module.Address VIA Module.Customer_Address AS addresses {
+ *       Street AS street (String)
+ *     }
+ *   }
+ * };
+ */
+createExportMappingStatement
+    : EXPORT MAPPING qualifiedName
+      exportMappingSchemaClause?
+      exportMappingNullValuesClause?
+      LBRACE exportMappingElement RBRACE
+    ;
+
+exportMappingSchemaClause
+    : TO JSON STRUCTURE qualifiedName
+    | TO XML SCHEMA qualifiedName
+    ;
+
+exportMappingNullValuesClause
+    : NULL VALUES identifierOrKeyword
+    ;
+
+exportMappingElement
+    : qualifiedName (VIA qualifiedName)? AS identifierOrKeyword
+      (LBRACE exportMappingElement* RBRACE)?
+    | identifierOrKeyword AS identifierOrKeyword
+      LPAREN importMappingValueType RPAREN
     ;
 
 // =============================================================================
@@ -2516,6 +2606,8 @@ showStatement
     | SHOW JAVASCRIPT ACTIONS (IN (qualifiedName | IDENTIFIER))?
     | SHOW IMAGE COLLECTION (IN (qualifiedName | IDENTIFIER))?   // SHOW IMAGE COLLECTION [IN Module]
     | SHOW JSON STRUCTURES (IN (qualifiedName | IDENTIFIER))?    // SHOW JSON STRUCTURES [IN Module]
+    | SHOW IMPORT MAPPINGS (IN (qualifiedName | IDENTIFIER))?       // SHOW IMPORT MAPPINGS [IN module]
+    | SHOW EXPORT MAPPINGS (IN (qualifiedName | IDENTIFIER))?       // SHOW EXPORT MAPPINGS [IN module]
     | SHOW ENTITY qualifiedName
     | SHOW ASSOCIATION qualifiedName
     | SHOW PAGE qualifiedName
@@ -2647,6 +2739,8 @@ describeStatement
     | DESCRIBE FRAGMENT FROM SNIPPET qualifiedName WIDGET identifierOrKeyword  // DESCRIBE FRAGMENT FROM SNIPPET Module.Snippet WIDGET name
     | DESCRIBE IMAGE COLLECTION qualifiedName           // DESCRIBE IMAGE COLLECTION Module.Name
     | DESCRIBE JSON STRUCTURE qualifiedName              // DESCRIBE JSON STRUCTURE Module.Name
+    | DESCRIBE IMPORT MAPPING qualifiedName             // DESCRIBE IMPORT MAPPING Module.Name
+    | DESCRIBE EXPORT MAPPING qualifiedName             // DESCRIBE EXPORT MAPPING Module.Name
     | DESCRIBE REST CLIENT qualifiedName                // DESCRIBE REST CLIENT Module.Name
     | DESCRIBE PUBLISHED REST SERVICE qualifiedName    // DESCRIBE PUBLISHED REST SERVICE Module.Name
     | DESCRIBE FRAGMENT identifierOrKeyword            // DESCRIBE FRAGMENT Name
@@ -3281,6 +3375,7 @@ keyword
     | URL | POSITION | SORT                                      // Common attribute names
     | GENERATE | CONNECTOR | EXEC | TABLES | VIEWS              // SQL generate keywords
     | COLLECTION                                               // Image collection keyword
+    | STRUCTURES | MAPPINGS | VIA | KEY | SCHEMA               // JSON Structure / Import Mapping keywords
     | FILE_KW                                                    // REST client file keyword
     | SEND | REQUEST                                               // REST operation call keywords
     | STRUCTURES                                                   // JSON structure keywords

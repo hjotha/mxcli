@@ -566,6 +566,70 @@ func (s *BaseMDLParserListener) EnterCustomNameMapping(ctx *CustomNameMappingCon
 // ExitCustomNameMapping is called when production customNameMapping is exited.
 func (s *BaseMDLParserListener) ExitCustomNameMapping(ctx *CustomNameMappingContext) {}
 
+// EnterCreateImportMappingStatement is called when production createImportMappingStatement is entered.
+func (s *BaseMDLParserListener) EnterCreateImportMappingStatement(ctx *CreateImportMappingStatementContext) {
+}
+
+// ExitCreateImportMappingStatement is called when production createImportMappingStatement is exited.
+func (s *BaseMDLParserListener) ExitCreateImportMappingStatement(ctx *CreateImportMappingStatementContext) {
+}
+
+// EnterImportMappingSchemaClause is called when production importMappingSchemaClause is entered.
+func (s *BaseMDLParserListener) EnterImportMappingSchemaClause(ctx *ImportMappingSchemaClauseContext) {
+}
+
+// ExitImportMappingSchemaClause is called when production importMappingSchemaClause is exited.
+func (s *BaseMDLParserListener) ExitImportMappingSchemaClause(ctx *ImportMappingSchemaClauseContext) {
+}
+
+// EnterImportMappingElement is called when production importMappingElement is entered.
+func (s *BaseMDLParserListener) EnterImportMappingElement(ctx *ImportMappingElementContext) {}
+
+// ExitImportMappingElement is called when production importMappingElement is exited.
+func (s *BaseMDLParserListener) ExitImportMappingElement(ctx *ImportMappingElementContext) {}
+
+// EnterImportMappingHandling is called when production importMappingHandling is entered.
+func (s *BaseMDLParserListener) EnterImportMappingHandling(ctx *ImportMappingHandlingContext) {}
+
+// ExitImportMappingHandling is called when production importMappingHandling is exited.
+func (s *BaseMDLParserListener) ExitImportMappingHandling(ctx *ImportMappingHandlingContext) {}
+
+// EnterImportMappingValueType is called when production importMappingValueType is entered.
+func (s *BaseMDLParserListener) EnterImportMappingValueType(ctx *ImportMappingValueTypeContext) {}
+
+// ExitImportMappingValueType is called when production importMappingValueType is exited.
+func (s *BaseMDLParserListener) ExitImportMappingValueType(ctx *ImportMappingValueTypeContext) {}
+
+// EnterCreateExportMappingStatement is called when production createExportMappingStatement is entered.
+func (s *BaseMDLParserListener) EnterCreateExportMappingStatement(ctx *CreateExportMappingStatementContext) {
+}
+
+// ExitCreateExportMappingStatement is called when production createExportMappingStatement is exited.
+func (s *BaseMDLParserListener) ExitCreateExportMappingStatement(ctx *CreateExportMappingStatementContext) {
+}
+
+// EnterExportMappingSchemaClause is called when production exportMappingSchemaClause is entered.
+func (s *BaseMDLParserListener) EnterExportMappingSchemaClause(ctx *ExportMappingSchemaClauseContext) {
+}
+
+// ExitExportMappingSchemaClause is called when production exportMappingSchemaClause is exited.
+func (s *BaseMDLParserListener) ExitExportMappingSchemaClause(ctx *ExportMappingSchemaClauseContext) {
+}
+
+// EnterExportMappingNullValuesClause is called when production exportMappingNullValuesClause is entered.
+func (s *BaseMDLParserListener) EnterExportMappingNullValuesClause(ctx *ExportMappingNullValuesClauseContext) {
+}
+
+// ExitExportMappingNullValuesClause is called when production exportMappingNullValuesClause is exited.
+func (s *BaseMDLParserListener) ExitExportMappingNullValuesClause(ctx *ExportMappingNullValuesClauseContext) {
+}
+
+// EnterExportMappingElement is called when production exportMappingElement is entered.
+func (s *BaseMDLParserListener) EnterExportMappingElement(ctx *ExportMappingElementContext) {}
+
+// ExitExportMappingElement is called when production exportMappingElement is exited.
+func (s *BaseMDLParserListener) ExitExportMappingElement(ctx *ExportMappingElementContext) {}
+
 // EnterCreateValidationRuleStatement is called when production createValidationRuleStatement is entered.
 func (s *BaseMDLParserListener) EnterCreateValidationRuleStatement(ctx *CreateValidationRuleStatementContext) {
 }

@@ -684,11 +684,29 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	case ast.RestResultMapping:
 		mappingQN := s.Result.MappingName.Module + "." + s.Result.MappingName.Name
 		entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name
+		// Derive the output variable name from the root entity's short name so
+		// callers don't need to hard-code it in the MDL assignment.
+		s.OutputVariable = s.Result.ResultEntity.Name
+		// Determine whether the import mapping returns a single object or a list by
+		// looking at the JSON structure it references. If the root JSON element is
+		// an Object, the mapping produces one object; if it is an Array, a list.
+		singleObject := false
+		if fb.reader != nil {
+			if im, err := fb.reader.GetImportMappingByQualifiedName(s.Result.MappingName.Module, s.Result.MappingName.Name); err == nil && im.JsonStructure != "" {
+				// im.JsonStructure is "Module.Name" — split and look up the JSON structure.
+				if parts := strings.SplitN(im.JsonStructure, ".", 2); len(parts) == 2 {
+					if js, err := fb.reader.GetJsonStructureByQualifiedName(parts[0], parts[1]); err == nil && len(js.Elements) > 0 {
+						singleObject = js.Elements[0].ElementType == "Object"
+					}
+				}
+			}
+		}
 		resultHandling = &microflows.ResultHandlingMapping{
 			BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			MappingID:      model.ID(mappingQN),
 			ResultEntityID: model.ID(entityQN),
 			ResultVariable: s.OutputVariable,
+			SingleObject:   singleObject,
 		}
 	case ast.RestResultNone:
 		resultHandling = &microflows.ResultHandlingNone{
@@ -798,18 +816,6 @@ func (fb *flowBuilder) addSendRestRequestAction(s *ast.SendRestRequestStmt) mode
 
 // addExecuteDatabaseQueryAction creates an EXECUTE DATABASE QUERY statement.
 func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQueryStmt) model.ID {
-	// Version pre-check: database connector requires 10.6+
-	if fb.reader != nil {
-		pv := fb.reader.ProjectVersion()
-		if !pv.IsAtLeast(10, 6) {
-			fb.addError("EXECUTE DATABASE QUERY requires Mendix 10.6+ (project is %s)\n  hint: upgrade your project to 10.6+", pv.ProductVersion)
-		}
-		// Runtime connection override requires 11.0+
-		if len(s.ConnectionArguments) > 0 && !pv.IsAtLeast(11, 0) {
-			fb.addError("EXECUTE DATABASE QUERY with runtime connection override requires Mendix 11.0+ (project is %s)", pv.ProductVersion)
-		}
-	}
-
 	// DynamicQuery is a Mendix expression — string literals need single quotes
 	dynamicQuery := s.DynamicQuery
 	if dynamicQuery != "" && !strings.HasPrefix(dynamicQuery, "'") {

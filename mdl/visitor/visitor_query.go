@@ -214,7 +214,7 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
-	} else if ctx.VERSION() != nil && ctx.FEATURES() == nil {
+	} else if ctx.VERSION() != nil {
 		b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowVersion})
 	} else if ctx.CATALOG() != nil {
 		// Check for SHOW CATALOG STATUS
@@ -467,9 +467,9 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
-	} else if ctx.JSON() != nil && ctx.STRUCTURES() != nil {
-		// SHOW JSON STRUCTURES [IN module]
-		stmt := &ast.ShowStmt{ObjectType: ast.ShowJsonStructures}
+	} else if ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICES() != nil {
+		// SHOW PUBLISHED REST SERVICES [IN module] - must come before REST CLIENTS check
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowPublishedRestServices}
 		if ctx.IN() != nil {
 			if qn := ctx.QualifiedName(); qn != nil {
 				stmt.InModule = getQualifiedNameText(qn)
@@ -478,9 +478,9 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
-	} else if ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICES() != nil {
-		// SHOW PUBLISHED REST SERVICES [IN module] - must come before REST CLIENTS check
-		stmt := &ast.ShowStmt{ObjectType: ast.ShowPublishedRestServices}
+	} else if ctx.REST() != nil && ctx.CLIENTS() != nil {
+		// SHOW REST CLIENTS [IN module]
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowRestClients}
 		if ctx.IN() != nil {
 			if qn := ctx.QualifiedName(); qn != nil {
 				stmt.InModule = getQualifiedNameText(qn)
@@ -509,9 +509,31 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
-	} else if ctx.REST() != nil && ctx.CLIENTS() != nil {
-		// SHOW REST CLIENTS [IN module]
-		stmt := &ast.ShowStmt{ObjectType: ast.ShowRestClients}
+	} else if ctx.JSON() != nil && ctx.STRUCTURES() != nil {
+		// SHOW JSON STRUCTURES [IN module]
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowJsonStructures}
+		if ctx.IN() != nil {
+			if qn := ctx.QualifiedName(); qn != nil {
+				stmt.InModule = getQualifiedNameText(qn)
+			} else if id := ctx.IDENTIFIER(); id != nil {
+				stmt.InModule = id.GetText()
+			}
+		}
+		b.statements = append(b.statements, stmt)
+	} else if ctx.IMPORT() != nil && ctx.MAPPINGS() != nil {
+		// SHOW IMPORT MAPPINGS [IN module]
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowImportMappings}
+		if ctx.IN() != nil {
+			if qn := ctx.QualifiedName(); qn != nil {
+				stmt.InModule = getQualifiedNameText(qn)
+			} else if id := ctx.IDENTIFIER(); id != nil {
+				stmt.InModule = id.GetText()
+			}
+		}
+		b.statements = append(b.statements, stmt)
+	} else if ctx.EXPORT() != nil && ctx.MAPPINGS() != nil {
+		// SHOW EXPORT MAPPINGS [IN module]
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowExportMappings}
 		if ctx.IN() != nil {
 			if qn := ctx.QualifiedName(); qn != nil {
 				stmt.InModule = getQualifiedNameText(qn)
@@ -838,11 +860,6 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 			ObjectType: ast.DescribeImageCollection,
 			Name:       name,
 		})
-	} else if ctx.JSON() != nil && ctx.STRUCTURE() != nil {
-		b.statements = append(b.statements, &ast.DescribeStmt{
-			ObjectType: ast.DescribeJsonStructure,
-			Name:       name,
-		})
 	} else if ctx.REST() != nil && ctx.CLIENT() != nil {
 		b.statements = append(b.statements, &ast.DescribeStmt{
 			ObjectType: ast.DescribeRestClient,
@@ -851,6 +868,21 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 	} else if ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICE() != nil {
 		b.statements = append(b.statements, &ast.DescribeStmt{
 			ObjectType: ast.DescribePublishedRestService,
+			Name:       name,
+		})
+	} else if ctx.JSON() != nil && ctx.STRUCTURE() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeJsonStructure,
+			Name:       name,
+		})
+	} else if ctx.IMPORT() != nil && ctx.MAPPING() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeImportMapping,
+			Name:       name,
+		})
+	} else if ctx.EXPORT() != nil && ctx.MAPPING() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeExportMapping,
 			Name:       name,
 		})
 	}

@@ -265,6 +265,33 @@ type MDLParserListener interface {
 	// EnterCustomNameMapping is called when entering the customNameMapping production.
 	EnterCustomNameMapping(c *CustomNameMappingContext)
 
+	// EnterCreateImportMappingStatement is called when entering the createImportMappingStatement production.
+	EnterCreateImportMappingStatement(c *CreateImportMappingStatementContext)
+
+	// EnterImportMappingSchemaClause is called when entering the importMappingSchemaClause production.
+	EnterImportMappingSchemaClause(c *ImportMappingSchemaClauseContext)
+
+	// EnterImportMappingElement is called when entering the importMappingElement production.
+	EnterImportMappingElement(c *ImportMappingElementContext)
+
+	// EnterImportMappingHandling is called when entering the importMappingHandling production.
+	EnterImportMappingHandling(c *ImportMappingHandlingContext)
+
+	// EnterImportMappingValueType is called when entering the importMappingValueType production.
+	EnterImportMappingValueType(c *ImportMappingValueTypeContext)
+
+	// EnterCreateExportMappingStatement is called when entering the createExportMappingStatement production.
+	EnterCreateExportMappingStatement(c *CreateExportMappingStatementContext)
+
+	// EnterExportMappingSchemaClause is called when entering the exportMappingSchemaClause production.
+	EnterExportMappingSchemaClause(c *ExportMappingSchemaClauseContext)
+
+	// EnterExportMappingNullValuesClause is called when entering the exportMappingNullValuesClause production.
+	EnterExportMappingNullValuesClause(c *ExportMappingNullValuesClauseContext)
+
+	// EnterExportMappingElement is called when entering the exportMappingElement production.
+	EnterExportMappingElement(c *ExportMappingElementContext)
+
 	// EnterCreateValidationRuleStatement is called when entering the createValidationRuleStatement production.
 	EnterCreateValidationRuleStatement(c *CreateValidationRuleStatementContext)
 
@@ -1395,6 +1422,33 @@ type MDLParserListener interface {
 
 	// ExitCustomNameMapping is called when exiting the customNameMapping production.
 	ExitCustomNameMapping(c *CustomNameMappingContext)
+
+	// ExitCreateImportMappingStatement is called when exiting the createImportMappingStatement production.
+	ExitCreateImportMappingStatement(c *CreateImportMappingStatementContext)
+
+	// ExitImportMappingSchemaClause is called when exiting the importMappingSchemaClause production.
+	ExitImportMappingSchemaClause(c *ImportMappingSchemaClauseContext)
+
+	// ExitImportMappingElement is called when exiting the importMappingElement production.
+	ExitImportMappingElement(c *ImportMappingElementContext)
+
+	// ExitImportMappingHandling is called when exiting the importMappingHandling production.
+	ExitImportMappingHandling(c *ImportMappingHandlingContext)
+
+	// ExitImportMappingValueType is called when exiting the importMappingValueType production.
+	ExitImportMappingValueType(c *ImportMappingValueTypeContext)
+
+	// ExitCreateExportMappingStatement is called when exiting the createExportMappingStatement production.
+	ExitCreateExportMappingStatement(c *CreateExportMappingStatementContext)
+
+	// ExitExportMappingSchemaClause is called when exiting the exportMappingSchemaClause production.
+	ExitExportMappingSchemaClause(c *ExportMappingSchemaClauseContext)
+
+	// ExitExportMappingNullValuesClause is called when exiting the exportMappingNullValuesClause production.
+	ExitExportMappingNullValuesClause(c *ExportMappingNullValuesClauseContext)
+
+	// ExitExportMappingElement is called when exiting the exportMappingElement production.
+	ExitExportMappingElement(c *ExportMappingElementContext)
 
 	// ExitCreateValidationRuleStatement is called when exiting the createValidationRuleStatement production.
 	ExitCreateValidationRuleStatement(c *CreateValidationRuleStatementContext)

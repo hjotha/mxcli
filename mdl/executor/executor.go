@@ -280,12 +280,6 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	case *ast.DropImageCollectionStmt:
 		return e.execDropImageCollection(s)
 
-	// JSON structure statements
-	case *ast.CreateJsonStructureStmt:
-		return e.execCreateJsonStructure(s)
-	case *ast.DropJsonStructureStmt:
-		return e.execDropJsonStructure(s)
-
 	// Workflow statements
 	case *ast.CreateWorkflowStmt:
 		return e.execCreateWorkflow(s)
@@ -320,6 +314,24 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	case *ast.DropODataServiceStmt:
 		return e.dropODataService(s)
 
+	// JSON Structure statements
+	case *ast.CreateJsonStructureStmt:
+		return e.execCreateJsonStructure(s)
+	case *ast.DropJsonStructureStmt:
+		return e.execDropJsonStructure(s)
+
+	// Import Mapping statements
+	case *ast.CreateImportMappingStmt:
+		return e.execCreateImportMapping(s)
+	case *ast.DropImportMappingStmt:
+		return e.execDropImportMapping(s)
+
+	// Export Mapping statements
+	case *ast.CreateExportMappingStmt:
+		return e.execCreateExportMapping(s)
+	case *ast.DropExportMappingStmt:
+		return e.execDropExportMapping(s)
+
 	// REST client statements
 	case *ast.CreateRestClientStmt:
 		return e.createRestClient(s)
@@ -335,8 +347,6 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	// Query statements
 	case *ast.ShowStmt:
 		return e.execShow(s)
-	case *ast.ShowFeaturesStmt:
-		return e.execShowFeatures(s)
 	case *ast.ShowWidgetsStmt:
 		return e.execShowWidgets(s)
 	case *ast.UpdateWidgetsStmt:
@@ -790,14 +800,10 @@ func (e *Executor) execShow(s *ast.ShowStmt) error {
 		return e.showDatabaseConnections(s.InModule)
 	case ast.ShowImageCollections:
 		return e.showImageCollections(s.InModule)
-	case ast.ShowJsonStructures:
-		return e.showJsonStructures(s.InModule)
 	case ast.ShowRestClients:
 		return e.showRestClients(s.InModule)
 	case ast.ShowPublishedRestServices:
 		return e.showPublishedRestServices(s.InModule)
-	case ast.ShowLanguages:
-		return e.showLanguages()
 	case ast.ShowContractEntities:
 		return e.showContractEntities(s.Name)
 	case ast.ShowContractActions:
@@ -806,6 +812,12 @@ func (e *Executor) execShow(s *ast.ShowStmt) error {
 		return e.showContractChannels(s.Name)
 	case ast.ShowContractMessages:
 		return e.showContractMessages(s.Name)
+	case ast.ShowJsonStructures:
+		return e.showJsonStructures(s.InModule)
+	case ast.ShowImportMappings:
+		return e.showImportMappings(s.InModule)
+	case ast.ShowExportMappings:
+		return e.showExportMappings(s.InModule)
 	default:
 		return fmt.Errorf("unknown show object type")
 	}
@@ -865,8 +877,6 @@ func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
 		return e.describeFragment(s.Name)
 	case ast.DescribeImageCollection:
 		return e.describeImageCollection(s.Name)
-	case ast.DescribeJsonStructure:
-		return e.describeJsonStructure(s.Name)
 	case ast.DescribeRestClient:
 		return e.describeRestClient(s.Name)
 	case ast.DescribePublishedRestService:
@@ -877,6 +887,12 @@ func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
 		return e.describeContractAction(s.Name, s.Format)
 	case ast.DescribeContractMessage:
 		return e.describeContractMessage(s.Name)
+	case ast.DescribeJsonStructure:
+		return e.describeJsonStructure(s.Name)
+	case ast.DescribeImportMapping:
+		return e.describeImportMapping(s.Name)
+	case ast.DescribeExportMapping:
+		return e.describeExportMapping(s.Name)
 	default:
 		return fmt.Errorf("unknown describe object type")
 	}

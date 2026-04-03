@@ -430,6 +430,15 @@ func (e *testEnv) assertRoundtrip(createMDL string, opts ...RoundtripOption) Rou
 	case *ast.CreateRestClientStmt:
 		qualifiedName = s.Name.String()
 		describeCmd = "DESCRIBE REST CLIENT " + qualifiedName + ";"
+	case *ast.CreateJsonStructureStmt:
+		qualifiedName = s.Name.String()
+		describeCmd = "DESCRIBE JSON STRUCTURE " + qualifiedName + ";"
+	case *ast.CreateImportMappingStmt:
+		qualifiedName = s.Name.String()
+		describeCmd = "DESCRIBE IMPORT MAPPING " + qualifiedName + ";"
+	case *ast.CreateExportMappingStmt:
+		qualifiedName = s.Name.String()
+		describeCmd = "DESCRIBE EXPORT MAPPING " + qualifiedName + ";"
 	default:
 		e.t.Fatalf("Unsupported statement type for roundtrip: %T", prog.Statements[0])
 		return result
@@ -572,15 +581,6 @@ func (e *testEnv) assertContains(createMDL string, expectedProps []string, opts 
 			missing, result.Actual)
 	} else {
 		e.t.Logf("Roundtrip contains all expected properties.\nActual output:\n%s", result.Actual)
-	}
-}
-
-// requireMinVersion skips the test if the project's Mendix version is below the given minimum.
-func (e *testEnv) requireMinVersion(t *testing.T, major, minor int) {
-	t.Helper()
-	pv := e.executor.reader.ProjectVersion()
-	if !pv.IsAtLeast(major, minor) {
-		t.Skipf("Requires Mendix %d.%d+ (project is %s)", major, minor, pv.ProductVersion)
 	}
 }
 

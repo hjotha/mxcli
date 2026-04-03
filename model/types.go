@@ -295,6 +295,9 @@ const (
 	DocumentTypeRule                  DocumentType = "Rules$Rule"
 	DocumentTypeConsumedODataService  DocumentType = "Rest$ConsumedODataService"
 	DocumentTypePublishedODataService DocumentType = "ODataPublish$PublishedODataService2"
+	DocumentTypeJsonStructure         DocumentType = "JsonStructures$JsonStructure"
+	DocumentTypeImportMapping         DocumentType = "ImportMappings$ImportMapping"
+	DocumentTypeExportMapping         DocumentType = "ExportMappings$ExportMapping"
 )
 
 // ConsumedODataService represents a consumed OData service (OData client).
@@ -641,18 +644,18 @@ type RestAuthentication struct {
 
 // RestClientOperation represents a single operation in a consumed REST service.
 type RestClientOperation struct {
-	Name             string                `json:"name"`
-	Documentation    string                `json:"documentation,omitempty"`
-	HttpMethod       string                `json:"httpMethod"`       // "GET", "POST", etc.
-	Path             string                `json:"path"`             // e.g. "/pet/{petId}"
+	Name             string                 `json:"name"`
+	Documentation    string                 `json:"documentation,omitempty"`
+	HttpMethod       string                 `json:"httpMethod"`                // "GET", "POST", etc.
+	Path             string                 `json:"path"`                      // e.g. "/pet/{petId}"
 	Parameters       []*RestClientParameter `json:"parameters,omitempty"`      // path parameters
 	QueryParameters  []*RestClientParameter `json:"queryParameters,omitempty"` // query parameters
 	Headers          []*RestClientHeader    `json:"headers,omitempty"`
-	BodyType         string                `json:"bodyType,omitempty"`     // "JSON", "FILE", ""
-	BodyVariable     string                `json:"bodyVariable,omitempty"` // variable name
-	ResponseType     string                `json:"responseType"`           // "JSON", "STRING", "FILE", "STATUS", "NONE"
-	ResponseVariable string                `json:"responseVariable,omitempty"`
-	Timeout          int                   `json:"timeout,omitempty"` // 0 = default (300s)
+	BodyType         string                 `json:"bodyType,omitempty"`     // "JSON", "FILE", ""
+	BodyVariable     string                 `json:"bodyVariable,omitempty"` // variable name
+	ResponseType     string                 `json:"responseType"`           // "JSON", "STRING", "FILE", "STATUS", "NONE"
+	ResponseVariable string                 `json:"responseVariable,omitempty"`
+	Timeout          int                    `json:"timeout,omitempty"` // 0 = default (300s)
 }
 
 // RestClientParameter represents a path or query parameter.
@@ -791,6 +794,95 @@ type DistributionSettings struct {
 	Version         string `json:"version,omitempty"`
 }
 
+// ============================================================================
+// Import Mappings
+// ============================================================================
+
+// ImportMapping represents an ImportMappings$ImportMapping document.
+type ImportMapping struct {
+	BaseElement
+	ContainerID   ID     `json:"containerId"`
+	Name          string `json:"name"`
+	Documentation string `json:"documentation,omitempty"`
+	Excluded      bool   `json:"excluded,omitempty"`
+	ExportLevel   string `json:"exportLevel,omitempty"`
+	// Schema source (at most one is set)
+	JsonStructure     string `json:"jsonStructure,omitempty"`     // qualified name
+	XmlSchema         string `json:"xmlSchema,omitempty"`         // qualified name
+	MessageDefinition string `json:"messageDefinition,omitempty"` // qualified name
+	// Mapping tree (top-level elements, usually one root)
+	Elements []*ImportMappingElement `json:"elements,omitempty"`
+}
+
+// GetName returns the import mapping's name.
+func (m *ImportMapping) GetName() string { return m.Name }
+
+// GetContainerID returns the ID of the containing module.
+func (m *ImportMapping) GetContainerID() ID { return m.ContainerID }
+
+// ImportMappingElement represents either an object or value mapping element.
+type ImportMappingElement struct {
+	BaseElement
+	// "Object" or "Value"
+	Kind string `json:"kind"`
+	// Object mapping fields
+	Entity         string `json:"entity,omitempty"`         // qualified entity name
+	ObjectHandling string `json:"objectHandling,omitempty"` // "Create", "Find", "FindOrCreate", "Custom"
+	Association    string `json:"association,omitempty"`    // qualified association name
+	// Value mapping fields
+	Attribute string `json:"attribute,omitempty"` // qualified attribute name (Module.Entity.Attr)
+	DataType  string `json:"dataType,omitempty"`  // "String", "Integer", "Boolean", etc.
+	IsKey     bool   `json:"isKey,omitempty"`
+	// Shared fields
+	ExposedName string                  `json:"exposedName,omitempty"`
+	JsonPath    string                  `json:"jsonPath,omitempty"`
+	Children    []*ImportMappingElement `json:"children,omitempty"`
+}
+
+// ============================================================================
+// Export Mappings
+// ============================================================================
+
+// ExportMapping represents an ExportMappings$ExportMapping document.
+type ExportMapping struct {
+	BaseElement
+	ContainerID   ID     `json:"containerId"`
+	Name          string `json:"name"`
+	Documentation string `json:"documentation,omitempty"`
+	Excluded      bool   `json:"excluded,omitempty"`
+	ExportLevel   string `json:"exportLevel,omitempty"`
+	// Schema source (at most one is set)
+	JsonStructure     string `json:"jsonStructure,omitempty"`     // qualified name
+	XmlSchema         string `json:"xmlSchema,omitempty"`         // qualified name
+	MessageDefinition string `json:"messageDefinition,omitempty"` // qualified name
+	// NullValueOption controls how null values are serialized: "LeaveOutElement" or "SendAsNil"
+	NullValueOption string                  `json:"nullValueOption,omitempty"`
+	Elements        []*ExportMappingElement `json:"elements,omitempty"`
+}
+
+// GetName returns the export mapping's name.
+func (m *ExportMapping) GetName() string { return m.Name }
+
+// GetContainerID returns the ID of the containing module.
+func (m *ExportMapping) GetContainerID() ID { return m.ContainerID }
+
+// ExportMappingElement represents either an object or value mapping element in an export mapping.
+type ExportMappingElement struct {
+	BaseElement
+	// "Object" or "Value"
+	Kind string `json:"kind"`
+	// Object mapping fields
+	Entity      string `json:"entity,omitempty"`      // qualified entity name
+	Association string `json:"association,omitempty"` // qualified association name (VIA clause)
+	// Value mapping fields
+	Attribute string `json:"attribute,omitempty"` // qualified attribute name (Module.Entity.Attr)
+	DataType  string `json:"dataType,omitempty"`  // "String", "Integer", "Boolean", etc.
+	// Shared fields
+	ExposedName string                  `json:"exposedName,omitempty"`
+	JsonPath    string                  `json:"jsonPath,omitempty"`
+	Children    []*ExportMappingElement `json:"children,omitempty"`
+}
+
 // UnknownElement is a generic fallback for BSON elements with unrecognized $Type values.
 // It preserves all raw BSON fields so developers can diagnose unimplemented types
 // without silent data loss.
@@ -822,4 +914,3 @@ func (u *UnknownElement) GetCaption() string { return u.Caption }
 
 // ActivityType returns the type name (satisfies workflows.WorkflowActivity).
 func (u *UnknownElement) ActivityType() string { return u.TypeName }
-

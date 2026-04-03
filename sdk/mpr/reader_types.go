@@ -341,6 +341,34 @@ func (r *Reader) ListJsonStructures() ([]*JsonStructure, error) {
 	return result, nil
 }
 
+// GetJsonStructureByQualifiedName retrieves a JSON structure by its qualified name (Module.Name).
+func (r *Reader) GetJsonStructureByQualifiedName(moduleName, name string) (*JsonStructure, error) {
+	all, err := r.ListJsonStructures()
+	if err != nil {
+		return nil, err
+	}
+
+	modules, err := r.ListModules()
+	if err != nil {
+		return nil, err
+	}
+
+	moduleID := ""
+	for _, m := range modules {
+		if m.Name == moduleName {
+			moduleID = string(m.ID)
+			break
+		}
+	}
+
+	for _, js := range all {
+		if js.Name == name && (moduleID == "" || string(js.ContainerID) == moduleID) {
+			return js, nil
+		}
+	}
+	return nil, fmt.Errorf("JSON structure %s.%s not found", moduleName, name)
+}
+
 // UnitInfo contains basic information about a unit.
 type UnitInfo struct {
 	ID              model.ID
