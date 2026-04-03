@@ -83,6 +83,9 @@ func (e *Executor) describeJsonStructure(name ast.QualifiedName) error {
 
 	// Re-executable CREATE OR REPLACE statement
 	fmt.Fprintf(e.output, "CREATE OR REPLACE JSON STRUCTURE %s", qualifiedName)
+	if folderPath := h.BuildFolderPath(js.ContainerID); folderPath != "" {
+		fmt.Fprintf(e.output, "\n  FOLDER '%s'", folderPath)
+	}
 	if js.Documentation != "" {
 		fmt.Fprintf(e.output, "\n  COMMENT '%s'", strings.ReplaceAll(js.Documentation, "'", "''"))
 	}
@@ -207,6 +210,16 @@ func (e *Executor) execCreateJsonStructure(s *ast.CreateJsonStructureStmt) error
 		return err
 	}
 
+	// Resolve folder if specified
+	containerID := module.ID
+	if s.Folder != "" {
+		folderID, err := e.resolveFolder(module.ID, s.Folder)
+		if err != nil {
+			return fmt.Errorf("failed to resolve folder %s: %w", s.Folder, err)
+		}
+		containerID = folderID
+	}
+
 	// Check if already exists
 	existing := e.findJsonStructure(s.Name.Module, s.Name.Name)
 	if existing != nil {
@@ -226,8 +239,13 @@ func (e *Executor) execCreateJsonStructure(s *ast.CreateJsonStructureStmt) error
 		return fmt.Errorf("failed to build element tree: %w", err)
 	}
 
+	// For CREATE OR REPLACE, keep original folder unless a new one is specified
+	if existing != nil && s.Folder == "" {
+		containerID = existing.ContainerID
+	}
+
 	js := &mpr.JsonStructure{
-		ContainerID:   module.ID,
+		ContainerID:   containerID,
 		Name:          s.Name.Name,
 		Documentation: s.Documentation,
 		JsonSnippet:   mpr.PrettyPrintJSON(s.JsonSnippet),

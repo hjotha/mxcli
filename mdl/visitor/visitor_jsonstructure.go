@@ -9,16 +9,22 @@ import (
 
 // ExitCreateJsonStructureStatement is called when exiting the createJsonStructureStatement production.
 //
-// Grammar: JSON STRUCTURE qualifiedName (COMMENT STRING_LITERAL)? SNIPPET (STRING_LITERAL | DOLLAR_STRING) (CUSTOM_NAME_MAP LPAREN customNameMapping (COMMA customNameMapping)* RPAREN)?
+// Grammar: JSON STRUCTURE qualifiedName (FOLDER STRING_LITERAL)? (COMMENT STRING_LITERAL)? SNIPPET (STRING_LITERAL | DOLLAR_STRING) (CUSTOM_NAME_MAP LPAREN customNameMapping (COMMA customNameMapping)* RPAREN)?
 func (b *Builder) ExitCreateJsonStructureStatement(ctx *parser.CreateJsonStructureStatementContext) {
 	stmt := &ast.CreateJsonStructureStmt{
 		Name: buildQualifiedName(ctx.QualifiedName()),
 	}
 
-	// Parse COMMENT if present (always a STRING_LITERAL).
+	// Parse FOLDER and COMMENT from STRING_LITERAL tokens.
+	// Order in grammar: FOLDER STRING_LITERAL, then COMMENT STRING_LITERAL.
 	allStrings := ctx.AllSTRING_LITERAL()
-	if ctx.COMMENT() != nil && len(allStrings) >= 1 {
-		stmt.Documentation = unquoteString(allStrings[0].GetText())
+	strIdx := 0
+	if ctx.FOLDER() != nil && strIdx < len(allStrings) {
+		stmt.Folder = unquoteString(allStrings[strIdx].GetText())
+		strIdx++
+	}
+	if ctx.COMMENT() != nil && strIdx < len(allStrings) {
+		stmt.Documentation = unquoteString(allStrings[strIdx].GetText())
 	}
 
 	// Parse SNIPPET value — can be STRING_LITERAL or DOLLAR_STRING.

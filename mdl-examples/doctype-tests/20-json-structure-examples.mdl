@@ -19,8 +19,8 @@ CREATE JSON STRUCTURE JsonTest.SimpleItem
 SNIPPET '{"id": 1, "name": "John", "active": true}'
 ;
 
--- Create a JSON structure from a multi-line JSON snippet (use $$ quoting)
-CREATE JSON STRUCTURE JsonTest.CustomerResponse SNIPPET $${
+-- Create a JSON structure in a folder
+CREATE JSON STRUCTURE JsonTest.CustomerResponse FOLDER 'Resources' SNIPPET $${
   "id": 1,
   "name": "John Doe",
   "email": "john@example.com",
