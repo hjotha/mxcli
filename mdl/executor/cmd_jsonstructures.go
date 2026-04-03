@@ -5,7 +5,6 @@ package executor
 
 import (
 	"fmt"
-	"io"
 	"sort"
 	"strings"
 	"unicode"
@@ -121,44 +120,9 @@ func (e *Executor) describeJsonStructure(name ast.QualifiedName) error {
 	}
 
 	fmt.Fprintln(e.output, ";")
-
-	// Element tree as informational comments
-	fmt.Fprintln(e.output)
-	fmt.Fprintln(e.output, "-- Element tree:")
-	for _, elem := range js.Elements {
-		renderJsonElementComment(e.output, elem, 0)
-	}
-
-	fmt.Fprintln(e.output, "/")
 	return nil
 }
 
-// renderJsonElementComment renders an element tree as `-- ` prefixed comment lines.
-func renderJsonElementComment(w io.Writer, elem *mpr.JsonElement, depth int) {
-	indent := strings.Repeat("  ", depth)
-
-	// Determine type display
-	typeStr := elem.ElementType
-	if elem.ElementType == "Value" {
-		typeStr = elem.PrimitiveType
-	}
-
-	// Show occurrence bounds for arrays
-	suffix := ""
-	if elem.MaxOccurs != 1 {
-		maxStr := fmt.Sprintf("%d", elem.MaxOccurs)
-		if elem.MaxOccurs == -1 {
-			maxStr = "*"
-		}
-		suffix = fmt.Sprintf("[%d..%s]", elem.MinOccurs, maxStr)
-	}
-
-	fmt.Fprintf(w, "-- %s%s: %s%s\n", indent, elem.ExposedName, typeStr, suffix)
-
-	for _, child := range elem.Children {
-		renderJsonElementComment(w, child, depth+1)
-	}
-}
 
 // collectCustomNameMappings walks the element tree and returns JSON key → ExposedName
 // mappings where the ExposedName differs from the auto-generated default (capitalizeFirst).
