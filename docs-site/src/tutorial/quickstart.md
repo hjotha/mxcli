@@ -4,15 +4,31 @@ Get from zero to modifying a Mendix project in 5 minutes. No prior MDL knowledge
 
 ## 1. Install mxcli
 
+**Option A: Zero install (Playground)**
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mendixlabs/mxcli-playground)
+
+Open the [mxcli Playground](https://github.com/mendixlabs/mxcli-playground) in a Codespace -- mxcli, a sample project, and example scripts are pre-installed. Skip to step 3.
+
+**Option B: Binary download**
+
+Download from the [GitHub Releases page](https://github.com/mendixlabs/mxcli/releases) and extract:
+
 ```bash
 # macOS / Linux
-curl -fsSL https://mxcli.org/install.sh | bash
+tar xzf mxcli_<platform>.tar.gz
+sudo mv mxcli /usr/local/bin/
+```
 
-# Or with Go
+**Option C: Build from source**
+
+```bash
 go install github.com/mendixlabs/mxcli/cmd/mxcli@latest
 ```
 
 Verify: `mxcli --version` should print the version number.
+
+See [Installation](installation.md) for all options including Dev Containers.
 
 ## 2. Open your project
 
