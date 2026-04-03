@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -12,8 +13,21 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// shortSockPath returns a socket path short enough for Unix domain sockets
+// (max 104-108 chars depending on OS). t.TempDir() on macOS produces paths
+// that exceed this limit.
+func shortSockPath(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("/tmp", "sock")
+	if err != nil {
+		t.Fatalf("MkdirTemp: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	return filepath.Join(dir, fmt.Sprintf("%d.sock", os.Getpid()))
+}
+
 func TestAgentListenerAcceptsConnection(t *testing.T) {
-	sockPath := filepath.Join(t.TempDir(), "test.sock")
+	sockPath := shortSockPath(t)
 
 	var mu sync.Mutex
 	var received []tea.Msg
@@ -82,7 +96,7 @@ func TestAgentListenerAcceptsConnection(t *testing.T) {
 }
 
 func TestAgentListenerCleansUpSocket(t *testing.T) {
-	sockPath := filepath.Join(t.TempDir(), "test.sock")
+	sockPath := shortSockPath(t)
 	listener, err := NewAgentListener(sockPath, func(tea.Msg) {}, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -98,7 +112,7 @@ func TestAgentListenerCleansUpSocket(t *testing.T) {
 }
 
 func TestAgentListenerInvalidJSON(t *testing.T) {
-	sockPath := filepath.Join(t.TempDir(), "test.sock")
+	sockPath := shortSockPath(t)
 	listener, err := NewAgentListener(sockPath, func(tea.Msg) {}, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -133,7 +147,7 @@ func TestAgentListenerInvalidJSON(t *testing.T) {
 }
 
 func TestAgentListenerValidationError(t *testing.T) {
-	sockPath := filepath.Join(t.TempDir(), "test.sock")
+	sockPath := shortSockPath(t)
 	listener, err := NewAgentListener(sockPath, func(tea.Msg) {}, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
