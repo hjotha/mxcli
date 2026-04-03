@@ -598,6 +598,12 @@ func (e *Executor) formatAction(
 	case *microflows.ExecuteDatabaseQueryAction:
 		return e.formatExecuteDatabaseQueryAction(a)
 
+	case *microflows.ImportXmlAction:
+		return e.formatImportXmlAction(a, entityNames)
+
+	case *microflows.ExportXmlAction:
+		return e.formatExportXmlAction(a)
+
 	case *microflows.UnknownAction:
 		return fmt.Sprintf("-- Unsupported action type: %s", a.TypeName)
 
@@ -889,4 +895,65 @@ func isMendixKeyword(s string) bool {
 // that must not be prefixed with "$" when serialized as a RETURN value.
 func isQualifiedEnumLiteral(s string) bool {
 	return strings.Count(s, ".") >= 2
+}
+
+// formatImportXmlAction formats an import mapping action as MDL.
+// Syntax: [$Var =] IMPORT FROM MAPPING Module.IMM($SourceVar);
+func (e *Executor) formatImportXmlAction(a *microflows.ImportXmlAction, entityNames map[model.ID]string) string {
+	var sb strings.Builder
+
+	// Resolve mapping qualified name
+	mappingName := ""
+	resultVar := ""
+	if a.ResultHandling != nil {
+		mappingName = string(a.ResultHandling.MappingID)
+		resultVar = a.ResultHandling.ResultVariable
+	}
+
+	// Optional assignment
+	if resultVar != "" {
+		sb.WriteString("$")
+		sb.WriteString(resultVar)
+		sb.WriteString(" = ")
+	}
+
+	sb.WriteString("IMPORT FROM MAPPING ")
+	sb.WriteString(mappingName)
+	sb.WriteString("($")
+	sb.WriteString(a.XmlDocumentVariable)
+	sb.WriteString(");")
+
+	return sb.String()
+}
+
+// formatExportXmlAction formats an export mapping action as MDL.
+// Syntax: $Var = EXPORT TO MAPPING Module.EMM($SourceVar);
+func (e *Executor) formatExportXmlAction(a *microflows.ExportXmlAction) string {
+	var sb strings.Builder
+
+	// Output variable
+	if a.OutputVariable != "" {
+		sb.WriteString("$")
+		sb.WriteString(a.OutputVariable)
+		sb.WriteString(" = ")
+	}
+
+	sb.WriteString("EXPORT TO MAPPING ")
+
+	mappingName := ""
+	paramVar := ""
+	if a.RequestHandling != nil {
+		mappingName = string(a.RequestHandling.MappingID)
+		paramVar = a.RequestHandling.ParameterVariable
+	}
+
+	sb.WriteString(mappingName)
+	if paramVar != "" {
+		sb.WriteString("($")
+		sb.WriteString(paramVar)
+		sb.WriteString(")")
+	}
+	sb.WriteString(";")
+
+	return sb.String()
 }

@@ -563,3 +563,54 @@ func parseExecuteDatabaseQueryAction(raw map[string]any) *microflows.ExecuteData
 
 	return action
 }
+
+func parseImportXmlAction(raw map[string]any) *microflows.ImportXmlAction {
+	action := &microflows.ImportXmlAction{}
+	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	action.IsValidationRequired = extractBool(raw["IsValidationRequired"], false)
+	action.XmlDocumentVariable = extractString(raw["XmlDocumentVariableName"])
+
+	if rh := toMap(raw["ResultHandling"]); rh != nil {
+		handling := &microflows.ResultHandlingMapping{}
+		handling.ID = model.ID(extractBsonID(rh["$ID"]))
+		handling.ResultVariable = extractString(rh["ResultVariableName"])
+		if call := toMap(rh["ImportMappingCall"]); call != nil {
+			mappingRef := extractString(call["Mapping"])
+			if mappingRef == "" {
+				mappingRef = extractString(call["ReturnValueMapping"])
+			}
+			handling.MappingID = model.ID(mappingRef)
+			if varType := toMap(call["VariableType"]); varType != nil {
+				handling.ResultEntityID = model.ID(extractString(varType["Entity"]))
+			}
+			handling.SingleObject = extractBool(call["ForceSingleOccurrence"], false)
+		}
+		action.ResultHandling = handling
+	}
+
+	return action
+}
+
+func parseExportXmlAction(raw map[string]any) *microflows.ExportXmlAction {
+	action := &microflows.ExportXmlAction{}
+	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	action.IsValidationRequired = extractBool(raw["IsValidationRequired"], false)
+
+	// OutputMethod: ExportXmlAction$StringExport has OutputVariableName
+	if om := toMap(raw["OutputMethod"]); om != nil {
+		action.OutputVariable = extractString(om["OutputVariableName"])
+	}
+
+	// ResultHandling: Microflows$MappingRequestHandling with MappingId and MappingVariableName
+	if rh := toMap(raw["ResultHandling"]); rh != nil {
+		handling := &microflows.MappingRequestHandling{}
+		handling.ID = model.ID(extractBsonID(rh["$ID"]))
+		handling.ParameterVariable = extractString(rh["MappingVariableName"])
+		handling.MappingID = model.ID(extractString(rh["MappingId"]))
+		action.RequestHandling = handling
+	}
+
+	return action
+}

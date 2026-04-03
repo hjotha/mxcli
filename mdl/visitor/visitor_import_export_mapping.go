@@ -3,6 +3,9 @@
 package visitor
 
 import (
+	"strings"
+
+	"github.com/antlr4-go/antlr/v4"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
 )
@@ -210,6 +213,52 @@ func buildExportChild(ctx *parser.ExportMappingChildContext) *ast.ExportMappingE
 	}
 
 	return elem
+}
+
+// buildImportFromMappingStatement builds an ImportFromMappingStmt from the grammar context.
+// Grammar: (VARIABLE EQUALS)? IMPORT FROM MAPPING qualifiedName LPAREN VARIABLE RPAREN onErrorClause?
+func buildImportFromMappingStatement(ctx antlr.ParserRuleContext) ast.MicroflowStatement {
+	c := ctx.(*parser.ImportFromMappingStatementContext)
+	stmt := &ast.ImportFromMappingStmt{
+		Mapping: buildQualifiedName(c.QualifiedName()),
+	}
+
+	vars := c.AllVARIABLE()
+	if c.EQUALS() != nil && len(vars) >= 2 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+		stmt.SourceVariable = strings.TrimPrefix(vars[1].GetText(), "$")
+	} else if len(vars) >= 1 {
+		stmt.SourceVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+	}
+
+	if ec := c.OnErrorClause(); ec != nil {
+		stmt.ErrorHandling = buildOnErrorClause(ec)
+	}
+
+	return stmt
+}
+
+// buildExportToMappingStatement builds an ExportToMappingStmt from the grammar context.
+// Grammar: (VARIABLE EQUALS)? EXPORT TO MAPPING qualifiedName LPAREN VARIABLE RPAREN onErrorClause?
+func buildExportToMappingStatement(ctx antlr.ParserRuleContext) ast.MicroflowStatement {
+	c := ctx.(*parser.ExportToMappingStatementContext)
+	stmt := &ast.ExportToMappingStmt{
+		Mapping: buildQualifiedName(c.QualifiedName()),
+	}
+
+	vars := c.AllVARIABLE()
+	if c.EQUALS() != nil && len(vars) >= 2 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+		stmt.SourceVariable = strings.TrimPrefix(vars[1].GetText(), "$")
+	} else if len(vars) >= 1 {
+		stmt.SourceVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+	}
+
+	if ec := c.OnErrorClause(); ec != nil {
+		stmt.ErrorHandling = buildOnErrorClause(ec)
+	}
+
+	return stmt
 }
 
 // extractObjectHandling extracts the handling mode from the grammar context.

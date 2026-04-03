@@ -172,6 +172,8 @@ AUTHENTICATION Basic, Session
 | WHILE | `WHILE condition BEGIN ... END WHILE;` | Condition-based loop |
 | Return | `RETURN $value;` | Required at end of every flow path |
 | Execute DB query | `$Result = EXECUTE DATABASE QUERY Module.Conn.Query;` | 3-part name; supports DYNAMIC, params, CONNECTION override |
+| Import mapping | `[$Var =] IMPORT FROM MAPPING Module.IMM($SourceVar);` | Apply import mapping to string variable |
+| Export mapping | `$Var = EXPORT TO MAPPING Module.EMM($EntityVar);` | Apply export mapping to entity, returns string |
 | Error handling | `... ON ERROR CONTINUE\|ROLLBACK\|{ handler };` | Not supported on EXECUTE DATABASE QUERY |
 
 ## Microflows - NOT Supported (Will Cause Parse Errors)
@@ -344,6 +346,67 @@ CREATE OR REPLACE NAVIGATION Responsive
 | Create or replace | `CREATE OR REPLACE JSON STRUCTURE Module.Name SNIPPET '...';` | Idempotent — preferred for AI agents |
 | Create with name map | `CREATE JSON STRUCTURE Module.Name SNIPPET '...' CUSTOM NAME MAP ('jsonKey' AS 'CustomName', ...);` | Override auto-generated ExposedNames |
 | Drop structure | `DROP JSON STRUCTURE Module.Name;` | |
+
+## Import Mappings
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Show mappings | `SHOW IMPORT MAPPINGS [IN Module];` | List all or filter by module |
+| Describe mapping | `DESCRIBE IMPORT MAPPING Module.Name;` | Re-executable CREATE statement |
+| Create mapping | See below | Assignment syntax: `Attr = jsonField` |
+| Drop mapping | `DROP IMPORT MAPPING Module.Name;` | |
+
+```sql
+CREATE IMPORT MAPPING Module.IMM_Pet
+  WITH JSON STRUCTURE Module.JSON_Pet
+{
+  CREATE Module.PetResponse {
+    PetId = id KEY,
+    Name = name,
+    Status = status
+  }
+};
+```
+
+**Object handling:** `CREATE` (default), `FIND` (requires KEY), `FIND OR CREATE`
+
+**Nested objects:** Use association path `Assoc/Entity = jsonKey`:
+```sql
+CREATE Module.OrderResponse_CustomerInfo/Module.CustomerInfo = customer {
+  Email = email,
+  Name = name
+}
+```
+
+## Export Mappings
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Show mappings | `SHOW EXPORT MAPPINGS [IN Module];` | List all or filter by module |
+| Describe mapping | `DESCRIBE EXPORT MAPPING Module.Name;` | Re-executable CREATE statement |
+| Create mapping | See below | Assignment syntax: `jsonField = Attr` |
+| Drop mapping | `DROP EXPORT MAPPING Module.Name;` | |
+
+```sql
+CREATE EXPORT MAPPING Module.EMM_Pet
+  WITH JSON STRUCTURE Module.JSON_Pet
+  NULL VALUES LeaveOutElement
+{
+  Module.PetResponse {
+    id = PetId,
+    name = Name,
+    status = Status
+  }
+};
+```
+
+**Nested objects:** Use association path `Assoc/Entity AS jsonKey`:
+```sql
+Module.OrderResponse_CustomerInfo/Module.CustomerInfo AS customer {
+  email = Email,
+  name = Name
+}
+```
 
 ## Java Actions
 

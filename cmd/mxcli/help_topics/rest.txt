@@ -15,6 +15,44 @@ DESCRIBE COMMANDS
   DESCRIBE REST CLIENT MyModule.PetStoreAPI;      -- Full MDL definition
   DESCRIBE PUBLISHED REST SERVICE MyModule.MyAPI; -- Full MDL definition
 
+JSON STRUCTURES & MAPPINGS
+--------------------------
+
+  SHOW JSON STRUCTURES;                             -- List all JSON structures
+  DESCRIBE JSON STRUCTURE Module.JSON_Pet;          -- Element tree + snippet
+  CREATE JSON STRUCTURE Module.JSON_Pet SNIPPET '{"id": 1}';
+
+  SHOW IMPORT MAPPINGS;                             -- List import mappings
+  DESCRIBE IMPORT MAPPING Module.IMM_Pet;           -- Full CREATE statement
+  CREATE IMPORT MAPPING Module.IMM_Pet
+    WITH JSON STRUCTURE Module.JSON_Pet
+  {
+    CREATE Module.PetResponse {
+      PetId = id,
+      Name = name
+    }
+  };
+
+  SHOW EXPORT MAPPINGS;                             -- List export mappings
+  DESCRIBE EXPORT MAPPING Module.EMM_Pet;           -- Full CREATE statement
+  CREATE EXPORT MAPPING Module.EMM_Pet
+    WITH JSON STRUCTURE Module.JSON_Pet
+  {
+    Module.PetResponse {
+      id = PetId,
+      name = Name
+    }
+  };
+
+MICROFLOW ACTIONS
+-----------------
+
+  -- Import from mapping (JSON string → entities)
+  $Pet = IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
+
+  -- Export to mapping (entity → JSON string)
+  $Json = EXPORT TO MAPPING Module.EMM_Pet($Pet);
+
 CATALOG QUERIES
 ---------------
 

@@ -499,6 +499,12 @@ type MDLParserListener interface {
 	// EnterSendRestRequestBodyClause is called when entering the sendRestRequestBodyClause production.
 	EnterSendRestRequestBodyClause(c *SendRestRequestBodyClauseContext)
 
+	// EnterImportFromMappingStatement is called when entering the importFromMappingStatement production.
+	EnterImportFromMappingStatement(c *ImportFromMappingStatementContext)
+
+	// EnterExportToMappingStatement is called when entering the exportToMappingStatement production.
+	EnterExportToMappingStatement(c *ExportToMappingStatementContext)
+
 	// EnterListOperationStatement is called when entering the listOperationStatement production.
 	EnterListOperationStatement(c *ListOperationStatementContext)
 
@@ -1659,6 +1665,12 @@ type MDLParserListener interface {
 
 	// ExitSendRestRequestBodyClause is called when exiting the sendRestRequestBodyClause production.
 	ExitSendRestRequestBodyClause(c *SendRestRequestBodyClauseContext)
+
+	// ExitImportFromMappingStatement is called when exiting the importFromMappingStatement production.
+	ExitImportFromMappingStatement(c *ImportFromMappingStatementContext)
+
+	// ExitExportToMappingStatement is called when exiting the exportToMappingStatement production.
+	ExitExportToMappingStatement(c *ExportToMappingStatementContext)
 
 	// ExitListOperationStatement is called when exiting the listOperationStatement production.
 	ExitListOperationStatement(c *ListOperationStatementContext)

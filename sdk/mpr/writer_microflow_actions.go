@@ -428,6 +428,12 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 	case *microflows.ExecuteDatabaseQueryAction:
 		return serializeExecuteDatabaseQueryAction(a)
 
+	case *microflows.ImportXmlAction:
+		return serializeImportXmlAction(a)
+
+	case *microflows.ExportXmlAction:
+		return serializeExportXmlAction(a)
+
 	default:
 		return nil
 	}
@@ -1077,4 +1083,93 @@ func serializeExecuteDatabaseQueryAction(a *microflows.ExecuteDatabaseQueryActio
 	}
 
 	return doc
+}
+
+func serializeImportXmlAction(a *microflows.ImportXmlAction) bson.D {
+	// Build ImportMappingCall
+	importCall := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+		{Key: "$Type", Value: "Microflows$ImportMappingCall"},
+		{Key: "Commit", Value: "YesWithoutEvents"},
+		{Key: "ContentType", Value: "Json"},
+		{Key: "ForceSingleOccurrence", Value: false},
+		{Key: "ObjectHandlingBackup", Value: "Create"},
+		{Key: "ParameterVariableName", Value: ""},
+		{Key: "Range", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+			{Key: "$Type", Value: "Microflows$ConstantRange"},
+			{Key: "SingleObject", Value: false},
+		}},
+		{Key: "ReturnValueMapping", Value: string(a.ResultHandling.MappingID)},
+	}
+
+	// Build VariableType
+	var varType bson.D
+	if a.ResultHandling.SingleObject {
+		varType = bson.D{
+			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+			{Key: "$Type", Value: "DataTypes$ObjectType"},
+			{Key: "Entity", Value: string(a.ResultHandling.ResultEntityID)},
+		}
+	} else {
+		varType = bson.D{
+			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+			{Key: "$Type", Value: "DataTypes$ListType"},
+			{Key: "Entity", Value: string(a.ResultHandling.ResultEntityID)},
+		}
+	}
+
+	bind := a.ResultHandling.ResultVariable != ""
+
+	resultHandling := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ResultHandling.ID))},
+		{Key: "$Type", Value: "Microflows$ResultHandling"},
+		{Key: "Bind", Value: bind},
+		{Key: "ImportMappingCall", Value: importCall},
+		{Key: "ResultVariableName", Value: a.ResultHandling.ResultVariable},
+		{Key: "VariableType", Value: varType},
+	}
+
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+		{Key: "$Type", Value: "Microflows$ImportXmlAction"},
+		{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+		{Key: "IsValidationRequired", Value: a.IsValidationRequired},
+		{Key: "ResultHandling", Value: resultHandling},
+		{Key: "XmlDocumentVariableName", Value: a.XmlDocumentVariable},
+	}
+}
+
+func serializeExportXmlAction(a *microflows.ExportXmlAction) bson.D {
+	// OutputMethod: ExportXmlAction$StringExport
+	outputMethod := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+		{Key: "$Type", Value: "ExportXmlAction$StringExport"},
+		{Key: "OutputVariableName", Value: a.OutputVariable},
+	}
+
+	// ResultHandling: MappingRequestHandling
+	mappingID := ""
+	paramVar := ""
+	if a.RequestHandling != nil {
+		mappingID = string(a.RequestHandling.MappingID)
+		paramVar = a.RequestHandling.ParameterVariable
+	}
+
+	resultHandling := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+		{Key: "$Type", Value: "Microflows$MappingRequestHandling"},
+		{Key: "ContentType", Value: "Json"},
+		{Key: "MappingId", Value: mappingID},
+		{Key: "MappingVariableName", Value: paramVar},
+	}
+
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+		{Key: "$Type", Value: "Microflows$ExportXmlAction"},
+		{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+		{Key: "IsValidationRequired", Value: a.IsValidationRequired},
+		{Key: "OutputMethod", Value: outputMethod},
+		{Key: "ResultHandling", Value: resultHandling},
+	}
 }

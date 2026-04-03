@@ -523,6 +523,10 @@ var microflowActionParsers = map[string]func(map[string]any) microflows.Microflo
 		return parseRestOperationCallAction(r)
 	},
 
+	// Import/Export mapping actions
+	"Microflows$ImportXmlAction": func(r map[string]any) microflows.MicroflowAction { return parseImportXmlAction(r) },
+	"Microflows$ExportXmlAction": func(r map[string]any) microflows.MicroflowAction { return parseExportXmlAction(r) },
+
 	// Database Connector action
 	"DatabaseConnector$ExecuteDatabaseQueryAction": func(r map[string]any) microflows.MicroflowAction { return parseExecuteDatabaseQueryAction(r) },
 }

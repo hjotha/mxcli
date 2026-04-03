@@ -133,6 +133,46 @@ END;
 
 ---
 
+## Step 5 — Import/Export Mapping in Microflows (Optional)
+
+Instead of using `RETURNS MAPPING` on a REST CALL, you can use standalone import/export mapping actions. This is useful when you already have a JSON string and want to map it to entities, or when you want to serialize entities back to JSON.
+
+### Import from mapping
+
+Applies an import mapping to a string variable (JSON content) to produce entity objects:
+
+```sql
+-- With assignment (non-persistent entities, need the result in the flow)
+$PetResponse = IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
+
+-- Without assignment (persistent entities, just stores to DB)
+IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
+```
+
+### Export to mapping
+
+Applies an export mapping to an entity object to produce a JSON string:
+
+```sql
+$JsonOutput = EXPORT TO MAPPING Module.EMM_Pet($PetResponse);
+```
+
+### Complete import → process → export microflow
+
+```sql
+CREATE MICROFLOW Module.ProcessPetData ()
+BEGIN
+  DECLARE $ResponseContent String = $latestHttpResponse/Content;
+  $PetResponse = IMPORT FROM MAPPING Module.IMM_Pet($ResponseContent);
+  -- Process the imported data...
+  $JsonOutput = EXPORT TO MAPPING Module.EMM_Pet($PetResponse);
+  LOG INFO NODE 'Integration' 'Exported: ' + $JsonOutput;
+END;
+/
+```
+
+---
+
 ## Complete Example — Bible Verse API
 
 ```sql

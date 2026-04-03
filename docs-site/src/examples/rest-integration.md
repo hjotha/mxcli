@@ -105,3 +105,77 @@ BEGIN
 END;
 /
 ```
+
+## JSON Structure + Import Mapping
+
+Map a JSON response to Mendix entities using a JSON structure and import mapping.
+
+```sql
+-- Step 1: Define the JSON structure
+CREATE JSON STRUCTURE Integration.JSON_Pet
+  SNIPPET '{"id": 1, "name": "Fido", "status": "available"}';
+
+-- Step 2: Create a non-persistent entity to hold the data
+CREATE NON-PERSISTENT ENTITY Integration.PetResponse (
+  PetId: Integer,
+  Name: String,
+  Status: String
+);
+/
+
+-- Step 3: Create the import mapping
+CREATE IMPORT MAPPING Integration.IMM_Pet
+  WITH JSON STRUCTURE Integration.JSON_Pet
+{
+  CREATE Integration.PetResponse {
+    PetId = id,
+    Name = name,
+    Status = status
+  }
+};
+
+-- Step 4: Use in a microflow with IMPORT FROM MAPPING
+-- $PetResponse = IMPORT FROM MAPPING Integration.IMM_Pet($JsonContent);
+```
+
+## Export Mapping (Entity → JSON)
+
+Serialize entities back to JSON using an export mapping.
+
+```sql
+CREATE EXPORT MAPPING Integration.EMM_Pet
+  WITH JSON STRUCTURE Integration.JSON_Pet
+{
+  Integration.PetResponse {
+    id = PetId,
+    name = Name,
+    status = Status
+  }
+};
+
+-- Use in a microflow with EXPORT TO MAPPING
+-- $JsonOutput = EXPORT TO MAPPING Integration.EMM_Pet($PetResponse);
+```
+
+## Nested Mappings with Associations
+
+Map nested JSON objects to multiple entities linked by associations.
+
+```sql
+CREATE IMPORT MAPPING Integration.IMM_Order
+  WITH JSON STRUCTURE Integration.JSON_Order
+{
+  CREATE Integration.OrderResponse {
+    OrderId = orderId KEY,
+    CREATE Integration.OrderResponse_CustomerInfo/Integration.CustomerInfo = customer {
+      Email = email,
+      Name = name
+    },
+    CREATE Integration.OrderResponse_OrderItem/Integration.OrderItem = items {
+      Sku = sku,
+      Quantity = quantity,
+      Price = price
+    }
+  }
+};
+```

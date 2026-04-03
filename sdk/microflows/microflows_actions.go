@@ -812,6 +812,30 @@ type DatabaseConnectionParameterMapping struct {
 	Value         string `json:"value"`
 }
 
+// ImportXmlAction applies an import mapping to a string variable (JSON/XML content)
+// to produce entity objects. BSON type: Microflows$ImportXmlAction
+type ImportXmlAction struct {
+	model.BaseElement
+	ErrorHandlingType    ErrorHandlingType      `json:"errorHandlingType,omitempty"`
+	IsValidationRequired bool                   `json:"isValidationRequired,omitempty"`
+	XmlDocumentVariable  string                 `json:"xmlDocumentVariable,omitempty"` // source string variable
+	ResultHandling       *ResultHandlingMapping `json:"resultHandling,omitempty"`      // mapping ref + output variable
+}
+
+func (ImportXmlAction) isMicroflowAction() {}
+
+// ExportXmlAction applies an export mapping to an entity object to produce a string.
+// BSON type: Microflows$ExportXmlAction
+type ExportXmlAction struct {
+	model.BaseElement
+	ErrorHandlingType    ErrorHandlingType        `json:"errorHandlingType,omitempty"`
+	IsValidationRequired bool                     `json:"isValidationRequired,omitempty"`
+	OutputVariable       string                   `json:"outputVariable,omitempty"` // result string variable
+	RequestHandling      *MappingRequestHandling  `json:"requestHandling,omitempty"`
+}
+
+func (ExportXmlAction) isMicroflowAction() {}
+
 // UnknownAction represents an action type that is not yet implemented.
 // It stores the type name for debugging purposes.
 type UnknownAction struct {

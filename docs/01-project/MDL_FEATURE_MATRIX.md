@@ -199,9 +199,9 @@ Document types that exist in Mendix but have no MDL support:
 | **Web service publish** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Published SOAP web services |
 | **Web service consume** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Consumed SOAP web services |
 | **Ext. DB connector** | N | N | N | N | N | N | 05 | N | N | N | N | Y | N | N | N | N | N | External database connections |
-| **Import mappings** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | JSON/XML import mappings |
-| **Export mappings** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | JSON/XML export mappings |
-| **JSON transformations** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | JSON structure definitions |
+| **Import mappings** | Y | Y | Y | N | Y | N | 06 | Y | N | N | P | Y | N | N | N | Y | N | JSON import mappings with v2 syntax |
+| **Export mappings** | Y | Y | Y | N | Y | N | 06 | Y | N | N | P | Y | N | N | N | Y | N | JSON export mappings with v2 syntax |
+| **JSON transformations** | Y | Y | Y | Y | Y | N | 20 | Y | N | N | P | N | N | N | N | N | N | JSON structure definitions |
 | **Message definitions** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Message definition documents |
 | **XML schemas** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Imported XML schema documents |
 | **Workflows** | Y | Y | Y | N | Y | N | N | N | Y | Y | N | N | Y | N | Y | Y | N | SHOW/DESCRIBE/CREATE/DROP/GRANT/REVOKE implemented |

@@ -875,3 +875,104 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 
 	return activity.ID
 }
+
+// addImportFromMappingAction adds an ImportXmlAction to the microflow.
+func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) model.ID {
+	activityX := fb.posX
+
+	action := &microflows.ImportXmlAction{
+		BaseElement:         model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+		XmlDocumentVariable: s.SourceVariable,
+	}
+
+	resultHandling := &microflows.ResultHandlingMapping{
+		BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		MappingID:      model.ID(s.Mapping.String()),
+		ResultVariable: s.OutputVariable,
+		SingleObject:   true,
+	}
+
+	// Determine single vs list and result entity from the import mapping
+	if fb.reader != nil {
+		if im, err := fb.reader.GetImportMappingByQualifiedName(s.Mapping.Module, s.Mapping.Name); err == nil {
+			if im.JsonStructure != "" {
+				parts := strings.SplitN(im.JsonStructure, ".", 2)
+				if len(parts) == 2 {
+					if js, err := fb.reader.GetJsonStructureByQualifiedName(parts[0], parts[1]); err == nil && len(js.Elements) > 0 {
+						if js.Elements[0].ElementType == "Array" {
+							resultHandling.SingleObject = false
+						}
+					}
+				}
+			}
+			if len(im.Elements) > 0 && im.Elements[0].Entity != "" {
+				resultHandling.ResultEntityID = model.ID(im.Elements[0].Entity)
+			}
+		}
+	}
+
+	action.ResultHandling = resultHandling
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+	}
+
+	return activity.ID
+}
+
+// addExportToMappingAction adds an ExportXmlAction to the microflow.
+func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) model.ID {
+	activityX := fb.posX
+
+	action := &microflows.ExportXmlAction{
+		BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
+		OutputVariable:    s.OutputVariable,
+		RequestHandling: &microflows.MappingRequestHandling{
+			BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			MappingID:         model.ID(s.Mapping.String()),
+			ParameterVariable: s.SourceVariable,
+		},
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+	}
+
+	return activity.ID
+}

@@ -1127,6 +1127,8 @@ microflowStatement
     | annotation* validationFeedbackStatement SEMICOLON?
     | annotation* restCallStatement SEMICOLON?
     | annotation* sendRestRequestStatement SEMICOLON?
+    | annotation* importFromMappingStatement SEMICOLON?
+    | annotation* exportToMappingStatement SEMICOLON?
     ;
 
 declareStatement
@@ -1455,6 +1457,22 @@ sendRestRequestStatement
 
 sendRestRequestBodyClause
     : BODY VARIABLE
+    ;
+
+/**
+ * Import from mapping: [$Var =] IMPORT FROM MAPPING Module.IMM($SourceVar);
+ */
+importFromMappingStatement
+    : (VARIABLE EQUALS)? IMPORT FROM MAPPING qualifiedName LPAREN VARIABLE RPAREN
+      onErrorClause?
+    ;
+
+/**
+ * Export to mapping: $Var = EXPORT TO MAPPING Module.EMM($SourceVar);
+ */
+exportToMappingStatement
+    : (VARIABLE EQUALS)? EXPORT TO MAPPING qualifiedName LPAREN VARIABLE RPAREN
+      onErrorClause?
     ;
 
 // =============================================================================

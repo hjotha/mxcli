@@ -181,6 +181,10 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addRestCallAction(s)
 	case *ast.SendRestRequestStmt:
 		return fb.addSendRestRequestAction(s)
+	case *ast.ImportFromMappingStmt:
+		return fb.addImportFromMappingAction(s)
+	case *ast.ExportToMappingStmt:
+		return fb.addExportToMappingAction(s)
 	default:
 		// For now, skip unknown statement types
 		return ""

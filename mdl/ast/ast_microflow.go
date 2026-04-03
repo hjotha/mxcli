@@ -623,3 +623,25 @@ type SendRestRequestStmt struct {
 }
 
 func (s *SendRestRequestStmt) isMicroflowStatement() {}
+
+// ImportFromMappingStmt represents: [$Var =] IMPORT FROM MAPPING Module.IMM($SourceVar)
+type ImportFromMappingStmt struct {
+	OutputVariable string               // Optional result variable (without $)
+	Mapping        QualifiedName        // Import mapping qualified name
+	SourceVariable string               // Input string variable (without $)
+	ErrorHandling  *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations    *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *ImportFromMappingStmt) isMicroflowStatement() {}
+
+// ExportToMappingStmt represents: $Var = EXPORT TO MAPPING Module.EMM($SourceVar)
+type ExportToMappingStmt struct {
+	OutputVariable string               // Result string variable (without $)
+	Mapping        QualifiedName        // Export mapping qualified name
+	SourceVariable string               // Input entity variable (without $)
+	ErrorHandling  *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations    *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *ExportToMappingStmt) isMicroflowStatement() {}

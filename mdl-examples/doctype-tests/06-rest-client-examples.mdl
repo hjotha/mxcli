@@ -1382,7 +1382,67 @@ END;
 /
 
 -- ############################################################################
--- PART 16: VERIFICATION COMMANDS
+-- PART 16: IMPORT/EXPORT MAPPING IN MICROFLOWS
+-- ############################################################################
+
+-- MARK: Import/Export Mapping Actions
+
+-- ============================================================================
+-- Level 16.1: Import from Mapping (with result variable)
+-- ============================================================================
+--
+-- Applies an import mapping to a JSON string to produce entity objects.
+-- The result is stored in a variable for further processing.
+
+CREATE MICROFLOW RestTest.ACT_ImportFromMapping ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Success Boolean = false;
+  DECLARE $JsonContent String = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
+
+  $PetResponse = IMPORT FROM MAPPING RestTest.IMM_Pet($JsonContent);
+
+  IF $PetResponse != empty THEN
+    SET $Success = true;
+    LOG INFO NODE 'RestTest' 'Import succeeded: ' + $PetResponse/Name;
+  END IF;
+
+  RETURN $Success;
+END;
+/
+
+-- ============================================================================
+-- Level 16.2: Export to Mapping (entity to JSON string)
+-- ============================================================================
+--
+-- Applies an export mapping to an entity object to produce a JSON string.
+
+CREATE MICROFLOW RestTest.ACT_ExportToMapping ($PetResponse: RestTest.PetResponse)
+RETURNS String AS $JsonOutput
+BEGIN
+  $JsonOutput = EXPORT TO MAPPING RestTest.EMM_Pet($PetResponse);
+  LOG INFO NODE 'RestTest' 'Exported JSON: ' + $JsonOutput;
+  RETURN $JsonOutput;
+END;
+/
+
+-- ============================================================================
+-- Level 16.3: Import → Process → Export pipeline
+-- ============================================================================
+--
+-- Full pipeline: receive JSON, import to entities, process, export back to JSON.
+
+CREATE MICROFLOW RestTest.ACT_ImportProcessExport ()
+BEGIN
+  DECLARE $JsonContent String = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
+  $PetResponse = IMPORT FROM MAPPING RestTest.IMM_Pet($JsonContent);
+  $PetResponseJson = EXPORT TO MAPPING RestTest.EMM_Pet($PetResponse);
+  LOG INFO NODE 'RestTest' 'Round-tripped: ' + $PetResponseJson;
+END;
+/
+
+-- ############################################################################
+-- PART 17: VERIFICATION COMMANDS
 -- ############################################################################
 
 -- MARK: Verification

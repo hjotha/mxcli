@@ -1054,6 +1054,20 @@ func (s *BaseMDLParserListener) EnterSendRestRequestBodyClause(ctx *SendRestRequ
 func (s *BaseMDLParserListener) ExitSendRestRequestBodyClause(ctx *SendRestRequestBodyClauseContext) {
 }
 
+// EnterImportFromMappingStatement is called when production importFromMappingStatement is entered.
+func (s *BaseMDLParserListener) EnterImportFromMappingStatement(ctx *ImportFromMappingStatementContext) {
+}
+
+// ExitImportFromMappingStatement is called when production importFromMappingStatement is exited.
+func (s *BaseMDLParserListener) ExitImportFromMappingStatement(ctx *ImportFromMappingStatementContext) {
+}
+
+// EnterExportToMappingStatement is called when production exportToMappingStatement is entered.
+func (s *BaseMDLParserListener) EnterExportToMappingStatement(ctx *ExportToMappingStatementContext) {}
+
+// ExitExportToMappingStatement is called when production exportToMappingStatement is exited.
+func (s *BaseMDLParserListener) ExitExportToMappingStatement(ctx *ExportToMappingStatementContext) {}
+
 // EnterListOperationStatement is called when production listOperationStatement is entered.
 func (s *BaseMDLParserListener) EnterListOperationStatement(ctx *ListOperationStatementContext) {}
 

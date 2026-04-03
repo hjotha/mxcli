@@ -105,6 +105,10 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildRestCallStatement(restCall)
 	} else if sendRest := mfCtx.SendRestRequestStatement(); sendRest != nil {
 		stmt = buildSendRestRequestStatement(sendRest)
+	} else if importMapping := mfCtx.ImportFromMappingStatement(); importMapping != nil {
+		stmt = buildImportFromMappingStatement(importMapping)
+	} else if exportMapping := mfCtx.ExportToMappingStatement(); exportMapping != nil {
+		stmt = buildExportToMappingStatement(exportMapping)
 	}
 
 	// Attach annotations to the statement
