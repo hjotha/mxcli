@@ -216,10 +216,9 @@ func (e *Executor) execCreateExportMapping(s *ast.CreateExportMappingStmt) error
 	// Build element tree from the AST definition
 	if s.RootElement != nil {
 		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsPathTypes, e.reader)
-		// Align root element ExposedName with JSON structure root
-		if em.JsonStructure != "" && e.reader != nil {
-			alignExportMappingRootWithJsonStructure(root, em.JsonStructure, e.reader)
-		}
+		// Root element must have empty ExposedName and JsonPath = "(Object)"
+		root.ExposedName = ""
+		root.JsonPath = "(Object)"
 		em.Elements = append(em.Elements, root)
 	}
 
@@ -308,20 +307,6 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 	}
 
 	return elem
-}
-
-// alignExportMappingRootWithJsonStructure copies the JSON structure root element's
-// ExposedName into the export mapping root element for schema alignment.
-func alignExportMappingRootWithJsonStructure(root *model.ExportMappingElement, jsRef string, reader *mpr.Reader) {
-	parts := strings.SplitN(jsRef, ".", 2)
-	if len(parts) != 2 {
-		return
-	}
-	js, err := reader.GetJsonStructureByQualifiedName(parts[0], parts[1])
-	if err != nil || len(js.Elements) == 0 {
-		return
-	}
-	root.ExposedName = js.Elements[0].ExposedName
 }
 
 // execDropExportMapping deletes an export mapping.

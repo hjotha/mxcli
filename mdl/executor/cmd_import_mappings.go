@@ -216,10 +216,9 @@ func (e *Executor) execCreateImportMapping(s *ast.CreateImportMappingStmt) error
 	// Build element tree from the AST definition
 	if s.RootElement != nil {
 		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", e.reader)
-		// Align root element ExposedName with JSON structure root
-		if im.JsonStructure != "" && e.reader != nil {
-			alignMappingRootWithJsonStructure(root, im.JsonStructure, e.reader)
-		}
+		// Root element must have empty ExposedName and JsonPath = "(Object)"
+		root.ExposedName = ""
+		root.JsonPath = "(Object)"
 		im.Elements = append(im.Elements, root)
 	}
 
@@ -283,20 +282,6 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 	}
 
 	return elem
-}
-
-// alignMappingRootWithJsonStructure copies the JSON structure root element's
-// ExposedName into the mapping root element so Mendix's schema alignment check passes.
-func alignMappingRootWithJsonStructure(root *model.ImportMappingElement, jsRef string, reader *mpr.Reader) {
-	parts := strings.SplitN(jsRef, ".", 2)
-	if len(parts) != 2 {
-		return
-	}
-	js, err := reader.GetJsonStructureByQualifiedName(parts[0], parts[1])
-	if err != nil || len(js.Elements) == 0 {
-		return
-	}
-	root.ExposedName = js.Elements[0].ExposedName
 }
 
 // resolveAttributeType looks up the data type of an entity attribute from the project.

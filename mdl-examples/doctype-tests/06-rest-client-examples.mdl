@@ -1254,7 +1254,7 @@ CREATE IMPORT MAPPING RestTest.IMM_Order
   WITH JSON STRUCTURE RestTest.JSON_Order
 {
   CREATE RestTest.OrderResponse {
-    OrderId = orderId KEY,
+    OrderId = orderId,
     CREATE RestTest.OrderResponse_CustomerInfo/RestTest.CustomerInfo = customer {
       Email = email,
       Name = name
