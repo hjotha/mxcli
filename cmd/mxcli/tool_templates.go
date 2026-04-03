@@ -295,7 +295,7 @@ func generateDevcontainerJSON(projectName, mprPath, containerRuntime string) str
   "containerEnv": {
     %s
   },
-  "postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f ./mxcli ] && ! file ./mxcli | grep -q Linux; then echo '⚠ ./mxcli is not a Linux binary. Replace it with the linux-amd64 or linux-arm64 build.'; fi",
+  "postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f ./mxcli ] && file ./mxcli | grep -q Linux; then echo 'mxcli binary OK'; else ./mxcli setup mxcli --output ./mxcli 2>/dev/null || { ARCH=$(uname -m); [ \"$ARCH\" = x86_64 ] && ARCH=amd64; [ \"$ARCH\" = aarch64 ] && ARCH=arm64; curl -fsSL https://github.com/mendixlabs/mxcli/releases/latest/download/mxcli-linux-${ARCH} -o ./mxcli && chmod +x ./mxcli; }; fi",
   "customizations": {
     "vscode": {
       "extensions": [

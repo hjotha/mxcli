@@ -464,6 +464,12 @@ Container Runtime:
 			} else {
 				fmt.Println("\nCreated .devcontainer/ configuration")
 			}
+			if runtime.GOOS == "windows" {
+				fmt.Println("\n⚠  You are running on Windows. The devcontainer is Linux-based,")
+				fmt.Println("   so the Windows mxcli.exe will not work inside it.")
+				fmt.Println("   The devcontainer will auto-download the correct Linux binary on first start.")
+				fmt.Println("   Or run: mxcli setup mxcli --os linux --output ./mxcli")
+			}
 		}
 
 		// Create .playwright/cli.config.json for playwright-cli

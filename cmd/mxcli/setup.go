@@ -4,8 +4,11 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -20,12 +23,14 @@ var setupCmd = &cobra.Command{
 Subcommands:
   mxbuild    Download MxBuild for the project's Mendix version
   mxruntime  Download the Mendix runtime for the project's Mendix version
+  mxcli      Download an mxcli binary from GitHub releases
 
 Examples:
   mxcli setup mxbuild -p app.mpr
   mxcli setup mxbuild --version 11.6.3
   mxcli setup mxruntime -p app.mpr
   mxcli setup mxruntime --version 11.6.3
+  mxcli setup mxcli --os linux --arch amd64
 `,
 }
 
@@ -159,6 +164,118 @@ Examples:
 	},
 }
 
+// mxcliBinaryURL returns the GitHub releases download URL for an mxcli binary.
+// ver should be a release tag like "v0.4.0" or "nightly".
+// targetOS is "linux", "darwin", or "windows". targetArch is "amd64" or "arm64".
+func mxcliBinaryURL(repo, ver, targetOS, targetArch string) string {
+	name := fmt.Sprintf("mxcli-%s-%s", targetOS, targetArch)
+	if targetOS == "windows" {
+		name += ".exe"
+	}
+	return fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, ver, name)
+}
+
+// mxcliReleaseTag returns the release tag that matches the running binary's
+// version string. Tagged releases use "vX.Y.Z"; nightly builds contain
+// "nightly" and map to the "nightly" release tag.
+func mxcliReleaseTag() string {
+	v := version // package-level var set from ldflags
+	if strings.Contains(v, "nightly") {
+		return "nightly"
+	}
+	if !strings.HasPrefix(v, "v") {
+		v = "v" + v
+	}
+	// Strip build metadata after first hyphen-with-commit (e.g. "v0.4.0-3-gabcdef" -> "v0.4.0")
+	if idx := strings.IndexByte(v, '-'); idx > 0 {
+		v = v[:idx]
+	}
+	return v
+}
+
+// downloadMxcliBinary downloads the mxcli binary for the given OS/arch from
+// GitHub releases and writes it to outputPath with executable permissions.
+func downloadMxcliBinary(repo, tag, targetOS, targetArch, outputPath string, w io.Writer) error {
+	url := mxcliBinaryURL(repo, tag, targetOS, targetArch)
+	fmt.Fprintf(w, "Downloading mxcli %s (%s/%s)...\n", tag, targetOS, targetArch)
+	fmt.Fprintf(w, "  URL: %s\n", url)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("downloading mxcli: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("downloading mxcli: HTTP %d from %s", resp.StatusCode, url)
+	}
+
+	if resp.ContentLength > 0 {
+		fmt.Fprintf(w, "  Size: %.1f MB\n", float64(resp.ContentLength)/(1024*1024))
+	}
+
+	f, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return fmt.Errorf("creating output file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		os.Remove(outputPath)
+		return fmt.Errorf("writing binary: %w", err)
+	}
+
+	fmt.Fprintf(w, "  Saved to %s\n", outputPath)
+	return nil
+}
+
+var setupMxcliCmd = &cobra.Command{
+	Use:   "mxcli",
+	Short: "Download an mxcli binary from GitHub releases",
+	Long: `Download an mxcli binary for a specific OS/architecture from GitHub releases.
+
+By default, downloads the version matching the currently running binary for
+linux/amd64 — the typical target for devcontainers.
+
+Examples:
+  mxcli setup mxcli                           # Linux amd64 binary to ./mxcli
+  mxcli setup mxcli --output /usr/local/bin/mxcli
+  mxcli setup mxcli --os darwin --arch arm64   # macOS Apple Silicon
+  mxcli setup mxcli --tag v0.4.0               # Specific release
+  mxcli setup mxcli --tag nightly              # Latest nightly build
+`,
+	Run: func(cmd *cobra.Command, args []string) {
+		targetOS, _ := cmd.Flags().GetString("os")
+		targetArch, _ := cmd.Flags().GetString("arch")
+		output, _ := cmd.Flags().GetString("output")
+		tag, _ := cmd.Flags().GetString("tag")
+		repo, _ := cmd.Flags().GetString("repo")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+		if tag == "" {
+			tag = mxcliReleaseTag()
+		}
+
+		if dryRun {
+			url := mxcliBinaryURL(repo, tag, targetOS, targetArch)
+			fmt.Fprintf(os.Stdout, "Dry run:\n")
+			fmt.Fprintf(os.Stdout, "  Tag:    %s\n", tag)
+			fmt.Fprintf(os.Stdout, "  OS:     %s\n", targetOS)
+			fmt.Fprintf(os.Stdout, "  Arch:   %s\n", targetArch)
+			fmt.Fprintf(os.Stdout, "  URL:    %s\n", url)
+			fmt.Fprintf(os.Stdout, "  Output: %s\n", output)
+			return
+		}
+
+		if err := downloadMxcliBinary(repo, tag, targetOS, targetArch, output, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Fprintf(os.Stdout, "\nmxcli ready: %s\n", output)
+	},
+}
+
 func init() {
 	setupMxBuildCmd.Flags().String("version", "", "Mendix version to download (e.g., 11.6.3)")
 	setupMxBuildCmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
@@ -166,7 +283,15 @@ func init() {
 	setupMxRuntimeCmd.Flags().String("version", "", "Mendix version to download (e.g., 11.6.3)")
 	setupMxRuntimeCmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
 
+	setupMxcliCmd.Flags().String("os", "linux", "Target operating system (linux, darwin, windows)")
+	setupMxcliCmd.Flags().String("arch", "amd64", "Target architecture (amd64, arm64)")
+	setupMxcliCmd.Flags().String("output", "./mxcli", "Output file path")
+	setupMxcliCmd.Flags().String("tag", "", "Release tag to download (default: match running version)")
+	setupMxcliCmd.Flags().String("repo", "mendixlabs/mxcli", "GitHub repository")
+	setupMxcliCmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
+
 	setupCmd.AddCommand(setupMxBuildCmd)
 	setupCmd.AddCommand(setupMxRuntimeCmd)
+	setupCmd.AddCommand(setupMxcliCmd)
 	rootCmd.AddCommand(setupCmd)
 }
