@@ -22,7 +22,7 @@ Grants access rights to module roles. There are four forms of the GRANT statemen
 
 ### Entity Access
 
-The entity access form creates an access rule on an entity for a given module role. The rule specifies which CRUD operations are permitted and optionally restricts visibility with an XPath constraint.
+The entity access form creates or updates an access rule on an entity for a given module role. **GRANT is additive**: if the role already has an access rule on the entity, the new rights are merged with existing ones. Existing permissions are never downgraded by a GRANT.
 
 Entity access rules control:
 - **CREATE** -- whether the role can create new instances
@@ -115,6 +115,14 @@ Grant nanoflow execution:
 
 ```sql
 GRANT EXECUTE ON NANOFLOW Shop.NAV_ValidateInput TO Shop.User;
+```
+
+Additive grant -- add new attribute access without removing existing:
+
+```sql
+-- Viewer already has READ (Name, Email)
+GRANT Shop.Viewer ON Shop.Customer (READ (Phone));
+-- Result: READ (Name, Email, Phone)
 ```
 
 ## See Also

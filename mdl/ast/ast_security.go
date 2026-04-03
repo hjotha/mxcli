@@ -75,10 +75,13 @@ type GrantEntityAccessStmt struct {
 
 func (s *GrantEntityAccessStmt) isStatement() {}
 
-// RevokeEntityAccessStmt represents: REVOKE role1, role2 ON Module.Entity
+// RevokeEntityAccessStmt represents: REVOKE role1, role2 ON Module.Entity [(rights...)]
+// When Rights is nil, the entire access rule is removed. When non-nil, only the
+// specified rights are revoked (partial revoke).
 type RevokeEntityAccessStmt struct {
 	Roles  []QualifiedName
 	Entity QualifiedName
+	Rights []EntityAccessRight // nil = full revoke, non-nil = partial
 }
 
 func (s *RevokeEntityAccessStmt) isStatement() {}

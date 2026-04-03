@@ -220,8 +220,9 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 | Revoke microflow access | `REVOKE EXECUTE ON MICROFLOW Mod.MF FROM Mod.Role, ...;` | |
 | Grant page access | `GRANT VIEW ON PAGE Mod.Page TO Mod.Role, ...;` | |
 | Revoke page access | `REVOKE VIEW ON PAGE Mod.Page FROM Mod.Role, ...;` | |
-| Grant entity access | `GRANT Mod.Role ON Mod.Entity (CREATE, DELETE, READ *, WRITE *);` | Supports member lists and WHERE |
-| Revoke entity access | `REVOKE Mod.Role ON Mod.Entity;` | |
+| Grant entity access | `GRANT Mod.Role ON Mod.Entity (CREATE, DELETE, READ *, WRITE *);` | Additive — merges with existing |
+| Revoke entity access | `REVOKE Mod.Role ON Mod.Entity;` | Full revoke — removes entire rule |
+| Revoke entity access (partial) | `REVOKE Mod.Role ON Mod.Entity (READ (Attr));` | Partial — downgrades specific rights |
 | Set security level | `ALTER PROJECT SECURITY LEVEL OFF\|PROTOTYPE\|PRODUCTION;` | |
 | Toggle demo users | `ALTER PROJECT SECURITY DEMO USERS ON\|OFF;` | |
 | Create demo user | `CREATE DEMO USER 'name' PASSWORD 'pass' [ENTITY Module.Entity] (UserRole, ...);` | |

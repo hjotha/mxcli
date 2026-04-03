@@ -126,7 +126,7 @@ func (b *Builder) ExitGrantEntityAccessStatement(ctx *parser.GrantEntityAccessSt
 	b.statements = append(b.statements, stmt)
 }
 
-// ExitRevokeEntityAccessStatement handles REVOKE role1, role2 ON Module.Entity
+// ExitRevokeEntityAccessStatement handles REVOKE role1, role2 ON Module.Entity [(rights...)]
 func (b *Builder) ExitRevokeEntityAccessStatement(ctx *parser.RevokeEntityAccessStatementContext) {
 	qn := ctx.QualifiedName()
 	if qn == nil {
@@ -140,6 +140,14 @@ func (b *Builder) ExitRevokeEntityAccessStatement(ctx *parser.RevokeEntityAccess
 	if mrl := ctx.ModuleRoleList(); mrl != nil {
 		for _, rqn := range mrl.AllQualifiedName() {
 			stmt.Roles = append(stmt.Roles, buildQualifiedName(rqn))
+		}
+	}
+
+	// Parse optional rights list for partial revoke
+	if earl := ctx.EntityAccessRightList(); earl != nil {
+		for _, ear := range earl.AllEntityAccessRight() {
+			right := parseEntityAccessRight(ear)
+			stmt.Rights = append(stmt.Rights, right)
 		}
 	}
 

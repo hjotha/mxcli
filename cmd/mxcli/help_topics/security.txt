@@ -29,8 +29,12 @@ PAGE ACCESS:
 ENTITY ACCESS:
   GRANT <role> ON <module>.<entity> (<rights>) [WHERE '<xpath>'];
   REVOKE <role> ON <module>.<entity>;
+  REVOKE <role> ON <module>.<entity> (<rights>);
 
   Rights: CREATE, DELETE, READ *, READ (<attr>,...), WRITE *, WRITE (<attr>,...)
+
+  GRANT is additive — merges new rights into existing access rules.
+  REVOKE without rights removes the entire rule; with rights, downgrades selectively.
 
 USER ROLES:
   CREATE USER ROLE <name> (<role> [, ...]) [MANAGE ALL ROLES];

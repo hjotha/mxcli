@@ -21,6 +21,8 @@ Where `<rights>` is a comma-separated list of:
 | `WRITE *` | Write all members |
 | `WRITE (<attr>, ...)` | Write specific members only |
 
+GRANT is **additive**: if the role already has an access rule on the entity, new rights are merged in. Existing permissions are never removed by a GRANT — only upgraded.
+
 Examples:
 
 ```sql
@@ -36,20 +38,39 @@ GRANT Shop.User ON Shop.Customer (READ (Name, Email), WRITE (Email));
 -- With XPath constraint (doubled single quotes for string literals)
 GRANT Shop.User ON Shop.Order (READ *, WRITE *)
   WHERE '[Status = ''Open'']';
+
+-- Additive: adds Notes to existing read access without removing Name, Email
+GRANT Shop.User ON Shop.Customer (READ (Notes));
 ```
 
 ### REVOKE
 
-Remove an entity access rule entirely:
+Remove an entity access rule entirely, or revoke specific rights:
 
 ```sql
+-- Full revoke (removes entire rule)
 REVOKE <Module>.<Role> ON <Module>.<Entity>;
+
+-- Partial revoke (downgrades specific rights)
+REVOKE <Module>.<Role> ON <Module>.<Entity> (<rights>);
 ```
 
-Example:
+For partial revoke, `REVOKE READ (x)` sets member x access to None. `REVOKE WRITE (x)` downgrades member x from ReadWrite to ReadOnly. `REVOKE CREATE` / `REVOKE DELETE` removes the structural permission.
+
+Examples:
 
 ```sql
+-- Remove all access
 REVOKE Shop.Viewer ON Shop.Customer;
+
+-- Remove read access on a specific member
+REVOKE Shop.User ON Shop.Customer (READ (Notes));
+
+-- Downgrade write to read-only
+REVOKE Shop.User ON Shop.Customer (WRITE (Email));
+
+-- Remove delete permission only
+REVOKE Shop.User ON Shop.Customer (DELETE);
 ```
 
 ## Microflow Access

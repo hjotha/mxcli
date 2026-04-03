@@ -121,6 +121,8 @@ REVOKE VIEW ON PAGE MyModule.Customer_Overview FROM MyModule.User;
 
 ### Entity Access (CRUD)
 
+GRANT is **additive** — it merges with existing access, never removes permissions.
+
 ```sql
 -- Full access (all CRUD + all members)
 GRANT MyModule.Admin ON MyModule.Customer (CREATE, DELETE, READ *, WRITE *);
@@ -131,11 +133,23 @@ GRANT MyModule.Viewer ON MyModule.Customer (READ *);
 -- Selective member access
 GRANT MyModule.User ON MyModule.Customer (READ (Name, Email), WRITE (Email));
 
+-- Additive: adds Phone to existing read access (Name, Email preserved)
+GRANT MyModule.User ON MyModule.Customer (READ (Phone));
+
 -- With XPath constraint
 GRANT MyModule.User ON MyModule.Order (READ *, WRITE *) WHERE '[Status = ''Open'']';
 
--- Revoke entity access for a role
+-- Revoke entity access entirely
 REVOKE MyModule.Viewer ON MyModule.Customer;
+
+-- Partial revoke: remove read on specific attribute
+REVOKE MyModule.User ON MyModule.Customer (READ (Phone));
+
+-- Partial revoke: downgrade write to read-only
+REVOKE MyModule.User ON MyModule.Customer (WRITE (Email));
+
+-- Partial revoke: remove structural permission
+REVOKE MyModule.User ON MyModule.Customer (DELETE);
 ```
 
 ### User Roles

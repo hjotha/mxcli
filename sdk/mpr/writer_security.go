@@ -620,7 +620,10 @@ func (w *Writer) AddEntityAccessRule(unitID model.ID, entityName string, roleNam
 			}
 
 			if existingIdx >= 0 {
-				// Update in place
+				// Merge additively: keep the higher access level for each member
+				// and OR the structural permissions (Create/Delete).
+				existingRule, _ := accessRules[existingIdx].(bson.D)
+				newRule = mergeAccessRule(existingRule, newRule)
 				accessRules[existingIdx] = newRule
 			} else {
 				// Append new rule
@@ -677,6 +680,134 @@ func rolesMatch(ruleDoc bson.D, roleNames []string) bool {
 		return true
 	}
 	return false
+}
+
+// accessRightsLevel returns a numeric level for access rights comparison.
+// None=0 < ReadOnly=1 < ReadWrite=2.
+func accessRightsLevel(s string) int {
+	switch s {
+	case "ReadWrite":
+		return 2
+	case "ReadOnly":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// mergeAccessRule merges a new access rule into an existing one additively.
+// AllowCreate/AllowDelete are OR'd. MemberAccesses keep the higher access level.
+// XPathConstraint is replaced only if the new rule specifies one.
+func mergeAccessRule(existing, newRule bson.D) bson.D {
+	// Extract existing MemberAccesses keyed by attribute/association ref
+	existingMembers := make(map[string]string) // ref -> access rights
+	for _, f := range existing {
+		if f.Key != "MemberAccesses" {
+			continue
+		}
+		arr, ok := f.Value.(bson.A)
+		if !ok {
+			break
+		}
+		for _, item := range arr {
+			maDoc, ok := item.(bson.D)
+			if !ok {
+				continue
+			}
+			var ref, rights string
+			for _, mf := range maDoc {
+				switch mf.Key {
+				case "Attribute":
+					ref = mf.Value.(string)
+				case "Association":
+					ref = mf.Value.(string)
+				case "AccessRights":
+					rights, _ = mf.Value.(string)
+				}
+			}
+			if ref != "" {
+				existingMembers[ref] = rights
+			}
+		}
+	}
+
+	// Extract existing AllowCreate/AllowDelete and DefaultMemberAccessRights
+	var existCreate, existDelete bool
+	var existDefault, existXPath string
+	for _, f := range existing {
+		switch f.Key {
+		case "AllowCreate":
+			existCreate, _ = f.Value.(bool)
+		case "AllowDelete":
+			existDelete, _ = f.Value.(bool)
+		case "DefaultMemberAccessRights":
+			existDefault, _ = f.Value.(string)
+		case "XPathConstraint":
+			existXPath, _ = f.Value.(string)
+		}
+	}
+
+	// Merge into newRule
+	for i, f := range newRule {
+		switch f.Key {
+		case "AllowCreate":
+			newVal, _ := f.Value.(bool)
+			newRule[i].Value = newVal || existCreate
+		case "AllowDelete":
+			newVal, _ := f.Value.(bool)
+			newRule[i].Value = newVal || existDelete
+		case "DefaultMemberAccessRights":
+			newVal, _ := f.Value.(string)
+			if accessRightsLevel(existDefault) > accessRightsLevel(newVal) {
+				newRule[i].Value = existDefault
+			}
+		case "XPathConstraint":
+			newVal, _ := f.Value.(string)
+			if newVal == "" && existXPath != "" {
+				newRule[i].Value = existXPath
+			}
+		case "MemberAccesses":
+			arr, ok := f.Value.(bson.A)
+			if !ok {
+				break
+			}
+			for j, item := range arr {
+				maDoc, ok := item.(bson.D)
+				if !ok {
+					continue
+				}
+				var ref, newRights string
+				for _, mf := range maDoc {
+					switch mf.Key {
+					case "Attribute":
+						ref = mf.Value.(string)
+					case "Association":
+						ref = mf.Value.(string)
+					case "AccessRights":
+						newRights, _ = mf.Value.(string)
+					}
+				}
+				if ref == "" {
+					continue
+				}
+				if existRights, ok := existingMembers[ref]; ok {
+					if accessRightsLevel(existRights) > accessRightsLevel(newRights) {
+						// Upgrade to existing higher level
+						for k, mf := range maDoc {
+							if mf.Key == "AccessRights" {
+								maDoc[k].Value = existRights
+								break
+							}
+						}
+						arr[j] = maDoc
+					}
+				}
+			}
+			newRule[i].Value = arr
+		}
+	}
+
+	return newRule
 }
 
 // RemoveEntityAccessRule removes the given roles from access rules on an entity.
@@ -801,6 +932,175 @@ func removeRolesFromAccessRule(ruleDoc bson.D, removeRoles map[string]bool) (boo
 		return true, true // keep rule with fewer roles
 	}
 	return true, false
+}
+
+// EntityAccessRevocation describes what to revoke from an entity access rule.
+type EntityAccessRevocation struct {
+	RevokeCreate bool
+	RevokeDelete bool
+	// Members to fully revoke (set to None)
+	RevokeReadMembers []string // attribute/association refs to set to None
+	// Members to downgrade from ReadWrite to ReadOnly
+	RevokeWriteMembers []string // attribute/association refs to downgrade
+	// Revoke all read/write access
+	RevokeReadAll  bool
+	RevokeWriteAll bool
+}
+
+// RevokeEntityMemberAccess performs a partial revoke on an existing access rule.
+// It downgrades or removes specific rights without deleting the entire rule.
+// Returns the number of rules modified.
+func (w *Writer) RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation EntityAccessRevocation) (int, error) {
+	modified := 0
+	err := w.readPatchWrite(unitID, func(doc bson.D) (bson.D, error) {
+		entitiesArr := getBsonArray(doc, "Entities")
+		if entitiesArr == nil {
+			return doc, fmt.Errorf("no Entities array found in domain model")
+		}
+
+		found := false
+		for i, item := range entitiesArr {
+			entityDoc, ok := item.(bson.D)
+			if !ok {
+				continue
+			}
+			name := ""
+			for _, f := range entityDoc {
+				if f.Key == "Name" {
+					name, _ = f.Value.(string)
+					break
+				}
+			}
+			if name != entityName {
+				continue
+			}
+			found = true
+
+			for j, f := range entityDoc {
+				if f.Key != "AccessRules" {
+					continue
+				}
+				arr, ok := f.Value.(bson.A)
+				if !ok {
+					break
+				}
+
+				for ri, ruleItem := range arr {
+					ruleDoc, ok := ruleItem.(bson.D)
+					if !ok {
+						continue
+					}
+					if !rolesMatch(ruleDoc, roleNames) {
+						continue
+					}
+
+					// Found matching rule — apply revocations
+					ruleModified := false
+
+					// Build sets for quick lookup
+					revokeReadSet := make(map[string]bool)
+					for _, ref := range revocation.RevokeReadMembers {
+						revokeReadSet[ref] = true
+					}
+					revokeWriteSet := make(map[string]bool)
+					for _, ref := range revocation.RevokeWriteMembers {
+						revokeWriteSet[ref] = true
+					}
+
+					for k, rf := range ruleDoc {
+						switch rf.Key {
+						case "AllowCreate":
+							if revocation.RevokeCreate {
+								ruleDoc[k].Value = false
+								ruleModified = true
+							}
+						case "AllowDelete":
+							if revocation.RevokeDelete {
+								ruleDoc[k].Value = false
+								ruleModified = true
+							}
+						case "DefaultMemberAccessRights":
+							if revocation.RevokeReadAll {
+								ruleDoc[k].Value = "None"
+								ruleModified = true
+							} else if revocation.RevokeWriteAll {
+								cur, _ := rf.Value.(string)
+								if cur == "ReadWrite" {
+									ruleDoc[k].Value = "ReadOnly"
+									ruleModified = true
+								}
+							}
+						case "MemberAccesses":
+							maArr, ok := rf.Value.(bson.A)
+							if !ok {
+								break
+							}
+							for mi, maItem := range maArr {
+								maDoc, ok := maItem.(bson.D)
+								if !ok {
+									continue
+								}
+								var ref, rights string
+								for _, mf := range maDoc {
+									switch mf.Key {
+									case "Attribute":
+										ref = mf.Value.(string)
+									case "Association":
+										ref = mf.Value.(string)
+									case "AccessRights":
+										rights, _ = mf.Value.(string)
+									}
+								}
+								if ref == "" {
+									continue
+								}
+
+								newRights := rights
+								if revocation.RevokeReadAll || revokeReadSet[ref] {
+									newRights = "None"
+								} else if revocation.RevokeWriteAll || revokeWriteSet[ref] {
+									if rights == "ReadWrite" {
+										newRights = "ReadOnly"
+									}
+								}
+
+								if newRights != rights {
+									for mk, mf := range maDoc {
+										if mf.Key == "AccessRights" {
+											maDoc[mk].Value = newRights
+											break
+										}
+									}
+									maArr[mi] = maDoc
+									ruleModified = true
+								}
+							}
+							ruleDoc[k].Value = maArr
+						}
+					}
+
+					if ruleModified {
+						arr[ri] = ruleDoc
+						modified++
+					}
+					break
+				}
+
+				entityDoc[j].Value = arr
+				break
+			}
+
+			entitiesArr[i] = entityDoc
+			break
+		}
+
+		if !found {
+			return doc, fmt.Errorf("entity not found: %s", entityName)
+		}
+
+		return setBsonField(doc, "Entities", entitiesArr), nil
+	})
+	return modified, err
 }
 
 // RemoveRoleFromAllEntities removes the given role from all entity access rules in a domain model.

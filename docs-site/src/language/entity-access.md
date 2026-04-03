@@ -59,6 +59,23 @@ GRANT Shop.User ON Shop.Order (READ *, WRITE *)
 
 Note that single quotes inside XPath expressions must be doubled (`''`), since the entire expression is wrapped in single quotes.
 
+### Additive Behavior
+
+GRANT is **additive**. If a role already has an access rule on the entity, the new rights are merged in without removing existing permissions:
+
+```sql
+-- Initial grant
+GRANT Shop.User ON Shop.Customer (READ (Name, Email));
+
+-- Add Notes access — Name and Email are preserved
+GRANT Shop.User ON Shop.Customer (READ (Notes));
+-- Result: READ (Name, Email, Notes)
+
+-- Upgrade Email to writable — existing reads preserved
+GRANT Shop.User ON Shop.Customer (WRITE (Email));
+-- Result: READ (Name, Notes), WRITE (Email)
+```
+
 ### Multiple Roles on the Same Entity
 
 Each GRANT creates a separate access rule. An entity can have rules for multiple roles:
@@ -71,19 +88,30 @@ GRANT Shop.Viewer ON Shop.Order (READ *);
 
 ## REVOKE on Entities
 
-Remove an entity access rule for a role:
+Remove an entity access rule entirely or revoke specific rights:
 
 ```sql
+-- Full revoke (removes entire rule)
 REVOKE <Module>.<Role> ON <Module>.<Entity>;
+
+-- Partial revoke (downgrades specific rights)
+REVOKE <Module>.<Role> ON <Module>.<Entity> (<rights>);
 ```
 
-Example:
+Examples:
 
 ```sql
+-- Remove all access for Viewer
 REVOKE Shop.Viewer ON Shop.Customer;
+
+-- Remove read access on a specific attribute
+REVOKE Shop.User ON Shop.Customer (READ (Notes));
+
+-- Downgrade write to read-only on Email
+REVOKE Shop.User ON Shop.Customer (WRITE (Email));
 ```
 
-This removes the entire access rule for that role on that entity.
+A full `REVOKE` (without rights list) removes the entire access rule. A partial `REVOKE` downgrades specific rights: `REVOKE READ (x)` sets member x to no access, `REVOKE WRITE (x)` downgrades from ReadWrite to ReadOnly.
 
 ## Viewing Entity Access
 
