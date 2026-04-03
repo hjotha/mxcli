@@ -163,7 +163,7 @@ func callM2EEViaDocker(opts M2EEOptions, dockerDir string, action string, params
 	)
 
 	composePath := filepath.Join(dockerDir, "docker-compose.yml")
-	cmd := exec.Command("docker", "compose", "-f", composePath, "exec", "-T", "mendix", "sh", "-c", curlCmd)
+	cmd := exec.Command(ContainerCLI(), "compose", "-f", composePath, "exec", "-T", "mendix", "sh", "-c", curlCmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

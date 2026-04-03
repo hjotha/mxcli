@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	initTools     []string
-	initAllTools  bool
-	initListTools bool
+	initTools            []string
+	initAllTools         bool
+	initListTools        bool
+	initContainerRuntime string
 )
 
 var initCmd = &cobra.Command{
@@ -57,6 +58,10 @@ Supported Tools:
   - vibe        Mistral Vibe CLI agent with skills
 
 All tools receive universal documentation in AGENTS.md and .ai-context/
+
+Container Runtime:
+  --container-runtime docker   Use Docker-in-Docker (default)
+  --container-runtime podman   Use Podman-in-Podman
 `,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -445,7 +450,7 @@ All tools receive universal documentation in AGENTS.md and .ai-context/
 		if err := os.MkdirAll(devcontainerDir, 0755); err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating .devcontainer directory: %v\n", err)
 		} else {
-			dcJSON := generateDevcontainerJSON(projectName, mprFile)
+			dcJSON := generateDevcontainerJSON(projectName, mprFile, initContainerRuntime)
 			if err := os.WriteFile(devcontainerJSON, []byte(dcJSON), 0644); err != nil {
 				fmt.Fprintf(os.Stderr, "  Error writing devcontainer.json: %v\n", err)
 			}
@@ -1252,4 +1257,5 @@ func init() {
 	initCmd.Flags().StringSliceVar(&initTools, "tool", []string{}, "AI tool(s) to configure (claude, opencode, cursor, continue, windsurf, aider)")
 	initCmd.Flags().BoolVar(&initAllTools, "all-tools", false, "Initialize for all supported AI tools")
 	initCmd.Flags().BoolVar(&initListTools, "list-tools", false, "List supported AI tools and exit")
+	initCmd.Flags().StringVar(&initContainerRuntime, "container-runtime", "docker", "Container runtime for devcontainer (docker or podman)")
 }

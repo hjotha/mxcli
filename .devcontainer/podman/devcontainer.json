@@ -1,0 +1,44 @@
+{
+  "name": "Mendix Model SDK Go (Podman)",
+  "build": {
+    "dockerfile": "../Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/podman-in-podman:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [8080, 8090, 5432],
+  "portsAttributes": {
+    "8080-8099": { "onAutoForward": "silent" },
+    "5432-5499": { "onAutoForward": "silent" }
+  },
+  "containerEnv": {
+    "MXCLI_CONTAINER_CLI": "podman"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "ms-vscode.makefile-tools",
+        "anthropic.claude-code",
+        "mike-lischke.vscode-antlr4"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "editor.formatOnSave": true,
+        "[go]": {
+          "editor.defaultFormatter": "golang.go"
+        }
+      }
+    }
+  },
+  "postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && go mod download",
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "CGO_ENABLED": "0",
+    "LANG": "en_US.UTF-8",
+    "LC_ALL": "en_US.UTF-8"
+  }
+}

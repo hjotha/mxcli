@@ -14,18 +14,27 @@ Use this when:
 
 The devcontainer created by `mxcli init` includes:
 - **JDK 21** (Adoptium temurin-21-jdk) — required by MxBuild
-- **Docker-in-Docker** — Docker daemon running inside the devcontainer
+- **Docker-in-Docker** (or **Podman-in-Podman**) — container runtime inside the devcontainer
 - **Port forwarding** — ports 8080 (app) and 8090 (admin) auto-forwarded
+
+### Podman Support
+
+mxcli auto-detects Docker or Podman. To force Podman:
+```bash
+export MXCLI_CONTAINER_CLI=podman
+```
+
+When using `mxcli init`, pass `--container-runtime podman` to generate a devcontainer with Podman-in-Podman instead of Docker-in-Docker. Requires Podman 4.7+ (ships `podman compose` natively).
 
 ## Architecture
 
 ```
 Host machine (browser at localhost:8080)
-  └── Docker (host daemon)
+  └── Docker or Podman (host daemon)
       └── Devcontainer (VS Code)
           ├── mxcli, JDK 21, project files
-          └── Docker daemon (docker-in-docker)
-              └── docker compose stack
+          └── Docker/Podman daemon (docker-in-docker or podman-in-podman)
+              └── docker/podman compose stack
                   ├── mendix container (8080, 8090)
                   │     └── /mendix ← volume mount from .docker/build/
                   └── postgres container (5432)
@@ -392,7 +401,7 @@ All defaults can be overridden in `.docker/.env`.
 
 | Problem | Solution |
 |---------|----------|
-| `docker: command not found` | Rebuild devcontainer — docker-in-docker feature needs rebuild to activate |
+| `docker: command not found` | Rebuild devcontainer — docker-in-docker feature needs rebuild to activate. Or use Podman: `export MXCLI_CONTAINER_CLI=podman` |
 | `mxbuild not found` | Run `mxcli setup mxbuild -p app.mpr` to download from CDN |
 | `JDK 21 not found` | Rebuild devcontainer — JDK 21 should be pre-installed |
 | Build fails with version error | Requires Mendix >= 11.6.1 for PAD support |

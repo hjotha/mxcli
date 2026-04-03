@@ -14,8 +14,18 @@ mxcli provides Docker integration for building, running, and validating Mendix a
 
 ## Prerequisites
 
-- Docker must be installed and running
-- The Docker daemon must be accessible from the command line
+- Docker (or Podman 4.7+) must be installed and running
+- The container runtime must be accessible from the command line
+
+### Podman Support
+
+mxcli auto-detects Docker or Podman on PATH. To explicitly select:
+
+```bash
+export MXCLI_CONTAINER_CLI=podman
+```
+
+Podman 4.7+ ships `podman compose` with full Docker Compose V2 compatibility. All `mxcli docker` subcommands work with both runtimes.
 
 ## The mx Tool
 

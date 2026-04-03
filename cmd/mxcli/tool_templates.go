@@ -270,14 +270,22 @@ recognize:
 `, projectName, mprFile, mprFile, mprFile)
 }
 
-func generateDevcontainerJSON(projectName, mprPath string) string {
+func generateDevcontainerJSON(projectName, mprPath, containerRuntime string) string {
+	feature := `"ghcr.io/devcontainers/features/docker-in-docker:2": {}`
+	containerEnv := `"PLAYWRIGHT_CLI_SESSION": "mendix-app"`
+	if containerRuntime == "podman" {
+		feature = `"ghcr.io/devcontainers/features/podman-in-podman:1": {}`
+		containerEnv = `"PLAYWRIGHT_CLI_SESSION": "mendix-app",
+    "MXCLI_CONTAINER_CLI": "podman"`
+	}
+
 	return fmt.Sprintf(`{
   "name": "%s",
   "build": {
     "dockerfile": "Dockerfile"
   },
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    %s
   },
   "forwardPorts": [8080, 8090, 5432],
   "portsAttributes": {
@@ -285,7 +293,7 @@ func generateDevcontainerJSON(projectName, mprPath string) string {
     "5432-5499": { "onAutoForward": "silent" }
   },
   "containerEnv": {
-    "PLAYWRIGHT_CLI_SESSION": "mendix-app"
+    %s
   },
   "postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash && if [ -f ./mxcli ] && ! file ./mxcli | grep -q Linux; then echo '⚠ ./mxcli is not a Linux binary. Replace it with the linux-amd64 or linux-arm64 build.'; fi",
   "customizations": {
@@ -300,7 +308,7 @@ func generateDevcontainerJSON(projectName, mprPath string) string {
   },
   "remoteUser": "vscode"
 }
-`, projectName)
+`, projectName, feature, containerEnv)
 }
 
 func generateDockerfile(projectName, mprPath string) string {

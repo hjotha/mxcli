@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 )
 
 // RunOptions configures the test runner.
@@ -310,7 +312,7 @@ func captureRuntimeLogs(dockerDir string, timeout time.Duration, w io.Writer, ve
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "docker", "compose", "logs", "--follow", "--no-log-prefix", "--since", "1s", "mendix")
+	cmd := exec.CommandContext(ctx, docker.ContainerCLI(), "compose", "logs", "--follow", "--no-log-prefix", "--since", "1s", "mendix")
 	cmd.Dir = dockerDir
 
 	stdout, err := cmd.StdoutPipe()
@@ -442,7 +444,7 @@ func findMxcli() (string, error) {
 
 // runCompose executes a docker compose command in the given directory.
 func runCompose(dockerDir string, args ...string) error {
-	cmd := exec.Command("docker", append([]string{"compose"}, args...)...)
+	cmd := exec.Command(docker.ContainerCLI(), append([]string{"compose"}, args...)...)
 	cmd.Dir = dockerDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -57,9 +57,11 @@ mxcli init -p app.mpr
 # - VS Code MDL extension (auto-installed)
 ```
 
-## Docker-in-Docker
+## Container Runtime (Docker or Podman)
 
-For `mxcli docker build`, `mxcli docker run`, and `mxcli test` (which require Docker), the dev container must have Docker-in-Docker support enabled. This is typically configured in `devcontainer.json`:
+For `mxcli docker build`, `mxcli docker run`, and `mxcli test` (which require a container runtime), the dev container must have Docker-in-Docker or Podman-in-Podman support enabled.
+
+### Docker-in-Docker (default)
 
 ```json
 {
@@ -68,6 +70,23 @@ For `mxcli docker build`, `mxcli docker run`, and `mxcli test` (which require Do
   }
 }
 ```
+
+### Podman-in-Podman
+
+For organizations that cannot use Docker Desktop due to licensing:
+
+```json
+{
+  "features": {
+    "ghcr.io/devcontainers/features/podman-in-podman:1": {}
+  },
+  "containerEnv": {
+    "MXCLI_CONTAINER_CLI": "podman"
+  }
+}
+```
+
+When running `mxcli init`, use `--container-runtime podman` to generate this configuration automatically. Requires Podman 4.7+ (ships `podman compose` with Docker Compose V2 compatibility).
 
 ## Typical Dev Container Workflow
 

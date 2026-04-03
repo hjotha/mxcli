@@ -17,7 +17,7 @@ mxcli docker run -p app.mpr
 
 ## Prerequisites
 
-- Docker must be installed and running
+- Docker (or Podman 4.7+) must be installed and running
 - The project must be buildable (no errors in `mxcli docker check`)
 - A PostgreSQL database must be available (Docker can provide one)
 

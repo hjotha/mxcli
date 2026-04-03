@@ -15,6 +15,25 @@ import (
 	"time"
 )
 
+// ContainerCLI returns the container runtime binary ("docker" or "podman").
+// Resolution order:
+//  1. MXCLI_CONTAINER_CLI env var (explicit override)
+//  2. "docker" if available on PATH
+//  3. "podman" if available on PATH
+//  4. "docker" as fallback (will fail with a clear error at exec time)
+func ContainerCLI() string {
+	if cli := os.Getenv("MXCLI_CONTAINER_CLI"); cli != "" {
+		return cli
+	}
+	if _, err := exec.LookPath("docker"); err == nil {
+		return "docker"
+	}
+	if _, err := exec.LookPath("podman"); err == nil {
+		return "podman"
+	}
+	return "docker"
+}
+
 // RuntimeOptions configures docker runtime commands.
 type RuntimeOptions struct {
 	// ProjectPath is the path to the .mpr file.
@@ -85,7 +104,7 @@ func WaitForReady(opts RuntimeOptions, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "docker", "compose", "logs", "--follow", "--no-log-prefix", "--since", "1s", "mendix")
+	cmd := exec.CommandContext(ctx, ContainerCLI(), "compose", "logs", "--follow", "--no-log-prefix", "--since", "1s", "mendix")
 	cmd.Dir = dockerDir
 
 	stdout, err := cmd.StdoutPipe()
@@ -205,7 +224,7 @@ func Status(opts RuntimeOptions) error {
 	}
 
 	// Get JSON output from docker compose ps
-	cmd := exec.Command("docker", "compose", "ps", "--format", "json")
+	cmd := exec.Command(ContainerCLI(), "compose", "ps", "--format", "json")
 	cmd.Dir = dockerDir
 
 	output, err := cmd.Output()
@@ -261,7 +280,7 @@ func Shell(opts RuntimeOptions, execCmd string) error {
 		args = []string{"exec", "-it", "mendix", "sh"}
 	}
 
-	cmd := exec.Command("docker", append([]string{"compose"}, args...)...)
+	cmd := exec.Command(ContainerCLI(), append([]string{"compose"}, args...)...)
 	cmd.Dir = dockerDir
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = opts.Stdout
@@ -278,7 +297,7 @@ func Shell(opts RuntimeOptions, execCmd string) error {
 
 // runCompose executes a docker compose command in the given directory.
 func runCompose(dockerDir string, opts RuntimeOptions, args ...string) error {
-	cmd := exec.Command("docker", append([]string{"compose"}, args...)...)
+	cmd := exec.Command(ContainerCLI(), append([]string{"compose"}, args...)...)
 	cmd.Dir = dockerDir
 	cmd.Stdout = opts.Stdout
 	if cmd.Stdout == nil {

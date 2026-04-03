@@ -32,7 +32,11 @@ Requirements:
   - Mendix 11.6.1 or later
   - MxBuild (auto-downloaded from CDN if not found)
   - JDK 21 (installed in devcontainers created by 'mxcli init')
-  - Docker with Compose V2
+  - Docker with Compose V2, or Podman 4.7+ with podman compose
+
+Podman Support:
+  mxcli auto-detects the container runtime (Docker or Podman).
+  Override with: export MXCLI_CONTAINER_CLI=podman
 
 Examples:
   # One command to setup, build, and start

@@ -1,6 +1,6 @@
 # Proposal: Podman Support as Docker Alternative
 
-**Status:** Draft
+**Status:** Implemented (Phase 1 & 2)
 **Date:** 2026-03-27
 
 ## Motivation
