@@ -392,11 +392,38 @@ SHOW ACCESS ON SecTest.Customer;
 /
 
 -- ============================================================================
--- Level 5.5: Revoke Entity Access
+-- Level 5.5: Additive GRANT
 -- ============================================================================
 
 /**
- * Remove the Viewer role's access rule from Customer.
+ * GRANT is additive: adding Notes access preserves existing Name and Email.
+ */
+GRANT SecTest.User ON SecTest.Customer (READ (Notes));
+/
+
+-- ============================================================================
+-- Level 5.6: Partial REVOKE
+-- ============================================================================
+
+/**
+ * Remove read access on a specific attribute (Notes).
+ * Other permissions are preserved.
+ */
+REVOKE SecTest.User ON SecTest.Customer (READ (Notes));
+/
+
+/**
+ * Downgrade write to read-only on Email.
+ */
+REVOKE SecTest.User ON SecTest.Customer (WRITE (Email));
+/
+
+-- ============================================================================
+-- Level 5.7: Full Revoke Entity Access
+-- ============================================================================
+
+/**
+ * Remove the Viewer role's access rule from Customer entirely.
  */
 REVOKE SecTest.Viewer ON SecTest.Customer;
 /

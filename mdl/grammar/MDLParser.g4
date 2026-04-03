@@ -359,6 +359,7 @@ grantEntityAccessStatement
 
 revokeEntityAccessStatement
     : REVOKE moduleRoleList ON qualifiedName
+      (LPAREN entityAccessRightList RPAREN)?
     ;
 
 grantMicroflowAccessStatement

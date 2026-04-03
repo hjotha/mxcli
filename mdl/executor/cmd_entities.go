@@ -1252,56 +1252,13 @@ func (e *Executor) outputEntityAccessGrants(entity *domainmodel.Entity, moduleNa
 			continue
 		}
 
-		// Build rights list
-		var rights []string
-		if rule.AllowCreate {
-			rights = append(rights, "CREATE")
-		}
-		if rule.AllowDelete {
-			rights = append(rights, "DELETE")
-		}
-
-		// Determine READ/WRITE access.
-		// Mendix has no AllowRead/AllowWrite on AccessRule — infer from
-		// DefaultMemberAccessRights and individual MemberAccesses entries.
-		hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
-			rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-		hasWrite := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
-		if !hasRead || !hasWrite {
-			for _, ma := range rule.MemberAccesses {
-				if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly ||
-					ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-					hasRead = true
-				}
-				if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
-					hasWrite = true
-				}
-			}
-		}
-
-		readMembers, writeMembers := e.resolveEntityMemberAccess(rule, attrNames)
-
-		if hasRead {
-			if readMembers == nil {
-				rights = append(rights, "READ *")
-			} else {
-				rights = append(rights, fmt.Sprintf("READ (%s)", strings.Join(readMembers, ", ")))
-			}
-		}
-		if hasWrite {
-			if writeMembers == nil {
-				rights = append(rights, "WRITE *")
-			} else if len(writeMembers) > 0 {
-				rights = append(rights, fmt.Sprintf("WRITE (%s)", strings.Join(writeMembers, ", ")))
-			}
-		}
-
-		if len(rights) == 0 {
+		rightsStr := e.formatAccessRuleRights(rule, attrNames)
+		if rightsStr == "" {
 			continue
 		}
 
 		grantLine := fmt.Sprintf("\nGRANT %s ON %s.%s (%s)",
-			strings.Join(roleStrs, ", "), moduleName, entityName, strings.Join(rights, ", "))
+			strings.Join(roleStrs, ", "), moduleName, entityName, rightsStr)
 
 		if rule.XPathConstraint != "" {
 			grantLine += fmt.Sprintf(" WHERE '%s'", rule.XPathConstraint)
@@ -1371,6 +1328,105 @@ func (e *Executor) resolveEntityMemberAccess(rule *domainmodel.AccessRule, attrN
 	}
 
 	return readMembers, writeMembers
+}
+
+// formatAccessRuleRights formats the rights portion of an access rule as a string.
+// Returns a string like "CREATE, DELETE, READ (Name, Price), WRITE (Price)" or empty if no rights.
+func (e *Executor) formatAccessRuleRights(rule *domainmodel.AccessRule, attrNames map[string]string) string {
+	var rights []string
+	if rule.AllowCreate {
+		rights = append(rights, "CREATE")
+	}
+	if rule.AllowDelete {
+		rights = append(rights, "DELETE")
+	}
+
+	hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
+		rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
+	hasWrite := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
+	if !hasRead || !hasWrite {
+		for _, ma := range rule.MemberAccesses {
+			if ma.AccessRights == domainmodel.MemberAccessRightsReadOnly ||
+				ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
+				hasRead = true
+			}
+			if ma.AccessRights == domainmodel.MemberAccessRightsReadWrite {
+				hasWrite = true
+			}
+		}
+	}
+
+	readMembers, writeMembers := e.resolveEntityMemberAccess(rule, attrNames)
+
+	if hasRead {
+		if readMembers == nil {
+			rights = append(rights, "READ *")
+		} else {
+			rights = append(rights, fmt.Sprintf("READ (%s)", strings.Join(readMembers, ", ")))
+		}
+	}
+	if hasWrite {
+		if writeMembers == nil {
+			rights = append(rights, "WRITE *")
+		} else if len(writeMembers) > 0 {
+			rights = append(rights, fmt.Sprintf("WRITE (%s)", strings.Join(writeMembers, ", ")))
+		}
+	}
+
+	return strings.Join(rights, ", ")
+}
+
+// formatAccessRuleResult re-reads the entity and formats the resulting access state
+// for the given roles. Returns a string like "  Result: CREATE, READ (Name, Price)\n".
+func (e *Executor) formatAccessRuleResult(moduleName, entityName string, roleNames []string) string {
+	e.invalidateDomainModelsCache()
+
+	module, err := e.findModule(moduleName)
+	if err != nil {
+		return ""
+	}
+
+	dm, err := e.reader.GetDomainModel(module.ID)
+	if err != nil {
+		return ""
+	}
+
+	entity := dm.FindEntityByName(entityName)
+	if entity == nil {
+		return ""
+	}
+
+	attrNames := make(map[string]string)
+	for _, attr := range entity.Attributes {
+		attrNames[string(attr.ID)] = attr.Name
+	}
+
+	// Build role set for matching
+	roleSet := make(map[string]bool)
+	for _, rn := range roleNames {
+		roleSet[rn] = true
+	}
+
+	for _, rule := range entity.AccessRules {
+		// Check if this rule matches the given roles
+		matchCount := 0
+		for _, rn := range rule.ModuleRoleNames {
+			if roleSet[rn] {
+				matchCount++
+			}
+		}
+		if matchCount == 0 {
+			continue
+		}
+		// Found a matching rule
+		rightsStr := e.formatAccessRuleRights(rule, attrNames)
+		if rightsStr == "" {
+			return "  Result: (no access)\n"
+		}
+		return fmt.Sprintf("  Result: %s\n", rightsStr)
+	}
+
+	return "  Result: (no access)\n"
 }
 
 // extractAttrNameFromQualified extracts the attribute name from a qualified name.

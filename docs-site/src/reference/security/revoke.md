@@ -3,8 +3,11 @@
 ## Synopsis
 
 ```sql
--- Entity access
+-- Entity access (full -- removes entire rule)
 REVOKE module.Role ON module.Entity
+
+-- Entity access (partial -- downgrades specific rights)
+REVOKE module.Role ON module.Entity ( rights )
 
 -- Microflow access
 REVOKE EXECUTE ON MICROFLOW module.Name FROM module.Role [, ...]
@@ -22,7 +25,9 @@ Removes previously granted access rights from module roles. Each form is the cou
 
 ### Entity Access
 
-Removes the entire entity access rule for the specified module role on the entity. Unlike GRANT, there is no way to partially revoke (e.g., remove only WRITE while keeping READ). The entire rule is removed.
+Without a rights list, removes the entire entity access rule for the specified module role on the entity.
+
+With a rights list, performs a **partial revoke**: `REVOKE READ (x)` sets member x to no access. `REVOKE WRITE (x)` downgrades member x from ReadWrite to ReadOnly. `REVOKE CREATE` and `REVOKE DELETE` remove the structural permission. The access rule itself is preserved.
 
 ### Microflow Access
 
@@ -42,7 +47,16 @@ Removes execute permission on a nanoflow from one or more module roles.
 :   The module role losing access. Must be a qualified name (`Module.RoleName`).
 
 `module.Entity`
-:   The entity whose access rule is removed.
+:   The entity whose access rule is removed or modified.
+
+`rights`
+:   Optional. A comma-separated list of rights to revoke (partial revoke). Same syntax as GRANT rights:
+    - `CREATE` -- revoke create permission
+    - `DELETE` -- revoke delete permission
+    - `READ *` -- revoke all read access
+    - `READ (Attr1, ...)` -- revoke read on specific attributes
+    - `WRITE *` -- downgrade all members from ReadWrite to ReadOnly
+    - `WRITE (Attr1, ...)` -- downgrade specific attributes from ReadWrite to ReadOnly
 
 `module.Name`
 :   The target microflow, nanoflow, or page.
@@ -52,10 +66,28 @@ Removes execute permission on a nanoflow from one or more module roles.
 
 ## Examples
 
-Remove entity access for a role:
+Remove all entity access for a role:
 
 ```sql
 REVOKE Shop.Viewer ON Shop.Customer;
+```
+
+Partial revoke -- remove read access on a specific attribute:
+
+```sql
+REVOKE Shop.User ON Shop.Customer (READ (Notes));
+```
+
+Partial revoke -- downgrade write to read-only:
+
+```sql
+REVOKE Shop.User ON Shop.Customer (WRITE (Email));
+```
+
+Partial revoke -- remove structural permission:
+
+```sql
+REVOKE Shop.User ON Shop.Customer (DELETE);
 ```
 
 Remove microflow execution from multiple roles:

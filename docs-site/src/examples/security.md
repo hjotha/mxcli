@@ -73,11 +73,27 @@ CREATE OR MODIFY DEMO USER 'manager' PASSWORD 'Password1!' (SalesManager);
 ALTER PROJECT SECURITY DEMO USERS ON;
 ```
 
+## Additive Grants
+
+GRANT merges with existing access — it never removes permissions:
+
+```sql
+-- Viewer already has READ (Name, Email)
+GRANT Sales.Viewer ON Sales.Customer (READ (Phone));
+-- Result: READ (Name, Email, Phone)
+```
+
 ## Revoking Access
 
 ```sql
--- Remove a specific grant
+-- Remove all access for a role
 REVOKE Sales.Viewer ON Sales.Customer;
+
+-- Partial revoke: remove read on a specific attribute
+REVOKE Sales.User ON Sales.Customer (READ (Phone));
+
+-- Partial revoke: downgrade write to read-only
+REVOKE Sales.User ON Sales.Customer (WRITE (Email));
 
 -- Remove microflow access
 REVOKE EXECUTE ON MICROFLOW Sales.ACT_Order_Delete FROM Sales.User;

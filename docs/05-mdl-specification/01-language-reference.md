@@ -1004,7 +1004,7 @@ REVOKE VIEW ON PAGE <module>.<name> FROM <module>.<role> [, ...]
 
 ### GRANT (Entity Access)
 
-Creates an access rule on an entity for one or more module roles with CRUD permissions.
+Creates or updates an access rule on an entity for one or more module roles with CRUD permissions. **GRANT is additive** — if the role already has an access rule, new rights are merged without removing existing permissions.
 
 **Syntax:**
 ```sql
@@ -1030,15 +1030,36 @@ GRANT Shop.User ON Shop.Customer (READ (Name, Email), WRITE (Email));
 
 -- With XPath constraint
 GRANT Shop.User ON Shop.Order (READ *, WRITE *) WHERE '[Status = ''Open'']';
+
+-- Additive: adds Phone to existing read access (Name, Email preserved)
+GRANT Shop.User ON Shop.Customer (READ (Phone));
 ```
 
 ### REVOKE (Entity Access)
 
-Removes an entity access rule for specified roles.
+Removes an entity access rule entirely, or revokes specific rights.
 
 **Syntax:**
 ```sql
+-- Full revoke (removes entire rule)
 REVOKE <module>.<role> ON <module>.<entity>
+
+-- Partial revoke (downgrades specific rights)
+REVOKE <module>.<role> ON <module>.<entity> (<rights>)
+```
+
+Partial revoke semantics: `REVOKE READ (x)` sets member x to no access. `REVOKE WRITE (x)` downgrades from ReadWrite to ReadOnly. `REVOKE CREATE` / `REVOKE DELETE` removes the structural permission.
+
+**Examples:**
+```sql
+-- Remove all access
+REVOKE Shop.Viewer ON Shop.Customer;
+
+-- Remove read on specific attribute
+REVOKE Shop.User ON Shop.Customer (READ (Phone));
+
+-- Downgrade write to read-only
+REVOKE Shop.User ON Shop.Customer (WRITE (Email));
 ```
 
 ### CREATE USER ROLE

@@ -423,10 +423,13 @@ func (e *Executor) execGrantEntityAccess(s *ast.GrantEntityAccessStmt) error {
 
 	e.trackModifiedDomainModel(module.ID, module.Name)
 	fmt.Fprintf(e.output, "Granted access on %s.%s to %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
+	if !e.quiet {
+		fmt.Fprint(e.output, e.formatAccessRuleResult(s.Entity.Module, s.Entity.Name, roleNames))
+	}
 	return nil
 }
 
-// execRevokeEntityAccess handles REVOKE roles ON Module.Entity.
+// execRevokeEntityAccess handles REVOKE roles ON Module.Entity [(rights...)].
 func (e *Executor) execRevokeEntityAccess(s *ast.RevokeEntityAccessStmt) error {
 	if e.writer == nil {
 		return fmt.Errorf("not connected to a project in write mode")
@@ -454,15 +457,60 @@ func (e *Executor) execRevokeEntityAccess(s *ast.RevokeEntityAccessStmt) error {
 		roleNames = append(roleNames, role.Module+"."+role.Name)
 	}
 
-	modified, err := e.writer.RemoveEntityAccessRule(dm.ID, s.Entity.Name, roleNames)
-	if err != nil {
-		return fmt.Errorf("failed to revoke entity access: %w", err)
-	}
+	if len(s.Rights) > 0 {
+		// Partial revoke — downgrade specific rights
+		revocation := mpr.EntityAccessRevocation{}
+		for _, right := range s.Rights {
+			switch right.Type {
+			case ast.EntityAccessCreate:
+				revocation.RevokeCreate = true
+			case ast.EntityAccessDelete:
+				revocation.RevokeDelete = true
+			case ast.EntityAccessReadAll:
+				revocation.RevokeReadAll = true
+			case ast.EntityAccessWriteAll:
+				revocation.RevokeWriteAll = true
+			case ast.EntityAccessReadMembers:
+				for _, m := range right.Members {
+					revocation.RevokeReadMembers = append(revocation.RevokeReadMembers,
+						module.Name+"."+s.Entity.Name+"."+m)
+				}
+			case ast.EntityAccessWriteMembers:
+				for _, m := range right.Members {
+					revocation.RevokeWriteMembers = append(revocation.RevokeWriteMembers,
+						module.Name+"."+s.Entity.Name+"."+m)
+				}
+			}
+		}
 
-	if modified == 0 {
-		fmt.Fprintf(e.output, "No access rules found matching %s on %s.%s\n", strings.Join(roleNames, ", "), s.Entity.Module, s.Entity.Name)
+		modified, err := e.writer.RevokeEntityMemberAccess(dm.ID, s.Entity.Name, roleNames, revocation)
+		if err != nil {
+			return fmt.Errorf("failed to revoke entity access: %w", err)
+		}
+
+		if modified == 0 {
+			fmt.Fprintf(e.output, "No access rules found matching %s on %s.%s\n", strings.Join(roleNames, ", "), s.Entity.Module, s.Entity.Name)
+		} else {
+			fmt.Fprintf(e.output, "Revoked partial access on %s.%s from %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
+			if !e.quiet {
+				fmt.Fprint(e.output, e.formatAccessRuleResult(s.Entity.Module, s.Entity.Name, roleNames))
+			}
+		}
 	} else {
-		fmt.Fprintf(e.output, "Revoked access on %s.%s from %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
+		// Full revoke — remove entire access rule
+		modified, err := e.writer.RemoveEntityAccessRule(dm.ID, s.Entity.Name, roleNames)
+		if err != nil {
+			return fmt.Errorf("failed to revoke entity access: %w", err)
+		}
+
+		if modified == 0 {
+			fmt.Fprintf(e.output, "No access rules found matching %s on %s.%s\n", strings.Join(roleNames, ", "), s.Entity.Module, s.Entity.Name)
+		} else {
+			fmt.Fprintf(e.output, "Revoked access on %s.%s from %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
+			if !e.quiet {
+				fmt.Fprint(e.output, "  Result: (no access)\n")
+			}
+		}
 	}
 	e.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
