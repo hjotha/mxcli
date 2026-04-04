@@ -1240,14 +1240,14 @@ CREATE NON-PERSISTENT ENTITY RestTest.OrderItem (
 );
 /
 
-CREATE ASSOCIATION RestTest.OrderResponse_CustomerInfo
-  FROM RestTest.OrderResponse
-  TO RestTest.CustomerInfo;
+CREATE ASSOCIATION RestTest.CustomerInfo_OrderResponse
+  FROM RestTest.CustomerInfo
+  TO RestTest.OrderResponse;
 /
 
-CREATE ASSOCIATION RestTest.OrderResponse_OrderItem
-  FROM RestTest.OrderResponse
-  TO RestTest.OrderItem;
+CREATE ASSOCIATION RestTest.OrderItem_OrderResponse
+  FROM RestTest.OrderItem
+  TO RestTest.OrderResponse;
 /
 
 CREATE IMPORT MAPPING RestTest.IMM_Order
@@ -1255,11 +1255,11 @@ CREATE IMPORT MAPPING RestTest.IMM_Order
 {
   CREATE RestTest.OrderResponse {
     OrderId = orderId,
-    CREATE RestTest.OrderResponse_CustomerInfo/RestTest.CustomerInfo = customer {
+    CREATE RestTest.CustomerInfo_OrderResponse/RestTest.CustomerInfo = customer {
       Email = email,
       Name = name
     },
-    CREATE RestTest.OrderResponse_OrderItem/RestTest.OrderItem = items {
+    CREATE RestTest.OrderItem_OrderResponse/RestTest.OrderItem = items {
       Sku = sku,
       Quantity = quantity,
       Price = price
@@ -1334,11 +1334,11 @@ CREATE EXPORT MAPPING RestTest.EMM_Order
 {
   RestTest.OrderResponse {
     orderId = OrderId,
-    RestTest.OrderResponse_CustomerInfo/RestTest.CustomerInfo AS customer {
+    RestTest.CustomerInfo_OrderResponse/RestTest.CustomerInfo AS customer {
       email = Email,
       name = Name
     },
-    RestTest.OrderResponse_OrderItem/RestTest.OrderItem AS items {
+    RestTest.OrderItem_OrderResponse/RestTest.OrderItem AS items {
       price = Price,
       quantity = Quantity,
       sku = Sku
