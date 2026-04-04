@@ -301,26 +301,30 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 		var jsonPath string
 		if isRoot {
 			jsonPath = parentPath // "(Object)"
-			// Root must have empty ExposedName
 			elem.ExposedName = ""
 			if info, ok := jsElements[jsonPath]; ok {
 				elem.MaxOccurs = info.MaxOccurs
 			}
+			elem.JsonPath = jsonPath
 		} else {
-			candidatePath := parentPath + "|" + def.JsonName
-			if info, ok := jsElements[candidatePath]; ok {
+			// Look up by original JSON key, then use ExposedName for the mapping's JsonPath
+			lookupPath := parentPath + "|" + def.JsonName
+			if info, ok := jsElements[lookupPath]; ok {
 				elem.ExposedName = info.ExposedName
 				elem.MaxOccurs = info.MaxOccurs
+				jsonPath = parentPath + "|" + info.ExposedName
 				if info.ElementType == "Array" {
-					jsonPath = candidatePath + "|(Object)"
-				} else {
-					jsonPath = candidatePath
+					jsonPath = lookupPath // array keeps original path
 				}
 			} else {
-				jsonPath = candidatePath
+				jsonPath = lookupPath
+			}
+			elem.JsonPath = jsonPath
+			// Array children use the item path
+			if jsElements[lookupPath] != nil && jsElements[lookupPath].ElementType == "Array" {
+				jsonPath = lookupPath + "|(Object)"
 			}
 		}
-		elem.JsonPath = jsonPath
 
 		for _, child := range def.Children {
 			elem.Children = append(elem.Children, buildExportMappingElementModel(moduleName, child, entity, jsonPath, jsElements, reader, false))

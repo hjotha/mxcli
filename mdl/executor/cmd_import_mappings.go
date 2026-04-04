@@ -281,24 +281,24 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 		var jsonPath string
 		if isRoot {
 			jsonPath = "(Object)"
-		} else {
-			jsonPath = parentPath + "|" + def.JsonName
-		}
-		elem.JsonPath = jsonPath
-
-		// Root must have empty ExposedName; children align with JSON structure
-		if isRoot {
 			elem.ExposedName = ""
-		}
-
-		// Look up JSON structure element to align ExposedName and ElementType
-		if info, ok := jsElements[jsonPath]; ok {
-			if !isRoot {
+			elem.JsonPath = jsonPath
+		} else {
+			// Look up by original JSON key, then use ExposedName for the mapping's JsonPath
+			lookupPath := parentPath + "|" + def.JsonName
+			if info, ok := jsElements[lookupPath]; ok {
 				elem.ExposedName = info.ExposedName
+				jsonPath = parentPath + "|" + info.ExposedName
+				if info.ElementType == "Array" {
+					elem.Kind = "Array"
+					jsonPath = lookupPath // array container keeps original path
+				}
+			} else {
+				jsonPath = lookupPath
 			}
-			if info.ElementType == "Array" {
-				elem.Kind = "Array"
-				// Children of array containers use the array item path
+			elem.JsonPath = jsonPath
+			// Array children use the item path for recursion
+			if elem.Kind == "Array" {
 				jsonPath = jsonPath + "|(Object)"
 			}
 		}
@@ -319,10 +319,13 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 		elem.Attribute = attr
 
 		// Compute JsonPath and align ExposedName with JSON structure
-		jsonPath := parentPath + "|" + def.JsonName
-		elem.JsonPath = jsonPath
-		if info, ok := jsElements[jsonPath]; ok {
+		// Look up by original JSON key path, then use ExposedName for the mapping's JsonPath
+		lookupPath := parentPath + "|" + def.JsonName
+		if info, ok := jsElements[lookupPath]; ok {
 			elem.ExposedName = info.ExposedName
+			elem.JsonPath = parentPath + "|" + info.ExposedName
+		} else {
+			elem.JsonPath = lookupPath
 		}
 	}
 
