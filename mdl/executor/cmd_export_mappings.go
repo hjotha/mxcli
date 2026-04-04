@@ -301,9 +301,9 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 		var jsonPath string
 		if isRoot {
 			jsonPath = parentPath // "(Object)"
-			// Root: always empty ExposedName
-			elem.ExposedName = ""
+			// Root: align ExposedName with JSON structure root
 			if info, ok := jsElements[jsonPath]; ok {
+				elem.ExposedName = info.ExposedName
 				elem.MaxOccurs = info.MaxOccurs
 			}
 		} else {

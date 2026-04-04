@@ -232,7 +232,7 @@ func (e *Executor) execCreateImportMapping(s *ast.CreateImportMappingStmt) error
 
 	// Build element tree from the AST definition
 	if s.RootElement != nil {
-		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", e.reader, jsElements, true)
+		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", e.reader, jsElements, true)
 		im.Elements = append(im.Elements, root)
 	}
 
@@ -248,14 +248,13 @@ func (e *Executor) execCreateImportMapping(s *ast.CreateImportMappingStmt) error
 
 // buildImportMappingElementModel converts an AST element definition to a model element,
 // resolving attribute qualified names, data types, and JSON structure alignment.
-func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity string, reader *mpr.Reader, jsElements map[string]*jsonElementInfo, isRoot bool) *model.ImportMappingElement {
+func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity, parentPath string, reader *mpr.Reader, jsElements map[string]*jsonElementInfo, isRoot bool) *model.ImportMappingElement {
 	elem := &model.ImportMappingElement{
 		BaseElement: model.BaseElement{
 			ID:       model.ID(mpr.GenerateID()),
 			TypeName: "ImportMappings$ObjectMappingElement",
 		},
 		ExposedName: def.JsonName,
-		JsonPath:    def.JsonName,
 	}
 
 	if def.Entity != "" {
@@ -278,14 +277,27 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 			elem.Association = assoc
 		}
 
-		// Root element: empty ExposedName, JsonPath = "(Object)"
+		// Compute JsonPath and align ExposedName/ElementType with JSON structure
+		var jsonPath string
 		if isRoot {
-			elem.JsonPath = "(Object)"
-			elem.ExposedName = ""
+			jsonPath = "(Object)"
+		} else {
+			jsonPath = parentPath + "|" + def.JsonName
+		}
+		elem.JsonPath = jsonPath
+
+		// Look up JSON structure element to align ExposedName and ElementType
+		if info, ok := jsElements[jsonPath]; ok {
+			elem.ExposedName = info.ExposedName
+			if info.ElementType == "Array" {
+				elem.Kind = "Array"
+				// Children of array containers use the array item path
+				jsonPath = jsonPath + "|(Object)"
+			}
 		}
 
 		for _, child := range def.Children {
-			elem.Children = append(elem.Children, buildImportMappingElementModel(moduleName, child, entity, reader, jsElements, false))
+			elem.Children = append(elem.Children, buildImportMappingElementModel(moduleName, child, entity, jsonPath, reader, jsElements, false))
 		}
 	} else {
 		// Value mapping — qualify attribute name as Module.Entity.Attribute
@@ -298,6 +310,13 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 			attr = parentEntity + "." + attr
 		}
 		elem.Attribute = attr
+
+		// Compute JsonPath and align ExposedName with JSON structure
+		jsonPath := parentPath + "|" + def.JsonName
+		elem.JsonPath = jsonPath
+		if info, ok := jsElements[jsonPath]; ok {
+			elem.ExposedName = info.ExposedName
+		}
 	}
 
 	return elem

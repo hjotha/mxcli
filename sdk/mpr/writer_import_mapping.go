@@ -137,10 +137,10 @@ func serializeImportObjectElement(id string, elem *model.ImportMappingElement, p
 		"Association":                       elem.Association,
 		"Children":                          children,
 		"MinOccurs":                         int32(0),
-		"MaxOccurs":                         int32(1),
+		"MaxOccurs":                         int32(0),
 		"Nillable":                          true,
 		"IsDefaultType":                     false,
-		"ElementType":                       "Object",
+		"ElementType":                       elementTypeForKind(elem.Kind),
 		"Documentation":                     "",
 		"CustomHandlerCall":                 nil,
 	}
@@ -160,7 +160,7 @@ func serializeImportValueElement(id string, elem *model.ImportMappingElement, pa
 		"IsKey":            elem.IsKey,
 		"Type":             dataType,
 		"MinOccurs":        int32(0),
-		"MaxOccurs":        int32(1),
+		"MaxOccurs":        int32(0),
 		"Nillable":         true,
 		"IsDefaultType":    false,
 		"ElementType":      "Value",
@@ -189,6 +189,17 @@ func xmlPrimitiveTypeName(dataType string) string {
 	default:
 		return "String"
 	}
+}
+
+// elementTypeForKind maps model Kind to BSON ElementType.
+func elementTypeForKind(kind string) string {
+	if kind == "Array" {
+		return "Array"
+	}
+	if kind == "Value" {
+		return "Value"
+	}
+	return "Object"
 }
 
 func serializeImportValueDataType(typeName string) bson.D {

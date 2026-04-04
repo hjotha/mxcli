@@ -124,9 +124,6 @@ func serializeExportObjectElement(id string, elem *model.ExportMappingElement, p
 	}
 
 	maxOccurs := int32(elem.MaxOccurs)
-	if maxOccurs == 0 {
-		maxOccurs = 1
-	}
 
 	return bson.M{
 		"$ID":                               idToBsonBinary(id),
@@ -136,7 +133,7 @@ func serializeExportObjectElement(id string, elem *model.ExportMappingElement, p
 		"JsonPath":                          jsonPath,
 		"XmlPath":                           "",
 		"ObjectHandling":                    objectHandling,
-		"ObjectHandlingBackup":              objectHandling,
+		"ObjectHandlingBackup":              "Create",
 		"ObjectHandlingBackupAllowOverride": false,
 		"Association":                       elem.Association,
 		"Children":                          children,
