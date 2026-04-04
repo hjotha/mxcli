@@ -1,142 +1,462 @@
 # Contributing to mxcli
 
-Thank you for your interest in contributing to mxcli! This guide will help you get started.
+Thank you for your interest in contributing to mxcli! This document explains what we expect from contributors and how to make effective contributions.
 
-## Prerequisites
+## Table of Contents
 
-- **Go 1.26+** — the project uses pure Go with no CGO dependency
-- **bun** — used for the VS Code extension (`vscode-mdl/`); do not use npm/node
-- **Docker** — required for integration tests and running Mendix apps
-- **ANTLR4** — only needed if modifying the MDL grammar (`.g4` files)
+1. [Quick Start](#quick-start)
+2. [Contribution Workflow](#contribution-workflow)
+3. [Quality Requirements](#quality-requirements)
+4. [Testing Your Changes](#testing-your-changes)
+5. [Testing with Agentic Code (Claude Code)](#testing-with-agentic-code-claude-code)
+6. [Git Workflow](#git-workflow)
+7. [Code Standards](#code-standards)
+8. [Documentation](#documentation)
+9. [Troubleshooting](#troubleshooting)
 
-## Getting Started
+---
 
+## Quick Start
+
+### Prerequisites
+
+- Go 1.26+
+- Git
+- Make
+- (Optional) Docker or Podman 4.7+ for dev container
+- (Optional) Claude Code / Cursor for agentic development
+
+### Local Setup
+
+**Option 1: Dev Container (Recommended)**
 ```bash
-# Clone the repository
-git clone https://github.com/mendixlabs/mxcli.git
+git clone https://github.com/mendixlabs/mxcli
 cd mxcli
+# Open in VS Code, then: Command Palette -> "Reopen in Container"
+# Podman users: select the "Mendix Model SDK Go (Podman)" configuration
+```
 
-# Build
+**Option 2: Local Machine**
+```bash
+git clone https://github.com/mendixlabs/mxcli
+cd mxcli
 make build
-
-# Run tests
-make test
+./bin/mxcli --help
 ```
 
-The binary is output to `./bin/mxcli`.
-
-## Project Structure
-
-See [CLAUDE.md](CLAUDE.md) for a detailed architecture overview. Key directories:
-
-| Directory | Description |
-|-----------|-------------|
-| `cmd/mxcli/` | CLI entry point (Cobra commands) |
-| `sdk/` | Core SDK: domain model, microflows, pages, MPR reader/writer |
-| `mdl/` | MDL parser (ANTLR4 grammar, AST, visitor, executor) |
-| `api/` | High-level fluent API |
-| `sql/` | External database connectivity |
-| `vscode-mdl/` | VS Code extension for MDL language support |
-
-## Development Workflow
-
-### Building
+### Common Tasks
 
 ```bash
-make build          # Build mxcli + source_tree (syncs embedded assets automatically)
-make release        # Cross-compile for all platforms
-make vscode-ext     # Build the VS Code extension (requires bun)
+make build        # Build binary
+make test         # Run unit tests
+make test-mdl     # Run MDL integration tests
+make lint         # Run linter (fmt + vet)
+make clean        # Clean build artifacts
+make grammar      # Regenerate ANTLR parser (after modifying mdl/grammar/MDLParser.g4)
 ```
 
-### Testing
+---
+
+## Contribution Workflow
+
+**We follow a strict workflow to ensure quality and prevent duplicate work.**
+
+### Step 1: File an Issue First
+
+**Always** file an issue before starting work. This prevents wasted effort and duplicate contributions.
+
+1. Go to **Issues** -> **New Issue**
+2. Choose template: **Bug** or **Feature**
+3. Fill out **all required fields**
+4. Provide clear context and expected behavior
+5. **Submit issue** (don't start coding yet!)
+
+**Examples:**
+- Bug: "Creating entity with 200+ character name causes parser error"
+- Feature: "Add `mxcli impact` command to analyze change impact"
+
+### Step 2: Get Issue Approved
+
+The maintainer will review and respond:
+
+- **Approved**: "Let's do it!" -> Go to Step 3
+- **Needs clarification**: Respond to questions
+- **Not aligned**: "We're focusing on X instead" -> Discuss or close
+
+**Don't start coding until the issue is approved.**
+
+### Step 3: Assign Issue to Yourself
+
+Once approved:
+
+1. Click **Assignees** -> Select yourself
+2. This signals you're working on it
+3. Prevents others from duplicating your work
+4. Gives the maintainer visibility on what's in progress
+
+### Step 4: Implement in Feature Branch
+
+Create a feature branch with a descriptive name:
 
 ```bash
-make test           # Unit tests
-make test-mdl MPR=path/to/app.mpr   # MDL integration tests (requires Docker)
+git checkout -b feature/123-add-impact-command
+git checkout -b fix/456-entity-parser-unicode
+git checkout -b docs/789-add-mdl-examples
 ```
+
+**Commit messages should reference the issue:**
+
+```bash
+git commit -m "feat: add impact command for change analysis (closes #123)"
+git commit -m "fix: handle 200+ character entity names (closes #456)"
+```
+
+### Step 5: Validate Locally (Before Pushing)
+
+**This is critical.** Validate that your code works before pushing.
+
+#### 5a. Compile & Test
+
+```bash
+make build  # Must succeed
+make test   # Must pass all tests
+make lint   # Must have no issues
+```
+
+#### 5b. MDL Syntax Changes
+
+If your change adds or modifies MDL syntax:
+
+```bash
+make grammar                          # Regenerate parser
+./bin/mxcli check your-script.mdl     # Verify syntax parses
+```
+
+Add working examples in `mdl-examples/doctype-tests/` for any new syntax.
+
+#### 5c. Mendix Studio Pro Validation
+
+**Required for any change that affects Mendix project behavior** (new MDL statements, BSON serialization, entity/microflow modifications).
+
+1. Apply your changes to a test `.mpr` project
+2. Open the project in Mendix Studio Pro
+3. Verify no errors (`mx check` or Studio Pro's error list)
+4. Document the Mendix version you tested with
+
+**Example validation:**
+```
+Tested: Created entity with FOLDER clause via MDL
+Mendix version: 11.8.0
+Result: mx check passes, entity appears in correct folder in Studio Pro
+```
+
+### Step 6: Create Pull Request
+
+```bash
+git push origin feature/123-add-impact-command
+```
+
+In your PR description:
+
+1. **Link issue**: "Closes #123"
+2. **What does it do?**: Brief description
+3. **Testing**: Confirm `make test` and `make lint` pass
+4. **Mendix validation**: Document what you tested and which version
+5. **Agentic testing**: Confirm Claude Code can use the feature (see below)
+
+### Step 7: CI Validates PR
+
+GitHub Actions automatically verify:
+
+- Code compiles
+- Tests pass
+- Integration tests pass (with `mx check` against real Mendix runtime)
+
+**If any check fails**: Fix locally and push again.
+
+### Step 8: Maintainer Review
+
+The maintainer will:
+
+1. Review code quality and architecture
+2. Verify documentation completeness
+3. Check Mendix Studio Pro validation claim
+4. Verify the PR checklist in CLAUDE.md is satisfied
+
+Once approved, the PR is merged.
+
+---
+
+## Quality Requirements
+
+### PR Checklist
+
+Every PR is checked against the review checklist in `CLAUDE.md`. Key items:
+
+| Area | Requirements |
+|------|-------------|
+| **Full-stack MDL** | Grammar, parser regenerated, AST, visitor, executor, DESCRIBE roundtrip |
+| **Test coverage** | MDL examples in `mdl-examples/doctype-tests/`, integration paths tested |
+| **Version compat** | Version-gated features have registry entry and executor pre-check |
+| **Security** | Restrictive socket permissions, no file I/O in hot paths |
+| **Scope** | One concern per PR, refactors in separate commits |
+| **Documentation** | Skills, CLI help text, syntax reference, site docs updated |
 
 ### Code Quality
 
 ```bash
-make fmt            # Format code
-make vet            # Run go vet
+make build    # Code compiles (CGO_ENABLED=0, no C compiler needed)
+make test     # All tests pass
+make lint     # go fmt + go vet pass
 ```
 
-### Grammar Changes
+---
 
-If you modify `mdl/grammar/MDLLexer.g4` or `mdl/grammar/MDLParser.g4`:
+## Testing Your Changes
 
+### Unit Tests
+
+Test files are `*_test.go` in the same package. This project uses the standard `testing` package:
+
+```go
+func TestCreateEntityWithLongName(t *testing.T) {
+    reader, err := modelsdk.Open("testdata/test.mpr")
+    if err != nil {
+        t.Fatalf("failed to open project: %v", err)
+    }
+    defer reader.Close()
+
+    entities, err := reader.ListEntities()
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+    if len(entities) == 0 {
+        t.Fatal("expected at least one entity")
+    }
+}
+```
+
+### MDL Integration Tests
+
+For new MDL commands, add test scripts in `mdl-examples/doctype-tests/`:
+
+```sql
+-- Create a module for testing
+CREATE MODULE TestFeature;
+
+-- Test the new feature
+CREATE JSON STRUCTURE TestFeature.MyStructure
+  FOLDER 'Resources'
+  SNIPPET '{"id": 1, "name": "test"}';
+
+-- Verify it exists
+DESCRIBE JSON STRUCTURE TestFeature.MyStructure;
+
+-- Clean up
+DROP JSON STRUCTURE TestFeature.MyStructure;
+```
+
+Validate with:
 ```bash
-make grammar        # Regenerate the ANTLR4 parser
+./bin/mxcli check mdl-examples/doctype-tests/your-test.mdl
 ```
 
-See `docs/03-development/MDL_PARSER_ARCHITECTURE.md` for parser design details.
+### Roundtrip Tests
 
-### VS Code Extension
+The CI runs `TestMxCheck_DoctypeScripts` which executes each MDL script against a real Mendix project and validates with `mx check`. Your test script must produce zero errors.
 
-The extension lives in `vscode-mdl/` and uses **bun** (not npm):
+---
 
-```bash
-cd vscode-mdl
-bun install
-bun run compile
+## Testing with Agentic Code (Claude Code)
+
+**mxcli is designed for AI agents to use.** Your contribution must work well with them.
+
+### Why This Matters
+
+mxcli's primary value is that AI agents (Claude Code, Cursor, etc.) can generate correct MDL scripts. If an agent can't understand or use your feature, the feature needs more work.
+
+### How to Test
+
+1. **Open the dev container** with Claude Code installed
+2. **Ask Claude Code to use your feature** without giving it the exact syntax:
+   ```
+   I want to create a JSON structure for a customer API response
+   with name, email, and an addresses array. Can you write the MDL?
+   ```
+3. **Evaluate the result:**
+   - Did Claude generate correct MDL syntax?
+   - Did it find the right skill/documentation?
+   - Did the generated script pass `mxcli check`?
+
+### What to Fix If Claude Struggles
+
+| Problem | Fix |
+|---------|-----|
+| Claude doesn't know the syntax exists | Add/update skill in `.claude/skills/` |
+| Claude generates wrong syntax | Improve examples in skill files |
+| Claude uses outdated patterns | Update CLI help text (`Short`/`Long`/`Example` in Cobra) |
+| Error messages are unhelpful | Improve error text with hints |
+
+### PR Section
+
+Include in your PR:
+
+```markdown
+## Agentic Code Testing
+
+- [ ] Tested with Claude Code in dev container
+- [ ] Claude can generate correct MDL for this feature
+- [ ] Skills updated (if applicable)
+- [ ] Error messages are helpful for debugging
 ```
 
-Or use the Makefile:
+---
 
-```bash
-make vscode-ext       # Build .vsix package
-make vscode-install   # Build and install into VS Code
+## Git Workflow
+
+### Branch Naming
+
+```
+feature/123-add-impact-command
+fix/456-handle-unicode-names
+docs/789-add-mdl-examples
+refactor/101-simplify-catalog
 ```
 
-## Code Style
+### Commit Messages
 
-- Follow standard Go conventions (`go fmt`, `go vet`)
+Use conventional commits:
+
+```
+feat: add impact command for change analysis (closes #123)
+fix: handle unicode characters in entity names (closes #456)
+docs: add examples for CREATE WORKFLOW (closes #789)
+refactor: simplify executor dispatch logic
+```
+
+### Scope
+
+- Each commit does **one thing** (feature, bugfix, or refactor)
+- Each PR is scoped to a **single feature or concern**
+- Independent features go in separate PRs even if developed together
+- Refactors that touch many files get their own commit
+
+---
+
+## Code Standards
+
+### Go Conventions
+
+- Follow `go fmt` and `go vet`
 - Use descriptive names matching Mendix terminology
-- Add `// SPDX-License-Identifier: Apache-2.0` as the first line of every new source file
 - Keep BSON/JSON tags consistent with Mendix serialization format
 - Export types that should be part of the public API
+- Handle all errors (no `_` for error returns)
 
-## Key Conventions
+### Project Structure
+
+| Directory | Purpose |
+|-----------|---------|
+| `cmd/mxcli/` | CLI commands (Cobra) |
+| `sdk/mpr/` | MPR file reading/writing, BSON parsing |
+| `sdk/microflows/`, `sdk/pages/`, etc. | Domain types |
+| `mdl/grammar/` | ANTLR4 grammar (`MDLParser.g4`, `MDLLexer.g4`) |
+| `mdl/ast/` | AST node types |
+| `mdl/visitor/` | ANTLR listener -> AST |
+| `mdl/executor/` | AST execution against modelsdk |
+| `mdl/catalog/` | SQLite catalog for project metadata queries |
+| `api/` | High-level fluent API |
+| `.claude/skills/` | AI agent skill documentation |
+| `docs-site/src/` | Documentation site pages |
 
 ### BSON Storage Names
 
-Mendix uses different "storage names" in BSON `$Type` fields than the "qualified names" in SDK documentation. Always verify storage names against:
-1. Existing MPR files
-2. Reflection data in `reference/mendixmodellib/reflection-data/`
-3. Parser cases in `sdk/mpr/parser_microflow.go`
+**Critical**: Mendix uses different storage names in BSON `$Type` fields than the qualified names in SDK documentation. Always verify against `reference/mendixmodellib/reflection-data/` or existing MPR files. See the table in `CLAUDE.md` for common mismatches.
 
-See the table in [CLAUDE.md](CLAUDE.md) for common mappings.
+---
 
-### Pluggable Widget Templates
+## Documentation
 
-Templates in `sdk/widgets/templates/` must include both `type` (PropertyTypes schema) and `object` (default WidgetObject) fields. Always extract from Studio Pro, not generated programmatically.
+### What Needs Documentation
 
-### MDL Scripts
+| Change | Where to Document |
+|--------|-------------------|
+| New CLI command | Cobra `Short`/`Long`/`Example` fields |
+| New MDL statement | `docs/01-project/MDL_QUICK_REFERENCE.md`, skill in `.claude/skills/` |
+| New SDK function | Godoc comments, `docs/GO_LIBRARY.md` |
+| New site-facing feature | `docs-site/src/` pages |
+| Changelog-worthy change | `CHANGELOG.md` (unreleased section) |
 
-Before writing MDL scripts, read the relevant skill files in `.claude/skills/mendix/` for syntax reference and common pitfalls. Validate with:
+### Changelog Entry
 
-```bash
-./bin/mxcli check script.mdl                          # Syntax check
-./bin/mxcli check script.mdl -p app.mpr --references  # With reference validation
+Update `CHANGELOG.md`:
+
+```markdown
+## [Unreleased]
+
+### Added
+- `DESCRIBE NANOFLOW` with activities and control flows (#42)
+- FOLDER support for CREATE JSON STRUCTURE (#38)
+
+### Fixed
+- Nanoflow parser now reads activities and return type from BSON (#43)
 ```
 
-## Submitting Changes
+---
 
-1. Create a feature branch from `main`
-2. Make your changes, ensuring tests pass (`make test`)
-3. Add tests for new functionality
-4. Verify the build succeeds (`make build`)
-5. Submit a pull request with a clear description of the changes
+## Troubleshooting
 
-## Reporting Issues
+### "Tests fail locally"
 
-Please report bugs and feature requests via the project's issue tracker. Include:
-- Steps to reproduce
-- Expected vs actual behavior
-- Mendix version (if relevant)
-- Output of `mxcli --version`
+```bash
+make build        # Ensure binary is up to date
+make test         # Run tests, read error output
+make lint         # Check formatting and vet
+```
 
-## License
+### "Parser changes don't take effect"
 
-By contributing, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
+```bash
+make grammar      # Regenerate ANTLR parser after .g4 changes
+make build        # Rebuild with new parser
+```
+
+### "mx check fails in CI but not locally"
+
+The CI uses a specific Mendix version (check `.github/workflows/`). Ensure your BSON serialization matches what that version expects. See `.claude/skills/debug-bson.md` for the debugging workflow.
+
+### "How do I test with Claude Code?"
+
+1. Open the project in VS Code -> Reopen in Container
+2. Claude Code is auto-installed in the dev container
+3. Ask it to use your feature and verify the output
+
+### "GitHub Actions failed"
+
+1. Go to **Actions** tab -> click the failing run
+2. Expand the failing job and read the error
+3. Fix locally with `make test` / `make lint` / `make build`
+4. Push again
+
+---
+
+## Getting Help
+
+- **Question about workflow?** Ask in the issue
+- **Stuck on implementation?** Comment in the PR
+- **Design discussion?** Create an issue with a proposal
+- **Need feedback on approach?** Comment on the issue before coding
+
+---
+
+## Summary
+
+| Stage | What's Expected |
+|-------|----------------|
+| **Before coding** | File issue, get approval, assign to yourself |
+| **While coding** | Follow architecture, write tests, follow style |
+| **Before pushing** | `make build` + `make test` + `make lint` pass |
+| **In the PR** | Mendix Studio Pro validation, Claude Code testing documented |
+| **Review** | Documentation complete, PR checklist satisfied |
+
+Thank you for contributing!
