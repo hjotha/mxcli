@@ -141,8 +141,9 @@ func serializeExportObjectElement(id string, elem *model.ExportMappingElement, p
 		"MaxOccurs":                         maxOccurs,
 		"Nillable":                          true,
 		"IsDefaultType":                     false,
-		"ElementType":                       "Object",
+		"ElementType":                       elementTypeForKind(elem.Kind),
 		"Documentation":                     "",
+		"CustomHandlerCall":                 nil,
 	}
 }
 

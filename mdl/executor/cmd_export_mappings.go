@@ -301,27 +301,26 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 		var jsonPath string
 		if isRoot {
 			jsonPath = parentPath // "(Object)"
-			elem.ExposedName = ""
+			elem.ExposedName = "Root" // default; overridden from JSON structure below
 			if info, ok := jsElements[jsonPath]; ok {
+				elem.ExposedName = info.ExposedName
 				elem.MaxOccurs = info.MaxOccurs
 			}
 			elem.JsonPath = jsonPath
 		} else {
 			// Look up by original JSON key, then use ExposedName for the mapping's JsonPath
 			lookupPath := parentPath + "|" + def.JsonName
+			jsonPath = lookupPath // export JsonPath always uses original JSON key
 			if info, ok := jsElements[lookupPath]; ok {
 				elem.ExposedName = info.ExposedName
 				elem.MaxOccurs = info.MaxOccurs
-				jsonPath = parentPath + "|" + info.ExposedName
 				if info.ElementType == "Array" {
-					jsonPath = lookupPath // array keeps original path
+					elem.Kind = "Array"
 				}
-			} else {
-				jsonPath = lookupPath
 			}
 			elem.JsonPath = jsonPath
-			// Array children use the item path
-			if jsElements[lookupPath] != nil && jsElements[lookupPath].ElementType == "Array" {
+			// Array children use the item path for recursion
+			if elem.Kind == "Array" {
 				jsonPath = lookupPath + "|(Object)"
 			}
 		}

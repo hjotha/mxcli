@@ -281,7 +281,10 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 		var jsonPath string
 		if isRoot {
 			jsonPath = "(Object)"
-			elem.ExposedName = ""
+			elem.ExposedName = "Root" // default; overridden from JSON structure below
+			if info, ok := jsElements["(Object)"]; ok {
+				elem.ExposedName = info.ExposedName
+			}
 			elem.JsonPath = jsonPath
 		} else {
 			// Look up by original JSON key, then use ExposedName for the mapping's JsonPath
