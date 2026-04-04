@@ -872,8 +872,10 @@ type ExportMappingElement struct {
 	// "Object" or "Value"
 	Kind string `json:"kind"`
 	// Object mapping fields
-	Entity      string `json:"entity,omitempty"`      // qualified entity name
-	Association string `json:"association,omitempty"` // qualified association name (VIA clause)
+	Entity         string `json:"entity,omitempty"`         // qualified entity name
+	Association    string `json:"association,omitempty"`     // qualified association name
+	ObjectHandling string `json:"objectHandling,omitempty"` // "Parameter" for root, "Find" for children
+	MaxOccurs      int    `json:"maxOccurs,omitempty"`      // 1 for Object, -1 for Array; 0 = default (1)
 	// Value mapping fields
 	Attribute string `json:"attribute,omitempty"` // qualified attribute name (Module.Entity.Attr)
 	DataType  string `json:"dataType,omitempty"`  // "String", "Integer", "Boolean", etc.

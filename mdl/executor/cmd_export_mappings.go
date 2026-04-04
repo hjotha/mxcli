@@ -213,21 +213,17 @@ func (e *Executor) execCreateExportMapping(s *ast.CreateExportMappingStmt) error
 		em.XmlSchema = s.SchemaRef.String()
 	}
 
-	// Build a path→ElementType map from the JSON structure so we can compute correct JsonPaths.
-	// Array elements in the JSON structure require |(Object) appended to the entity's JsonPath.
-	jsPathTypes := map[string]string{}
+	// Build a path→element info map from the JSON structure for schema alignment.
+	jsElements := map[string]*jsonElementInfo{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
 		if js, err2 := e.reader.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
-			buildJsonPathTypeMap(js.Elements, jsPathTypes)
+			buildJsonPathElementMap(js.Elements, jsElements)
 		}
 	}
 
 	// Build element tree from the AST definition
 	if s.RootElement != nil {
-		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsPathTypes, e.reader)
-		// Root element must have empty ExposedName and JsonPath = "(Object)"
-		root.ExposedName = ""
-		root.JsonPath = "(Object)"
+		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsElements, e.reader, true)
 		em.Elements = append(em.Elements, root)
 	}
 
@@ -241,23 +237,35 @@ func (e *Executor) execCreateExportMapping(s *ast.CreateExportMappingStmt) error
 	return nil
 }
 
-// buildJsonPathTypeMap recursively walks a JSON structure element tree and populates
-// a map of JSON path → ElementType ("Object", "Array", "Value").
-func buildJsonPathTypeMap(elems []*mpr.JsonElement, m map[string]string) {
+// jsonElementInfo holds metadata about a JSON structure element for mapping alignment.
+type jsonElementInfo struct {
+	ElementType string // "Object", "Array", "Value"
+	ExposedName string
+	MaxOccurs   int // 1 for Object, -1 for Array (unbounded)
+}
+
+// buildJsonPathElementMap recursively walks a JSON structure element tree and populates
+// a map of JSON path → element info.
+func buildJsonPathElementMap(elems []*mpr.JsonElement, m map[string]*jsonElementInfo) {
 	for _, e := range elems {
 		if e == nil {
 			continue
 		}
-		m[e.Path] = e.ElementType
-		buildJsonPathTypeMap(e.Children, m)
+		m[e.Path] = &jsonElementInfo{
+			ElementType: e.ElementType,
+			ExposedName: e.ExposedName,
+			MaxOccurs:   e.MaxOccurs,
+		}
+		buildJsonPathElementMap(e.Children, m)
 	}
 }
 
 // buildExportMappingElementModel converts an AST element definition to a model element.
 // parentEntity is the fully-qualified entity name of the enclosing object element (for
 // qualifying attribute names). parentPath is the JSON path of the parent element.
-// jsPathTypes maps JSON structure paths to their ElementType ("Array"/"Object"/"Value").
-func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingElementDef, parentEntity, parentPath string, jsPathTypes map[string]string, reader *mpr.Reader) *model.ExportMappingElement {
+// jsElements maps JSON structure paths to their element info.
+// isRoot indicates whether this is the root element (gets ObjectHandling "Parameter").
+func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingElementDef, parentEntity, parentPath string, jsElements map[string]*jsonElementInfo, reader *mpr.Reader, isRoot bool) *model.ExportMappingElement {
 	elem := &model.ExportMappingElement{
 		BaseElement: model.BaseElement{
 			ID:       model.ID(mpr.GenerateID()),
@@ -282,17 +290,32 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 			elem.Association = assoc
 		}
 
-		// Compute JsonPath using the JSON structure type map.
-		// Root entity (parentPath == "(Object)" and no association): maps to "(Object)".
-		// Other entities: look up parentPath+"|"+ExposedName; if Array → append "|(Object)".
+		// Set ObjectHandling: root = "Parameter", children = "Find"
+		if isRoot {
+			elem.ObjectHandling = "Parameter"
+		} else {
+			elem.ObjectHandling = "Find"
+		}
+
+		// Compute JsonPath and align with JSON structure metadata
 		var jsonPath string
-		if elem.Association == "" {
-			// Root entity — always maps to the JSON structure root
+		if isRoot {
 			jsonPath = parentPath // "(Object)"
+			// Root: align ExposedName with JSON structure root
+			if info, ok := jsElements[jsonPath]; ok {
+				elem.ExposedName = info.ExposedName
+				elem.MaxOccurs = info.MaxOccurs
+			}
 		} else {
 			candidatePath := parentPath + "|" + def.JsonName
-			if jsPathTypes[candidatePath] == "Array" {
-				jsonPath = candidatePath + "|(Object)"
+			if info, ok := jsElements[candidatePath]; ok {
+				elem.ExposedName = info.ExposedName
+				elem.MaxOccurs = info.MaxOccurs
+				if info.ElementType == "Array" {
+					jsonPath = candidatePath + "|(Object)"
+				} else {
+					jsonPath = candidatePath
+				}
 			} else {
 				jsonPath = candidatePath
 			}
@@ -300,7 +323,7 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 		elem.JsonPath = jsonPath
 
 		for _, child := range def.Children {
-			elem.Children = append(elem.Children, buildExportMappingElementModel(moduleName, child, entity, jsonPath, jsPathTypes, reader))
+			elem.Children = append(elem.Children, buildExportMappingElementModel(moduleName, child, entity, jsonPath, jsElements, reader, false))
 		}
 	} else {
 		// Value mapping — qualify attribute name as Module.Entity.Attribute

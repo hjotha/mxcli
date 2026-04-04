@@ -118,6 +118,16 @@ func serializeExportObjectElement(id string, elem *model.ExportMappingElement, p
 	// The generated metamodel (ExportMappingsExportObjectMappingElement) is misleading — Studio Pro will throw
 	// TypeCacheUnknownTypeException if you use "ExportMappings$ExportObjectMappingElement".
 	// Same convention as ImportMappings: element types do NOT repeat the namespace prefix.
+	objectHandling := elem.ObjectHandling
+	if objectHandling == "" {
+		objectHandling = "Parameter"
+	}
+
+	maxOccurs := int32(elem.MaxOccurs)
+	if maxOccurs == 0 {
+		maxOccurs = 1
+	}
+
 	return bson.M{
 		"$ID":                               idToBsonBinary(id),
 		"$Type":                             "ExportMappings$ObjectMappingElement",
@@ -125,13 +135,13 @@ func serializeExportObjectElement(id string, elem *model.ExportMappingElement, p
 		"ExposedName":                       elem.ExposedName,
 		"JsonPath":                          jsonPath,
 		"XmlPath":                           "",
-		"ObjectHandling":                    "Parameter",
-		"ObjectHandlingBackup":              "Parameter",
+		"ObjectHandling":                    objectHandling,
+		"ObjectHandlingBackup":              objectHandling,
 		"ObjectHandlingBackupAllowOverride": false,
 		"Association":                       elem.Association,
 		"Children":                          children,
 		"MinOccurs":                         int32(0),
-		"MaxOccurs":                         int32(1),
+		"MaxOccurs":                         maxOccurs,
 		"Nillable":                          true,
 		"IsDefaultType":                     false,
 		"ElementType":                       "Object",

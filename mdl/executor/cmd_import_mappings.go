@@ -222,12 +222,17 @@ func (e *Executor) execCreateImportMapping(s *ast.CreateImportMappingStmt) error
 		im.XmlSchema = s.SchemaRef.String()
 	}
 
+	// Build path→element info map from JSON structure for schema alignment
+	jsElements := map[string]*jsonElementInfo{}
+	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
+		if js, err2 := e.reader.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
+			buildJsonPathElementMap(js.Elements, jsElements)
+		}
+	}
+
 	// Build element tree from the AST definition
 	if s.RootElement != nil {
-		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", e.reader)
-		// Root element must have empty ExposedName and JsonPath = "(Object)"
-		root.ExposedName = ""
-		root.JsonPath = "(Object)"
+		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", e.reader, jsElements, true)
 		im.Elements = append(im.Elements, root)
 	}
 
@@ -242,10 +247,8 @@ func (e *Executor) execCreateImportMapping(s *ast.CreateImportMappingStmt) error
 }
 
 // buildImportMappingElementModel converts an AST element definition to a model element,
-// resolving attribute qualified names and data types using the module context.
-// parentEntity is the fully-qualified entity name of the enclosing object element (used to
-// qualify attribute names for value elements).
-func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity string, reader *mpr.Reader) *model.ImportMappingElement {
+// resolving attribute qualified names, data types, and JSON structure alignment.
+func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity string, reader *mpr.Reader, jsElements map[string]*jsonElementInfo, isRoot bool) *model.ImportMappingElement {
 	elem := &model.ImportMappingElement{
 		BaseElement: model.BaseElement{
 			ID:       model.ID(mpr.GenerateID()),
@@ -274,8 +277,18 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 			}
 			elem.Association = assoc
 		}
+
+		// Align with JSON structure: set ExposedName and JsonPath from schema
+		if isRoot {
+			elem.JsonPath = "(Object)"
+			elem.ExposedName = ""
+			if info, ok := jsElements["(Object)"]; ok {
+				elem.ExposedName = info.ExposedName
+			}
+		}
+
 		for _, child := range def.Children {
-			elem.Children = append(elem.Children, buildImportMappingElementModel(moduleName, child, entity, reader))
+			elem.Children = append(elem.Children, buildImportMappingElementModel(moduleName, child, entity, reader, jsElements, false))
 		}
 	} else {
 		// Value mapping — qualify attribute name as Module.Entity.Attribute
