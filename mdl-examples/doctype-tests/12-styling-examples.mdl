@@ -49,7 +49,8 @@ FROM StyleTest.Task TO StyleTest.Employee
 TYPE Reference
 OWNER Both;
 
--- MARK: Class
+-- @version: 11.0+
+-- MARK: Class — pages with Params require Mendix 11.0+
 
 -- ============================================================================
 -- LEVEL 1: CSS Classes (Class property)

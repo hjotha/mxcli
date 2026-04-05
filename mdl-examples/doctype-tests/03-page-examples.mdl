@@ -2318,18 +2318,21 @@ CREATE MODULE PgTest2;
 -- Move a page to a different folder within the same module
 MOVE PAGE PgTest.P001_Empty_Page TO FOLDER 'Pages/Archive';
 
--- Move a microflow to a subfolder
+-- @version: 11.0+
+-- Move a microflow to a subfolder (ProcessProducts created under 11.0+ gate)
 MOVE MICROFLOW PgTest.ProcessProducts TO FOLDER 'MasterDetail/Actions';
 
--- Move a snippet to a nested folder
+-- Move snippets to a nested folder (DashboardHeader/Footer created under 11.0+ gate)
 MOVE SNIPPET PgTest.DashboardHeader TO FOLDER 'Snippets/Dashboard';
 MOVE SNIPPET PgTest.DashboardFooter TO FOLDER 'Snippets/Dashboard';
 
--- Move a page to another module (root of that module)
+-- Move a page to another module (P034 uses page params, 11.0+ only)
 MOVE PAGE PgTest.P034_ComboBox_Enum TO PgTest2;
 
 -- Move a page to a folder in another module
 MOVE PAGE PgTest2.P034_ComboBox_Enum TO FOLDER 'Imported' IN PgTest2;
+
+-- @version: any
 
 -- Move a snippet to another module
 MOVE SNIPPET PgTest.QuickActions TO PgTest2;

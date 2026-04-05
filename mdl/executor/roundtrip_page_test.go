@@ -263,6 +263,7 @@ func TestRoundtripPage_V3DataGridWithFilter(t *testing.T) {
 func TestRoundtripPage_V3DataGridWithControlBar(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
+	env.requireMinVersion(t, 11, 0) // CREATE PAGE with parameters requires 11.0+
 
 	// Create entity
 	entityName := testModule + ".V3GridControlEntity"
@@ -491,6 +492,7 @@ func TestRoundtripPage_V3DataGridComplexFilter(t *testing.T) {
 func TestRoundtripPage_MicroflowButtonWithParams(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
+	env.requireMinVersion(t, 11, 0) // CREATE PAGE with parameters requires 11.0+
 
 	// First create an entity to use as the page parameter and microflow parameter
 	entityName := testModule + ".MfButtonEntity"
@@ -639,6 +641,7 @@ func TestRoundtripPage_MicroflowButtonWithCurrentObject(t *testing.T) {
 func TestRoundtripPage_DataViewAttributeShortNames(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
+	env.requireMinVersion(t, 11, 0) // CREATE PAGE with parameters requires 11.0+
 
 	entityName := testModule + ".AttrShortNameEntity"
 	env.registerCleanup("entity", entityName)
