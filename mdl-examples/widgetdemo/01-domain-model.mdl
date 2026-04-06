@@ -1,6 +1,9 @@
 -- WidgetDemo: self-contained domain model (no external dependencies)
 -- Provides entities and enumerations for the widget showcase page.
 
+CREATE MODULE WidgetDemo;
+CREATE MODULE ROLE WidgetDemo.User;
+
 CREATE ENUMERATION WidgetDemo.ENUM_Priority (
   LOW 'Low',
   MEDIUM 'Medium',

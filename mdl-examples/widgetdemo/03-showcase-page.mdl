@@ -104,7 +104,7 @@ CREATE OR REPLACE PAGE WidgetDemo.WidgetDemo_Showcase (
         ) {
           FILTER flt1 {
             TEXTFILTER tfTitle (Attributes: [Title, Code])
-            DROPDOWNFILTER dfCat
+            DROPDOWNFILTER dfCat (Attributes: [Category])
             NUMBERFILTER nfAmt (Attributes: [Amount])
             DATEFILTER dtfDate (Attributes: [DateCreated])
             PLUGGABLEWIDGET 'com.mendix.widget.web.dropdownsort.DropdownSort' ddSort1
@@ -425,7 +425,9 @@ CREATE OR REPLACE PAGE WidgetDemo.WidgetDemo_Showcase (
     -- 8f: Language + Accessibility
     ROW rowS8f {
       COLUMN cS8f1 (DesktopWidth: 6) {
-        PLUGGABLEWIDGET 'com.mendix.widget.web.languageselector.LanguageSelector' langSel1
+        -- LanguageSelector requires runtime data source and caption — omitted (needs running app)
+        -- PLUGGABLEWIDGET 'com.mendix.widget.web.languageselector.LanguageSelector' langSel1
+        DYNAMICTEXT langPlaceholder (Content: '[LanguageSelector — requires runtime config]', RenderMode: Paragraph)
       }
       COLUMN cS8f2 (DesktopWidth: 6) {
         PLUGGABLEWIDGET 'com.mendix.widget.web.accessibilityhelper.AccessibilityHelper' accHelper1 (targetSelector: '.mx-name-accHelper1') {

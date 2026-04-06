@@ -96,3 +96,6 @@ END;
 /
 
 GRANT EXECUTE ON MICROFLOW WidgetDemo.SeedAndShowShowcase TO WidgetDemo.User;
+
+ALTER USER ROLE Administrator ADD MODULE ROLES (WidgetDemo.User);
+ALTER USER ROLE User ADD MODULE ROLES (WidgetDemo.User);
