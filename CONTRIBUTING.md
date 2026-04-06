@@ -373,6 +373,10 @@ refactor: simplify executor dispatch logic
 
 **Critical**: Mendix uses different storage names in BSON `$Type` fields than the qualified names in SDK documentation. Always verify against `reference/mendixmodellib/reflection-data/` or existing MPR files. See the table in `CLAUDE.md` for common mismatches.
 
+### BSON Tooling
+
+When adding or debugging a new Mendix document type, see the [BSON Tooling Guide](docs/03-development/BSON_TOOLING_GUIDE.md) for which tool to use at each stage (`bson dump`, `bson compare`, `bson discover`, TUI, Python scripts, `mx check`).
+
 ---
 
 ## Documentation

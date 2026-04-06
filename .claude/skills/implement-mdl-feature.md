@@ -86,10 +86,10 @@ First, create or find an example of the feature in Mendix Studio Pro:
 
 ### Step 3: Dump Raw BSON
 
-Use the debug tool to dump the raw BSON structure:
+Use `mxcli bson dump` to inspect the raw BSON structure (see [BSON Tooling Guide](../../docs/03-development/BSON_TOOLING_GUIDE.md) for the full tool reference):
 
 ```bash
-go run ./cmd/debug/main.go mx-test-projects/test2-go-app/test2-go.mpr <document-id>
+mxcli bson dump -p mx-test-projects/test2-go-app/test2-go.mpr --type microflow --object "RestTemplate.GetWebpage"
 ```
 
 Example output (abbreviated):
@@ -573,7 +573,8 @@ Before considering the implementation complete:
 | Debug | `cmd/debug/main.go` | Raw BSON dump tool |
 | Examples | `mdl-examples/doctype-tests/` | MDL examples |
 
-## Related Skills
+## Related Documentation
 
-- [BSON Serialization Debugging](./debug-bson.md) - Fixing BSON serialization issues
+- [BSON Tooling Guide](../../docs/03-development/BSON_TOOLING_GUIDE.md) - Which BSON tool to use when (dump, compare, discover, TUI, Python)
+- [Debug BSON](./debug-bson.md) - Fixing BSON serialization issues (CE errors, widget templates)
 - [Write Microflows](./write-microflows.md) - MDL microflow syntax reference

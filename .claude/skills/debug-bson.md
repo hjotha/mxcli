@@ -230,6 +230,7 @@ for t, props in crash_props.items():
 
 ## Related Documentation
 
+- [BSON Tooling Guide](../../docs/03-development/BSON_TOOLING_GUIDE.md) — Which BSON tool to use when (dump, compare, discover, TUI, Python)
 - [PAGE_BSON_SERIALIZATION.md](../../docs/03-development/PAGE_BSON_SERIALIZATION.md) — Full BSON format reference and CE0463 analysis
 - [sdk/widgets/templates/README.md](../../sdk/widgets/templates/README.md) — Template extraction requirements
 - [implement-mdl-feature.md](./implement-mdl-feature.md) — Full feature implementation workflow
