@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -914,9 +915,11 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 	// Deep-clone so we don't mutate the cached template
 	clone, err := deepCloneTemplate(tmpl)
 	if err != nil {
+		log.Printf("warning: failed to clone template for %s: %v", widgetID, err)
 		return tmpl
 	}
 	if err := AugmentTemplate(clone, def); err != nil {
+		log.Printf("warning: failed to augment template for %s from MPK: %v", widgetID, err)
 		return tmpl
 	}
 

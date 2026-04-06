@@ -27,7 +27,7 @@ endif
 
 generate: check-antlr $(LEXER) $(PARSER)
 	@mkdir -p $(OUTPUT_DIR)
-	$(ANTLR4) -Dlanguage=Go -package $(PACKAGE) -o $(OUTPUT_DIR) $(LEXER) $(PARSER)
+	$(ANTLR4) -Dlanguage=Go -no-visitor -package $(PACKAGE) -o $(OUTPUT_DIR) $(LEXER) $(PARSER)
 	@echo "Generated Go parser in $(OUTPUT_DIR)/"
 
 clean:

@@ -5,6 +5,7 @@ package executor
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -338,10 +339,12 @@ func opAttributeObjects(obj bson.D, propTypeIDs map[string]pages.PropertyTypeIDE
 		objects = append(objects, int32(2)) // BSON array version marker
 
 		for _, attrPath := range ctx.AttributePaths {
-			attrObj, _ := ctx.pageBuilder.createAttributeObject(attrPath, entry.ObjectTypeID, nestedEntry.PropertyTypeID, nestedEntry.ValueTypeID)
-			if attrObj != nil {
-				objects = append(objects, attrObj)
+			attrObj, err := ctx.pageBuilder.createAttributeObject(attrPath, entry.ObjectTypeID, nestedEntry.PropertyTypeID, nestedEntry.ValueTypeID)
+			if err != nil {
+				log.Printf("warning: skipping attribute %s: %v", attrPath, err)
+				continue
 			}
+			objects = append(objects, attrObj)
 		}
 
 		result := make(bson.D, 0, len(val))
