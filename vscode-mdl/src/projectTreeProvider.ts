@@ -261,6 +261,20 @@ export class MendixProjectTreeProvider implements vscode.TreeDataProvider<Mendix
 				return new vscode.ThemeIcon('file-media');
 			case 'businesseventservice':
 				return new vscode.ThemeIcon('broadcast');
+			case 'jsonstructure':
+				return new vscode.ThemeIcon('json');
+			case 'importmapping':
+				return new vscode.ThemeIcon('arrow-down');
+			case 'exportmapping':
+				return new vscode.ThemeIcon('arrow-up');
+			case 'restclient':
+				return new vscode.ThemeIcon('cloud-download');
+			case 'settings':
+				return new vscode.ThemeIcon('gear');
+			case 'settingscategory':
+				return new vscode.ThemeIcon('folder-library');
+			case 'settingsitem':
+				return new vscode.ThemeIcon('symbol-property');
 			case 'databaseconnection':
 				return new vscode.ThemeIcon('plug');
 			case 'publishedrestservice':

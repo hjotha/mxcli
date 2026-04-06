@@ -331,6 +331,65 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		md.documents = append(md.documents, treeElement{Name: bes.Name, ContainerID: bes.ContainerID, Type: "businesseventservice", Children: children})
 	}
 
+	// Collect JSON structures
+	jss, _ := reader.ListJsonStructures()
+	for _, js := range jss {
+		modID := h.FindModuleID(js.ContainerID)
+		md, ok := modData[modID]
+		if !ok {
+			continue
+		}
+		md.documents = append(md.documents, treeElement{Name: js.Name, ContainerID: js.ContainerID, Type: "jsonstructure"})
+	}
+
+	// Collect import mappings
+	ims, _ := reader.ListImportMappings()
+	for _, im := range ims {
+		modID := h.FindModuleID(im.ContainerID)
+		md, ok := modData[modID]
+		if !ok {
+			continue
+		}
+		md.documents = append(md.documents, treeElement{Name: im.Name, ContainerID: im.ContainerID, Type: "importmapping"})
+	}
+
+	// Collect export mappings
+	ems, _ := reader.ListExportMappings()
+	for _, em := range ems {
+		modID := h.FindModuleID(em.ContainerID)
+		md, ok := modData[modID]
+		if !ok {
+			continue
+		}
+		md.documents = append(md.documents, treeElement{Name: em.Name, ContainerID: em.ContainerID, Type: "exportmapping"})
+	}
+
+	// Collect consumed REST services (with operations as children)
+	restClients, _ := reader.ListConsumedRestServices()
+	for _, rc := range restClients {
+		modID := h.FindModuleID(rc.ContainerID)
+		md, ok := modData[modID]
+		if !ok {
+			continue
+		}
+		var children []*TreeNode
+		for _, op := range rc.Operations {
+			method := op.HttpMethod
+			if method == "" {
+				method = "GET"
+			}
+			label := method
+			if op.Path != "" {
+				label += " " + op.Path
+			}
+			children = append(children, &TreeNode{
+				Label: label,
+				Type:  "restoperation",
+			})
+		}
+		md.documents = append(md.documents, treeElement{Name: rc.Name, ContainerID: rc.ContainerID, Type: "restclient", Children: children})
+	}
+
 	// Collect database connections (with queries as children)
 	dbcs, _ := reader.ListDatabaseConnections()
 	for _, dbc := range dbcs {
@@ -484,6 +543,37 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 		}
 
 		tree = append([]*TreeNode{psNode}, tree...)
+	}
+
+	// Project Settings top-level node
+	settings, settingsErr := reader.GetProjectSettings()
+	if settingsErr == nil {
+		settingsNode := &TreeNode{Label: "Settings", Type: "settings", QualifiedName: "Settings"}
+		if settings.Model != nil {
+			modelNode := &TreeNode{Label: "Model", Type: "settingscategory"}
+			if settings.Model.AfterStartupMicroflow != "" {
+				modelNode.Children = append(modelNode.Children, &TreeNode{
+					Label: "After Startup: " + settings.Model.AfterStartupMicroflow,
+					Type:  "settingsitem",
+				})
+			}
+			if settings.Model.BeforeShutdownMicroflow != "" {
+				modelNode.Children = append(modelNode.Children, &TreeNode{
+					Label: "Before Shutdown: " + settings.Model.BeforeShutdownMicroflow,
+					Type:  "settingsitem",
+				})
+			}
+			if len(modelNode.Children) > 0 {
+				settingsNode.Children = append(settingsNode.Children, modelNode)
+			}
+		}
+		if settings.Language != nil && settings.Language.DefaultLanguageCode != "" {
+			settingsNode.Children = append(settingsNode.Children, &TreeNode{
+				Label: "Default Language: " + settings.Language.DefaultLanguageCode,
+				Type:  "settingsitem",
+			})
+		}
+		tree = append([]*TreeNode{settingsNode}, tree...)
 	}
 
 	// Navigation top-level node
