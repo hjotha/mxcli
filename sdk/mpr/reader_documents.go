@@ -33,6 +33,9 @@ func (r *Reader) ListModules() ([]*model.Module, error) {
 		modules = append(modules, module)
 	}
 
+	// Append virtual System module
+	modules = append(modules, BuildSystemModule())
+
 	return modules, nil
 }
 
@@ -101,6 +104,9 @@ func (r *Reader) ListDomainModels() ([]*domainmodel.DomainModel, error) {
 			}
 		}
 	}
+
+	// Append virtual System module domain model
+	domainModels = append(domainModels, BuildSystemDomainModel())
 
 	return domainModels, nil
 }

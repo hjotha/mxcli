@@ -3,6 +3,7 @@
 package mpr
 
 import (
+	"crypto/sha256"
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -11,6 +12,14 @@ import (
 // GenerateID generates a new unique ID for model elements.
 func GenerateID() string {
 	return generateUUID()
+}
+
+// GenerateDeterministicID generates a stable UUID from a seed string.
+// Used for System module entities that aren't in the MPR but need consistent IDs.
+func GenerateDeterministicID(seed string) string {
+	h := sha256.Sum256([]byte(seed))
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		h[0:4], h[4:6], h[6:8], h[8:10], h[10:16])
 }
 
 // BlobToUUID converts a binary ID blob to a UUID string.
