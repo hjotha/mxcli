@@ -5,7 +5,9 @@ This skill provides a systematic workflow for debugging BSON serialization error
 ## When to Use This Skill
 
 Use when encountering:
-- **Studio Pro crash** `System.InvalidOperationException: Sequence contains no matching element` at `MprProperty..ctor`
+- **Studio Pro crash** `System.InvalidOperationException: Sequence contains no matching element` at `MprObject..ctor` or `MprProperty..ctor`
+- **Studio Pro crash on open** with `RevStatusCache.CreateDeleteStatusItem` in stack trace
+- **`mx diff` crash** with "Sequence contains no matching element"
 - **CE1613** "The selected attribute/enumeration no longer exists"
 - **CE0463** "The definition of this widget has changed"
 - **CE0642** "Property X is required"
@@ -135,7 +137,93 @@ reference/mxbuild/modeler/mx update-widgets /path/to/app.mpr
 
 Templates must include both `type` (PropertyTypes schema) AND `object` (default WidgetObject).
 
+## Critical: mx check vs mx diff vs Studio Pro Tolerance Levels
+
+Three Mendix tools parse the same BSON but with **different strictness levels**:
+
+| Tool | Extra properties | Missing properties | When used |
+|------|-----------------|-------------------|-----------|
+| `mx check` | **Tolerant** — silently skips | **Tolerant** — uses defaults | Validation |
+| `mx dump-mpr` | **Tolerant** — silently skips | **Tolerant** — uses defaults | Export |
+| `mx diff` | **STRICT** — crashes | **STRICT** — crashes | Version control diff |
+| Studio Pro `RevStatusCache` | **STRICT** — crashes | **STRICT** — crashes | Opening project with uncommitted changes |
+
+**Key insight**: `mx check` passing does NOT mean Studio Pro can open the project. Always verify with `mx diff` when testing BSON writers.
+
+**Why it matters**: Studio Pro calls `mx diff` internally during `RevStatusCache.DoRefresh()` to compare the working copy against git HEAD. Any BSON property mismatch → crash on open.
+
+## Diagnostic: mx diff as Crash Reproducer
+
+### Step 0: Reproduce Outside Studio Pro
+
+```bash
+# Self-diff: is the project's BSON clean?
+mx diff project.mpr project.mpr output.mpr
+# Success = all BSON matches schema. Crash = some mxunit has bad properties.
+
+# Cross-diff: compare baseline vs modified
+# 1. Extract baseline from git
+mkdir /tmp/baseline && cd project-dir && git archive HEAD -- *.mpr mprcontents/ | tar -x -C /tmp/baseline/
+# 2. Run diff (file names must match!)
+mx diff /tmp/baseline/App.mpr ./App.mpr /tmp/diff-output.mpr
+```
+
+### Interpreting mx diff Output
+
+**Detailed error** (when both sides have same-ID objects):
+```
+Objects with ID b6fc893f-... of type Settings$ServerConfiguration do not have the same properties.
+baseNames = ApplicationRootUrl, ConstantValues, CustomSettings, ..., Tracing;
+newNames = ApplicationRootUrl, ConstantValues, ...
+```
+→ Compare the two lists. Properties in `baseNames` but not `newNames` = missing in our BSON. Properties in `newNames` but not `baseNames` = extra in our BSON.
+
+**Generic error** (when objects don't have matching IDs — e.g., deleted units):
+```
+Sequence contains no matching element
+```
+→ No detail given. Use the property comparison tools below.
+
+### Finding the Offending mxunit File
+
+Write a Go tool (or use the pattern below) to compare property keys of mxcli-written files against Studio Pro-native files of the same `$Type`:
+
+```go
+// Walk mprcontents/, group files by $Type, compare key sets
+// Files with EXTRA keys (vs native files of same type) = the crash cause
+// Files with MISSING keys = also crash cause for mx diff
+```
+
+The principle: for each `$Type`, ALL instances must have the **exact same set of non-$ property names**. Any deviation → crash.
+
+### Version-Specific Properties
+
+Some properties only exist in certain Mendix versions. Before adding a property to a BSON writer:
+1. Check `reference/mendixmodellib/reflection-data/` for the property definition
+2. Check `min_version` if present
+3. Test with `mx diff` self-diff on the target version
+
+**Example**: `IsReusableComponent` exists in `Projects$ModuleImpl` in newer Mendix but NOT in 11.6.4. Writing it → crash.
+
 ## Common Error Patterns
+
+### Studio Pro Crash: InvalidOperationException in MprObject..ctor (RevStatusCache)
+
+**Symptom**: Studio Pro crashes on open with stack trace through `RevStatusCache.DoRefresh` → `CreateDeleteStatusItem` → `MprUnit.get_Contents` → `MprObject..ctor` → `b__2(JProperty p)`.
+
+**Root cause**: `MprObject` constructor iterates each non-`$` BSON property and does a LINQ `First()` lookup against the Mendix type schema. Any property name not in the schema → `First()` fails → crash.
+
+**This is triggered by**:
+- Any uncommitted change to `.mpr` or `mprcontents/` files
+- Studio Pro uses `mx diff` internally to diff working copy vs git HEAD
+- Even `git update-index --assume-unchanged` does NOT help — Studio Pro reads files directly, bypassing git index
+
+**Diagnosis**:
+1. Run `mx diff baseline.mpr working.mpr output.mpr` to reproduce
+2. If self-diff (`mx diff a.mpr a.mpr out.mpr`) crashes, the project itself has bad BSON
+3. Use property comparison tool to find extra/missing keys
+
+**Fix pattern**: Remove extra properties from writer, add missing properties with correct defaults (empty array `bson.A{int32(2)}` for lists, `nil` for nullable objects, `""` for strings).
 
 ### Studio Pro Crash: InvalidOperationException in MprProperty..ctor
 

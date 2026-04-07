@@ -120,6 +120,8 @@ func serializeServerConfiguration(cfg *model.ServerConfiguration) bson.M {
 		"ExtraJvmParameters":            cfg.ExtraJvmParameters,
 		"OpenAdminPort":                 cfg.OpenAdminPort,
 		"OpenHttpPort":                  cfg.OpenHttpPort,
+		"CustomSettings":                bson.A{int32(2)},
+		"Tracing":                       nil,
 	}
 	if cfg.ID != "" {
 		cfgDoc["$ID"] = idToBsonBinary(string(cfg.ID))
