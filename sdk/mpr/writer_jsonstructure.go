@@ -302,7 +302,8 @@ func (b *snippetBuilder) buildElementFromRawValue(exposedName, path, jsonKey str
 		}
 		return buildValueElement(exposedName, path, primitiveType, fmt.Sprintf("%q", v))
 	case float64:
-		if v == math.Trunc(v) && !strings.Contains(fmt.Sprintf("%v", v), ".") {
+		// Check the raw JSON text for a decimal point — Go's %v drops ".0" from 41850.0
+		if v == math.Trunc(v) && !strings.Contains(trimmed, ".") {
 			return buildValueElement(exposedName, path, "Integer", fmt.Sprintf("%v", int64(v)))
 		}
 		return buildValueElement(exposedName, path, "Decimal", fmt.Sprintf("%v", v))

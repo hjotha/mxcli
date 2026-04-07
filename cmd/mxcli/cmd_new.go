@@ -88,6 +88,13 @@ Examples:
 			os.Exit(1)
 		}
 
+		// Clean up duplicate locale files that mx create-project generates.
+		// MxBuild's AtlasPlugin.LoadTranslations crashes with "An item with the same
+		// key has already been added" when duplicate translation.json files exist.
+		if removed := cleanupDuplicateLocaleFiles(absDir); removed > 0 {
+			fmt.Printf("  Cleaned %d duplicate locale file(s)\n", removed)
+		}
+
 		// Verify .mpr was created — mx create-project names the file after --app-name
 		mprPath := filepath.Join(absDir, appName+".mpr")
 		if _, err := os.Stat(mprPath); os.IsNotExist(err) {
@@ -151,6 +158,51 @@ Examples:
 		fmt.Println("  2. Reopen in Dev Container when prompted")
 		fmt.Printf("  3. Run './mxcli -p %s' to start working\n", filepath.Base(mprPath))
 	},
+}
+
+// cleanupDuplicateLocaleFiles removes duplicate locale files that mx create-project
+// generates in themesource/atlas_core/. MxBuild crashes when multiple translation.json
+// files map to the same locale key (e.g., "en-US").
+//
+// Studio Pro-created projects have locale files only at:
+//   themesource/atlas_core/locales/<locale>/translation.json
+//
+// mx create-project additionally creates duplicates in nested subdirectories
+// (e.g., locales/en-US/atlas_core/locales/en-US/translation.json).
+// We keep only the top-level files and remove any deeper duplicates.
+func cleanupDuplicateLocaleFiles(projectDir string) int {
+	localesDir := filepath.Join(projectDir, "themesource", "atlas_core", "locales")
+	if _, err := os.Stat(localesDir); os.IsNotExist(err) {
+		return 0
+	}
+
+	removed := 0
+	// Walk locale directories (en-US, nl-NL, etc.)
+	entries, err := os.ReadDir(localesDir)
+	if err != nil {
+		return 0
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		localeDir := filepath.Join(localesDir, entry.Name())
+		// Check for nested subdirectories that duplicate the locale
+		subEntries, err := os.ReadDir(localeDir)
+		if err != nil {
+			continue
+		}
+		for _, sub := range subEntries {
+			if sub.IsDir() {
+				// Any subdirectory under a locale dir is a duplicate tree
+				dupPath := filepath.Join(localeDir, sub.Name())
+				if err := os.RemoveAll(dupPath); err == nil {
+					removed++
+				}
+			}
+		}
+	}
+	return removed
 }
 
 func init() {
