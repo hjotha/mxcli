@@ -79,11 +79,14 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 			INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts)
 			VALUES (?, ?, ?, 0, ?, '')
 		`, unitIDBlob, containerIDBlob, containmentName, contentsHash)
-		if err == nil {
-			w.reader.InvalidateCache()
-			w.updateTransactionID()
+		if err != nil {
+			// Clean up the file we just wrote — otherwise it becomes an orphan
+			os.Remove(filePath)
+			return err
 		}
-		return err
+		w.reader.InvalidateCache()
+		w.updateTransactionID()
+		return nil
 	}
 
 	// MPR v1: Store directly in database
