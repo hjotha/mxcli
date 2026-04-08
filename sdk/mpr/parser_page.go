@@ -162,38 +162,41 @@ func parsePageParameter(raw map[string]any) *pages.PageParameter {
 		param.EntityID = model.ID(entityID)
 	}
 
-	// Parse ParameterType to get entity name
+	// Parse ParameterType to get entity name and/or primitive type
 	// ParameterType can be a map/bson.D (single object) or array (with version marker)
-	if paramType, ok := raw["ParameterType"].(bson.D); ok {
-		// Direct bson.D format
-		for _, elem := range paramType {
-			if elem.Key == "Entity" {
+	parseParamTypeDoc := func(doc bson.D) {
+		for _, elem := range doc {
+			switch elem.Key {
+			case "$Type":
+				if typeName, ok := elem.Value.(string); ok && typeName != "DataTypes$ObjectType" {
+					param.TypeName = typeName
+				}
+			case "Entity":
 				if entity, ok := elem.Value.(string); ok {
 					param.EntityName = entity
 				}
 			}
 		}
-	} else if paramType, ok := raw["ParameterType"].(map[string]any); ok {
-		// Direct map format: {"$Type": "DataTypes$ObjectType", "Entity": "..."}
-		if entity, ok := paramType["Entity"].(string); ok {
+	}
+	parseParamTypeMap := func(m map[string]any) {
+		if typeName, ok := m["$Type"].(string); ok && typeName != "DataTypes$ObjectType" {
+			param.TypeName = typeName
+		}
+		if entity, ok := m["Entity"].(string); ok {
 			param.EntityName = entity
 		}
+	}
+
+	if paramType, ok := raw["ParameterType"].(bson.D); ok {
+		parseParamTypeDoc(paramType)
+	} else if paramType, ok := raw["ParameterType"].(map[string]any); ok {
+		parseParamTypeMap(paramType)
 	} else if paramTypeArr, ok := raw["ParameterType"].(bson.A); ok {
-		// Array format: [{...}] or [version, {...}]
 		for _, item := range paramTypeArr {
 			if typeDoc, ok := item.(bson.D); ok {
-				for _, elem := range typeDoc {
-					if elem.Key == "Entity" {
-						if entity, ok := elem.Value.(string); ok {
-							param.EntityName = entity
-						}
-					}
-				}
+				parseParamTypeDoc(typeDoc)
 			} else if typeMap, ok := item.(map[string]any); ok {
-				if entity, ok := typeMap["Entity"].(string); ok {
-					param.EntityName = entity
-					break
-				}
+				parseParamTypeMap(typeMap)
 			}
 		}
 	}

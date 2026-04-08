@@ -103,11 +103,8 @@ func (e *Executor) describePage(name ast.QualifiedName) error {
 	if len(foundPage.Parameters) > 0 {
 		params := []string{}
 		for _, p := range foundPage.Parameters {
-			entityName := p.EntityName
-			if entityName == "" {
-				entityName = string(p.EntityID)
-			}
-			params = append(params, fmt.Sprintf("$%s: %s", p.Name, entityName))
+			typeName := pageParamTypeMDL(p)
+			params = append(params, fmt.Sprintf("$%s: %s", p.Name, typeName))
 		}
 		props = append(props, fmt.Sprintf("Params: { %s }", strings.Join(params, ", ")))
 	}
@@ -720,4 +717,31 @@ func wrapStringLiteralExpression(value string) string {
 	}
 	// Otherwise wrap in single quotes as a string literal
 	return "'" + value + "'"
+}
+
+// pageParamTypeMDL returns the MDL type string for a page parameter.
+// Primitive params return "String", "Integer", etc.; entity params return the qualified name.
+func pageParamTypeMDL(p *pages.PageParameter) string {
+	if p.TypeName != "" {
+		switch p.TypeName {
+		case "DataTypes$StringType":
+			return "String"
+		case "DataTypes$IntegerType":
+			return "Integer"
+		case "DataTypes$LongType":
+			return "Long"
+		case "DataTypes$DecimalType":
+			return "Decimal"
+		case "DataTypes$BooleanType":
+			return "Boolean"
+		case "DataTypes$DateTimeType":
+			return "DateTime"
+		default:
+			return p.TypeName
+		}
+	}
+	if p.EntityName != "" {
+		return p.EntityName
+	}
+	return string(p.EntityID)
 }

@@ -43,7 +43,10 @@ func buildPageParameters(ctx parser.IPageParameterListContext) []ast.PageParamet
 			name = strings.TrimPrefix(v.GetText(), "$")
 		}
 		var entityType ast.QualifiedName
+		var dataType ast.DataType
 		if dt := paramCtx.DataType(); dt != nil {
+			dataType = buildDataType(dt)
+			// For backward compatibility, also populate EntityType for entity/enum refs
 			dtCtx := dt.(*parser.DataTypeContext)
 			if qn := dtCtx.QualifiedName(); qn != nil {
 				entityType = buildQualifiedName(qn)
@@ -52,6 +55,7 @@ func buildPageParameters(ctx parser.IPageParameterListContext) []ast.PageParamet
 		params = append(params, ast.PageParameter{
 			Name:       name,
 			EntityType: entityType,
+			Type:       dataType,
 		})
 	}
 	return params

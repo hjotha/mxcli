@@ -188,12 +188,23 @@ func (w *Writer) serializePage(page *pages.Page) ([]byte, error) {
 			paramID = generateUUID()
 		}
 
-		// Build ParameterType with DataTypes$ObjectType (as bson.D, not wrapped in bson.A)
+		// Build ParameterType — entity params use DataTypes$ObjectType,
+		// primitive params use DataTypes$StringType, DataTypes$IntegerType, etc.
 		paramTypeID := generateUUID()
-		paramType := bson.D{
-			{Key: "$ID", Value: idToBsonBinary(paramTypeID)},
-			{Key: "$Type", Value: "DataTypes$ObjectType"},
-			{Key: "Entity", Value: p.EntityName},
+		var paramType bson.D
+		if p.TypeName != "" {
+			// Primitive type parameter
+			paramType = bson.D{
+				{Key: "$ID", Value: idToBsonBinary(paramTypeID)},
+				{Key: "$Type", Value: p.TypeName},
+			}
+		} else {
+			// Entity type parameter (default)
+			paramType = bson.D{
+				{Key: "$ID", Value: idToBsonBinary(paramTypeID)},
+				{Key: "$Type", Value: "DataTypes$ObjectType"},
+				{Key: "Entity", Value: p.EntityName},
+			}
 		}
 
 		paramDoc := bson.D{

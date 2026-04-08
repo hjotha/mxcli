@@ -6,10 +6,12 @@ package ast
 // Page Statements
 // ============================================================================
 
-// PageParameter represents a page parameter: $Name: EntityType
+// PageParameter represents a page parameter: $Name: Type
+// Type can be an entity (Module.Entity) or a primitive (String, Integer, etc.).
 type PageParameter struct {
 	Name       string        // Parameter name (without $ prefix)
-	EntityType QualifiedName // Entity type
+	EntityType QualifiedName // Entity type (for backward compatibility; empty for primitives)
+	Type       DataType      // Full data type (primitives + entities)
 }
 
 // PageVariable represents a page variable: $Name: DataType = 'defaultExpression'

@@ -86,8 +86,12 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 			IsRequired:  true, // Page parameters are required by default
 		}
 
-		// Resolve entity type
-		if param.EntityType.Name != "" {
+		// Check if this is a primitive type or entity type
+		if bsonType := pageParamBSONType(param.Type); bsonType != "" {
+			// Primitive type parameter
+			pageParam.TypeName = bsonType
+		} else if param.EntityType.Name != "" {
+			// Entity type parameter
 			entityID, err := pb.resolveEntity(param.EntityType)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve entity %s: %w", param.EntityType.String(), err)
@@ -966,6 +970,27 @@ func (pb *pageBuilder) getEntityNameByID(entityID model.ID) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("entity not found by ID: %s", entityID)
+}
+
+// pageParamBSONType maps a DataType to the BSON $Type string for primitive page parameters.
+// Returns empty string for entity/enum types (which use DataTypes$ObjectType instead).
+func pageParamBSONType(dt ast.DataType) string {
+	switch dt.Kind {
+	case ast.TypeString:
+		return "DataTypes$StringType"
+	case ast.TypeInteger:
+		return "DataTypes$IntegerType"
+	case ast.TypeLong:
+		return "DataTypes$LongType"
+	case ast.TypeDecimal:
+		return "DataTypes$DecimalType"
+	case ast.TypeBoolean:
+		return "DataTypes$BooleanType"
+	case ast.TypeDateTime:
+		return "DataTypes$DateTimeType"
+	default:
+		return ""
+	}
 }
 
 // resolveNanoflowByName resolves a nanoflow qualified name to its ID.

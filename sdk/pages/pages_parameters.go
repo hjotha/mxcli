@@ -28,6 +28,7 @@ type PageParameter struct {
 	Name         string   `json:"name"`
 	EntityID     model.ID `json:"entityId,omitempty"`
 	EntityName   string   `json:"entityName,omitempty"`   // Qualified entity name (e.g., "Module.Entity")
+	TypeName     string   `json:"typeName,omitempty"`     // BSON $Type for ParameterType (e.g., "DataTypes$StringType")
 	DefaultValue string   `json:"defaultValue,omitempty"` // Default value expression
 	IsRequired   bool     `json:"isRequired"`             // Whether the parameter is required
 }
