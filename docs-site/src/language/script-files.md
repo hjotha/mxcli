@@ -37,14 +37,49 @@ CREATE ASSOCIATION Sales.Order_Customer
   TYPE Reference;
 ```
 
-## Executing Scripts
+## Execution Modes
 
-### From the Command Line
+mxcli supports several ways to execute MDL. All modes open a single connection to the project — there is no per-command overhead.
 
-Use `mxcli exec` to run a script against a project:
+### Script File
+
+Use `mxcli exec` to run a `.mdl` file:
 
 ```bash
 mxcli exec setup_domain_model.mdl -p /path/to/app.mpr
+```
+
+### Inline Commands (`-c`)
+
+Pass one or more semicolon-separated commands with the `-c` flag:
+
+```bash
+# Single command
+mxcli -p app.mpr -c "SHOW ENTITIES"
+
+# Multiple commands in one connection
+mxcli -p app.mpr -c "DESCRIBE ENTITY Sales.Customer; DESCRIBE ENTITY Sales.Order; SHOW MICROFLOWS IN Sales"
+```
+
+This is the fastest way for AI agents to batch multiple queries — all commands share a single connection.
+
+### Stdin Piping
+
+When stdin is a pipe (not a terminal), mxcli reads commands from it in quiet mode (no banner, no prompts):
+
+```bash
+# Pipe from echo
+echo "SHOW ENTITIES; SHOW MICROFLOWS" | mxcli -p app.mpr
+
+# Pipe from file
+mxcli -p app.mpr < commands.mdl
+
+# Pipe from heredoc
+mxcli -p app.mpr <<'EOF'
+DESCRIBE ENTITY Sales.Customer;
+DESCRIBE ENTITY Sales.Order;
+SHOW MICROFLOWS IN Sales;
+EOF
 ```
 
 ### From the REPL

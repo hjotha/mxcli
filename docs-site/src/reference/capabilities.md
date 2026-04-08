@@ -120,8 +120,9 @@ Everything mxcli can do, organized by use case.
 
 | Capability | Command | Notes |
 |---|---|---|
-| Batch execution | `mxcli -p app.mpr -c "..."` | Non-interactive |
+| Inline commands | `mxcli -p app.mpr -c "CMD1; CMD2; CMD3"` | Semicolon-separated, single connection |
 | Script files | `mxcli exec script.mdl -p app.mpr` | Run MDL files |
+| Stdin piping | `echo "CMD" \| mxcli -p app.mpr` | Quiet mode, no prompts |
 | Docker build | `mxcli docker build -p app.mpr` | Build MDA in container |
 | Docker check | `mxcli docker check -p app.mpr` | Validate in container |
 | Testing | `mxcli test tests/ -p app.mpr` | `.test.mdl` / `.test.md` |

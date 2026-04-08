@@ -531,8 +531,9 @@ Cross-reference commands require `REFRESH CATALOG FULL` to populate reference da
 | Command | Syntax | Notes |
 |---------|--------|-------|
 | Interactive REPL | `mxcli` | Interactive MDL shell |
-| Execute command | `mxcli -p app.mpr -c "SHOW ENTITIES"` | Single command |
+| Inline commands | `mxcli -p app.mpr -c "CMD1; CMD2; CMD3"` | Semicolons batch multiple commands |
 | Execute script | `mxcli exec script.mdl -p app.mpr` | Script file |
+| Stdin piping | `echo "CMD" \| mxcli -p app.mpr` | Quiet mode, pipe-friendly |
 | Check syntax | `mxcli check script.mdl` | Parse-only validation |
 | Check references | `mxcli check script.mdl -p app.mpr --references` | With reference validation |
 | Lint project | `mxcli lint -p app.mpr [--format json\|sarif]` | 14 built-in + 27 Starlark rules |
