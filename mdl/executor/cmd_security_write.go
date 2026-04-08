@@ -947,6 +947,11 @@ func (e *Executor) execCreateDemoUser(s *ast.CreateDemoUserStmt) error {
 		return fmt.Errorf("failed to read project security: %w", err)
 	}
 
+	// Validate password against project password policy
+	if err := ps.PasswordPolicy.ValidatePassword(s.Password); err != nil {
+		return fmt.Errorf("password policy violation for demo user '%s': %w\nhint: check your project's password policy with SHOW PROJECT SECURITY", s.UserName, err)
+	}
+
 	// Check if user already exists
 	for _, du := range ps.DemoUsers {
 		if du.UserName == s.UserName {
