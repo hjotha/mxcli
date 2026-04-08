@@ -17,42 +17,48 @@ var describeCmd = &cobra.Command{
 	Long: `Describe an element from a Mendix project in MDL syntax.
 
 Types:
+  module           Describe a module (all contents)
   entity           Describe an entity
   externalentity   Describe an external entity (alias for entity)
   association      Describe an association
   enumeration      Describe an enumeration
   constant         Describe a constant
   microflow        Describe a microflow
+  nanoflow         Describe a nanoflow
   workflow         Describe a workflow
   page             Describe a page
   snippet          Describe a snippet
   layout           Describe a layout
   javaaction       Describe a java action
+  jsonstructure    Describe a JSON structure (also: "json structure")
+  importmapping    Describe an import mapping (also: "import mapping")
+  exportmapping    Describe an export mapping (also: "export mapping")
+  restclient       Describe a consumed REST service (also: "rest client")
   odataclient      Describe a consumed OData service
   odataservice     Describe a published OData service
+  imagecollection  Describe an image collection (also: "image collection")
   businesseventservice  Describe a business event service (also: "business event service")
+  databaseconnection    Describe a database connection (also: "database connection")
   modulerole       Describe a module role
   userrole         Describe a user role
   projectsecurity  Show project security settings
+  settings         Describe project settings
   demouser         Describe a demo user
   navigation       Describe a navigation profile
   systemoverview   Module dependency graph (requires --format elk)
 
 Example:
+  mxcli describe -p app.mpr module MyModule
   mxcli describe -p app.mpr entity MyModule.Customer
   mxcli describe -p app.mpr microflow MyModule.ProcessOrder
-  mxcli describe -p app.mpr workflow MyModule.MyWorkflow
+  mxcli describe -p app.mpr nanoflow MyModule.ValidateInput
+  mxcli describe -p app.mpr page MyModule.Customer_Overview
+  mxcli describe -p app.mpr json structure MyModule.CustomerResponse
+  mxcli describe -p app.mpr import mapping MyModule.IMM_Customer
+  mxcli describe -p app.mpr export mapping MyModule.EMM_Customer
+  mxcli describe -p app.mpr rest client MyModule.PetStoreAPI
+  mxcli describe -p app.mpr settings Settings
   mxcli describe -p app.mpr navigation Responsive
-  mxcli describe -p app.mpr layout Atlas_Core.PopupLayout
-  mxcli describe -p app.mpr javaaction MyModule.MyAction
-  mxcli describe -p app.mpr odataclient MyModule.ExternalAPI
-  mxcli describe -p app.mpr odataservice MyModule.CustomerAPI
-  mxcli describe -p app.mpr businesseventservice MyModule.CustomerEventsApi
-  mxcli describe -p app.mpr business event service MyModule.CustomerEventsApi
-  mxcli describe -p app.mpr constant MyModule.BaseUrl
-  mxcli describe -p app.mpr modulerole MyModule.User
-  mxcli describe -p app.mpr userrole Administrator
-  mxcli describe -p app.mpr projectsecurity ProjectSecurity
   mxcli describe -p app.mpr --format elk systemoverview SystemOverview
 `,
 	Args: cobra.MinimumNArgs(2),
@@ -70,6 +76,8 @@ Example:
 
 		var mdlCmd string
 		switch objectType {
+		case "MODULE":
+			mdlCmd = fmt.Sprintf("DESCRIBE MODULE %s", name)
 		case "ENTITY":
 			mdlCmd = fmt.Sprintf("DESCRIBE ENTITY %s", name)
 		case "ASSOCIATION":
@@ -78,6 +86,8 @@ Example:
 			mdlCmd = fmt.Sprintf("DESCRIBE ENUMERATION %s", name)
 		case "MICROFLOW":
 			mdlCmd = fmt.Sprintf("DESCRIBE MICROFLOW %s", name)
+		case "NANOFLOW":
+			mdlCmd = fmt.Sprintf("DESCRIBE NANOFLOW %s", name)
 		case "WORKFLOW":
 			mdlCmd = fmt.Sprintf("DESCRIBE WORKFLOW %s", name)
 		case "PAGE":
@@ -92,16 +102,28 @@ Example:
 			mdlCmd = fmt.Sprintf("DESCRIBE USER ROLE '%s'", name)
 		case "PROJECTSECURITY", "PROJECT SECURITY":
 			mdlCmd = "SHOW PROJECT SECURITY"
+		case "SETTINGS":
+			mdlCmd = "DESCRIBE SETTINGS"
 		case "DEMOUSER", "DEMO USER":
 			mdlCmd = fmt.Sprintf("DESCRIBE DEMO USER '%s'", name)
 		case "JAVAACTION", "JAVA ACTION":
 			mdlCmd = fmt.Sprintf("DESCRIBE JAVA ACTION %s", name)
 		case "CONSTANT":
 			mdlCmd = fmt.Sprintf("DESCRIBE CONSTANT %s", name)
+		case "JSONSTRUCTURE", "JSON STRUCTURE":
+			mdlCmd = fmt.Sprintf("DESCRIBE JSON STRUCTURE %s", name)
+		case "IMPORTMAPPING", "IMPORT MAPPING":
+			mdlCmd = fmt.Sprintf("DESCRIBE IMPORT MAPPING %s", name)
+		case "EXPORTMAPPING", "EXPORT MAPPING":
+			mdlCmd = fmt.Sprintf("DESCRIBE EXPORT MAPPING %s", name)
+		case "RESTCLIENT", "REST CLIENT":
+			mdlCmd = fmt.Sprintf("DESCRIBE REST CLIENT %s", name)
 		case "ODATACLIENT", "ODATA CLIENT":
 			mdlCmd = fmt.Sprintf("DESCRIBE ODATA CLIENT %s", name)
 		case "ODATASERVICE", "ODATA SERVICE":
 			mdlCmd = fmt.Sprintf("DESCRIBE ODATA SERVICE %s", name)
+		case "IMAGECOLLECTION", "IMAGE COLLECTION":
+			mdlCmd = fmt.Sprintf("DESCRIBE IMAGE COLLECTION %s", name)
 		case "BUSINESSEVENTSERVICE", "BUSINESS EVENT SERVICE":
 			mdlCmd = fmt.Sprintf("DESCRIBE BUSINESS EVENT SERVICE %s", name)
 		case "DATABASECONNECTION", "DATABASE CONNECTION":
@@ -116,8 +138,8 @@ Example:
 			mdlCmd = "" // handled directly by format-specific path
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown type: %s\n", strings.Join(args[:len(args)-1], " "))
-			fmt.Fprintln(os.Stderr, "Valid types: entity, association, enumeration, constant, microflow, workflow, page, snippet, layout, javaaction, odataclient, odataservice, businesseventservice, databaseconnection, modulerole, userrole, projectsecurity, demouser, navigation, systemoverview")
-			fmt.Fprintln(os.Stderr, "Multi-word types also accepted: business event service, odata service, java action, database connection, etc.")
+			fmt.Fprintln(os.Stderr, "Valid types: module, entity, association, enumeration, constant, microflow, nanoflow, workflow, page, snippet, layout, javaaction, jsonstructure, importmapping, exportmapping, restclient, odataclient, odataservice, imagecollection, businesseventservice, databaseconnection, modulerole, userrole, projectsecurity, settings, demouser, navigation, systemoverview")
+			fmt.Fprintln(os.Stderr, "Multi-word types also accepted: json structure, import mapping, export mapping, rest client, image collection, business event service, etc.")
 			os.Exit(1)
 		}
 

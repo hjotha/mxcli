@@ -170,11 +170,13 @@ mxcli -p app.mpr -c "SHOW MODULES"
 # List entities in a module
 mxcli -p app.mpr -c "SHOW ENTITIES IN MyModule"
 
-# Describe an entity, microflow, page, or workflow
+# Describe any element (module, entity, microflow, nanoflow, page, etc.)
+mxcli describe -p app.mpr module MyModule
 mxcli describe -p app.mpr entity MyModule.Customer
 mxcli describe -p app.mpr microflow MyModule.ProcessOrder
+mxcli describe -p app.mpr nanoflow MyModule.ValidateInput
 mxcli describe -p app.mpr page MyModule.CustomerOverview
-mxcli describe -p app.mpr workflow MyModule.MyWorkflow
+mxcli describe -p app.mpr json structure MyModule.CustomerResponse
 ```
 
 ### Full-Text Search

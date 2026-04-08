@@ -20,6 +20,15 @@ CREATE PERSISTENT ENTITY Module.Photo (
 ) EXTENDS System.Image;
 ```
 
+## Modules
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Show modules | `SHOW MODULES;` | List all modules |
+| Describe module | `DESCRIBE MODULE ModuleName;` | All contents (entities, microflows, pages, etc.) |
+| Create module | `CREATE MODULE ModuleName;` | |
+| Drop module | `DROP MODULE ModuleName;` | |
+
 ## Domain Model
 
 | Statement | Syntax | Notes |
@@ -30,6 +39,7 @@ CREATE PERSISTENT ENTITY Module.Photo (
 | Create external entity | `CREATE EXTERNAL ENTITY Module.Name FROM ODATA CLIENT Module.Client (...) (attrs);` | From consumed OData |
 | Drop entity | `DROP ENTITY Module.Name;` | |
 | Describe entity | `DESCRIBE ENTITY Module.Name;` | Full MDL output |
+| Describe enumeration | `DESCRIBE ENUMERATION Module.Name;` | Full MDL output |
 | Show entities | `SHOW ENTITIES [IN Module];` | List all or filter by module |
 | Create enumeration | `CREATE [OR MODIFY] ENUMERATION Module.Name (Value1 'Caption', ...);` | |
 | Drop enumeration | `DROP ENUMERATION Module.Name;` | |
@@ -141,6 +151,17 @@ AUTHENTICATION Basic, Session
   EXPOSE (Name, Email, Phone);
 };
 ```
+
+## Microflows & Nanoflows
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Show microflows | `SHOW MICROFLOWS [IN Module];` | List all or filter by module |
+| Show nanoflows | `SHOW NANOFLOWS [IN Module];` | List all or filter by module |
+| Describe microflow | `DESCRIBE MICROFLOW Module.Name;` | Full MDL with activities |
+| Describe nanoflow | `DESCRIBE NANOFLOW Module.Name;` | Full MDL with activities |
+| Drop microflow | `DROP MICROFLOW Module.Name;` | |
+| Drop nanoflow | `DROP NANOFLOW Module.Name;` | |
 
 ## Microflows - Supported Statements
 

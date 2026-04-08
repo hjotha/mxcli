@@ -135,15 +135,34 @@ CREATE ASSOCIATION MyFirstModule.Order_Customer
   DELETE_BEHAVIOR DeleteRefSetOnly;
 ```
 
+## DESCRIBE MODULE
+
+To see the full contents of a module (all entities, microflows, pages, etc.):
+
+```sql
+DESCRIBE MODULE MyFirstModule;
+```
+
+This is especially useful from the CLI:
+```bash
+mxcli describe -p app.mpr module MyFirstModule
+```
+
 ## Other DESCRIBE targets
 
 The same pattern works for other element types:
 
 ```sql
+DESCRIBE MODULE MyFirstModule;
 DESCRIBE WORKFLOW MyFirstModule.ApprovalFlow;
 DESCRIBE NANOFLOW MyFirstModule.NAV_GoToDetail;
 DESCRIBE SNIPPET MyFirstModule.CustomerCard;
 DESCRIBE CONSTANT MyFirstModule.ApiBaseUrl;
+DESCRIBE JSON STRUCTURE MyFirstModule.CustomerResponse;
+DESCRIBE IMPORT MAPPING MyFirstModule.IMM_Customer;
+DESCRIBE EXPORT MAPPING MyFirstModule.EMM_Customer;
+DESCRIBE REST CLIENT MyFirstModule.PetStoreAPI;
+DESCRIBE IMAGE COLLECTION MyFirstModule.Icons;
 DESCRIBE NAVIGATION;
 DESCRIBE SETTINGS;
 ```
