@@ -4,6 +4,9 @@
 package security
 
 import (
+	"fmt"
+	"unicode"
+
 	"github.com/mendixlabs/mxcli/model"
 )
 
@@ -53,6 +56,62 @@ type PasswordPolicy struct {
 	RequireDigit     bool `json:"requireDigit"`
 	RequireMixedCase bool `json:"requireMixedCase"`
 	RequireSymbol    bool `json:"requireSymbol"`
+}
+
+// ValidatePassword checks a password against the policy.
+// Returns nil if the password is compliant, or an error describing the first violation.
+// A nil policy accepts any password.
+func (p *PasswordPolicy) ValidatePassword(password string) error {
+	if p == nil {
+		return nil
+	}
+	if p.MinimumLength > 0 && len(password) < p.MinimumLength {
+		return fmt.Errorf("password must be at least %d characters (got %d)", p.MinimumLength, len(password))
+	}
+	if p.RequireDigit && !containsDigit(password) {
+		return fmt.Errorf("password must contain at least one digit")
+	}
+	if p.RequireMixedCase && !containsMixedCase(password) {
+		return fmt.Errorf("password must contain both uppercase and lowercase letters")
+	}
+	if p.RequireSymbol && !containsSymbol(password) {
+		return fmt.Errorf("password must contain at least one symbol")
+	}
+	return nil
+}
+
+func containsDigit(s string) bool {
+	for _, r := range s {
+		if unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsMixedCase(s string) bool {
+	hasUpper, hasLower := false, false
+	for _, r := range s {
+		if unicode.IsUpper(r) {
+			hasUpper = true
+		}
+		if unicode.IsLower(r) {
+			hasLower = true
+		}
+		if hasUpper && hasLower {
+			return true
+		}
+	}
+	return false
+}
+
+func containsSymbol(s string) bool {
+	for _, r := range s {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
 }
 
 // ModuleSecurity represents the security configuration for a module.
