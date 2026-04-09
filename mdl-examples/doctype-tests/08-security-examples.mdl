@@ -562,7 +562,7 @@ CREATE or modify DEMO USER 'sectest_user' PASSWORD 'Password1!xx' (RegularUser);
 /**
  * Create a demo user with multiple user roles.
  */
-CREATE or modify DEMO USER 'sectest_admin' PASSWORD 'Admin123!' (RegularUser, SuperAdmin);
+CREATE or modify DEMO USER 'sectest_admin' PASSWORD 'Admin12345!!' (RegularUser, SuperAdmin);
 /
 
 -- Verify
