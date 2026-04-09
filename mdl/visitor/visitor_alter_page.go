@@ -58,10 +58,10 @@ func (b *Builder) buildAlterPageSet(ctx *parser.AlterPageSetContext) ast.AlterPa
 		Properties: make(map[string]interface{}),
 	}
 
-	// Widget name (if ON widgetName is present)
+	// Widget ref (if ON widgetRef is present)
 	if ctx.ON() != nil {
-		if id := ctx.IdentifierOrKeyword(); id != nil {
-			op.WidgetName = identifierOrKeywordText(id)
+		if wr := ctx.WidgetRef(); wr != nil {
+			op.Target = buildWidgetRef(wr)
 		}
 	}
 
@@ -134,8 +134,8 @@ func (b *Builder) buildAlterPageInsert(ctx *parser.AlterPageInsertContext) *ast.
 		op.Position = "BEFORE"
 	}
 
-	if id := ctx.IdentifierOrKeyword(); id != nil {
-		op.TargetName = identifierOrKeywordText(id)
+	if wr := ctx.WidgetRef(); wr != nil {
+		op.Target = buildWidgetRef(wr)
 	}
 
 	if body := ctx.PageBodyV3(); body != nil {
@@ -149,8 +149,8 @@ func (b *Builder) buildAlterPageInsert(ctx *parser.AlterPageInsertContext) *ast.
 func (b *Builder) buildAlterPageDrop(ctx *parser.AlterPageDropContext) *ast.DropWidgetOp {
 	op := &ast.DropWidgetOp{}
 
-	for _, id := range ctx.AllIdentifierOrKeyword() {
-		op.WidgetNames = append(op.WidgetNames, identifierOrKeywordText(id))
+	for _, wr := range ctx.AllWidgetRef() {
+		op.Targets = append(op.Targets, buildWidgetRef(wr))
 	}
 
 	return op
@@ -160,8 +160,8 @@ func (b *Builder) buildAlterPageDrop(ctx *parser.AlterPageDropContext) *ast.Drop
 func (b *Builder) buildAlterPageReplace(ctx *parser.AlterPageReplaceContext) *ast.ReplaceWidgetOp {
 	op := &ast.ReplaceWidgetOp{}
 
-	if id := ctx.IdentifierOrKeyword(); id != nil {
-		op.WidgetName = identifierOrKeywordText(id)
+	if wr := ctx.WidgetRef(); wr != nil {
+		op.Target = buildWidgetRef(wr)
 	}
 
 	if body := ctx.PageBodyV3(); body != nil {
@@ -169,6 +169,23 @@ func (b *Builder) buildAlterPageReplace(ctx *parser.AlterPageReplaceContext) *as
 	}
 
 	return op
+}
+
+// buildWidgetRef extracts a WidgetRef from a widgetRef grammar context.
+// Supports both plain "btnSave" and dotted "dgProducts.Name" references.
+func buildWidgetRef(ctx parser.IWidgetRefContext) ast.WidgetRef {
+	wrCtx := ctx.(*parser.WidgetRefContext)
+	ids := wrCtx.AllIdentifierOrKeyword()
+	if len(ids) == 2 {
+		return ast.WidgetRef{
+			Widget: identifierOrKeywordText(ids[0]),
+			Column: identifierOrKeywordText(ids[1]),
+		}
+	}
+	if len(ids) == 1 {
+		return ast.WidgetRef{Widget: identifierOrKeywordText(ids[0])}
+	}
+	return ast.WidgetRef{}
 }
 
 // buildAlterPageAddVariable builds an AddVariableOp from the parse tree.

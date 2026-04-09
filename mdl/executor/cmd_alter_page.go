@@ -367,11 +367,12 @@ func extractBinaryIDFromDoc(val any) string {
 
 // bsonWidgetResult holds a found widget and its parent context.
 type bsonWidgetResult struct {
-	widget    bson.D // the widget document itself
-	parentArr []any  // the parent array elements (without marker)
-	parentKey string // key in the parent doc that holds this array
-	parentDoc bson.D // the doc containing parentKey
-	index     int    // index in parentArr
+	widget       bson.D            // the widget document itself
+	parentArr    []any             // the parent array elements (without marker)
+	parentKey    string            // key in the parent doc that holds this array
+	parentDoc    bson.D            // the doc containing parentKey
+	index        int               // index in parentArr
+	colPropKeys  map[string]string // column property TypePointer → key map (only set for column results)
 }
 
 // widgetFinder is a function type for locating widgets in a raw BSON tree.
@@ -530,6 +531,262 @@ func findInControlBar(wDoc bson.D, widgetName string) *bsonWidgetResult {
 }
 
 // ============================================================================
+// DataGrid2 column finder
+// ============================================================================
+
+// findBsonColumn finds a column inside a DataGrid2 widget by derived name.
+// It locates the grid widget first, then searches its columns Objects[] array.
+// Returns a bsonWidgetResult where parentArr/parentDoc/parentKey point to the
+// columns array, so INSERT/DROP/REPLACE work via standard array manipulation.
+func findBsonColumn(rawData bson.D, gridName, columnName string, find widgetFinder) *bsonWidgetResult {
+	// Find the DataGrid2 widget
+	gridResult := find(rawData, gridName)
+	if gridResult == nil {
+		return nil
+	}
+
+	// Build grid-level PropertyTypeID -> key map
+	gridPropKeyMap := buildPropKeyMap(gridResult.widget)
+
+	// Navigate to the "columns" property's Value.Objects[]
+	obj := dGetDoc(gridResult.widget, "Object")
+	if obj == nil {
+		return nil
+	}
+
+	props := dGetArrayElements(dGet(obj, "Properties"))
+	for _, prop := range props {
+		propDoc, ok := prop.(bson.D)
+		if !ok {
+			continue
+		}
+		typePointerID := extractBinaryIDFromDoc(dGet(propDoc, "TypePointer"))
+		propKey := gridPropKeyMap[typePointerID]
+		if propKey != "columns" {
+			continue
+		}
+
+		valDoc := dGetDoc(propDoc, "Value")
+		if valDoc == nil {
+			return nil
+		}
+
+		// Build column-level PropertyTypeID -> key map for name derivation
+		colPropKeyMap := buildColumnPropKeyMap(gridResult.widget, typePointerID)
+
+		// Search columns by derived name
+		columns := dGetArrayElements(dGet(valDoc, "Objects"))
+		for i, colItem := range columns {
+			colDoc, ok := colItem.(bson.D)
+			if !ok {
+				continue
+			}
+			derived := deriveColumnNameBson(colDoc, colPropKeyMap, i)
+			if derived == columnName {
+				return &bsonWidgetResult{
+					widget:      colDoc,
+					parentArr:   columns,
+					parentKey:   "Objects",
+					parentDoc:   valDoc,
+					index:       i,
+					colPropKeys: colPropKeyMap,
+				}
+			}
+		}
+		return nil // found columns property but no matching column
+	}
+	return nil
+}
+
+// buildPropKeyMap builds a TypePointer ID -> PropertyKey map from a widget's
+// Type.ObjectType.PropertyTypes array.
+func buildPropKeyMap(widgetDoc bson.D) map[string]string {
+	m := make(map[string]string)
+	widgetType := dGetDoc(widgetDoc, "Type")
+	if widgetType == nil {
+		return m
+	}
+	objType := dGetDoc(widgetType, "ObjectType")
+	if objType == nil {
+		return m
+	}
+	for _, pt := range dGetArrayElements(dGet(objType, "PropertyTypes")) {
+		ptDoc, ok := pt.(bson.D)
+		if !ok {
+			continue
+		}
+		key := dGetString(ptDoc, "PropertyKey")
+		id := extractBinaryIDFromDoc(dGet(ptDoc, "$ID"))
+		if key != "" && id != "" {
+			m[id] = key
+		}
+	}
+	return m
+}
+
+// buildColumnPropKeyMap builds a TypePointer ID -> PropertyKey map for column
+// properties. It navigates: Type.ObjectType.PropertyTypes["columns"].ValueType.ObjectType.PropertyTypes
+func buildColumnPropKeyMap(widgetDoc bson.D, columnsTypePointerID string) map[string]string {
+	m := make(map[string]string)
+	widgetType := dGetDoc(widgetDoc, "Type")
+	if widgetType == nil {
+		return m
+	}
+	objType := dGetDoc(widgetType, "ObjectType")
+	if objType == nil {
+		return m
+	}
+	// Find the columns PropertyType entry
+	for _, pt := range dGetArrayElements(dGet(objType, "PropertyTypes")) {
+		ptDoc, ok := pt.(bson.D)
+		if !ok {
+			continue
+		}
+		id := extractBinaryIDFromDoc(dGet(ptDoc, "$ID"))
+		if id != columnsTypePointerID {
+			continue
+		}
+		// Navigate to ValueType.ObjectType.PropertyTypes
+		valType := dGetDoc(ptDoc, "ValueType")
+		if valType == nil {
+			return m
+		}
+		colObjType := dGetDoc(valType, "ObjectType")
+		if colObjType == nil {
+			return m
+		}
+		for _, cpt := range dGetArrayElements(dGet(colObjType, "PropertyTypes")) {
+			cptDoc, ok := cpt.(bson.D)
+			if !ok {
+				continue
+			}
+			key := dGetString(cptDoc, "PropertyKey")
+			cid := extractBinaryIDFromDoc(dGet(cptDoc, "$ID"))
+			if key != "" && cid != "" {
+				m[cid] = key
+			}
+		}
+		return m
+	}
+	return m
+}
+
+// deriveColumnNameBson derives a column name from its BSON WidgetObject,
+// matching the logic in deriveColumnName() in cmd_pages_describe_output.go.
+func deriveColumnNameBson(colDoc bson.D, propKeyMap map[string]string, index int) string {
+	var attribute, caption string
+
+	props := dGetArrayElements(dGet(colDoc, "Properties"))
+	for _, prop := range props {
+		propDoc, ok := prop.(bson.D)
+		if !ok {
+			continue
+		}
+		typePointerID := extractBinaryIDFromDoc(dGet(propDoc, "TypePointer"))
+		propKey := propKeyMap[typePointerID]
+
+		valDoc := dGetDoc(propDoc, "Value")
+		if valDoc == nil {
+			continue
+		}
+
+		switch propKey {
+		case "attribute":
+			// Extract attribute path from AttributeRef
+			if attrRef := dGetString(valDoc, "AttributeRef"); attrRef != "" {
+				attribute = attrRef
+			} else if attrDoc := dGetDoc(valDoc, "AttributeRef"); attrDoc != nil {
+				attribute = dGetString(attrDoc, "Attribute")
+			}
+		case "header":
+			// Extract caption from TextTemplate
+			if tmpl := dGetDoc(valDoc, "TextTemplate"); tmpl != nil {
+				items := dGetArrayElements(dGet(tmpl, "Items"))
+				for _, item := range items {
+					if itemDoc, ok := item.(bson.D); ok {
+						if text := dGetString(itemDoc, "Text"); text != "" {
+							caption = text
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Apply same derivation logic as deriveColumnName
+	if attribute != "" {
+		parts := strings.Split(attribute, ".")
+		return parts[len(parts)-1]
+	}
+	if caption != "" {
+		return sanitizeColumnName(caption)
+	}
+	return fmt.Sprintf("col%d", index+1)
+}
+
+// sanitizeColumnName converts a caption string into a valid column identifier.
+func sanitizeColumnName(caption string) string {
+	var result []rune
+	for _, r := range caption {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			result = append(result, r)
+		} else {
+			result = append(result, '_')
+		}
+	}
+	return string(result)
+}
+
+// columnPropertyAliases maps user-facing property names to internal column property keys.
+var columnPropertyAliases = map[string]string{
+	"Caption":       "header",
+	"Attribute":     "attribute",
+	"Visible":       "visible",
+	"Alignment":     "alignment",
+	"WrapText":      "wrapText",
+	"Sortable":      "sortable",
+	"Resizable":     "resizable",
+	"Draggable":     "draggable",
+	"Hidable":       "hidable",
+	"ColumnWidth":   "width",
+	"Size":          "size",
+	"ShowContentAs": "showContentAs",
+	"ColumnClass":   "columnClass",
+	"Tooltip":       "tooltip",
+}
+
+// setColumnProperty sets a property on a DataGrid2 column WidgetObject.
+// propKeyMap maps TypePointer IDs to property keys (from the parent grid's column type).
+func setColumnProperty(colDoc bson.D, propKeyMap map[string]string, propName string, value interface{}) error {
+	// Map user-facing name to internal property key
+	internalKey := columnPropertyAliases[propName]
+	if internalKey == "" {
+		internalKey = propName
+	}
+
+	// Search column Properties[] for matching property and update
+	props := dGetArrayElements(dGet(colDoc, "Properties"))
+	for _, prop := range props {
+		propDoc, ok := prop.(bson.D)
+		if !ok {
+			continue
+		}
+		typePointerID := extractBinaryIDFromDoc(dGet(propDoc, "TypePointer"))
+		propKey := propKeyMap[typePointerID]
+		if propKey != internalKey {
+			continue
+		}
+		if valDoc := dGetDoc(propDoc, "Value"); valDoc != nil {
+			strVal := fmt.Sprintf("%v", value)
+			dSet(valDoc, "PrimitiveValue", strVal)
+			return nil
+		}
+		return fmt.Errorf("column property %q has no Value", propName)
+	}
+	return fmt.Errorf("column property %q not found", propName)
+}
+
+// ============================================================================
 // SET property
 // ============================================================================
 
@@ -540,21 +797,32 @@ func applySetProperty(rawData bson.D, op *ast.SetPropertyOp) error {
 
 // applySetPropertyWith modifies widget properties using the given widget finder.
 func applySetPropertyWith(rawData bson.D, op *ast.SetPropertyOp, find widgetFinder) error {
-	if op.WidgetName == "" {
+	if op.Target.Widget == "" {
 		// Page/snippet-level SET
 		return applyPageLevelSet(rawData, op.Properties)
 	}
 
-	// Find the widget
-	result := find(rawData, op.WidgetName)
+	// Find the widget (or column via dotted ref)
+	var result *bsonWidgetResult
+	if op.Target.IsColumn() {
+		result = findBsonColumn(rawData, op.Target.Widget, op.Target.Column, find)
+	} else {
+		result = find(rawData, op.Target.Widget)
+	}
 	if result == nil {
-		return fmt.Errorf("widget %q not found", op.WidgetName)
+		return fmt.Errorf("widget %q not found", op.Target.Name())
 	}
 
 	// Apply each property
 	for propName, value := range op.Properties {
-		if err := setRawWidgetProperty(result.widget, propName, value); err != nil {
-			return fmt.Errorf("failed to set %s on %s: %w", propName, op.WidgetName, err)
+		if op.Target.IsColumn() {
+			if err := setColumnProperty(result.widget, result.colPropKeys, propName, value); err != nil {
+				return fmt.Errorf("failed to set %s on %s: %w", propName, op.Target.Name(), err)
+			}
+		} else {
+			if err := setRawWidgetProperty(result.widget, propName, value); err != nil {
+				return fmt.Errorf("failed to set %s on %s: %w", propName, op.Target.Name(), err)
+			}
 		}
 	}
 	return nil
@@ -905,9 +1173,14 @@ func (e *Executor) applyInsertWidget(rawData bson.D, op *ast.InsertWidgetOp, mod
 
 // applyInsertWidgetWith inserts new widgets using the given widget finder.
 func (e *Executor) applyInsertWidgetWith(rawData bson.D, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
-	result := find(rawData, op.TargetName)
+	var result *bsonWidgetResult
+	if op.Target.IsColumn() {
+		result = findBsonColumn(rawData, op.Target.Widget, op.Target.Column, find)
+	} else {
+		result = find(rawData, op.Target.Widget)
+	}
 	if result == nil {
-		return fmt.Errorf("widget %q not found", op.TargetName)
+		return fmt.Errorf("widget %q not found", op.Target.Name())
 	}
 
 	// Check for duplicate widget names before building
@@ -918,7 +1191,7 @@ func (e *Executor) applyInsertWidgetWith(rawData bson.D, op *ast.InsertWidgetOp,
 	}
 
 	// Find entity context from enclosing DataView/DataGrid/ListView
-	entityCtx := findEnclosingEntityContext(rawData, op.TargetName)
+	entityCtx := findEnclosingEntityContext(rawData, op.Target.Widget)
 
 	// Build new widget BSON from AST
 	newBsonWidgets, err := e.buildWidgetsBson(op.Widgets, moduleName, moduleID, entityCtx)
@@ -955,10 +1228,15 @@ func applyDropWidget(rawData bson.D, op *ast.DropWidgetOp) error {
 
 // applyDropWidgetWith removes widgets using the given widget finder.
 func applyDropWidgetWith(rawData bson.D, op *ast.DropWidgetOp, find widgetFinder) error {
-	for _, name := range op.WidgetNames {
-		result := find(rawData, name)
+	for _, target := range op.Targets {
+		var result *bsonWidgetResult
+		if target.IsColumn() {
+			result = findBsonColumn(rawData, target.Widget, target.Column, find)
+		} else {
+			result = find(rawData, target.Widget)
+		}
 		if result == nil {
-			return fmt.Errorf("widget %q not found", name)
+			return fmt.Errorf("widget %q not found", target.Name())
 		}
 
 		// Remove from parent array
@@ -983,20 +1261,25 @@ func (e *Executor) applyReplaceWidget(rawData bson.D, op *ast.ReplaceWidgetOp, m
 
 // applyReplaceWidgetWith replaces a widget using the given widget finder.
 func (e *Executor) applyReplaceWidgetWith(rawData bson.D, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
-	result := find(rawData, op.WidgetName)
+	var result *bsonWidgetResult
+	if op.Target.IsColumn() {
+		result = findBsonColumn(rawData, op.Target.Widget, op.Target.Column, find)
+	} else {
+		result = find(rawData, op.Target.Widget)
+	}
 	if result == nil {
-		return fmt.Errorf("widget %q not found", op.WidgetName)
+		return fmt.Errorf("widget %q not found", op.Target.Name())
 	}
 
 	// Check for duplicate widget names (skip the widget being replaced)
 	for _, w := range op.NewWidgets {
-		if w.Name != "" && w.Name != op.WidgetName && find(rawData, w.Name) != nil {
+		if w.Name != "" && w.Name != op.Target.Widget && find(rawData, w.Name) != nil {
 			return fmt.Errorf("duplicate widget name '%s': a widget with this name already exists on the page", w.Name)
 		}
 	}
 
 	// Find entity context from enclosing DataView/DataGrid/ListView
-	entityCtx := findEnclosingEntityContext(rawData, op.WidgetName)
+	entityCtx := findEnclosingEntityContext(rawData, op.Target.Widget)
 
 	// Build new widget BSON from AST
 	newBsonWidgets, err := e.buildWidgetsBson(op.NewWidgets, moduleName, moduleID, entityCtx)

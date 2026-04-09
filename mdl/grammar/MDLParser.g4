@@ -195,8 +195,8 @@ alterPageOperation
 
 alterPageSet
     : SET LAYOUT EQUALS qualifiedName (MAP LPAREN alterLayoutMapping (COMMA alterLayoutMapping)* RPAREN)?  // SET Layout = Atlas_Core.TopBar MAP (Main -> Main)
-    | SET alterPageAssignment ON identifierOrKeyword                             // SET Caption = 'Save' ON btnSave
-    | SET LPAREN alterPageAssignment (COMMA alterPageAssignment)* RPAREN ON identifierOrKeyword  // SET (Caption = 'Save', ButtonStyle = Success) ON btnSave
+    | SET alterPageAssignment ON widgetRef                             // SET Caption = 'Save' ON btnSave  |  ON dgProducts.Name
+    | SET LPAREN alterPageAssignment (COMMA alterPageAssignment)* RPAREN ON widgetRef  // SET (Caption = 'Save', ButtonStyle = Success) ON btnSave
     | SET alterPageAssignment                                                    // SET Title = 'Edit' (page-level)
     ;
 
@@ -211,16 +211,22 @@ alterPageAssignment
     ;
 
 alterPageInsert
-    : INSERT AFTER identifierOrKeyword LBRACE pageBodyV3 RBRACE
-    | INSERT BEFORE identifierOrKeyword LBRACE pageBodyV3 RBRACE
+    : INSERT AFTER widgetRef LBRACE pageBodyV3 RBRACE
+    | INSERT BEFORE widgetRef LBRACE pageBodyV3 RBRACE
     ;
 
 alterPageDrop
-    : DROP WIDGET identifierOrKeyword (COMMA identifierOrKeyword)*
+    : DROP WIDGET widgetRef (COMMA widgetRef)*
     ;
 
 alterPageReplace
-    : REPLACE identifierOrKeyword WITH LBRACE pageBodyV3 RBRACE
+    : REPLACE widgetRef WITH LBRACE pageBodyV3 RBRACE
+    ;
+
+// Widget reference: plain name (btnSave) or dotted path (dgProducts.Name)
+widgetRef
+    : identifierOrKeyword DOT identifierOrKeyword    // dgProducts.Name (column ref)
+    | identifierOrKeyword                            // btnSave (widget ref)
     ;
 
 alterPageAddVariable

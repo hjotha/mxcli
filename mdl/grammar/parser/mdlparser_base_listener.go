@@ -110,6 +110,12 @@ func (s *BaseMDLParserListener) EnterAlterPageReplace(ctx *AlterPageReplaceConte
 // ExitAlterPageReplace is called when production alterPageReplace is exited.
 func (s *BaseMDLParserListener) ExitAlterPageReplace(ctx *AlterPageReplaceContext) {}
 
+// EnterWidgetRef is called when production widgetRef is entered.
+func (s *BaseMDLParserListener) EnterWidgetRef(ctx *WidgetRefContext) {}
+
+// ExitWidgetRef is called when production widgetRef is exited.
+func (s *BaseMDLParserListener) ExitWidgetRef(ctx *WidgetRefContext) {}
+
 // EnterAlterPageAddVariable is called when production alterPageAddVariable is entered.
 func (s *BaseMDLParserListener) EnterAlterPageAddVariable(ctx *AlterPageAddVariableContext) {}
 

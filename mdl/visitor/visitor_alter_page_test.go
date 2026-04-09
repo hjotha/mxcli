@@ -43,8 +43,8 @@ func TestAlterPageSetPropertyOnWidget(t *testing.T) {
 		t.Fatalf("Expected SetPropertyOp, got %T", stmt.Operations[0])
 	}
 
-	if setOp.WidgetName != "btnSave" {
-		t.Errorf("Expected widget name 'btnSave', got %q", setOp.WidgetName)
+	if setOp.Target.Widget != "btnSave" {
+		t.Errorf("Expected widget name 'btnSave', got %q", setOp.Target.Widget)
 	}
 
 	if v, ok := setOp.Properties["Caption"]; !ok || v != "Save" {
@@ -68,8 +68,8 @@ func TestAlterPageSetMultiplePropertiesOnWidget(t *testing.T) {
 	stmt := prog.Statements[0].(*ast.AlterPageStmt)
 	setOp := stmt.Operations[0].(*ast.SetPropertyOp)
 
-	if setOp.WidgetName != "btnSave" {
-		t.Errorf("Expected widget name 'btnSave', got %q", setOp.WidgetName)
+	if setOp.Target.Widget != "btnSave" {
+		t.Errorf("Expected widget name 'btnSave', got %q", setOp.Target.Widget)
 	}
 
 	if len(setOp.Properties) != 2 {
@@ -101,8 +101,8 @@ func TestAlterPageSetPageLevel(t *testing.T) {
 	stmt := prog.Statements[0].(*ast.AlterPageStmt)
 	setOp := stmt.Operations[0].(*ast.SetPropertyOp)
 
-	if setOp.WidgetName != "" {
-		t.Errorf("Expected empty widget name for page-level SET, got %q", setOp.WidgetName)
+	if setOp.Target.Widget != "" {
+		t.Errorf("Expected empty widget name for page-level SET, got %q", setOp.Target.Widget)
 	}
 
 	if v, ok := setOp.Properties["Title"]; !ok || v != "New Title" {
@@ -126,8 +126,8 @@ func TestAlterPageSetQuotedProperty(t *testing.T) {
 	stmt := prog.Statements[0].(*ast.AlterPageStmt)
 	setOp := stmt.Operations[0].(*ast.SetPropertyOp)
 
-	if setOp.WidgetName != "cbStatus" {
-		t.Errorf("Expected widget name 'cbStatus', got %q", setOp.WidgetName)
+	if setOp.Target.Widget != "cbStatus" {
+		t.Errorf("Expected widget name 'cbStatus', got %q", setOp.Target.Widget)
 	}
 
 	if v, ok := setOp.Properties["showLabel"]; !ok || v != false {
@@ -157,8 +157,8 @@ func TestAlterPageInsertAfter(t *testing.T) {
 		t.Errorf("Expected position 'AFTER', got %q", insertOp.Position)
 	}
 
-	if insertOp.TargetName != "txtName" {
-		t.Errorf("Expected target 'txtName', got %q", insertOp.TargetName)
+	if insertOp.Target.Widget != "txtName" {
+		t.Errorf("Expected target 'txtName', got %q", insertOp.Target.Widget)
 	}
 
 	if len(insertOp.Widgets) != 1 {
@@ -192,8 +192,8 @@ func TestAlterPageInsertBefore(t *testing.T) {
 		t.Errorf("Expected position 'BEFORE', got %q", insertOp.Position)
 	}
 
-	if insertOp.TargetName != "txtEmail" {
-		t.Errorf("Expected target 'txtEmail', got %q", insertOp.TargetName)
+	if insertOp.Target.Widget != "txtEmail" {
+		t.Errorf("Expected target 'txtEmail', got %q", insertOp.Target.Widget)
 	}
 }
 
@@ -213,12 +213,12 @@ func TestAlterPageDropWidget(t *testing.T) {
 	stmt := prog.Statements[0].(*ast.AlterPageStmt)
 	dropOp := stmt.Operations[0].(*ast.DropWidgetOp)
 
-	if len(dropOp.WidgetNames) != 1 {
-		t.Fatalf("Expected 1 widget name, got %d", len(dropOp.WidgetNames))
+	if len(dropOp.Targets) != 1 {
+		t.Fatalf("Expected 1 widget name, got %d", len(dropOp.Targets))
 	}
 
-	if dropOp.WidgetNames[0] != "txtOld" {
-		t.Errorf("Expected 'txtOld', got %q", dropOp.WidgetNames[0])
+	if dropOp.Targets[0].Widget != "txtOld" {
+		t.Errorf("Expected 'txtOld', got %q", dropOp.Targets[0].Widget)
 	}
 }
 
@@ -238,14 +238,14 @@ func TestAlterPageDropMultipleWidgets(t *testing.T) {
 	stmt := prog.Statements[0].(*ast.AlterPageStmt)
 	dropOp := stmt.Operations[0].(*ast.DropWidgetOp)
 
-	if len(dropOp.WidgetNames) != 3 {
-		t.Fatalf("Expected 3 widget names, got %d", len(dropOp.WidgetNames))
+	if len(dropOp.Targets) != 3 {
+		t.Fatalf("Expected 3 widget names, got %d", len(dropOp.Targets))
 	}
 
 	expected := []string{"a", "b", "c"}
 	for i, name := range expected {
-		if dropOp.WidgetNames[i] != name {
-			t.Errorf("Expected %q at index %d, got %q", name, i, dropOp.WidgetNames[i])
+		if dropOp.Targets[i].Widget != name {
+			t.Errorf("Expected %q at index %d, got %q", name, i, dropOp.Targets[i].Widget)
 		}
 	}
 }
@@ -270,8 +270,8 @@ func TestAlterPageReplace(t *testing.T) {
 	stmt := prog.Statements[0].(*ast.AlterPageStmt)
 	replaceOp := stmt.Operations[0].(*ast.ReplaceWidgetOp)
 
-	if replaceOp.WidgetName != "footer1" {
-		t.Errorf("Expected 'footer1', got %q", replaceOp.WidgetName)
+	if replaceOp.Target.Widget != "footer1" {
+		t.Errorf("Expected 'footer1', got %q", replaceOp.Target.Widget)
 	}
 
 	if len(replaceOp.NewWidgets) != 1 {
@@ -405,8 +405,8 @@ func TestAlterSnippetReplace(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected ReplaceWidgetOp, got %T", stmt.Operations[0])
 	}
-	if replaceOp.WidgetName != "text1" {
-		t.Errorf("Expected widget name 'text1', got %q", replaceOp.WidgetName)
+	if replaceOp.Target.Widget != "text1" {
+		t.Errorf("Expected widget name 'text1', got %q", replaceOp.Target.Widget)
 	}
 	if len(replaceOp.NewWidgets) != 1 {
 		t.Fatalf("Expected 1 new widget, got %d", len(replaceOp.NewWidgets))
@@ -435,8 +435,8 @@ func TestAlterSnippetDrop(t *testing.T) {
 	}
 
 	dropOp := stmt.Operations[0].(*ast.DropWidgetOp)
-	if len(dropOp.WidgetNames) != 1 || dropOp.WidgetNames[0] != "txtOld" {
-		t.Errorf("Expected DROP WIDGET txtOld, got %v", dropOp.WidgetNames)
+	if len(dropOp.Targets) != 1 || dropOp.Targets[0].Widget != "txtOld" {
+		t.Errorf("Expected DROP WIDGET txtOld, got %v", dropOp.Targets)
 	}
 }
 
@@ -459,8 +459,8 @@ func TestAlterSnippetSet(t *testing.T) {
 	}
 
 	setOp := stmt.Operations[0].(*ast.SetPropertyOp)
-	if setOp.WidgetName != "btnAction" {
-		t.Errorf("Expected widget name 'btnAction', got %q", setOp.WidgetName)
+	if setOp.Target.Widget != "btnAction" {
+		t.Errorf("Expected widget name 'btnAction', got %q", setOp.Target.Widget)
 	}
 }
 

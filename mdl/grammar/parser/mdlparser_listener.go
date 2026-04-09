@@ -52,6 +52,9 @@ type MDLParserListener interface {
 	// EnterAlterPageReplace is called when entering the alterPageReplace production.
 	EnterAlterPageReplace(c *AlterPageReplaceContext)
 
+	// EnterWidgetRef is called when entering the widgetRef production.
+	EnterWidgetRef(c *WidgetRefContext)
+
 	// EnterAlterPageAddVariable is called when entering the alterPageAddVariable production.
 	EnterAlterPageAddVariable(c *AlterPageAddVariableContext)
 
@@ -1230,6 +1233,9 @@ type MDLParserListener interface {
 
 	// ExitAlterPageReplace is called when exiting the alterPageReplace production.
 	ExitAlterPageReplace(c *AlterPageReplaceContext)
+
+	// ExitWidgetRef is called when exiting the widgetRef production.
+	ExitWidgetRef(c *WidgetRefContext)
 
 	// ExitAlterPageAddVariable is called when exiting the alterPageAddVariable production.
 	ExitAlterPageAddVariable(c *AlterPageAddVariableContext)

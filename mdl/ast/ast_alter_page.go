@@ -20,34 +20,55 @@ type AlterPageOperation interface {
 	isAlterPageOperation()
 }
 
-// SetPropertyOp represents: SET prop = value ON widgetName
-// or SET prop = value (page-level, WidgetName empty)
+// WidgetRef represents a widget reference, optionally with a sub-element path.
+// Plain: "btnSave" (Widget="btnSave", Column="")
+// Dotted: "dgProducts.Name" (Widget="dgProducts", Column="Name")
+type WidgetRef struct {
+	Widget string // widget name (always set)
+	Column string // column name within widget (empty for plain widget refs)
+}
+
+// Name returns the full reference string for error messages.
+func (r WidgetRef) Name() string {
+	if r.Column != "" {
+		return r.Widget + "." + r.Column
+	}
+	return r.Widget
+}
+
+// IsColumn returns true if this is a column reference (dotted path).
+func (r WidgetRef) IsColumn() bool {
+	return r.Column != ""
+}
+
+// SetPropertyOp represents: SET prop = value ON widgetRef
+// or SET prop = value (page-level, Target.Widget empty)
 type SetPropertyOp struct {
-	WidgetName string                 // empty for page-level SET
+	Target     WidgetRef              // empty Widget for page-level SET
 	Properties map[string]interface{} // property name -> value
 }
 
 func (s *SetPropertyOp) isAlterPageOperation() {}
 
-// InsertWidgetOp represents: INSERT AFTER/BEFORE widgetName { widgets }
+// InsertWidgetOp represents: INSERT AFTER/BEFORE widgetRef { widgets }
 type InsertWidgetOp struct {
-	Position   string // "AFTER" or "BEFORE"
-	TargetName string // widget to insert relative to
-	Widgets    []*WidgetV3
+	Position string    // "AFTER" or "BEFORE"
+	Target   WidgetRef // widget/column to insert relative to
+	Widgets  []*WidgetV3
 }
 
 func (s *InsertWidgetOp) isAlterPageOperation() {}
 
-// DropWidgetOp represents: DROP WIDGET name1, name2, ...
+// DropWidgetOp represents: DROP WIDGET ref1, ref2, ...
 type DropWidgetOp struct {
-	WidgetNames []string
+	Targets []WidgetRef
 }
 
 func (s *DropWidgetOp) isAlterPageOperation() {}
 
-// ReplaceWidgetOp represents: REPLACE widgetName WITH { widgets }
+// ReplaceWidgetOp represents: REPLACE widgetRef WITH { widgets }
 type ReplaceWidgetOp struct {
-	WidgetName string
+	Target     WidgetRef
 	NewWidgets []*WidgetV3
 }
 

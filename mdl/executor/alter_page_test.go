@@ -95,7 +95,7 @@ func TestApplyDropWidget_Single(t *testing.T) {
 	w3 := makeWidget("txtPhone", "Pages$TextBox")
 	rawData := makeRawPage(w1, w2, w3)
 
-	op := &ast.DropWidgetOp{WidgetNames: []string{"txtEmail"}}
+	op := &ast.DropWidgetOp{Targets: []ast.WidgetRef{{Widget: "txtEmail"}}}
 	if err := applyDropWidget(rawData, op); err != nil {
 		t.Fatalf("applyDropWidget failed: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestApplyDropWidget_Multiple(t *testing.T) {
 	w3 := makeWidget("c", "Pages$TextBox")
 	rawData := makeRawPage(w1, w2, w3)
 
-	op := &ast.DropWidgetOp{WidgetNames: []string{"a", "c"}}
+	op := &ast.DropWidgetOp{Targets: []ast.WidgetRef{{Widget: "a"}, {Widget: "c"}}}
 	if err := applyDropWidget(rawData, op); err != nil {
 		t.Fatalf("applyDropWidget failed: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestApplyDropWidget_NotFound(t *testing.T) {
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	rawData := makeRawPage(w1)
 
-	op := &ast.DropWidgetOp{WidgetNames: []string{"nonexistent"}}
+	op := &ast.DropWidgetOp{Targets: []ast.WidgetRef{{Widget: "nonexistent"}}}
 	err := applyDropWidget(rawData, op)
 	if err == nil {
 		t.Fatal("Expected error for nonexistent widget")
@@ -163,7 +163,7 @@ func TestApplyDropWidget_Nested(t *testing.T) {
 	container := makeContainerWidget("ctn1", inner1, inner2)
 	rawData := makeRawPage(container)
 
-	op := &ast.DropWidgetOp{WidgetNames: []string{"txtInner1"}}
+	op := &ast.DropWidgetOp{Targets: []ast.WidgetRef{{Widget: "txtInner1"}}}
 	if err := applyDropWidget(rawData, op); err != nil {
 		t.Fatalf("applyDropWidget failed: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestApplySetProperty_Name(t *testing.T) {
 	rawData := makeRawPage(w1)
 
 	op := &ast.SetPropertyOp{
-		WidgetName: "txtOld",
+		Target: ast.WidgetRef{Widget: "txtOld"},
 		Properties: map[string]interface{}{
 			"Name": "txtNew",
 		},
@@ -211,7 +211,7 @@ func TestApplySetProperty_ButtonStyle(t *testing.T) {
 	rawData := makeRawPage(w1)
 
 	op := &ast.SetPropertyOp{
-		WidgetName: "btnSave",
+		Target: ast.WidgetRef{Widget: "btnSave"},
 		Properties: map[string]interface{}{
 			"ButtonStyle": "Success",
 		},
@@ -234,7 +234,7 @@ func TestApplySetProperty_WidgetNotFound(t *testing.T) {
 	rawData := makeRawPage(w1)
 
 	op := &ast.SetPropertyOp{
-		WidgetName: "nonexistent",
+		Target: ast.WidgetRef{Widget: "nonexistent"},
 		Properties: map[string]interface{}{
 			"Name": "new",
 		},
@@ -279,7 +279,7 @@ func TestApplySetProperty_PluggableWidget(t *testing.T) {
 	rawData := makeRawPage(w1)
 
 	op := &ast.SetPropertyOp{
-		WidgetName: "cb1",
+		Target: ast.WidgetRef{Widget: "cb1"},
 		Properties: map[string]interface{}{
 			"showLabel": false,
 		},
@@ -448,7 +448,7 @@ func TestApplyDropWidget_Snippet(t *testing.T) {
 	w2 := makeWidget("txtEmail", "Pages$TextBox")
 	rawData := makeRawSnippet(w1, w2)
 
-	op := &ast.DropWidgetOp{WidgetNames: []string{"txtEmail"}}
+	op := &ast.DropWidgetOp{Targets: []ast.WidgetRef{{Widget: "txtEmail"}}}
 	if err := applyDropWidgetWith(rawData, op, findBsonWidgetInSnippet); err != nil {
 		t.Fatalf("applyDropWidgetWith failed: %v", err)
 	}
@@ -473,7 +473,7 @@ func TestApplySetProperty_Snippet(t *testing.T) {
 	rawData := makeRawSnippet(w1)
 
 	op := &ast.SetPropertyOp{
-		WidgetName: "btnAction",
+		Target: ast.WidgetRef{Widget: "btnAction"},
 		Properties: map[string]interface{}{
 			"ButtonStyle": "Danger",
 		},
