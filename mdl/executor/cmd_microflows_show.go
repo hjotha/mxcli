@@ -267,25 +267,9 @@ func (e *Executor) describeMicroflow(name ast.QualifiedName) error {
 		return fmt.Errorf("failed to build hierarchy: %w", err)
 	}
 
-	// Build entity name lookup for resolving entity IDs
-	entityNames := make(map[model.ID]string)
-	domainModels, _ := e.reader.ListDomainModels()
-	for _, dm := range domainModels {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, entity := range dm.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
-		}
-	}
-
-	// Build microflow name lookup for resolving microflow IDs
-	microflowNames := make(map[model.ID]string)
-
-	// Build page name lookup for resolving page IDs
-	pageNames := make(map[model.ID]string)
-	allPages, _ := e.reader.ListPages()
-	for _, p := range allPages {
-		pageNames[p.ID] = h.GetQualifiedName(p.ContainerID, p.Name)
-	}
+	// Use pre-warmed cache if available (from PreWarmCache), otherwise build on demand
+	entityNames := e.getEntityNames(h)
+	microflowNames := e.getMicroflowNames(h)
 
 	// Find the microflow
 	allMicroflows, err := e.reader.ListMicroflows()
@@ -293,9 +277,11 @@ func (e *Executor) describeMicroflow(name ast.QualifiedName) error {
 		return fmt.Errorf("failed to list microflows: %w", err)
 	}
 
-	// Build microflow name lookup
-	for _, mf := range allMicroflows {
-		microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+	// Supplement microflow name lookup if not pre-warmed
+	if len(microflowNames) == 0 {
+		for _, mf := range allMicroflows {
+			microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+		}
 	}
 
 	var targetMf *microflows.Microflow

@@ -13,6 +13,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 // execShowCatalogTables handles SHOW CATALOG TABLES.
@@ -788,10 +789,39 @@ func (e *Executor) captureDescribeParallel(objectType string, qualifiedName stri
 	return buf.String(), nil
 }
 
-// PreWarmCache ensures the hierarchy cache is populated before parallel operations.
+// PreWarmCache ensures all caches are populated before parallel operations.
 // Must be called from the main goroutine before using captureDescribeParallel.
+// This avoids O(n²) re-parsing in describe functions by building name lookup
+// maps once and sharing them across all goroutines.
 func (e *Executor) PreWarmCache() {
-	e.getHierarchy()
+	h, _ := e.getHierarchy()
+	if h == nil || e.cache == nil {
+		return
+	}
+
+	// Build entity name lookup
+	e.cache.entityNames = make(map[model.ID]string)
+	dms, _ := e.reader.ListDomainModels()
+	for _, dm := range dms {
+		modName := h.GetModuleName(dm.ContainerID)
+		for _, ent := range dm.Entities {
+			e.cache.entityNames[ent.ID] = modName + "." + ent.Name
+		}
+	}
+
+	// Build microflow name lookup
+	e.cache.microflowNames = make(map[model.ID]string)
+	mfs, _ := e.reader.ListMicroflows()
+	for _, mf := range mfs {
+		e.cache.microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+	}
+
+	// Build page name lookup
+	e.cache.pageNames = make(map[model.ID]string)
+	pgs, _ := e.reader.ListPages()
+	for _, pg := range pgs {
+		e.cache.pageNames[pg.ID] = h.GetQualifiedName(pg.ContainerID, pg.Name)
+	}
 }
 
 // execSearch handles SEARCH 'query' command.

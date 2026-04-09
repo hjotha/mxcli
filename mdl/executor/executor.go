@@ -34,6 +34,11 @@ type executorCache struct {
 
 	// Track domain models modified during this session for finalization
 	modifiedDomainModels map[model.ID]string // domain model unit ID -> module name
+
+	// Pre-warmed name lookup maps for parallel describe (goroutine-safe after init)
+	entityNames    map[model.ID]string // entity ID -> "Module.EntityName"
+	microflowNames map[model.ID]string // microflow ID -> "Module.MicroflowName"
+	pageNames      map[model.ID]string // page ID -> "Module.PageName"
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.
@@ -59,6 +64,48 @@ type createdSnippetInfo struct {
 	Name        string
 	ModuleName  string
 	ContainerID model.ID
+}
+
+// getEntityNames returns the entity name lookup map, using the pre-warmed cache if available.
+func (e *Executor) getEntityNames(h *ContainerHierarchy) map[model.ID]string {
+	if e.cache != nil && len(e.cache.entityNames) > 0 {
+		return e.cache.entityNames
+	}
+	entityNames := make(map[model.ID]string)
+	dms, _ := e.reader.ListDomainModels()
+	for _, dm := range dms {
+		modName := h.GetModuleName(dm.ContainerID)
+		for _, ent := range dm.Entities {
+			entityNames[ent.ID] = modName + "." + ent.Name
+		}
+	}
+	return entityNames
+}
+
+// getMicroflowNames returns the microflow name lookup map, using the pre-warmed cache if available.
+func (e *Executor) getMicroflowNames(h *ContainerHierarchy) map[model.ID]string {
+	if e.cache != nil && len(e.cache.microflowNames) > 0 {
+		return e.cache.microflowNames
+	}
+	microflowNames := make(map[model.ID]string)
+	mfs, _ := e.reader.ListMicroflows()
+	for _, mf := range mfs {
+		microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+	}
+	return microflowNames
+}
+
+// getPageNames returns the page name lookup map, using the pre-warmed cache if available.
+func (e *Executor) getPageNames(h *ContainerHierarchy) map[model.ID]string {
+	if e.cache != nil && len(e.cache.pageNames) > 0 {
+		return e.cache.pageNames
+	}
+	pageNames := make(map[model.ID]string)
+	pgs, _ := e.reader.ListPages()
+	for _, pg := range pgs {
+		pageNames[pg.ID] = h.GetQualifiedName(pg.ContainerID, pg.Name)
+	}
+	return pageNames
 }
 
 const (
