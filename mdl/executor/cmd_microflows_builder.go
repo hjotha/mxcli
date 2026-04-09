@@ -5,6 +5,7 @@ package executor
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
@@ -71,4 +72,99 @@ func (fb *flowBuilder) isVariableDeclared(varName string) bool {
 		return true
 	}
 	return false
+}
+
+// exprToString converts an AST Expression to a Mendix expression string,
+// resolving association navigation paths to include the target entity qualifier.
+// e.g. $Order/MyModule.Order_Customer/Name → $Order/MyModule.Order_Customer/MyModule.Customer/Name
+func (fb *flowBuilder) exprToString(expr ast.Expression) string {
+	resolved := fb.resolveAssociationPaths(expr)
+	return expressionToString(resolved)
+}
+
+// resolveAssociationPaths walks an expression tree and, for any AttributePathExpr
+// whose path contains an association (qualified name like Module.AssocName), inserts
+// the association's target entity after the association segment.
+func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expression {
+	if expr == nil {
+		return nil
+	}
+
+	switch e := expr.(type) {
+	case *ast.AttributePathExpr:
+		resolved := fb.resolvePathSegments(e.Path)
+		return &ast.AttributePathExpr{
+			Variable: e.Variable,
+			Path:     resolved,
+			Segments: e.Segments,
+		}
+	case *ast.BinaryExpr:
+		return &ast.BinaryExpr{
+			Left:     fb.resolveAssociationPaths(e.Left),
+			Operator: e.Operator,
+			Right:    fb.resolveAssociationPaths(e.Right),
+		}
+	case *ast.UnaryExpr:
+		return &ast.UnaryExpr{
+			Operator: e.Operator,
+			Operand:  fb.resolveAssociationPaths(e.Operand),
+		}
+	case *ast.FunctionCallExpr:
+		args := make([]ast.Expression, len(e.Arguments))
+		for i, arg := range e.Arguments {
+			args[i] = fb.resolveAssociationPaths(arg)
+		}
+		return &ast.FunctionCallExpr{
+			Name:      e.Name,
+			Arguments: args,
+		}
+	case *ast.ParenExpr:
+		return &ast.ParenExpr{Inner: fb.resolveAssociationPaths(e.Inner)}
+	case *ast.IfThenElseExpr:
+		return &ast.IfThenElseExpr{
+			Condition: fb.resolveAssociationPaths(e.Condition),
+			ThenExpr:  fb.resolveAssociationPaths(e.ThenExpr),
+			ElseExpr:  fb.resolveAssociationPaths(e.ElseExpr),
+		}
+	default:
+		return expr
+	}
+}
+
+// resolvePathSegments processes path segments in an attribute path expression.
+// For each segment that is a qualified association name (Module.AssocName), it looks up
+// the association's target entity and inserts it after the association.
+func (fb *flowBuilder) resolvePathSegments(path []string) []string {
+	if fb.reader == nil || len(path) == 0 {
+		return path
+	}
+
+	var resolved []string
+	for i, segment := range path {
+		resolved = append(resolved, segment)
+
+		// A qualified name (contains ".") that isn't the last segment might be an association
+		if !strings.Contains(segment, ".") {
+			continue
+		}
+		// If the next segment is already a qualified name, the target entity is already present
+		if i+1 < len(path) && strings.Contains(path[i+1], ".") {
+			continue
+		}
+		// If this is the last segment, nothing to insert after
+		if i == len(path)-1 {
+			continue
+		}
+
+		// Look up association target entity
+		parts := strings.SplitN(segment, ".", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		result := fb.lookupAssociation(parts[0], parts[1])
+		if result != nil && result.childEntityQN != "" {
+			resolved = append(resolved, result.childEntityQN)
+		}
+	}
+	return resolved
 }

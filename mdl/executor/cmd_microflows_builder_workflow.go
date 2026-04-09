@@ -38,7 +38,7 @@ func (fb *flowBuilder) addCallWorkflowAction(s *ast.CallWorkflowStmt) model.ID {
 	wfQN := s.Workflow.Module + "." + s.Workflow.Name
 	ctxVar := ""
 	if len(s.Arguments) > 0 {
-		ctxVar = expressionToString(s.Arguments[0].Value)
+		ctxVar = fb.exprToString(s.Arguments[0].Value)
 		// Strip leading $ if present
 		if len(ctxVar) > 0 && ctxVar[0] == '$' {
 			ctxVar = ctxVar[1:]
@@ -93,7 +93,7 @@ func (fb *flowBuilder) addWorkflowOperationAction(s *ast.WorkflowOperationStmt) 
 	case "ABORT":
 		reason := ""
 		if s.Reason != nil {
-			reason = expressionToString(s.Reason)
+			reason = fb.exprToString(s.Reason)
 		}
 		op = &microflows.AbortOperation{
 			BaseElement:      model.BaseElement{ID: model.ID(mpr.GenerateID())},

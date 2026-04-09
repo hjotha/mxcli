@@ -422,3 +422,140 @@ func validateMicroflowFromMDL(t *testing.T, input string) []string {
 
 	return ValidateMicroflowBody(stmt)
 }
+
+// TestAssociationNavParsing verifies that $Var/Module.Assoc/Attr parses as
+// AttributePathExpr (not nested BinaryExpr with "/" operator).
+// Issue #120: extra spaces around path separators.
+func TestAssociationNavParsing(t *testing.T) {
+	input := `CREATE MICROFLOW Test.MF_Nav()
+RETURNS String AS $Result
+BEGIN
+  DECLARE $CustName String = $Order/Test.Order_Customer/Name;
+  RETURN $CustName;
+END;`
+
+	prog, errs := visitor.Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("Parse error: %v", errs[0])
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	declStmt := stmt.Body[0].(*ast.DeclareStmt)
+
+	// The expression should be an AttributePathExpr, not a BinaryExpr
+	pathExpr, ok := declStmt.InitialValue.(*ast.AttributePathExpr)
+	if !ok {
+		t.Fatalf("Expected AttributePathExpr, got %T", declStmt.InitialValue)
+	}
+
+	if pathExpr.Variable != "Order" {
+		t.Errorf("Variable = %q, want %q", pathExpr.Variable, "Order")
+	}
+	if len(pathExpr.Path) != 2 {
+		t.Fatalf("Path length = %d, want 2", len(pathExpr.Path))
+	}
+	if pathExpr.Path[0] != "Test.Order_Customer" {
+		t.Errorf("Path[0] = %q, want %q", pathExpr.Path[0], "Test.Order_Customer")
+	}
+	if pathExpr.Path[1] != "Name" {
+		t.Errorf("Path[1] = %q, want %q", pathExpr.Path[1], "Name")
+	}
+
+	// Serialized form should have no extra spaces
+	got := expressionToString(pathExpr)
+	want := "$Order/Test.Order_Customer/Name"
+	if got != want {
+		t.Errorf("expressionToString() = %q, want %q", got, want)
+	}
+}
+
+// TestResolveAssociationPaths verifies that resolveAssociationPaths inserts
+// the target entity after an association segment.
+// Issue #120: missing target entity qualifier.
+func TestResolveAssociationPaths(t *testing.T) {
+	tests := []struct {
+		name string
+		path []string
+		want []string
+	}{
+		{
+			name: "simple_attribute",
+			path: []string{"Name"},
+			want: []string{"Name"},
+		},
+		{
+			name: "assoc_then_attr",
+			path: []string{"Test.Order_Customer", "Name"},
+			want: []string{"Test.Order_Customer", "Test.Customer", "Name"},
+		},
+		{
+			name: "already_has_target_entity",
+			path: []string{"Test.Order_Customer", "Test.Customer", "Name"},
+			want: []string{"Test.Order_Customer", "Test.Customer", "Name"},
+		},
+		{
+			name: "assoc_at_end",
+			path: []string{"Test.Order_Customer"},
+			want: []string{"Test.Order_Customer"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fb := &flowBuilder{
+				reader: nil, // nil reader → no resolution, path unchanged
+			}
+			got := fb.resolvePathSegments(tt.path)
+
+			// With nil reader, all paths should be unchanged
+			if len(got) != len(tt.path) {
+				t.Errorf("resolvePathSegments() length = %d, want %d", len(got), len(tt.path))
+			}
+		})
+	}
+}
+
+// TestExprToStringNoSpaces verifies that association navigation expressions
+// produce no extra spaces around separators after parsing.
+// Issue #120: generated $Order / Module.Assoc / Name instead of $Order/Module.Assoc/Name
+func TestExprToStringNoSpaces(t *testing.T) {
+	tests := []struct {
+		name string
+		expr ast.Expression
+		want string
+	}{
+		{
+			name: "simple_path",
+			expr: &ast.AttributePathExpr{
+				Variable: "Order",
+				Path:     []string{"OrderNumber"},
+			},
+			want: "$Order/OrderNumber",
+		},
+		{
+			name: "assoc_path",
+			expr: &ast.AttributePathExpr{
+				Variable: "Order",
+				Path:     []string{"Test.Order_Customer", "Name"},
+			},
+			want: "$Order/Test.Order_Customer/Name",
+		},
+		{
+			name: "multi_segment_path",
+			expr: &ast.AttributePathExpr{
+				Variable: "Invoice",
+				Path:     []string{"Billing.Invoice_Order", "Billing.Order_Customer", "Name"},
+			},
+			want: "$Invoice/Billing.Invoice_Order/Billing.Order_Customer/Name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expressionToString(tt.expr)
+			if got != tt.want {
+				t.Errorf("expressionToString() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -266,15 +266,18 @@ func buildMultiplicativeExpression(ctx parser.IMultiplicativeExpressionContext) 
 // tryBuildAttributePath attempts to build an AttributePathExpr from a left expression
 // and a right identifier. Returns nil if not an XPath-style path.
 func tryBuildAttributePath(left ast.Expression, right ast.Expression) *ast.AttributePathExpr {
-	// Right must be an identifier (LiteralExpr with string kind representing an identifier)
+	// Right must be a path component: identifier, qualified name, or string literal
 	var pathPart string
 	switch r := right.(type) {
+	case *ast.IdentifierExpr:
+		pathPart = r.Name
+	case *ast.QualifiedNameExpr:
+		pathPart = r.QualifiedName.String()
 	case *ast.LiteralExpr:
 		if r.Kind == ast.LiteralString {
 			pathPart, _ = r.Value.(string)
 		}
 	case *ast.VariableExpr:
-		// This shouldn't normally happen, but handle it
 		pathPart = r.Name
 	}
 

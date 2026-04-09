@@ -146,7 +146,7 @@ func (fb *flowBuilder) applyAnnotations(activityID model.ID, ann *ast.ActivityAn
 func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 	retVal := ""
 	if s.Value != nil {
-		retVal = expressionToString(s.Value)
+		retVal = fb.exprToString(s.Value)
 	}
 
 	endEvent := &microflows.EndEvent{

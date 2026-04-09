@@ -46,7 +46,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	// Create ExclusiveSplit with expression condition
 	splitCondition := &microflows.ExpressionSplitCondition{
 		BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
-		Expression:  expressionToString(s.Condition),
+		Expression:  fb.exprToString(s.Condition),
 	}
 
 	split := &microflows.ExclusiveSplit{
@@ -55,7 +55,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			Position:    model.Point{X: splitX, Y: centerY},
 			Size:        model.Size{Width: SplitWidth, Height: SplitHeight},
 		},
-		Caption:           expressionToString(s.Condition),
+		Caption:           fb.exprToString(s.Condition),
 		SplitCondition:    splitCondition,
 		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
 	}
@@ -343,7 +343,7 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 		}
 	}
 
-	whileExpr := expressionToString(s.Condition)
+	whileExpr := fb.exprToString(s.Condition)
 
 	loop := &microflows.LoopedActivity{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{

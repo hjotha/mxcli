@@ -38,7 +38,7 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 
 	if len(s.Template) > 0 {
 		// Use provided template parameters
-		templateText = expressionToString(s.Message)
+		templateText = fb.exprToString(s.Message)
 		// Sort parameters by index to ensure correct order
 		maxIndex := 0
 		for _, p := range s.Template {
@@ -49,7 +49,7 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 		templateParams = make([]string, maxIndex)
 		for _, p := range s.Template {
 			if p.Index > 0 && p.Index <= maxIndex {
-				templateParams[p.Index-1] = expressionToString(p.Value)
+				templateParams[p.Index-1] = fb.exprToString(p.Value)
 			}
 		}
 	} else if lit, ok := s.Message.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
@@ -58,7 +58,7 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 	} else {
 		// Complex expression - use {1} placeholder and add expression as parameter
 		templateText = "{1}"
-		templateParams = []string{expressionToString(s.Message)}
+		templateParams = []string{fb.exprToString(s.Message)}
 	}
 
 	action := &microflows.LogMessageAction{
@@ -103,7 +103,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		mapping := &microflows.MicroflowCallParameterMapping{
 			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			Parameter:   paramQN,
-			Argument:    expressionToString(arg.Value),
+			Argument:    fb.exprToString(arg.Value),
 		}
 		mappings = append(mappings, mapping)
 	}
@@ -181,7 +181,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 		if entityTypeParams[arg.Name] {
 			// Entity type parameter: value is the entity qualified name, not the variable reference.
 			// When the argument is a variable like $Email, resolve its entity type from varTypes.
-			valueExpr := expressionToString(arg.Value)
+			valueExpr := fb.exprToString(arg.Value)
 			entityName := strings.Trim(valueExpr, "'")
 			if strings.HasPrefix(entityName, "$") {
 				varName := strings.TrimPrefix(entityName, "$")
@@ -195,7 +195,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 			}
 		} else {
 			// Regular parameter: expression-based value
-			valueExpr := expressionToString(arg.Value)
+			valueExpr := fb.exprToString(arg.Value)
 			value = &microflows.BasicCodeActionParameterValue{
 				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 				Argument:    valueExpr,
@@ -255,7 +255,7 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 		mapping := &microflows.ExternalActionParameterMapping{
 			BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			ParameterName: arg.Name,
-			Argument:      expressionToString(arg.Value),
+			Argument:      fb.exprToString(arg.Value),
 		}
 		mappings = append(mappings, mapping)
 	}
@@ -310,7 +310,7 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 		mapping := &microflows.PageParameterMapping{
 			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			Parameter:   paramQN,
-			Argument:    expressionToString(arg.Value),
+			Argument:    fb.exprToString(arg.Value),
 		}
 		mappings = append(mappings, mapping)
 	}
@@ -411,12 +411,12 @@ func (fb *flowBuilder) addShowMessageAction(s *ast.ShowMessageStmt) model.ID {
 		templateText = fmt.Sprintf("%v", lit.Value)
 	} else {
 		templateText = "{1}"
-		templateParams = []string{expressionToString(s.Message)}
+		templateParams = []string{fb.exprToString(s.Message)}
 	}
 
 	// Append template parameters from TemplateArgs (e.g., OBJECTS [$Var1, $Var2])
 	for _, arg := range s.TemplateArgs {
-		templateParams = append(templateParams, expressionToString(arg))
+		templateParams = append(templateParams, fb.exprToString(arg))
 	}
 
 	template := &model.Text{
@@ -497,7 +497,7 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 	} else {
 		// Complex expression - use {1} placeholder and add expression as parameter
 		templateText = "{1}"
-		templateParams = []string{expressionToString(s.Message)}
+		templateParams = []string{fb.exprToString(s.Message)}
 	}
 
 	// Create template with translations map (default language "en_US")
@@ -537,7 +537,7 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 
 	// Append template parameters from TemplateArgs (e.g., OBJECTS [$Var1, $Var2])
 	for _, arg := range s.TemplateArgs {
-		templateParams = append(templateParams, expressionToString(arg))
+		templateParams = append(templateParams, fb.exprToString(arg))
 	}
 
 	// Strip the $ prefix from variable name for BSON storage
@@ -599,12 +599,12 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	if lit, ok := s.URL.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
 		httpConfig.LocationTemplate = fmt.Sprintf("%v", lit.Value)
 	} else {
-		httpConfig.LocationTemplate = expressionToString(s.URL)
+		httpConfig.LocationTemplate = fb.exprToString(s.URL)
 	}
 
 	// Set URL template parameters
 	for _, param := range s.URLParams {
-		httpConfig.LocationParams = append(httpConfig.LocationParams, expressionToString(param.Value))
+		httpConfig.LocationParams = append(httpConfig.LocationParams, fb.exprToString(param.Value))
 	}
 
 	// Set custom headers
@@ -612,7 +612,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 		h := &microflows.HttpHeader{
 			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			Name:        header.Name,
-			Value:       expressionToString(header.Value),
+			Value:       fb.exprToString(header.Value),
 		}
 		httpConfig.CustomHeaders = append(httpConfig.CustomHeaders, h)
 	}
@@ -620,8 +620,8 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	// Set authentication
 	if s.Auth != nil {
 		httpConfig.UseAuthentication = true
-		httpConfig.Username = expressionToString(s.Auth.Username)
-		httpConfig.Password = expressionToString(s.Auth.Password)
+		httpConfig.Username = fb.exprToString(s.Auth.Username)
+		httpConfig.Password = fb.exprToString(s.Auth.Password)
 	}
 
 	// Build request handling
@@ -634,12 +634,12 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			if lit, ok := s.Body.Template.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
 				template = fmt.Sprintf("%v", lit.Value)
 			} else {
-				template = expressionToString(s.Body.Template)
+				template = fb.exprToString(s.Body.Template)
 			}
 			// Extract template parameters
 			var templateParams []string
 			for _, param := range s.Body.TemplateParams {
-				templateParams = append(templateParams, expressionToString(param.Value))
+				templateParams = append(templateParams, fb.exprToString(param.Value))
 			}
 			requestHandling = &microflows.CustomRequestHandling{
 				BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
@@ -721,7 +721,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	// Build timeout expression
 	var timeoutExpr string
 	if s.Timeout != nil {
-		timeoutExpr = expressionToString(s.Timeout)
+		timeoutExpr = fb.exprToString(s.Timeout)
 	} else {
 		timeoutExpr = "300" // Default 5 minutes
 	}
@@ -835,7 +835,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 		pm := &microflows.DatabaseQueryParameterMapping{
 			BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			ParameterName: arg.Name,
-			Value:         expressionToString(arg.Value),
+			Value:         fb.exprToString(arg.Value),
 		}
 		action.ParameterMappings = append(action.ParameterMappings, pm)
 	}
@@ -845,7 +845,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 		cm := &microflows.DatabaseConnectionParameterMapping{
 			BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			ParameterName: arg.Name,
-			Value:         expressionToString(arg.Value),
+			Value:         fb.exprToString(arg.Value),
 		}
 		action.ConnectionParameterMappings = append(action.ConnectionParameterMappings, cm)
 	}

@@ -32,7 +32,7 @@ func (fb *flowBuilder) addCreateVariableAction(s *ast.DeclareStmt) model.ID {
 		BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
 		VariableName: s.Variable,
 		DataType:     convertASTToMicroflowDataType(declType, nil),
-		InitialValue: expressionToString(s.InitialValue),
+		InitialValue: fb.exprToString(s.InitialValue),
 	}
 
 	activity := &microflows.ActionActivity{
@@ -64,7 +64,7 @@ func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
 	action := &microflows.ChangeVariableAction{
 		BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
 		VariableName: s.Target,
-		Value:        expressionToString(s.Value),
+		Value:        fb.exprToString(s.Value),
 	}
 
 	activity := &microflows.ActionActivity{
@@ -108,7 +108,7 @@ func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 		memberChange := &microflows.MemberChange{
 			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			Type:        microflows.MemberChangeTypeSet,
-			Value:       expressionToString(change.Value),
+			Value:       fb.exprToString(change.Value),
 		}
 		fb.resolveMemberChange(memberChange, change.Attribute, entityQN)
 		action.InitialMembers = append(action.InitialMembers, memberChange)
@@ -257,7 +257,7 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 		memberChange := &microflows.MemberChange{
 			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			Type:        microflows.MemberChangeTypeSet,
-			Value:       expressionToString(change.Value),
+			Value:       fb.exprToString(change.Value),
 		}
 		fb.resolveMemberChange(memberChange, change.Attribute, entityQN)
 		action.Changes = append(action.Changes, memberChange)
@@ -463,13 +463,13 @@ func (fb *flowBuilder) addListOperationAction(s *ast.ListOperationStmt) model.ID
 		operation = &microflows.FindOperation{
 			BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			ListVariable: s.InputVariable,
-			Expression:   expressionToString(s.Condition),
+			Expression:   fb.exprToString(s.Condition),
 		}
 	case ast.ListOpFilter:
 		operation = &microflows.FilterOperation{
 			BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
 			ListVariable: s.InputVariable,
-			Expression:   expressionToString(s.Condition),
+			Expression:   fb.exprToString(s.Condition),
 		}
 	case ast.ListOpSort:
 		// Resolve entity type from input variable for qualified attribute names
