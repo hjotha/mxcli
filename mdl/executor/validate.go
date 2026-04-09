@@ -181,7 +181,9 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 			}
 		}
 		// Validate enumeration references in attributes
+		attrTypes := make(map[string]ast.DataType)
 		for _, attr := range s.Attributes {
+			attrTypes[attr.Name] = attr.Type
 			if attr.Type.Kind == ast.TypeEnumeration && attr.Type.EnumRef != nil {
 				enumRef := attr.Type.EnumRef
 				// Check for missing module (common mistake - bare type name)
@@ -196,6 +198,18 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 					if !e.enumerationExists(enumQN) {
 						return fmt.Errorf("attribute '%s': enumeration not found: %s", attr.Name, enumQN)
 					}
+				}
+			}
+		}
+		// Validate index columns
+		for _, idx := range s.Indexes {
+			for _, col := range idx.Columns {
+				dt, exists := attrTypes[col.Name]
+				if !exists {
+					return fmt.Errorf("INDEX on unknown attribute '%s'", col.Name)
+				}
+				if dt.Kind == ast.TypeString && dt.Length == 0 {
+					return fmt.Errorf("INDEX on attribute '%s' is not allowed — String(unlimited) maps to TEXT/CLOB which cannot be indexed. Use a fixed length, e.g. String(200)", col.Name)
 				}
 			}
 		}
