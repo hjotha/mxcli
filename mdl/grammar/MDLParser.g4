@@ -1192,7 +1192,7 @@ rollbackStatement
 // RETRIEVE $ProductList FROM MfTest.Product WHERE Code = $SearchCode SORT BY Name ASC LIMIT 1;
 retrieveStatement
     : RETRIEVE VARIABLE FROM retrieveSource
-      (WHERE (xpathConstraint | expression))?
+      (WHERE (xpathConstraint (andOrXpath? xpathConstraint)* | expression))?
       (SORT_BY sortColumn (COMMA sortColumn)*)?
       (LIMIT limitExpr=expression)?
       (OFFSET offsetExpr=expression)?
@@ -2027,7 +2027,7 @@ attributeListV3
 dataSourceExprV3
     : VARIABLE                                        // $ParamName
     | DATABASE FROM? qualifiedName                    // DATABASE [FROM] Entity [WHERE ...] [SORT BY ...]
-      (WHERE (xpathConstraint (andOrXpath xpathConstraint)* | expression))?
+      (WHERE (xpathConstraint (andOrXpath? xpathConstraint)* | expression))?
       (SORT_BY sortColumn (COMMA sortColumn)*)?
     | MICROFLOW qualifiedName microflowArgsV3?        // MICROFLOW Module.Flow
     | NANOFLOW qualifiedName microflowArgsV3?         // NANOFLOW Module.Flow

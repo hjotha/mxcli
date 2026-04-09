@@ -176,6 +176,7 @@ Available topics:
   fragment    - Show fragment (reusable widget group) syntax
   java-action - Show Java action syntax (CREATE/DESCRIBE/CALL, type params, EXPOSED AS)
   business-events - Show business event service syntax
+  xpath       - Show XPath constraint syntax for WHERE clauses
   oql         - Show OQL query execution syntax (mxcli oql)
   sql         - Show external SQL query execution syntax (mxcli sql)
   errors      - List validation errors and how to fix them
@@ -240,6 +241,8 @@ Example:
 			showTopicHelp("java-action")
 		case "business-events", "businessevents", "business_events", "be":
 			showTopicHelp("business-events")
+		case "xpath", "xpath-constraints":
+			showTopicHelp("xpath")
 		case "oql":
 			showTopicHelp("oql")
 		case "sql", "external-sql":

@@ -754,10 +754,30 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 	// Supports both bare expression: WHERE expr
 	// and bracket notation: WHERE [expr]
 	if retrCtx.WHERE() != nil {
-		if xc := retrCtx.XpathConstraint(); xc != nil {
-			xcCtx := xc.(*parser.XpathConstraintContext)
+		xpathConstraints := retrCtx.AllXpathConstraint()
+		if len(xpathConstraints) == 1 {
+			xcCtx := xpathConstraints[0].(*parser.XpathConstraintContext)
 			if xpathExpr := xcCtx.XpathExpr(); xpathExpr != nil {
 				stmt.Where = buildXPathExpr(xpathExpr)
+			}
+		} else if len(xpathConstraints) > 1 {
+			// Multiple predicates [cond1][cond2] — combine with AND
+			var andExprs []ast.Expression
+			for _, xc := range xpathConstraints {
+				xcCtx := xc.(*parser.XpathConstraintContext)
+				if xpathExpr := xcCtx.XpathExpr(); xpathExpr != nil {
+					andExprs = append(andExprs, buildXPathExpr(xpathExpr))
+				}
+			}
+			if len(andExprs) == 1 {
+				stmt.Where = andExprs[0]
+			} else if len(andExprs) > 1 {
+				// Build a chain of AND expressions
+				result := andExprs[0]
+				for _, expr := range andExprs[1:] {
+					result = &ast.BinaryExpr{Left: result, Operator: "and", Right: expr}
+				}
+				stmt.Where = result
 			}
 		} else if expr := retrCtx.Expression(0); expr != nil {
 			stmt.Where = buildExpression(expr)

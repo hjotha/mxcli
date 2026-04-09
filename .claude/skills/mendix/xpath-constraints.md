@@ -167,10 +167,13 @@ DATAGRID dg (
 }
 ```
 
-Multiple bracket constraints can be chained:
+Multiple bracket constraints can be chained. Consecutive brackets without an operator are treated as AND (standard Mendix XPath):
 
 ```mdl
--- All AND: separate brackets
+-- Consecutive brackets (implicit AND) — standard Mendix XPath syntax
+DataSource: DATABASE FROM Module.Entity WHERE [IsActive = true][Stock > 0]
+
+-- Explicit AND: same result
 DataSource: DATABASE FROM Module.Entity WHERE [IsActive = true] AND [Stock > 0]
 
 -- Mix with OR: combines into single bracket
