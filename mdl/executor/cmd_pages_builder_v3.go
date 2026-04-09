@@ -1188,8 +1188,10 @@ func (pb *pageBuilder) resolveTemplateAttributePathFull(attrRef string, param *p
 
 	// For other patterns, resolve and check type
 	resolved := pb.resolveTemplateAttributePath(attrRef)
-	if pb.isNonStringAttribute(resolved) {
-		// Convert to toString() expression for non-String attributes
+	if !strings.HasPrefix(attrRef, "$") && pb.isNonStringAttribute(resolved) {
+		// Convert bare attribute names to toString() for non-String types.
+		// Only for bare names (e.g., "TotalOrders") in DataView context,
+		// not for $param.Attr references which are resolved via SourceVariable.
 		param.Expression = "toString($currentObject/" + attrRef + ")"
 		return
 	}
