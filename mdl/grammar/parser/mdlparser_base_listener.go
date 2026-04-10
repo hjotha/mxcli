@@ -386,6 +386,24 @@ func (s *BaseMDLParserListener) EnterEntityOption(ctx *EntityOptionContext) {}
 // ExitEntityOption is called when production entityOption is exited.
 func (s *BaseMDLParserListener) ExitEntityOption(ctx *EntityOptionContext) {}
 
+// EnterEventHandlerDefinition is called when production eventHandlerDefinition is entered.
+func (s *BaseMDLParserListener) EnterEventHandlerDefinition(ctx *EventHandlerDefinitionContext) {}
+
+// ExitEventHandlerDefinition is called when production eventHandlerDefinition is exited.
+func (s *BaseMDLParserListener) ExitEventHandlerDefinition(ctx *EventHandlerDefinitionContext) {}
+
+// EnterEventMoment is called when production eventMoment is entered.
+func (s *BaseMDLParserListener) EnterEventMoment(ctx *EventMomentContext) {}
+
+// ExitEventMoment is called when production eventMoment is exited.
+func (s *BaseMDLParserListener) ExitEventMoment(ctx *EventMomentContext) {}
+
+// EnterEventType is called when production eventType is entered.
+func (s *BaseMDLParserListener) EnterEventType(ctx *EventTypeContext) {}
+
+// ExitEventType is called when production eventType is exited.
+func (s *BaseMDLParserListener) ExitEventType(ctx *EventTypeContext) {}
+
 // EnterAttributeDefinitionList is called when production attributeDefinitionList is entered.
 func (s *BaseMDLParserListener) EnterAttributeDefinitionList(ctx *AttributeDefinitionListContext) {}
 

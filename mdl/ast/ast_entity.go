@@ -35,9 +35,10 @@ func (k EntityKind) String() string {
 type CreateEntityStmt struct {
 	Name             QualifiedName
 	Kind             EntityKind
-	Generalization   *QualifiedName // Parent entity for inheritance (e.g., System.Image)
+	Generalization   *QualifiedName    // Parent entity for inheritance (e.g., System.Image)
 	Attributes       []Attribute
 	Indexes          []Index
+	EventHandlers    []EventHandlerDef // ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL ...
 	Position         *Position
 	Documentation    string
 	Comment          string
@@ -78,7 +79,18 @@ const (
 	AlterEntityDropStoreCreatedDate                   // DROP STORE CREATED DATE
 	AlterEntityDropStoreChangedDate                   // DROP STORE CHANGED DATE
 	AlterEntitySetPosition                            // SET POSITION (x, y)
+	AlterEntityAddEventHandler                        // ADD EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.MF
+	AlterEntityDropEventHandler                       // DROP EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK
 )
+
+// EventHandlerDef represents an event handler in CREATE/ALTER ENTITY syntax.
+type EventHandlerDef struct {
+	Moment            string        // "Before" or "After"
+	Event             string        // "Create", "Commit", "Delete", "Rollback"
+	Microflow         QualifiedName // Microflow to call
+	RaiseErrorOnFalse bool          // RAISE ERROR clause present
+	PassEventObject   bool          // Whether to pass entity object (default true)
+}
 
 // AlterEntityStmt represents: ALTER ENTITY Module.Name ADD/DROP/RENAME/MODIFY ATTRIBUTE ...
 type AlterEntityStmt struct {
@@ -95,6 +107,7 @@ type AlterEntityStmt struct {
 	Index               *Index         // For ADD INDEX
 	IndexName           string         // For DROP INDEX
 	Position            *Position      // For SET POSITION
+	EventHandler        *EventHandlerDef // For ADD/DROP EVENT HANDLER
 }
 
 func (s *AlterEntityStmt) isStatement() {}

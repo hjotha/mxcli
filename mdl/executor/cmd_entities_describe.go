@@ -378,6 +378,29 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 				fmt.Fprint(e.output, "\nSTORE CHANGED DATE")
 			}
 
+			// Output event handlers
+			for _, eh := range entity.EventHandlers {
+				mfName := eh.MicroflowName
+				if mfName == "" && eh.MicroflowID != "" {
+					mfName = e.lookupMicroflowName(eh.MicroflowID)
+				}
+				if mfName == "" {
+					continue
+				}
+				raise := ""
+				if eh.RaiseErrorOnFalse {
+					raise = " RAISE ERROR"
+				}
+				eventName := string(eh.Event)
+				if eventName == "RollBack" {
+					eventName = "ROLLBACK"
+				} else {
+					eventName = strings.ToUpper(eventName)
+				}
+				fmt.Fprintf(e.output, "\nON %s %s CALL %s%s",
+					strings.ToUpper(string(eh.Moment)), eventName, mfName, raise)
+			}
+
 			fmt.Fprintln(e.output, ";")
 
 			// Output access rule GRANT statements

@@ -98,11 +98,51 @@ func (b *Builder) ExitCreateEntityStatement(ctx *parser.CreateEntityStatementCon
 						stmt.StoreChangedDate = true
 					}
 				}
+				// Handle event handler option (ON BEFORE/AFTER ... CALL ...)
+				if ehCtx := optCtx.EventHandlerDefinition(); ehCtx != nil {
+					if eh := buildEventHandler(ehCtx); eh != nil {
+						stmt.EventHandlers = append(stmt.EventHandlers, *eh)
+					}
+				}
 			}
 		}
 	}
 
 	b.statements = append(b.statements, stmt)
+}
+
+// buildEventHandler converts an eventHandlerDefinition parse tree to an ast.EventHandlerDef.
+func buildEventHandler(ctx parser.IEventHandlerDefinitionContext) *ast.EventHandlerDef {
+	if ctx == nil {
+		return nil
+	}
+	ehCtx := ctx.(*parser.EventHandlerDefinitionContext)
+	eh := &ast.EventHandlerDef{
+		PassEventObject: true, // default
+	}
+	if m := ehCtx.EventMoment(); m != nil {
+		eh.Moment = strings.Title(strings.ToLower(m.GetText()))
+	}
+	if t := ehCtx.EventType(); t != nil {
+		txt := strings.ToUpper(t.GetText())
+		switch txt {
+		case "CREATE":
+			eh.Event = "Create"
+		case "COMMIT":
+			eh.Event = "Commit"
+		case "DELETE":
+			eh.Event = "Delete"
+		case "ROLLBACK":
+			eh.Event = "RollBack"
+		}
+	}
+	if qn := ehCtx.QualifiedName(); qn != nil {
+		eh.Microflow = buildQualifiedName(qn)
+	}
+	if ehCtx.RAISE() != nil {
+		eh.RaiseErrorOnFalse = true
+	}
+	return eh
 }
 
 // buildViewEntity handles CREATE VIEW ENTITY statements.
@@ -677,6 +717,47 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 					Name:      name,
 					Operation: ast.AlterEntityDropIndex,
 					IndexName: ctx.IDENTIFIER().GetText(),
+				})
+				return
+			}
+
+			// ADD EVENT HANDLER
+			if ctx.ADD() != nil && ctx.EVENT() != nil && ctx.HANDLER() != nil {
+				if ehCtx := ctx.EventHandlerDefinition(); ehCtx != nil {
+					if eh := buildEventHandler(ehCtx); eh != nil {
+						b.statements = append(b.statements, &ast.AlterEntityStmt{
+							Name:         name,
+							Operation:    ast.AlterEntityAddEventHandler,
+							EventHandler: eh,
+						})
+					}
+				}
+				return
+			}
+
+			// DROP EVENT HANDLER ON Moment Type
+			if ctx.DROP() != nil && ctx.EVENT() != nil && ctx.HANDLER() != nil {
+				eh := &ast.EventHandlerDef{}
+				if m := ctx.EventMoment(); m != nil {
+					eh.Moment = strings.Title(strings.ToLower(m.GetText()))
+				}
+				if t := ctx.EventType(); t != nil {
+					txt := strings.ToUpper(t.GetText())
+					switch txt {
+					case "CREATE":
+						eh.Event = "Create"
+					case "COMMIT":
+						eh.Event = "Commit"
+					case "DELETE":
+						eh.Event = "Delete"
+					case "ROLLBACK":
+						eh.Event = "RollBack"
+					}
+				}
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:         name,
+					Operation:    ast.AlterEntityDropEventHandler,
+					EventHandler: eh,
 				})
 				return
 			}

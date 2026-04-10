@@ -175,6 +175,15 @@ type MDLParserListener interface {
 	// EnterEntityOption is called when entering the entityOption production.
 	EnterEntityOption(c *EntityOptionContext)
 
+	// EnterEventHandlerDefinition is called when entering the eventHandlerDefinition production.
+	EnterEventHandlerDefinition(c *EventHandlerDefinitionContext)
+
+	// EnterEventMoment is called when entering the eventMoment production.
+	EnterEventMoment(c *EventMomentContext)
+
+	// EnterEventType is called when entering the eventType production.
+	EnterEventType(c *EventTypeContext)
+
 	// EnterAttributeDefinitionList is called when entering the attributeDefinitionList production.
 	EnterAttributeDefinitionList(c *AttributeDefinitionListContext)
 
@@ -1425,6 +1434,15 @@ type MDLParserListener interface {
 
 	// ExitEntityOption is called when exiting the entityOption production.
 	ExitEntityOption(c *EntityOptionContext)
+
+	// ExitEventHandlerDefinition is called when exiting the eventHandlerDefinition production.
+	ExitEventHandlerDefinition(c *EventHandlerDefinitionContext)
+
+	// ExitEventMoment is called when exiting the eventMoment production.
+	ExitEventMoment(c *EventMomentContext)
+
+	// ExitEventType is called when exiting the eventType production.
+	ExitEventType(c *EventTypeContext)
 
 	// ExitAttributeDefinitionList is called when exiting the attributeDefinitionList production.
 	ExitAttributeDefinitionList(c *AttributeDefinitionListContext)

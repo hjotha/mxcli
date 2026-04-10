@@ -14,6 +14,36 @@ import (
 )
 
 // execCreateEntity handles CREATE ENTITY statements.
+// buildEventHandlers converts a list of AST EventHandlerDef to domain model EventHandler.
+// Resolves the microflow qualified name to a microflow ID, but stores the qualified name
+// for BY_NAME serialization.
+func (e *Executor) buildEventHandlers(defs []ast.EventHandlerDef) ([]*domainmodel.EventHandler, error) {
+	if len(defs) == 0 {
+		return nil, nil
+	}
+	var handlers []*domainmodel.EventHandler
+	for _, d := range defs {
+		mfQN := d.Microflow.String()
+		mfID, err := e.resolveMicroflowByName(mfQN)
+		if err != nil {
+			return nil, fmt.Errorf("event handler microflow not found: %s", mfQN)
+		}
+		handlers = append(handlers, &domainmodel.EventHandler{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(mpr.GenerateID()),
+				TypeName: "DomainModels$EventHandler",
+			},
+			Moment:            domainmodel.EventMoment(d.Moment),
+			Event:             domainmodel.EventType(d.Event),
+			MicroflowID:       mfID,
+			MicroflowName:     mfQN,
+			RaiseErrorOnFalse: d.RaiseErrorOnFalse,
+			PassEventObject:   d.PassEventObject,
+		})
+	}
+	return handlers, nil
+}
+
 func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 	if e.reader == nil {
 		return fmt.Errorf("not connected to a project")
@@ -190,6 +220,12 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 	}
 
 	// Create entity
+	// Build event handlers
+	eventHandlers, err := e.buildEventHandlers(s.EventHandlers)
+	if err != nil {
+		return err
+	}
+
 	entity := &domainmodel.Entity{
 		Name:            s.Name.Name,
 		Documentation:   s.Documentation,
@@ -198,6 +234,7 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 		Attributes:      attrs,
 		ValidationRules: validationRules,
 		Indexes:         indexes,
+		EventHandlers:   eventHandlers,
 		HasOwner:        s.StoreOwner,
 		HasChangedBy:    s.StoreChangedBy,
 		HasCreatedDate:  s.StoreCreatedDate,
@@ -822,6 +859,54 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		}
 		e.invalidateDomainModelsCache()
 		fmt.Fprintf(e.output, "Dropped index '%s' from entity %s\n", s.IndexName, s.Name)
+
+	case ast.AlterEntityAddEventHandler:
+		if s.EventHandler == nil {
+			return fmt.Errorf("missing event handler definition")
+		}
+		ehs, err := e.buildEventHandlers([]ast.EventHandlerDef{*s.EventHandler})
+		if err != nil {
+			return err
+		}
+		// Reject duplicate (same Moment + Event)
+		for _, existing := range entity.EventHandlers {
+			if existing.Moment == ehs[0].Moment && existing.Event == ehs[0].Event {
+				return fmt.Errorf("event handler already exists for %s %s on %s",
+					s.EventHandler.Moment, s.EventHandler.Event, s.Name)
+			}
+		}
+		entity.EventHandlers = append(entity.EventHandlers, ehs[0])
+		if err := e.writer.UpdateEntity(dm.ID, entity); err != nil {
+			return fmt.Errorf("failed to add event handler: %w", err)
+		}
+		e.invalidateDomainModelsCache()
+		fmt.Fprintf(e.output, "Added event handler %s %s on %s\n",
+			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
+
+	case ast.AlterEntityDropEventHandler:
+		if s.EventHandler == nil {
+			return fmt.Errorf("missing event handler reference")
+		}
+		moment := domainmodel.EventMoment(s.EventHandler.Moment)
+		event := domainmodel.EventType(s.EventHandler.Event)
+		idx := -1
+		for i, eh := range entity.EventHandlers {
+			if eh.Moment == moment && eh.Event == event {
+				idx = i
+				break
+			}
+		}
+		if idx < 0 {
+			return fmt.Errorf("event handler %s %s not found on %s",
+				s.EventHandler.Moment, s.EventHandler.Event, s.Name)
+		}
+		entity.EventHandlers = append(entity.EventHandlers[:idx], entity.EventHandlers[idx+1:]...)
+		if err := e.writer.UpdateEntity(dm.ID, entity); err != nil {
+			return fmt.Errorf("failed to drop event handler: %w", err)
+		}
+		e.invalidateDomainModelsCache()
+		fmt.Fprintf(e.output, "Dropped event handler %s %s from %s\n",
+			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
 
 	default:
 		return fmt.Errorf("unsupported ALTER ENTITY operation")

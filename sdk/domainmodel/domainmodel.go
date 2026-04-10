@@ -508,10 +508,13 @@ func (UniqueValidationRuleInfo) isValidationRuleInfo() {}
 // EventHandler represents an event handler for an entity.
 type EventHandler struct {
 	model.BaseElement
-	ContainerID       model.ID  `json:"containerId"`
-	Event             EventType `json:"event"`
-	MicroflowID       model.ID  `json:"microflowId"`
-	RaiseErrorOnFalse bool      `json:"raiseErrorOnFalse"`
+	ContainerID       model.ID    `json:"containerId"`
+	Moment            EventMoment `json:"moment"`
+	Event             EventType   `json:"event"`
+	MicroflowID       model.ID    `json:"microflowId"`
+	MicroflowName     string      `json:"microflowName,omitempty"` // Qualified name for BY_NAME serialization
+	RaiseErrorOnFalse bool        `json:"raiseErrorOnFalse"`
+	PassEventObject   bool        `json:"passEventObject"`
 }
 
 // GetContainerID returns the ID of the containing entity.
@@ -519,14 +522,23 @@ func (eh *EventHandler) GetContainerID() model.ID {
 	return eh.ContainerID
 }
 
+// EventMoment represents when an event handler runs (Before or After the event).
+type EventMoment string
+
+const (
+	EventMomentBefore EventMoment = "Before"
+	EventMomentAfter  EventMoment = "After"
+)
+
 // EventType represents the type of entity event.
+// Note: "RollBack" matches the Mendix metamodel spelling.
 type EventType string
 
 const (
 	EventTypeCreate   EventType = "Create"
 	EventTypeCommit   EventType = "Commit"
 	EventTypeDelete   EventType = "Delete"
-	EventTypeRollback EventType = "Rollback"
+	EventTypeRollback EventType = "RollBack"
 )
 
 // Annotation represents an annotation in the domain model.

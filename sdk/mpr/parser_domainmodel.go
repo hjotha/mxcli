@@ -634,9 +634,16 @@ func parseEventHandler(raw map[string]any) *domainmodel.EventHandler {
 	handler := &domainmodel.EventHandler{}
 
 	handler.ID = model.ID(extractBsonID(raw["$ID"]))
+	handler.Moment = domainmodel.EventMoment(extractString(raw["Moment"]))
 	handler.Event = domainmodel.EventType(extractString(raw["Event"]))
-	handler.MicroflowID = model.ID(extractBsonID(raw["Microflow"]))
+	// Microflow can be either a binary ID (BY_ID_REFERENCE) or a string (BY_NAME_REFERENCE)
+	if mfStr, ok := raw["Microflow"].(string); ok {
+		handler.MicroflowName = mfStr
+	} else {
+		handler.MicroflowID = model.ID(extractBsonID(raw["Microflow"]))
+	}
 	handler.RaiseErrorOnFalse = extractBool(raw["RaiseErrorOnFalse"], false)
+	handler.PassEventObject = extractBool(raw["PassEventObject"], true)
 
 	return handler
 }

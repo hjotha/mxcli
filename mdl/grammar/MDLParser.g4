@@ -551,6 +551,20 @@ entityOption
     | STORE CHANGED BY
     | STORE CREATED DATE_TYPE
     | STORE CHANGED DATE_TYPE
+    | eventHandlerDefinition
+    ;
+
+// Entity event handler: ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.Microflow [RAISE ERROR]
+eventHandlerDefinition
+    : ON eventMoment eventType CALL qualifiedName (RAISE ERROR)?
+    ;
+
+eventMoment
+    : BEFORE | AFTER
+    ;
+
+eventType
+    : CREATE | COMMIT | DELETE | ROLLBACK
     ;
 
 attributeDefinitionList
@@ -765,6 +779,8 @@ alterEntityAction
     | SET POSITION LPAREN NUMBER_LITERAL COMMA NUMBER_LITERAL RPAREN
     | ADD INDEX indexDefinition
     | DROP INDEX IDENTIFIER
+    | ADD EVENT HANDLER eventHandlerDefinition
+    | DROP EVENT HANDLER ON eventMoment eventType
     ;
 
 alterAssociationAction

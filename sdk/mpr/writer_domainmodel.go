@@ -661,7 +661,7 @@ func serializeEntity(e *domainmodel.Entity, moduleName string, pv *version.Proje
 		{Key: "GUID", Value: entityGUID},
 		{Key: "Location", Value: location},
 		{Key: "Indexes", Value: indexes},
-		{Key: "EventHandlers", Value: bson.A{int32(3)}},
+		{Key: "EventHandlers", Value: serializeEventHandlers(e.EventHandlers)},
 	}
 
 	// Add Source for view entities (references a ViewEntitySourceDocument)
@@ -675,6 +675,51 @@ func serializeEntity(e *domainmodel.Entity, moduleName string, pv *version.Proje
 	}
 
 	return doc
+}
+
+// serializeEventHandlers serializes a list of EventHandlers to a BSON array.
+// Returns [int32(3)] for empty (storageListType 3 = stored object list).
+func serializeEventHandlers(handlers []*domainmodel.EventHandler) bson.A {
+	arr := bson.A{int32(3)}
+	for _, eh := range handlers {
+		arr = append(arr, serializeEventHandler(eh))
+	}
+	return arr
+}
+
+// serializeEventHandler serializes a single EventHandler to BSON.
+// $Type is "DomainModels$EventHandler". Microflow uses BY_NAME (string) reference.
+func serializeEventHandler(eh *domainmodel.EventHandler) bson.D {
+	ehID := string(eh.ID)
+	if ehID == "" {
+		ehID = generateUUID()
+	}
+	moment := string(eh.Moment)
+	if moment == "" {
+		moment = "Before"
+	}
+	event := string(eh.Event)
+	if event == "" {
+		event = "Commit"
+	}
+	// BY_NAME reference for the microflow
+	var microflowRef interface{}
+	if eh.MicroflowName != "" {
+		microflowRef = eh.MicroflowName
+	} else if eh.MicroflowID != "" {
+		microflowRef = idToBsonBinary(string(eh.MicroflowID))
+	} else {
+		microflowRef = ""
+	}
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(ehID)},
+		{Key: "$Type", Value: "DomainModels$EventHandler"},
+		{Key: "Moment", Value: moment},
+		{Key: "Event", Value: event},
+		{Key: "Microflow", Value: microflowRef},
+		{Key: "RaiseErrorOnFalse", Value: eh.RaiseErrorOnFalse},
+		{Key: "PassEventObject", Value: eh.PassEventObject},
+	}
 }
 
 func serializeAccessRule(ar *domainmodel.AccessRule) bson.D {
