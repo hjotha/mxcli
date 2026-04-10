@@ -787,9 +787,18 @@ func (e *Executor) execSearch(stmt *ast.SearchStmt) error {
 }
 
 // escapeFTSQuery escapes special characters in FTS5 queries.
+// FTS5 treats characters like '/', '.', '-' as token separators. To make
+// queries like 'rest/companies' or 'Module.Entity' usable, we replace these
+// with spaces (treated as AND between terms).
 func escapeFTSQuery(q string) string {
 	// Escape single quotes for SQL
-	return strings.ReplaceAll(q, "'", "''")
+	q = strings.ReplaceAll(q, "'", "''")
+	// Replace common path/qualified-name separators with spaces so each segment
+	// becomes a separate token that FTS5 ANDs together.
+	for _, sep := range []string{"/", ".", "-", ":"} {
+		q = strings.ReplaceAll(q, sep, " ")
+	}
+	return q
 }
 
 // Search performs a full-text search with the specified output format.
