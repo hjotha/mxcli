@@ -141,6 +141,12 @@ func (e *Executor) describePublishedRestService(name ast.QualifiedName) error {
 		}
 		fmt.Fprintln(e.output, "/")
 
+		// Emit GRANT statements for any module roles with access.
+		if len(svc.AllowedRoles) > 0 {
+			fmt.Fprintf(e.output, "\nGRANT ACCESS ON PUBLISHED REST SERVICE %s.%s TO %s;\n",
+				modName, svc.Name, strings.Join(svc.AllowedRoles, ", "))
+		}
+
 		return nil
 	}
 

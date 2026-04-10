@@ -314,6 +314,46 @@ func (b *Builder) ExitRevokeODataServiceAccessStatement(ctx *parser.RevokeODataS
 	b.statements = append(b.statements, stmt)
 }
 
+// ExitGrantPublishedRestServiceAccessStatement handles GRANT ACCESS ON PUBLISHED REST SERVICE Module.Svc TO role1, role2
+func (b *Builder) ExitGrantPublishedRestServiceAccessStatement(ctx *parser.GrantPublishedRestServiceAccessStatementContext) {
+	qn := ctx.QualifiedName()
+	if qn == nil {
+		return
+	}
+
+	stmt := &ast.GrantPublishedRestServiceAccessStmt{
+		Service: buildQualifiedName(qn),
+	}
+
+	if mrl := ctx.ModuleRoleList(); mrl != nil {
+		for _, rqn := range mrl.AllQualifiedName() {
+			stmt.Roles = append(stmt.Roles, buildQualifiedName(rqn))
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
+// ExitRevokePublishedRestServiceAccessStatement handles REVOKE ACCESS ON PUBLISHED REST SERVICE Module.Svc FROM role1, role2
+func (b *Builder) ExitRevokePublishedRestServiceAccessStatement(ctx *parser.RevokePublishedRestServiceAccessStatementContext) {
+	qn := ctx.QualifiedName()
+	if qn == nil {
+		return
+	}
+
+	stmt := &ast.RevokePublishedRestServiceAccessStmt{
+		Service: buildQualifiedName(qn),
+	}
+
+	if mrl := ctx.ModuleRoleList(); mrl != nil {
+		for _, rqn := range mrl.AllQualifiedName() {
+			stmt.Roles = append(stmt.Roles, buildQualifiedName(rqn))
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
 // ExitAlterProjectSecurityStatement handles ALTER PROJECT SECURITY commands
 func (b *Builder) ExitAlterProjectSecurityStatement(ctx *parser.AlterProjectSecurityStatementContext) {
 	stmt := &ast.AlterProjectSecurityStmt{}

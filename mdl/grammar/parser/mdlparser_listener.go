@@ -127,6 +127,12 @@ type MDLParserListener interface {
 	// EnterRevokeODataServiceAccessStatement is called when entering the revokeODataServiceAccessStatement production.
 	EnterRevokeODataServiceAccessStatement(c *RevokeODataServiceAccessStatementContext)
 
+	// EnterGrantPublishedRestServiceAccessStatement is called when entering the grantPublishedRestServiceAccessStatement production.
+	EnterGrantPublishedRestServiceAccessStatement(c *GrantPublishedRestServiceAccessStatementContext)
+
+	// EnterRevokePublishedRestServiceAccessStatement is called when entering the revokePublishedRestServiceAccessStatement production.
+	EnterRevokePublishedRestServiceAccessStatement(c *RevokePublishedRestServiceAccessStatementContext)
+
 	// EnterAlterProjectSecurityStatement is called when entering the alterProjectSecurityStatement production.
 	EnterAlterProjectSecurityStatement(c *AlterProjectSecurityStatementContext)
 
@@ -1365,6 +1371,12 @@ type MDLParserListener interface {
 
 	// ExitRevokeODataServiceAccessStatement is called when exiting the revokeODataServiceAccessStatement production.
 	ExitRevokeODataServiceAccessStatement(c *RevokeODataServiceAccessStatementContext)
+
+	// ExitGrantPublishedRestServiceAccessStatement is called when exiting the grantPublishedRestServiceAccessStatement production.
+	ExitGrantPublishedRestServiceAccessStatement(c *GrantPublishedRestServiceAccessStatementContext)
+
+	// ExitRevokePublishedRestServiceAccessStatement is called when exiting the revokePublishedRestServiceAccessStatement production.
+	ExitRevokePublishedRestServiceAccessStatement(c *RevokePublishedRestServiceAccessStatementContext)
 
 	// ExitAlterProjectSecurityStatement is called when exiting the alterProjectSecurityStatement production.
 	ExitAlterProjectSecurityStatement(c *AlterProjectSecurityStatementContext)

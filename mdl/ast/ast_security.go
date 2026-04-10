@@ -150,6 +150,22 @@ type RevokeODataServiceAccessStmt struct {
 
 func (s *RevokeODataServiceAccessStmt) isStatement() {}
 
+// GrantPublishedRestServiceAccessStmt represents: GRANT ACCESS ON PUBLISHED REST SERVICE Module.Svc TO role1, role2
+type GrantPublishedRestServiceAccessStmt struct {
+	Service QualifiedName
+	Roles   []QualifiedName
+}
+
+func (s *GrantPublishedRestServiceAccessStmt) isStatement() {}
+
+// RevokePublishedRestServiceAccessStmt represents: REVOKE ACCESS ON PUBLISHED REST SERVICE Module.Svc FROM role1, role2
+type RevokePublishedRestServiceAccessStmt struct {
+	Service QualifiedName
+	Roles   []QualifiedName
+}
+
+func (s *RevokePublishedRestServiceAccessStmt) isStatement() {}
+
 // AlterProjectSecurityStmt represents ALTER PROJECT SECURITY commands.
 type AlterProjectSecurityStmt struct {
 	// SecurityLevel is set for ALTER PROJECT SECURITY LEVEL (PRODUCTION|PROTOTYPE|OFF)

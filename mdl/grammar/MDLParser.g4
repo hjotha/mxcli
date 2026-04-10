@@ -342,6 +342,8 @@ securityStatement
     | revokeWorkflowAccessStatement
     | grantODataServiceAccessStatement
     | revokeODataServiceAccessStatement
+    | grantPublishedRestServiceAccessStatement
+    | revokePublishedRestServiceAccessStatement
     | alterProjectSecurityStatement
     | dropDemoUserStatement
     | updateSecurityStatement
@@ -411,6 +413,14 @@ grantODataServiceAccessStatement
 
 revokeODataServiceAccessStatement
     : REVOKE ACCESS ON ODATA SERVICE qualifiedName FROM moduleRoleList
+    ;
+
+grantPublishedRestServiceAccessStatement
+    : GRANT ACCESS ON PUBLISHED REST SERVICE qualifiedName TO moduleRoleList
+    ;
+
+revokePublishedRestServiceAccessStatement
+    : REVOKE ACCESS ON PUBLISHED REST SERVICE qualifiedName FROM moduleRoleList
     ;
 
 alterProjectSecurityStatement

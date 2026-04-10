@@ -33,6 +33,14 @@ func (r *Reader) parsePublishedRestService(unitID, containerID string, contents 
 	svc.ServiceName = extractString(raw["ServiceName"])
 	svc.Excluded = extractBool(raw["Excluded"], false)
 
+	// Parse allowed roles (BY_NAME references)
+	allowedRoles := extractBsonArray(raw["AllowedRoles"])
+	for _, r := range allowedRoles {
+		if name, ok := r.(string); ok {
+			svc.AllowedRoles = append(svc.AllowedRoles, name)
+		}
+	}
+
 	// Parse resources
 	resources := extractBsonArray(raw["Resources"])
 	for _, res := range resources {

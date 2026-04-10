@@ -124,7 +124,23 @@ SHOW PUBLISHED REST SERVICES;
 SHOW PUBLISHED REST SERVICES IN PrsTest;
 
 -- ############################################################################
--- PART 6: DROP
+-- PART 6: GRANT / REVOKE ACCESS
+-- ############################################################################
+--
+-- Grant module roles access to a published REST service. The roles must
+-- already exist in the same module's security model.
+
+CREATE MODULE ROLE PrsTest.User;
+CREATE MODULE ROLE PrsTest.Admin;
+
+GRANT ACCESS ON PUBLISHED REST SERVICE PrsTest.OrderAPI TO PrsTest.User, PrsTest.Admin;
+DESCRIBE PUBLISHED REST SERVICE PrsTest.OrderAPI;
+
+REVOKE ACCESS ON PUBLISHED REST SERVICE PrsTest.OrderAPI FROM PrsTest.User;
+DESCRIBE PUBLISHED REST SERVICE PrsTest.OrderAPI;
+
+-- ############################################################################
+-- PART 7: DROP
 -- ############################################################################
 
 DROP PUBLISHED REST SERVICE PrsTest.OrderAPI;

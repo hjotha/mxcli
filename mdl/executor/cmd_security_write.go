@@ -1199,6 +1199,126 @@ func (e *Executor) execRevokeODataServiceAccess(s *ast.RevokeODataServiceAccessS
 	return fmt.Errorf("published OData service not found: %s.%s", s.Service.Module, s.Service.Name)
 }
 
+// ============================================================================
+// GRANT/REVOKE ACCESS ON PUBLISHED REST SERVICE
+// ============================================================================
+
+// execGrantPublishedRestServiceAccess handles GRANT ACCESS ON PUBLISHED REST SERVICE Module.Svc TO roles.
+func (e *Executor) execGrantPublishedRestServiceAccess(s *ast.GrantPublishedRestServiceAccessStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected to a project in write mode")
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	services, err := e.reader.ListPublishedRestServices()
+	if err != nil {
+		return fmt.Errorf("failed to list published REST services: %w", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Service.Module || svc.Name != s.Service.Name {
+			continue
+		}
+
+		// Validate all roles exist
+		for _, role := range s.Roles {
+			if err := e.validateModuleRole(role); err != nil {
+				return err
+			}
+		}
+
+		// Merge new roles with existing (skip duplicates)
+		existing := make(map[string]bool)
+		var merged []string
+		for _, r := range svc.AllowedRoles {
+			existing[r] = true
+			merged = append(merged, r)
+		}
+		var added []string
+		for _, role := range s.Roles {
+			qn := role.Module + "." + role.Name
+			if !existing[qn] {
+				merged = append(merged, qn)
+				added = append(added, qn)
+			}
+		}
+
+		if err := e.writer.UpdatePublishedRestServiceRoles(svc.ID, merged); err != nil {
+			return fmt.Errorf("failed to update published REST service access: %w", err)
+		}
+
+		if len(added) == 0 {
+			fmt.Fprintf(e.output, "All specified roles already have access on published REST service %s.%s\n", modName, svc.Name)
+		} else {
+			fmt.Fprintf(e.output, "Granted access on published REST service %s.%s to %s\n", modName, svc.Name, strings.Join(added, ", "))
+		}
+		return nil
+	}
+
+	return fmt.Errorf("published REST service not found: %s.%s", s.Service.Module, s.Service.Name)
+}
+
+// execRevokePublishedRestServiceAccess handles REVOKE ACCESS ON PUBLISHED REST SERVICE Module.Svc FROM roles.
+func (e *Executor) execRevokePublishedRestServiceAccess(s *ast.RevokePublishedRestServiceAccessStmt) error {
+	if e.writer == nil {
+		return fmt.Errorf("not connected to a project in write mode")
+	}
+
+	h, err := e.getHierarchy()
+	if err != nil {
+		return fmt.Errorf("failed to build hierarchy: %w", err)
+	}
+
+	services, err := e.reader.ListPublishedRestServices()
+	if err != nil {
+		return fmt.Errorf("failed to list published REST services: %w", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Service.Module || svc.Name != s.Service.Name {
+			continue
+		}
+
+		// Build set of roles to remove
+		toRemove := make(map[string]bool)
+		for _, role := range s.Roles {
+			toRemove[role.Module+"."+role.Name] = true
+		}
+
+		// Filter out removed roles
+		var remaining []string
+		var removed []string
+		for _, r := range svc.AllowedRoles {
+			if toRemove[r] {
+				removed = append(removed, r)
+			} else {
+				remaining = append(remaining, r)
+			}
+		}
+
+		if err := e.writer.UpdatePublishedRestServiceRoles(svc.ID, remaining); err != nil {
+			return fmt.Errorf("failed to update published REST service access: %w", err)
+		}
+
+		if len(removed) == 0 {
+			fmt.Fprintf(e.output, "None of the specified roles had access on published REST service %s.%s\n", modName, svc.Name)
+		} else {
+			fmt.Fprintf(e.output, "Revoked access on published REST service %s.%s from %s\n", modName, svc.Name, strings.Join(removed, ", "))
+		}
+		return nil
+	}
+
+	return fmt.Errorf("published REST service not found: %s.%s", s.Service.Module, s.Service.Name)
+}
+
 // execUpdateSecurity handles UPDATE SECURITY [IN Module].
 func (e *Executor) execUpdateSecurity(s *ast.UpdateSecurityStmt) error {
 	if e.writer == nil {

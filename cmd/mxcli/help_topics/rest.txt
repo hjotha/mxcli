@@ -37,6 +37,16 @@ CREATE / DROP PUBLISHED REST SERVICE
 
   Properties: Path (required), Version, ServiceName, Folder
   HTTP methods: GET, POST, PUT, DELETE, PATCH
+
+GRANT / REVOKE ACCESS
+---------------------
+
+  GRANT ACCESS ON PUBLISHED REST SERVICE Module.MyAPI
+    TO Module.User, Module.Admin;
+
+  REVOKE ACCESS ON PUBLISHED REST SERVICE Module.MyAPI
+    FROM Module.User;
+
   Modifiers: DEPRECATED, IMPORT MAPPING, EXPORT MAPPING, COMMIT
   Operation paths: empty '' for root, '{name}' for path params.
                    Do NOT start/end with /.

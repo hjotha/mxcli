@@ -121,6 +121,10 @@ func stmtSummary(stmt ast.Statement) string {
 		return fmt.Sprintf("GRANT ACCESS ON ODATA SERVICE %s", s.Service)
 	case *ast.RevokeODataServiceAccessStmt:
 		return fmt.Sprintf("REVOKE ACCESS ON ODATA SERVICE %s", s.Service)
+	case *ast.GrantPublishedRestServiceAccessStmt:
+		return fmt.Sprintf("GRANT ACCESS ON PUBLISHED REST SERVICE %s", s.Service)
+	case *ast.RevokePublishedRestServiceAccessStmt:
+		return fmt.Sprintf("REVOKE ACCESS ON PUBLISHED REST SERVICE %s", s.Service)
 
 	// Image Collection
 	case *ast.CreateImageCollectionStmt:

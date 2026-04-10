@@ -366,7 +366,7 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 		"Path":                   svc.Path,
 		"Version":                svc.Version,
 		"ServiceName":            svc.ServiceName,
-		"AllowedRoles":           bson.A{int32(2)},
+		"AllowedRoles":           makeMendixStringArray(svc.AllowedRoles),
 		"AuthenticationTypes":    bson.A{int32(2)},
 		"AuthenticationMicroflow": "",
 		"CorsConfiguration":      nil,

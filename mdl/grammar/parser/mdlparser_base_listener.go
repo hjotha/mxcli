@@ -280,6 +280,22 @@ func (s *BaseMDLParserListener) EnterRevokeODataServiceAccessStatement(ctx *Revo
 func (s *BaseMDLParserListener) ExitRevokeODataServiceAccessStatement(ctx *RevokeODataServiceAccessStatementContext) {
 }
 
+// EnterGrantPublishedRestServiceAccessStatement is called when production grantPublishedRestServiceAccessStatement is entered.
+func (s *BaseMDLParserListener) EnterGrantPublishedRestServiceAccessStatement(ctx *GrantPublishedRestServiceAccessStatementContext) {
+}
+
+// ExitGrantPublishedRestServiceAccessStatement is called when production grantPublishedRestServiceAccessStatement is exited.
+func (s *BaseMDLParserListener) ExitGrantPublishedRestServiceAccessStatement(ctx *GrantPublishedRestServiceAccessStatementContext) {
+}
+
+// EnterRevokePublishedRestServiceAccessStatement is called when production revokePublishedRestServiceAccessStatement is entered.
+func (s *BaseMDLParserListener) EnterRevokePublishedRestServiceAccessStatement(ctx *RevokePublishedRestServiceAccessStatementContext) {
+}
+
+// ExitRevokePublishedRestServiceAccessStatement is called when production revokePublishedRestServiceAccessStatement is exited.
+func (s *BaseMDLParserListener) ExitRevokePublishedRestServiceAccessStatement(ctx *RevokePublishedRestServiceAccessStatementContext) {
+}
+
 // EnterAlterProjectSecurityStatement is called when production alterProjectSecurityStatement is entered.
 func (s *BaseMDLParserListener) EnterAlterProjectSecurityStatement(ctx *AlterProjectSecurityStatementContext) {
 }

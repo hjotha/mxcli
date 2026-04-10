@@ -125,6 +125,15 @@ func (w *Writer) UpdateAllowedRoles(unitID model.ID, roles []string) error {
 	})
 }
 
+// UpdatePublishedRestServiceRoles patches the AllowedRoles BSON field on a
+// Rest$PublishedRestService unit. Note: REST uses "AllowedRoles" while
+// microflows/pages/OData use "AllowedModuleRoles".
+func (w *Writer) UpdatePublishedRestServiceRoles(unitID model.ID, roles []string) error {
+	return w.readPatchWrite(unitID, func(doc bson.D) (bson.D, error) {
+		return setBsonField(doc, "AllowedRoles", makeMendixStringArray(roles)), nil
+	})
+}
+
 // RemoveFromAllowedRoles removes a role from the AllowedModuleRoles BSON field on a unit.
 // Returns true if the role was found and removed.
 func (w *Writer) RemoveFromAllowedRoles(unitID model.ID, roleName string) (bool, error) {

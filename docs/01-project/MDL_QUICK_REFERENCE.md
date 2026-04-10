@@ -445,6 +445,8 @@ CREATE OR REPLACE NAVIGATION Responsive
 | Create service | See below | |
 | Create or replace | `CREATE OR REPLACE PUBLISHED REST SERVICE ...` | Replaces existing service |
 | Drop service | `DROP PUBLISHED REST SERVICE Module.Name;` | |
+| Grant access | `GRANT ACCESS ON PUBLISHED REST SERVICE Module.Name TO Module.Role, ...;` | Adds module roles to AllowedRoles |
+| Revoke access | `REVOKE ACCESS ON PUBLISHED REST SERVICE Module.Name FROM Module.Role, ...;` | |
 
 ```sql
 CREATE PUBLISHED REST SERVICE Module.MyAPI (

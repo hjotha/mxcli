@@ -208,6 +208,10 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 		return e.execGrantODataServiceAccess(s)
 	case *ast.RevokeODataServiceAccessStmt:
 		return e.execRevokeODataServiceAccess(s)
+	case *ast.GrantPublishedRestServiceAccessStmt:
+		return e.execGrantPublishedRestServiceAccess(s)
+	case *ast.RevokePublishedRestServiceAccessStmt:
+		return e.execRevokePublishedRestServiceAccess(s)
 
 	// Query statements
 	case *ast.ShowStmt:

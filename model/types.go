@@ -578,8 +578,9 @@ type PublishedRestService struct {
 	Path        string                   `json:"path,omitempty"`
 	Version     string                   `json:"version,omitempty"`
 	ServiceName string                   `json:"serviceName,omitempty"`
-	Excluded    bool                     `json:"excluded,omitempty"`
-	Resources   []*PublishedRestResource `json:"resources,omitempty"`
+	Excluded     bool                     `json:"excluded,omitempty"`
+	AllowedRoles []string                 `json:"allowedRoles,omitempty"`
+	Resources    []*PublishedRestResource `json:"resources,omitempty"`
 }
 
 // GetName returns the service's name.
