@@ -547,6 +547,10 @@ entityOptions
 entityOption
     : COMMENT STRING_LITERAL
     | INDEX indexDefinition
+    | STORE OWNER
+    | STORE CHANGED BY
+    | STORE CREATED DATE_TYPE
+    | STORE CHANGED DATE_TYPE
     ;
 
 attributeDefinitionList
@@ -751,6 +755,13 @@ alterEntityAction
     | SET DOCUMENTATION STRING_LITERAL
     | SET COMMENT STRING_LITERAL
     | SET STORE OWNER
+    | SET STORE CHANGED BY
+    | SET STORE CREATED DATE_TYPE
+    | SET STORE CHANGED DATE_TYPE
+    | DROP STORE OWNER
+    | DROP STORE CHANGED BY
+    | DROP STORE CREATED DATE_TYPE
+    | DROP STORE CHANGED DATE_TYPE
     | SET POSITION LPAREN NUMBER_LITERAL COMMA NUMBER_LITERAL RPAREN
     | ADD INDEX indexDefinition
     | DROP INDEX IDENTIFIER
@@ -3611,6 +3622,7 @@ keyword
     | JAVA | EVENTS | OVER | MEMBERS                         // Miscellaneous keywords
     | WORKFLOW | WORKFLOWS | REFERENCES | CALLERS | CALLEES   // Code search keywords
     | TASK | DECISION | SPLIT | OUTCOMES | TARGETING | NOTIFICATION | TIMER | JUMP | DUE | OVERVIEW | DATE | PARALLEL | WAIT | BY // Workflow keywords
+    | CHANGED | CREATED                                          // Entity system attribute keywords
     | TRANSITIVE | IMPACT | SEARCH                           // Additional search keywords
     | BUSINESS | EVENT | SUBSCRIBE | SETTINGS | CONFIGURATION  // Business events / settings keywords
     | DEFINE | FRAGMENT | FRAGMENTS                            // Fragment keywords

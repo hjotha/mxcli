@@ -1,0 +1,77 @@
+-- ============================================================================
+-- System Attribute Examples (Issue #182)
+-- ============================================================================
+--
+-- Mendix persistent entities support four optional system attributes that
+-- provide built-in auditing:
+--
+--   STORE OWNER         -> System.owner association
+--   STORE CHANGED BY    -> System.changedBy association
+--   STORE CREATED DATE  -> CreatedDate attribute (DateTime)
+--   STORE CHANGED DATE  -> ChangedDate attribute (DateTime)
+--
+-- This file demonstrates enabling these flags both during CREATE ENTITY
+-- (as entity options) and via ALTER ENTITY (SET / DROP).
+--
+-- Usage:
+--   1. Connect to your project: CONNECT LOCAL 'app.mpr';
+--   2. Execute: EXECUTE SCRIPT 'mdl-examples/doctype-tests/26-system-attribute-examples.mdl';
+--   3. Roundtrip: DESCRIBE ENTITY SysAttrTest.<EntityName>
+--
+-- ============================================================================
+
+CREATE MODULE SysAttrTest;
+
+-- ============================================================================
+-- Example 1: All four system attributes set during CREATE
+-- ============================================================================
+
+/**
+ * Audited entity that uses all four built-in system attributes.
+ */
+CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.AuditedRecord (
+  Title: String(200) NOT NULL,
+  Amount: Decimal
+)
+STORE OWNER
+STORE CHANGED BY
+STORE CREATED DATE
+STORE CHANGED DATE;
+
+-- ============================================================================
+-- Example 2: Subset of system attributes
+-- ============================================================================
+
+CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.LogEntry (
+  Message: String(500),
+  Level: String(20)
+)
+STORE CREATED DATE;
+
+-- ============================================================================
+-- Example 3: ALTER ENTITY to enable flags after creation
+-- ============================================================================
+
+CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.Customer (
+  Name: String(100) NOT NULL,
+  Email: String(200)
+);
+
+ALTER ENTITY SysAttrTest.Customer SET STORE OWNER;
+ALTER ENTITY SysAttrTest.Customer SET STORE CHANGED BY;
+ALTER ENTITY SysAttrTest.Customer SET STORE CREATED DATE;
+ALTER ENTITY SysAttrTest.Customer SET STORE CHANGED DATE;
+
+-- ============================================================================
+-- Example 4: ALTER ENTITY to disable previously enabled flags
+-- ============================================================================
+
+CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.TempRecord (
+  Payload: String(100)
+)
+STORE OWNER
+STORE CREATED DATE;
+
+-- Disable both flags
+ALTER ENTITY SysAttrTest.TempRecord DROP STORE OWNER;
+ALTER ENTITY SysAttrTest.TempRecord DROP STORE CREATED DATE;

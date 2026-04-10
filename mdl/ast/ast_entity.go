@@ -33,15 +33,19 @@ func (k EntityKind) String() string {
 
 // CreateEntityStmt represents: CREATE [OR MODIFY] PERSISTENT|NON-PERSISTENT ENTITY Module.Name [EXTENDS Parent] (attributes) ...
 type CreateEntityStmt struct {
-	Name           QualifiedName
-	Kind           EntityKind
-	Generalization *QualifiedName // Parent entity for inheritance (e.g., System.Image)
-	Attributes     []Attribute
-	Indexes        []Index
-	Position       *Position
-	Documentation  string
-	Comment        string
-	CreateOrModify bool // true for CREATE OR MODIFY
+	Name             QualifiedName
+	Kind             EntityKind
+	Generalization   *QualifiedName // Parent entity for inheritance (e.g., System.Image)
+	Attributes       []Attribute
+	Indexes          []Index
+	Position         *Position
+	Documentation    string
+	Comment          string
+	CreateOrModify   bool // true for CREATE OR MODIFY
+	StoreOwner       bool // STORE OWNER (system attribute)
+	StoreChangedBy   bool // STORE CHANGED BY (system attribute)
+	StoreCreatedDate bool // STORE CREATED DATE (system attribute)
+	StoreChangedDate bool // STORE CHANGED DATE (system attribute)
 }
 
 func (s *CreateEntityStmt) isStatement() {}
@@ -57,16 +61,23 @@ func (s *DropEntityStmt) isStatement() {}
 type AlterEntityOp int
 
 const (
-	AlterEntityAddAttribute     AlterEntityOp = iota // ADD ATTRIBUTE / ADD COLUMN
-	AlterEntityRenameAttribute                       // RENAME ATTRIBUTE / RENAME COLUMN
-	AlterEntityModifyAttribute                       // MODIFY ATTRIBUTE / MODIFY COLUMN
-	AlterEntityDropAttribute                         // DROP ATTRIBUTE / DROP COLUMN
-	AlterEntitySetDocumentation                      // SET DOCUMENTATION
-	AlterEntitySetComment                            // SET COMMENT
-	AlterEntityAddIndex                              // ADD INDEX
-	AlterEntityDropIndex                             // DROP INDEX
-	AlterEntitySetStoreOwner                         // SET STORE OWNER
-	AlterEntitySetPosition                           // SET POSITION (x, y)
+	AlterEntityAddAttribute      AlterEntityOp = iota // ADD ATTRIBUTE / ADD COLUMN
+	AlterEntityRenameAttribute                        // RENAME ATTRIBUTE / RENAME COLUMN
+	AlterEntityModifyAttribute                        // MODIFY ATTRIBUTE / MODIFY COLUMN
+	AlterEntityDropAttribute                          // DROP ATTRIBUTE / DROP COLUMN
+	AlterEntitySetDocumentation                       // SET DOCUMENTATION
+	AlterEntitySetComment                             // SET COMMENT
+	AlterEntityAddIndex                               // ADD INDEX
+	AlterEntityDropIndex                              // DROP INDEX
+	AlterEntitySetStoreOwner                          // SET STORE OWNER
+	AlterEntitySetStoreChangedBy                      // SET STORE CHANGED BY
+	AlterEntitySetStoreCreatedDate                    // SET STORE CREATED DATE
+	AlterEntitySetStoreChangedDate                    // SET STORE CHANGED DATE
+	AlterEntityDropStoreOwner                         // DROP STORE OWNER
+	AlterEntityDropStoreChangedBy                     // DROP STORE CHANGED BY
+	AlterEntityDropStoreCreatedDate                   // DROP STORE CREATED DATE
+	AlterEntityDropStoreChangedDate                   // DROP STORE CHANGED DATE
+	AlterEntitySetPosition                            // SET POSITION (x, y)
 )
 
 // AlterEntityStmt represents: ALTER ENTITY Module.Name ADD/DROP/RENAME/MODIFY ATTRIBUTE ...

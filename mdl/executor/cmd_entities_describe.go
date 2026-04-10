@@ -364,6 +364,20 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 				}
 			}
 
+			// Output system attribute flags as entity options (round-trippable)
+			if entity.HasOwner {
+				fmt.Fprint(e.output, "\nSTORE OWNER")
+			}
+			if entity.HasChangedBy {
+				fmt.Fprint(e.output, "\nSTORE CHANGED BY")
+			}
+			if entity.HasCreatedDate {
+				fmt.Fprint(e.output, "\nSTORE CREATED DATE")
+			}
+			if entity.HasChangedDate {
+				fmt.Fprint(e.output, "\nSTORE CHANGED DATE")
+			}
+
 			fmt.Fprintln(e.output, ";")
 
 			// Output access rule GRANT statements

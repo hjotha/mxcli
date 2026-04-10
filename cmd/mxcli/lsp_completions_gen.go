@@ -511,6 +511,8 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "DUE", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "OVERVIEW", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "DATE", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
+	{Label: "CHANGED", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
+	{Label: "CREATED", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "PARALLEL", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "WAIT", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},
 	{Label: "ANNOTATION", Kind: protocol.CompletionItemKindKeyword, Detail: "Keyword"},

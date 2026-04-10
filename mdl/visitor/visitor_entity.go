@@ -73,7 +73,7 @@ func (b *Builder) ExitCreateEntityStatement(ctx *parser.CreateEntityStatementCon
 			stmt.Attributes = buildAttributes(attrList, b)
 		}
 
-		// Options (comment, extends, indexes, etc.)
+		// Options (comment, extends, indexes, system attributes, etc.)
 		if opts := bodyCtx.EntityOptions(); opts != nil {
 			optsCtx := opts.(*parser.EntityOptionsContext)
 			for _, opt := range optsCtx.AllEntityOption() {
@@ -84,6 +84,19 @@ func (b *Builder) ExitCreateEntityStatement(ctx *parser.CreateEntityStatementCon
 				// Handle INDEX option
 				if optCtx.INDEX() != nil && optCtx.IndexDefinition() != nil {
 					stmt.Indexes = append(stmt.Indexes, buildIndex(optCtx.IndexDefinition()))
+				}
+				// Handle STORE OWNER / CHANGED BY / CREATED DATE / CHANGED DATE
+				if optCtx.STORE() != nil {
+					switch {
+					case optCtx.OWNER() != nil:
+						stmt.StoreOwner = true
+					case optCtx.CHANGED() != nil && optCtx.BY() != nil:
+						stmt.StoreChangedBy = true
+					case optCtx.CREATED() != nil && optCtx.DATE_TYPE() != nil:
+						stmt.StoreCreatedDate = true
+					case optCtx.CHANGED() != nil && optCtx.DATE_TYPE() != nil:
+						stmt.StoreChangedDate = true
+					}
 				}
 			}
 		}
@@ -563,6 +576,69 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 				b.statements = append(b.statements, &ast.AlterEntityStmt{
 					Name:      name,
 					Operation: ast.AlterEntitySetStoreOwner,
+				})
+				return
+			}
+
+			// SET STORE CHANGED BY
+			if ctx.SET() != nil && ctx.STORE() != nil && ctx.CHANGED() != nil && ctx.BY() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntitySetStoreChangedBy,
+				})
+				return
+			}
+
+			// SET STORE CREATED DATE
+			if ctx.SET() != nil && ctx.STORE() != nil && ctx.CREATED() != nil && ctx.DATE_TYPE() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntitySetStoreCreatedDate,
+				})
+				return
+			}
+
+			// SET STORE CHANGED DATE
+			if ctx.SET() != nil && ctx.STORE() != nil && ctx.CHANGED() != nil && ctx.DATE_TYPE() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntitySetStoreChangedDate,
+				})
+				return
+			}
+
+			// DROP STORE OWNER
+			if ctx.DROP() != nil && ctx.STORE() != nil && ctx.OWNER() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntityDropStoreOwner,
+				})
+				return
+			}
+
+			// DROP STORE CHANGED BY
+			if ctx.DROP() != nil && ctx.STORE() != nil && ctx.CHANGED() != nil && ctx.BY() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntityDropStoreChangedBy,
+				})
+				return
+			}
+
+			// DROP STORE CREATED DATE
+			if ctx.DROP() != nil && ctx.STORE() != nil && ctx.CREATED() != nil && ctx.DATE_TYPE() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntityDropStoreCreatedDate,
+				})
+				return
+			}
+
+			// DROP STORE CHANGED DATE
+			if ctx.DROP() != nil && ctx.STORE() != nil && ctx.CHANGED() != nil && ctx.DATE_TYPE() != nil {
+				b.statements = append(b.statements, &ast.AlterEntityStmt{
+					Name:      name,
+					Operation: ast.AlterEntityDropStoreChangedDate,
 				})
 				return
 			}
