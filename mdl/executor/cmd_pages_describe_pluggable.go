@@ -221,7 +221,8 @@ func (e *Executor) extractDataGrid2DataSource(w map[string]any) *rawDataSource {
 }
 
 // extractDataGrid2Columns extracts the columns from a DataGrid2 CustomWidget.
-func (e *Executor) extractDataGrid2Columns(w map[string]any) []rawDataGridColumn {
+// entityContext is the resolved entity context from the DataGrid2's datasource.
+func (e *Executor) extractDataGrid2Columns(w map[string]any, entityContext ...string) []rawDataGridColumn {
 	obj, ok := w["Object"].(map[string]any)
 	if !ok {
 		return nil
@@ -247,13 +248,17 @@ func (e *Executor) extractDataGrid2Columns(w map[string]any) []rawDataGridColumn
 			continue
 		}
 
+		ctx := ""
+		if len(entityContext) > 0 {
+			ctx = entityContext[0]
+		}
 		var columns []rawDataGridColumn
 		for _, colObj := range objects {
 			colMap, ok := colObj.(map[string]any)
 			if !ok {
 				continue
 			}
-			col := e.extractDataGrid2Column(colMap, colPropKeyMap)
+			col := e.extractDataGrid2Column(colMap, colPropKeyMap, ctx)
 			if col.Attribute != "" || col.Caption != "" {
 				columns = append(columns, col)
 			}
@@ -326,7 +331,7 @@ func (e *Executor) buildColumnPropertyKeyMap(w map[string]any) map[string]string
 // - "dynamicText": TextTemplate for dynamic text (when showContentAs = "dynamicText")
 // - "alignment": enum value ("left", "center", "right")
 // - "wrapText": boolean ("true", "false")
-func (e *Executor) extractDataGrid2Column(colObj map[string]any, colPropKeyMap map[string]string) rawDataGridColumn {
+func (e *Executor) extractDataGrid2Column(colObj map[string]any, colPropKeyMap map[string]string, entityContext string) rawDataGridColumn {
 	col := rawDataGridColumn{}
 
 	// Track if we've found the header to avoid overwriting with dynamicText's TextTemplate
@@ -460,7 +465,7 @@ func (e *Executor) extractDataGrid2Column(colObj map[string]any, colPropKeyMap m
 			if len(widgets) > 0 {
 				for _, w := range widgets {
 					if wMap, ok := w.(map[string]any); ok {
-						col.ContentWidgets = append(col.ContentWidgets, e.parseRawWidget(wMap)...)
+						col.ContentWidgets = append(col.ContentWidgets, e.parseRawWidget(wMap, entityContext)...)
 					}
 				}
 			}
@@ -690,12 +695,22 @@ func (e *Executor) parseCustomWidgetDataSource(ds map[string]any) *rawDataSource
 }
 
 // extractGalleryContent extracts the content widgets from a CustomWidget Gallery.
-func (e *Executor) extractGalleryContent(w map[string]any) []rawWidget {
-	return e.extractGalleryWidgetsByPropertyKey(w, "content")
+// entityContext is the resolved entity context from the Gallery's datasource.
+func (e *Executor) extractGalleryContent(w map[string]any, entityContext ...string) []rawWidget {
+	ctx := ""
+	if len(entityContext) > 0 {
+		ctx = entityContext[0]
+	}
+	return e.extractGalleryWidgetsByPropertyKey(w, "content", ctx)
 }
 
 // extractGalleryWidgetsByPropertyKey extracts widgets from a named property of a CustomWidget Gallery.
-func (e *Executor) extractGalleryWidgetsByPropertyKey(w map[string]any, targetKey string) []rawWidget {
+// entityContext is the resolved entity context to propagate to child widgets.
+func (e *Executor) extractGalleryWidgetsByPropertyKey(w map[string]any, targetKey string, entityContext ...string) []rawWidget {
+	ctx := ""
+	if len(entityContext) > 0 {
+		ctx = entityContext[0]
+	}
 	obj, ok := w["Object"].(map[string]any)
 	if !ok {
 		return nil
@@ -739,7 +754,7 @@ func (e *Executor) extractGalleryWidgetsByPropertyKey(w map[string]any, targetKe
 			if !ok {
 				continue
 			}
-			result = append(result, e.parseRawWidget(wgtMap)...)
+			result = append(result, e.parseRawWidget(wgtMap, ctx)...)
 		}
 		return result
 	}
@@ -767,7 +782,7 @@ func (e *Executor) extractGalleryWidgetsByPropertyKey(w map[string]any, targetKe
 				if !ok {
 					continue
 				}
-				result = append(result, e.parseRawWidget(wgtMap)...)
+				result = append(result, e.parseRawWidget(wgtMap, ctx)...)
 			}
 			if len(result) > 0 {
 				return result

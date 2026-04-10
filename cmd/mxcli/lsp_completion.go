@@ -33,7 +33,7 @@ func (s *mdlServer) Completion(ctx context.Context, params *protocol.CompletionP
 
 	// Check if typing a $ variable reference inside page/snippet context
 	if strings.Contains(linePrefix, "$") {
-		varItems := s.variableCompletionItems(text, linePrefix)
+		varItems := s.variableCompletionItems(text, linePrefix, int(params.Position.Line))
 		if len(varItems) > 0 {
 			return &protocol.CompletionList{
 				IsIncomplete: false,
@@ -373,9 +373,10 @@ func objectTypeToCompletionKind(objectType string) (protocol.CompletionItemKind,
 }
 
 // variableCompletionItems returns completion items for $ variable references.
-// It suggests $currentObject (common in data containers) and any page parameters
-// found in the document's CREATE PAGE Params declaration.
-func (s *mdlServer) variableCompletionItems(docText string, linePrefix string) []protocol.CompletionItem {
+// It suggests $currentObject (with entity type from enclosing data container) and
+// any page parameters found in the document's CREATE PAGE Params declaration.
+// cursorLine is the 0-based line number of the cursor position.
+func (s *mdlServer) variableCompletionItems(docText string, linePrefix string, cursorLine int) []protocol.CompletionItem {
 	// Extract the partial after the last $ to filter suggestions
 	lastDollar := strings.LastIndex(linePrefix, "$")
 	partial := ""
@@ -385,13 +386,36 @@ func (s *mdlServer) variableCompletionItems(docText string, linePrefix string) [
 
 	var items []protocol.CompletionItem
 
-	// Always suggest $currentObject — it's the most common data container variable
+	// Scan upward from cursor to find enclosing data container context
+	entityType, widgetName := scanEnclosingDataContainer(docText, cursorLine)
+
+	// Suggest $currentObject with entity type if found
 	if partial == "" || strings.HasPrefix("CURRENTOBJECT", partial) {
+		detail := "Current object from enclosing data container"
+		if entityType != "" {
+			detail = entityType
+		}
 		items = append(items, protocol.CompletionItem{
 			Label:  "$currentObject",
 			Kind:   protocol.CompletionItemKindVariable,
-			Detail: "Current object from enclosing data container",
+			Detail: detail,
 		})
+	}
+
+	// Suggest $widgetName (selection) for list containers
+	if widgetName != "" {
+		wNameUpper := strings.ToUpper(widgetName)
+		if partial == "" || strings.HasPrefix(wNameUpper, partial) {
+			detail := "Selection from list container"
+			if entityType != "" {
+				detail = entityType + " (selection)"
+			}
+			items = append(items, protocol.CompletionItem{
+				Label:  "$" + widgetName,
+				Kind:   protocol.CompletionItemKindVariable,
+				Detail: detail,
+			})
+		}
 	}
 
 	// Extract page parameter names from CREATE PAGE ... Params: { $Name: Type, ... }
@@ -409,13 +433,133 @@ func (s *mdlServer) variableCompletionItems(docText string, linePrefix string) [
 	return items
 }
 
-// extractPageParamNames extracts parameter names from CREATE PAGE ... Params: { $Name: Type } declarations.
+// scanEnclosingDataContainer scans upward from cursorLine to find the nearest
+// enclosing data container widget and its entity type.
+// Returns (entityType, widgetName) where widgetName is set for list containers.
+// Best-effort: uses brace matching and keyword scanning (Enclosing Scope Scanning pattern).
+func scanEnclosingDataContainer(text string, cursorLine int) (string, string) {
+	lines := strings.Split(text, "\n")
+	if cursorLine >= len(lines) {
+		return "", ""
+	}
+
+	// Track brace nesting depth as we scan upward
+	depth := 0
+	for i := cursorLine; i >= 0; i-- {
+		line := lines[i]
+		// Count braces on this line (right to left for correct nesting)
+		for j := len(line) - 1; j >= 0; j-- {
+			switch line[j] {
+			case '}':
+				depth++
+			case '{':
+				depth--
+			}
+		}
+
+		// At depth < 0, we've found an opening brace that encloses the cursor
+		if depth < 0 {
+			trimmed := strings.TrimSpace(line)
+			upper := strings.ToUpper(trimmed)
+
+			// Check for data container keywords
+			entityType, widgetName, isList := extractContainerInfo(upper, trimmed)
+			if entityType != "" {
+				if isList {
+					return entityType, widgetName
+				}
+				return entityType, ""
+			}
+			// Reset depth — we passed through this opening brace but it wasn't a data container
+			depth = 0
+		}
+	}
+	return "", ""
+}
+
+// extractContainerInfo extracts entity type and widget name from a data container line.
+// upperLine is the uppercase version, originalLine preserves case for widget name extraction.
+// Returns (entityType, widgetName, isList).
+func extractContainerInfo(upperLine string, originalLine string) (string, string, bool) {
+	// Patterns: DATAVIEW name (DataSource: ...) {
+	//           LISTVIEW name (DataSource: DATABASE FROM Module.Entity ...) {
+	//           DATAGRID name (DataSource: DATABASE FROM Module.Entity ...) {
+	//           GALLERY name (DataSource: DATABASE FROM Module.Entity ...) {
+	type containerPattern struct {
+		keyword string
+		isList  bool
+	}
+	patterns := []containerPattern{
+		{"DATAVIEW ", false},
+		{"LISTVIEW ", true},
+		{"DATAGRID ", true},
+		{"GALLERY ", true},
+	}
+
+	for _, p := range patterns {
+		if !strings.HasPrefix(upperLine, p.keyword) {
+			continue
+		}
+
+		// Extract widget name (first token after keyword)
+		rest := strings.TrimSpace(originalLine[len(p.keyword):])
+		widgetName := ""
+		for j, c := range rest {
+			if c == ' ' || c == '(' || c == '{' {
+				widgetName = rest[:j]
+				break
+			}
+		}
+		if widgetName == "" {
+			widgetName = rest
+		}
+
+		// Extract entity from DataSource (use original case for entity name)
+		entityType := extractEntityFromLine(originalLine)
+		if entityType != "" {
+			return entityType, widgetName, p.isList
+		}
+	}
+	return "", "", false
+}
+
+// extractEntityFromLine extracts the entity type from a DataSource declaration in a line.
+// Preserves original casing of the entity name (e.g., "Sales.Order" not "SALES.ORDER").
+func extractEntityFromLine(line string) string {
+	// Case-insensitive search for "DATABASE FROM" pattern
+	upperLine := strings.ToUpper(line)
+	if idx := strings.Index(upperLine, "DATABASE FROM "); idx >= 0 {
+		rest := strings.TrimSpace(line[idx+len("DATABASE FROM "):])
+		// Entity is the next qualified name (Module.Entity)
+		end := strings.IndexAny(rest, " \t,)}")
+		if end < 0 {
+			end = len(rest)
+		}
+		entity := rest[:end]
+		if strings.Contains(entity, ".") {
+			return entity
+		}
+	}
+	// MICROFLOW/NANOFLOW datasource — entity type not directly available
+	// $ParamName datasource — would need to resolve param type
+	return ""
+}
+
+// extractPageParamNames extracts parameter names from CREATE PAGE/SNIPPET parameter declarations.
+// Best-effort: scans for "$Name: Type" patterns (colon after identifier distinguishes
+// declarations from usage like "DataSource: $Param" or context comments like "$currentObject").
 func extractPageParamNames(text string) []string {
 	var names []string
 	for _, line := range strings.Split(text, "\n") {
 		trimmed := strings.TrimSpace(line)
-		// Look for $ParamName patterns in Params declarations
-		// Format: Params: { $Name: Type } or $Name: Type on separate lines
+		// Skip DECLARE lines (variable declarations, not page params)
+		if strings.HasPrefix(strings.ToUpper(trimmed), "DECLARE") {
+			continue
+		}
+		// Skip comment lines
+		if strings.HasPrefix(trimmed, "--") {
+			continue
+		}
 		idx := 0
 		for idx < len(trimmed) {
 			dollar := strings.Index(trimmed[idx:], "$")
@@ -423,7 +567,7 @@ func extractPageParamNames(text string) []string {
 				break
 			}
 			dollar += idx
-			// Extract the name after $
+			// Extract the identifier after $
 			end := dollar + 1
 			for end < len(trimmed) {
 				c := trimmed[end]
@@ -435,8 +579,10 @@ func extractPageParamNames(text string) []string {
 			}
 			if end > dollar+1 {
 				name := trimmed[dollar+1 : end]
-				// Skip if this looks like a variable declaration (DECLARE) rather than a param
-				if !strings.HasPrefix(strings.ToUpper(trimmed), "DECLARE") {
+				// Only match parameter declarations: "$Name:" followed by a type.
+				// Skip references like "DataSource: $Param" where $ is a value, not a declaration.
+				rest := strings.TrimSpace(trimmed[end:])
+				if strings.HasPrefix(rest, ":") {
 					names = append(names, name)
 				}
 			}
