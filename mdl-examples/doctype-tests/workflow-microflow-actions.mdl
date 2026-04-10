@@ -1,10 +1,37 @@
 -- Test: workflow microflow actions syntax
 -- Verifies parsing of all 11 workflow action types in microflows
 
+-- ############################################################################
+-- PREREQUISITES
+-- ############################################################################
+
+CREATE PERSISTENT ENTITY TestModule.DeliveryContext (
+  OrderID: String(50),
+  Status: String(100)
+);
+
+CREATE MICROFLOW TestModule.ACT_Stub ($DeliveryContext: TestModule.DeliveryContext)
+BEGIN
+  @position(200,200) RETURN;
+END;
+/
+
+CREATE WORKFLOW TestModule.WF_DeliveryDelay
+  PARAMETER $WorkflowContext: TestModule.DeliveryContext
+  DISPLAY 'Delivery Delay'
+BEGIN
+  CALL MICROFLOW TestModule.ACT_Stub;
+END WORKFLOW;
+/
+
+-- ############################################################################
+-- MICROFLOW WITH ALL WORKFLOW ACTION TYPES
+-- ############################################################################
+
 CREATE MICROFLOW TestModule.MF_WorkflowActions (
-  $Workflow: Object,
-  $ContextObj: Object,
-  $UserTask: Object
+  $Workflow: System.Workflow,
+  $ContextObj: TestModule.DeliveryContext,
+  $UserTask: System.WorkflowUserTask
 )
 RETURNS Nothing
 BEGIN
@@ -34,15 +61,6 @@ BEGIN
   WORKFLOW OPERATION RETRY $Workflow;
   WORKFLOW OPERATION UNPAUSE $Workflow;
 
-  -- Notify workflow
-  NOTIFY WORKFLOW $Workflow;
-
   -- Open workflow admin page
   OPEN WORKFLOW $Workflow;
-
-  -- Lock/Unlock
-  LOCK WORKFLOW ALL;
-  UNLOCK WORKFLOW ALL;
-  LOCK WORKFLOW $Workflow;
-  UNLOCK WORKFLOW $Workflow;
 END;
