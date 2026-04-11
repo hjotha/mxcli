@@ -356,7 +356,7 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 				"ExportMapping": "",
 				"ImportMapping": "",
 				"ObjectHandlingBackup": "Create",
-				"Parameters":  serializePublishedRestParams(op.Path, op.Parameters),
+				"Parameters":  serializePublishedRestParams(op.Path, op.Microflow, op.Parameters),
 			}
 			ops = append(ops, opDoc)
 		}
@@ -394,16 +394,34 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 // serializePublishedRestParams builds the Parameters array for a published REST operation.
 // It auto-extracts path parameters from {paramName} placeholders in the path string,
 // then appends any explicitly declared parameters.
-func serializePublishedRestParams(path string, _ []string) bson.A {
+//
+// Each parameter must include:
+//   - Type: a structured DataTypes$StringType object (not a bare string)
+//   - ParameterType: "Path" (vs Query/Header/Body)
+//   - MicroflowParameter: qualified name of the matching microflow parameter,
+//     so Mendix wires the path value to the handler. Without this, mx check
+//     reports CE6538 "Parameter is not passed to a microflow parameter" and
+//     CE0350 "Microflow has a parameter that is not a parameter of the operation".
+func serializePublishedRestParams(path string, microflowQN string, _ []string) bson.A {
 	params := bson.A{int32(2)}
 	// Extract {paramName} from path
 	for _, name := range extractPathParams(path) {
+		// MicroflowParameter format: "Module.Microflow.parameterName"
+		mfParam := ""
+		if microflowQN != "" {
+			mfParam = microflowQN + "." + name
+		}
 		params = append(params, bson.M{
-			"$ID":         idToBsonBinary(generateUUID()),
-			"$Type":       "Rest$RestOperationParameter",
-			"Name":        name,
-			"DataType":    "String",
-			"Description": "",
+			"$ID":   idToBsonBinary(generateUUID()),
+			"$Type": "Rest$RestOperationParameter",
+			"Name":  name,
+			"Type": bson.M{
+				"$ID":   idToBsonBinary(generateUUID()),
+				"$Type": "DataTypes$StringType",
+			},
+			"ParameterType":      "Path",
+			"MicroflowParameter": mfParam,
+			"Description":        "",
 		})
 	}
 	return params
