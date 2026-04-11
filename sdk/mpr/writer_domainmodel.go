@@ -674,6 +674,49 @@ func serializeEntity(e *domainmodel.Entity, moduleName string, pv *version.Proje
 		doc = append(doc, bson.E{Key: "Source", Value: serializeODataRemoteEntitySource(e)})
 	}
 
+	// Source for entity-type-only external entities (derived/abstract/contained types
+	// that have no entity set, e.g. PlanItem, Flight, Trip)
+	if e.Source == "Rest$ODataEntityTypeSource" && e.RemoteServiceName != "" {
+		doc = append(doc, bson.E{Key: "Source", Value: serializeODataEntityTypeSource(e)})
+	}
+
+	// Source for primitive collection NPEs (e.g. TripTag for Trip.Tags = Collection(Edm.String))
+	if e.Source == "Rest$ODataPrimitiveCollectionEntitySource" && e.RemoteServiceName != "" {
+		doc = append(doc, bson.E{Key: "Source", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$ODataPrimitiveCollectionEntitySource"},
+			{Key: "SourceDocument", Value: e.RemoteServiceName},
+		}})
+	}
+
+	return doc
+}
+
+// serializeODataEntityTypeSource emits Rest$ODataEntityTypeSource for an entity
+// that maps to an OData entity type but has no entity set (e.g. derived,
+// abstract, or contained nav target). It carries only the type name, key, and
+// SourceDocument — no CRUD or paging fields.
+func serializeODataEntityTypeSource(e *domainmodel.Entity) bson.D {
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$ODataEntityTypeSource"},
+		{Key: "EntityTypeName", Value: e.RemoteEntityName},
+		{Key: "IsOpen", Value: e.IsOpen},
+	}
+
+	if len(e.RemoteKeyParts) > 0 {
+		parts := bson.A{int32(2)}
+		for _, kp := range e.RemoteKeyParts {
+			parts = append(parts, serializeODataKeyPart(kp))
+		}
+		doc = append(doc, bson.E{Key: "Key", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$ODataKey"},
+			{Key: "Parts", Value: parts},
+		}})
+	}
+
+	doc = append(doc, bson.E{Key: "SourceDocument", Value: e.RemoteServiceName})
 	return doc
 }
 
@@ -785,12 +828,17 @@ func serializeMemberAccess(ma *domainmodel.MemberAccess) bson.D {
 }
 
 func serializeNoGeneralization(e *domainmodel.Entity) bson.D {
-	// Studio Pro stores external entities with Persistable=true (counter-intuitive
-	// but verified against reference projects). Setting Persistable=false on an
-	// external entity causes Studio Pro validation errors (CE6630).
+	// Persistability rules for external entities, verified against Studio Pro
+	// reference projects:
+	//   Rest$ODataRemoteEntitySource              → Persistable=true
+	//   Rest$ODataEntityTypeSource                → Persistable=false
+	//   Rest$ODataPrimitiveCollectionEntitySource → Persistable=false
 	persistable := e.Persistable
-	if e.Source == "Rest$ODataRemoteEntitySource" {
+	switch e.Source {
+	case "Rest$ODataRemoteEntitySource":
 		persistable = true
+	case "Rest$ODataEntityTypeSource", "Rest$ODataPrimitiveCollectionEntitySource":
+		persistable = false
 	}
 	doc := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(generateUUID())},

@@ -487,49 +487,47 @@ func (e *Executor) createExternalEntities(s *ast.CreateExternalEntitiesStmt) err
 		existing[ent.Name] = ent
 	}
 
+	// Build a global type lookup so we can resolve BaseType references across schemas.
+	typeByQualified := make(map[string]*mpr.EdmEntityType)
+	for _, schema := range doc.Schemas {
+		for _, et := range schema.EntityTypes {
+			typeByQualified[schema.Namespace+"."+et.Name] = et
+		}
+	}
+
 	serviceRef := s.ServiceRef.String()
 	var created, updated, skipped, failed int
 
 	for _, schema := range doc.Schemas {
 		for _, et := range schema.EntityTypes {
-			// Apply entity name filter (matched against entity set name when available)
 			entitySetName := esMap[schema.Namespace+"."+et.Name]
+			isTopLevel := entitySetName != ""
 
-			// Skip abstract types (no entity set) — Studio Pro creates them but
-			// points them at a parent's entity set; we don't yet handle this.
-			if entitySetName == "" {
-				if len(filterSet) > 0 {
-					// Only skip silently if the user didn't ask for it
-					if !filterSet[strings.ToLower(et.Name)] {
-						continue
-					}
-				}
-				fmt.Fprintf(e.output, "  SKIPPED: %s (no entity set; abstract or derived type)\n", et.Name)
-				skipped++
+			// Mendix entity name: entity set name when present (e.g. "People"),
+			// otherwise the type name (e.g. "PlanItem", "Flight", "Trip").
+			mendixName := et.Name
+			if isTopLevel {
+				mendixName = entitySetName
+			}
+
+			// Apply entity name filter (matched against type name OR entity set name)
+			if len(filterSet) > 0 && !filterSet[strings.ToLower(et.Name)] && !filterSet[strings.ToLower(mendixName)] {
 				continue
 			}
 
-			// The Mendix entity name should be the entity set name (e.g. "People"),
-			// not the entity type name ("Person").
-			mendixName := entitySetName
+			// Resolve the merged property and key set by walking the BaseType chain.
+			mergedProps, keyProps := mergedPropertiesWithKey(et, typeByQualified)
 
-			if len(filterSet) > 0 && !filterSet[strings.ToLower(et.Name)] && !filterSet[strings.ToLower(entitySetName)] {
-				continue
-			}
-
-			// keyPropSet helps both for building Source.Key and for forcing key
-			// string attributes to have a non-zero length (CE6121).
 			keyPropSet := make(map[string]bool)
-			for _, k := range et.KeyProperties {
+			for _, k := range keyProps {
 				keyPropSet[k] = true
 			}
 
-			// Build key parts (used both for Source.Key and to skip emitting key
-			// properties as plain attributes when they would collide with reserved names)
+			// Build key parts from the resolved key (root entity in the chain)
 			var keyParts []*domainmodel.RemoteKeyPart
-			for _, keyName := range et.KeyProperties {
+			for _, keyName := range keyProps {
 				var keyProp *mpr.EdmProperty
-				for _, p := range et.Properties {
+				for _, p := range mergedProps {
 					if p.Name == keyName {
 						keyProp = p
 						break
@@ -546,19 +544,22 @@ func (e *Executor) createExternalEntities(s *ast.CreateExternalEntitiesStmt) err
 				})
 			}
 
-			// Build attributes from properties
+			// Build attributes from merged properties
 			var attrs []*domainmodel.Attribute
-			for _, p := range et.Properties {
-				// Drop collection-of-primitive (e.g. Collection(Edm.String)) — Studio Pro
-				// stores these via separate primitive collection entities; we skip for now.
+			for _, p := range mergedProps {
+				// Drop collection-of-primitive — handled separately as primitive
+				// collection NPEs (not yet implemented).
 				if strings.HasPrefix(p.Type, "Collection(") {
 					continue
 				}
-
-				// Drop non-Edm types (complex types, entity refs) — they need to be
-				// modelled as separate non-persistent entities or external entities,
-				// which we don't yet handle. Studio Pro skips them or creates NPEs.
+				// Drop non-Edm types (complex types and entity refs) — they need
+				// to be modelled as NPEs/associations, not implemented yet.
 				if !strings.HasPrefix(p.Type, "Edm.") {
+					continue
+				}
+				// Drop Edm.Duration — Mendix has no native duration type and
+				// Studio Pro skips these properties.
+				if p.Type == "Edm.Duration" {
 					continue
 				}
 
@@ -570,9 +571,9 @@ func (e *Executor) createExternalEntities(s *ast.CreateExternalEntitiesStmt) err
 					RemoteType: p.Type,
 					Filterable: true,
 					Sortable:   true,
-					// TODO: parse Org.OData.Capabilities.V1 annotations from $metadata
-					// to derive these per-attribute. For now, defaults assume
-					// create-on-insert but no in-place update.
+					// TODO: parse Org.OData.Capabilities.V1 annotations to set
+					// these per-attribute. Current defaults assume create-on-insert
+					// but no in-place update.
 					Creatable: true,
 					Updatable: false,
 				}
@@ -586,19 +587,7 @@ func (e *Executor) createExternalEntities(s *ast.CreateExternalEntitiesStmt) err
 					skipped++
 					continue
 				}
-				existingEntity.Source = "Rest$ODataRemoteEntitySource"
-				existingEntity.RemoteServiceName = serviceRef
-				existingEntity.RemoteEntitySet = entitySetName
-				existingEntity.RemoteEntityName = et.Name
-				existingEntity.Countable = true
-				existingEntity.Creatable = true
-				existingEntity.Deletable = false
-				existingEntity.Updatable = false
-				existingEntity.SkipSupported = true
-				existingEntity.TopSupported = true
-				existingEntity.CreateChangeLocally = false
-				existingEntity.RemoteKeyParts = keyParts
-				existingEntity.Attributes = attrs
+				applyExternalEntityFields(existingEntity, et, isTopLevel, serviceRef, entitySetName, keyParts, attrs)
 				if err := e.writer.UpdateEntity(dm.ID, existingEntity); err != nil {
 					fmt.Fprintf(e.output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 					failed++
@@ -610,24 +599,11 @@ func (e *Executor) createExternalEntities(s *ast.CreateExternalEntitiesStmt) err
 
 			location := model.Point{X: 100 + (created+updated)*150, Y: 100}
 			newEntity := &domainmodel.Entity{
-				Name:                mendixName,
-				Persistable:         true, // Studio Pro stores external entities as persistable
-				Location:            location,
-				Attributes:          attrs,
-				Source:              "Rest$ODataRemoteEntitySource",
-				RemoteServiceName:   serviceRef,
-				RemoteEntitySet:     entitySetName,
-				RemoteEntityName:    et.Name,
-				Countable:           true,
-				Creatable:           true, // TODO: parse Capabilities annotations
-				Deletable:           false,
-				Updatable:           false,
-				SkipSupported:       true,
-				TopSupported:        true,
-				CreateChangeLocally: false,
-				RemoteKeyParts:      keyParts,
+				Name:     mendixName,
+				Location: location,
 			}
 			newEntity.ID = model.ID(mpr.GenerateID())
+			applyExternalEntityFields(newEntity, et, isTopLevel, serviceRef, entitySetName, keyParts, attrs)
 			if err := e.writer.CreateEntity(dm.ID, newEntity); err != nil {
 				fmt.Fprintf(e.output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 				failed++
@@ -641,6 +617,88 @@ func (e *Executor) createExternalEntities(s *ast.CreateExternalEntitiesStmt) err
 		svcQN, targetModule, created, updated, skipped, failed)
 
 	return nil
+}
+
+// applyExternalEntityFields stamps the Source/RemoteServiceName/Key/Attributes
+// fields on a domain model entity, choosing the right BSON source type based on
+// whether the entity has its own entity set.
+//
+// Top-level entities (have an entity set) → Rest$ODataRemoteEntitySource.
+// Derived/abstract/contained types → Rest$ODataEntityTypeSource.
+func applyExternalEntityFields(
+	ent *domainmodel.Entity,
+	et *mpr.EdmEntityType,
+	isTopLevel bool,
+	serviceRef, entitySetName string,
+	keyParts []*domainmodel.RemoteKeyPart,
+	attrs []*domainmodel.Attribute,
+) {
+	ent.RemoteServiceName = serviceRef
+	ent.RemoteEntityName = et.Name
+	ent.RemoteKeyParts = keyParts
+	ent.Attributes = attrs
+
+	if isTopLevel {
+		ent.Source = "Rest$ODataRemoteEntitySource"
+		ent.Persistable = true
+		ent.RemoteEntitySet = entitySetName
+		ent.Countable = true
+		ent.Creatable = true // TODO: parse Capabilities annotations per-entity
+		ent.Deletable = false
+		ent.Updatable = false
+		ent.SkipSupported = true
+		ent.TopSupported = true
+		ent.CreateChangeLocally = false
+		return
+	}
+
+	// Derived / abstract / contained-target entity (no entity set)
+	ent.Source = "Rest$ODataEntityTypeSource"
+	ent.Persistable = false
+	ent.IsOpen = et.IsOpen
+	ent.RemoteEntitySet = ""
+	// CRUD/skip/top fields are not used for entity-type sources; clear them
+	// in case we're updating an existing entity that previously had them.
+	ent.Countable = false
+	ent.Creatable = false
+	ent.Deletable = false
+	ent.Updatable = false
+	ent.SkipSupported = false
+	ent.TopSupported = false
+	ent.CreateChangeLocally = false
+}
+
+// mergedPropertiesWithKey walks the BaseType chain of an entity type and
+// returns the merged property list (base properties first, then derived) along
+// with the key property names from the root of the chain.
+func mergedPropertiesWithKey(et *mpr.EdmEntityType, byQualified map[string]*mpr.EdmEntityType) ([]*mpr.EdmProperty, []string) {
+	// Walk to the root, collecting types in order from base → derived.
+	chain := []*mpr.EdmEntityType{et}
+	current := et
+	for current.BaseType != "" {
+		parent := byQualified[current.BaseType]
+		if parent == nil {
+			break
+		}
+		chain = append([]*mpr.EdmEntityType{parent}, chain...)
+		current = parent
+	}
+
+	var merged []*mpr.EdmProperty
+	seen := make(map[string]bool)
+	for _, t := range chain {
+		for _, p := range t.Properties {
+			if seen[p.Name] {
+				continue
+			}
+			seen[p.Name] = true
+			merged = append(merged, p)
+		}
+	}
+
+	// The key always comes from the root of the chain.
+	keyProps := chain[0].KeyProperties
+	return merged, keyProps
 }
 
 // attrNameForOData returns a Mendix-safe attribute name for an OData property.

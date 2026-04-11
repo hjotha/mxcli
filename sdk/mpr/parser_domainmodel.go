@@ -118,8 +118,9 @@ func parseEntity(raw map[string]any) *domainmodel.Entity {
 		if sourceDocRef, ok := source["SourceDocument"].(string); ok {
 			entity.SourceDocumentRef = sourceDocRef
 		}
-		// For external entities (OData remote entity source)
-		if entity.Source == "Rest$ODataRemoteEntitySource" {
+		// External entity sources (three flavors)
+		switch entity.Source {
+		case "Rest$ODataRemoteEntitySource":
 			entity.RemoteServiceName = extractString(source["SourceDocument"])
 			entity.RemoteEntitySet = extractString(source["EntitySet"])
 			entity.RemoteEntityName = extractString(source["RemoteName"])
@@ -130,27 +131,14 @@ func parseEntity(raw map[string]any) *domainmodel.Entity {
 			entity.SkipSupported = extractBool(source["SkipSupported"], false)
 			entity.TopSupported = extractBool(source["TopSupported"], false)
 			entity.CreateChangeLocally = extractBool(source["CreateChangeLocally"], false)
-
-			// Parse Key with KeyParts
-			if keyMap, ok := source["Key"].(map[string]any); ok {
-				if partsArr := extractBsonArray(keyMap["Parts"]); len(partsArr) > 0 {
-					for _, p := range partsArr {
-						pMap, ok := p.(map[string]any)
-						if !ok {
-							continue
-						}
-						kp := &domainmodel.RemoteKeyPart{
-							Name:       extractString(pMap["EntityKeyPartName"]),
-							RemoteName: extractString(pMap["Name"]),
-							RemoteType: extractString(pMap["RemoteType"]),
-						}
-						if typeMap, ok := pMap["Type"].(map[string]any); ok {
-							kp.Type = parseAttributeType(typeMap)
-						}
-						entity.RemoteKeyParts = append(entity.RemoteKeyParts, kp)
-					}
-				}
-			}
+			parseRemoteKey(source, entity)
+		case "Rest$ODataEntityTypeSource":
+			entity.RemoteServiceName = extractString(source["SourceDocument"])
+			entity.RemoteEntityName = extractString(source["EntityTypeName"])
+			entity.IsOpen = extractBool(source["IsOpen"], false)
+			parseRemoteKey(source, entity)
+		case "Rest$ODataPrimitiveCollectionEntitySource":
+			entity.RemoteServiceName = extractString(source["SourceDocument"])
 		}
 	}
 
@@ -235,6 +223,31 @@ func parseEntity(raw map[string]any) *domainmodel.Entity {
 	}
 
 	return entity
+}
+
+// parseRemoteKey reads the Rest$ODataKey block from a Source map and populates
+// entity.RemoteKeyParts.
+func parseRemoteKey(source map[string]any, entity *domainmodel.Entity) {
+	keyMap, ok := source["Key"].(map[string]any)
+	if !ok {
+		return
+	}
+	partsArr := extractBsonArray(keyMap["Parts"])
+	for _, p := range partsArr {
+		pMap, ok := p.(map[string]any)
+		if !ok {
+			continue
+		}
+		kp := &domainmodel.RemoteKeyPart{
+			Name:       extractString(pMap["EntityKeyPartName"]),
+			RemoteName: extractString(pMap["Name"]),
+			RemoteType: extractString(pMap["RemoteType"]),
+		}
+		if typeMap, ok := pMap["Type"].(map[string]any); ok {
+			kp.Type = parseAttributeType(typeMap)
+		}
+		entity.RemoteKeyParts = append(entity.RemoteKeyParts, kp)
+	}
 }
 
 func parseAttribute(raw map[string]any) *domainmodel.Attribute {

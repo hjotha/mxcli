@@ -91,17 +91,18 @@ type Entity struct {
 	GeneralizationRef string `json:"generalizationRef,omitempty"`
 
 	// OData remote entity source fields (for external entities)
-	RemoteServiceName   string             `json:"remoteServiceName,omitempty"` // Qualified name of consumed OData service
-	RemoteEntitySet     string             `json:"remoteEntitySet,omitempty"`   // Entity set name
-	RemoteEntityName    string             `json:"remoteEntityName,omitempty"`  // Remote type name
-	Countable           bool               `json:"countable,omitempty"`
-	Creatable           bool               `json:"creatable,omitempty"`
-	Deletable           bool               `json:"deletable,omitempty"`
-	Updatable           bool               `json:"updatable,omitempty"`
-	SkipSupported       bool               `json:"skipSupported,omitempty"`
-	TopSupported        bool               `json:"topSupported,omitempty"`
-	CreateChangeLocally bool               `json:"createChangeLocally,omitempty"`
-	RemoteKeyParts      []*RemoteKeyPart   `json:"remoteKeyParts,omitempty"` // OData key properties
+	RemoteServiceName   string           `json:"remoteServiceName,omitempty"` // Qualified name of consumed OData service
+	RemoteEntitySet     string           `json:"remoteEntitySet,omitempty"`   // Entity set name (Rest$ODataRemoteEntitySource only)
+	RemoteEntityName    string           `json:"remoteEntityName,omitempty"`  // Remote type name
+	Countable           bool             `json:"countable,omitempty"`
+	Creatable           bool             `json:"creatable,omitempty"`
+	Deletable           bool             `json:"deletable,omitempty"`
+	Updatable           bool             `json:"updatable,omitempty"`
+	SkipSupported       bool             `json:"skipSupported,omitempty"`
+	TopSupported        bool             `json:"topSupported,omitempty"`
+	CreateChangeLocally bool             `json:"createChangeLocally,omitempty"`
+	IsOpen              bool             `json:"isOpen,omitempty"`         // Rest$ODataEntityTypeSource: <EntityType OpenType="true">
+	RemoteKeyParts      []*RemoteKeyPart `json:"remoteKeyParts,omitempty"` // OData key properties
 }
 
 // RemoteKeyPart describes one key property of an external entity, used to

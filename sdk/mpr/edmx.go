@@ -27,6 +27,9 @@ type EdmSchema struct {
 // EdmEntityType represents an entity type definition.
 type EdmEntityType struct {
 	Name                 string
+	BaseType             string // Qualified name of base type (e.g. "Microsoft...PlanItem"), empty if none
+	IsAbstract           bool   // True if <EntityType Abstract="true">
+	IsOpen               bool   // True if <EntityType OpenType="true">
 	KeyProperties        []string
 	Properties           []*EdmProperty
 	NavigationProperties []*EdmNavigationProperty
@@ -45,11 +48,12 @@ type EdmProperty struct {
 
 // EdmNavigationProperty represents a navigation property (association).
 type EdmNavigationProperty struct {
-	Name       string
-	Type       string // OData4: "DefaultNamespace.Customer" or "Collection(DefaultNamespace.Part)"
-	Partner    string // OData4 partner property name
-	TargetType string // Resolved target entity type name (without namespace/Collection)
-	IsMany     bool   // true if Collection()
+	Name           string
+	Type           string // OData4: "DefaultNamespace.Customer" or "Collection(DefaultNamespace.Part)"
+	Partner        string // OData4 partner property name
+	TargetType     string // Resolved target entity type name (without namespace/Collection)
+	IsMany         bool   // true if Collection()
+	ContainsTarget bool   // true if <NavigationProperty ContainsTarget="true">
 	// OData3 fields (from Association)
 	Relationship string
 	FromRole     string
@@ -221,7 +225,10 @@ func (d *EdmxDocument) FindEntityType(name string) *EdmEntityType {
 
 func parseXmlEntityType(et *xmlEntityType) *EdmEntityType {
 	entityType := &EdmEntityType{
-		Name: et.Name,
+		Name:       et.Name,
+		BaseType:   et.BaseType,
+		IsAbstract: et.Abstract == "true",
+		IsOpen:     et.OpenType == "true",
 	}
 
 	// Parse key
@@ -265,12 +272,13 @@ func parseXmlEntityType(et *xmlEntityType) *EdmEntityType {
 	// Parse navigation properties
 	for _, np := range et.NavigationProperties {
 		nav := &EdmNavigationProperty{
-			Name:         np.Name,
-			Type:         np.Type,
-			Partner:      np.Partner,
-			Relationship: np.Relationship,
-			FromRole:     np.FromRole,
-			ToRole:       np.ToRole,
+			Name:           np.Name,
+			Type:           np.Type,
+			Partner:        np.Partner,
+			ContainsTarget: np.ContainsTarget == "true",
+			Relationship:   np.Relationship,
+			FromRole:       np.FromRole,
+			ToRole:         np.ToRole,
 		}
 
 		// Resolve target type from OData4 Type field
@@ -323,6 +331,9 @@ type xmlSchema struct {
 
 type xmlEntityType struct {
 	Name                 string                  `xml:"Name,attr"`
+	BaseType             string                  `xml:"BaseType,attr"`
+	Abstract             string                  `xml:"Abstract,attr"`
+	OpenType             string                  `xml:"OpenType,attr"`
 	Key                  *xmlKey                 `xml:"Key"`
 	Properties           []xmlProperty           `xml:"Property"`
 	NavigationProperties []xmlNavigationProperty `xml:"NavigationProperty"`
@@ -348,12 +359,13 @@ type xmlProperty struct {
 }
 
 type xmlNavigationProperty struct {
-	Name         string `xml:"Name,attr"`
-	Type         string `xml:"Type,attr"`         // OData4
-	Partner      string `xml:"Partner,attr"`      // OData4
-	Relationship string `xml:"Relationship,attr"` // OData3
-	FromRole     string `xml:"FromRole,attr"`     // OData3
-	ToRole       string `xml:"ToRole,attr"`       // OData3
+	Name           string `xml:"Name,attr"`
+	Type           string `xml:"Type,attr"`           // OData4
+	Partner        string `xml:"Partner,attr"`        // OData4
+	ContainsTarget string `xml:"ContainsTarget,attr"` // OData4: contained nav target (e.g. Person.Trips)
+	Relationship   string `xml:"Relationship,attr"`   // OData3
+	FromRole       string `xml:"FromRole,attr"`       // OData3
+	ToRole         string `xml:"ToRole,attr"`         // OData3
 }
 
 type xmlDocumentation struct {
