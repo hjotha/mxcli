@@ -23,7 +23,11 @@ func extractConditionalSettings(widget *rawWidget, w map[string]any) {
 	}
 }
 
-func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
+func (e *Executor) parseRawWidget(w map[string]any, parentEntityContext ...string) []rawWidget {
+	inheritedCtx := ""
+	if len(parentEntityContext) > 0 {
+		inheritedCtx = parentEntityContext[0]
+	}
 	typeName, _ := w["$Type"].(string)
 	name, _ := w["Name"].(string)
 
@@ -65,7 +69,7 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		if children != nil {
 			for _, c := range children {
 				if cMap, ok := c.(map[string]any); ok {
-					widget.Children = append(widget.Children, e.parseRawWidget(cMap)...)
+					widget.Children = append(widget.Children, e.parseRawWidget(cMap, inheritedCtx)...)
 				}
 			}
 		}
@@ -91,7 +95,7 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 
 	switch typeName {
 	case "Forms$LayoutGrid", "Pages$LayoutGrid":
-		widget.Rows = e.parseLayoutGridRows(w)
+		widget.Rows = e.parseLayoutGridRows(w, inheritedCtx)
 		return []rawWidget{widget}
 
 	case "Forms$DynamicText", "Pages$DynamicText":
@@ -121,11 +125,13 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		return []rawWidget{widget}
 
 	case "Forms$DataView", "Pages$DataView":
-		widget.Children = e.parseDataViewChildren(w)
 		widget.DataSource = e.extractDataViewDataSource(w)
 		if widget.DataSource != nil && widget.DataSource.Reference != "" {
 			widget.EntityContext = widget.DataSource.Reference
+		} else if inheritedCtx != "" {
+			widget.EntityContext = inheritedCtx
 		}
+		widget.Children = e.parseDataViewChildren(w, widget.EntityContext)
 		return []rawWidget{widget}
 
 	case "Forms$TextBox", "Pages$TextBox":
@@ -175,8 +181,6 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		// For DataGrid2, also extract datasource, columns, CONTROLBAR widgets, paging, and selection
 		if widget.RenderMode == "DATAGRID2" {
 			widget.DataSource = e.extractDataGrid2DataSource(w)
-			widget.DataGridColumns = e.extractDataGrid2Columns(w)
-			widget.ControlBar = e.extractDataGrid2ControlBar(w)
 			widget.PageSize = e.extractCustomWidgetPropertyString(w, "pageSize")
 			widget.Pagination = e.extractCustomWidgetPropertyString(w, "pagination")
 			widget.PagingPosition = e.extractCustomWidgetPropertyString(w, "pagingPosition")
@@ -185,20 +189,26 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 			widget.Selection = e.extractGallerySelection(w)
 			if widget.DataSource != nil && widget.DataSource.Reference != "" {
 				widget.EntityContext = widget.DataSource.Reference
+			} else if inheritedCtx != "" {
+				widget.EntityContext = inheritedCtx
 			}
+			widget.DataGridColumns = e.extractDataGrid2Columns(w, widget.EntityContext)
+			widget.ControlBar = e.extractDataGrid2ControlBar(w)
 		}
 		// For Gallery, extract datasource, content widgets, filter widgets, and selection mode
 		if widget.RenderMode == "GALLERY" {
 			widget.DataSource = e.extractGalleryDataSource(w)
-			widget.Children = e.extractGalleryContent(w)
-			widget.FilterWidgets = e.extractGalleryFilters(w)
 			widget.Selection = e.extractGallerySelection(w)
 			widget.DesktopColumns = e.extractCustomWidgetPropertyString(w, "desktopItems")
 			widget.TabletColumns = e.extractCustomWidgetPropertyString(w, "tabletItems")
 			widget.PhoneColumns = e.extractCustomWidgetPropertyString(w, "phoneItems")
 			if widget.DataSource != nil && widget.DataSource.Reference != "" {
 				widget.EntityContext = widget.DataSource.Reference
+			} else if inheritedCtx != "" {
+				widget.EntityContext = inheritedCtx
 			}
+			widget.Children = e.extractGalleryContent(w, widget.EntityContext)
+			widget.FilterWidgets = e.extractGalleryFilters(w)
 		}
 		// For filter widgets, extract filter attributes and expression
 		if widget.RenderMode == "TEXTFILTER" || widget.RenderMode == "NUMBERFILTER" || widget.RenderMode == "DROPDOWNFILTER" || widget.RenderMode == "DATEFILTER" {
@@ -225,11 +235,13 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		return []rawWidget{widget}
 
 	case "Forms$Gallery", "Pages$Gallery":
-		widget.Children = e.parseGalleryContent(w)
 		widget.DataSource = e.extractGalleryDataSource(w)
 		if widget.DataSource != nil && widget.DataSource.Reference != "" {
 			widget.EntityContext = widget.DataSource.Reference
+		} else if inheritedCtx != "" {
+			widget.EntityContext = inheritedCtx
 		}
+		widget.Children = e.parseGalleryContent(w, widget.EntityContext)
 		return []rawWidget{widget}
 
 	case "Forms$SnippetCallWidget", "Pages$SnippetCallWidget":
@@ -237,11 +249,13 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 		return []rawWidget{widget}
 
 	case "Forms$ListView", "Pages$ListView":
-		widget.Children = e.parseListViewContent(w)
 		widget.DataSource = e.extractListViewDataSource(w)
 		if widget.DataSource != nil && widget.DataSource.Reference != "" {
 			widget.EntityContext = widget.DataSource.Reference
+		} else if inheritedCtx != "" {
+			widget.EntityContext = inheritedCtx
 		}
+		widget.Children = e.parseListViewContent(w, widget.EntityContext)
 		return []rawWidget{widget}
 
 	default:
@@ -250,7 +264,11 @@ func (e *Executor) parseRawWidget(w map[string]any) []rawWidget {
 	}
 }
 
-func (e *Executor) parseLayoutGridRows(w map[string]any) []rawWidgetRow {
+func (e *Executor) parseLayoutGridRows(w map[string]any, entityContext ...string) []rawWidgetRow {
+	ctx := ""
+	if len(entityContext) > 0 {
+		ctx = entityContext[0]
+	}
 	rows := getBsonArrayElements(w["Rows"])
 	if rows == nil {
 		return nil
@@ -286,7 +304,7 @@ func (e *Executor) parseLayoutGridRows(w map[string]any) []rawWidgetRow {
 			colWidgets := getBsonArrayElements(cMap["Widgets"])
 			for _, cw := range colWidgets {
 				if cwMap, ok := cw.(map[string]any); ok {
-					col.Widgets = append(col.Widgets, e.parseRawWidget(cwMap)...)
+					col.Widgets = append(col.Widgets, e.parseRawWidget(cwMap, ctx)...)
 				}
 			}
 			row.Columns = append(row.Columns, col)
@@ -381,14 +399,19 @@ func (e *Executor) extractNavigationListItemAction(w map[string]any) string {
 }
 
 // parseDataViewChildren extracts child widgets from a DataView.
-func (e *Executor) parseDataViewChildren(w map[string]any) []rawWidget {
+// entityContext is the resolved entity context from the enclosing data container.
+func (e *Executor) parseDataViewChildren(w map[string]any, entityContext ...string) []rawWidget {
+	ctx := ""
+	if len(entityContext) > 0 {
+		ctx = entityContext[0]
+	}
 	var result []rawWidget
 
 	// Get main widgets
 	widgets := getBsonArrayElements(w["Widgets"])
 	for _, child := range widgets {
 		if childMap, ok := child.(map[string]any); ok {
-			result = append(result, e.parseRawWidget(childMap)...)
+			result = append(result, e.parseRawWidget(childMap, ctx)...)
 		}
 	}
 
@@ -399,7 +422,7 @@ func (e *Executor) parseDataViewChildren(w map[string]any) []rawWidget {
 		footer := rawWidget{Type: "Footer", Name: "footer1"}
 		for _, child := range footerWidgets {
 			if childMap, ok := child.(map[string]any); ok {
-				footer.Children = append(footer.Children, e.parseRawWidget(childMap)...)
+				footer.Children = append(footer.Children, e.parseRawWidget(childMap, ctx)...)
 			}
 		}
 		result = append(result, footer)
@@ -542,7 +565,12 @@ func (e *Executor) extractAttributeRef(w map[string]any) string {
 }
 
 // parseGalleryContent extracts the content widget from a Gallery.
-func (e *Executor) parseGalleryContent(w map[string]any) []rawWidget {
+// entityContext is the resolved entity context from the Gallery's datasource.
+func (e *Executor) parseGalleryContent(w map[string]any, entityContext ...string) []rawWidget {
+	ctx := ""
+	if len(entityContext) > 0 {
+		ctx = entityContext[0]
+	}
 	content := w["ContentWidget"]
 	if content == nil {
 		return nil
@@ -551,11 +579,16 @@ func (e *Executor) parseGalleryContent(w map[string]any) []rawWidget {
 	if !ok {
 		return nil
 	}
-	return e.parseRawWidget(contentMap)
+	return e.parseRawWidget(contentMap, ctx)
 }
 
 // parseListViewContent extracts the content widgets from a ListView.
-func (e *Executor) parseListViewContent(w map[string]any) []rawWidget {
+// entityContext is the resolved entity context from the enclosing list container.
+func (e *Executor) parseListViewContent(w map[string]any, entityContext ...string) []rawWidget {
+	ctx := ""
+	if len(entityContext) > 0 {
+		ctx = entityContext[0]
+	}
 	widgets := getBsonArrayElements(w["Widgets"])
 	if widgets == nil {
 		return nil
@@ -566,7 +599,7 @@ func (e *Executor) parseListViewContent(w map[string]any) []rawWidget {
 		if !ok {
 			continue
 		}
-		result = append(result, e.parseRawWidget(wgtMap)...)
+		result = append(result, e.parseRawWidget(wgtMap, ctx)...)
 	}
 	return result
 }

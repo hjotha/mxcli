@@ -86,3 +86,46 @@ func TestOutputWidgetMDLV3_ListViewWithContext(t *testing.T) {
 		t.Errorf("ListView output should contain context comment with selection, got:\n%s", got)
 	}
 }
+
+func TestOutputWidgetMDLV3_DataViewInheritsParentContext(t *testing.T) {
+	// A DataView without its own DataSource should inherit parent context
+	buf := &bytes.Buffer{}
+	e := New(buf)
+	w := rawWidget{
+		Type:          "Forms$DataView",
+		Name:          "dvNested",
+		EntityContext: "Sales.OrderLine", // inherited from parent during parse
+		Children: []rawWidget{
+			{Type: "Forms$TextBox", Name: "txtQty", Content: "Quantity"},
+		},
+	}
+	e.outputWidgetMDLV3(w, 0)
+	got := buf.String()
+	if !strings.Contains(got, "-- Context: $currentObject (Sales.OrderLine)") {
+		t.Errorf("Nested DataView should show inherited context, got:\n%s", got)
+	}
+}
+
+func TestOutputWidgetMDLV3_DataGridColumnInheritsContext(t *testing.T) {
+	// DataGrid2 column content widgets should inherit DataGrid2's context
+	buf := &bytes.Buffer{}
+	e := New(buf)
+	w := rawWidget{
+		Type:          "CustomWidgets$CustomWidget",
+		Name:          "dgProducts",
+		RenderMode:    "DATAGRID2",
+		EntityContext: "Shop.Product",
+		DataSource:    &rawDataSource{Type: "database", Reference: "Shop.Product"},
+		DataGridColumns: []rawDataGridColumn{
+			{
+				Attribute: "Name",
+				Caption:   "Product Name",
+			},
+		},
+	}
+	e.outputWidgetMDLV3(w, 0)
+	got := buf.String()
+	if !strings.Contains(got, "-- Context: $currentObject (Shop.Product), $dgProducts (selection)") {
+		t.Errorf("DataGrid2 should show context comment, got:\n%s", got)
+	}
+}

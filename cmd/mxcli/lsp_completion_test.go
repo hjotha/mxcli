@@ -32,6 +32,21 @@ func TestExtractPageParamNames(t *testing.T) {
 			text:     "DECLARE $Temp String = '';\n$Order: Mod.Order",
 			expected: []string{"Order"},
 		},
+		{
+			name:     "reject body $currentObject reference",
+			text:     "CREATE PAGE Mod.Page ($Order: Mod.Order) {\n  -- Context: $currentObject (Mod.Order)\n  DATAVIEW dv1 (DataSource: $Order)\n}",
+			expected: []string{"Order"},
+		},
+		{
+			name:     "reject body $var usage without colon",
+			text:     "CREATE PAGE Mod.Page ($Item: Mod.Item) {\n  TEXTBOX t1 (Attribute: $Item/Name)\n}",
+			expected: []string{"Item"},
+		},
+		{
+			name:     "reject comment lines",
+			text:     "-- $FakeParam: NotReal\n$RealParam: Mod.Entity",
+			expected: []string{"RealParam"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -52,9 +67,10 @@ func TestExtractPageParamNames(t *testing.T) {
 
 func TestVariableCompletionItems(t *testing.T) {
 	s := &mdlServer{}
-	docText := "CREATE PAGE Mod.Page (\n  Params: { $Customer: Mod.Customer }\n) {\n  DATAVIEW dv1 (DataSource: $Customer) {\n"
+	docText := "CREATE PAGE Mod.Page (\n  Params: { $Customer: Mod.Customer }\n) {\n  DATAVIEW dv1 (DataSource: $Customer) {\n    TEXTBOX t1 (Attribute: $\n"
 
-	items := s.variableCompletionItems(docText, "$")
+	// Cursor at last line (line 4, 0-based)
+	items := s.variableCompletionItems(docText, "$", 4)
 	if len(items) == 0 {
 		t.Fatal("expected completion items for $ prefix")
 	}
@@ -75,5 +91,81 @@ func TestVariableCompletionItems(t *testing.T) {
 	}
 	if !foundCustomer {
 		t.Error("expected $Customer in completion items")
+	}
+}
+
+func TestVariableCompletionItems_DataGridContext(t *testing.T) {
+	s := &mdlServer{}
+	docText := "CREATE PAGE Mod.Page ($Order: Sales.Order) {\n  DATAGRID dgOrders (DataSource: DATABASE FROM Sales.Order) {\n    COLUMN Name {\n      TEXTBOX t1 (Attribute: $\n"
+
+	// Cursor inside DATAGRID column (line 3)
+	items := s.variableCompletionItems(docText, "$", 3)
+
+	var currentObjDetail string
+	foundSelection := false
+	for _, item := range items {
+		if item.Label == "$currentObject" {
+			currentObjDetail = item.Detail
+		}
+		if item.Label == "$dgOrders" {
+			foundSelection = true
+		}
+	}
+	if currentObjDetail != "Sales.Order" {
+		t.Errorf("expected $currentObject detail = %q, got %q", "Sales.Order", currentObjDetail)
+	}
+	if !foundSelection {
+		t.Error("expected $dgOrders selection variable in completion items")
+	}
+}
+
+func TestScanEnclosingDataContainer(t *testing.T) {
+	tests := []struct {
+		name           string
+		text           string
+		cursorLine     int
+		wantEntity     string
+		wantWidgetName string
+	}{
+		{
+			name:           "inside DATAVIEW",
+			text:           "DATAVIEW dv1 (DataSource: DATABASE FROM Mod.Order) {\n  TEXTBOX t1\n}",
+			cursorLine:     1,
+			wantEntity:     "Mod.Order",
+			wantWidgetName: "",
+		},
+		{
+			name:           "inside DATAGRID",
+			text:           "DATAGRID dg1 (DataSource: DATABASE FROM Shop.Product) {\n  COLUMN Name {\n    TEXTBOX t1\n  }\n}",
+			cursorLine:     2,
+			wantEntity:     "Shop.Product",
+			wantWidgetName: "dg1",
+		},
+		{
+			name:           "no container",
+			text:           "CREATE PAGE Mod.Page ($P: Mod.E) {\n  TEXTBOX t1\n}",
+			cursorLine:     1,
+			wantEntity:     "",
+			wantWidgetName: "",
+		},
+		{
+			name:           "nested DataView inside DataGrid",
+			text:           "DATAGRID dg1 (DataSource: DATABASE FROM Sales.Order) {\n  COLUMN col1 {\n    DATAVIEW dv1 (DataSource: DATABASE FROM Sales.Line) {\n      TEXTBOX t1\n    }\n  }\n}",
+			cursorLine:     3,
+			wantEntity:     "Sales.Line",
+			wantWidgetName: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entity, widgetName := scanEnclosingDataContainer(tt.text, tt.cursorLine)
+			if entity != tt.wantEntity {
+				t.Errorf("scanEnclosingDataContainer() entity = %q, want %q", entity, tt.wantEntity)
+			}
+			if widgetName != tt.wantWidgetName {
+				t.Errorf("scanEnclosingDataContainer() widgetName = %q, want %q", widgetName, tt.wantWidgetName)
+			}
+		})
 	}
 }
