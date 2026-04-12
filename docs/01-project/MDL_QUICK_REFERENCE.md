@@ -36,6 +36,7 @@ CREATE PERSISTENT ENTITY Module.Photo (
 |-----------|--------|-------|
 | Create entity | `CREATE [OR MODIFY] PERSISTENT\|NON-PERSISTENT ENTITY Module.Name (attrs);` | Persistent is default |
 | Create with extends | `CREATE PERSISTENT ENTITY Module.Name EXTENDS Parent.Entity (attrs);` | EXTENDS before `(` |
+| Create with auditing | `CREATE PERSISTENT ENTITY Module.Name (attrs) STORE OWNER STORE CHANGED BY STORE CREATED DATE STORE CHANGED DATE;` | System attributes added automatically |
 | Create view entity | `CREATE VIEW ENTITY Module.Name (attrs) AS SELECT ...;` | OQL-backed read-only |
 | Create external entity | `CREATE EXTERNAL ENTITY Module.Name FROM ODATA CLIENT Module.Client (...) (attrs);` | From consumed OData |
 | Create external entities | `CREATE [OR MODIFY] EXTERNAL ENTITIES FROM Module.Client [INTO Module] [ENTITIES (...)];` | Bulk from $metadata |
@@ -67,6 +68,11 @@ Modifies an existing entity without full replacement.
 | Drop event handler | `ALTER ENTITY Module.Name DROP EVENT HANDLER ON BEFORE COMMIT;` | |
 | Set documentation | `ALTER ENTITY Module.Name SET DOCUMENTATION 'text';` | |
 | Set position | `ALTER ENTITY Module.Name SET POSITION (100, 200);` | Canvas position |
+| Enable owner tracking | `ALTER ENTITY Module.Name SET STORE OWNER;` | Adds System.owner association |
+| Enable changed-by tracking | `ALTER ENTITY Module.Name SET STORE CHANGED BY;` | Adds System.changedBy association |
+| Enable created-date tracking | `ALTER ENTITY Module.Name SET STORE CREATED DATE;` | Adds CreatedDate attribute |
+| Enable changed-date tracking | `ALTER ENTITY Module.Name SET STORE CHANGED DATE;` | Adds ChangedDate attribute |
+| Disable any of the above | `ALTER ENTITY Module.Name DROP STORE OWNER\|CHANGED BY\|CREATED DATE\|CHANGED DATE;` | |
 
 **Example:**
 ```sql

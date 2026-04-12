@@ -95,6 +95,35 @@ CREATE OR MODIFY PERSISTENT ENTITY Sales.Customer (
 );
 ```
 
+## System Attributes (Auditing)
+
+Persistent entities can track who created/modified objects and when, using built-in system attributes. Add these clauses after the closing parenthesis:
+
+```sql
+CREATE PERSISTENT ENTITY Sales.Order (
+  OrderNumber: AutoNumber,
+  TotalAmount: Decimal
+)
+STORE OWNER
+STORE CHANGED BY
+STORE CREATED DATE
+STORE CHANGED DATE;
+```
+
+| Clause | System Attribute | Type | Set When |
+|--------|-----------------|------|----------|
+| `STORE OWNER` | `System.owner` | Association → System.User | Object created |
+| `STORE CHANGED BY` | `System.changedBy` | Association → System.User | Every commit |
+| `STORE CREATED DATE` | `CreatedDate` | DateTime | Object created |
+| `STORE CHANGED DATE` | `ChangedDate` | DateTime | Every commit |
+
+Toggle on existing entities with ALTER ENTITY:
+
+```sql
+ALTER ENTITY Sales.Order SET STORE OWNER;
+ALTER ENTITY Sales.Order DROP STORE CHANGED DATE;
+```
+
 ## Annotations
 
 ### @Position

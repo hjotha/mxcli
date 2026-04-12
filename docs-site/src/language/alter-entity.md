@@ -89,6 +89,28 @@ ALTER ENTITY Sales.Customer
   SET DOCUMENTATION 'Customer master data for the Sales module';
 ```
 
+## SET/DROP STORE (System Attributes)
+
+Enable or disable auditing system attributes:
+
+```sql
+-- Enable owner tracking (adds System.owner association)
+ALTER ENTITY Sales.Order SET STORE OWNER;
+
+-- Enable changed-by tracking (adds System.changedBy association)
+ALTER ENTITY Sales.Order SET STORE CHANGED BY;
+
+-- Enable created-date tracking (adds CreatedDate: DateTime)
+ALTER ENTITY Sales.Order SET STORE CREATED DATE;
+
+-- Enable changed-date tracking (adds ChangedDate: DateTime)
+ALTER ENTITY Sales.Order SET STORE CHANGED DATE;
+
+-- Disable any of the above
+ALTER ENTITY Sales.Order DROP STORE OWNER;
+ALTER ENTITY Sales.Order DROP STORE CHANGED DATE;
+```
+
 ## Syntax Summary
 
 ```sql
@@ -115,6 +137,12 @@ ALTER ENTITY <Module>.<Entity>
 
 ALTER ENTITY <Module>.<Entity>
   SET POSITION (<x>, <y>)
+
+ALTER ENTITY <Module>.<Entity>
+  SET STORE OWNER|CHANGED BY|CREATED DATE|CHANGED DATE
+
+ALTER ENTITY <Module>.<Entity>
+  DROP STORE OWNER|CHANGED BY|CREATED DATE|CHANGED DATE
 ```
 
 ## See Also

@@ -196,6 +196,48 @@ CREATE PERSISTENT ENTITY Module.Photo (
 
 **Note:** `mxcli syntax entity` output may show EXTENDS after `)` — this is misleading. Always place EXTENDS before `(`.
 
+#### System Attributes (Auditing)
+
+Mendix supports four built-in auditing properties on persistent entities. These are stored at the entity level (not as regular attributes) and the system fills them automatically:
+
+| Clause | Effect |
+|--------|--------|
+| `STORE OWNER` | Adds `System.owner` association to System.User; set on insert |
+| `STORE CHANGED BY` | Adds `System.changedBy` association to System.User; updated on every commit |
+| `STORE CREATED DATE` | Adds `CreatedDate` (DateTime); set on insert |
+| `STORE CHANGED DATE` | Adds `ChangedDate` (DateTime); updated on every commit |
+
+**Position**: STORE clauses go AFTER the closing parenthesis of attributes, before the semicolon. They can appear in any order.
+
+```sql
+/**
+ * Order with full audit trail
+ */
+CREATE PERSISTENT ENTITY Sales.Order (
+  OrderNumber: AutoNumber,
+  TotalAmount: Decimal NOT NULL,
+  Status: Enumeration(Sales.OrderStatus) NOT NULL
+)
+STORE OWNER
+STORE CHANGED BY
+STORE CREATED DATE
+STORE CHANGED DATE;
+```
+
+To enable/disable on existing entities, use ALTER ENTITY:
+
+```sql
+ALTER ENTITY Sales.Order SET STORE OWNER;
+ALTER ENTITY Sales.Order SET STORE CHANGED DATE;
+ALTER ENTITY Sales.Order DROP STORE CHANGED BY;
+```
+
+**When to use auditing:**
+- Compliance/regulated domains (finance, healthcare) — use all four
+- User-generated content — use STORE OWNER for ownership rules
+- "Recently modified" lists — use STORE CHANGED DATE
+- Avoid on high-volume system tables (every write touches the audit columns)
+
 #### Non-Persistent Entity
 
 **IMPORTANT: Non-persistent entities cannot have validation rules** (`NOT NULL ERROR`, `UNIQUE ERROR`) on attributes. They can only have `DEFAULT` values.
