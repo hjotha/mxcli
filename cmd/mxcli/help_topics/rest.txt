@@ -15,6 +15,46 @@ DESCRIBE COMMANDS
   DESCRIBE REST CLIENT MyModule.PetStoreAPI;      -- Full MDL definition
   DESCRIBE PUBLISHED REST SERVICE MyModule.MyAPI; -- Full MDL definition
 
+CREATE REST CLIENT
+------------------
+
+  CREATE REST CLIENT Module.Api (
+    BaseUrl: 'https://api.example.com',
+    Authentication: NONE
+  )
+  {
+    OPERATION GetOrder {
+      Method: GET,
+      Path: '/orders/{id}',
+      Parameters: ($id: String),
+      Headers: ('Accept' = 'application/json'),
+      Timeout: 30,
+      Response: JSON AS $Result
+    }
+
+    OPERATION CreateOrder {
+      Method: POST,
+      Path: '/orders',
+      Headers: ('Content-Type' = 'application/json'),
+      Body: MAPPING Module.OrderRequest {
+        customerId = CustomerId,
+        amount = Amount,
+      },
+      Response: MAPPING Module.OrderResponse {
+        Id = id,
+        Status = status,
+      }
+    }
+  };
+
+  CREATE OR MODIFY REST CLIENT Module.Api ( ... ) { ... };  -- Update existing
+  DROP REST CLIENT Module.Api;
+
+  Authentication: NONE | BASIC (Username: '...', Password: '...')
+  Body: JSON FROM $var | TEMPLATE '...' | MAPPING Entity { jsonField = Attr, ... }
+  Response: JSON AS $var | STRING AS $var | FILE AS $var | STATUS AS $var | NONE
+          | MAPPING Entity { Attr = jsonField, ... }
+
 CREATE / DROP PUBLISHED REST SERVICE
 -------------------------------------
 

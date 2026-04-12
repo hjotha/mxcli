@@ -179,6 +179,12 @@ func (e *Executor) execCreatePublishedRestService(s *ast.CreatePublishedRestServ
 		return fmt.Errorf("not connected to a project in write mode")
 	}
 
+	if err := e.checkFeature("integration", "published_rest_service",
+		"CREATE PUBLISHED REST SERVICE",
+		"upgrade your project to 10.0+"); err != nil {
+		return err
+	}
+
 	// Handle CREATE OR REPLACE — delete existing if found
 	if s.CreateOrReplace {
 		if existing, _ := e.findPublishedRestService(s.Name.Module, s.Name.Name); existing != nil {
@@ -290,6 +296,12 @@ func astResourceDefToModel(def *ast.PublishedRestResourceDef) *model.PublishedRe
 func (e *Executor) execAlterPublishedRestService(s *ast.AlterPublishedRestServiceStmt) error {
 	if e.writer == nil {
 		return fmt.Errorf("not connected to a project in write mode")
+	}
+
+	if err := e.checkFeature("integration", "published_rest_alter",
+		"ALTER PUBLISHED REST SERVICE",
+		"upgrade your project to 10.0+"); err != nil {
+		return err
 	}
 
 	svc, err := e.findPublishedRestService(s.Name.Module, s.Name.Name)

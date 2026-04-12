@@ -1105,6 +1105,12 @@ func (e *Executor) execGrantPublishedRestServiceAccess(s *ast.GrantPublishedRest
 		return fmt.Errorf("not connected to a project in write mode")
 	}
 
+	if err := e.checkFeature("integration", "published_rest_grant_revoke",
+		"GRANT ACCESS ON PUBLISHED REST SERVICE",
+		"upgrade your project to 10.0+"); err != nil {
+		return err
+	}
+
 	h, err := e.getHierarchy()
 	if err != nil {
 		return fmt.Errorf("failed to build hierarchy: %w", err)

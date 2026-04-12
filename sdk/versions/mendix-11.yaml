@@ -109,6 +109,15 @@ features:
       mdl: "CREATE REST CLIENT with query parameters"
     rest_client_headers:
       min_version: "10.4.0"
+    published_rest_service:
+      min_version: "10.0.0"
+      mdl: "CREATE PUBLISHED REST SERVICE Module.Name ..."
+    published_rest_grant_revoke:
+      min_version: "10.0.0"
+      mdl: "GRANT/REVOKE ACCESS ON PUBLISHED REST SERVICE ..."
+    published_rest_alter:
+      min_version: "10.0.0"
+      mdl: "ALTER PUBLISHED REST SERVICE Module.Name ..."
     database_connector_basic:
       min_version: "10.6.0"
       mdl: "CREATE DATABASE CONNECTION Module.Name ..."

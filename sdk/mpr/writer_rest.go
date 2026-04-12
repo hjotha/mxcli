@@ -159,7 +159,11 @@ func serializeRestOperation(op *model.RestClientOperation) bson.M {
 	doc["QueryParameters"] = queryParams
 
 	// ResponseHandling: polymorphic
-	doc["ResponseHandling"] = serializeRestResponseHandling(op.ResponseType)
+	if op.ResponseType == "MAPPING" && op.ResponseEntity != "" && len(op.ResponseMappings) > 0 {
+		doc["ResponseHandling"] = serializeRestImplicitMappingResponse(op.ResponseEntity, op.ResponseMappings)
+	} else {
+		doc["ResponseHandling"] = serializeRestResponseHandling(op.ResponseType)
+	}
 
 	return doc
 }
@@ -177,7 +181,11 @@ func serializeRestMethod(op *model.RestClientOperation) bson.M {
 			"$Type":      "Rest$RestOperationMethodWithBody",
 			"HttpMethod": httpMethod,
 		}
-		doc["Body"] = serializeRestBody(op.BodyType, op.BodyVariable)
+		if op.BodyType == "EXPORT_MAPPING" && len(op.BodyMappings) > 0 {
+			doc["Body"] = serializeRestImplicitMappingBody(op.BodyVariable, op.BodyMappings)
+		} else {
+			doc["Body"] = serializeRestBody(op.BodyType, op.BodyVariable)
+		}
 		return doc
 	}
 
@@ -216,7 +224,7 @@ func serializeRestBody(bodyType, bodyExpr string) bson.M {
 			"$Type": "Rest$JsonBody",
 			"Value": bodyExpr,
 		}
-	case "FILE":
+	case "FILE", "TEMPLATE":
 		return bson.M{
 			"$ID":           idToBsonBinary(generateUUID()),
 			"$Type":         "Rest$StringBody",
@@ -228,6 +236,108 @@ func serializeRestBody(bodyType, bodyExpr string) bson.M {
 			"$Type": "Rest$JsonBody",
 			"Value": bodyExpr,
 		}
+	}
+}
+
+// serializeRestImplicitMappingBody creates a Rest$ImplicitMappingBody with an inline
+// export mapping tree (ExportMappings$ObjectMappingElement). Used for Body: MAPPING Entity { ... }.
+func serializeRestImplicitMappingBody(entity string, mappings []*model.RestResponseMapping) bson.M {
+	rootElement := serializeInlineMappingElement(entity, "", "", "(Object)", mappings, "ExportMappings", "Parameter")
+
+	return bson.M{
+		"$ID":                idToBsonBinary(generateUUID()),
+		"$Type":              "Rest$ImplicitMappingBody",
+		"RootMappingElement": rootElement,
+		"TestValue": bson.M{
+			"$ID":   idToBsonBinary(generateUUID()),
+			"$Type": "Rest$StringValue",
+			"Value": "",
+		},
+	}
+}
+
+// serializeRestImplicitMappingResponse creates a Rest$ImplicitMappingResponseHandling with an
+// inline import mapping tree (ImportMappings$ObjectMappingElement). Used for Response: MAPPING Entity { ... }.
+func serializeRestImplicitMappingResponse(entity string, mappings []*model.RestResponseMapping) bson.M {
+	rootElement := serializeInlineMappingElement(entity, "", "", "(Object)", mappings, "ImportMappings", "Create")
+
+	return bson.M{
+		"$ID":                idToBsonBinary(generateUUID()),
+		"$Type":              "Rest$ImplicitMappingResponseHandling",
+		"ContentType":        "application/json",
+		"RootMappingElement": rootElement,
+		"StatusCode":         int32(200),
+	}
+}
+
+// serializeInlineMappingElement creates a single ObjectMappingElement with children for inline REST mappings.
+// namespace is "ImportMappings" or "ExportMappings". objectHandling is "Create" or "Parameter".
+func serializeInlineMappingElement(entity, association, exposedName, jsonPath string, mappings []*model.RestResponseMapping, namespace, objectHandling string) bson.M {
+	children := bson.A{int32(2)}
+	for _, m := range mappings {
+		if m.Entity != "" {
+			// Nested object mapping
+			childJsonPath := jsonPath + "|" + m.ExposedName
+			child := serializeInlineMappingElement(m.Entity, m.Association, m.ExposedName, childJsonPath, m.Children, namespace, "Create")
+			children = append(children, child)
+		} else {
+			// Value mapping
+			valueJsonPath := m.JsonPath
+			if valueJsonPath == "" {
+				valueJsonPath = jsonPath + "|" + m.ExposedName
+			}
+			attrQN := entity + "." + m.Attribute
+			children = append(children, bson.M{
+				"$ID":              idToBsonBinary(generateUUID()),
+				"$Type":            namespace + "$ValueMappingElement",
+				"Attribute":        attrQN,
+				"ExposedName":      m.ExposedName,
+				"JsonPath":         valueJsonPath,
+				"XmlPath":          "",
+				"IsKey":            false,
+				"Type":             bson.M{"$ID": idToBsonBinary(generateUUID()), "$Type": "DataTypes$StringType"},
+				"MinOccurs":        int32(0),
+				"MaxOccurs":        int32(1),
+				"Nillable":         true,
+				"IsDefaultType":    false,
+				"ElementType":      "Value",
+				"Documentation":    "",
+				"Converter":        "",
+				"FractionDigits":   int32(-1),
+				"TotalDigits":      int32(-1),
+				"MaxLength":        int32(0),
+				"IsContent":        false,
+				"IsXmlAttribute":   false,
+				"OriginalValue":    "",
+				"XmlPrimitiveType": "String",
+			})
+		}
+	}
+
+	minOccurs := int32(1)
+	if association != "" {
+		minOccurs = 0
+	}
+
+	return bson.M{
+		"$ID":                               idToBsonBinary(generateUUID()),
+		"$Type":                             namespace + "$ObjectMappingElement",
+		"Entity":                            entity,
+		"ExposedName":                       exposedName,
+		"JsonPath":                          jsonPath,
+		"XmlPath":                           "",
+		"ObjectHandling":                    objectHandling,
+		"ObjectHandlingBackup":              "Create",
+		"ObjectHandlingBackupAllowOverride": false,
+		"Association":                       association,
+		"Children":                          children,
+		"MinOccurs":                         minOccurs,
+		"MaxOccurs":                         int32(1),
+		"Nillable":                          true,
+		"IsDefaultType":                     false,
+		"ElementType":                       "Object",
+		"Documentation":                     "",
+		"CustomHandlerCall":                 nil,
 	}
 }
 

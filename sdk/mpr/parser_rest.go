@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
 
@@ -178,7 +179,7 @@ func parseRestOperation(opMap map[string]any) *model.RestClientOperation {
 		if qMap, ok := q.(map[string]any); ok {
 			param := &model.RestClientParameter{
 				Name:     extractString(qMap["Name"]),
-				DataType: "String", // query parameters default to String
+				DataType: extractRestDataType(qMap["DataType"]),
 			}
 			op.QueryParameters = append(op.QueryParameters, param)
 		}
@@ -202,12 +203,10 @@ func parseRestOperation(opMap map[string]any) *model.RestClientOperation {
 				op.ResponseType = "NONE"
 			}
 		case "Rest$ImplicitMappingResponseHandling":
-			contentType := extractString(respMap["ContentType"])
-			switch contentType {
-			case "application/json":
-				op.ResponseType = "JSON"
-			default:
-				op.ResponseType = "JSON" // default for implicit mapping
+			op.ResponseType = "MAPPING"
+			if rootMap := extractBsonMap(respMap["RootMappingElement"]); rootMap != nil {
+				op.ResponseEntity = extractString(rootMap["Entity"])
+				op.ResponseMappings = parseMappingChildren(rootMap)
 			}
 		}
 	}
@@ -224,16 +223,104 @@ func parseRestBody(bodyVal any, op *model.RestClientOperation) {
 	bodyType := extractString(bodyMap["$Type"])
 	switch bodyType {
 	case "Rest$ImplicitMappingBody":
-		op.BodyType = "JSON"
+		op.BodyType = "EXPORT_MAPPING"
+		if rootMap := extractBsonMap(bodyMap["RootMappingElement"]); rootMap != nil {
+			op.BodyVariable = extractString(rootMap["Entity"])
+			op.BodyMappings = parseExportMappingChildren(rootMap)
+		}
 	case "Rest$JsonBody":
 		op.BodyType = "JSON"
 		op.BodyVariable = extractString(bodyMap["Value"])
 	case "Rest$StringBody":
-		op.BodyType = "FILE" // StringBody with template is used for file uploads
+		op.BodyType = "TEMPLATE" // String body with a value template (may contain {param} placeholders)
 		if vt := extractBsonMap(bodyMap["ValueTemplate"]); vt != nil {
 			op.BodyVariable = extractString(vt["Value"])
 		}
 	}
+}
+
+// parseMappingChildren recursively parses Children from an ImportMappings$ObjectMappingElement.
+// Returns a flat/nested list of RestResponseMapping entries covering both value and object elements.
+func parseMappingChildren(parentMap map[string]any) []*model.RestResponseMapping {
+	parentEntity := extractString(parentMap["Entity"])
+	entityPrefix := parentEntity + "."
+	children := extractBsonArray(parentMap["Children"])
+
+	var mappings []*model.RestResponseMapping
+	for _, child := range children {
+		childMap, ok := child.(map[string]any)
+		if !ok {
+			continue
+		}
+		childType := extractString(childMap["$Type"])
+		switch childType {
+		case "ImportMappings$ValueMappingElement":
+			attr := extractString(childMap["Attribute"])
+			exposed := extractString(childMap["ExposedName"])
+			if attr == "" || exposed == "" {
+				continue
+			}
+			mappings = append(mappings, &model.RestResponseMapping{
+				Attribute:   strings.TrimPrefix(attr, entityPrefix),
+				ExposedName: exposed,
+				JsonPath:    extractString(childMap["JsonPath"]),
+			})
+		case "ImportMappings$ObjectMappingElement":
+			entity := extractString(childMap["Entity"])
+			assoc := extractString(childMap["Association"])
+			exposed := extractString(childMap["ExposedName"])
+			mappings = append(mappings, &model.RestResponseMapping{
+				Entity:      entity,
+				Association: assoc,
+				ExposedName: exposed,
+				JsonPath:    extractString(childMap["JsonPath"]),
+				Children:    parseMappingChildren(childMap),
+			})
+		}
+	}
+	return mappings
+}
+
+// parseExportMappingChildren recursively parses Children from an ExportMappings$ObjectMappingElement.
+// Same structure as parseMappingChildren but for ExportMappings$ types.
+func parseExportMappingChildren(parentMap map[string]any) []*model.RestResponseMapping {
+	parentEntity := extractString(parentMap["Entity"])
+	entityPrefix := parentEntity + "."
+	children := extractBsonArray(parentMap["Children"])
+
+	var mappings []*model.RestResponseMapping
+	for _, child := range children {
+		childMap, ok := child.(map[string]any)
+		if !ok {
+			continue
+		}
+		childType := extractString(childMap["$Type"])
+		switch childType {
+		case "ExportMappings$ValueMappingElement":
+			attr := extractString(childMap["Attribute"])
+			exposed := extractString(childMap["ExposedName"])
+			if attr == "" || exposed == "" {
+				continue
+			}
+			mappings = append(mappings, &model.RestResponseMapping{
+				Attribute:   strings.TrimPrefix(attr, entityPrefix),
+				ExposedName: exposed,
+				JsonPath:    extractString(childMap["JsonPath"]),
+			})
+		case "ExportMappings$ObjectMappingElement":
+			entity := extractString(childMap["Entity"])
+			assoc := extractString(childMap["Association"])
+			exposed := extractString(childMap["ExposedName"])
+			mappings = append(mappings, &model.RestResponseMapping{
+				Entity:      entity,
+				Association: assoc,
+				ExposedName: exposed,
+				JsonPath:    extractString(childMap["JsonPath"]),
+				Children:    parseExportMappingChildren(childMap),
+			})
+		}
+	}
+	return mappings
 }
 
 // extractRestValue extracts a value from a polymorphic Rest$Value (StringValue or ConstantValue).

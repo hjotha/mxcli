@@ -439,6 +439,52 @@ CREATE OR REPLACE NAVIGATION Responsive
 
 **Export levels:** `'Hidden'` (default, internal to module), `'Public'` (accessible from other modules).
 
+## Consumed REST Services
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| Show clients | `SHOW REST CLIENTS [IN Module];` | List all or filter by module |
+| Describe client | `DESCRIBE REST CLIENT Module.Name;` | Re-executable CREATE |
+| Create client | See syntax below | Property-based `{}` syntax |
+| Create or modify | `CREATE OR MODIFY REST CLIENT ...` | Replaces existing |
+| Drop client | `DROP REST CLIENT Module.Name;` | |
+
+```sql
+CREATE REST CLIENT Module.Api (
+  BaseUrl: 'https://api.example.com',
+  Authentication: NONE
+)
+{
+  OPERATION GetItems {
+    Method: GET,
+    Path: '/items/{id}',
+    Parameters: ($id: String),
+    Query: ($filter: String),
+    Headers: ('Accept' = 'application/json'),
+    Timeout: 30,
+    Response: JSON AS $Result
+  }
+
+  OPERATION CreateItem {
+    Method: POST,
+    Path: '/items',
+    Headers: ('Content-Type' = 'application/json'),
+    Body: MAPPING Module.ItemRequest {
+      name = Name,
+      price = Price,
+    },
+    Response: MAPPING Module.ItemResponse {
+      Id = id,
+      Status = status,
+    }
+  }
+};
+```
+
+**Body types:** `JSON FROM $var`, `TEMPLATE '...'`, `MAPPING Entity { jsonField = Attr, ... }`
+**Response types:** `JSON AS $var`, `STRING AS $var`, `FILE AS $var`, `STATUS AS $var`, `NONE`, `MAPPING Entity { Attr = jsonField, ... }`
+**Authentication:** `NONE`, `BASIC (Username: '...', Password: '...')`
+
 ## Published REST Services
 
 | Statement | Syntax | Notes |

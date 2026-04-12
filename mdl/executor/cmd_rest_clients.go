@@ -12,6 +12,14 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
+// safeIdent returns an identifier safe for MDL output. Always double-quotes
+// the name to avoid clashes with the 600+ MDL keywords/tokens. This guarantees
+// DESCRIBE output round-trips through the parser regardless of what JSON field
+// names the external API returns (e.g., "Host", "Data", "Method").
+func safeIdent(name string) string {
+	return `"` + name + `"`
+}
+
 // showRestClients handles SHOW REST CLIENTS [IN module] command.
 func (e *Executor) showRestClients(moduleName string) error {
 	services, err := e.reader.ListConsumedRestServices()
@@ -96,31 +104,25 @@ func (e *Executor) describeRestClient(name ast.QualifiedName) error {
 	return fmt.Errorf("consumed REST service not found: %s", name)
 }
 
-// outputConsumedRestServiceMDL outputs a consumed REST service in valid CREATE REST CLIENT MDL format.
+// outputConsumedRestServiceMDL outputs a consumed REST service in the property-based { } format.
 func (e *Executor) outputConsumedRestServiceMDL(svc *model.ConsumedRestService, moduleName string) error {
 	w := e.output
 
-	// Documentation
 	if svc.Documentation != "" {
 		outputJavadoc(w, svc.Documentation)
 	}
 
-	// CREATE REST CLIENT
-	fmt.Fprintf(w, "CREATE REST CLIENT %s.%s\n", moduleName, svc.Name)
-	fmt.Fprintf(w, "BASE URL '%s'\n", svc.BaseUrl)
-
-	// Authentication
+	fmt.Fprintf(w, "CREATE REST CLIENT %s.%s (\n", moduleName, svc.Name)
+	fmt.Fprintf(w, "  BaseUrl: '%s',\n", svc.BaseUrl)
 	if svc.Authentication == nil {
-		fmt.Fprintln(w, "AUTHENTICATION NONE")
+		fmt.Fprintln(w, "  Authentication: NONE")
 	} else {
-		username := formatRestAuthValue(svc.Authentication.Username)
-		password := formatRestAuthValue(svc.Authentication.Password)
-		fmt.Fprintf(w, "AUTHENTICATION BASIC (USERNAME = %s, PASSWORD = %s)\n", username, password)
+		fmt.Fprintf(w, "  Authentication: BASIC (Username: '%s', Password: '%s')\n",
+			svc.Authentication.Username, svc.Authentication.Password)
 	}
+	fmt.Fprintln(w, ")")
+	fmt.Fprintln(w, "{")
 
-	fmt.Fprintln(w, "BEGIN")
-
-	// Operations
 	for i, op := range svc.Operations {
 		if i > 0 {
 			fmt.Fprintln(w)
@@ -128,60 +130,147 @@ func (e *Executor) outputConsumedRestServiceMDL(svc *model.ConsumedRestService, 
 		outputRestOperation(w, op)
 	}
 
-	fmt.Fprintln(w, "END;")
+	fmt.Fprintln(w, "};")
 	return nil
 }
 
-// outputRestOperation writes a single operation in MDL format.
+// outputRestOperation writes a single operation in the new { Key: Value } format.
 func outputRestOperation(w io.Writer, op *model.RestClientOperation) {
-	// Documentation
 	if op.Documentation != "" {
 		outputJavadocIndented(w, op.Documentation, "  ")
 	}
 
-	fmt.Fprintf(w, "  OPERATION %s\n", op.Name)
-	fmt.Fprintf(w, "    METHOD %s\n", op.HttpMethod)
-	fmt.Fprintf(w, "    PATH '%s'\n", op.Path)
+	fmt.Fprintf(w, "  OPERATION %s {\n", op.Name)
+	fmt.Fprintf(w, "    Method: %s,\n", op.HttpMethod)
+	fmt.Fprintf(w, "    Path: '%s',\n", op.Path)
 
-	// Path parameters
-	for _, p := range op.Parameters {
-		fmt.Fprintf(w, "    PARAMETER $%s: %s\n", p.Name, p.DataType)
+	// Parameters: ($var: Type, ...)
+	if len(op.Parameters) > 0 {
+		var params []string
+		for _, p := range op.Parameters {
+			params = append(params, fmt.Sprintf("$%s: %s", p.Name, p.DataType))
+		}
+		fmt.Fprintf(w, "    Parameters: (%s),\n", strings.Join(params, ", "))
 	}
 
-	// Query parameters
-	for _, q := range op.QueryParameters {
-		fmt.Fprintf(w, "    QUERY $%s: %s\n", q.Name, q.DataType)
+	// Query: ($var: Type, ...)
+	if len(op.QueryParameters) > 0 {
+		var params []string
+		for _, q := range op.QueryParameters {
+			params = append(params, fmt.Sprintf("$%s: %s", q.Name, q.DataType))
+		}
+		fmt.Fprintf(w, "    Query: (%s),\n", strings.Join(params, ", "))
 	}
 
-	// Headers
-	for _, h := range op.Headers {
-		fmt.Fprintf(w, "    HEADER '%s' = '%s'\n", h.Name, h.Value)
+	// Headers: ('Name' = 'Value', ...)
+	if len(op.Headers) > 0 {
+		var hdrs []string
+		for _, h := range op.Headers {
+			hdrs = append(hdrs, fmt.Sprintf("'%s' = '%s'", h.Name, h.Value))
+		}
+		fmt.Fprintf(w, "    Headers: (%s),\n", strings.Join(hdrs, ", "))
 	}
 
 	// Body
 	if op.BodyType != "" {
-		fmt.Fprintf(w, "    BODY %s FROM %s\n", op.BodyType, op.BodyVariable)
+		switch op.BodyType {
+		case "TEMPLATE":
+			fmt.Fprintf(w, "    Body: TEMPLATE '%s',\n", strings.ReplaceAll(op.BodyVariable, "'", "''"))
+		case "EXPORT_MAPPING":
+			if op.BodyVariable != "" && len(op.BodyMappings) > 0 {
+				fmt.Fprintf(w, "    Body: MAPPING %s {\n", op.BodyVariable)
+				writeExportMappings(w, op.BodyMappings, 6)
+				fmt.Fprintln(w, "    },")
+			} else if op.BodyVariable != "" {
+				fmt.Fprintf(w, "    Body: MAPPING %s,\n", op.BodyVariable)
+			}
+		default:
+			fmt.Fprintf(w, "    Body: %s FROM %s,\n", op.BodyType, op.BodyVariable)
+		}
 	}
 
 	// Timeout
 	if op.Timeout > 0 {
-		fmt.Fprintf(w, "    TIMEOUT %d\n", op.Timeout)
+		fmt.Fprintf(w, "    Timeout: %d,\n", op.Timeout)
 	}
 
 	// Response
 	switch op.ResponseType {
 	case "NONE":
-		fmt.Fprintln(w, "    RESPONSE NONE;")
+		fmt.Fprintln(w, "    Response: NONE")
 	case "JSON":
-		fmt.Fprintf(w, "    RESPONSE JSON AS %s;\n", op.ResponseVariable)
+		if op.ResponseVariable != "" {
+			fmt.Fprintf(w, "    Response: JSON AS %s\n", op.ResponseVariable)
+		} else {
+			fmt.Fprintln(w, "    Response: JSON")
+		}
 	case "STRING":
-		fmt.Fprintf(w, "    RESPONSE STRING AS %s;\n", op.ResponseVariable)
+		fmt.Fprintf(w, "    Response: STRING AS %s\n", op.ResponseVariable)
 	case "FILE":
-		fmt.Fprintf(w, "    RESPONSE FILE AS %s;\n", op.ResponseVariable)
+		fmt.Fprintf(w, "    Response: FILE AS %s\n", op.ResponseVariable)
 	case "STATUS":
-		fmt.Fprintf(w, "    RESPONSE STATUS AS %s;\n", op.ResponseVariable)
+		fmt.Fprintf(w, "    Response: STATUS AS %s\n", op.ResponseVariable)
+	case "MAPPING":
+		if op.ResponseEntity != "" && len(op.ResponseMappings) > 0 {
+			fmt.Fprintf(w, "    Response: MAPPING %s {\n", op.ResponseEntity)
+			writeResponseMappings(w, op.ResponseMappings, 6)
+			fmt.Fprintln(w, "    }")
+		} else if op.ResponseEntity != "" {
+			fmt.Fprintf(w, "    Response: MAPPING %s\n", op.ResponseEntity)
+		} else {
+			fmt.Fprintln(w, "    Response: NONE")
+		}
 	default:
-		fmt.Fprintln(w, "    RESPONSE NONE;")
+		fmt.Fprintln(w, "    Response: NONE")
+	}
+
+	fmt.Fprintln(w, "  }")
+}
+
+// writeResponseMappings writes import-direction mappings (JSON → Entity): EntityAttr = jsonField.
+// Matches the import mapping syntax: CREATE Association/Entity = jsonField { ... }.
+func writeResponseMappings(w io.Writer, mappings []*model.RestResponseMapping, indent int) {
+	pad := strings.Repeat(" ", indent)
+	for _, m := range mappings {
+		if m.Entity != "" {
+			// Object mapping → nested entity via association (import style: CREATE Assoc/Entity = jsonField)
+			fmt.Fprintf(w, "%sCREATE %s/%s = %s", pad, m.Association, m.Entity, m.ExposedName)
+			if len(m.Children) > 0 {
+				fmt.Fprintln(w, " {")
+				writeResponseMappings(w, m.Children, indent+2)
+				fmt.Fprintf(w, "%s},\n", pad)
+			} else {
+				fmt.Fprintln(w, " {},")
+			}
+		} else {
+			// Value mapping: EntityAttr = jsonField (import direction)
+			jsonComment := ""
+			if m.JsonPath != "" {
+				jsonComment = fmt.Sprintf("  -- %s", m.JsonPath)
+			}
+			fmt.Fprintf(w, "%s%s = %s,%s\n", pad, safeIdent(m.Attribute), safeIdent(m.ExposedName), jsonComment)
+		}
+	}
+}
+
+// writeExportMappings writes export-direction mappings (Entity → JSON): jsonField = EntityAttr.
+// Matches the export mapping syntax.
+func writeExportMappings(w io.Writer, mappings []*model.RestResponseMapping, indent int) {
+	pad := strings.Repeat(" ", indent)
+	for _, m := range mappings {
+		if m.Entity != "" {
+			fmt.Fprintf(w, "%s%s/%s = %s", pad, m.Association, m.Entity, m.ExposedName)
+			if len(m.Children) > 0 {
+				fmt.Fprintln(w, " {")
+				writeExportMappings(w, m.Children, indent+2)
+				fmt.Fprintf(w, "%s},\n", pad)
+			} else {
+				fmt.Fprintln(w, " {},")
+			}
+		} else {
+			// Export direction: jsonField = EntityAttr
+			fmt.Fprintf(w, "%s%s = %s,\n", pad, safeIdent(m.ExposedName), safeIdent(m.Attribute))
+		}
 	}
 }
 
@@ -282,6 +371,20 @@ func buildRestClientOperation(opDef *ast.RestOperationDef) *model.RestClientOper
 		Timeout:          opDef.Timeout,
 	}
 
+	// Convert body mapping (export direction: Left=jsonField, Right=entityAttr)
+	if opDef.BodyMapping != nil {
+		op.BodyType = "EXPORT_MAPPING"
+		op.BodyVariable = opDef.BodyMapping.Entity.String()
+		op.BodyMappings = convertMappingEntries(opDef.BodyMapping.Entries, false)
+	}
+
+	// Convert response mapping (import direction: Left=entityAttr, Right=jsonField)
+	if opDef.ResponseMapping != nil {
+		op.ResponseType = "MAPPING"
+		op.ResponseEntity = opDef.ResponseMapping.Entity.String()
+		op.ResponseMappings = convertMappingEntries(opDef.ResponseMapping.Entries, true)
+	}
+
 	// Path parameters
 	for _, p := range opDef.Parameters {
 		name := strings.TrimPrefix(p.Name, "$")
@@ -318,6 +421,36 @@ func buildRestClientOperation(opDef *ast.RestOperationDef) *model.RestClientOper
 	}
 
 	return op
+}
+
+// convertMappingEntries converts AST RestMappingEntry slices to model RestResponseMapping slices.
+// importDirection=true: Left=entityAttr, Right=jsonField (import/response)
+// importDirection=false: Left=jsonField, Right=entityAttr (export/body)
+func convertMappingEntries(entries []ast.RestMappingEntry, importDirection bool) []*model.RestResponseMapping {
+	var result []*model.RestResponseMapping
+	for _, e := range entries {
+		if e.Entity.Name != "" {
+			// Object mapping
+			result = append(result, &model.RestResponseMapping{
+				Entity:      e.Entity.String(),
+				Association: e.Association.String(),
+				ExposedName: e.ExposedName,
+				Children:    convertMappingEntries(e.Children, importDirection),
+			})
+		} else {
+			// Value mapping — direction determines which side is attribute vs JSON field
+			m := &model.RestResponseMapping{}
+			if importDirection {
+				m.Attribute = e.Left   // EntityAttr = jsonField
+				m.ExposedName = e.Right
+			} else {
+				m.Attribute = e.Right  // jsonField = EntityAttr
+				m.ExposedName = e.Left
+			}
+			result = append(result, m)
+		}
+	}
+	return result
 }
 
 // dropRestClient handles DROP REST CLIENT statement.

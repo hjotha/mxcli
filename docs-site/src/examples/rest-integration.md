@@ -180,6 +180,67 @@ CREATE IMPORT MAPPING Integration.IMM_Order
 };
 ```
 
+## Consuming a REST API
+
+Define a reusable REST client with typed operations using `CREATE REST CLIENT`. Each operation declares its method, path, optional parameters, headers, body, and response mapping.
+
+```sql
+-- Define a client for the orders API
+CREATE REST CLIENT Integration.OrdersApi (
+  BaseUrl: 'https://api.example.com/v1',
+  Authentication: NONE
+)
+{
+  OPERATION GetOrder {
+    Method: GET,
+    Path: '/orders/{id}',
+    Parameters: ($id: String),
+    Headers: ('Accept' = 'application/json'),
+    Timeout: 30,
+    Response: JSON AS $Result
+  }
+
+  OPERATION CreateOrder {
+    Method: POST,
+    Path: '/orders',
+    Headers: ('Content-Type' = 'application/json'),
+    Body: MAPPING Integration.OrderRequest {
+      customerId = CustomerId,
+      totalAmount = TotalAmount,
+      notes = Notes,
+    },
+    Response: MAPPING Integration.OrderResponse {
+      Id = id,
+      Status = status,
+      CreatedAt = createdAt,
+    }
+  }
+};
+```
+
+Use `CREATE OR MODIFY REST CLIENT` to update an existing client without dropping it first:
+
+```sql
+CREATE OR MODIFY REST CLIENT Integration.OrdersApi (
+  BaseUrl: 'https://api.example.com/v2',
+  Authentication: BASIC (Username: 'apiuser', Password: 'secret')
+)
+{
+  OPERATION GetOrder {
+    Method: GET,
+    Path: '/orders/{id}',
+    Parameters: ($id: String),
+    Headers: ('Accept' = 'application/json'),
+    Timeout: 60,
+    Response: JSON AS $Result
+  }
+};
+```
+
+**Body types:** `JSON FROM $var`, `TEMPLATE '...'`, `MAPPING Entity { jsonField = Attr, ... }`
+**Response types:** `JSON AS $var`, `STRING AS $var`, `FILE AS $var`, `STATUS AS $var`, `NONE`, `MAPPING Entity { Attr = jsonField, ... }`
+**Authentication:** `NONE`, `BASIC (Username: '...', Password: '...')`
+
 ## Publishing a REST API
 
 Create a published REST service with CRUD operations backed by microflows.

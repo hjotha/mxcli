@@ -653,11 +653,29 @@ type RestClientOperation struct {
 	Parameters       []*RestClientParameter `json:"parameters,omitempty"`      // path parameters
 	QueryParameters  []*RestClientParameter `json:"queryParameters,omitempty"` // query parameters
 	Headers          []*RestClientHeader    `json:"headers,omitempty"`
-	BodyType         string                 `json:"bodyType,omitempty"`     // "JSON", "FILE", ""
-	BodyVariable     string                 `json:"bodyVariable,omitempty"` // variable name
-	ResponseType     string                 `json:"responseType"`           // "JSON", "STRING", "FILE", "STATUS", "NONE"
+	BodyType         string                 `json:"bodyType,omitempty"`     // "JSON", "FILE", "TEMPLATE", "EXPORT_MAPPING", ""
+	BodyVariable     string                 `json:"bodyVariable,omitempty"` // variable name, template expression, or entity name
+	BodyMappings     []*RestResponseMapping `json:"bodyMappings,omitempty"` // export mapping tree (Entity → JSON) for EXPORT_MAPPING bodies
+	ResponseType     string                 `json:"responseType"`           // "JSON", "STRING", "FILE", "STATUS", "NONE", "MAPPING"
 	ResponseVariable string                 `json:"responseVariable,omitempty"`
-	Timeout          int                    `json:"timeout,omitempty"` // 0 = default (300s)
+	ResponseEntity   string                 `json:"responseEntity,omitempty"`              // target entity for implicit mapping response
+	ResponseMappings []*RestResponseMapping `json:"responseMappings,omitempty"`            // JSON field → entity attribute
+	Timeout          int                    `json:"timeout,omitempty"`                     // 0 = default (300s)
+}
+
+// RestResponseMapping represents one element in a response mapping tree.
+// It is either a value mapping (Attribute set, Entity empty) or an object mapping
+// (Entity set, with its own Children).
+type RestResponseMapping struct {
+	// Value mapping: maps a JSON field to an entity attribute
+	Attribute   string `json:"attribute,omitempty"`   // entity attribute short name
+	ExposedName string `json:"exposedName"`           // JSON field name
+	JsonPath    string `json:"jsonPath,omitempty"`     // e.g. "(Object)|args|queryparam_1"
+
+	// Object mapping: nested entity linked by association
+	Entity      string                 `json:"entity,omitempty"`      // child entity (e.g. "RestDemo.Args")
+	Association string                 `json:"association,omitempty"` // e.g. "RestDemo.Args_PostDemo2Response"
+	Children    []*RestResponseMapping `json:"children,omitempty"`    // recursive children
 }
 
 // RestClientParameter represents a path or query parameter.

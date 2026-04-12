@@ -32,14 +32,36 @@ type RestOperationDef struct {
 	Documentation    string
 	Method           string // "GET", "POST", "PUT", "PATCH", "DELETE"
 	Path             string
-	Parameters       []RestParamDef  // path parameters
-	QueryParameters  []RestParamDef  // query parameters
-	Headers          []RestHeaderDef // HTTP headers
-	BodyType         string          // "JSON", "FILE", "" (none)
-	BodyVariable     string          // e.g. "$ItemData"
-	ResponseType     string          // "JSON", "STRING", "FILE", "STATUS", "NONE"
-	ResponseVariable string          // e.g. "$CreatedItem"
+	Parameters       []RestParamDef       // path parameters
+	QueryParameters  []RestParamDef       // query parameters
+	Headers          []RestHeaderDef      // HTTP headers
+	BodyType         string               // "JSON", "FILE", "TEMPLATE", "MAPPING", "" (none)
+	BodyVariable     string               // e.g. "$ItemData" or template string
+	BodyMapping      *RestMappingDef      // for MAPPING body
+	ResponseType     string               // "JSON", "STRING", "FILE", "STATUS", "NONE", "MAPPING"
+	ResponseVariable string               // e.g. "$CreatedItem"
+	ResponseMapping  *RestMappingDef      // for MAPPING response
 	Timeout          int
+}
+
+// RestMappingDef represents an inline import/export mapping in a REST operation.
+type RestMappingDef struct {
+	Entity  QualifiedName
+	Entries []RestMappingEntry
+}
+
+// RestMappingEntry is either a value mapping or a nested object mapping.
+type RestMappingEntry struct {
+	// Value mapping: Left = Right
+	Left  string
+	Right string
+
+	// Object mapping: [CREATE] Association/Entity = ExposedName { children }
+	Create      bool
+	Association QualifiedName
+	Entity      QualifiedName
+	ExposedName string
+	Children    []RestMappingEntry
 }
 
 // RestParamDef represents a path or query parameter definition.

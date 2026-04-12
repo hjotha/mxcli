@@ -14,41 +14,50 @@ import (
 // REST Client CREATE Statements
 // ============================================================================
 
-// ExitCreateRestClientStatement handles CREATE REST CLIENT Module.Name BASE URL '...' AUTHENTICATION ... BEGIN ... END.
+// ExitCreateRestClientStatement handles the property-based CREATE REST CLIENT syntax.
 func (b *Builder) ExitCreateRestClientStatement(ctx *parser.CreateRestClientStatementContext) {
 	stmt := &ast.CreateRestClientStmt{
 		Name: buildQualifiedName(ctx.QualifiedName()),
 	}
 
-	// Parse BASE URL
-	if baseUrlCtx := ctx.RestClientBaseUrl(); baseUrlCtx != nil {
-		bc := baseUrlCtx.(*parser.RestClientBaseUrlContext)
-		if sl := bc.STRING_LITERAL(); sl != nil {
-			stmt.BaseUrl = unquoteString(sl.GetText())
-		}
-	}
-
-	// Parse AUTHENTICATION
-	if authCtx := ctx.RestClientAuthentication(); authCtx != nil {
-		ac := authCtx.(*parser.RestClientAuthenticationContext)
-		if ac.BASIC() != nil {
-			authDef := &ast.RestAuthDef{Scheme: "BASIC"}
-			authValues := ac.AllRestAuthValue()
-			if len(authValues) >= 1 {
-				authDef.Username = restAuthValueText(authValues[0])
+	// Parse service-level properties (BaseUrl, Authentication, Folder)
+	for _, propCtx := range ctx.AllRestClientProperty() {
+		pc := propCtx.(*parser.RestClientPropertyContext)
+		key := strings.ToLower(identifierOrKeywordText(pc.IdentifierOrKeyword().(*parser.IdentifierOrKeywordContext)))
+		switch key {
+		case "baseurl":
+			if sl := pc.STRING_LITERAL(); sl != nil {
+				stmt.BaseUrl = unquoteString(sl.GetText())
 			}
-			if len(authValues) >= 2 {
-				authDef.Password = restAuthValueText(authValues[1])
+		case "folder":
+			if sl := pc.STRING_LITERAL(); sl != nil {
+				stmt.Folder = unquoteString(sl.GetText())
 			}
-			stmt.Authentication = authDef
+		case "authentication":
+			if pc.BASIC() != nil {
+				authDef := &ast.RestAuthDef{Scheme: "BASIC"}
+				for _, subProp := range pc.AllRestClientProperty() {
+					sp := subProp.(*parser.RestClientPropertyContext)
+					subKey := strings.ToLower(identifierOrKeywordText(sp.IdentifierOrKeyword().(*parser.IdentifierOrKeywordContext)))
+					if sl := sp.STRING_LITERAL(); sl != nil {
+						switch subKey {
+						case "username":
+							authDef.Username = unquoteString(sl.GetText())
+						case "password":
+							authDef.Password = unquoteString(sl.GetText())
+						}
+					}
+				}
+				stmt.Authentication = authDef
+			}
+			// NONE: leave Authentication nil
 		}
-		// NONE: leave Authentication nil
 	}
 
 	// Parse operations
-	for _, opCtx := range ctx.AllRestOperationDef() {
-		oc := opCtx.(*parser.RestOperationDefContext)
-		opDef := parseRestOperationDef(oc)
+	for _, opCtx := range ctx.AllRestClientOperation() {
+		oc := opCtx.(*parser.RestClientOperationContext)
+		opDef := parseRestClientOperation(oc)
 		stmt.Operations = append(stmt.Operations, opDef)
 	}
 
@@ -64,166 +73,212 @@ func (b *Builder) ExitCreateRestClientStatement(ctx *parser.CreateRestClientStat
 	b.statements = append(b.statements, stmt)
 }
 
-// parseRestOperationDef converts a RestOperationDefContext into an ast.RestOperationDef.
-func parseRestOperationDef(ctx *parser.RestOperationDefContext) *ast.RestOperationDef {
+// parseRestClientOperation parses a single OPERATION { Key: Value, ... } block.
+func parseRestClientOperation(ctx *parser.RestClientOperationContext) *ast.RestOperationDef {
 	op := &ast.RestOperationDef{}
 
-	// Operation name: identifierOrKeyword or STRING_LITERAL
+	// Operation name
 	if iok := ctx.IdentifierOrKeyword(); iok != nil {
 		op.Name = identifierOrKeywordText(iok)
-	} else if sl := ctx.AllSTRING_LITERAL(); len(sl) > 0 {
-		// First STRING_LITERAL is the operation name (single-quoted)
-		op.Name = unquoteString(sl[0].GetText())
+	} else if sl := ctx.STRING_LITERAL(); sl != nil {
+		op.Name = unquoteString(sl.GetText())
 	}
 
-	// Method
-	if methodCtx := ctx.RestHttpMethod(); methodCtx != nil {
-		op.Method = strings.ToUpper(methodCtx.GetText())
-	}
-
-	// PATH — find the STRING_LITERAL after the PATH keyword
-	// If identifierOrKeyword is set, first STRING_LITERAL is PATH
-	// If identifierOrKeyword is nil, first is name, second is PATH
-	allStrLits := ctx.AllSTRING_LITERAL()
-	if ctx.IdentifierOrKeyword() != nil {
-		// Name is identifierOrKeyword, first STRING_LITERAL is PATH
-		if len(allStrLits) >= 1 {
-			op.Path = unquoteString(allStrLits[0].GetText())
-		}
-	} else {
-		// Name is STRING_LITERAL(0), PATH is STRING_LITERAL(1)
-		if len(allStrLits) >= 2 {
-			op.Path = unquoteString(allStrLits[1].GetText())
-		}
-	}
-
-	// Parse operation clauses
-	for _, clauseCtx := range ctx.AllRestOperationClause() {
-		cc := clauseCtx.(*parser.RestOperationClauseContext)
-		parseRestOperationClause(cc, op)
-	}
-
-	// Parse RESPONSE spec
-	if respCtx := ctx.RestResponseSpec(); respCtx != nil {
-		rc := respCtx.(*parser.RestResponseSpecContext)
-		parseRestResponseSpec(rc, op)
-	}
-
-	// Documentation (from doc comment on the operation)
+	// Documentation
 	if docCtx := ctx.DocComment(); docCtx != nil {
 		op.Documentation = extractDocCommentText(docCtx)
+	}
+
+	// Parse properties
+	for _, propCtx := range ctx.AllRestClientOpProp() {
+		pc := propCtx.(*parser.RestClientOpPropContext)
+		parseRestClientOpProp(pc, op)
 	}
 
 	return op
 }
 
-// parseRestOperationClause handles individual clauses within an operation.
-func parseRestOperationClause(ctx *parser.RestOperationClauseContext, op *ast.RestOperationDef) {
-	if ctx.PARAMETER() != nil {
-		// PARAMETER $name: Type
-		param := ast.RestParamDef{}
-		if v := ctx.VARIABLE(); v != nil {
-			param.Name = v.GetText()
+// parseRestClientOpProp dispatches a single operation property to the right handler.
+func parseRestClientOpProp(ctx *parser.RestClientOpPropContext, op *ast.RestOperationDef) {
+	// Determine key name from the identifierOrKeyword
+	iokCtx := ctx.IdentifierOrKeyword()
+	if iokCtx == nil {
+		return
+	}
+	key := strings.ToLower(identifierOrKeywordText(iokCtx.(*parser.IdentifierOrKeywordContext)))
+
+	// Method: GET
+	if mCtx := ctx.RestHttpMethod(); mCtx != nil {
+		op.Method = strings.ToUpper(mCtx.GetText())
+		return
+	}
+
+	// MAPPING qualifiedName { ... }
+	if ctx.MAPPING() != nil && ctx.QualifiedName() != nil {
+		md := &ast.RestMappingDef{
+			Entity: buildQualifiedName(ctx.QualifiedName()),
 		}
-		if dt := ctx.DataType(); dt != nil {
-			param.DataType = buildDataType(dt).Kind.String()
+		for _, entryCtx := range ctx.AllRestClientMappingEntry() {
+			md.Entries = append(md.Entries, parseRestClientMappingEntry(entryCtx.(*parser.RestClientMappingEntryContext)))
 		}
-		op.Parameters = append(op.Parameters, param)
-	} else if ctx.QUERY() != nil {
-		// QUERY $name: Type
-		param := ast.RestParamDef{}
-		if v := ctx.VARIABLE(); v != nil {
-			param.Name = v.GetText()
+		switch key {
+		case "body":
+			op.BodyType = "MAPPING"
+			op.BodyMapping = md
+		case "response":
+			op.ResponseType = "MAPPING"
+			op.ResponseMapping = md
 		}
-		if dt := ctx.DataType(); dt != nil {
-			param.DataType = buildDataType(dt).Kind.String()
-		}
-		op.QueryParameters = append(op.QueryParameters, param)
-	} else if ctx.HEADER() != nil {
-		// HEADER 'name' = value
-		header := ast.RestHeaderDef{}
+		return
+	}
+
+	// TEMPLATE 'string'
+	if ctx.TEMPLATE() != nil {
 		if sl := ctx.STRING_LITERAL(); sl != nil {
-			header.Name = unquoteString(sl.GetText())
+			op.BodyType = "TEMPLATE"
+			op.BodyVariable = unquoteString(sl.GetText())
 		}
-		if hvCtx := ctx.RestHeaderValue(); hvCtx != nil {
-			hv := hvCtx.(*parser.RestHeaderValueContext)
-			if hv.PLUS() != nil {
-				// 'prefix' + $Variable
-				if sl := hv.STRING_LITERAL(); sl != nil {
-					header.Prefix = unquoteString(sl.GetText())
-				}
-				if v := hv.VARIABLE(); v != nil {
-					header.Variable = v.GetText()
-				}
-			} else if hv.VARIABLE() != nil {
-				// $Variable only
-				header.Variable = hv.VARIABLE().GetText()
-			} else if hv.STRING_LITERAL() != nil {
-				// static literal
-				header.Value = unquoteString(hv.STRING_LITERAL().GetText())
+		return
+	}
+
+	// (JSON|FILE|STRING|STATUS) (FROM|AS) $var
+	if ctx.VARIABLE() != nil {
+		varName := ctx.VARIABLE().GetText()
+		if ctx.FROM() != nil {
+			// Body: JSON FROM $var, FILE FROM $var
+			if ctx.JSON() != nil {
+				op.BodyType = "JSON"
+			} else if ctx.FILE_KW() != nil {
+				op.BodyType = "FILE"
+			}
+			op.BodyVariable = varName
+		} else if ctx.AS() != nil {
+			// Response: JSON AS $var, STRING AS $var, etc.
+			if ctx.JSON() != nil {
+				op.ResponseType = "JSON"
+			} else if ctx.STRING_TYPE() != nil {
+				op.ResponseType = "STRING"
+			} else if ctx.FILE_KW() != nil {
+				op.ResponseType = "FILE"
+			} else if ctx.STATUS() != nil {
+				op.ResponseType = "STATUS"
+			}
+			op.ResponseVariable = varName
+		}
+		return
+	}
+
+	// NONE
+	if ctx.NONE() != nil {
+		switch key {
+		case "response":
+			op.ResponseType = "NONE"
+		case "authentication":
+			// handled at service level
+		}
+		return
+	}
+
+	// Param list: ($var: Type, ...)
+	paramItems := ctx.AllRestClientParamItem()
+	if len(paramItems) > 0 {
+		for _, pi := range paramItems {
+			pic := pi.(*parser.RestClientParamItemContext)
+			param := ast.RestParamDef{}
+			if v := pic.VARIABLE(); v != nil {
+				param.Name = v.GetText()
+			}
+			if dt := pic.DataType(); dt != nil {
+				param.DataType = buildDataType(dt).Kind.String()
+			}
+			switch key {
+			case "parameters":
+				op.Parameters = append(op.Parameters, param)
+			case "query":
+				op.QueryParameters = append(op.QueryParameters, param)
 			}
 		}
-		op.Headers = append(op.Headers, header)
-	} else if ctx.BODY() != nil {
-		// BODY JSON FROM $var or BODY FILE FROM $var
-		if ctx.JSON() != nil {
-			op.BodyType = "JSON"
-		} else if ctx.FILE_KW() != nil {
-			op.BodyType = "FILE"
+		return
+	}
+
+	// Header list: ('Name' = 'Value', ...)
+	headerItems := ctx.AllRestClientHeaderItem()
+	if len(headerItems) > 0 {
+		for _, hi := range headerItems {
+			hic := hi.(*parser.RestClientHeaderItemContext)
+			header := ast.RestHeaderDef{}
+			allSL := hic.AllSTRING_LITERAL()
+			if len(allSL) >= 1 {
+				header.Name = unquoteString(allSL[0].GetText())
+			}
+			if hic.PLUS() != nil {
+				// 'prefix' + $Variable
+				if len(allSL) >= 2 {
+					header.Prefix = unquoteString(allSL[1].GetText())
+				}
+				if v := hic.VARIABLE(); v != nil {
+					header.Variable = v.GetText()
+				}
+			} else if hic.VARIABLE() != nil {
+				header.Variable = hic.VARIABLE().GetText()
+			} else if len(allSL) >= 2 {
+				header.Value = unquoteString(allSL[1].GetText())
+			}
+			op.Headers = append(op.Headers, header)
 		}
-		if v := ctx.VARIABLE(); v != nil {
-			op.BodyVariable = v.GetText()
+		return
+	}
+
+	// String property: Path: '/items'
+	if sl := ctx.STRING_LITERAL(); sl != nil {
+		switch key {
+		case "path":
+			op.Path = unquoteString(sl.GetText())
 		}
-	} else if ctx.TIMEOUT() != nil {
-		// TIMEOUT number
-		if nl := ctx.NUMBER_LITERAL(); nl != nil {
+		return
+	}
+
+	// Number property: Timeout: 30
+	if nl := ctx.NUMBER_LITERAL(); nl != nil {
+		switch key {
+		case "timeout":
 			if val, err := strconv.Atoi(nl.GetText()); err == nil {
 				op.Timeout = val
 			}
 		}
+		return
 	}
 }
 
-// parseRestResponseSpec handles the RESPONSE clause of an operation.
-func parseRestResponseSpec(ctx *parser.RestResponseSpecContext, op *ast.RestOperationDef) {
-	if ctx.NONE() != nil {
-		op.ResponseType = "NONE"
-	} else if ctx.JSON() != nil {
-		op.ResponseType = "JSON"
-		if v := ctx.VARIABLE(); v != nil {
-			op.ResponseVariable = v.GetText()
-		}
-	} else if ctx.STRING_TYPE() != nil {
-		op.ResponseType = "STRING"
-		if v := ctx.VARIABLE(); v != nil {
-			op.ResponseVariable = v.GetText()
-		}
-	} else if ctx.FILE_KW() != nil {
-		op.ResponseType = "FILE"
-		if v := ctx.VARIABLE(); v != nil {
-			op.ResponseVariable = v.GetText()
-		}
-	} else if ctx.STATUS() != nil {
-		op.ResponseType = "STATUS"
-		if v := ctx.VARIABLE(); v != nil {
-			op.ResponseVariable = v.GetText()
-		}
-	}
-}
+// parseRestClientMappingEntry parses a single mapping entry (value or object).
+func parseRestClientMappingEntry(ctx *parser.RestClientMappingEntryContext) ast.RestMappingEntry {
+	allQN := ctx.AllQualifiedName()
+	allIOK := ctx.AllIdentifierOrKeyword()
 
-// restAuthValueText extracts the text from a RestAuthValue context.
-func restAuthValueText(ctx parser.IRestAuthValueContext) string {
-	if ctx == nil {
-		return ""
+	// Object mapping: [CREATE] Association/Entity = exposedName { ... }
+	if len(allQN) >= 2 {
+		entry := ast.RestMappingEntry{
+			Create:      ctx.CREATE() != nil,
+			Association: buildQualifiedName(allQN[0]),
+			Entity:      buildQualifiedName(allQN[1]),
+		}
+		// ExposedName is the identifierOrKeyword after EQUALS
+		if len(allIOK) > 0 {
+			entry.ExposedName = identifierOrKeywordText(allIOK[0].(*parser.IdentifierOrKeywordContext))
+		}
+		for _, childCtx := range ctx.AllRestClientMappingEntry() {
+			entry.Children = append(entry.Children, parseRestClientMappingEntry(childCtx.(*parser.RestClientMappingEntryContext)))
+		}
+		return entry
 	}
-	ac := ctx.(*parser.RestAuthValueContext)
-	if sl := ac.STRING_LITERAL(); sl != nil {
-		return unquoteString(sl.GetText())
+
+	// Value mapping: Left = Right
+	entry := ast.RestMappingEntry{}
+	if len(allIOK) >= 2 {
+		entry.Left = identifierOrKeywordText(allIOK[0].(*parser.IdentifierOrKeywordContext))
+		entry.Right = identifierOrKeywordText(allIOK[1].(*parser.IdentifierOrKeywordContext))
 	}
-	if v := ac.VARIABLE(); v != nil {
-		return v.GetText()
-	}
-	return ""
+	return entry
 }
 
 // extractDocCommentText extracts documentation text from a DocComment context.

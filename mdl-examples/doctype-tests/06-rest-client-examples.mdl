@@ -54,16 +54,18 @@ CREATE MODULE RestTest;
 --
 -- The simplest possible REST client with a single GET operation.
 
-CREATE REST CLIENT RestTest.RC001_SimpleAPI
-BASE URL 'https://reqbin.com'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION GetStatus
-    METHOD GET
-    PATH '/echo'
-    HEADER 'Accept' = '*/*'
-    RESPONSE NONE;
-END;
+CREATE REST CLIENT RestTest.RC001_SimpleAPI (
+  BaseUrl: 'https://reqbin.com',
+  Authentication: NONE
+)
+{
+  OPERATION GetStatus {
+    Method: GET,
+    Path: '/echo',
+    Headers: ('Accept' = '*/*'),
+    Response: NONE
+  }
+};
 
 -- ============================================================================
 -- Level 1.2: REST Client with JSON Response
@@ -71,16 +73,18 @@ END;
 --
 -- A REST client that returns JSON data mapped to a variable.
 
-CREATE REST CLIENT RestTest.RC002_JsonAPI
-BASE URL 'https://jsonplaceholder.typicode.com'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION GetPosts
-    METHOD GET
-    PATH '/posts'
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Posts;
-END;
+CREATE REST CLIENT RestTest.RC002_JsonAPI (
+  BaseUrl: 'https://jsonplaceholder.typicode.com',
+  Authentication: NONE
+)
+{
+  OPERATION GetPosts {
+    Method: GET,
+    Path: '/posts',
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Posts
+  }
+};
 
 -- ============================================================================
 -- Level 1.3: REST Client with Path Parameter
@@ -88,17 +92,19 @@ END;
 --
 -- Demonstrates path parameters using {param} syntax in the path.
 
-CREATE REST CLIENT RestTest.RC003_UserAPI
-BASE URL 'https://jsonplaceholder.typicode.com'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION GetUser
-    METHOD GET
-    PATH '/users/{userId}'
-    HEADER 'Accept' = 'application/json'
-    PARAMETER $userId: Integer
-    RESPONSE JSON AS $User;
-END;
+CREATE REST CLIENT RestTest.RC003_UserAPI (
+  BaseUrl: 'https://jsonplaceholder.typicode.com',
+  Authentication: NONE
+)
+{
+  OPERATION GetUser {
+    Method: GET,
+    Path: '/users/{userId}',
+    Parameters: ($userId: Integer),
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $User
+  }
+};
 
 -- ############################################################################
 -- PART 2: HTTP METHODS
@@ -112,47 +118,53 @@ END;
 --
 -- Demonstrates all supported HTTP methods in a single client.
 
-CREATE REST CLIENT RestTest.RC004_CrudAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC004_CrudAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
   /** Retrieve all resources */
-  OPERATION GetAll
-    METHOD GET
-    PATH '/get'
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Resources;
+  OPERATION GetAll {
+    Method: GET,
+    Path: '/get',
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Resources
+  }
 
   /** Create a new resource */
-  OPERATION CreateResource
-    METHOD POST
-    PATH '/post'
-    HEADER 'Accept' = 'application/json'
-    BODY JSON FROM $NewResource
-    RESPONSE JSON AS $CreatedResource;
+  OPERATION CreateResource {
+    Method: POST,
+    Path: '/post',
+    Headers: ('Accept' = 'application/json'),
+    Body: JSON FROM $NewResource,
+    Response: JSON AS $CreatedResource
+  }
 
   /** Fully update an existing resource */
-  OPERATION UpdateResource
-    METHOD PUT
-    PATH '/put'
-    HEADER 'Accept' = 'application/json'
-    BODY JSON FROM $UpdatedResource
-    RESPONSE JSON AS $Resource;
+  OPERATION UpdateResource {
+    Method: PUT,
+    Path: '/put',
+    Headers: ('Accept' = 'application/json'),
+    Body: JSON FROM $UpdatedResource,
+    Response: JSON AS $Resource
+  }
 
   /** Partially update an existing resource */
-  OPERATION "PatchResource"
-    METHOD PATCH
-    PATH '/patch'
-    HEADER 'Accept' = 'application/json'
-    BODY JSON FROM $PatchData
-    RESPONSE JSON AS $Resource;
+  OPERATION "PatchResource" {
+    Method: PATCH,
+    Path: '/patch',
+    Headers: ('Accept' = 'application/json'),
+    Body: JSON FROM $PatchData,
+    Response: JSON AS $Resource
+  }
 
   /** Delete a resource */
-  OPERATION "DeleteResource"
-    METHOD DELETE
-    PATH '/delete'
-    RESPONSE NONE;
-END;
+  OPERATION "DeleteResource" {
+    Method: DELETE,
+    Path: '/delete',
+    Response: NONE
+  }
+};
 
 -- ############################################################################
 -- PART 3: QUERY PARAMETERS
@@ -164,16 +176,18 @@ END;
 -- Level 3.1: Single Query Parameter
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC005_SearchAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION Search
-    METHOD GET
-    PATH '/anything/search'
-    QUERY $q: String
-    RESPONSE JSON AS $Results;
-END;
+CREATE REST CLIENT RestTest.RC005_SearchAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
+  OPERATION Search {
+    Method: GET,
+    Path: '/anything/search',
+    Query: ($q: String),
+    Response: JSON AS $Results
+  }
+};
 
 -- ============================================================================
 -- Level 3.2: Multiple Query Parameters
@@ -181,40 +195,38 @@ END;
 --
 -- Demonstrates pagination and filtering with multiple query parameters.
 
-CREATE REST CLIENT RestTest.RC006_PaginatedAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC006_PaginatedAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
   /** Search with pagination */
-  OPERATION SearchPaginated
-    METHOD GET
-    PATH '/anything/items'
-    QUERY $search: String
-    QUERY $page: Integer
-    QUERY $limit: Integer
-    QUERY $sortBy: String
-    QUERY $ascending: Boolean
-    RESPONSE JSON AS $Items;
-END;
+  OPERATION SearchPaginated {
+    Method: GET,
+    Path: '/anything/items',
+    Query: ($search: String, $page: Integer, $limit: Integer, $sortBy: String, $ascending: Boolean),
+    Response: JSON AS $Items
+  }
+};
 
 -- ============================================================================
 -- Level 3.3: Mixed Path and Query Parameters
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC007_FilteredAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC007_FilteredAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
   /** Get items in a category with filters */
-  OPERATION GetCategoryItems
-    METHOD GET
-    PATH '/anything/categories/{categoryId}/items'
-    PARAMETER $categoryId: Integer
-    QUERY $status: String
-    QUERY $minPrice: Decimal
-    QUERY $maxPrice: Decimal
-    RESPONSE JSON AS $Items;
-END;
+  OPERATION GetCategoryItems {
+    Method: GET,
+    Path: '/anything/categories/{categoryId}/items',
+    Parameters: ($categoryId: Integer),
+    Query: ($status: String, $minPrice: Decimal, $maxPrice: Decimal),
+    Response: JSON AS $Items
+  }
+};
 
 -- ############################################################################
 -- PART 4: HEADERS
@@ -228,18 +240,18 @@ END;
 --
 -- Headers with literal string values.
 
-CREATE REST CLIENT RestTest.RC008_HeaderAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION GetData
-    METHOD GET
-    PATH '/headers'
-    HEADER 'Accept' = 'application/json'
-    HEADER 'X-API-Version' = '2.0'
-    HEADER 'X-Client-ID' = 'mendix-repl'
-    RESPONSE JSON AS $Data;
-END;
+CREATE REST CLIENT RestTest.RC008_HeaderAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
+  OPERATION GetData {
+    Method: GET,
+    Path: '/headers',
+    Headers: ('Accept' = 'application/json', 'X-API-Version' = '2.0', 'X-Client-ID' = 'mendix-repl'),
+    Response: JSON AS $Data
+  }
+};
 
 -- ============================================================================
 -- Level 4.2: Dynamic Headers with Parameters
@@ -247,35 +259,36 @@ END;
 --
 -- Headers that include parameter values using concatenation.
 
-CREATE REST CLIENT RestTest.RC009_AuthHeaderAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION GetSecureData
-    METHOD GET
-    PATH '/headers'
-    HEADER 'Accept' = 'application/json'
-    HEADER 'Authorization' = 'Bearer my-api-token'
-    HEADER 'X-Request-ID' = 'request-001'
-    RESPONSE JSON AS $Data;
-END;
+CREATE REST CLIENT RestTest.RC009_AuthHeaderAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
+  OPERATION GetSecureData {
+    Method: GET,
+    Path: '/headers',
+    Headers: ('Accept' = 'application/json', 'Authorization' = 'Bearer my-api-token', 'X-Request-ID' = 'request-001'),
+    Response: JSON AS $Data
+  }
+};
 
 -- ============================================================================
 -- Level 4.3: Content-Type Headers for POST/PUT
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC010_ContentTypeAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION PostJson
-    METHOD POST
-    PATH '/post'
-    HEADER 'Content-Type' = 'application/json'
-    HEADER 'Accept' = 'application/json'
-    BODY JSON FROM $Payload
-    RESPONSE JSON AS $Result;
-END;
+CREATE REST CLIENT RestTest.RC010_ContentTypeAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
+  OPERATION PostJson {
+    Method: POST,
+    Path: '/post',
+    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    Body: JSON FROM $Payload,
+    Response: JSON AS $Result
+  }
+};
 
 -- ############################################################################
 -- PART 5: AUTHENTICATION
@@ -287,29 +300,33 @@ END;
 -- Level 5.1: No Authentication (explicit)
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC011_PublicAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION GetPublicData
-    METHOD GET
-    PATH '/get'
-    RESPONSE JSON AS $Data;
-END;
+CREATE REST CLIENT RestTest.RC011_PublicAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
+  OPERATION GetPublicData {
+    Method: GET,
+    Path: '/get',
+    Response: JSON AS $Data
+  }
+};
 
 -- ============================================================================
 -- Level 5.2: Basic Authentication with Literals
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC012_BasicAuthAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION BASIC (USERNAME = 'api_user', PASSWORD = 'api_secret')
-BEGIN
-  OPERATION GetProtectedData
-    METHOD GET
-    PATH '/basic-auth/api_user/api_secret'
-    RESPONSE JSON AS $Data;
-END;
+CREATE REST CLIENT RestTest.RC012_BasicAuthAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: BASIC (Username: 'api_user', Password: 'api_secret')
+)
+{
+  OPERATION GetProtectedData {
+    Method: GET,
+    Path: '/basic-auth/api_user/api_secret',
+    Response: JSON AS $Data
+  }
+};
 
 -- ============================================================================
 -- Level 5.3: Basic Authentication with Parameters
@@ -317,16 +334,18 @@ END;
 --
 -- For production use, credentials should come from constants.
 
-CREATE REST CLIENT RestTest.RC013_SecureAuthAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION BASIC (USERNAME = 'testuser', PASSWORD = 'testpass')
-BEGIN
-  OPERATION GetSecureData
-    METHOD GET
-    PATH '/hidden-basic-auth/testuser/testpass'
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Data;
-END;
+CREATE REST CLIENT RestTest.RC013_SecureAuthAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: BASIC (Username: 'testuser', Password: 'testpass')
+)
+{
+  OPERATION GetSecureData {
+    Method: GET,
+    Path: '/hidden-basic-auth/testuser/testpass',
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Data
+  }
+};
 
 -- ############################################################################
 -- PART 6: REQUEST BODY
@@ -338,32 +357,36 @@ END;
 -- Level 6.1: JSON Body
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC014_JsonBodyAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION AddItem
-    METHOD POST
-    PATH '/post'
-    HEADER 'Content-Type' = 'application/json'
-    BODY JSON FROM $ItemData
-    RESPONSE JSON AS $CreatedItem;
-END;
+CREATE REST CLIENT RestTest.RC014_JsonBodyAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
+  OPERATION AddItem {
+    Method: POST,
+    Path: '/post',
+    Headers: ('Content-Type' = 'application/json'),
+    Body: JSON FROM $ItemData,
+    Response: JSON AS $CreatedItem
+  }
+};
 
 -- ============================================================================
 -- Level 6.2: File Upload
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC015_FileUploadAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION UploadFile
-    METHOD POST
-    PATH '/post'
-    BODY FILE FROM $FileDocument
-    RESPONSE JSON AS $UploadResult;
-END;
+CREATE REST CLIENT RestTest.RC015_FileUploadAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
+  OPERATION UploadFile {
+    Method: POST,
+    Path: '/post',
+    Body: FILE FROM $FileDocument,
+    Response: JSON AS $UploadResult
+  }
+};
 
 -- ############################################################################
 -- PART 7: RESPONSE HANDLING
@@ -377,41 +400,47 @@ END;
 --
 -- Demonstrates all supported response handling types.
 
-CREATE REST CLIENT RestTest.RC016_ResponseTypesAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC016_ResponseTypesAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
   /** JSON response mapped to entity */
-  OPERATION GetJson
-    METHOD GET
-    PATH '/json'
-    RESPONSE JSON AS $JsonData;
+  OPERATION GetJson {
+    Method: GET,
+    Path: '/json',
+    Response: JSON AS $JsonData
+  }
 
   /** Raw string response */
-  OPERATION GetString
-    METHOD GET
-    PATH '/robots.txt'
-    RESPONSE STRING AS $TextContent;
+  OPERATION GetString {
+    Method: GET,
+    Path: '/robots.txt',
+    Response: STRING AS $TextContent
+  }
 
   /** Binary file download */
-  OPERATION DownloadFile
-    METHOD GET
-    PATH '/bytes/{fileId}'
-    PARAMETER $fileId: String
-    RESPONSE FILE AS $FileDocument;
+  OPERATION DownloadFile {
+    Method: GET,
+    Path: '/bytes/{fileId}',
+    Parameters: ($fileId: String),
+    Response: FILE AS $FileDocument
+  }
 
   /** HTTP status code only */
-  OPERATION CheckStatus
-    METHOD GET
-    PATH '/status/200'
-    RESPONSE STATUS AS $StatusCode;
+  OPERATION CheckStatus {
+    Method: GET,
+    Path: '/status/200',
+    Response: STATUS AS $StatusCode
+  }
 
   /** No response expected */
-  OPERATION Ping
-    METHOD GET
-    PATH '/status/204'
-    RESPONSE NONE;
-END;
+  OPERATION Ping {
+    Method: GET,
+    Path: '/status/204',
+    Response: NONE
+  }
+};
 
 -- ############################################################################
 -- PART 8: TIMEOUT CONFIGURATION
@@ -425,25 +454,28 @@ END;
 --
 -- Default timeout is 300 seconds. Override for long-running operations.
 
-CREATE REST CLIENT RestTest.RC017_LongRunningAPI
-BASE URL 'https://httpbin.org'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC017_LongRunningAPI (
+  BaseUrl: 'https://httpbin.org',
+  Authentication: NONE
+)
+{
   /** Quick health check with short timeout */
-  OPERATION HealthCheck
-    METHOD GET
-    PATH '/status/200'
-    TIMEOUT 5
-    RESPONSE STATUS AS $Status;
+  OPERATION HealthCheck {
+    Method: GET,
+    Path: '/status/200',
+    Timeout: 5,
+    Response: STATUS AS $Status
+  }
 
   /** Report generation with extended timeout (delay/10 waits 10 seconds) */
-  OPERATION GenerateReport
-    METHOD POST
-    PATH '/delay/10'
-    TIMEOUT 600
-    BODY JSON FROM $ReportParams
-    RESPONSE JSON AS $ReportResult;
-END;
+  OPERATION GenerateReport {
+    Method: POST,
+    Path: '/delay/10',
+    Body: JSON FROM $ReportParams,
+    Timeout: 600,
+    Response: JSON AS $ReportResult
+  }
+};
 
 -- ############################################################################
 -- PART 9: COMPLETE REAL-WORLD EXAMPLES
@@ -460,81 +492,86 @@ END;
  * A complete REST client for the classic Pet Store demo API.
  * Demonstrates full CRUD operations with various features.
  */
-CREATE REST CLIENT RestTest.RC018_PetStoreAPI
-BASE URL 'https://petstore.swagger.io/v2'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC018_PetStoreAPI (
+  BaseUrl: 'https://petstore.swagger.io/v2',
+  Authentication: NONE
+)
+{
   /**
    * List all pets with optional filtering
    * @param status Filter by pet status (available, pending, sold)
    * @param limit Maximum number of pets to return
    */
-  OPERATION ListPets
-    METHOD GET
-    PATH '/pet/findByStatus'
-    QUERY $status: String
-    HEADER 'Accept' = 'application/json'
-    TIMEOUT 30
-    RESPONSE JSON AS $PetList;
+  OPERATION ListPets {
+    Method: GET,
+    Path: '/pet/findByStatus',
+    Query: ($status: String),
+    Headers: ('Accept' = 'application/json'),
+    Timeout: 30,
+    Response: JSON AS $PetList
+  }
 
   /**
    * Get a single pet by ID
    * @param petId The unique identifier of the pet
    */
-  OPERATION GetPet
-    METHOD GET
-    PATH '/pet/{petId}'
-    PARAMETER $petId: Integer
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Pet;
+  OPERATION GetPet {
+    Method: GET,
+    Path: '/pet/{petId}',
+    Parameters: ($petId: Integer),
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Pet
+  }
 
   /**
    * Create a new pet
    * Adds a new pet to the store inventory.
    */
-  OPERATION AddPet
-    METHOD POST
-    PATH '/pet'
-    HEADER 'Content-Type' = 'application/json'
-    HEADER 'Accept' = 'application/json'
-    BODY JSON FROM $NewPet
-    RESPONSE JSON AS $CreatedPet;
+  OPERATION AddPet {
+    Method: POST,
+    Path: '/pet',
+    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    Body: JSON FROM $NewPet,
+    Response: JSON AS $CreatedPet
+  }
 
   /**
    * Update an existing pet
    * Modifies all fields of an existing pet record.
    */
-  OPERATION ModifyPet
-    METHOD PUT
-    PATH '/pet'
-    HEADER 'Content-Type' = 'application/json'
-    HEADER 'Accept' = 'application/json'
-    BODY JSON FROM $UpdatedPet
-    RESPONSE JSON AS $Pet;
+  OPERATION ModifyPet {
+    Method: PUT,
+    Path: '/pet',
+    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    Body: JSON FROM $UpdatedPet,
+    Response: JSON AS $Pet
+  }
 
   /**
    * Delete a pet
    * Removes a pet from the store inventory.
    * @param petId The unique identifier of the pet to delete
    */
-  OPERATION RemovePet
-    METHOD DELETE
-    PATH '/pet/{petId}'
-    PARAMETER $petId: Integer
-    HEADER 'api_key' = 'special-key'
-    RESPONSE NONE;
+  OPERATION RemovePet {
+    Method: DELETE,
+    Path: '/pet/{petId}',
+    Parameters: ($petId: Integer),
+    Headers: ('api_key' = 'special-key'),
+    Response: NONE
+  }
 
   /**
    * Upload pet image
    * @param petId The pet to associate the image with
    */
-  OPERATION UploadImage
-    METHOD POST
-    PATH '/pet/{petId}/uploadImage'
-    PARAMETER $petId: Integer
-    BODY FILE FROM $ImageFile
-    RESPONSE JSON AS $UploadResult;
-END;
+  OPERATION UploadImage {
+    Method: POST,
+    Path: '/pet/{petId}/uploadImage',
+    Parameters: ($petId: Integer),
+    Body: FILE FROM $ImageFile,
+    Response: JSON AS $UploadResult
+  }
+};
 
 -- ============================================================================
 -- Level 9.2: GitHub API Client
@@ -544,55 +581,48 @@ END;
  * GitHub REST API Client
  * Demonstrates integration with GitHub's REST API v3.
  */
-CREATE REST CLIENT RestTest.RC019_GitHubAPI
-BASE URL 'https://api.github.com'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC019_GitHubAPI (
+  BaseUrl: 'https://api.github.com',
+  Authentication: NONE
+)
+{
   /** Get repository information */
-  OPERATION GetRepository
-    METHOD GET
-    PATH '/repos/{owner}/{repo}'
-    PARAMETER $owner: String
-    PARAMETER $repo: String
-    HEADER 'Accept' = 'application/vnd.github.v3+json'
-    HEADER 'User-Agent' = 'Mendix-REPL'
-    RESPONSE JSON AS $Repository;
+  OPERATION GetRepository {
+    Method: GET,
+    Path: '/repos/{owner}/{repo}',
+    Parameters: ($owner: String, $repo: String),
+    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL'),
+    Response: JSON AS $Repository
+  }
 
   /** List repository issues */
-  OPERATION ListIssues
-    METHOD GET
-    PATH '/repos/{owner}/{repo}/issues'
-    PARAMETER $owner: String
-    PARAMETER $repo: String
-    QUERY $state: String
-    QUERY $labels: String
-    QUERY $page: Integer
-    QUERY $per_page: Integer
-    HEADER 'Accept' = 'application/vnd.github.v3+json'
-    HEADER 'User-Agent' = 'Mendix-REPL'
-    RESPONSE JSON AS $Issues;
+  OPERATION ListIssues {
+    Method: GET,
+    Path: '/repos/{owner}/{repo}/issues',
+    Parameters: ($owner: String, $repo: String),
+    Query: ($state: String, $labels: String, $page: Integer, $per_page: Integer),
+    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL'),
+    Response: JSON AS $Issues
+  }
 
   /** Create an issue (requires authentication) */
-  OPERATION AddIssue
-    METHOD POST
-    PATH '/repos/{owner}/{repo}/issues'
-    PARAMETER $owner: String
-    PARAMETER $repo: String
-    HEADER 'Accept' = 'application/vnd.github.v3+json'
-    HEADER 'User-Agent' = 'Mendix-REPL'
-    HEADER 'Authorization' = 'token ghp_exampletoken123'
-    BODY JSON FROM $IssueData
-    RESPONSE JSON AS $CreatedIssue;
+  OPERATION AddIssue {
+    Method: POST,
+    Path: '/repos/{owner}/{repo}/issues',
+    Parameters: ($owner: String, $repo: String),
+    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL', 'Authorization' = 'token ghp_exampletoken123'),
+    Body: JSON FROM $IssueData,
+    Response: JSON AS $CreatedIssue
+  }
 
   /** Get authenticated user */
-  OPERATION GetAuthenticatedUser
-    METHOD GET
-    PATH '/user'
-    HEADER 'Accept' = 'application/vnd.github.v3+json'
-    HEADER 'User-Agent' = 'Mendix-REPL'
-    HEADER 'Authorization' = 'token ghp_exampletoken123'
-    RESPONSE JSON AS $User;
-END;
+  OPERATION GetAuthenticatedUser {
+    Method: GET,
+    Path: '/user',
+    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL', 'Authorization' = 'token ghp_exampletoken123'),
+    Response: JSON AS $User
+  }
+};
 
 -- ============================================================================
 -- Level 9.3: Weather API Client
@@ -602,42 +632,38 @@ END;
  * OpenWeatherMap API Client
  * Demonstrates API key authentication via query parameter.
  */
-CREATE REST CLIENT RestTest.RC020_WeatherAPI
-BASE URL 'https://api.openweathermap.org/data/2.5'
-AUTHENTICATION NONE
-BEGIN
+CREATE REST CLIENT RestTest.RC020_WeatherAPI (
+  BaseUrl: 'https://api.openweathermap.org/data/2.5',
+  Authentication: NONE
+)
+{
   /** Get current weather for a city */
-  OPERATION GetCurrentWeather
-    METHOD GET
-    PATH '/weather'
-    QUERY $q: String
-    QUERY $appid: String
-    QUERY $units: String
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Weather;
+  OPERATION GetCurrentWeather {
+    Method: GET,
+    Path: '/weather',
+    Query: ($q: String, $appid: String, $units: String),
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Weather
+  }
 
   /** Get 5-day forecast */
-  OPERATION GetForecast
-    METHOD GET
-    PATH '/forecast'
-    QUERY $q: String
-    QUERY $appid: String
-    QUERY $units: String
-    QUERY $cnt: Integer
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Forecast;
+  OPERATION GetForecast {
+    Method: GET,
+    Path: '/forecast',
+    Query: ($q: String, $appid: String, $units: String, $cnt: Integer),
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Forecast
+  }
 
   /** Get weather by coordinates */
-  OPERATION GetWeatherByCoords
-    METHOD GET
-    PATH '/weather'
-    QUERY $lat: Decimal
-    QUERY $lon: Decimal
-    QUERY $appid: String
-    QUERY $units: String
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Weather;
-END;
+  OPERATION GetWeatherByCoords {
+    Method: GET,
+    Path: '/weather',
+    Query: ($lat: Decimal, $lon: Decimal, $appid: String, $units: String),
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Weather
+  }
+};
 
 -- ============================================================================
 -- Level 9.4: Stripe-style Payment API
@@ -647,53 +673,55 @@ END;
  * Payment Processing API
  * Demonstrates secure API patterns for payment processing.
  */
-CREATE REST CLIENT RestTest.RC021_PaymentAPI
-BASE URL 'https://api.payments.example.com/v1'
-AUTHENTICATION BASIC (USERNAME = 'sk_test_placeholder', PASSWORD = '')
-BEGIN
+CREATE REST CLIENT RestTest.RC021_PaymentAPI (
+  BaseUrl: 'https://api.payments.example.com/v1',
+  Authentication: BASIC (Username: 'sk_test_placeholder', Password: '')
+)
+{
   /** Create a payment intent */
-  OPERATION InitiatePayment
-    METHOD POST
-    PATH '/payment_intents'
-    HEADER 'Content-Type' = 'application/json'
-    HEADER 'Accept' = 'application/json'
-    HEADER 'Idempotency-Key' = 'idem-key-001'
-    BODY JSON FROM $PaymentData
-    TIMEOUT 30
-    RESPONSE JSON AS $PaymentIntent;
+  OPERATION InitiatePayment {
+    Method: POST,
+    Path: '/payment_intents',
+    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json', 'Idempotency-Key' = 'idem-key-001'),
+    Body: JSON FROM $PaymentData,
+    Timeout: 30,
+    Response: JSON AS $PaymentIntent
+  }
 
   /** Retrieve a payment intent */
-  OPERATION GetPaymentIntent
-    METHOD GET
-    PATH '/payment_intents/{paymentIntentId}'
-    PARAMETER $paymentIntentId: String
-    RESPONSE JSON AS $PaymentIntent;
+  OPERATION GetPaymentIntent {
+    Method: GET,
+    Path: '/payment_intents/{paymentIntentId}',
+    Parameters: ($paymentIntentId: String),
+    Response: JSON AS $PaymentIntent
+  }
 
   /** Confirm a payment */
-  OPERATION ConfirmPayment
-    METHOD POST
-    PATH '/payment_intents/{paymentIntentId}/confirm'
-    PARAMETER $paymentIntentId: String
-    HEADER 'Content-Type' = 'application/json'
-    BODY JSON FROM $ConfirmData
-    RESPONSE JSON AS $PaymentIntent;
+  OPERATION ConfirmPayment {
+    Method: POST,
+    Path: '/payment_intents/{paymentIntentId}/confirm',
+    Parameters: ($paymentIntentId: String),
+    Headers: ('Content-Type' = 'application/json'),
+    Body: JSON FROM $ConfirmData,
+    Response: JSON AS $PaymentIntent
+  }
 
   /** Cancel a payment */
-  OPERATION CancelPayment
-    METHOD POST
-    PATH '/payment_intents/{paymentIntentId}/cancel'
-    PARAMETER $paymentIntentId: String
-    RESPONSE JSON AS $PaymentIntent;
+  OPERATION CancelPayment {
+    Method: POST,
+    Path: '/payment_intents/{paymentIntentId}/cancel',
+    Parameters: ($paymentIntentId: String),
+    Response: JSON AS $PaymentIntent
+  }
 
   /** List all payments */
-  OPERATION ListPayments
-    METHOD GET
-    PATH '/payment_intents'
-    QUERY $limit: Integer
-    QUERY $starting_after: String
-    QUERY $created: Integer
-    RESPONSE JSON AS $PaymentList;
-END;
+  OPERATION ListPayments {
+    Method: GET,
+    Path: '/payment_intents',
+    Query: ($limit: Integer, $starting_after: String, $created: Integer),
+    Response: JSON AS $PaymentList
+  }
+};
 
 -- ############################################################################
 -- PART 10: MICROFLOWS THAT CALL REST SERVICES

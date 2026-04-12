@@ -2335,70 +2335,89 @@ createConfigurationStatement
     ;
 
 /**
- * CREATE REST CLIENT Module.Name
- * BASE URL 'https://api.example.com/v1'
- * AUTHENTICATION NONE | BASIC (USERNAME = ..., PASSWORD = ...)
- * BEGIN
- *   OPERATION GetData METHOD GET PATH '/data' RESPONSE JSON AS $Result;
- * END;
+ * CREATE REST CLIENT — property-based syntax with { } blocks.
+ *
+ * @example Simple GET client
+ * ```mdl
+ * CREATE REST CLIENT Module.Api (
+ *   BaseUrl: 'https://api.example.com/v1',
+ *   Authentication: NONE
+ * )
+ * {
+ *   OPERATION GetData {
+ *     Method: GET,
+ *     Path: '/data',
+ *     Parameters: ($userId: Integer),
+ *     Headers: ('Accept' = 'application/json'),
+ *     Response: JSON AS $Result
+ *   }
+ * };
+ * ```
+ *
+ * @example POST with body and response mapping
+ * ```mdl
+ * OPERATION PostOrder {
+ *   Method: POST,
+ *   Path: '/orders',
+ *   Headers: ('Content-Type' = 'application/json'),
+ *   Body: MAPPING Module.OrderRequest {
+ *     orderId = OrderId,
+ *   },
+ *   Response: MAPPING Module.OrderResponse {
+ *     OrderId = orderId,
+ *     CREATE Module.Items_Order/Module.Item = items {
+ *       Sku = sku,
+ *     }
+ *   }
+ * }
+ * ```
  */
 createRestClientStatement
     : REST CLIENT qualifiedName
-      restClientBaseUrl
-      restClientAuthentication
-      BEGIN restOperationDef* END
+      LPAREN restClientProperty (COMMA restClientProperty)* RPAREN
+      LBRACE restClientOperation* RBRACE
     ;
 
-restClientBaseUrl
-    : BASE URL STRING_LITERAL
+restClientProperty
+    : identifierOrKeyword COLON STRING_LITERAL                       // BaseUrl: '...', Username: '...'
+    | identifierOrKeyword COLON NONE                                 // Authentication: NONE
+    | identifierOrKeyword COLON BASIC LPAREN restClientProperty (COMMA restClientProperty)* RPAREN
     ;
 
-restClientAuthentication
-    : AUTHENTICATION NONE
-    | AUTHENTICATION BASIC LPAREN
-        USERNAME EQUALS restAuthValue COMMA
-        PASSWORD EQUALS restAuthValue
-      RPAREN
-    ;
-
-restAuthValue
-    : STRING_LITERAL
-    | VARIABLE
-    ;
-
-restOperationDef
+restClientOperation
     : docComment?
       OPERATION (identifierOrKeyword | STRING_LITERAL)
-        METHOD restHttpMethod
-        PATH STRING_LITERAL
-        restOperationClause*
-        RESPONSE restResponseSpec SEMICOLON
+      LBRACE restClientOpProp (COMMA restClientOpProp)* RBRACE
+    ;
+
+restClientOpProp
+    : identifierOrKeyword COLON restHttpMethod                       // Method: GET
+    | identifierOrKeyword COLON STRING_LITERAL                       // Path: '/items'
+    | identifierOrKeyword COLON NUMBER_LITERAL                       // Timeout: 30
+    | identifierOrKeyword COLON NONE                                 // Response: NONE
+    | identifierOrKeyword COLON LPAREN restClientParamItem (COMMA restClientParamItem)* RPAREN  // Parameters/Query
+    | identifierOrKeyword COLON LPAREN restClientHeaderItem (COMMA restClientHeaderItem)* RPAREN  // Headers
+    | identifierOrKeyword COLON (JSON | FILE_KW | STRING_TYPE | STATUS) (FROM | AS) VARIABLE  // Body: JSON FROM $v, Response: JSON AS $v
+    | identifierOrKeyword COLON TEMPLATE STRING_LITERAL              // Body: TEMPLATE '...'
+    | identifierOrKeyword COLON MAPPING qualifiedName (LBRACE restClientMappingEntry* RBRACE)?  // Body/Response: MAPPING Entity { ... }
+    ;
+
+restClientParamItem
+    : VARIABLE COLON dataType
+    ;
+
+restClientHeaderItem
+    : STRING_LITERAL EQUALS (STRING_LITERAL | VARIABLE | STRING_LITERAL PLUS VARIABLE)
+    ;
+
+restClientMappingEntry
+    : identifierOrKeyword EQUALS identifierOrKeyword COMMA?                          // Attr = jsonField,
+    | CREATE? qualifiedName SLASH qualifiedName EQUALS identifierOrKeyword
+      (LBRACE restClientMappingEntry* RBRACE)? COMMA?                                // CREATE Assoc/Entity = jsonField { ... },
     ;
 
 restHttpMethod
     : GET | POST | PUT | PATCH | DELETE
-    ;
-
-restOperationClause
-    : PARAMETER VARIABLE COLON dataType                         // path param
-    | QUERY VARIABLE COLON dataType                             // query param
-    | HEADER STRING_LITERAL EQUALS restHeaderValue              // header
-    | BODY (JSON | FILE_KW) FROM VARIABLE                       // request body
-    | TIMEOUT NUMBER_LITERAL                                    // timeout override
-    ;
-
-restHeaderValue
-    : STRING_LITERAL                                            // 'application/json'
-    | VARIABLE                                                  // $RequestId
-    | STRING_LITERAL PLUS VARIABLE                              // 'Bearer ' + $Token
-    ;
-
-restResponseSpec
-    : JSON AS VARIABLE                                          // JSON response
-    | STRING_TYPE AS VARIABLE                                   // string response
-    | FILE_KW AS VARIABLE                                       // file download
-    | STATUS AS VARIABLE                                        // status code only
-    | NONE                                                      // no response
     ;
 
 // =============================================================================
@@ -3605,10 +3624,22 @@ keyword
     | HEAD | TAIL | FIND | SORT | EMPTY
     | LIST_OF | LIST_KW | EQUALS_OP
 
+    // Control flow / microflow statements
+    | BEGIN | END | IF | ELSE | ELSIF | THEN | WHILE | LOOP
+    | DECLARE | SET | CHANGE | RETRIEVE | DELETE | COMMIT | RETURN
+    | CALL | LOG | WITH | FOR | TO | OF
+    | DESCRIBE | CLOSE | REPLACE | UPDATE | REFRESH | EXECUTE
+    | INSERT | IMPORT | EXPORT | INTO | BATCH | NOTHING
+
     // Database / connection
     | CONNECT | CONNECTION | CONNECTIONS | DATABASE | DISCONNECT | QUERY
     | HOST | PORT | TOKEN | RUNTIME | BRANCH | INTROSPECT
     | SCHEMA | KEY | VALUES | RECORDS
+
+    // Entity / structure
+    | INDEX | UNIQUE | REFERENCE | CASCADE | STORAGE | TABLE
+    | LOCAL | PROJECT | STRUCTURE | COLLECTION | STRUCTURES
+    | LAYOUT | EXPRESSION | CHANGED | CREATED | GENERATE | FOLDER
 
     // Widget types
     | ACTIONBUTTON | CHECKBOX | COMBOBOX | CONTAINER | CONTROLBAR
