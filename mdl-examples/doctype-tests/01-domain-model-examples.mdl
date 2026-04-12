@@ -1460,24 +1460,27 @@ ALTER ENTITY DmTest.VATRate
 -- or Rollback. RAISE ERROR makes the handler act as a validation microflow:
 -- if it returns false, the operation is aborted.
 
-CREATE MICROFLOW DmTest.ACT_ValidateBankAccount ()
+CREATE MICROFLOW DmTest.ACT_ValidateBankAccount ($BankAccount: DmTest.BankAccount)
+RETURNS Boolean
 BEGIN
   LOG INFO 'Validating bank account';
+  RETURN true;
 END;
 /
 
-CREATE MICROFLOW DmTest.ACT_InitBankAccountDefaults ()
+CREATE MICROFLOW DmTest.ACT_InitBankAccountDefaults ($BankAccount: DmTest.BankAccount)
 BEGIN
   LOG INFO 'Initializing defaults';
+  RETURN empty;
 END;
 /
 
--- Add event handlers via ALTER ENTITY
+-- Add event handlers via ALTER ENTITY (pass entity object to microflow)
 ALTER ENTITY DmTest.BankAccount
-  ADD EVENT HANDLER ON BEFORE COMMIT CALL DmTest.ACT_ValidateBankAccount RAISE ERROR;
+  ADD EVENT HANDLER ON BEFORE COMMIT CALL DmTest.ACT_ValidateBankAccount($currentObject) RAISE ERROR;
 
 ALTER ENTITY DmTest.BankAccount
-  ADD EVENT HANDLER ON AFTER CREATE CALL DmTest.ACT_InitBankAccountDefaults;
+  ADD EVENT HANDLER ON AFTER CREATE CALL DmTest.ACT_InitBankAccountDefaults($currentObject);
 
 -- Drop an event handler
 ALTER ENTITY DmTest.BankAccount
