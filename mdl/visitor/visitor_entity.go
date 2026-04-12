@@ -85,19 +85,6 @@ func (b *Builder) ExitCreateEntityStatement(ctx *parser.CreateEntityStatementCon
 				if optCtx.INDEX() != nil && optCtx.IndexDefinition() != nil {
 					stmt.Indexes = append(stmt.Indexes, buildIndex(optCtx.IndexDefinition()))
 				}
-				// Handle STORE OWNER / CHANGED BY / CREATED DATE / CHANGED DATE
-				if optCtx.STORE() != nil {
-					switch {
-					case optCtx.OWNER() != nil:
-						stmt.StoreOwner = true
-					case optCtx.CHANGED() != nil && optCtx.BY() != nil:
-						stmt.StoreChangedBy = true
-					case optCtx.CREATED() != nil && optCtx.DATE_TYPE() != nil:
-						stmt.StoreCreatedDate = true
-					case optCtx.CHANGED() != nil && optCtx.DATE_TYPE() != nil:
-						stmt.StoreChangedDate = true
-					}
-				}
 				// Handle event handler option (ON BEFORE/AFTER ... CALL ...)
 				if ehCtx := optCtx.EventHandlerDefinition(); ehCtx != nil {
 					if eh := buildEventHandler(ehCtx); eh != nil {

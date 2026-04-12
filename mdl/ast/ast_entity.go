@@ -42,11 +42,7 @@ type CreateEntityStmt struct {
 	Position         *Position
 	Documentation    string
 	Comment          string
-	CreateOrModify   bool // true for CREATE OR MODIFY
-	StoreOwner       bool // STORE OWNER (system attribute)
-	StoreChangedBy   bool // STORE CHANGED BY (system attribute)
-	StoreCreatedDate bool // STORE CREATED DATE (system attribute)
-	StoreChangedDate bool // STORE CHANGED DATE (system attribute)
+	CreateOrModify bool // true for CREATE OR MODIFY
 }
 
 func (s *CreateEntityStmt) isStatement() {}

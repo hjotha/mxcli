@@ -642,7 +642,7 @@ func serializeEntity(e *domainmodel.Entity, moduleName string, pv *version.Proje
 	if e.GeneralizationRef != "" {
 		maybeGeneralization = serializeGeneralization(e.GeneralizationRef)
 	} else {
-		maybeGeneralization = serializeNoGeneralization(e)
+		maybeGeneralization = serializeNoGeneralization(e, pv)
 	}
 
 	// AccessRules array with version prefix 3
@@ -832,7 +832,7 @@ func serializeMemberAccess(ma *domainmodel.MemberAccess) bson.D {
 	return doc
 }
 
-func serializeNoGeneralization(e *domainmodel.Entity) bson.D {
+func serializeNoGeneralization(e *domainmodel.Entity, pv *version.ProjectVersion) bson.D {
 	// Persistability rules for external entities, verified against Studio Pro
 	// reference projects:
 	//   Rest$ODataRemoteEntitySource              → Persistable=true
@@ -850,17 +850,23 @@ func serializeNoGeneralization(e *domainmodel.Entity) bson.D {
 		{Key: "$Type", Value: "DomainModels$NoGeneralization"},
 		{Key: "Persistable", Value: persistable},
 	}
+	// Mendix >= 11.9 renamed HasOwner → HasOwnerAttr, etc.
+	useAttrSuffix := pv != nil && pv.IsAtLeast(11, 9)
+	ownerKey, changedByKey, changedDateKey, createdDateKey := "HasOwner", "HasChangedBy", "HasChangedDate", "HasCreatedDate"
+	if useAttrSuffix {
+		ownerKey, changedByKey, changedDateKey, createdDateKey = "HasOwnerAttr", "HasChangedByAttr", "HasChangedDateAttr", "HasCreatedDateAttr"
+	}
 	if e.HasOwner {
-		doc = append(doc, bson.E{Key: "HasOwner", Value: true})
+		doc = append(doc, bson.E{Key: ownerKey, Value: true})
 	}
 	if e.HasChangedBy {
-		doc = append(doc, bson.E{Key: "HasChangedBy", Value: true})
+		doc = append(doc, bson.E{Key: changedByKey, Value: true})
 	}
 	if e.HasChangedDate {
-		doc = append(doc, bson.E{Key: "HasChangedDate", Value: true})
+		doc = append(doc, bson.E{Key: changedDateKey, Value: true})
 	}
 	if e.HasCreatedDate {
-		doc = append(doc, bson.E{Key: "HasCreatedDate", Value: true})
+		doc = append(doc, bson.E{Key: createdDateKey, Value: true})
 	}
 	return doc
 }

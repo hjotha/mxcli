@@ -98,9 +98,28 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 	}
 
 	// Create attributes and build name-to-ID map for validation rules and indexes
+	// Also detect pseudo-types (AutoOwner, AutoChangedBy, etc.) and set entity flags
+	var storeOwner, storeChangedBy, storeCreatedDate, storeChangedDate bool
+
 	var attrs []*domainmodel.Attribute
 	attrNameToID := make(map[string]model.ID)
 	for _, a := range s.Attributes {
+		// Pseudo-types: set entity flags instead of creating attributes
+		switch a.Type.Kind {
+		case ast.TypeAutoOwner:
+			storeOwner = true
+			continue
+		case ast.TypeAutoChangedBy:
+			storeChangedBy = true
+			continue
+		case ast.TypeAutoCreatedDate:
+			storeCreatedDate = true
+			continue
+		case ast.TypeAutoChangedDate:
+			storeChangedDate = true
+			continue
+		}
+
 		// CALCULATED attributes are only supported on persistent entities
 		if a.Calculated && !persistable {
 			return fmt.Errorf("attribute '%s': CALCULATED attributes are only supported on persistent entities", a.Name)
@@ -235,10 +254,10 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 		ValidationRules: validationRules,
 		Indexes:         indexes,
 		EventHandlers:   eventHandlers,
-		HasOwner:        s.StoreOwner,
-		HasChangedBy:    s.StoreChangedBy,
-		HasCreatedDate:  s.StoreCreatedDate,
-		HasChangedDate:  s.StoreChangedDate,
+		HasOwner:        storeOwner,
+		HasChangedBy:    storeChangedBy,
+		HasCreatedDate:  storeCreatedDate,
+		HasChangedDate:  storeChangedDate,
 	}
 
 	// Set generalization (inheritance) if specified

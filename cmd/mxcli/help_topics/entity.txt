@@ -41,24 +41,26 @@ Attribute Constraints:
   Note: CALCULATED attributes are only supported on persistent entities.
 
 System Attributes (auditing):
-  STORE OWNER           - Adds System.owner association (System.User)
-  STORE CHANGED BY      - Adds System.changedBy association (System.User)
-  STORE CREATED DATE    - Adds CreatedDate attribute (DateTime, auto-set on insert)
-  STORE CHANGED DATE    - Adds ChangedDate attribute (DateTime, auto-set on every commit)
+  AutoOwner             - System.owner association (auto-set on create)
+  AutoChangedBy         - System.changedBy association (auto-set on every commit)
+  AutoCreatedDate       - CreatedDate: DateTime (auto-set on create)
+  AutoChangedDate       - ChangedDate: DateTime (auto-set on every commit)
 
-  These clauses go AFTER the closing parenthesis of attributes:
+  These are pseudo-types like AutoNumber — list them as regular attributes:
 
   CREATE PERSISTENT ENTITY MyModule.AuditedEntity (
-    Name: String(100)
-  )
-  STORE OWNER
-  STORE CHANGED BY
-  STORE CREATED DATE
-  STORE CHANGED DATE;
+    Name: String(100),
+    Owner: AutoOwner,
+    ChangedBy: AutoChangedBy,
+    CreatedDate: AutoCreatedDate,
+    ChangedDate: AutoChangedDate
+  );
 
   Use ALTER ENTITY to toggle on existing entities:
     ALTER ENTITY MyModule.Entity SET STORE OWNER;
     ALTER ENTITY MyModule.Entity DROP STORE CHANGED DATE;
+
+  To toggle on existing entities, use ALTER ENTITY SET/DROP STORE.
 
 Complete Example:
   CREATE PERSISTENT ENTITY MyModule.Customer (

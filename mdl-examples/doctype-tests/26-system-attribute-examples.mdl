@@ -2,21 +2,16 @@
 -- System Attribute Examples (Issue #182)
 -- ============================================================================
 --
--- Mendix persistent entities support four optional system attributes that
--- provide built-in auditing:
+-- Mendix persistent entities support four optional system attributes for
+-- built-in auditing. Declare them as pseudo-types (like AutoNumber):
 --
---   STORE OWNER         -> System.owner association
---   STORE CHANGED BY    -> System.changedBy association
---   STORE CREATED DATE  -> CreatedDate attribute (DateTime)
---   STORE CHANGED DATE  -> ChangedDate attribute (DateTime)
+--   AutoOwner          -> System.owner association (auto-set on create)
+--   AutoChangedBy      -> System.changedBy association (auto-set on commit)
+--   AutoCreatedDate    -> CreatedDate: DateTime (auto-set on create)
+--   AutoChangedDate    -> ChangedDate: DateTime (auto-set on commit)
 --
--- This file demonstrates enabling these flags both during CREATE ENTITY
--- (as entity options) and via ALTER ENTITY (SET / DROP).
---
--- Usage:
---   1. Connect to your project: CONNECT LOCAL 'app.mpr';
---   2. Execute: EXECUTE SCRIPT 'mdl-examples/doctype-tests/26-system-attribute-examples.mdl';
---   3. Roundtrip: DESCRIBE ENTITY SysAttrTest.<EntityName>
+-- This file demonstrates enabling these both during CREATE ENTITY
+-- (as pseudo-typed attributes) and via ALTER ENTITY (SET / DROP STORE).
 --
 -- ============================================================================
 
@@ -31,12 +26,12 @@ CREATE MODULE SysAttrTest;
  */
 CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.AuditedRecord (
   Title: String(200) NOT NULL,
-  Amount: Decimal
-)
-STORE OWNER
-STORE CHANGED BY
-STORE CREATED DATE
-STORE CHANGED DATE;
+  Amount: Decimal,
+  Owner: AutoOwner,
+  ChangedBy: AutoChangedBy,
+  CreatedDate: AutoCreatedDate,
+  ChangedDate: AutoChangedDate
+);
 
 -- ============================================================================
 -- Example 2: Subset of system attributes
@@ -44,9 +39,9 @@ STORE CHANGED DATE;
 
 CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.LogEntry (
   Message: String(500),
-  Level: String(20)
-)
-STORE CREATED DATE;
+  Level: String(20),
+  CreatedDate: AutoCreatedDate
+);
 
 -- ============================================================================
 -- Example 3: ALTER ENTITY to enable flags after creation
@@ -67,10 +62,10 @@ ALTER ENTITY SysAttrTest.Customer SET STORE CHANGED DATE;
 -- ============================================================================
 
 CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.TempRecord (
-  Payload: String(100)
-)
-STORE OWNER
-STORE CREATED DATE;
+  Payload: String(100),
+  Owner: AutoOwner,
+  CreatedDate: AutoCreatedDate
+);
 
 -- Disable both flags
 ALTER ENTITY SysAttrTest.TempRecord DROP STORE OWNER;

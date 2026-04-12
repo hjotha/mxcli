@@ -198,16 +198,14 @@ CREATE PERSISTENT ENTITY Module.Photo (
 
 #### System Attributes (Auditing)
 
-Mendix supports four built-in auditing properties on persistent entities. These are stored at the entity level (not as regular attributes) and the system fills them automatically:
+Mendix supports four built-in auditing properties on persistent entities. Declare them as regular attributes using pseudo-types (like `AutoNumber`):
 
-| Clause | Effect |
-|--------|--------|
-| `STORE OWNER` | Adds `System.owner` association to System.User; set on insert |
-| `STORE CHANGED BY` | Adds `System.changedBy` association to System.User; updated on every commit |
-| `STORE CREATED DATE` | Adds `CreatedDate` (DateTime); set on insert |
-| `STORE CHANGED DATE` | Adds `ChangedDate` (DateTime); updated on every commit |
-
-**Position**: STORE clauses go AFTER the closing parenthesis of attributes, before the semicolon. They can appear in any order.
+| Pseudo-Type | System Attribute | Set When |
+|-------------|-----------------|----------|
+| `AutoOwner` | `System.owner` (→ System.User) | Object created |
+| `AutoChangedBy` | `System.changedBy` (→ System.User) | Every commit |
+| `AutoCreatedDate` | `CreatedDate` (DateTime) | Object created |
+| `AutoChangedDate` | `ChangedDate` (DateTime) | Every commit |
 
 ```sql
 /**
@@ -216,12 +214,12 @@ Mendix supports four built-in auditing properties on persistent entities. These 
 CREATE PERSISTENT ENTITY Sales.Order (
   OrderNumber: AutoNumber,
   TotalAmount: Decimal NOT NULL,
-  Status: Enumeration(Sales.OrderStatus) NOT NULL
-)
-STORE OWNER
-STORE CHANGED BY
-STORE CREATED DATE
-STORE CHANGED DATE;
+  Status: Enumeration(Sales.OrderStatus) NOT NULL,
+  Owner: AutoOwner,
+  ChangedBy: AutoChangedBy,
+  CreatedDate: AutoCreatedDate,
+  ChangedDate: AutoChangedDate
+);
 ```
 
 To enable/disable on existing entities, use ALTER ENTITY:
@@ -234,8 +232,8 @@ ALTER ENTITY Sales.Order DROP STORE CHANGED BY;
 
 **When to use auditing:**
 - Compliance/regulated domains (finance, healthcare) — use all four
-- User-generated content — use STORE OWNER for ownership rules
-- "Recently modified" lists — use STORE CHANGED DATE
+- User-generated content — use AutoOwner for ownership-based access rules
+- "Recently modified" lists — use AutoChangedDate
 - Avoid on high-volume system tables (every write touches the audit columns)
 
 #### Non-Persistent Entity

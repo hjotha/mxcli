@@ -31,6 +31,10 @@ const (
 	TypeDateTime
 	TypeDate
 	TypeAutoNumber
+	TypeAutoOwner       // System.owner association (auto-set on create)
+	TypeAutoChangedBy   // System.changedBy association (auto-set on commit)
+	TypeAutoCreatedDate // CreatedDate DateTime (auto-set on create)
+	TypeAutoChangedDate // ChangedDate DateTime (auto-set on commit)
 	TypeBinary
 	TypeEnumeration
 	TypeEntity          // Entity reference (for microflow parameters)
@@ -58,6 +62,14 @@ func (k DataTypeKind) String() string {
 		return "Date"
 	case TypeAutoNumber:
 		return "AutoNumber"
+	case TypeAutoOwner:
+		return "AutoOwner"
+	case TypeAutoChangedBy:
+		return "AutoChangedBy"
+	case TypeAutoCreatedDate:
+		return "AutoCreatedDate"
+	case TypeAutoChangedDate:
+		return "AutoChangedDate"
 	case TypeBinary:
 		return "Binary"
 	case TypeEnumeration:

@@ -263,11 +263,19 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 				}
 			}
 
-			// Output attributes
-			for i, attr := range entity.Attributes {
+			// Build the list of attribute lines (regular + system pseudo-types)
+			type attrLine struct {
+				text string
+			}
+			var attrLines []attrLine
+
+			// Output regular attributes
+			for _, attr := range entity.Attributes {
+				var line strings.Builder
+
 				// Attribute documentation
 				if attr.Documentation != "" {
-					fmt.Fprintf(e.output, "  /** %s */\n", attr.Documentation)
+					line.WriteString(fmt.Sprintf("  /** %s */\n", attr.Documentation))
 				}
 
 				typeStr := formatAttributeType(attr.Type)
@@ -324,11 +332,31 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 					constraints.WriteString(fmt.Sprintf(" DEFAULT %s", defaultVal))
 				}
 
+				line.WriteString(fmt.Sprintf("  %s: %s%s", attr.Name, typeStr, constraints.String()))
+				attrLines = append(attrLines, attrLine{text: line.String()})
+			}
+
+			// Append system attributes as pseudo-typed entries
+			if entity.HasOwner {
+				attrLines = append(attrLines, attrLine{text: "  Owner: AutoOwner"})
+			}
+			if entity.HasChangedBy {
+				attrLines = append(attrLines, attrLine{text: "  ChangedBy: AutoChangedBy"})
+			}
+			if entity.HasCreatedDate {
+				attrLines = append(attrLines, attrLine{text: "  CreatedDate: AutoCreatedDate"})
+			}
+			if entity.HasChangedDate {
+				attrLines = append(attrLines, attrLine{text: "  ChangedDate: AutoChangedDate"})
+			}
+
+			// Output with commas
+			for i, al := range attrLines {
 				comma := ","
-				if i == len(entity.Attributes)-1 {
+				if i == len(attrLines)-1 {
 					comma = ""
 				}
-				fmt.Fprintf(e.output, "  %s: %s%s%s\n", attr.Name, typeStr, constraints.String(), comma)
+				fmt.Fprintf(e.output, "%s%s\n", al.text, comma)
 			}
 			fmt.Fprint(e.output, ")")
 
@@ -362,20 +390,6 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 				if len(cols) > 0 {
 					fmt.Fprintf(e.output, "\nINDEX (%s)", strings.Join(cols, ", "))
 				}
-			}
-
-			// Output system attribute flags as entity options (round-trippable)
-			if entity.HasOwner {
-				fmt.Fprint(e.output, "\nSTORE OWNER")
-			}
-			if entity.HasChangedBy {
-				fmt.Fprint(e.output, "\nSTORE CHANGED BY")
-			}
-			if entity.HasCreatedDate {
-				fmt.Fprint(e.output, "\nSTORE CREATED DATE")
-			}
-			if entity.HasChangedDate {
-				fmt.Fprint(e.output, "\nSTORE CHANGED DATE")
 			}
 
 			// Output event handlers

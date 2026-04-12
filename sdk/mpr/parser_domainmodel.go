@@ -156,25 +156,33 @@ func parseEntity(raw map[string]any) *domainmodel.Entity {
 			if genRef, ok := genMap["Generalization"].(string); ok {
 				entity.GeneralizationRef = genRef
 			}
-			// For NoGeneralization, system flags are stored inside the generalization object
+			// For NoGeneralization, system flags are stored inside the generalization object.
+			// Mendix < 11.9 uses HasOwner/HasChangedBy/HasChangedDate/HasCreatedDate.
+			// Mendix >= 11.9 uses HasOwnerAttr/HasChangedByAttr/HasChangedDateAttr/HasCreatedDateAttr.
 			if genType, ok := genMap["$Type"].(string); ok && genType == "DomainModels$NoGeneralization" {
 				if persistable, ok := genMap["Persistable"].(bool); ok {
 					entity.Persistable = persistable
 				}
-				if v, ok := genMap["HasOwner"].(bool); ok {
-					entity.HasOwner = v
-				}
-				if v, ok := genMap["HasChangedBy"].(bool); ok {
-					entity.HasChangedBy = v
-				}
-				if v, ok := genMap["HasChangedDate"].(bool); ok {
-					entity.HasChangedDate = v
-				}
-				if v, ok := genMap["HasCreatedDate"].(bool); ok {
-					entity.HasCreatedDate = v
-				}
+				entity.HasOwner = extractBool(genMap["HasOwner"], false) || extractBool(genMap["HasOwnerAttr"], false)
+				entity.HasChangedBy = extractBool(genMap["HasChangedBy"], false) || extractBool(genMap["HasChangedByAttr"], false)
+				entity.HasChangedDate = extractBool(genMap["HasChangedDate"], false) || extractBool(genMap["HasChangedDateAttr"], false)
+				entity.HasCreatedDate = extractBool(genMap["HasCreatedDate"], false) || extractBool(genMap["HasCreatedDateAttr"], false)
 			}
 		}
+	}
+
+	// Fallback: check both old and new field names at entity level
+	if extractBool(raw["HasOwner"], false) || extractBool(raw["HasOwnerAttr"], false) {
+		entity.HasOwner = true
+	}
+	if extractBool(raw["HasChangedBy"], false) || extractBool(raw["HasChangedByAttr"], false) {
+		entity.HasChangedBy = true
+	}
+	if extractBool(raw["HasChangedDate"], false) || extractBool(raw["HasChangedDateAttr"], false) {
+		entity.HasChangedDate = true
+	}
+	if extractBool(raw["HasCreatedDate"], false) || extractBool(raw["HasCreatedDateAttr"], false) {
+		entity.HasCreatedDate = true
 	}
 
 	// Parse attributes using extractBsonArray
