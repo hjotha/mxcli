@@ -114,6 +114,8 @@ func (e *Executor) execShow(s *ast.ShowStmt) error {
 		return e.showRestClients(s.InModule)
 	case ast.ShowPublishedRestServices:
 		return e.showPublishedRestServices(s.InModule)
+	case ast.ShowDataTransformers:
+		return e.listDataTransformers(s.InModule)
 	case ast.ShowContractEntities:
 		return e.showContractEntities(s.Name)
 	case ast.ShowContractActions:
@@ -198,6 +200,8 @@ func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
 			return e.describeRestClient(s.Name)
 		case ast.DescribePublishedRestService:
 			return e.describePublishedRestService(s.Name)
+		case ast.DescribeDataTransformer:
+			return e.describeDataTransformer(s.Name)
 		case ast.DescribeContractEntity:
 			return e.describeContractEntity(s.Name, s.Format)
 		case ast.DescribeContractAction:
@@ -273,6 +277,8 @@ func describeObjectTypeLabel(t ast.DescribeObjectType) string {
 		return "restclient"
 	case ast.DescribePublishedRestService:
 		return "publishedrestservice"
+	case ast.DescribeDataTransformer:
+		return "datatransformer"
 	case ast.DescribeContractEntity:
 		return "contractentity"
 	case ast.DescribeContractAction:

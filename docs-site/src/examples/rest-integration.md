@@ -298,3 +298,51 @@ CREATE OR REPLACE PUBLISHED REST SERVICE Module.OrderAPI (
 -- Remove entirely
 DROP PUBLISHED REST SERVICE Module.OrderAPI;
 ```
+
+## Data Transformers (JSLT)
+
+Data Transformers apply transformation steps (JSLT or XSLT) to JSON or XML payloads. Useful for reshaping API responses before import mapping, or normalising data from third-party sources. Requires Mendix 11.9+.
+
+```sql
+-- Create a transformer that extracts key fields from a weather API response.
+-- The SOURCE JSON defines a sample payload used for schema inference and testing.
+CREATE DATA TRANSFORMER Integration.WeatherTransform
+SOURCE JSON '{
+  "latitude": 51.9,
+  "longitude": 4.5,
+  "timezone": "Europe/Amsterdam",
+  "current": {
+    "time": "2024-01-15T14:00",
+    "temperature_2m": 12.8,
+    "wind_speed_10m": 18.3,
+    "weather_code": 3
+  }
+}'
+{
+  JSLT $$
+{
+  "lat":        .latitude,
+  "lon":        .longitude,
+  "timezone":   .timezone,
+  "temp":       .current.temperature_2m,
+  "wind_speed": .current.wind_speed_10m,
+  "code":       .current.weather_code
+}
+  $$;
+};
+
+-- List all data transformers in the Integration module
+LIST DATA TRANSFORMERS IN Integration;
+
+-- Inspect a transformer (outputs a re-executable CREATE statement)
+DESCRIBE DATA TRANSFORMER Integration.WeatherTransform;
+
+-- Remove a transformer
+DROP DATA TRANSFORMER Integration.WeatherTransform;
+```
+
+**Notes:**
+- Steps execute in order; the output of each step feeds the next.
+- `JSLT '...'` for short single-line expressions; `JSLT $$ ... $$` for multi-line.
+- `XSLT $$ ... $$` is also supported for XML-to-XML transformations.
+- Requires Mendix 11.9+. Use `SHOW FEATURES` to confirm support before using.

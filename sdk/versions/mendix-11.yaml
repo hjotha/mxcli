@@ -118,6 +118,9 @@ features:
     published_rest_alter:
       min_version: "10.0.0"
       mdl: "ALTER PUBLISHED REST SERVICE Module.Name ..."
+    data_transformer:
+      min_version: "11.9.0"
+      mdl: "CREATE DATA TRANSFORMER Module.Name SOURCE JSON '...' { JSLT '...'; }"
     database_connector_basic:
       min_version: "10.6.0"
       mdl: "CREATE DATABASE CONNECTION Module.Name ..."

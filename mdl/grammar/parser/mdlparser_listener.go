@@ -1225,6 +1225,12 @@ type MDLParserListener interface {
 	// EnterExpressionList is called when entering the expressionList production.
 	EnterExpressionList(c *ExpressionListContext)
 
+	// EnterCreateDataTransformerStatement is called when entering the createDataTransformerStatement production.
+	EnterCreateDataTransformerStatement(c *CreateDataTransformerStatementContext)
+
+	// EnterDataTransformerStep is called when entering the dataTransformerStep production.
+	EnterDataTransformerStep(c *DataTransformerStepContext)
+
 	// EnterQualifiedName is called when entering the qualifiedName production.
 	EnterQualifiedName(c *QualifiedNameContext)
 
@@ -2478,6 +2484,12 @@ type MDLParserListener interface {
 
 	// ExitExpressionList is called when exiting the expressionList production.
 	ExitExpressionList(c *ExpressionListContext)
+
+	// ExitCreateDataTransformerStatement is called when exiting the createDataTransformerStatement production.
+	ExitCreateDataTransformerStatement(c *CreateDataTransformerStatementContext)
+
+	// ExitDataTransformerStep is called when exiting the dataTransformerStep production.
+	ExitDataTransformerStep(c *DataTransformerStepContext)
 
 	// ExitQualifiedName is called when exiting the qualifiedName production.
 	ExitQualifiedName(c *QualifiedNameContext)

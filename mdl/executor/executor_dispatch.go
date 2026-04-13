@@ -215,6 +215,12 @@ func (e *Executor) executeInner(stmt ast.Statement) error {
 	case *ast.RevokePublishedRestServiceAccessStmt:
 		return e.execRevokePublishedRestServiceAccess(s)
 
+	// Data transformer statements
+	case *ast.CreateDataTransformerStmt:
+		return e.execCreateDataTransformer(s)
+	case *ast.DropDataTransformerStmt:
+		return e.execDropDataTransformer(s)
+
 	// Query statements
 	case *ast.ShowStmt:
 		return e.execShow(s)

@@ -691,6 +691,33 @@ type RestClientHeader struct {
 }
 
 // ============================================================================
+// Data Transformers (Mendix 11.9+)
+// ============================================================================
+
+// DataTransformer represents a DataTransformers$DataTransformer document.
+type DataTransformer struct {
+	BaseElement
+	ContainerID ID                     `json:"containerId"`
+	Name        string                 `json:"name"`
+	SourceType  string                 `json:"sourceType,omitempty"` // "JSON", "XML"
+	SourceJSON  string                 `json:"sourceJson,omitempty"` // source content
+	Steps       []*DataTransformerStep `json:"steps,omitempty"`
+	Excluded    bool                   `json:"excluded,omitempty"`
+}
+
+// GetName returns the transformer's name.
+func (t *DataTransformer) GetName() string { return t.Name }
+
+// GetContainerID returns the ID of the containing element.
+func (t *DataTransformer) GetContainerID() ID { return t.ContainerID }
+
+// DataTransformerStep represents a single transformation step.
+type DataTransformerStep struct {
+	Technology string `json:"technology"` // "JSLT", "XSLT"
+	Expression string `json:"expression"` // the transformation expression
+}
+
+// ============================================================================
 // Project Settings
 // ============================================================================
 

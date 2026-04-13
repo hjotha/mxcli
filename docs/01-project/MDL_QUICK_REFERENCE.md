@@ -527,6 +527,30 @@ CREATE PUBLISHED REST SERVICE Module.MyAPI (
 **Path parameters:** Must match a microflow parameter exactly (case-sensitive). E.g., `'{id}'` requires the microflow to have parameter `$id`.
 **Operation modifiers:** `DEPRECATED`, `IMPORT MAPPING Module.Name`, `EXPORT MAPPING Module.Name`, `COMMIT Yes|No`
 
+## Data Transformers
+
+Requires Mendix 11.9+. Steps: `JSLT`, `XSLT`. Single-line: `JSLT '...'`. Multi-line: `JSLT $$ ... $$`.
+
+| Statement | Syntax | Notes |
+|-----------|--------|-------|
+| List transformers | `LIST DATA TRANSFORMERS [IN Module];` | |
+| Describe transformer | `DESCRIBE DATA TRANSFORMER Module.Name;` | Re-executable CREATE |
+| Create transformer | See syntax below | |
+| Drop transformer | `DROP DATA TRANSFORMER Module.Name;` | |
+
+```sql
+CREATE DATA TRANSFORMER Module.WeatherTransform
+SOURCE JSON '{"latitude": 51.9, "current": {"temp": 12.8}}'
+{
+  JSLT $$
+{
+  "lat": .latitude,
+  "temp": .current.temp
+}
+  $$;
+};
+```
+
 ## JSON Structures
 
 | Statement | Syntax | Notes |

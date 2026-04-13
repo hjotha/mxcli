@@ -478,6 +478,17 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			}
 		}
 		b.statements = append(b.statements, stmt)
+	} else if ctx.DATA() != nil && ctx.TRANSFORMERS() != nil {
+		// LIST DATA TRANSFORMERS [IN module]
+		stmt := &ast.ShowStmt{ObjectType: ast.ShowDataTransformers}
+		if ctx.IN() != nil {
+			if qn := ctx.QualifiedName(); qn != nil {
+				stmt.InModule = getQualifiedNameText(qn)
+			} else if id := ctx.IDENTIFIER(); id != nil {
+				stmt.InModule = id.GetText()
+			}
+		}
+		b.statements = append(b.statements, stmt)
 	} else if ctx.REST() != nil && ctx.CLIENTS() != nil {
 		// SHOW REST CLIENTS [IN module]
 		stmt := &ast.ShowStmt{ObjectType: ast.ShowRestClients}
@@ -873,6 +884,11 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 	} else if ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICE() != nil {
 		b.statements = append(b.statements, &ast.DescribeStmt{
 			ObjectType: ast.DescribePublishedRestService,
+			Name:       name,
+		})
+	} else if ctx.DATA() != nil && ctx.TRANSFORMER() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeDataTransformer,
 			Name:       name,
 		})
 	} else if ctx.JSON() != nil && ctx.STRUCTURE() != nil {

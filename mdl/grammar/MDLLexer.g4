@@ -651,8 +651,12 @@ CONDITION: C O N D I T I O N;
 OFF: O F F;
 USERS: U S E R S;
 
-// Workflow microflow action tokens
+// Data transformer tokens
 DATA: D A T A;
+TRANSFORMER: T R A N S F O R M E R;
+TRANSFORMERS: T R A N S F O R M E R S;
+JSLT: J S L T;
+XSLT: X S L T;
 RECORDS: R E C O R D S;
 NOTIFY: N O T I F Y;
 PAUSE: P A U S E;

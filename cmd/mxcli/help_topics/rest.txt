@@ -162,3 +162,34 @@ CATALOG QUERIES
   -- Published API surface area
   SELECT ServiceQualifiedName, ResourceName, HttpMethod, Path, Microflow
   FROM CATALOG.PUBLISHED_REST_OPERATIONS;
+
+DATA TRANSFORMERS
+-----------------
+
+  LIST DATA TRANSFORMERS;                           -- List all transformers
+  LIST DATA TRANSFORMERS IN MyModule;               -- Filter by module
+  DESCRIBE DATA TRANSFORMER MyModule.WeatherTransform; -- Re-executable CREATE
+
+  -- Single-line JSLT step
+  CREATE DATA TRANSFORMER MyModule.Flatten
+  SOURCE JSON '{"a": {"b": 1}}'
+  {
+    JSLT '{"value": .a.b}';
+  };
+
+  -- Multi-line JSLT step using $$ quoting
+  CREATE DATA TRANSFORMER MyModule.WeatherTransform
+  SOURCE JSON '{"latitude": 51.9, "current": {"temp": 12.8}}'
+  {
+    JSLT $$
+  {
+    "lat": .latitude,
+    "temp": .current.temp
+  }
+    $$;
+  };
+
+  DROP DATA TRANSFORMER MyModule.WeatherTransform;  -- Delete transformer
+
+  Requires Mendix 11.9+. Steps: JSLT, XSLT.
+  Single-line: JSLT '...'. Multi-line: JSLT $$ ... $$.

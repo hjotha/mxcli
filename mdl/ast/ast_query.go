@@ -79,6 +79,7 @@ const (
 	ShowImageCollections      // SHOW IMAGE COLLECTIONS [IN module]
 	ShowRestClients           // SHOW REST CLIENTS [IN module]
 	ShowPublishedRestServices // SHOW PUBLISHED REST SERVICES [IN module]
+	ShowDataTransformers     // LIST DATA TRANSFORMERS [IN module]
 	ShowConstantValues        // SHOW CONSTANT VALUES [IN module]
 	ShowContractEntities      // SHOW CONTRACT ENTITIES FROM Module.Service
 	ShowContractActions       // SHOW CONTRACT ACTIONS FROM Module.Service
@@ -193,6 +194,8 @@ func (t ShowObjectType) String() string {
 		return "REST CLIENTS"
 	case ShowPublishedRestServices:
 		return "PUBLISHED REST SERVICES"
+	case ShowDataTransformers:
+		return "DATA TRANSFORMERS"
 	case ShowConstantValues:
 		return "CONSTANT VALUES"
 	case ShowContractEntities:
@@ -280,6 +283,7 @@ const (
 	DescribeImageCollection      // DESCRIBE IMAGE COLLECTION Module.Name
 	DescribeRestClient           // DESCRIBE REST CLIENT Module.Name
 	DescribePublishedRestService // DESCRIBE PUBLISHED REST SERVICE Module.Name
+	DescribeDataTransformer      // DESCRIBE DATA TRANSFORMER Module.Name
 	DescribeContractEntity       // DESCRIBE CONTRACT ENTITY Service.EntityName [FORMAT mdl]
 	DescribeContractAction       // DESCRIBE CONTRACT ACTION Service.ActionName [FORMAT mdl]
 	DescribeContractMessage      // DESCRIBE CONTRACT MESSAGE Service.MessageName
@@ -344,6 +348,8 @@ func (t DescribeObjectType) String() string {
 		return "REST CLIENT"
 	case DescribePublishedRestService:
 		return "PUBLISHED REST SERVICE"
+	case DescribeDataTransformer:
+		return "DATA TRANSFORMER"
 	case DescribeContractEntity:
 		return "CONTRACT ENTITY"
 	case DescribeContractAction:

@@ -590,6 +590,25 @@ func (r *Reader) ListPublishedRestServices() ([]*model.PublishedRestService, err
 	return result, nil
 }
 
+// ListDataTransformers returns all data transformers in the project.
+func (r *Reader) ListDataTransformers() ([]*model.DataTransformer, error) {
+	units, err := r.listUnitsByType("DataTransformers$DataTransformer")
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*model.DataTransformer
+	for _, u := range units {
+		dt, err := r.parseDataTransformer(u.ID, u.ContainerID, u.Contents)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse data transformer %s: %w", u.ID, err)
+		}
+		result = append(result, dt)
+	}
+
+	return result, nil
+}
+
 // ListConsumedRestServices returns all consumed REST services in the project.
 func (r *Reader) ListConsumedRestServices() ([]*model.ConsumedRestService, error) {
 	units, err := r.listUnitsByType("Rest$ConsumedRestService")
