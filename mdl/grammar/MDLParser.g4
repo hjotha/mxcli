@@ -611,8 +611,7 @@ attributeDefinition
 attributeName
     : IDENTIFIER
     | QUOTED_IDENTIFIER                     // Escape any reserved word ("Range", `Order`)
-    | commonNameKeyword
-    | ATTRIBUTE                             // Allow 'Attribute' as attribute name
+    | keyword
     ;
 
 attributeConstraint
@@ -724,7 +723,7 @@ indexAttribute
 indexColumnName
     : IDENTIFIER
     | QUOTED_IDENTIFIER                     // Escape any reserved word
-    | commonNameKeyword
+    | keyword
     ;
 
 createAssociationStatement
@@ -835,15 +834,12 @@ enumerationValue
     : docComment? enumValueName (CAPTION? STRING_LITERAL)?
     ;
 
-// Allow reserved keywords as enumeration value names
+// Allow reserved keywords as enumeration value names.
+// Uses the full `keyword` rule so any lexer token can appear as an enum value name.
 enumValueName
     : IDENTIFIER
     | QUOTED_IDENTIFIER                                      // Escape any reserved word
-    | commonNameKeyword
-    | SERVICE | SERVICES                                     // OData/auth keywords used as enum values
-    | GUEST | SESSION | BASIC | CLIENT | CLIENTS
-    | PUBLISH | EXPOSE | EXTERNAL | PAGING | HEADERS
-    | DISPLAY | STRUCTURE                                    // Layout/structure keywords used as enum values
+    | keyword
     ;
 
 enumerationOptions
@@ -882,7 +878,7 @@ imageCollectionItem
 imageName
     : IDENTIFIER
     | QUOTED_IDENTIFIER
-    | commonNameKeyword
+    | keyword
     ;
 
 // =============================================================================
@@ -1139,7 +1135,7 @@ microflowParameter
 parameterName
     : IDENTIFIER
     | QUOTED_IDENTIFIER                            // Escape any reserved word
-    | commonNameKeyword
+    | keyword
     ;
 
 microflowReturnType
@@ -1778,7 +1774,7 @@ memberAttributeName
     : qualifiedName
     | IDENTIFIER
     | QUOTED_IDENTIFIER                     // Escape any reserved word
-    | commonNameKeyword
+    | keyword
     ;
 
 // Legacy changeList for backwards compatibility
@@ -3126,7 +3122,7 @@ selectItem
 // Allow keywords as aliases in SELECT
 selectAlias
     : IDENTIFIER
-    | commonNameKeyword
+    | keyword
     ;
 
 fromClause
@@ -3559,33 +3555,8 @@ annotationValue
     | qualifiedName
     ;
 
-/**
- * Keywords commonly used as attribute, parameter, enum value, and column names.
- * Excludes DDL keywords (CREATE, ALTER, DROP, ENTITY, etc.) and flow control
- * keywords (BEGIN, END, IF, RETURN, etc.) that would cause parser ambiguity
- * when used in entity/microflow body contexts.
- */
-commonNameKeyword
-    : STATUS | TYPE | VALUE | INDEX                          // Common data keywords
-    | USERNAME | PASSWORD                                    // User-related keywords
-    | COUNT | SUM | AVG | MIN | MAX                          // Aggregate function names
-    | ACTION | MESSAGE                                       // Common entity attribute names
-    | OWNER | REFERENCE | CASCADE                            // Association keywords
-    | SUCCESS | ERROR | WARNING | INFO | DEBUG | CRITICAL    // Log/status keywords
-    | DESCRIPTION | ROLE | LEVEL | ACCESS | USER             // Security keywords
-    | CAPTION | CONTENT | LABEL | TITLE | TEXT               // Display/UI keywords
-    | FORMAT | RANGE | SOURCE_KW | CHECK                     // Validation/data keywords
-    | FOLDER | NAVIGATION | HOME | VERSION | PRODUCTION      // Structure/config keywords
-    | SELECTION | EDITABLE | VISIBLE | DATASOURCE            // Widget property keywords
-    | TABLETWIDTH | PHONEWIDTH                               // Responsive width keywords
-    | WIDTH | HEIGHT | STYLE | CLASS                         // Styling keywords
-    | BOTH | SINGLE | MULTIPLE | NONE                        // Cardinality keywords
-    | PROTOTYPE | OFF                                        // Security level keywords
-    | STORAGE | TABLE                                         // Association storage keywords
-    | URL | POSITION | SORT                                    // Common attribute names
-    ;
-
-/** Keywords that can be used as identifiers in certain contexts (module/entity names via qualifiedName).
+/** Keywords that can be used as identifiers in certain contexts (module/entity names via qualifiedName,
+ *  attribute names, enum values, parameter names, etc.).
  *  Every word-type lexer token must appear here so that user-defined names (entity, attribute,
  *  enum value, module) that happen to match a keyword can still be parsed.
  *  Maintain alphabetical order within each group for easy auditing.
@@ -3707,7 +3678,7 @@ keyword
     | UNLOCK | UNPAUSE | WAIT | WORKFLOW | WORKFLOWS
 
     // Business events / settings
-    | BUSINESS | CONFIGURATION | EVENT | EVENTS | SETTINGS | SUBSCRIBE
+    | BUSINESS | CONFIGURATION | EVENT | EVENTS | HANDLER | SETTINGS | SUBSCRIBE
 
     // Code search / analysis
     | BACKGROUND | CALLERS | CALLEES | DEPTH | IMPACT | REFERENCES

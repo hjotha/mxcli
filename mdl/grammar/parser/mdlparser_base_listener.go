@@ -2622,12 +2622,6 @@ func (s *BaseMDLParserListener) EnterAnnotationValue(ctx *AnnotationValueContext
 // ExitAnnotationValue is called when production annotationValue is exited.
 func (s *BaseMDLParserListener) ExitAnnotationValue(ctx *AnnotationValueContext) {}
 
-// EnterCommonNameKeyword is called when production commonNameKeyword is entered.
-func (s *BaseMDLParserListener) EnterCommonNameKeyword(ctx *CommonNameKeywordContext) {}
-
-// ExitCommonNameKeyword is called when production commonNameKeyword is exited.
-func (s *BaseMDLParserListener) ExitCommonNameKeyword(ctx *CommonNameKeywordContext) {}
-
 // EnterKeyword is called when production keyword is entered.
 func (s *BaseMDLParserListener) EnterKeyword(ctx *KeywordContext) {}
 

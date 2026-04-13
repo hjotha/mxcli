@@ -1,0 +1,117 @@
+-- ============================================================================
+-- Keyword-as-Identifier Regression Tests
+-- ============================================================================
+--
+-- Verifies that lexer keyword tokens can be used as identifiers (entity names,
+-- attribute names, enum values) via the parser's `keyword` rule.
+--
+-- Regression test for PR #186 (168 missing tokens) and PR #174 (OPEN fix).
+-- See: https://github.com/mendixlabs/mxcli/pull/186
+--
+-- Usage:
+--   mxcli check mdl-examples/doctype-tests/keyword-as-identifier.mdl
+--
+-- ============================================================================
+
+CREATE MODULE KeywordTest;
+
+-- MARK: Enum values that are lexer keywords
+
+CREATE ENUMERATION KeywordTest.IssueStatus (
+  Open,
+  Closed,
+  Data,
+  Filter,
+  Match,
+  Empty,
+  Container,
+  Node
+);
+
+CREATE ENUMERATION KeywordTest.HttpMethod (
+  Get,
+  Post,
+  Put,
+  Delete,
+  Patch
+);
+
+CREATE ENUMERATION KeywordTest.ActivityKind (
+  Activity,
+  Condition,
+  Loop,
+  Start,
+  End,
+  Split,
+  Join,
+  Merge
+);
+
+CREATE ENUMERATION KeywordTest.LayoutKind (
+  Layout,
+  Header,
+  Footer,
+  Body,
+  Content,
+  Title,
+  Text,
+  Image
+);
+
+CREATE ENUMERATION KeywordTest.MiscKeywords (
+  Action,
+  Source,
+  Target,
+  Owner,
+  Type,
+  Name,
+  Value,
+  Result,
+  Object,
+  Index,
+  Input,
+  Output,
+  Sort,
+  Order,
+  Commit,
+  Close,
+  Refresh,
+  Rollback
+);
+
+-- MARK: Entity names and attributes that are keywords
+
+CREATE ENTITY KeywordTest.Data (
+  Filter     : String(200),
+  Match      : String(200),
+  Container  : String(200),
+  Source     : String(200),
+  Target     : String(200),
+  Action     : String(200),
+  Value      : String(200),
+  Status     : String(200)
+);
+
+CREATE ENTITY KeywordTest.Activity (
+  Name       : String(200),
+  Type       : String(200),
+  Result     : String(200)
+);
+
+-- MARK: Microflow using keyword-named enum values in CREATE
+
+CREATE OR REPLACE MICROFLOW KeywordTest.TestKeywordEnumValues ()
+RETURNS Nothing
+BEGIN
+  $Issue = CREATE KeywordTest.Data (
+    Filter = 'test',
+    Match  = 'test',
+    Status = 'active'
+  );
+
+  $Activity = CREATE KeywordTest.Activity (
+    Name   = 'test',
+    Type   = 'task',
+    Result = 'ok'
+  );
+END;
