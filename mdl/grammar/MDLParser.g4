@@ -3483,7 +3483,7 @@ linkMapping
     ;
 
 helpStatement
-    : IDENTIFIER  // HELP command
+    : IDENTIFIER (identifierOrKeyword)*  // HELP [topic words...]
     ;
 
 /**

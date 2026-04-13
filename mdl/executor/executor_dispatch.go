@@ -33,3 +33,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		executor:      e,
 	}
 }
+
+// Ensure ast import is used via executeInner's stmt parameter.
+var _ ast.Statement = (*ast.HelpStmt)(nil)
