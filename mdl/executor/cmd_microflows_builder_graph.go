@@ -185,6 +185,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addImportFromMappingAction(s)
 	case *ast.ExportToMappingStmt:
 		return fb.addExportToMappingAction(s)
+	case *ast.TransformJsonStmt:
+		return fb.addTransformJsonAction(s)
 	// Workflow microflow actions
 	case *ast.CallWorkflowStmt:
 		return fb.addCallWorkflowAction(s)

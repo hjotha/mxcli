@@ -261,6 +261,29 @@ func buildExportToMappingStatement(ctx antlr.ParserRuleContext) ast.MicroflowSta
 	return stmt
 }
 
+// buildTransformJsonStatement builds a TransformJsonStmt from the grammar context.
+// Grammar: (VARIABLE EQUALS)? TRANSFORM VARIABLE WITH qualifiedName onErrorClause?
+func buildTransformJsonStatement(ctx antlr.ParserRuleContext) ast.MicroflowStatement {
+	c := ctx.(*parser.TransformJsonStatementContext)
+	stmt := &ast.TransformJsonStmt{
+		Transformation: buildQualifiedName(c.QualifiedName()),
+	}
+
+	vars := c.AllVARIABLE()
+	if c.EQUALS() != nil && len(vars) >= 2 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+		stmt.InputVariable = strings.TrimPrefix(vars[1].GetText(), "$")
+	} else if len(vars) >= 1 {
+		stmt.InputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+	}
+
+	if ec := c.OnErrorClause(); ec != nil {
+		stmt.ErrorHandling = buildOnErrorClause(ec)
+	}
+
+	return stmt
+}
+
 // extractObjectHandling extracts the handling mode from the grammar context.
 func extractObjectHandling(ctx *parser.ImportMappingObjectHandlingContext) string {
 	if ctx.FIND() != nil && ctx.OR() != nil {

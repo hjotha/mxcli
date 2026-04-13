@@ -836,6 +836,18 @@ type ExportXmlAction struct {
 
 func (ExportXmlAction) isMicroflowAction() {}
 
+// TransformJsonAction applies a data transformer (JSLT/XSLT) to a JSON string.
+// BSON type: Microflows$TransformJsonAction
+type TransformJsonAction struct {
+	model.BaseElement
+	ErrorHandlingType  ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	InputVariableName  string            `json:"inputVariableName"`  // source JSON string variable (without $)
+	OutputVariableName string            `json:"outputVariableName"` // result JSON string variable (without $)
+	Transformation     string            `json:"transformation"`     // qualified name of DataTransformer
+}
+
+func (TransformJsonAction) isMicroflowAction() {}
+
 // UnknownAction represents an action type that is not yet implemented.
 // It stores the type name for debugging purposes.
 type UnknownAction struct {

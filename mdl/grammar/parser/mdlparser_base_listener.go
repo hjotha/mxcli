@@ -1206,6 +1206,12 @@ func (s *BaseMDLParserListener) EnterExportToMappingStatement(ctx *ExportToMappi
 // ExitExportToMappingStatement is called when production exportToMappingStatement is exited.
 func (s *BaseMDLParserListener) ExitExportToMappingStatement(ctx *ExportToMappingStatementContext) {}
 
+// EnterTransformJsonStatement is called when production transformJsonStatement is entered.
+func (s *BaseMDLParserListener) EnterTransformJsonStatement(ctx *TransformJsonStatementContext) {}
+
+// ExitTransformJsonStatement is called when production transformJsonStatement is exited.
+func (s *BaseMDLParserListener) ExitTransformJsonStatement(ctx *TransformJsonStatementContext) {}
+
 // EnterListOperationStatement is called when production listOperationStatement is entered.
 func (s *BaseMDLParserListener) EnterListOperationStatement(ctx *ListOperationStatementContext) {}
 

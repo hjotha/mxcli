@@ -1193,6 +1193,7 @@ microflowStatement
     | annotation* sendRestRequestStatement SEMICOLON?
     | annotation* importFromMappingStatement SEMICOLON?
     | annotation* exportToMappingStatement SEMICOLON?
+    | annotation* transformJsonStatement SEMICOLON?
     | annotation* callWorkflowStatement SEMICOLON?
     | annotation* getWorkflowDataStatement SEMICOLON?
     | annotation* getWorkflowsStatement SEMICOLON?
@@ -1616,6 +1617,14 @@ importFromMappingStatement
  */
 exportToMappingStatement
     : (VARIABLE EQUALS)? EXPORT TO MAPPING qualifiedName LPAREN VARIABLE RPAREN
+      onErrorClause?
+    ;
+
+/**
+ * Transform JSON: $Result = TRANSFORM $Input WITH Module.Transformer;
+ */
+transformJsonStatement
+    : (VARIABLE EQUALS)? TRANSFORM VARIABLE WITH qualifiedName
       onErrorClause?
     ;
 
@@ -3755,7 +3764,7 @@ keyword
     | SINGLE | SQL | TEMPLATE | TEXT | TYPE | VALUE
 
     // Data transformers
-    | TRANSFORMER | TRANSFORMERS | JSLT | XSLT
+    | TRANSFORM | TRANSFORMER | TRANSFORMERS | JSLT | XSLT
 
     // Import/Export mapping / SQL generate
     | ATTRIBUTE_NAME | CONNECTOR | MEMBERS | OVER | JAVA | XPATH

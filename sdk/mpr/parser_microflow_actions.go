@@ -592,6 +592,16 @@ func parseImportXmlAction(raw map[string]any) *microflows.ImportXmlAction {
 	return action
 }
 
+func parseTransformJsonAction(raw map[string]any) *microflows.TransformJsonAction {
+	action := &microflows.TransformJsonAction{}
+	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	action.InputVariableName = extractString(raw["InputVariableName"])
+	action.OutputVariableName = extractString(raw["OutputVariableName"])
+	action.Transformation = extractString(raw["Transformation"])
+	return action
+}
+
 func parseExportXmlAction(raw map[string]any) *microflows.ExportXmlAction {
 	action := &microflows.ExportXmlAction{}
 	action.ID = model.ID(extractBsonID(raw["$ID"]))

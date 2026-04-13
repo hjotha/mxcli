@@ -653,6 +653,7 @@ USERS: U S E R S;
 
 // Data transformer tokens
 DATA: D A T A;
+TRANSFORM: T R A N S F O R M;
 TRANSFORMER: T R A N S F O R M E R;
 TRANSFORMERS: T R A N S F O R M E R S;
 JSLT: J S L T;

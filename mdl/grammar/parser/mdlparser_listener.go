@@ -568,6 +568,9 @@ type MDLParserListener interface {
 	// EnterExportToMappingStatement is called when entering the exportToMappingStatement production.
 	EnterExportToMappingStatement(c *ExportToMappingStatementContext)
 
+	// EnterTransformJsonStatement is called when entering the transformJsonStatement production.
+	EnterTransformJsonStatement(c *TransformJsonStatementContext)
+
 	// EnterListOperationStatement is called when entering the listOperationStatement production.
 	EnterListOperationStatement(c *ListOperationStatementContext)
 
@@ -1827,6 +1830,9 @@ type MDLParserListener interface {
 
 	// ExitExportToMappingStatement is called when exiting the exportToMappingStatement production.
 	ExitExportToMappingStatement(c *ExportToMappingStatementContext)
+
+	// ExitTransformJsonStatement is called when exiting the transformJsonStatement production.
+	ExitTransformJsonStatement(c *TransformJsonStatementContext)
 
 	// ExitListOperationStatement is called when exiting the listOperationStatement production.
 	ExitListOperationStatement(c *ListOperationStatementContext)

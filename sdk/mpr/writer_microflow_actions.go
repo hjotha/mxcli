@@ -434,6 +434,9 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 	case *microflows.ExportXmlAction:
 		return serializeExportXmlAction(a)
 
+	case *microflows.TransformJsonAction:
+		return serializeTransformJsonAction(a)
+
 	// Workflow actions
 	case *microflows.WorkflowCallAction:
 		return serializeWorkflowCallAction(a)
@@ -1161,6 +1164,17 @@ func serializeImportXmlAction(a *microflows.ImportXmlAction) bson.D {
 		{Key: "IsValidationRequired", Value: a.IsValidationRequired},
 		{Key: "ResultHandling", Value: resultHandling},
 		{Key: "XmlDocumentVariableName", Value: a.XmlDocumentVariable},
+	}
+}
+
+func serializeTransformJsonAction(a *microflows.TransformJsonAction) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+		{Key: "$Type", Value: "Microflows$TransformJsonAction"},
+		{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+		{Key: "InputVariableName", Value: a.InputVariableName},
+		{Key: "OutputVariableName", Value: a.OutputVariableName},
+		{Key: "Transformation", Value: a.Transformation},
 	}
 }
 

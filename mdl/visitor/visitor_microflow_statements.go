@@ -109,6 +109,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildImportFromMappingStatement(importMapping)
 	} else if exportMapping := mfCtx.ExportToMappingStatement(); exportMapping != nil {
 		stmt = buildExportToMappingStatement(exportMapping)
+	} else if transformJson := mfCtx.TransformJsonStatement(); transformJson != nil {
+		stmt = buildTransformJsonStatement(transformJson)
 	} else if callWf := mfCtx.CallWorkflowStatement(); callWf != nil {
 		stmt = buildCallWorkflowStatement(callWf)
 	} else if getWfData := mfCtx.GetWorkflowDataStatement(); getWfData != nil {

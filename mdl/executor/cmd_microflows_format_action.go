@@ -604,6 +604,9 @@ func (e *Executor) formatAction(
 	case *microflows.ExportXmlAction:
 		return e.formatExportXmlAction(a)
 
+	case *microflows.TransformJsonAction:
+		return formatTransformJsonAction(a)
+
 	// Workflow microflow actions
 	case *microflows.GetWorkflowDataAction:
 		if a.OutputVariableName != "" {
@@ -1042,5 +1045,22 @@ func (e *Executor) formatExportXmlAction(a *microflows.ExportXmlAction) string {
 	}
 	sb.WriteString(";")
 
+	return sb.String()
+}
+
+// formatTransformJsonAction formats a TRANSFORM JSON action as MDL.
+// Syntax: $Result = TRANSFORM $Input WITH Module.Transformer;
+func formatTransformJsonAction(a *microflows.TransformJsonAction) string {
+	var sb strings.Builder
+	if a.OutputVariableName != "" {
+		sb.WriteString("$")
+		sb.WriteString(a.OutputVariableName)
+		sb.WriteString(" = ")
+	}
+	sb.WriteString("TRANSFORM $")
+	sb.WriteString(a.InputVariableName)
+	sb.WriteString(" WITH ")
+	sb.WriteString(a.Transformation)
+	sb.WriteString(";")
 	return sb.String()
 }

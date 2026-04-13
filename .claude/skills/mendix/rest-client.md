@@ -1,228 +1,332 @@
-# REST Client Skill
+# REST Integration Skill
 
-Use this skill when creating, modifying, or calling Consumed REST Clients in MDL.
+Use this skill when integrating with external REST APIs from Mendix.
 
-## When to Use
+## Two Approaches
 
-- Creating consumed REST service definitions (`CREATE REST CLIENT`)
-- Calling REST service operations from microflows (`SEND REST REQUEST`)
-- Listing or inspecting REST clients (`SHOW REST CLIENTS`, `DESCRIBE REST CLIENT`)
+Mendix offers two ways to call REST APIs from microflows. Choose based on the use case:
 
-## JSON Structures
+| Approach | When to Use | Artifacts |
+|----------|-------------|-----------|
+| **REST Client + SEND REST REQUEST** | Structured APIs with multiple operations, reusable across microflows, Studio Pro UI support | REST client document + microflow |
+| **REST CALL (inline)** | One-off calls, quick prototyping, dynamic URLs, low-level HTTP control | Microflow only |
 
-Define JSON structures from a sample snippet before creating import/export mappings.
+Both can be combined with **Data Transformers** (Mendix 11.9+) and **Import/Export Mappings** to map between JSON and entities.
 
-```sql
-CREATE JSON STRUCTURE Module.Name SNIPPET '{"id": 1, "name": "John"}';
+---
 
--- Multi-line (use $$ quoting)
-CREATE JSON STRUCTURE Module.Name SNIPPET $${ "id": 1, "items": [{"name": "A"}] }$$;
+## Approach 1: REST Client (Recommended)
 
--- With documentation
-CREATE JSON STRUCTURE Module.Name COMMENT 'API response' SNIPPET '...';
+Define the API once as a REST client document, then call its operations from microflows.
 
--- Custom name mapping for non-English keys
-CREATE JSON STRUCTURE Module.Name SNIPPET $${"kvkNummer": "123"}$$
-CUSTOM NAME MAP ('kvkNummer' AS 'ChamberOfCommerceNumber');
-
--- Idempotent update
-CREATE OR REPLACE JSON STRUCTURE Module.Name SNIPPET '...';
-
--- Browse and delete
-SHOW JSON STRUCTURES;
-DESCRIBE JSON STRUCTURE Module.Name;
-DROP JSON STRUCTURE Module.Name;
-```
-
-Type inference: ISO 8601 strings → DateTime, integers → Integer, decimals → Decimal, booleans → Boolean. Snippet is auto-formatted when stored.
-
-## CREATE REST CLIENT
+### Step 1 — Create the REST Client
 
 ```sql
-CREATE REST CLIENT Module.ClientName
-BASE URL 'https://api.example.com'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION GetData
-    METHOD GET
-    PATH '/data'
-    HEADER 'Accept' = 'application/json'
-    RESPONSE NONE;
-END;
+CREATE REST CLIENT Module.OpenMeteoAPI (
+  BaseUrl: 'https://api.open-meteo.com/v1',
+  Authentication: NONE
+)
+{
+  OPERATION GetForecast {
+    Method: GET,
+    Path: '/forecast',
+    Query: ($latitude: Decimal, $longitude: Decimal, $current: String),
+    Headers: ('Accept' = 'application/json'),
+    Timeout: 30,
+    Response: JSON AS $WeatherJson
+  }
+
+  OPERATION PostData {
+    Method: POST,
+    Path: '/submit',
+    Headers: ('Content-Type' = 'application/json'),
+    Body: JSON FROM $JsonPayload,
+    Response: NONE
+  }
+};
 ```
 
 ### Authentication
 
 ```sql
 -- No authentication
-AUTHENTICATION NONE
+Authentication: NONE
 
--- Basic auth with literal credentials
-AUTHENTICATION BASIC (USERNAME = 'user', PASSWORD = 'secret')
+-- Basic auth
+Authentication: BASIC (Username: 'user', Password: 'secret')
 ```
 
-**IMPORTANT**: `$Variable` references in authentication (e.g., `USERNAME = $MyConstant`) are serialized as `Rest$ConstantValue` and require the constant to exist in the project. Use literal strings in examples to avoid CE7073.
-
-### Operations
-
-Each operation defines one HTTP endpoint call:
+### Body Types
 
 ```sql
-OPERATION OperationName
-    METHOD GET|POST|PUT|PATCH|DELETE
-    PATH '/path/{paramName}'
-    [PARAMETER $paramName: Type]       -- Path parameters
-    [QUERY $queryParam: Type]          -- Query parameters
-    [HEADER 'Name' = 'value']          -- HTTP headers
-    [BODY JSON FROM $Variable]         -- Request body (POST/PUT/PATCH)
-    [BODY FILE FROM $Variable]         -- File upload
-    [TIMEOUT seconds]                  -- Default: 300
-    RESPONSE NONE|JSON AS $var|STRING AS $var|FILE AS $var|STATUS AS $var;
+-- JSON variable (Mendix expression stored on the operation)
+Body: JSON FROM $JsonPayload
+
+-- String template with parameter placeholders
+Body: TEMPLATE '{ "name": "{name}", "value": {value} }'
+
+-- Export mapping (entity → JSON, aligned with export mapping syntax)
+Body: MAPPING Module.RequestEntity {
+  name = Name,
+  email = Email,
+}
 ```
 
-### Mendix Validation Rules (mx check)
+### Response Types
 
-Follow these rules to avoid errors from `mx check`:
+```sql
+-- Simple types (variable binding is at the call site, not stored on the operation)
+Response: JSON AS $Result
+Response: STRING AS $Text
+Response: FILE AS $Document
+Response: STATUS AS $Code
+Response: NONE
+
+-- Import mapping (JSON → entity, aligned with import mapping syntax)
+Response: MAPPING Module.ResponseEntity {
+  "Id" = "id",
+  "Status" = "status",
+  CREATE Module.Items_Response/Module.Item = items {
+    "Sku" = "sku",
+    "Quantity" = "quantity",
+  }
+}
+```
+
+### Step 2 — Call from a Microflow
+
+```sql
+CREATE MICROFLOW Module.ACT_GetWeather ()
+RETURNS Module.WeatherInfo AS $Weather
+BEGIN
+  -- Call the REST client operation
+  SEND REST REQUEST Module.OpenMeteoAPI.GetForecast;
+
+  -- Extract response body from system variable
+  DECLARE $RawJson String = $latestHttpResponse/Content;
+
+  -- (Optional) Transform with JSLT
+  $SimplifiedJson = TRANSFORM $RawJson WITH Module.SimplifyWeather;
+
+  -- Import into entity
+  $Weather = IMPORT FROM MAPPING Module.IMM_Weather($SimplifiedJson);
+
+  RETURN $Weather;
+END;
+/
+```
+
+**CRITICAL**: After `SEND REST REQUEST`, the response is in `$latestHttpResponse` (System.HttpResponse):
+- `$latestHttpResponse/Content` — response body (String)
+- `$latestHttpResponse/StatusCode` — HTTP status (Integer)
+
+### Show / Describe / Drop
+
+```sql
+SHOW REST CLIENTS [IN Module];
+DESCRIBE REST CLIENT Module.ClientName;
+DROP REST CLIENT Module.ClientName;
+CREATE OR MODIFY REST CLIENT Module.ClientName ...  -- idempotent
+```
+
+---
+
+## Approach 2: REST CALL (Inline HTTP)
+
+Call an HTTP endpoint directly from a microflow — no REST client document needed. Best for one-off calls, dynamic URLs, or low-level control.
+
+```sql
+-- Simple GET returning a string
+$Response = REST CALL GET 'https://api.example.com/data'
+  HEADER Accept = 'application/json'
+  TIMEOUT 30
+  RETURNS String;
+
+-- GET with URL template parameters
+$Response = REST CALL GET 'https://api.example.com/users/{1}' WITH (
+  {1} = toString($UserId)
+)
+  HEADER Accept = 'application/json'
+  RETURNS String;
+
+-- POST with body
+$Response = REST CALL POST 'https://api.example.com/items'
+  HEADER 'Content-Type' = 'application/json'
+  BODY '{"name": "test"}'
+  RETURNS String;
+
+-- With basic auth
+$Response = REST CALL GET 'https://api.example.com/secure'
+  AUTH BASIC 'username' PASSWORD 'password'
+  RETURNS String;
+
+-- With import mapping (JSON → entity)
+$Item = REST CALL GET 'https://api.example.com/item/1'
+  HEADER Accept = 'application/json'
+  RETURNS MAPPING Module.IMM_Item AS Module.Item;
+
+-- Fire and forget
+REST CALL DELETE 'https://api.example.com/item/1'
+  RETURNS Nothing;
+
+-- Error handling
+$Response = REST CALL GET 'https://api.example.com/data'
+  RETURNS String
+  ON ERROR CONTINUE;
+```
+
+---
+
+## Data Transformers (JSLT — Mendix 11.9+)
+
+Transform complex JSON responses into simpler structures before import mapping.
+
+```sql
+-- Define the transformer
+CREATE DATA TRANSFORMER Module.SimplifyWeather
+SOURCE JSON '{"latitude": 52.52, "current": {"temperature_2m": 12.8, "wind_speed_10m": 18.3}}'
+{
+  JSLT $$
+{
+  "temp": .current.temperature_2m,
+  "wind": .current.wind_speed_10m,
+  "lat": .latitude
+}
+  $$;
+};
+
+-- Use in a microflow
+$SimplifiedJson = TRANSFORM $RawJson WITH Module.SimplifyWeather;
+```
+
+Single-line JSLT: `JSLT '{ "temp": .current.temperature_2m }';`
+Multi-line JSLT: `JSLT $$ { ... } $$;` (dollar-quoting, same as Java actions)
+
+```sql
+LIST DATA TRANSFORMERS [IN Module];
+DESCRIBE DATA TRANSFORMER Module.Name;
+DROP DATA TRANSFORMER Module.Name;
+```
+
+---
+
+## JSON Structures & Mappings
+
+See [json-structures-and-mappings.md](json-structures-and-mappings.md) for full reference. Quick summary:
+
+```sql
+-- JSON structure from snippet
+CREATE JSON STRUCTURE Module.JSON_Weather
+SNIPPET '{"temp": 12.8, "wind": 18.3, "lat": 52.52}';
+
+-- Non-persistent entity
+CREATE NON-PERSISTENT ENTITY Module.WeatherInfo (
+  Temperature: Decimal,
+  WindSpeed: Decimal,
+  Latitude: Decimal
+);
+/
+
+-- Import mapping (JSON → entity)
+CREATE IMPORT MAPPING Module.IMM_Weather
+  WITH JSON STRUCTURE Module.JSON_Weather
+{
+  CREATE Module.WeatherInfo {
+    Temperature = temp,
+    WindSpeed = wind,
+    Latitude = lat
+  }
+};
+
+-- Use in microflow
+$Weather = IMPORT FROM MAPPING Module.IMM_Weather($JsonString);
+$JsonOutput = EXPORT TO MAPPING Module.EMM_Weather($WeatherEntity);
+```
+
+---
+
+## Complete Pipeline Example
+
+Full example: call weather API → transform → import → show on page.
+
+```sql
+-- 1. Entity
+CREATE NON-PERSISTENT ENTITY Module.CurrentWeather (
+  Temperature: Decimal,
+  WindSpeed: Decimal,
+  Latitude: Decimal,
+  ObservationTime: DateTime
+);
+/
+
+-- 2. Data Transformer (simplify API response)
+CREATE DATA TRANSFORMER Module.SimplifyWeather
+SOURCE JSON '{"latitude":52.52,"current":{"time":"2024-01-15T14:00","temperature_2m":12.8,"wind_speed_10m":18.3}}'
+{
+  JSLT $$
+{
+  "temperature": .current.temperature_2m,
+  "windSpeed": .current.wind_speed_10m,
+  "latitude": .latitude,
+  "observationTime": .current.time
+}
+  $$;
+};
+
+-- 3. JSON Structure + Import Mapping (for transformed output)
+CREATE JSON STRUCTURE Module.JSON_Weather
+SNIPPET '{"temperature":12.8,"windSpeed":18.3,"latitude":52.52,"observationTime":"2024-01-15T14:00"}';
+
+CREATE IMPORT MAPPING Module.IMM_Weather
+  WITH JSON STRUCTURE Module.JSON_Weather
+{
+  CREATE Module.CurrentWeather {
+    Temperature = temperature,
+    WindSpeed = windSpeed,
+    Latitude = latitude,
+    ObservationTime = observationTime
+  }
+};
+
+-- 4. REST Client
+CREATE REST CLIENT Module.WeatherAPI (
+  BaseUrl: 'https://api.open-meteo.com/v1',
+  Authentication: NONE
+)
+{
+  OPERATION GetCurrent {
+    Method: GET,
+    Path: '/forecast',
+    Query: ($latitude: Decimal, $longitude: Decimal, $current: String),
+    Headers: ('Accept' = 'application/json'),
+    Response: JSON AS $Result
+  }
+};
+
+-- 5. Microflow (REST Client → Transform → Import)
+CREATE MICROFLOW Module.ACT_GetWeather ()
+RETURNS Module.CurrentWeather AS $Weather
+BEGIN
+  SEND REST REQUEST Module.WeatherAPI.GetCurrent;
+  DECLARE $RawJson String = $latestHttpResponse/Content;
+  $SimplifiedJson = TRANSFORM $RawJson WITH Module.SimplifyWeather;
+  $Weather = IMPORT FROM MAPPING Module.IMM_Weather($SimplifiedJson);
+  RETURN $Weather;
+END;
+/
+```
+
+---
+
+## Mendix Validation Rules
 
 | Rule | Error | Fix |
 |------|-------|-----|
-| Every operation MUST have an Accept header | CE7062 | Auto-added by serializer (`Accept: */*`) if missing |
+| Every operation MUST have an Accept header | CE7062 | Auto-added by serializer if missing |
 | POST/PUT/PATCH MUST have a body | CE7064 | Auto-added by serializer (empty JSON body) |
-| Dynamic header values (`'Bearer ' + $Token`) are NOT supported | CE7056 | Use static literal values only |
-| Auth with `$Variable` requires the constant to exist | CE7073 | Use literal strings or create constants first |
-| RESPONSE JSON requires entity mapping for full functionality | CE0061 | Configure entity mapping in Studio Pro after creation |
-
-### Response Handling
-
-The serializer uses `Rest$NoResponseHandling` with ContentType for all response types to avoid CE0061 (entity mapping requirement). This means:
-
-- **RESPONSE NONE** → `Rest$NoResponseHandling` (no ContentType)
-- **RESPONSE JSON** → `Rest$NoResponseHandling` with `ContentType: "application/json"`
-- **RESPONSE STRING** → `Rest$NoResponseHandling` with `ContentType: "text/plain"`
-- **RESPONSE FILE** → `Rest$NoResponseHandling` with `ContentType: "application/octet-stream"`
-
-For full JSON-to-entity mapping (`Rest$ImplicitMappingResponseHandling`), configure the response mapping in Studio Pro. This requires:
-1. A non-persistent entity to hold the response data
-2. An `ImportMappings$ObjectMappingElement` mapping JSON fields to entity attributes
-
-## SEND REST REQUEST (Microflow Activity)
-
-Calls a consumed REST service operation from a microflow. This creates a `Microflows$RestOperationCallAction` in the BSON.
-
-```sql
--- Fire and forget (RESPONSE NONE operation)
-SEND REST REQUEST Module.ServiceName.OperationName;
-
--- With output variable (RESPONSE JSON — maps to entity)
-$Result = SEND REST REQUEST Module.ServiceName.OperationName;
-
--- With request body (POST/PUT operations)
-$Result = SEND REST REQUEST Module.ServiceName.CreateItem
-    BODY $NewItem;
-```
-
-### CRITICAL: `$latestHttpResponse` System Variable
-
-After every `SEND REST REQUEST`, Mendix automatically populates `$latestHttpResponse` (type `System.HttpResponse`). **Always use this to check call success**:
-
-```sql
--- ✅ CORRECT: check $latestHttpResponse
-$RootResult = SEND REST REQUEST Module.Service.GetData;
-IF $latestHttpResponse/Content != empty THEN
-  -- Process $RootResult
-END IF;
-
--- ❌ WRONG: causes CE0117 (expression error)
-IF $RootResult != empty THEN
-```
-
-Key attributes on `$latestHttpResponse`:
-- `Content` (String) — response body
-- `StatusCode` (Integer) — HTTP status code (200, 404, etc.)
-
-### Restrictions
-
-- **No custom error handling** — `ON ERROR CONTINUE` or `ON ERROR ROLLBACK` causes CE6035. The action always uses abort-on-error semantics.
-- Operation reference uses three-part qualified name: `Module.ServiceDocument.OperationName`
-
-## REST CALL (Inline HTTP — Different Feature)
-
-`REST CALL` is a separate feature for direct HTTP calls without a REST client document. URL, headers, auth, and body are specified inline in the microflow. See the write-microflows skill for full syntax.
-
-Do NOT mix up:
-- `SEND REST REQUEST` → calls consumed REST service operation (`Microflows$RestOperationCallAction`)
-- `REST CALL` → inline HTTP call (`Microflows$RestCallAction`)
-
-## Show / Describe
-
-```sql
--- List all consumed REST clients
-SHOW REST CLIENTS;
-SHOW REST CLIENTS IN ModuleName;
-
--- Show client definition as MDL
-DESCRIBE REST CLIENT Module.ClientName;
-
--- Delete a client
-DROP REST CLIENT Module.ClientName;
-
--- Create or overwrite existing
-CREATE OR MODIFY REST CLIENT Module.ClientName ...
-```
-
-## Complete Example
-
-```sql
--- 1. Create the REST client with operations
-CREATE REST CLIENT MyModule.PetStoreAPI
-BASE URL 'https://petstore.swagger.io/v2'
-AUTHENTICATION NONE
-BEGIN
-  OPERATION ListPets
-    METHOD GET
-    PATH '/pet/findByStatus'
-    QUERY $status: String
-    HEADER 'Accept' = 'application/json'
-    TIMEOUT 30
-    RESPONSE JSON AS $PetList;
-
-  OPERATION GetPet
-    METHOD GET
-    PATH '/pet/{petId}'
-    PARAMETER $petId: Integer
-    HEADER 'Accept' = 'application/json'
-    RESPONSE JSON AS $Pet;
-
-  OPERATION AddPet
-    METHOD POST
-    PATH '/pet'
-    HEADER 'Content-Type' = 'application/json'
-    HEADER 'Accept' = 'application/json'
-    BODY JSON FROM $NewPet
-    RESPONSE JSON AS $CreatedPet;
-
-  OPERATION RemovePet
-    METHOD DELETE
-    PATH '/pet/{petId}'
-    PARAMETER $petId: Integer
-    RESPONSE NONE;
-END;
-
--- 2. Call an operation from a microflow
-CREATE MICROFLOW MyModule.ACT_TestPetStore ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
-
-  SEND REST REQUEST MyModule.PetStoreAPI.RemovePet;
-
-  IF $latestHttpResponse/StatusCode = 200 THEN
-    SET $Success = true;
-  END IF;
-
-  RETURN $Success;
-END;
-```
+| Template placeholders must match parameters | CE7056 | `{name}` requires a parameter named `name` |
+| No custom error handling on SEND REST REQUEST | CE6035 | Always uses abort-on-error semantics |
+| Data Transformer requires 11.9+ | version check | `checkFeature("integration", "data_transformer", ...)` |
 
 ## BSON Types Reference
 
@@ -233,13 +337,15 @@ END;
 | GET/DELETE method | `Rest$RestOperationMethodWithoutBody` |
 | POST/PUT/PATCH method | `Rest$RestOperationMethodWithBody` |
 | JSON body | `Rest$JsonBody` |
-| File body | `Rest$StringBody` |
+| Template body | `Rest$StringBody` |
+| Export mapping body | `Rest$ImplicitMappingBody` |
 | No response | `Rest$NoResponseHandling` |
-| JSON response (with entity mapping) | `Rest$ImplicitMappingResponseHandling` |
+| Import mapping response | `Rest$ImplicitMappingResponseHandling` |
 | Header | `Rest$HeaderWithValueTemplate` |
 | Path parameter | `Rest$OperationParameter` |
 | Query parameter | `Rest$QueryParameter` |
-| No auth | `null` (AuthenticationScheme field) |
-| Basic auth | `Rest$BasicAuthenticationScheme` |
-| Microflow action (send request) | `Microflows$RestOperationCallAction` |
-| Microflow action (inline HTTP) | `Microflows$RestCallAction` |
+| Data transformer | `DataTransformers$DataTransformer` |
+| JSLT step | `DataTransformers$JsltAction` |
+| Transform action | `Microflows$TransformJsonAction` |
+| Send request action | `Microflows$RestOperationCallAction` |
+| Inline HTTP action | `Microflows$RestCallAction` |

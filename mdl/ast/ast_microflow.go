@@ -647,3 +647,14 @@ type ExportToMappingStmt struct {
 }
 
 func (s *ExportToMappingStmt) isMicroflowStatement() {}
+
+// TransformJsonStmt represents: $Result = TRANSFORM $Input WITH Module.Transformer
+type TransformJsonStmt struct {
+	OutputVariable  string               // Result string variable (without $)
+	InputVariable   string               // Source JSON string variable (without $)
+	Transformation  QualifiedName        // Data transformer qualified name
+	ErrorHandling   *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations     *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *TransformJsonStmt) isMicroflowStatement() {}

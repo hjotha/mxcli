@@ -1,14 +1,19 @@
 # REST Call from JSON Payload — End-to-End Skill
 
 Use this skill to generate the full stack of Mendix integration artifacts from a JSON payload:
-JSON Structure → Non-persistent entities → Import Mapping → REST CALL microflow.
+JSON Structure → Non-persistent entities → Import Mapping → microflow.
+
+> **Two approaches**: This skill uses the **inline REST CALL** approach (good for one-off calls
+> and quick prototyping). For structured APIs with reusable operations, use the **REST Client**
+> approach instead — see [rest-client.md](rest-client.md) for `CREATE REST CLIENT` + `SEND REST REQUEST`
+> + optional `TRANSFORM` with JSLT data transformers.
 
 ## Overview — Four Steps
 
 1. **CREATE JSON STRUCTURE** — store the raw payload and derive the element tree
 2. **CREATE ENTITY** (non-persistent) — one per JSON object type, with attributes per JSON field
 3. **CREATE IMPORT MAPPING** — link JSON structure elements to entities and attributes
-4. **CREATE MICROFLOW** — inline REST CALL that invokes the import mapping
+4. **CREATE MICROFLOW** — inline REST CALL that invokes the import mapping (or use REST Client + SEND REST REQUEST)
 
 ---
 

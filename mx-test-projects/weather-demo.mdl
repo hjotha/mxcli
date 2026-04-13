@@ -1,0 +1,191 @@
+-- ============================================================================
+-- Weather Demo — Open-Meteo API with JSLT Transformer
+-- ============================================================================
+--
+-- Demonstrates the full pipeline:
+--   1. REST Client → call Open-Meteo weather API
+--   2. Data Transformer → simplify complex JSON with JSLT
+--   3. Import Mapping → map transformed JSON to entities
+--   4. Page → display weather data
+--
+-- Prerequisites:
+--   - Mendix 11.9+ project (for data transformers)
+--
+-- Usage:
+--   mxcli exec mx-test-projects/weather-demo.mdl -p path/to/test3.mpr
+--
+-- ============================================================================
+
+-- ############################################################################
+-- PART 1: MODULE
+-- ############################################################################
+
+CREATE MODULE WeatherDemo;
+
+-- ############################################################################
+-- PART 2: DOMAIN MODEL
+-- ############################################################################
+
+-- Current weather conditions
+CREATE NON-PERSISTENT ENTITY WeatherDemo.CurrentWeather (
+  Temperature: Decimal,
+  WindSpeed: Decimal,
+  Humidity: Integer,
+  WeatherCode: Integer,
+  Latitude: Decimal,
+  Longitude: Decimal,
+  Timezone: String(200),
+  ObservationTime: DateTime
+);
+/
+
+-- ############################################################################
+-- PART 3: DATA TRANSFORMER
+-- ############################################################################
+
+-- The Open-Meteo API returns a complex nested JSON response.
+-- This JSLT transformer extracts just the fields we need into a flat structure.
+--
+-- Input (from https://api.open-meteo.com/v1/forecast):
+--   { "latitude": 52.52, "longitude": 13.41, "timezone": "Europe/Berlin",
+--     "current": { "time": "...", "temperature_2m": 12.8, "relative_humidity_2m": 65,
+--                  "wind_speed_10m": 18.3, "weather_code": 3 }, ... }
+--
+-- Output (simplified):
+--   { "temperature": 12.8, "windSpeed": 18.3, "humidity": 65, "weatherCode": 3,
+--     "latitude": 52.52, "longitude": 13.41, "timezone": "Europe/Berlin",
+--     "observationTime": "2024-01-15T14:00" }
+
+CREATE DATA TRANSFORMER WeatherDemo.SimplifyWeather
+SOURCE JSON '{"latitude":52.52,"longitude":13.41,"timezone":"Europe/Berlin","current":{"time":"2024-01-15T14:00","temperature_2m":12.8,"relative_humidity_2m":65,"wind_speed_10m":18.3,"weather_code":3}}'
+{
+  JSLT $$
+{
+  "temperature": .current.temperature_2m,
+  "windSpeed": .current.wind_speed_10m,
+  "humidity": .current.relative_humidity_2m,
+  "weatherCode": .current.weather_code,
+  "latitude": .latitude,
+  "longitude": .longitude,
+  "timezone": .timezone,
+  "observationTime": .current.time
+}
+  $$;
+};
+
+-- ############################################################################
+-- PART 4: JSON STRUCTURE + IMPORT MAPPING
+-- ############################################################################
+
+-- JSON structure matching the transformer output
+CREATE JSON STRUCTURE WeatherDemo.JSON_Weather
+SNIPPET '{"temperature": 12.8, "windSpeed": 18.3, "humidity": 65, "weatherCode": 3, "latitude": 52.52, "longitude": 13.41, "timezone": "Europe/Berlin", "observationTime": "2024-01-15T14:00"}';
+
+-- Import mapping: transformer output → CurrentWeather entity
+CREATE IMPORT MAPPING WeatherDemo.IMM_Weather
+  WITH JSON STRUCTURE WeatherDemo.JSON_Weather
+{
+  CREATE WeatherDemo.CurrentWeather {
+    Temperature = temperature,
+    WindSpeed = windSpeed,
+    Humidity = humidity,
+    WeatherCode = weatherCode,
+    Latitude = latitude,
+    Longitude = longitude,
+    Timezone = timezone,
+    ObservationTime = observationTime
+  }
+};
+
+-- ############################################################################
+-- PART 5: REST CLIENT
+-- ############################################################################
+
+-- Open-Meteo API — free, no authentication required
+-- Docs: https://open-meteo.com/en/docs
+CREATE REST CLIENT WeatherDemo.OpenMeteoAPI (
+  BaseUrl: 'https://api.open-meteo.com/v1',
+  Authentication: NONE
+)
+{
+  /** Fetch current weather for given coordinates */
+  OPERATION GetCurrentWeather {
+    Method: GET,
+    Path: '/forecast',
+    Query: ($latitude: Decimal, $longitude: Decimal, $current: String),
+    Headers: ('Accept' = 'application/json'),
+    Timeout: 30,
+    Response: JSON AS $WeatherJson
+  }
+};
+
+-- ############################################################################
+-- PART 6: MICROFLOWS
+-- ############################################################################
+
+/**
+ * Fetch weather for Amsterdam using the full pipeline:
+ *   1. SEND REST REQUEST → call the REST client operation
+ *   2. Extract response body from $latestHttpResponse
+ *   3. TRANSFORM with JSLT → simplified JSON
+ *   4. IMPORT FROM MAPPING → CurrentWeather entity
+ */
+CREATE MICROFLOW WeatherDemo.ACT_GetWeather ()
+RETURNS WeatherDemo.CurrentWeather AS $Weather
+BEGIN
+  -- Step 1: Call the REST client operation (populates $latestHttpResponse)
+  SEND REST REQUEST WeatherDemo.OpenMeteoAPI.GetCurrentWeather;
+
+  -- Step 2: Extract response body
+  DECLARE $RawJsonResponse String = $latestHttpResponse/Content;
+
+  -- Step 3: Transform the complex response into a flat structure
+  $SimplifiedJson = TRANSFORM $RawJsonResponse WITH WeatherDemo.SimplifyWeather;
+
+  -- Step 4: Import the simplified JSON into a CurrentWeather entity
+  $Weather = IMPORT FROM MAPPING WeatherDemo.IMM_Weather($SimplifiedJson);
+
+  RETURN $Weather;
+END;
+/
+
+-- ############################################################################
+-- PART 7: PAGE
+-- ############################################################################
+
+CREATE PAGE WeatherDemo.WeatherPage
+(
+  Title: 'Current Weather',
+  Layout: Atlas_Core.Atlas_Default,
+  Url: 'weather'
+)
+{
+  LAYOUTGRID gridMain {
+    ROW rowTitle {
+      COLUMN colTitle (DesktopWidth: 12) {
+        DYNAMICTEXT txtTitle (Content: 'Weather Dashboard', RenderMode: H2)
+        DYNAMICTEXT txtSubtitle (Content: 'Current conditions from Open-Meteo API', RenderMode: Paragraph)
+      }
+    }
+    ROW rowButton {
+      COLUMN colButton (DesktopWidth: 4) {
+        ACTIONBUTTON btnFetch (
+          Caption: 'Fetch Weather',
+          Action: MICROFLOW WeatherDemo.ACT_GetWeather,
+          ButtonStyle: Primary
+        )
+      }
+    }
+  }
+};
+
+-- ############################################################################
+-- PART 8: VERIFICATION
+-- ############################################################################
+
+LIST DATA TRANSFORMERS IN WeatherDemo;
+SHOW REST CLIENTS IN WeatherDemo;
+SHOW IMPORT MAPPINGS IN WeatherDemo;
+DESCRIBE DATA TRANSFORMER WeatherDemo.SimplifyWeather;
+DESCRIBE REST CLIENT WeatherDemo.OpenMeteoAPI;
+DESCRIBE MICROFLOW WeatherDemo.ACT_GetWeather;

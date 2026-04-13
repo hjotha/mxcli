@@ -939,6 +939,41 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 }
 
 // addExportToMappingAction adds an ExportXmlAction to the microflow.
+func (fb *flowBuilder) addTransformJsonAction(s *ast.TransformJsonStmt) model.ID {
+	activityX := fb.posX
+
+	action := &microflows.TransformJsonAction{
+		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		InputVariableName:  s.InputVariable,
+		OutputVariableName: s.OutputVariable,
+		Transformation:     s.Transformation.String(),
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+	}
+
+	return activity.ID
+}
+
 func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) model.ID {
 	activityX := fb.posX
 
