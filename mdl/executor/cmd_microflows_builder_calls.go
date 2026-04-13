@@ -787,13 +787,30 @@ func (fb *flowBuilder) addSendRestRequestAction(s *ast.SendRestRequestStmt) mode
 		}
 	}
 
+	// Build parameter mappings from WITH clause
+	var paramMappings []*microflows.RestParameterMapping
+	var queryParamMappings []*microflows.RestQueryParameterMapping
+	for _, p := range s.Parameters {
+		// Determine if path or query param by convention:
+		// the executor can't distinguish at this level, so we emit both
+		// and let the BSON field names sort it out. For now, emit as
+		// query parameter mappings (most common use case).
+		queryParamMappings = append(queryParamMappings, &microflows.RestQueryParameterMapping{
+			Parameter: operationQN + "." + p.Name,
+			Value:     p.Expression,
+			Included:  "Yes",
+		})
+	}
+
 	// RestOperationCallAction does not support custom error handling (CE6035).
 	// ON ERROR clauses in the MDL are silently ignored for this action type.
 	action := &microflows.RestOperationCallAction{
-		BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
-		Operation:      operationQN,
-		OutputVariable: outputVar,
-		BodyVariable:   bodyVar,
+		BaseElement:            model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		Operation:              operationQN,
+		OutputVariable:         outputVar,
+		BodyVariable:           bodyVar,
+		ParameterMappings:      paramMappings,
+		QueryParameterMappings: queryParamMappings,
 	}
 
 	activity := &microflows.ActionActivity{

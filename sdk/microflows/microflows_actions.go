@@ -595,10 +595,25 @@ func (RestCallAction) isMicroflowAction() {}
 // BSON type: Microflows$RestOperationCallAction
 type RestOperationCallAction struct {
 	model.BaseElement
-	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
-	Operation         string            `json:"operation,omitempty"`      // BY_NAME: Module.Service.Operation
-	OutputVariable    *RestOutputVar    `json:"outputVariable,omitempty"` // null or Microflows$OutputVariable
-	BodyVariable      *RestBodyVar      `json:"bodyVariable,omitempty"`   // null or nested object
+	ErrorHandlingType    ErrorHandlingType       `json:"errorHandlingType,omitempty"`
+	Operation            string                  `json:"operation,omitempty"`            // BY_NAME: Module.Service.Operation
+	OutputVariable       *RestOutputVar          `json:"outputVariable,omitempty"`       // null or Microflows$OutputVariable
+	BodyVariable         *RestBodyVar            `json:"bodyVariable,omitempty"`         // null or nested object
+	ParameterMappings    []*RestParameterMapping `json:"parameterMappings,omitempty"`    // path parameter bindings
+	QueryParameterMappings []*RestQueryParameterMapping `json:"queryParameterMappings,omitempty"` // query parameter bindings
+}
+
+// RestParameterMapping maps an operation path parameter to a Mendix expression.
+type RestParameterMapping struct {
+	Parameter string `json:"parameter"` // fully qualified: Module.Client.Op.paramName
+	Value     string `json:"value"`     // Mendix expression
+}
+
+// RestQueryParameterMapping maps an operation query parameter to a Mendix expression.
+type RestQueryParameterMapping struct {
+	Parameter string `json:"parameter"` // fully qualified: Module.Client.Op.paramName
+	Value     string `json:"value"`     // Mendix expression
+	Included  string `json:"included"`  // "Yes" or "No"
 }
 
 func (RestOperationCallAction) isMicroflowAction() {}

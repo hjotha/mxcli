@@ -1027,6 +1027,22 @@ func buildSendRestRequestStatement(ctx parser.ISendRestRequestStatementContext) 
 		stmt.Operation = buildQualifiedName(qn)
 	}
 
+	// WITH clause (parameter bindings)
+	if withClause := sendCtx.SendRestRequestWithClause(); withClause != nil {
+		wc := withClause.(*parser.SendRestRequestWithClauseContext)
+		for _, paramCtx := range wc.AllSendRestRequestParam() {
+			pc := paramCtx.(*parser.SendRestRequestParamContext)
+			param := ast.SendRestParamDef{}
+			if v := pc.VARIABLE(); v != nil {
+				param.Name = strings.TrimPrefix(v.GetText(), "$")
+			}
+			if expr := pc.Expression(); expr != nil {
+				param.Expression = expr.GetText()
+			}
+			stmt.Parameters = append(stmt.Parameters, param)
+		}
+	}
+
 	// Body clause
 	if bodyClause := sendCtx.SendRestRequestBodyClause(); bodyClause != nil {
 		bc := bodyClause.(*parser.SendRestRequestBodyClauseContext)

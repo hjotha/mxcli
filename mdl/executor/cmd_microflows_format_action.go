@@ -915,6 +915,37 @@ func (e *Executor) formatRestOperationCallAction(a *microflows.RestOperationCall
 	sb.WriteString("SEND REST REQUEST ")
 	sb.WriteString(a.Operation)
 
+	// WITH clause for parameter mappings
+	allParams := make([]struct{ name, value string }, 0)
+	for _, pm := range a.ParameterMappings {
+		// Strip operation prefix from parameter name
+		name := pm.Parameter
+		if idx := strings.LastIndex(name, "."); idx >= 0 {
+			name = name[idx+1:]
+		}
+		allParams = append(allParams, struct{ name, value string }{name, pm.Value})
+	}
+	for _, qm := range a.QueryParameterMappings {
+		name := qm.Parameter
+		if idx := strings.LastIndex(name, "."); idx >= 0 {
+			name = name[idx+1:]
+		}
+		allParams = append(allParams, struct{ name, value string }{name, qm.Value})
+	}
+	if len(allParams) > 0 {
+		sb.WriteString("\n    WITH (")
+		for i, p := range allParams {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString("$")
+			sb.WriteString(p.name)
+			sb.WriteString(" = ")
+			sb.WriteString(p.value)
+		}
+		sb.WriteString(")")
+	}
+
 	if a.BodyVariable != nil && a.BodyVariable.VariableName != "" {
 		sb.WriteString("\n    BODY $")
 		sb.WriteString(a.BodyVariable.VariableName)

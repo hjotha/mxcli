@@ -1596,8 +1596,17 @@ restCallReturnsClause
  */
 sendRestRequestStatement
     : (VARIABLE EQUALS)? SEND REST REQUEST qualifiedName
+      sendRestRequestWithClause?
       sendRestRequestBodyClause?
       onErrorClause?
+    ;
+
+sendRestRequestWithClause
+    : WITH LPAREN sendRestRequestParam (COMMA sendRestRequestParam)* RPAREN
+    ;
+
+sendRestRequestParam
+    : VARIABLE EQUALS expression
     ;
 
 sendRestRequestBodyClause
