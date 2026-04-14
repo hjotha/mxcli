@@ -248,9 +248,8 @@ var mendixReservedWords = map[string]bool{
 	"while": true,
 	// Mendix-specific reserved identifiers
 	"changedby": true, "changeddate": true, "con": true, "context": true,
-	"createddate": true, "currentuser": true, "empty": true, "guid": true,
-	"id": true, "mendixobject": true, "object": true, "owner": true,
-	"submetaobjectname": true, "type": true,
+	"createddate": true, "currentuser": true, "guid": true,
+	"id": true, "mendixobject": true, "submetaobjectname": true,
 }
 
 // ValidateEnumeration checks enumeration value names for reserved words.
