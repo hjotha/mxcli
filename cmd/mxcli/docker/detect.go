@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package docker implements Docker build and deployment support for Mendix projects.
+//
+// # Platform differences for Mendix tool resolution
+//
+// On Windows, Studio Pro installs mxbuild.exe, mx.exe, and the runtime under
+// a Program Files directory (e.g., D:\Program Files\Mendix\11.6.4\).
+// CDN downloads (mxbuild tar.gz) contain Linux ELF binaries that cannot
+// execute on Windows, so Studio Pro installations MUST be preferred.
+//
+// On Linux/macOS (CI, devcontainers), Studio Pro is not available.
+// CDN downloads are the primary source for mxbuild and runtime.
+//
+// Resolution priority (all platforms):
+//   1. Explicit path (--mxbuild-path)
+//   2. PATH lookup
+//   3. OS-specific known locations (Studio Pro on Windows)
+//   4. Cached CDN downloads (~/.mxcli/mxbuild/)
+//
+// Path discovery on Windows must NOT hardcode drive letters. Use environment
+// variables (PROGRAMFILES, PROGRAMW6432, SystemDrive) to locate install dirs.
 package docker
 
 import (
@@ -49,7 +68,9 @@ func findMxBuildInDir(dir string) string {
 }
 
 // resolveMxBuild finds the MxBuild executable.
-// Priority: explicit path > PATH lookup > OS-specific known locations.
+// Priority: explicit path > PATH lookup > OS-specific known locations > cached downloads.
+// On Windows, Studio Pro installations are checked before cached downloads because
+// CDN downloads are Linux binaries that cannot run natively on Windows.
 // The explicit path can be the binary itself or a directory containing it
 // (e.g., a Mendix installation root with modeler/mxbuild inside).
 func resolveMxBuild(explicitPath string) (string, error) {
@@ -73,12 +94,8 @@ func resolveMxBuild(explicitPath string) (string, error) {
 		return p, nil
 	}
 
-	// Try cached downloads (~/.mxcli/mxbuild/*/modeler/mxbuild)
-	if p := AnyCachedMxBuildPath(); p != "" {
-		return p, nil
-	}
-
-	// Try OS-specific known locations
+	// Try OS-specific known locations (Studio Pro on Windows) BEFORE cached downloads.
+	// On Windows, CDN downloads are Linux binaries — Studio Pro's mxbuild.exe is preferred.
 	for _, pattern := range mxbuildSearchPaths() {
 		matches, _ := filepath.Glob(pattern)
 		if len(matches) > 0 {
@@ -87,31 +104,81 @@ func resolveMxBuild(explicitPath string) (string, error) {
 		}
 	}
 
+	// Try cached downloads (~/.mxcli/mxbuild/*/modeler/mxbuild)
+	if p := AnyCachedMxBuildPath(); p != "" {
+		return p, nil
+	}
+
 	return "", fmt.Errorf("mxbuild not found; install Mendix Studio Pro or specify --mxbuild-path")
+}
+
+// ResolveStudioProDir finds the Studio Pro installation directory for a specific
+// Mendix version on Windows. Returns the installation root (e.g.,
+// "D:\Program Files\Mendix\11.6.4") or empty string if not found.
+// On non-Windows platforms, always returns empty string.
+func ResolveStudioProDir(version string) string {
+	if runtime.GOOS != "windows" {
+		return ""
+	}
+	for _, dir := range windowsProgramDirs() {
+		candidate := filepath.Join(dir, "Mendix", version)
+		if info, err := os.Stat(filepath.Join(candidate, "modeler", "mxbuild.exe")); err == nil && !info.IsDir() {
+			return candidate
+		}
+	}
+	return ""
+}
+
+// windowsProgramDirs returns candidate Program Files directories on Windows,
+// derived from environment variables and the system drive letter.
+func windowsProgramDirs() []string {
+	seen := map[string]bool{}
+	var dirs []string
+	add := func(d string) {
+		if d != "" && !seen[d] {
+			seen[d] = true
+			dirs = append(dirs, d)
+		}
+	}
+	for _, env := range []string{"PROGRAMFILES", "PROGRAMW6432", "PROGRAMFILES(X86)"} {
+		add(os.Getenv(env))
+	}
+	// Fallback: derive from SystemDrive (e.g., "D:\Program Files").
+	// SystemDrive returns "D:" without a trailing separator; filepath.Join
+	// treats "D:" as a relative path, producing "D:Program Files" instead of
+	// "D:\Program Files". Append the separator explicitly.
+	if sysDrive := os.Getenv("SystemDrive"); sysDrive != "" {
+		root := sysDrive + string(os.PathSeparator)
+		add(filepath.Join(root, "Program Files"))
+		add(filepath.Join(root, "Program Files (x86)"))
+	}
+	return dirs
+}
+
+// mendixSearchPaths returns OS-specific glob patterns for a Mendix binary
+// (e.g., "mxbuild.exe", "mx.exe", "mxbuild", "mx") inside Studio Pro installations.
+func mendixSearchPaths(binaryName string) []string {
+	switch runtime.GOOS {
+	case "windows":
+		var paths []string
+		for _, dir := range windowsProgramDirs() {
+			paths = append(paths, filepath.Join(dir, "Mendix", "*", "modeler", binaryName))
+		}
+		return paths
+	case "darwin":
+		return []string{filepath.Join("/Applications/Mendix/*/modeler", binaryName)}
+	default: // linux
+		paths := []string{filepath.Join("/opt/mendix/*/modeler", binaryName)}
+		if home, err := os.UserHomeDir(); err == nil {
+			paths = append(paths, filepath.Join(home, ".mendix/*/modeler", binaryName))
+		}
+		return paths
+	}
 }
 
 // mxbuildSearchPaths returns OS-specific glob patterns for MxBuild.
 func mxbuildSearchPaths() []string {
-	switch runtime.GOOS {
-	case "windows":
-		return []string{
-			`C:\Program Files\Mendix\*\modeler\mxbuild.exe`,
-			`C:\Program Files (x86)\Mendix\*\modeler\mxbuild.exe`,
-		}
-	case "darwin":
-		return []string{
-			"/Applications/Mendix/*/modeler/mxbuild",
-		}
-	default: // linux
-		home, _ := os.UserHomeDir()
-		paths := []string{
-			"/opt/mendix/*/modeler/mxbuild",
-		}
-		if home != "" {
-			paths = append(paths, filepath.Join(home, ".mendix/*/modeler/mxbuild"))
-		}
-		return paths
-	}
+	return mendixSearchPaths(mxbuildBinaryName())
 }
 
 // resolveJDK21 finds a JDK 21 installation.
@@ -174,11 +241,15 @@ func resolveMacOSJavaHome() (string, error) {
 func jdkSearchPaths() []string {
 	switch runtime.GOOS {
 	case "windows":
-		return []string{
-			`C:\Program Files\Eclipse Adoptium\jdk-21*`,
-			`C:\Program Files\Java\jdk-21*`,
-			`C:\Program Files\Microsoft\jdk-21*`,
+		var paths []string
+		for _, dir := range windowsProgramDirs() {
+			paths = append(paths,
+				filepath.Join(dir, "Eclipse Adoptium", "jdk-21*"),
+				filepath.Join(dir, "Java", "jdk-21*"),
+				filepath.Join(dir, "Microsoft", "jdk-21*"),
+			)
 		}
+		return paths
 	case "darwin":
 		return []string{
 			"/Library/Java/JavaVirtualMachines/temurin-21*/Contents/Home",

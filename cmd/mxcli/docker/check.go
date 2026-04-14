@@ -123,6 +123,14 @@ func ResolveMx(mxbuildPath string) (string, error) {
 		return p, nil
 	}
 
+	// Try OS-specific known locations (Studio Pro on Windows) before cached downloads.
+	for _, pattern := range mendixSearchPaths(mxBinaryName()) {
+		matches, _ := filepath.Glob(pattern)
+		if len(matches) > 0 {
+			return matches[len(matches)-1], nil
+		}
+	}
+
 	// Try cached mxbuild installations (~/.mxcli/mxbuild/*/modeler/mx).
 	// NOTE: lexicographic sort is imperfect for versions (e.g. "9.x" > "10.x"),
 	// but this is a fallback-of-last-resort — in practice users typically have

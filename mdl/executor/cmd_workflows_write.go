@@ -351,7 +351,22 @@ func buildExclusiveSplit(n *ast.WorkflowDecisionNode) *workflows.ExclusiveSplitA
 	}
 	act.Name = act.Caption
 
+	// Detect boolean decision (has TRUE or FALSE outcomes).
+	// The Mendix 11 runtime only supports BooleanConditionOutcome and
+	// EnumerationValueConditionOutcome — VoidConditionOutcome (DEFAULT) is rejected.
+	isBooleanDecision := false
+	for _, o := range n.Outcomes {
+		if o.Value == "True" || o.Value == "False" {
+			isBooleanDecision = true
+			break
+		}
+	}
+
 	for _, outcomeNode := range n.Outcomes {
+		if isBooleanDecision && outcomeNode.Value == "Default" {
+			// Skip DEFAULT on boolean decisions — runtime rejects VoidConditionOutcome.
+			continue
+		}
 		outcome := buildConditionOutcome(outcomeNode)
 		if outcome != nil {
 			act.Outcomes = append(act.Outcomes, outcome)

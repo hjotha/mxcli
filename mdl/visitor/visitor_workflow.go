@@ -195,6 +195,9 @@ func buildAlterWorkflowAction(ctx *parser.AlterWorkflowActionContext) ast.AlterW
 
 	// DROP OUTCOME 'name' ON alterActivityRef
 	if ctx.DROP() != nil && ctx.OUTCOME() != nil {
+		if ctx.AlterActivityRef() == nil || ctx.STRING_LITERAL() == nil {
+			return nil
+		}
 		ref, atPos := parseAlterActivityRef(ctx.AlterActivityRef().(*parser.AlterActivityRefContext))
 		outcomeName := unquoteString(ctx.STRING_LITERAL().GetText())
 		return &ast.DropOutcomeOp{
@@ -206,6 +209,9 @@ func buildAlterWorkflowAction(ctx *parser.AlterWorkflowActionContext) ast.AlterW
 
 	// DROP PATH 'caption' ON alterActivityRef
 	if ctx.DROP() != nil && ctx.PATH() != nil && ctx.BOUNDARY() == nil {
+		if ctx.AlterActivityRef() == nil || ctx.STRING_LITERAL() == nil {
+			return nil
+		}
 		ref, atPos := parseAlterActivityRef(ctx.AlterActivityRef().(*parser.AlterActivityRefContext))
 		pathCaption := unquoteString(ctx.STRING_LITERAL().GetText())
 		return &ast.DropPathOp{

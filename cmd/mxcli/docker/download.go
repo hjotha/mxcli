@@ -86,6 +86,12 @@ func DownloadMxBuild(version string, w io.Writer) (string, error) {
 		return "", err
 	}
 
+	// Remove any partial cache from a previously interrupted download.
+	if _, err := os.Stat(cacheDir); err == nil {
+		fmt.Fprintf(w, "  Removing incomplete cache at %s...\n", cacheDir)
+		os.RemoveAll(cacheDir)
+	}
+
 	url := MxBuildCDNURL(version, runtime.GOARCH)
 	fmt.Fprintf(w, "  Downloading MxBuild %s for %s...\n", version, runtime.GOARCH)
 	fmt.Fprintf(w, "  URL: %s\n", url)
@@ -180,6 +186,12 @@ func DownloadRuntime(version string, w io.Writer) (string, error) {
 	cacheDir, err := RuntimeCacheDir(version)
 	if err != nil {
 		return "", err
+	}
+
+	// Remove any partial cache from a previously interrupted download.
+	if _, err := os.Stat(cacheDir); err == nil {
+		fmt.Fprintf(w, "  Removing incomplete cache at %s...\n", cacheDir)
+		os.RemoveAll(cacheDir)
 	}
 
 	url := RuntimeCDNURL(version)

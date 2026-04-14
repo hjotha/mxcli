@@ -57,12 +57,21 @@ Examples:
 			os.Exit(1)
 		}
 
-		// Step 1: Download MxBuild
-		fmt.Printf("Step 1/4: Downloading MxBuild %s...\n", mendixVersion)
-		mxbuildPath, err := docker.DownloadMxBuild(mendixVersion, os.Stdout)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error downloading MxBuild: %v\n", err)
-			os.Exit(1)
+		// Step 1: Resolve MxBuild and mx binary.
+		// On Windows, prefer Studio Pro installation (ships both mxbuild.exe and mx.exe).
+		// Fall back to CDN download on other platforms or when Studio Pro is not installed.
+		fmt.Printf("Step 1/4: Resolving MxBuild %s...\n", mendixVersion)
+		var mxbuildPath string
+		if studioDir := docker.ResolveStudioProDir(mendixVersion); studioDir != "" {
+			mxbuildPath = filepath.Join(studioDir, "modeler", "mxbuild.exe")
+			fmt.Printf("  Using Studio Pro: %s\n", studioDir)
+		} else {
+			var err error
+			mxbuildPath, err = docker.DownloadMxBuild(mendixVersion, os.Stdout)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error downloading MxBuild: %v\n", err)
+				os.Exit(1)
+			}
 		}
 
 		// Resolve mx binary from mxbuild path

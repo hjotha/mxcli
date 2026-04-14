@@ -76,9 +76,12 @@ func Build(opts BuildOptions) error {
 	}
 	fmt.Fprintf(w, "  MxBuild: %s\n", mxbuildPath)
 
-	// Step 2b: Ensure PAD runtime files are linked
-	if err := ensurePADFiles(pv.ProductVersion, w); err != nil {
-		fmt.Fprintf(w, "  Warning: %v\n", err)
+	// Step 2b: Ensure PAD runtime files are linked (only needed for CDN downloads,
+	// Studio Pro installations already have runtime files in place).
+	if ResolveStudioProDir(pv.ProductVersion) == "" {
+		if err := ensurePADFiles(pv.ProductVersion, w); err != nil {
+			fmt.Fprintf(w, "  Warning: %v\n", err)
+		}
 	}
 
 	// Step 3: Resolve JDK 21
@@ -278,27 +281,36 @@ func Run(opts RunOptions) error {
 	reader.Close()
 	fmt.Fprintf(w, "  Mendix version: %s\n", pv.ProductVersion)
 
-	// Step 2: Ensure MxBuild is available
-	fmt.Fprintln(w, "Ensuring MxBuild is available...")
-	_, err = DownloadMxBuild(pv.ProductVersion, w)
-	if err != nil {
-		return fmt.Errorf("setting up mxbuild: %w", err)
-	}
+	// Step 2 & 3: Ensure MxBuild and runtime are available.
+	// On Windows, prefer Studio Pro installation directory — it ships both mxbuild.exe
+	// and runtime/, so no CDN download is needed.
+	studioProDir := ResolveStudioProDir(pv.ProductVersion)
+	if studioProDir != "" {
+		fmt.Fprintf(w, "Using Studio Pro installation: %s\n", studioProDir)
+		// Point MxBuildPath so Build() uses Studio Pro's mxbuild.exe
+		if opts.MxBuildPath == "" {
+			opts.MxBuildPath = studioProDir
+		}
+	} else {
+		fmt.Fprintln(w, "Ensuring MxBuild is available...")
+		_, err = DownloadMxBuild(pv.ProductVersion, w)
+		if err != nil {
+			return fmt.Errorf("setting up mxbuild: %w", err)
+		}
 
-	// Step 3: Ensure runtime is available
-	fmt.Fprintln(w, "Ensuring Mendix runtime is available...")
-	_, err = DownloadRuntime(pv.ProductVersion, w)
-	if err != nil {
-		return fmt.Errorf("setting up runtime: %w", err)
-	}
+		fmt.Fprintln(w, "Ensuring Mendix runtime is available...")
+		_, err = DownloadRuntime(pv.ProductVersion, w)
+		if err != nil {
+			return fmt.Errorf("setting up runtime: %w", err)
+		}
 
-	// Step 3b: Link PAD runtime files into mxbuild directory
-	// MxBuild's PAD builder expects template files at mxbuild/{ver}/runtime/pad/,
-	// but they live in the separately downloaded runtime at runtime/{ver}/runtime/pad/.
-	// Non-fatal: some Mendix versions don't include PAD files in the runtime archive.
-	// The docker build step handles this gracefully by downloading the runtime separately.
-	if err := ensurePADFiles(pv.ProductVersion, w); err != nil {
-		fmt.Fprintf(w, "  Warning: %v\n", err)
+		// Link PAD runtime files into mxbuild directory.
+		// MxBuild's PAD builder expects template files at mxbuild/{ver}/runtime/pad/,
+		// but they live in the separately downloaded runtime at runtime/{ver}/runtime/pad/.
+		// Non-fatal: some Mendix versions don't include PAD files in the runtime archive.
+		if err := ensurePADFiles(pv.ProductVersion, w); err != nil {
+			fmt.Fprintf(w, "  Warning: %v\n", err)
+		}
 	}
 
 	// Step 3c: Ensure demo users exist
@@ -641,9 +653,18 @@ func ensurePADFiles(productVersion string, w io.Writer) error {
 		return nil
 	}
 
-	// Check that the runtime PAD source exists
+	// Check that the runtime PAD source exists; if not, the cached runtime is stale
+	// (downloaded before PAD files were included). Invalidate and re-download.
 	if _, err := os.Stat(runtimePAD); err != nil {
-		return fmt.Errorf("runtime PAD files not found at %s", runtimePAD)
+		fmt.Fprintf(w, "  PAD files missing from cached runtime, re-downloading...\n")
+		os.RemoveAll(runtimeDir)
+		if _, err := DownloadRuntime(productVersion, w); err != nil {
+			return fmt.Errorf("re-downloading runtime for PAD files: %w", err)
+		}
+		// Check again — some versions simply don't ship PAD files.
+		if _, err := os.Stat(runtimePAD); err != nil {
+			return fmt.Errorf("runtime PAD files not found at %s (not included in this Mendix version)", runtimePAD)
+		}
 	}
 
 	// Create parent directory if needed
