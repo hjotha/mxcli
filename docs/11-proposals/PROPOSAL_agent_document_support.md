@@ -173,6 +173,46 @@ CREATE AGENT MyModule."ResearchAssistant" (
 DROP AGENT MyModule."SentimentAnalyzer"
 ```
 
+### What Goes Where: Design-Time vs. Call-Time
+
+Everything inside `CREATE AGENT` — including the properties in the top-level `(...)` — is **design-time configuration that is stored in the agent document**. None of it is an invocation parameter. Runtime inputs are supplied at the `CALL AGENT` site.
+
+The layering follows the same pattern as `CREATE REST CLIENT`:
+
+| Layer | REST CLIENT | AGENT |
+|---|---|---|
+| **Document-level static config** (stored in document) | `BaseUrl`, `Authentication` | `UsageType`, `Description`, `Entity`, `SystemPrompt`, `UserPrompt` |
+| **Input contract** (what the caller must bring at call time) | `Parameters: ($id: String)` on each operation | `Variables: ("Topic": String, ...)` on the agent |
+| **Attached resources** (body blocks) | `OPERATION` blocks | `TOOL` / `KNOWLEDGE BASE` / `MCP SERVICE` blocks |
+| **Runtime invocation** (values supplied at call site) | `SEND REST REQUEST Mod.Api.GetItems (id = $x)` | `CALL AGENT WITH HISTORY $agent REQUEST $req CONTEXT $obj` |
+
+In other words:
+
+- `UsageType`, `Entity`, `SystemPrompt`, `UserPrompt` are the same kind of property as `BaseUrl` on a REST client — baked into the document, changed by editing the document.
+- `Variables: (...)` is the same kind of property as `Parameters: (...)` on a REST operation — it declares the **schema** of what the caller must supply, not the values. Actual values arrive at runtime: for `EntityAttribute` variables, they're read from matching attributes on the `CONTEXT` object; for free-form variables (future extension), they'd be passed directly.
+- `TOOL`, `KNOWLEDGE BASE`, `MCP SERVICE` blocks describe **capabilities the agent carries with it** — the LLM can invoke them autonomously at runtime, but they aren't something the caller passes in.
+
+Example — all of this is stored in the agent document:
+
+```sql
+CREATE AGENT Reviews."SentimentAnalyzer" (
+  UsageType: Task,                                             -- design-time mode
+  Entity: Reviews.ProductReview,                               -- context entity contract
+  Variables: ("ProductName": EntityAttribute,                  -- input contract
+              "ReviewText": EntityAttribute),
+  SystemPrompt: 'Analyze the review for {{ProductName}}.',     -- prompt template
+  UserPrompt: '{{ReviewText}}'                                 -- prompt template
+);
+```
+
+And this is the runtime call — the only place values flow in:
+
+```sql
+CALL AGENT WITHOUT HISTORY $Agent CONTEXT $Review INTO $Response;
+-- $Review is a Reviews.ProductReview instance;
+-- its ProductName and ReviewText attributes satisfy the Variables contract.
+```
+
 ### Syntax Design Rationale
 
 | Decision | Rationale |
@@ -183,7 +223,7 @@ DROP AGENT MyModule."SentimentAnalyzer"
 | `TOOL <Name> { Microflow: ..., Description: ..., Access: ... }` | `Microflow`, `Description`, `Access` are regular properties (not positional), same as REST CLIENT operation properties |
 | `KNOWLEDGE BASE <QualifiedName>` (module-qualified) | The name references an external KB document (peer `CustomBlobDocument`), not a free-form identifier |
 | `MCP SERVICE <QualifiedName>` (module-qualified) | Same rationale — references a ConsumedMCPService document |
-| `Variables: ("Name": EntityAttribute, ...)` inline | Variables are 1–2 properties each; inline matches how REST CLIENT handles `Parameters: ($id: String)` and `Headers: ('Accept' = 'application/json')` |
+| `Variables: (...)` is the input-schema analog of REST CLIENT's `Parameters: (...)` | Declares what the caller must supply; values flow in via the `CONTEXT` object at the `CALL AGENT` site. Inline form matches REST CLIENT's `Parameters: ($id: String)` |
 | `Access: VisibleForUser` as enum literal | Maps to `GenAICommons.ENUM_UserAccessApproval` values: `HiddenForUser`, `VisibleForUser`, `UserConfirmationRequired` |
 | Body omitted when there are no tools/KB/MCP | Same concession REST CLIENT makes implicitly — empty bodies are awkward; drop them |
 | Prompts as string literals | Consistent with other MDL string properties; `{{var}}` placeholders are just text |
