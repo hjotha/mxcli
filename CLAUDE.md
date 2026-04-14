@@ -446,6 +446,7 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - CREATE/DROP/DESCRIBE PUBLISHED REST SERVICE with resources, operations, path params, CREATE OR REPLACE
 - Integration catalog tables (rest_clients, rest_operations, published_rest_services, external_entities, external_actions, business_events)
 - Contract catalog tables (contract_entities, contract_actions, contract_messages — parsed from cached $metadata and AsyncAPI)
+- Platform authentication (`mxcli auth login/logout/status/list`) with PAT scheme for marketplace-api.mendix.com and catalog.mendix.com; credentials stored at ~/.mxcli/auth.json (mode 0600), MENDIX_PAT env override
 
 **Not Yet Implemented:**
 - 47 of 52 metamodel domains (REST, etc.)
