@@ -3517,6 +3517,7 @@ argumentList
 atomicExpression
     : literal
     | VARIABLE (DOT attributeName)*    // $Var or $Widget.Attribute (data source ref)
+    | AT qualifiedName                 // @Module.ConstantName (constant reference)
     | qualifiedName
     | IDENTIFIER
     | MENDIX_TOKEN

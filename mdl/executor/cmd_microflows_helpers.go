@@ -130,6 +130,8 @@ func expressionToString(expr ast.Expression) string {
 	case *ast.QualifiedNameExpr:
 		// Qualified name (association name, entity reference) - unquoted
 		return e.QualifiedName.String()
+	case *ast.ConstantRefExpr:
+		return "@" + e.QualifiedName.String()
 	case *ast.IfThenElseExpr:
 		cond := expressionToString(e.Condition)
 		thenStr := expressionToString(e.ThenExpr)

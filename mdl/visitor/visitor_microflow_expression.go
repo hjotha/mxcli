@@ -617,6 +617,15 @@ func buildAtomicExpression(ctx parser.IAtomicExpressionContext) ast.Expression {
 		}
 	}
 
+	// Constant reference: @Module.ConstantName
+	if atomCtx.AT() != nil {
+		if qn := atomCtx.QualifiedName(); qn != nil {
+			return &ast.ConstantRefExpr{
+				QualifiedName: buildQualifiedName(qn),
+			}
+		}
+	}
+
 	// Mendix token [%TokenName%]
 	if token := atomCtx.MENDIX_TOKEN(); token != nil {
 		tokenText := token.GetText()

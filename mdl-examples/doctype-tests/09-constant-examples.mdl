@@ -150,6 +150,34 @@ DEFAULT true;
 DROP CONSTANT CoTest.LaunchDate;
 /
 
+-- MARK: - Constants in Microflow Expressions (regression: issue #178)
+
+/**
+ * Level 5.1: Use @Module.Const in a microflow DECLARE
+ * Tests that `@Module.Const` syntax parses and round-trips correctly.
+ * Regression test for: DESCRIBE → re-parse roundtrip with @-style constant refs.
+ */
+CREATE OR REPLACE MICROFLOW CoTest.UseConstantRef ()
+RETURNS Nothing
+BEGIN
+  DECLARE $Endpoint String = @CoTest.ServiceEndpoint;
+  DECLARE $Retries Integer = @CoTest.MaxRetries;
+  DECLARE $IsTaxable Boolean = @CoTest.EnableDebugLogging;
+END;
+/
+
+/**
+ * Level 5.2: Mix @Module.Const with other expressions
+ * Confirms constant references work in compound expressions alongside literals.
+ */
+CREATE OR REPLACE MICROFLOW CoTest.MixedConstantExpressions ()
+RETURNS Nothing
+BEGIN
+  DECLARE $Limit Decimal = @CoTest.TaxRate + 0.05;
+  DECLARE $Msg String = 'Endpoint: ' + @CoTest.ServiceEndpoint;
+END;
+/
+
 -- ############################################################################
 -- END OF CONSTANT EXAMPLES
 -- ############################################################################

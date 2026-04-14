@@ -701,6 +701,10 @@ func (e *Executor) expressionToString(expr ast.Expression) string {
 		return fmt.Sprintf("[%%%s%%]", ex.Token)
 	case *ast.ParenExpr:
 		return fmt.Sprintf("(%s)", e.expressionToString(ex.Inner))
+	case *ast.QualifiedNameExpr:
+		return ex.QualifiedName.String()
+	case *ast.ConstantRefExpr:
+		return "@" + ex.QualifiedName.String()
 	default:
 		return fmt.Sprintf("%v", expr)
 	}

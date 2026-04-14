@@ -108,6 +108,13 @@ type QualifiedNameExpr struct {
 
 func (e *QualifiedNameExpr) isExpression() {}
 
+// ConstantRefExpr represents a constant reference: @Module.ConstantName
+type ConstantRefExpr struct {
+	QualifiedName QualifiedName // The constant qualified name
+}
+
+func (e *ConstantRefExpr) isExpression() {}
+
 // IfThenElseExpr represents an inline if-then-else expression:
 // if condition then trueExpr else falseExpr
 type IfThenElseExpr struct {
