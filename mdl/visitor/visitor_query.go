@@ -668,10 +668,14 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 		return
 	}
 
-	// Handle DESCRIBE MODULE specially (uses IDENTIFIER not qualifiedName)
+	// Handle DESCRIBE MODULE specially (uses identifierOrKeyword — accepts
+	// module names that happen to match a keyword, like "Agents").
 	if ctx.MODULE() != nil {
 		var moduleName string
-		if id := ctx.IDENTIFIER(); id != nil {
+		if iok := ctx.IdentifierOrKeyword(); iok != nil {
+			moduleName = iok.GetText()
+		} else if id := ctx.IDENTIFIER(); id != nil {
+			// Fallback for older grammar versions.
 			moduleName = id.GetText()
 		}
 		b.statements = append(b.statements, &ast.DescribeStmt{

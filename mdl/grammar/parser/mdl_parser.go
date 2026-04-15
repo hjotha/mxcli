@@ -3677,7 +3677,7 @@ func mdlparserParserInit() {
 		6439, 5, 115, 0, 0, 6439, 6440, 5, 117, 0, 0, 6440, 6570, 3, 810, 405,
 		0, 6441, 6442, 5, 67, 0, 0, 6442, 6443, 5, 116, 0, 0, 6443, 6444, 5, 117,
 		0, 0, 6444, 6570, 3, 810, 405, 0, 6445, 6446, 5, 67, 0, 0, 6446, 6447,
-		5, 29, 0, 0, 6447, 6450, 5, 568, 0, 0, 6448, 6449, 5, 140, 0, 0, 6449,
+		5, 29, 0, 0, 6447, 6450, 3, 812, 406, 0, 6448, 6449, 5, 140, 0, 0, 6449,
 		6451, 5, 86, 0, 0, 6450, 6448, 1, 0, 0, 0, 6450, 6451, 1, 0, 0, 0, 6451,
 		6570, 1, 0, 0, 0, 6452, 6453, 5, 67, 0, 0, 6453, 6454, 5, 29, 0, 0, 6454,
 		6455, 5, 473, 0, 0, 6455, 6570, 3, 810, 405, 0, 6456, 6457, 5, 67, 0, 0,
@@ -91039,6 +91039,7 @@ type IDescribeStatementContext interface {
 	JAVA() antlr.TerminalNode
 	JAVASCRIPT() antlr.TerminalNode
 	MODULE() antlr.TerminalNode
+	IdentifierOrKeyword() IIdentifierOrKeywordContext
 	WITH() antlr.TerminalNode
 	ALL() antlr.TerminalNode
 	ROLE() antlr.TerminalNode
@@ -91063,7 +91064,6 @@ type IDescribeStatementContext interface {
 	SETTINGS() antlr.TerminalNode
 	FRAGMENT() antlr.TerminalNode
 	FROM() antlr.TerminalNode
-	IdentifierOrKeyword() IIdentifierOrKeywordContext
 	IMAGE() antlr.TerminalNode
 	COLLECTION() antlr.TerminalNode
 	MODEL() antlr.TerminalNode
@@ -91210,6 +91210,22 @@ func (s *DescribeStatementContext) MODULE() antlr.TerminalNode {
 	return s.GetToken(MDLParserMODULE, 0)
 }
 
+func (s *DescribeStatementContext) IdentifierOrKeyword() IIdentifierOrKeywordContext {
+	var t antlr.RuleContext
+	for _, ctx := range s.GetChildren() {
+		if _, ok := ctx.(IIdentifierOrKeywordContext); ok {
+			t = ctx.(antlr.RuleContext)
+			break
+		}
+	}
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IIdentifierOrKeywordContext)
+}
+
 func (s *DescribeStatementContext) WITH() antlr.TerminalNode {
 	return s.GetToken(MDLParserWITH, 0)
 }
@@ -91316,22 +91332,6 @@ func (s *DescribeStatementContext) FRAGMENT() antlr.TerminalNode {
 
 func (s *DescribeStatementContext) FROM() antlr.TerminalNode {
 	return s.GetToken(MDLParserFROM, 0)
-}
-
-func (s *DescribeStatementContext) IdentifierOrKeyword() IIdentifierOrKeywordContext {
-	var t antlr.RuleContext
-	for _, ctx := range s.GetChildren() {
-		if _, ok := ctx.(IIdentifierOrKeywordContext); ok {
-			t = ctx.(antlr.RuleContext)
-			break
-		}
-	}
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(IIdentifierOrKeywordContext)
 }
 
 func (s *DescribeStatementContext) IMAGE() antlr.TerminalNode {
@@ -91891,11 +91891,7 @@ func (p *MDLParser) DescribeStatement() (localctx IDescribeStatementContext) {
 		}
 		{
 			p.SetState(6447)
-			p.Match(MDLParserIDENTIFIER)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
+			p.IdentifierOrKeyword()
 		}
 		p.SetState(6450)
 		p.GetErrorHandler().Sync(p)

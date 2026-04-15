@@ -3038,7 +3038,7 @@ describeStatement
     | DESCRIBE CONSTANT qualifiedName
     | DESCRIBE JAVA ACTION qualifiedName
     | DESCRIBE JAVASCRIPT ACTION qualifiedName
-    | DESCRIBE MODULE IDENTIFIER (WITH ALL)?  // DESCRIBE MODULE Name [WITH ALL] - optionally include all objects
+    | DESCRIBE MODULE identifierOrKeyword (WITH ALL)?  // DESCRIBE MODULE Name [WITH ALL] - optionally include all objects
     | DESCRIBE MODULE ROLE qualifiedName        // DESCRIBE MODULE ROLE Module.RoleName
     | DESCRIBE USER ROLE STRING_LITERAL          // DESCRIBE USER ROLE 'Administrator'
     | DESCRIBE DEMO USER STRING_LITERAL          // DESCRIBE DEMO USER 'demo_admin'
