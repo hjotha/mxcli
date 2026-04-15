@@ -458,26 +458,49 @@ func (e *Executor) describeMicroflowToString(name ast.QualifiedName) (string, ma
 		return "", nil, fmt.Errorf("microflow not found: %s", name)
 	}
 
+	sourceMap := make(map[string]elkSourceRange)
+	mdl := e.renderMicroflowMDL(targetMf, name, entityNames, microflowNames, sourceMap)
+	return mdl, sourceMap, nil
+}
+
+// renderMicroflowMDL formats a parsed Microflow as MDL text.
+//
+// Shared by DESCRIBE MICROFLOW and `diff-local`, so both paths produce the
+// same output. entityNames/microflowNames provide ID → qualified-name
+// resolution; pass empty maps if unavailable (types will fall back to
+// "Object"/"List" stubs). If sourceMap is non-nil it will be populated with
+// ELK node IDs → line ranges for visualization; pass nil when not needed.
+func (e *Executor) renderMicroflowMDL(
+	mf *microflows.Microflow,
+	name ast.QualifiedName,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	sourceMap map[string]elkSourceRange,
+) string {
 	var lines []string
 
-	if targetMf.Documentation != "" {
+	if mf.Documentation != "" {
 		lines = append(lines, "/**")
-		for docLine := range strings.SplitSeq(targetMf.Documentation, "\n") {
+		for docLine := range strings.SplitSeq(mf.Documentation, "\n") {
 			lines = append(lines, " * "+docLine)
 		}
 		lines = append(lines, " */")
 	}
 
+	if mf.Excluded {
+		lines = append(lines, "@excluded")
+	}
+
 	qualifiedName := name.Module + "." + name.Name
-	if len(targetMf.Parameters) > 0 {
+	if len(mf.Parameters) > 0 {
 		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY MICROFLOW %s (", qualifiedName))
-		for i, param := range targetMf.Parameters {
+		for i, param := range mf.Parameters {
 			paramType := "Object"
 			if param.Type != nil {
 				paramType = e.formatMicroflowDataType(param.Type, entityNames)
 			}
 			comma := ","
-			if i == len(targetMf.Parameters)-1 {
+			if i == len(mf.Parameters)-1 {
 				comma = ""
 			}
 			lines = append(lines, fmt.Sprintf("  $%s: %s%s", param.Name, paramType, comma))
@@ -487,24 +510,27 @@ func (e *Executor) describeMicroflowToString(name ast.QualifiedName) (string, ma
 		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY MICROFLOW %s ()", qualifiedName))
 	}
 
-	if targetMf.ReturnType != nil {
-		returnType := e.formatMicroflowDataType(targetMf.ReturnType, entityNames)
+	if mf.ReturnType != nil {
+		returnType := e.formatMicroflowDataType(mf.ReturnType, entityNames)
 		if returnType != "Void" && returnType != "" {
 			returnLine := fmt.Sprintf("RETURNS %s", returnType)
-			if targetMf.ReturnVariableName != "" && targetMf.ReturnVariableName != "Variable" {
-				returnLine += fmt.Sprintf(" AS $%s", targetMf.ReturnVariableName)
+			if mf.ReturnVariableName != "" && mf.ReturnVariableName != "Variable" {
+				returnLine += fmt.Sprintf(" AS $%s", mf.ReturnVariableName)
 			}
 			lines = append(lines, returnLine)
 		}
 	}
 
 	lines = append(lines, "BEGIN")
-	headerLineCount := len(lines) // lines before activity body
+	headerLineCount := len(lines)
 
-	sourceMap := make(map[string]elkSourceRange)
-
-	if targetMf.ObjectCollection != nil && len(targetMf.ObjectCollection.Objects) > 0 {
-		activityLines := e.formatMicroflowActivitiesWithSourceMap(targetMf, entityNames, microflowNames, sourceMap, headerLineCount)
+	if mf.ObjectCollection != nil && len(mf.ObjectCollection.Objects) > 0 {
+		var activityLines []string
+		if sourceMap != nil {
+			activityLines = e.formatMicroflowActivitiesWithSourceMap(mf, entityNames, microflowNames, sourceMap, headerLineCount)
+		} else {
+			activityLines = e.formatMicroflowActivities(mf, entityNames, microflowNames)
+		}
 		for _, line := range activityLines {
 			lines = append(lines, "  "+line)
 		}
@@ -514,9 +540,9 @@ func (e *Executor) describeMicroflowToString(name ast.QualifiedName) (string, ma
 
 	lines = append(lines, "END;")
 
-	if len(targetMf.AllowedModuleRoles) > 0 {
-		roles := make([]string, len(targetMf.AllowedModuleRoles))
-		for i, r := range targetMf.AllowedModuleRoles {
+	if len(mf.AllowedModuleRoles) > 0 {
+		roles := make([]string, len(mf.AllowedModuleRoles))
+		for i, r := range mf.AllowedModuleRoles {
 			roles[i] = string(r)
 		}
 		lines = append(lines, "")
@@ -526,7 +552,7 @@ func (e *Executor) describeMicroflowToString(name ast.QualifiedName) (string, ma
 
 	lines = append(lines, "/")
 
-	return strings.Join(lines, "\n"), sourceMap, nil
+	return strings.Join(lines, "\n")
 }
 
 // formatMicroflowDataType formats a microflow data type for MDL output.

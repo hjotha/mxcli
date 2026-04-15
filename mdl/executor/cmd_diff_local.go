@@ -12,6 +12,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -484,55 +485,54 @@ func (e *Executor) attributeBsonToMDL(raw map[string]any) string {
 	return result.String()
 }
 
-// microflowBsonToMDL converts a microflow BSON to MDL
+// microflowBsonToMDL converts a microflow BSON to MDL using the same
+// renderer as DESCRIBE MICROFLOW, so diffs include activity bodies.
+// Falls back to a header-only stub if parsing fails.
 func (e *Executor) microflowBsonToMDL(raw map[string]any, qualifiedName string) string {
-	var lines []string
+	qn := splitQualifiedName(qualifiedName)
+	mf := mpr.ParseMicroflowFromRaw(raw, model.ID(qn.Name), "")
 
-	// Documentation
-	if doc := extractString(raw["Documentation"]); doc != "" {
-		lines = append(lines, "/**")
-		lines = append(lines, " * "+doc)
-		lines = append(lines, " */")
+	entityNames, microflowNames := e.buildNameLookups()
+	return e.renderMicroflowMDL(mf, qn, entityNames, microflowNames, nil)
+}
+
+// splitQualifiedName parses "Module.Name" into an ast.QualifiedName.
+// If no module prefix is present, Module is empty.
+func splitQualifiedName(qualifiedName string) ast.QualifiedName {
+	if idx := strings.LastIndex(qualifiedName, "."); idx > 0 {
+		return ast.QualifiedName{Module: qualifiedName[:idx], Name: qualifiedName[idx+1:]}
 	}
+	return ast.QualifiedName{Name: qualifiedName}
+}
 
-	lines = append(lines, fmt.Sprintf("CREATE MICROFLOW %s (", qualifiedName))
-
-	// Parameters - look in ObjectCollection
-	if objCollection, ok := raw["ObjectCollection"].(map[string]any); ok {
-		objects := extractBsonArray(objCollection["Objects"])
-		for i, obj := range objects {
-			if objMap, ok := obj.(map[string]any); ok {
-				if objType := extractString(objMap["$Type"]); strings.Contains(objType, "MicroflowParameterObject") {
-					paramName := extractString(objMap["Name"])
-					paramType := "Object"
-					if typeStr := extractString(objMap["VariableType"]); typeStr != "" {
-						paramType = typeStr
-					}
-					comma := ","
-					if i == len(objects)-1 {
-						comma = ""
-					}
-					lines = append(lines, fmt.Sprintf("  $%s: %s%s", paramName, paramType, comma))
-				}
+// buildNameLookups builds ID → qualified-name maps for entities and
+// microflows from the current project. Used by BSON-driven renderers that
+// receive IDs (e.g. entity references) and want to resolve them against
+// the working-tree model. Returns empty maps if the reader is unavailable.
+func (e *Executor) buildNameLookups() (map[model.ID]string, map[model.ID]string) {
+	entityNames := make(map[model.ID]string)
+	microflowNames := make(map[model.ID]string)
+	if e.reader == nil {
+		return entityNames, microflowNames
+	}
+	h, err := e.getHierarchy()
+	if err != nil {
+		return entityNames, microflowNames
+	}
+	if domainModels, err := e.reader.ListDomainModels(); err == nil {
+		for _, dm := range domainModels {
+			modName := h.GetModuleName(dm.ContainerID)
+			for _, entity := range dm.Entities {
+				entityNames[entity.ID] = modName + "." + entity.Name
 			}
 		}
 	}
-
-	lines = append(lines, ")")
-
-	// Return type
-	returnType := "Void"
-	if rt := extractString(raw["ReturnType"]); rt != "" {
-		returnType = rt
+	if microflows, err := e.reader.ListMicroflows(); err == nil {
+		for _, mf := range microflows {
+			microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+		}
 	}
-	lines = append(lines, fmt.Sprintf("RETURNS %s", returnType))
-
-	lines = append(lines, "BEGIN")
-	lines = append(lines, "  -- (microflow body)")
-	lines = append(lines, "END;")
-	lines = append(lines, "/")
-
-	return strings.Join(lines, "\n")
+	return entityNames, microflowNames
 }
 
 // nanoflowBsonToMDL converts a nanoflow BSON to MDL

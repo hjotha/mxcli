@@ -19,16 +19,27 @@ func (r *Reader) parseMicroflow(unitID, containerID string, contents []byte) (*m
 	if err != nil {
 		return nil, err
 	}
+	return ParseMicroflowBSON(contents, model.ID(unitID), model.ID(containerID))
+}
 
+// ParseMicroflowBSON parses raw microflow BSON bytes into a Microflow.
+// Unlike (*Reader).parseMicroflow it does not require a Reader, so it can
+// parse arbitrary blobs (e.g. historical versions read via `git show`).
+func ParseMicroflowBSON(contents []byte, unitID, containerID model.ID) (*microflows.Microflow, error) {
 	var raw map[string]any
 	if err := bson.Unmarshal(contents, &raw); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal BSON: %w", err)
 	}
+	return ParseMicroflowFromRaw(raw, unitID, containerID), nil
+}
 
+// ParseMicroflowFromRaw builds a Microflow from an already-unmarshalled BSON map.
+// Useful when the caller already has the decoded map (e.g. diff-local).
+func ParseMicroflowFromRaw(raw map[string]any, unitID, containerID model.ID) *microflows.Microflow {
 	mf := &microflows.Microflow{}
-	mf.ID = model.ID(unitID)
+	mf.ID = unitID
 	mf.TypeName = "Microflows$Microflow"
-	mf.ContainerID = model.ID(containerID)
+	mf.ContainerID = containerID
 
 	if name, ok := raw["Name"].(string); ok {
 		mf.Name = name
@@ -128,7 +139,7 @@ func (r *Reader) parseMicroflow(unitID, containerID string, contents []byte) (*m
 		}
 	}
 
-	return mf, nil
+	return mf
 }
 
 // parseSequenceFlow parses a SequenceFlow from raw BSON data.
