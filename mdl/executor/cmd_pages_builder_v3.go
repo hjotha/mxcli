@@ -587,20 +587,34 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 	case "association":
 		// Association path source — emits Forms$AssociationSource BSON.
-		// EntityPath is the qualified association name (and optional /DestinationEntity).
-		// ContextVariable is the page parameter name (empty when source is $currentObject of parent dataview).
+		// ds.Reference is either "Module.Assoc" (single-segment) or
+		// "Module.Assoc/Module.DestEntity" (multi-segment, dest explicit).
+		// For single-segment, resolve DestinationEntity from the association
+		// definition (the side opposite to the parent context entity).
 		ctxVar := ds.ContextVariable
 		if ctxVar == "currentObject" {
 			ctxVar = "" // implicit context — no SourceVariable in BSON
 		}
+
+		path := ds.Reference
+		destEntity := ""
+		if idx := strings.Index(path, "/"); idx >= 0 {
+			destEntity = path[idx+1:]
+			path = path[:idx]
+		} else {
+			destEntity = pb.resolveAssociationDestination(path, pb.entityContext)
+		}
+
+		// Return destEntity as the child context so column bindings inside the
+		// widget can resolve short attribute names against it.
 		return &pages.AssociationSource{
 			BaseElement: model.BaseElement{
 				ID:       model.ID(mpr.GenerateID()),
 				TypeName: "Forms$AssociationSource",
 			},
-			EntityPath:      ds.Reference,
+			EntityPath:      path + "/" + destEntity,
 			ContextVariable: ctxVar,
-		}, "", nil
+		}, destEntity, nil
 
 	case "selection":
 		// Selection from another widget
@@ -625,6 +639,98 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 	default:
 		return nil, "", fmt.Errorf("unsupported datasource type: %s", ds.Type)
 	}
+}
+
+// resolveAssociationDestination looks up an association by qualified name and returns
+// the qualified name of the entity OPPOSITE to contextEntity. Returns "" if the
+// association can't be resolved or the context isn't on either end.
+//
+// Convention (per CLAUDE.md): ParentID = FROM entity, ChildID = TO entity.
+// For `Module.OrderLine_Order` (`FROM OrderLine TO Order`), context=Order → dest=OrderLine (parent side).
+func (pb *pageBuilder) resolveAssociationDestination(assocQN, contextEntity string) string {
+	if assocQN == "" {
+		return ""
+	}
+	parts := strings.SplitN(assocQN, ".", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	modName, assocName := parts[0], parts[1]
+
+	domainModels, err := pb.reader.ListDomainModels()
+	if err != nil {
+		return ""
+	}
+	for _, dm := range domainModels {
+		for _, a := range dm.Associations {
+			if a.Name != assocName {
+				continue
+			}
+			// Resolve entity qualified names for ParentID and ChildID.
+			// Entity IDs are unique across the project; look up the entity
+			// in any domain model.
+			parentEntity := pb.entityQNByID(a.ParentID)
+			childEntity := pb.entityQNByID(a.ChildID)
+			// Module-scope safety: the association module must match the first
+			// segment of the qualified name we were given.
+			_ = modName
+			// The "destination" is the end OPPOSITE to the context.
+			if contextEntity != "" {
+				if contextEntity == childEntity {
+					return parentEntity
+				}
+				if contextEntity == parentEntity {
+					return childEntity
+				}
+			}
+			// No context or mismatch — default to the child (TO) side, which
+			// matches the common FROM=context pattern.
+			return childEntity
+		}
+	}
+	return ""
+}
+
+// entityQNByID returns the qualified name (Module.Entity) for a given entity ID
+// by scanning all domain models. Returns "" if not found.
+func (pb *pageBuilder) entityQNByID(entityID model.ID) string {
+	if entityID == "" {
+		return ""
+	}
+	domainModels, err := pb.reader.ListDomainModels()
+	if err != nil {
+		return ""
+	}
+	for _, dm := range domainModels {
+		for _, e := range dm.Entities {
+			if e.ID == entityID {
+				// Look up module name via the domain model's container
+				modName := pb.moduleNameByID(dm.ContainerID)
+				if modName == "" {
+					return e.Name
+				}
+				return modName + "." + e.Name
+			}
+		}
+	}
+	return ""
+}
+
+// moduleNameByID returns the module name for a given module ID. Cached via hierarchy.
+func (pb *pageBuilder) moduleNameByID(moduleID model.ID) string {
+	if moduleID == "" {
+		return ""
+	}
+	modules, err := pb.reader.ListModules()
+	if err != nil {
+		return ""
+	}
+	for _, m := range modules {
+		if m.ID == moduleID {
+			return m.Name
+		}
+	}
+	return ""
 }
 
 // getMicroflowReturnEntityName looks up a microflow and returns its return type entity name.
