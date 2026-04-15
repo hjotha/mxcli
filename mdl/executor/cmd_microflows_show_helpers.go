@@ -211,12 +211,19 @@ func (e *Executor) traverseFlow(
 
 		trueFlow, falseFlow := findBranchFlows(flows)
 
-		// Guard pattern: true branch is a single EndEvent (RETURN).
-		// Output IF/RETURN/END IF without ELSE, continue at same indent.
+		// Guard pattern: true branch is a single EndEvent (RETURN),
+		// but only when the false branch does NOT also end directly.
+		// If both branches return, use normal IF/ELSE/END IF.
 		isGuard := false
 		if trueFlow != nil {
 			if _, isEnd := activityMap[trueFlow.DestinationID].(*microflows.EndEvent); isEnd {
 				isGuard = true
+				// Not a guard if both branches return directly
+				if falseFlow != nil {
+					if _, falseIsEnd := activityMap[falseFlow.DestinationID].(*microflows.EndEvent); falseIsEnd {
+						isGuard = false
+					}
+				}
 			}
 		}
 
@@ -352,11 +359,17 @@ func (e *Executor) traverseFlowUntilMerge(
 
 		trueFlow, falseFlow := findBranchFlows(flows)
 
-		// Guard pattern: true branch is a single EndEvent (RETURN)
+		// Guard pattern: true branch is a single EndEvent (RETURN),
+		// but only when the false branch does NOT also end directly.
 		isGuard := false
 		if trueFlow != nil {
 			if _, isEnd := activityMap[trueFlow.DestinationID].(*microflows.EndEvent); isEnd {
 				isGuard = true
+				if falseFlow != nil {
+					if _, falseIsEnd := activityMap[falseFlow.DestinationID].(*microflows.EndEvent); falseIsEnd {
+						isGuard = false
+					}
+				}
 			}
 		}
 
