@@ -7,13 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/mendixlabs/mxcli/internal/pathutil"
 	"go.lsp.dev/protocol"
 )
 
@@ -31,16 +31,9 @@ func (s stdioReadWriteCloser) Write(p []byte) (int, error) { return os.Stdout.Wr
 func (s stdioReadWriteCloser) Close() error                { return nil }
 
 // uriToPath converts a file:// URI to a filesystem path.
+// Deprecated: use pathutil.URIToPath instead.
 func uriToPath(rawURI string) string {
-	u, err := url.Parse(rawURI)
-	if err != nil {
-		return ""
-	}
-	if u.Scheme == "file" {
-		return filepath.FromSlash(u.Path)
-	}
-	// If no scheme, treat as a raw path
-	return rawURI
+	return pathutil.URIToPath(rawURI)
 }
 
 // pullConfiguration requests the "mdl" configuration section from the client.

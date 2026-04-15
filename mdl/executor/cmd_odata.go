@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/mendixlabs/mxcli/internal/pathutil"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
@@ -1002,7 +1005,11 @@ func (e *Executor) createODataClient(stmt *ast.CreateODataClientStmt) error {
 
 	// Fetch and cache $metadata from the service URL
 	if newSvc.MetadataUrl != "" {
-		metadata, hash, err := fetchODataMetadata(newSvc.MetadataUrl)
+		mprDir := ""
+		if e.mprPath != "" {
+			mprDir = filepath.Dir(e.mprPath)
+		}
+		metadata, hash, err := fetchODataMetadata(newSvc.MetadataUrl, mprDir)
 		if err != nil {
 			fmt.Fprintf(e.output, "Warning: could not fetch $metadata: %v\n", err)
 		} else if metadata != "" {
@@ -1404,29 +1411,73 @@ func astEntityDefToModel(def *ast.PublishedEntityDef) (*model.PublishedEntityTyp
 	return entityType, entitySet
 }
 
-// fetchODataMetadata downloads the $metadata document from the service URL.
+// fetchODataMetadata downloads or reads the $metadata document.
+// Supports:
+//   - https://... or http://... (HTTP fetch)
+//   - file:///abs/path (local absolute path)
+//   - ./path or path/file.xml (local relative path, resolved against mprDir)
+//
 // Returns the metadata XML and its SHA-256 hash, or empty strings if the fetch fails.
-func fetchODataMetadata(metadataUrl string) (metadata string, hash string, err error) {
+// If mprDir is empty and a relative path is given, resolves against cwd.
+func fetchODataMetadata(metadataUrl string, mprDir string) (metadata string, hash string, err error) {
 	if metadataUrl == "" {
 		return "", "", nil
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(metadataUrl)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to fetch $metadata from %s: %w", metadataUrl, err)
-	}
-	defer resp.Body.Close()
+	var body []byte
 
-	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("$metadata fetch returned HTTP %d from %s", resp.StatusCode, metadataUrl)
+	// Detect if this is a local file path (file:// or not http/https)
+	isHTTP := strings.HasPrefix(metadataUrl, "http://") || strings.HasPrefix(metadataUrl, "https://")
+
+	if !isHTTP {
+		// Local file path - extract and resolve
+		filePath := metadataUrl
+		if strings.HasPrefix(metadataUrl, "file://") {
+			filePath = pathutil.URIToPath(metadataUrl)
+			if filePath == "" {
+				return "", "", fmt.Errorf("invalid file:// URI: %s", metadataUrl)
+			}
+		}
+
+		// Resolve relative paths
+		if !filepath.IsAbs(filePath) {
+			if mprDir != "" {
+				filePath = filepath.Join(mprDir, filePath)
+			} else {
+				// No project loaded - use cwd
+				cwd, err := os.Getwd()
+				if err != nil {
+					return "", "", fmt.Errorf("failed to resolve relative path: %w", err)
+				}
+				filePath = filepath.Join(cwd, filePath)
+			}
+		}
+
+		// Read local file
+		body, err = os.ReadFile(filePath)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to read local metadata file %s: %w", filePath, err)
+		}
+	} else {
+		// HTTP(S) fetch
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Get(metadataUrl)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to fetch $metadata from %s: %w", metadataUrl, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return "", "", fmt.Errorf("$metadata fetch returned HTTP %d from %s", resp.StatusCode, metadataUrl)
+		}
+
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to read $metadata response: %w", err)
+		}
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to read $metadata response: %w", err)
-	}
-
+	// Hash calculation (same for both HTTP and local file)
 	metadata = string(body)
 	h := sha256.Sum256(body)
 	hash = fmt.Sprintf("%x", h)

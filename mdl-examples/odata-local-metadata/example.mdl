@@ -1,0 +1,31 @@
+-- Example: Using local OData metadata files
+--
+-- This demonstrates three ways to specify local metadata files for OData clients:
+-- 1. Absolute file:// URI
+-- 2. Relative path with ./
+-- 3. Relative path without ./
+
+-- Method 1: Absolute file:// URI (works anywhere)
+-- Useful when the metadata file is in a fixed location
+CREATE ODATA CLIENT TestModule.NorthwindAbsolute (
+  MetadataUrl: 'file:///tmp/northwind-metadata.xml'
+);
+
+-- Method 2: Relative path with ./ (resolved against .mpr directory)
+-- Best for metadata files stored alongside the project
+CREATE ODATA CLIENT TestModule.NorthwindRelative (
+  MetadataUrl: './mdl-examples/odata-local-metadata/sample-metadata.xml'
+);
+
+-- Method 3: Relative path without ./ (also resolved against .mpr directory)
+CREATE ODATA CLIENT TestModule.NorthwindSimple (
+  MetadataUrl: 'mdl-examples/odata-local-metadata/sample-metadata.xml'
+);
+
+-- HTTP(S) URLs still work as before
+CREATE ODATA CLIENT TestModule.NorthwindRemote (
+  MetadataUrl: 'https://services.odata.org/V4/Northwind/Northwind.svc/$metadata'
+);
+
+-- Show the created clients
+SHOW ODATA CLIENTS IN TestModule;

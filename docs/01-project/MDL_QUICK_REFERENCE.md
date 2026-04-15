@@ -133,13 +133,35 @@ CREATE CONSTANT MyModule.EnableLogging TYPE Boolean DEFAULT true;
 
 **OData Client Example:**
 ```sql
+-- HTTP(S) URL (fetches metadata from remote service)
 CREATE ODATA CLIENT MyModule.ExternalAPI (
   Version: '1.0',
   ODataVersion: OData4,
   MetadataUrl: 'https://api.example.com/odata/v4/$metadata',
   Timeout: 300
 );
+
+-- Local file with absolute file:// URI
+CREATE ODATA CLIENT MyModule.LocalService (
+  Version: '1.0',
+  ODataVersion: OData4,
+  MetadataUrl: 'file:///path/to/metadata.xml',
+  Timeout: 300
+);
+
+-- Local file with relative path (resolved against .mpr directory)
+CREATE ODATA CLIENT MyModule.LocalService2 (
+  Version: '1.0',
+  ODataVersion: OData4,
+  MetadataUrl: './metadata/service.xml',
+  Timeout: 300
+);
 ```
+
+**Note:** `MetadataUrl` supports three formats:
+- `https://...` or `http://...` — fetches from HTTP(S) endpoint
+- `file:///abs/path` — reads from local absolute path
+- `./path` or `path/file.xml` — reads from local relative path (resolved against `.mpr` directory when project is loaded, or `cwd` otherwise)
 
 **OData Service Example:**
 ```sql
