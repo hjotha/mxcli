@@ -26,7 +26,7 @@ Once discovery is implemented, a natural follow-up is **automatic OData client g
 mxcli catalog create-odata-client <endpoint-uuid> --into MyModule
 ```
 
-This would fetch metadata from the Catalog-registered endpoint and execute `CREATE EXTERNAL ENTITIES` automatically. However, this proposal focuses solely on **read-only search and discovery** to unblock manual workflows first.
+This would fetch metadata from the Catalog-registered endpoint and execute `CREATE EXTERNAL ENTITIES` automatically. However, this proposal focuses on **Phase 1: search and endpoint inspection** to unblock manual workflows first. Client generation is deferred to Phase 2 pending architecture discussion.
 
 ## API Discovery
 
@@ -240,6 +240,66 @@ mxcli catalog search "customer" --service-type OData --production-only --json \
 mxcli catalog search "api" --json \
   | jq -r '.[] | "- [\(.name)](\(.application.name)) - \(.description)"'
 ```
+
+### `mxcli catalog show <uuid> [flags]`
+
+**Synopsis:**
+```bash
+mxcli catalog show <uuid> [flags]
+```
+
+**Arguments:**
+- `<uuid>` — Required endpoint UUID (from search results)
+
+**Flags:**
+- `--profile <name>` — Auth profile (default: "default")
+- `--json` — Output full JSON response including embedded contract
+
+**Examples:**
+
+```bash
+# Show endpoint details (human-readable)
+mxcli catalog show a7f3c2d1-4b5e-6c7f-8d9e-0a1b2c3d4e5f
+
+# JSON output with full contract
+mxcli catalog show a7f3c2d1 --json | jq '.serviceVersion.contracts[0].documents[0].contents'
+```
+
+**Human-Readable Output:**
+
+```
+Name:         CustomerService
+Type:         OData
+Version:      1.2.0
+Application:  CRM Application
+Environment:  Production (EU)
+Location:     https://crm.acme.com/odata/customer/v1
+Description:  Manages customer data and relationships
+
+Security:     Basic, MxID
+Validated:    Yes
+Last Updated: 2026-04-10T14:32:00Z
+
+Entities (3):
+  - Customer (6 attributes, 2 associations)
+    Attributes: Name, Email, Phone, Address, City, PostalCode
+    Associations: Customer_Order, Customer_Address
+  - Order (5 attributes, 1 association)
+  - Address (4 attributes)
+
+Actions (2):
+  - CalculateDiscount (parameters: CustomerId, DiscountCode)
+  - ValidateCustomer (parameters: Email)
+```
+
+**JSON Output:**
+
+Returns the complete `/endpoints/{uuid}` API response, including:
+- Full endpoint metadata
+- Embedded contract (`serviceVersion.contracts[0].documents[0].contents`)
+- Entity and action details
+- Security scheme
+- Application and environment metadata
 
 ## Implementation Plan
 
@@ -707,34 +767,7 @@ Choose based on user feedback and implementation complexity.
 
 ## Future Enhancements (Out of Scope)
 
-### 1. `mxcli catalog show <uuid>`
-
-Show detailed endpoint metadata:
-
-```bash
-mxcli catalog show a7f3c2d1-4b5e-6c7f-8d9e-0a1b2c3d4e5f
-
-# Output:
-Name:         CustomerService
-Type:         OData
-Version:      1.2.0
-Application:  CRM Application
-Environment:  Production (EU)
-Description:  Manages customer data and relationships
-
-Entities (3):
-  - Customer (attributes: Name, Email, Phone)
-  - Order (attributes: OrderNumber, Date, TotalAmount)
-  - Address (attributes: Street, City, PostalCode)
-
-Actions (2):
-  - CalculateDiscount
-  - ValidateCustomer
-```
-
-**Implementation:** Call `GET /endpoints/{uuid}`, parse entities/actions, format as hierarchical output.
-
-### 2. `mxcli catalog create-odata-client <uuid>`
+### 1. `mxcli catalog create-odata-client <uuid>`
 
 Generate OData client from Catalog entry:
 
@@ -746,9 +779,9 @@ mxcli catalog create-odata-client a7f3c2d1 --into MyModule -p app.mpr
 # 2. CREATE EXTERNAL ENTITIES FROM 'http://...$metadata' INTO MyModule
 ```
 
-**Implementation:** Fetch endpoint details, extract metadata URL, call existing `CREATE EXTERNAL ENTITIES` executor.
+**Implementation:** Fetch endpoint details, extract metadata content, call existing `CREATE EXTERNAL ENTITIES` executor with embedded metadata.
 
-### 3. Interactive Search UI
+### 2. Interactive Search UI
 
 TUI with arrow-key navigation and fuzzy search:
 
