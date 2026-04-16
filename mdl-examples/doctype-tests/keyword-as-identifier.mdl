@@ -62,12 +62,9 @@ CREATE ENUMERATION KeywordTest.MiscKeywords (
   Action,
   Source,
   Target,
-  Owner,
-  Type,
   Name,
   Value,
   Result,
-  Object,
   Index,
   Input,
   Output,
@@ -94,7 +91,6 @@ CREATE ENTITY KeywordTest.Data (
 
 CREATE ENTITY KeywordTest.Activity (
   Name       : String(200),
-  Type       : String(200),
   Result     : String(200)
 );
 
@@ -111,7 +107,6 @@ BEGIN
 
   $Activity = CREATE KeywordTest.Activity (
     Name   = 'test',
-    Type   = 'task',
     Result = 'ok'
   );
 END;

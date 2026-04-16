@@ -2867,7 +2867,8 @@ alterSettingsClause
     ;
 
 settingsSection
-    : IDENTIFIER   // MODEL, LANGUAGE
+    : IDENTIFIER   // LANGUAGE, etc.
+    | MODEL
     | WORKFLOWS
     ;
 

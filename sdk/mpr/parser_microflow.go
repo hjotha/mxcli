@@ -151,12 +151,8 @@ func parseSequenceFlow(raw map[string]any) *microflows.SequenceFlow {
 	flow.OriginID = model.ID(extractBsonID(raw["OriginPointer"]))
 	flow.DestinationID = model.ID(extractBsonID(raw["DestinationPointer"]))
 
-	if originIdx, ok := raw["OriginConnectionIndex"].(int32); ok {
-		flow.OriginConnectionIndex = int(originIdx)
-	}
-	if destIdx, ok := raw["DestinationConnectionIndex"].(int32); ok {
-		flow.DestinationConnectionIndex = int(destIdx)
-	}
+	flow.OriginConnectionIndex = extractInt(raw["OriginConnectionIndex"])
+	flow.DestinationConnectionIndex = extractInt(raw["DestinationConnectionIndex"])
 	if isErr, ok := raw["IsErrorHandler"].(bool); ok {
 		flow.IsErrorHandler = isErr
 	}

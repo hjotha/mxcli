@@ -24,7 +24,9 @@ func (e *Executor) formatActivity(
 	case *microflows.EndEvent:
 		if activity.ReturnValue != "" {
 			returnVal := strings.TrimSuffix(activity.ReturnValue, "\n")
-			if !strings.HasPrefix(returnVal, "$") && !isMendixKeyword(returnVal) && !isQualifiedEnumLiteral(returnVal) {
+			// Only add $ prefix for bare identifiers (no operators, quotes, or parens)
+			if !strings.HasPrefix(returnVal, "$") && !isMendixKeyword(returnVal) && !isQualifiedEnumLiteral(returnVal) &&
+				!strings.ContainsAny(returnVal, "+'\"()") {
 				returnVal = "$" + returnVal
 			}
 			return fmt.Sprintf("RETURN %s;", returnVal)
@@ -97,7 +99,7 @@ func (e *Executor) formatAction(
 		if a.DataType != nil {
 			varType = e.formatMicroflowDataType(a.DataType, entityNames)
 		}
-		initialValue := a.InitialValue
+		initialValue := strings.TrimSuffix(a.InitialValue, "\n")
 		if initialValue == "" {
 			initialValue = "empty"
 		}

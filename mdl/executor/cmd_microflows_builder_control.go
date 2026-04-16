@@ -65,9 +65,19 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	// Calculate merge position (after the longest branch)
 	mergeX := splitX + SplitWidth + HorizontalSpacing/2 + branchWidth + HorizontalSpacing/2
 
-	// Only create merge if at least one branch does NOT end with RETURN
-	var mergeID model.ID
+	// Determine if the merge would have 2+ incoming edges (non-redundant).
+	// Skip merge when only one branch flows into it (the other returns).
+	needMerge := false
 	if !bothReturn {
+		if hasElseBody {
+			needMerge = !thenReturns && !elseReturns // both branches continue → 2 inputs
+		} else {
+			needMerge = !thenReturns // THEN continues + FALSE path → 2 inputs
+		}
+	}
+
+	var mergeID model.ID
+	if needMerge {
 		merge := &microflows.ExclusiveMerge{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
 				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
@@ -153,8 +163,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// IF WITHOUT ELSE: FALSE path horizontal (happy path), TRUE path below
 		// This keeps the "do nothing" path straight and the "do something" path below
 
-		// FALSE path: connect split directly to merge horizontally
-		fb.flows = append(fb.flows, newHorizontalFlowWithCase(splitID, mergeID, "false"))
+		if needMerge {
+			// FALSE path: connect split directly to merge horizontally
+			fb.flows = append(fb.flows, newHorizontalFlowWithCase(splitID, mergeID, "false"))
+		}
+		// When !needMerge (thenReturns): FALSE flow is deferred — the parent will
+		// connect splitID to the next activity with nextFlowCase="false".
 
 		// TRUE path: goes below the main line
 		thenCenterY := centerY + VerticalSpacing
@@ -202,13 +216,34 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	// Restore endsWithReturn - a single branch returning doesn't end the overall flow
 	fb.endsWithReturn = savedEndsWithReturn
 
-	// Update position to after the merge, on the happy path center line
-	fb.posX = mergeX + MergeSize + HorizontalSpacing/2
-	fb.posY = centerY
-
-	// Set nextConnectionPoint so the next activity connects FROM the merge
-	// while incoming connection goes TO the split (returned below)
-	fb.nextConnectionPoint = mergeID
+	if needMerge {
+		// Update position to after the merge, on the happy path center line
+		fb.posX = mergeX + MergeSize + HorizontalSpacing/2
+		fb.posY = centerY
+		fb.nextConnectionPoint = mergeID
+	} else {
+		// No merge: the split's continuing branch connects directly to the next activity.
+		// Position after the split, past the downward branch's horizontal extent.
+		afterSplit := splitX + SplitWidth + HorizontalSpacing
+		afterBranch := thenStartX + thenBounds.Width + HorizontalSpacing/2
+		if !hasElseBody {
+			fb.posX = max(afterSplit, afterBranch)
+		} else {
+			fb.posX = max(afterSplit, afterBranch)
+		}
+		fb.posY = centerY
+		fb.nextConnectionPoint = splitID
+		// Tell parent to attach the case value on the next flow
+		if hasElseBody {
+			if thenReturns {
+				fb.nextFlowCase = "false"
+			} else {
+				fb.nextFlowCase = "true"
+			}
+		} else {
+			fb.nextFlowCase = "false" // IF without ELSE: false is the continuing path
+		}
+	}
 
 	return splitID
 }

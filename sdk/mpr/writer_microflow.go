@@ -204,7 +204,7 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow) bson.D {
 		{Key: "$ID", Value: idToBsonBinary(string(flow.ID))},
 		{Key: "$Type", Value: "Microflows$SequenceFlow"},
 		{Key: "CaseValues", Value: caseValues},
-		{Key: "DestinationConnectionIndex", Value: int64(flow.DestinationConnectionIndex)},
+		{Key: "DestinationConnectionIndex", Value: int32(flow.DestinationConnectionIndex)},
 		{Key: "DestinationPointer", Value: idToBsonBinary(string(flow.DestinationID))},
 		{Key: "IsErrorHandler", Value: flow.IsErrorHandler},
 		{Key: "Line", Value: bson.D{
@@ -213,7 +213,7 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow) bson.D {
 			{Key: "DestinationControlVector", Value: destCV},
 			{Key: "OriginControlVector", Value: originCV},
 		}},
-		{Key: "OriginConnectionIndex", Value: int64(flow.OriginConnectionIndex)},
+		{Key: "OriginConnectionIndex", Value: int32(flow.OriginConnectionIndex)},
 		{Key: "OriginPointer", Value: idToBsonBinary(string(flow.OriginID))},
 	}
 }
@@ -223,7 +223,7 @@ func serializeAnnotationFlow(af *microflows.AnnotationFlow) bson.D {
 	return bson.D{
 		{Key: "$ID", Value: idToBsonBinary(string(af.ID))},
 		{Key: "$Type", Value: "Microflows$AnnotationFlow"},
-		{Key: "DestinationConnectionIndex", Value: int64(0)},
+		{Key: "DestinationConnectionIndex", Value: int32(0)},
 		{Key: "DestinationPointer", Value: idToBsonBinary(string(af.DestinationID))},
 		{Key: "Line", Value: bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
@@ -231,7 +231,7 @@ func serializeAnnotationFlow(af *microflows.AnnotationFlow) bson.D {
 			{Key: "DestinationControlVector", Value: "0;0"},
 			{Key: "OriginControlVector", Value: "0;0"},
 		}},
-		{Key: "OriginConnectionIndex", Value: int64(0)},
+		{Key: "OriginConnectionIndex", Value: int32(0)},
 		{Key: "OriginPointer", Value: idToBsonBinary(string(af.OriginID))},
 	}
 }

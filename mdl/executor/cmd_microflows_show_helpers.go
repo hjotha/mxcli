@@ -211,28 +211,63 @@ func (e *Executor) traverseFlow(
 
 		trueFlow, falseFlow := findBranchFlows(flows)
 
+		// Guard pattern: true branch is a single EndEvent (RETURN),
+		// but only when the false branch does NOT also end directly.
+		// If both branches return, use normal IF/ELSE/END IF.
+		isGuard := false
 		if trueFlow != nil {
-			e.traverseFlowUntilMerge(trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
-		}
-
-		if falseFlow != nil {
-			*lines = append(*lines, indentStr+"ELSE")
-			visitedFalseBranch := make(map[model.ID]bool)
-			for id := range visited {
-				visitedFalseBranch[id] = true
+			if _, isEnd := activityMap[trueFlow.DestinationID].(*microflows.EndEvent); isEnd {
+				isGuard = true
+				// Not a guard if both branches return directly
+				if falseFlow != nil {
+					if _, falseIsEnd := activityMap[falseFlow.DestinationID].(*microflows.EndEvent); falseIsEnd {
+						isGuard = false
+					}
+				}
 			}
-			e.traverseFlowUntilMerge(falseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 		}
 
-		*lines = append(*lines, indentStr+"END IF;")
-		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+		if isGuard {
+			e.traverseFlowUntilMerge(trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			*lines = append(*lines, indentStr+"END IF;")
+			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
-		// Continue after the merge point
-		if mergeID != "" {
-			visited[mergeID] = true
-			nextFlows := flowsByOrigin[mergeID]
-			for _, flow := range nextFlows {
-				e.traverseFlow(flow.DestinationID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			// Continue from the false branch (skip through merge if present)
+			if falseFlow != nil {
+				contID := falseFlow.DestinationID
+				if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
+					visited[contID] = true
+					for _, flow := range flowsByOrigin[contID] {
+						contID = flow.DestinationID
+						break
+					}
+				}
+				e.traverseFlow(contID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
+		} else {
+			if trueFlow != nil {
+				e.traverseFlowUntilMerge(trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			}
+
+			if falseFlow != nil {
+				*lines = append(*lines, indentStr+"ELSE")
+				visitedFalseBranch := make(map[model.ID]bool)
+				for id := range visited {
+					visitedFalseBranch[id] = true
+				}
+				e.traverseFlowUntilMerge(falseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			}
+
+			*lines = append(*lines, indentStr+"END IF;")
+			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+
+			// Continue after the merge point
+			if mergeID != "" {
+				visited[mergeID] = true
+				nextFlows := flowsByOrigin[mergeID]
+				for _, flow := range nextFlows {
+					e.traverseFlow(flow.DestinationID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				}
 			}
 		}
 		return
@@ -324,28 +359,61 @@ func (e *Executor) traverseFlowUntilMerge(
 
 		trueFlow, falseFlow := findBranchFlows(flows)
 
+		// Guard pattern: true branch is a single EndEvent (RETURN),
+		// but only when the false branch does NOT also end directly.
+		isGuard := false
 		if trueFlow != nil {
-			e.traverseFlowUntilMerge(trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
-		}
-
-		if falseFlow != nil {
-			*lines = append(*lines, indentStr+"ELSE")
-			visitedFalseBranch := make(map[model.ID]bool)
-			for id := range visited {
-				visitedFalseBranch[id] = true
+			if _, isEnd := activityMap[trueFlow.DestinationID].(*microflows.EndEvent); isEnd {
+				isGuard = true
+				if falseFlow != nil {
+					if _, falseIsEnd := activityMap[falseFlow.DestinationID].(*microflows.EndEvent); falseIsEnd {
+						isGuard = false
+					}
+				}
 			}
-			e.traverseFlowUntilMerge(falseFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 		}
 
-		*lines = append(*lines, indentStr+"END IF;")
-		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+		if isGuard {
+			e.traverseFlowUntilMerge(trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			*lines = append(*lines, indentStr+"END IF;")
+			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
-		// Continue after nested merge
-		if nestedMergeID != "" && nestedMergeID != mergeID {
-			visited[nestedMergeID] = true
-			nextFlows := flowsByOrigin[nestedMergeID]
-			for _, flow := range nextFlows {
-				e.traverseFlowUntilMerge(flow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			// Continue from the false branch (skip through merge if present)
+			if falseFlow != nil {
+				contID := falseFlow.DestinationID
+				if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
+					visited[contID] = true
+					for _, flow := range flowsByOrigin[contID] {
+						contID = flow.DestinationID
+						break
+					}
+				}
+				e.traverseFlowUntilMerge(contID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
+		} else {
+			if trueFlow != nil {
+				e.traverseFlowUntilMerge(trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			}
+
+			if falseFlow != nil {
+				*lines = append(*lines, indentStr+"ELSE")
+				visitedFalseBranch := make(map[model.ID]bool)
+				for id := range visited {
+					visitedFalseBranch[id] = true
+				}
+				e.traverseFlowUntilMerge(falseFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			}
+
+			*lines = append(*lines, indentStr+"END IF;")
+			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+
+			// Continue after nested merge
+			if nestedMergeID != "" && nestedMergeID != mergeID {
+				visited[nestedMergeID] = true
+				nextFlows := flowsByOrigin[nestedMergeID]
+				for _, flow := range nextFlows {
+					e.traverseFlowUntilMerge(flow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				}
 			}
 		}
 		return
