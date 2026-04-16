@@ -33,15 +33,15 @@ func (k EntityKind) String() string {
 
 // CreateEntityStmt represents: CREATE [OR MODIFY] PERSISTENT|NON-PERSISTENT ENTITY Module.Name [EXTENDS Parent] (attributes) ...
 type CreateEntityStmt struct {
-	Name             QualifiedName
-	Kind             EntityKind
-	Generalization   *QualifiedName    // Parent entity for inheritance (e.g., System.Image)
-	Attributes       []Attribute
-	Indexes          []Index
-	EventHandlers    []EventHandlerDef // ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL ...
-	Position         *Position
-	Documentation    string
-	Comment          string
+	Name           QualifiedName
+	Kind           EntityKind
+	Generalization *QualifiedName // Parent entity for inheritance (e.g., System.Image)
+	Attributes     []Attribute
+	Indexes        []Index
+	EventHandlers  []EventHandlerDef // ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL ...
+	Position       *Position
+	Documentation  string
+	Comment        string
 	CreateOrModify bool // true for CREATE OR MODIFY
 }
 
@@ -58,17 +58,17 @@ func (s *DropEntityStmt) isStatement() {}
 type AlterEntityOp int
 
 const (
-	AlterEntityAddAttribute      AlterEntityOp = iota // ADD ATTRIBUTE / ADD COLUMN
-	AlterEntityRenameAttribute                        // RENAME ATTRIBUTE / RENAME COLUMN
-	AlterEntityModifyAttribute                        // MODIFY ATTRIBUTE / MODIFY COLUMN
-	AlterEntityDropAttribute                          // DROP ATTRIBUTE / DROP COLUMN
-	AlterEntitySetDocumentation                       // SET DOCUMENTATION
-	AlterEntitySetComment                             // SET COMMENT
-	AlterEntityAddIndex                               // ADD INDEX
-	AlterEntityDropIndex                              // DROP INDEX
-	AlterEntitySetPosition // SET POSITION (x, y)
-	AlterEntityAddEventHandler                        // ADD EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.MF
-	AlterEntityDropEventHandler                       // DROP EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK
+	AlterEntityAddAttribute     AlterEntityOp = iota // ADD ATTRIBUTE / ADD COLUMN
+	AlterEntityRenameAttribute                       // RENAME ATTRIBUTE / RENAME COLUMN
+	AlterEntityModifyAttribute                       // MODIFY ATTRIBUTE / MODIFY COLUMN
+	AlterEntityDropAttribute                         // DROP ATTRIBUTE / DROP COLUMN
+	AlterEntitySetDocumentation                      // SET DOCUMENTATION
+	AlterEntitySetComment                            // SET COMMENT
+	AlterEntityAddIndex                              // ADD INDEX
+	AlterEntityDropIndex                             // DROP INDEX
+	AlterEntitySetPosition                           // SET POSITION (x, y)
+	AlterEntityAddEventHandler                       // ADD EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK CALL Mod.MF
+	AlterEntityDropEventHandler                      // DROP EVENT HANDLER ON BEFORE/AFTER CREATE/COMMIT/DELETE/ROLLBACK
 )
 
 // EventHandlerDef represents an event handler in CREATE/ALTER ENTITY syntax.
@@ -84,17 +84,17 @@ type EventHandlerDef struct {
 type AlterEntityStmt struct {
 	Name                QualifiedName
 	Operation           AlterEntityOp
-	Attribute           *Attribute     // For ADD ATTRIBUTE
-	AttributeName       string         // For RENAME/MODIFY/DROP ATTRIBUTE
-	NewName             string         // For RENAME ATTRIBUTE
-	DataType            DataType       // For MODIFY ATTRIBUTE
-	Calculated          bool           // For MODIFY ATTRIBUTE with CALCULATED
-	CalculatedMicroflow *QualifiedName // For MODIFY ATTRIBUTE with CALCULATED microflow
-	Documentation       string         // For SET DOCUMENTATION
-	Comment             string         // For SET COMMENT
-	Index               *Index         // For ADD INDEX
-	IndexName           string         // For DROP INDEX
-	Position            *Position      // For SET POSITION
+	Attribute           *Attribute       // For ADD ATTRIBUTE
+	AttributeName       string           // For RENAME/MODIFY/DROP ATTRIBUTE
+	NewName             string           // For RENAME ATTRIBUTE
+	DataType            DataType         // For MODIFY ATTRIBUTE
+	Calculated          bool             // For MODIFY ATTRIBUTE with CALCULATED
+	CalculatedMicroflow *QualifiedName   // For MODIFY ATTRIBUTE with CALCULATED microflow
+	Documentation       string           // For SET DOCUMENTATION
+	Comment             string           // For SET COMMENT
+	Index               *Index           // For ADD INDEX
+	IndexName           string           // For DROP INDEX
+	Position            *Position        // For SET POSITION
 	EventHandler        *EventHandlerDef // For ADD/DROP EVENT HANDLER
 }
 

@@ -454,19 +454,19 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 		ops := bson.A{int32(2)}
 		for _, op := range res.Operations {
 			opDoc := bson.M{
-				"$ID":         idToBsonBinary(GenerateID()),
-				"$Type":       "Rest$PublishedRestServiceOperation",
-				"HttpMethod":  httpMethodToMendix(op.HTTPMethod),
-				"Path":        op.Path,
-				"Microflow":   op.Microflow,
-				"Summary":     op.Summary,
-				"Deprecated":  op.Deprecated,
-				"Commit":      "Yes",
-				"Documentation": "",
-				"ExportMapping": "",
-				"ImportMapping": "",
+				"$ID":                  idToBsonBinary(GenerateID()),
+				"$Type":                "Rest$PublishedRestServiceOperation",
+				"HttpMethod":           httpMethodToMendix(op.HTTPMethod),
+				"Path":                 op.Path,
+				"Microflow":            op.Microflow,
+				"Summary":              op.Summary,
+				"Deprecated":           op.Deprecated,
+				"Commit":               "Yes",
+				"Documentation":        "",
+				"ExportMapping":        "",
+				"ImportMapping":        "",
 				"ObjectHandlingBackup": "Create",
-				"Parameters":  serializePublishedRestParams(op.Path, op.Microflow, op.Parameters),
+				"Parameters":           serializePublishedRestParams(op.Path, op.Microflow, op.Parameters),
 			}
 			ops = append(ops, opDoc)
 		}
@@ -481,21 +481,21 @@ func (w *Writer) serializePublishedRestService(svc *model.PublishedRestService) 
 	}
 
 	doc := bson.M{
-		"$ID":                    idToBsonBinary(string(svc.ID)),
-		"$Type":                  "Rest$PublishedRestService",
-		"Name":                   svc.Name,
-		"Documentation":          "",
-		"Excluded":               svc.Excluded,
-		"ExportLevel":            "Hidden",
-		"Path":                   svc.Path,
-		"Version":                svc.Version,
-		"ServiceName":            svc.ServiceName,
-		"AllowedRoles":           makeMendixStringArray(svc.AllowedRoles),
-		"AuthenticationTypes":    bson.A{int32(2)},
+		"$ID":                     idToBsonBinary(string(svc.ID)),
+		"$Type":                   "Rest$PublishedRestService",
+		"Name":                    svc.Name,
+		"Documentation":           "",
+		"Excluded":                svc.Excluded,
+		"ExportLevel":             "Hidden",
+		"Path":                    svc.Path,
+		"Version":                 svc.Version,
+		"ServiceName":             svc.ServiceName,
+		"AllowedRoles":            makeMendixStringArray(svc.AllowedRoles),
+		"AuthenticationTypes":     bson.A{int32(2)},
 		"AuthenticationMicroflow": "",
-		"CorsConfiguration":      nil,
-		"Parameters":             bson.A{int32(2)},
-		"Resources":              resources,
+		"CorsConfiguration":       nil,
+		"Parameters":              bson.A{int32(2)},
+		"Resources":               resources,
 	}
 
 	return bson.Marshal(doc)

@@ -81,7 +81,7 @@ type Model struct {
 	// Portal-populated fields — usually empty on freshly-created documents.
 	// They are filled by Studio Pro after the user clicks "Test Key".
 	Type        string `json:"type,omitempty"`
-	InnerName   string `json:"innerName,omitempty"`   // Contents.name field
+	InnerName   string `json:"innerName,omitempty"` // Contents.name field
 	DisplayName string `json:"displayName,omitempty"`
 
 	// User-set: provider discriminator. Only observed value: "MxCloudGenAI".
@@ -165,19 +165,19 @@ type Agent struct {
 	Excluded      bool     `json:"excluded,omitempty"`
 	ExportLevel   string   `json:"exportLevel,omitempty"`
 
-	Description  string         `json:"description,omitempty"`
-	SystemPrompt string         `json:"systemPrompt,omitempty"`
-	UserPrompt   string         `json:"userPrompt,omitempty"`
-	UsageType    string         `json:"usageType,omitempty"`
-	Variables    []AgentVar     `json:"variables,omitempty"`
-	Tools        []AgentTool    `json:"tools,omitempty"`
-	KBTools      []AgentKBTool  `json:"knowledgebaseTools,omitempty"`
-	Model        *DocRef        `json:"model,omitempty"`
-	Entity       *DocRef        `json:"entity,omitempty"`
-	MaxTokens    *int           `json:"maxTokens,omitempty"`
-	ToolChoice   string         `json:"toolChoice,omitempty"`
-	Temperature  *float64       `json:"temperature,omitempty"`
-	TopP         *float64       `json:"topP,omitempty"`
+	Description  string        `json:"description,omitempty"`
+	SystemPrompt string        `json:"systemPrompt,omitempty"`
+	UserPrompt   string        `json:"userPrompt,omitempty"`
+	UsageType    string        `json:"usageType,omitempty"`
+	Variables    []AgentVar    `json:"variables,omitempty"`
+	Tools        []AgentTool   `json:"tools,omitempty"`
+	KBTools      []AgentKBTool `json:"knowledgebaseTools,omitempty"`
+	Model        *DocRef       `json:"model,omitempty"`
+	Entity       *DocRef       `json:"entity,omitempty"`
+	MaxTokens    *int          `json:"maxTokens,omitempty"`
+	ToolChoice   string        `json:"toolChoice,omitempty"`
+	Temperature  *float64      `json:"temperature,omitempty"`
+	TopP         *float64      `json:"topP,omitempty"`
 }
 
 // GetName returns the agent's name.

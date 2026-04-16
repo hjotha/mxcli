@@ -99,12 +99,12 @@ func (r *Reader) parseAgentEditorModel(unitID, containerID string, contents []by
 			DisplayName    string `json:"displayName"`
 			Provider       string `json:"provider"`
 			ProviderFields struct {
-				Environment  string                    `json:"environment"`
-				DeepLinkURL  string                    `json:"deepLinkURL"`
-				KeyID        string                    `json:"keyId"`
-				KeyName      string                    `json:"keyName"`
-				ResourceName string                    `json:"resourceName"`
-				Key          *agenteditor.ConstantRef  `json:"key"`
+				Environment  string                   `json:"environment"`
+				DeepLinkURL  string                   `json:"deepLinkURL"`
+				KeyID        string                   `json:"keyId"`
+				KeyName      string                   `json:"keyName"`
+				ResourceName string                   `json:"resourceName"`
+				Key          *agenteditor.ConstantRef `json:"key"`
 			} `json:"providerFields"`
 		}
 		if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
@@ -259,19 +259,19 @@ func (r *Reader) parseAgentEditorAgent(unitID, containerID string, contents []by
 		// Decode the fields we know about; unknown fields are ignored so
 		// the parser stays forward-compatible with editor updates.
 		var payload struct {
-			Description        string                `json:"description"`
-			SystemPrompt       string                `json:"systemPrompt"`
-			UserPrompt         string                `json:"userPrompt"`
-			UsageType          string                `json:"usageType"`
-			Variables          []agenteditor.AgentVar `json:"variables"`
-			Tools              []agenteditor.AgentTool `json:"tools"`
+			Description        string                    `json:"description"`
+			SystemPrompt       string                    `json:"systemPrompt"`
+			UserPrompt         string                    `json:"userPrompt"`
+			UsageType          string                    `json:"usageType"`
+			Variables          []agenteditor.AgentVar    `json:"variables"`
+			Tools              []agenteditor.AgentTool   `json:"tools"`
 			KnowledgebaseTools []agenteditor.AgentKBTool `json:"knowledgebaseTools"`
-			Model              *agenteditor.DocRef    `json:"model"`
-			Entity             *agenteditor.DocRef    `json:"entity"`
-			MaxTokens          *int                   `json:"maxTokens"`
-			ToolChoice         string                 `json:"toolChoice"`
-			Temperature        *float64               `json:"temperature"`
-			TopP               *float64               `json:"topP"`
+			Model              *agenteditor.DocRef       `json:"model"`
+			Entity             *agenteditor.DocRef       `json:"entity"`
+			MaxTokens          *int                      `json:"maxTokens"`
+			ToolChoice         string                    `json:"toolChoice"`
+			Temperature        *float64                  `json:"temperature"`
+			TopP               *float64                  `json:"topP"`
 		}
 		if err := json.Unmarshal([]byte(wrap.Contents), &payload); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal agent-editor Agent Contents JSON: %w", err)

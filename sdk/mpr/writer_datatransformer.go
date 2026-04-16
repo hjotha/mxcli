@@ -84,8 +84,8 @@ func serializeDataTransformer(dt *model.DataTransformer) ([]byte, error) {
 
 		steps = append(steps, bson.M{
 			"$ID":                  idToBsonBinary(generateUUID()),
-			"$Type":               "DataTransformers$Step",
-			"Action":              action,
+			"$Type":                "DataTransformers$Step",
+			"Action":               action,
 			"InputElementPointer":  idToBsonBinary(rootElemID),
 			"OutputElementPointer": idToBsonBinary(rootElemID),
 		})

@@ -32,15 +32,15 @@ type RestOperationDef struct {
 	Documentation    string
 	Method           string // "GET", "POST", "PUT", "PATCH", "DELETE"
 	Path             string
-	Parameters       []RestParamDef       // path parameters
-	QueryParameters  []RestParamDef       // query parameters
-	Headers          []RestHeaderDef      // HTTP headers
-	BodyType         string               // "JSON", "FILE", "TEMPLATE", "MAPPING", "" (none)
-	BodyVariable     string               // e.g. "$ItemData" or template string
-	BodyMapping      *RestMappingDef      // for MAPPING body
-	ResponseType     string               // "JSON", "STRING", "FILE", "STATUS", "NONE", "MAPPING"
-	ResponseVariable string               // e.g. "$CreatedItem"
-	ResponseMapping  *RestMappingDef      // for MAPPING response
+	Parameters       []RestParamDef  // path parameters
+	QueryParameters  []RestParamDef  // query parameters
+	Headers          []RestHeaderDef // HTTP headers
+	BodyType         string          // "JSON", "FILE", "TEMPLATE", "MAPPING", "" (none)
+	BodyVariable     string          // e.g. "$ItemData" or template string
+	BodyMapping      *RestMappingDef // for MAPPING body
+	ResponseType     string          // "JSON", "STRING", "FILE", "STATUS", "NONE", "MAPPING"
+	ResponseVariable string          // e.g. "$CreatedItem"
+	ResponseMapping  *RestMappingDef // for MAPPING response
 	Timeout          int
 }
 

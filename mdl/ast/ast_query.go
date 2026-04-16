@@ -79,7 +79,7 @@ const (
 	ShowImageCollections      // SHOW IMAGE COLLECTIONS [IN module]
 	ShowRestClients           // SHOW REST CLIENTS [IN module]
 	ShowPublishedRestServices // SHOW PUBLISHED REST SERVICES [IN module]
-	ShowDataTransformers     // LIST DATA TRANSFORMERS [IN module]
+	ShowDataTransformers      // LIST DATA TRANSFORMERS [IN module]
 	ShowConstantValues        // SHOW CONSTANT VALUES [IN module]
 	ShowContractEntities      // SHOW CONTRACT ENTITIES FROM Module.Service
 	ShowContractActions       // SHOW CONTRACT ACTIONS FROM Module.Service

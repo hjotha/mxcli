@@ -629,7 +629,6 @@ func (e *Executor) showSecurityMatrixJSON(moduleName string) error {
 		})
 	}
 
-
 	return e.writeResult(tr)
 }
 

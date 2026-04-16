@@ -441,10 +441,10 @@ func convertMappingEntries(entries []ast.RestMappingEntry, importDirection bool)
 			// Value mapping — direction determines which side is attribute vs JSON field
 			m := &model.RestResponseMapping{}
 			if importDirection {
-				m.Attribute = e.Left   // EntityAttr = jsonField
+				m.Attribute = e.Left // EntityAttr = jsonField
 				m.ExposedName = e.Right
 			} else {
-				m.Attribute = e.Right  // jsonField = EntityAttr
+				m.Attribute = e.Right // jsonField = EntityAttr
 				m.ExposedName = e.Left
 			}
 			result = append(result, m)

@@ -13,10 +13,10 @@
 // CDN downloads are the primary source for mxbuild and runtime.
 //
 // Resolution priority (all platforms):
-//   1. Explicit path (--mxbuild-path)
-//   2. PATH lookup
-//   3. OS-specific known locations (Studio Pro on Windows)
-//   4. Cached CDN downloads (~/.mxcli/mxbuild/)
+//  1. Explicit path (--mxbuild-path)
+//  2. PATH lookup
+//  3. OS-specific known locations (Studio Pro on Windows)
+//  4. Cached CDN downloads (~/.mxcli/mxbuild/)
 //
 // Path discovery on Windows must NOT hardcode drive letters. Use environment
 // variables (PROGRAMFILES, PROGRAMW6432, SystemDrive) to locate install dirs.

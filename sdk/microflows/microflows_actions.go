@@ -595,11 +595,11 @@ func (RestCallAction) isMicroflowAction() {}
 // BSON type: Microflows$RestOperationCallAction
 type RestOperationCallAction struct {
 	model.BaseElement
-	ErrorHandlingType    ErrorHandlingType       `json:"errorHandlingType,omitempty"`
-	Operation            string                  `json:"operation,omitempty"`            // BY_NAME: Module.Service.Operation
-	OutputVariable       *RestOutputVar          `json:"outputVariable,omitempty"`       // null or Microflows$OutputVariable
-	BodyVariable         *RestBodyVar            `json:"bodyVariable,omitempty"`         // null or nested object
-	ParameterMappings    []*RestParameterMapping `json:"parameterMappings,omitempty"`    // path parameter bindings
+	ErrorHandlingType      ErrorHandlingType            `json:"errorHandlingType,omitempty"`
+	Operation              string                       `json:"operation,omitempty"`              // BY_NAME: Module.Service.Operation
+	OutputVariable         *RestOutputVar               `json:"outputVariable,omitempty"`         // null or Microflows$OutputVariable
+	BodyVariable           *RestBodyVar                 `json:"bodyVariable,omitempty"`           // null or nested object
+	ParameterMappings      []*RestParameterMapping      `json:"parameterMappings,omitempty"`      // path parameter bindings
 	QueryParameterMappings []*RestQueryParameterMapping `json:"queryParameterMappings,omitempty"` // query parameter bindings
 }
 
