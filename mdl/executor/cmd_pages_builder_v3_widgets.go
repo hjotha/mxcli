@@ -128,10 +128,9 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*pages.CustomWidget, er
 			attr := child.GetAttribute()
 			// Sugar: when no explicit Attribute: property is given, fall back to
 			// the column's name. This lets `COLUMN Sku (Caption: 'SKU')` work
-			// without repeating `Attribute: Sku`. If the name starts with a
-			// lowercase prefix like "col" (convention for decoration), it won't
-			// resolve to a real attribute — and mx check will flag it later.
-			if attr == "" && child.Name != "" {
+			// without repeating `Attribute: Sku`. Skip for custom-content columns
+			// (those with a body of child widgets), which don't bind to an attribute.
+			if attr == "" && child.Name != "" && len(child.Children) == 0 {
 				attr = child.Name
 			}
 			col := ast.DataGridColumnDef{
