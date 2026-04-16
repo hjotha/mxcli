@@ -26,8 +26,16 @@ func TestSearchResponse_UnmarshalJSON(t *testing.T) {
 					"name": "CRM App",
 					"description": "CRM system",
 					"uuid": "app-uuid",
-					"businessOwner": "owner@example.com",
-					"technicalOwner": "tech@example.com"
+					"businessOwner": {
+						"name": "Business Owner",
+						"email": "owner@example.com",
+						"uuid": "owner-uuid"
+					},
+					"technicalOwner": {
+						"name": "Technical Owner",
+						"email": "tech@example.com",
+						"uuid": "tech-uuid"
+					}
 				},
 				"securityClassification": "Internal",
 				"lastUpdated": "2026-04-16T10:00:00Z",
