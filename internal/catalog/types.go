@@ -47,6 +47,13 @@ type Application struct {
 	Name           string `json:"name"`
 	Description    string `json:"description"`
 	UUID           string `json:"uuid"`
-	BusinessOwner  string `json:"businessOwner"`
-	TechnicalOwner string `json:"technicalOwner"`
+	BusinessOwner  *Owner `json:"businessOwner,omitempty"`
+	TechnicalOwner *Owner `json:"technicalOwner,omitempty"`
+}
+
+// Owner represents a business or technical owner.
+type Owner struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	UUID  string `json:"uuid"`
 }
