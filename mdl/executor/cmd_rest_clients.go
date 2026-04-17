@@ -355,7 +355,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 			auth.Username = "$" + name
 		} else if stmt.Authentication.Username != "" {
 			constName := stmt.Name.Name + "_Username"
-			if err := e.ensureConstant(moduleName, containerID, constName, stmt.Authentication.Username); err != nil {
+			if err := ensureConstant(ctx, moduleName, containerID, constName, stmt.Authentication.Username); err != nil {
 				return fmt.Errorf("failed to create username constant: %w", err)
 			}
 			auth.Username = "$" + moduleName + "." + constName
@@ -369,7 +369,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 			auth.Password = "$" + name
 		} else if stmt.Authentication.Password != "" {
 			constName := stmt.Name.Name + "_Password"
-			if err := e.ensureConstant(moduleName, containerID, constName, stmt.Authentication.Password); err != nil {
+			if err := ensureConstant(ctx, moduleName, containerID, constName, stmt.Authentication.Password); err != nil {
 				return fmt.Errorf("failed to create password constant: %w", err)
 			}
 			auth.Password = "$" + moduleName + "." + constName
@@ -489,10 +489,10 @@ func convertMappingEntries(entries []ast.RestMappingEntry, importDirection bool)
 }
 
 // ensureConstant creates a string constant if it doesn't already exist.
-func (e *Executor) ensureConstant(moduleName string, containerID model.ID, constName, value string) error {
+func ensureConstant(ctx *ExecContext, moduleName string, containerID model.ID, constName, value string) error {
 	// Check if constant already exists
-	constants, _ := e.reader.ListConstants()
-	h, _ := e.getHierarchy()
+	constants, _ := ctx.Backend.ListConstants()
+	h, _ := getHierarchy(ctx)
 	for _, c := range constants {
 		modID := h.FindModuleID(c.ContainerID)
 		modName := h.GetModuleName(modID)
@@ -509,7 +509,7 @@ func (e *Executor) ensureConstant(moduleName string, containerID model.ID, const
 		DefaultValue: value,
 		ExportLevel:  "Hidden",
 	}
-	return e.writer.CreateConstant(constant)
+	return ctx.Backend.CreateConstant(constant)
 }
 
 // dropRestClient handles DROP REST CLIENT statement.
