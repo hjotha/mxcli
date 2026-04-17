@@ -84,7 +84,10 @@ func (e *Executor) describeImportMapping(name ast.QualifiedName) error {
 
 	im, err := e.reader.GetImportMappingByQualifiedName(name.Module, name.Name)
 	if err != nil {
-		return mdlerrors.NewNotFoundMsg("import mapping", name.String(), err.Error())
+		if strings.Contains(err.Error(), "not found") {
+			return mdlerrors.NewNotFound("import mapping", name.String())
+		}
+		return mdlerrors.NewBackend("get import mapping", err)
 	}
 
 	if im.Documentation != "" {
@@ -377,7 +380,10 @@ func (e *Executor) execDropImportMapping(s *ast.DropImportMappingStmt) error {
 
 	im, err := e.reader.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if err != nil {
-		return mdlerrors.NewNotFoundMsg("import mapping", s.Name.String(), err.Error())
+		if strings.Contains(err.Error(), "not found") {
+			return mdlerrors.NewNotFound("import mapping", s.Name.String())
+		}
+		return mdlerrors.NewBackend("get import mapping", err)
 	}
 
 	if err := e.writer.DeleteImportMapping(im.ID); err != nil {

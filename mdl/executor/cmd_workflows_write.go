@@ -18,7 +18,7 @@ import (
 // execCreateWorkflow handles CREATE WORKFLOW statements.
 func (e *Executor) execCreateWorkflow(s *ast.CreateWorkflowStmt) error {
 	if e.writer == nil {
-		return mdlerrors.NewNotConnected()
+		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	module, err := e.findOrCreateModule(s.Name.Module)
@@ -130,7 +130,7 @@ func (e *Executor) execCreateWorkflow(s *ast.CreateWorkflowStmt) error {
 // execDropWorkflow handles DROP WORKFLOW statements.
 func (e *Executor) execDropWorkflow(s *ast.DropWorkflowStmt) error {
 	if e.writer == nil {
-		return mdlerrors.NewNotConnected()
+		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	h, err := e.getHierarchy()

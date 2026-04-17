@@ -34,7 +34,7 @@ func (e *Executor) loadRestServices() ([]*model.ConsumedRestService, error) {
 
 func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 	if e.writer == nil {
-		return mdlerrors.NewNotConnected()
+		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Find or auto-create module

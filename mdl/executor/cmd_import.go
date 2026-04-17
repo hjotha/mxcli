@@ -197,7 +197,7 @@ func (e *Executor) resolveOneLink(
 	}
 
 	if foundAssoc == nil && foundCross == nil {
-		return nil, mdlerrors.NewNotFoundMsg("association", link.AssociationName, fmt.Sprintf("not found in module %q", targetModule))
+		return nil, mdlerrors.NewNotFoundMsg("association", link.AssociationName, fmt.Sprintf("association %q not found in module %q", link.AssociationName, targetModule))
 	}
 
 	// Extract association info

@@ -39,7 +39,7 @@ func (e *Executor) execCreateEnumeration(s *ast.CreateEnumerationStmt) error {
 	// Check if enumeration already exists
 	existingEnum := e.findEnumeration(s.Name.Module, s.Name.Name)
 	if existingEnum != nil && !s.CreateOrModify {
-		return mdlerrors.NewAlreadyExistsMsg("enumeration", s.Name.Module+"."+s.Name.Name, "use CREATE OR MODIFY to update")
+		return mdlerrors.NewAlreadyExistsMsg("enumeration", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("enumeration already exists: %s.%s (use CREATE OR MODIFY to update)", s.Name.Module, s.Name.Name))
 	}
 
 	// Create enumeration values

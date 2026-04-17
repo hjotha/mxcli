@@ -248,7 +248,7 @@ func formatJavaActionReturnType(t javaactions.CodeActionReturnType) string {
 // execDropJavaAction handles DROP JAVA ACTION statements.
 func (e *Executor) execDropJavaAction(s *ast.DropJavaActionStmt) error {
 	if e.writer == nil {
-		return mdlerrors.NewNotConnected()
+		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Get hierarchy for module/folder resolution
@@ -281,7 +281,7 @@ func (e *Executor) execDropJavaAction(s *ast.DropJavaActionStmt) error {
 // execCreateJavaAction handles CREATE JAVA ACTION statements.
 func (e *Executor) execCreateJavaAction(s *ast.CreateJavaActionStmt) error {
 	if e.writer == nil {
-		return mdlerrors.NewNotConnected()
+		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Get hierarchy for module/folder resolution

@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -133,6 +134,7 @@ type Executor struct {
 	fragments     map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
 	sqlMgr        *sqllib.Manager                    // external SQL connection manager (lazy init)
 	themeRegistry *ThemeRegistry                     // cached theme design property definitions (lazy init)
+	registry      *Registry                          // statement dispatch registry
 }
 
 // New creates a new executor with the given output writer.
@@ -142,6 +144,7 @@ func New(output io.Writer) *Executor {
 		output:   guard,
 		guard:    guard,
 		settings: make(map[string]any),
+		registry: NewRegistry(),
 	}
 }
 
@@ -187,8 +190,12 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 		e.guard.reset()
 	}
 
-	// Run statement in a goroutine so we can enforce a wall-clock timeout.
-	// The outputGuard handles race-safe writes if the goroutine outlives the timeout.
+	// Enforce wall-clock timeout via context.WithTimeout.
+	// The goroutine pattern is retained because handlers are not yet
+	// context-aware; threading context through handlers is a follow-up.
+	ctx, cancel := context.WithTimeout(context.Background(), executeTimeout)
+	defer cancel()
+
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
@@ -199,8 +206,8 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 	select {
 	case r := <-ch:
 		err = r.err
-	case <-time.After(executeTimeout):
-		err = fmt.Errorf("statement timed out after %v", executeTimeout)
+	case <-ctx.Done():
+		err = mdlerrors.NewValidationf("statement timed out after %v", executeTimeout)
 	}
 
 	if e.logger != nil {

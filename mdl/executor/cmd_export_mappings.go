@@ -84,7 +84,10 @@ func (e *Executor) describeExportMapping(name ast.QualifiedName) error {
 
 	em, err := e.reader.GetExportMappingByQualifiedName(name.Module, name.Name)
 	if err != nil {
-		return mdlerrors.NewNotFoundMsg("export mapping", name.String(), err.Error())
+		if strings.Contains(err.Error(), "not found") {
+			return mdlerrors.NewNotFound("export mapping", name.String())
+		}
+		return mdlerrors.NewBackend("get export mapping", err)
 	}
 
 	if em.Documentation != "" {
@@ -363,7 +366,10 @@ func (e *Executor) execDropExportMapping(s *ast.DropExportMappingStmt) error {
 
 	em, err := e.reader.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if err != nil {
-		return mdlerrors.NewNotFoundMsg("export mapping", s.Name.String(), err.Error())
+		if strings.Contains(err.Error(), "not found") {
+			return mdlerrors.NewNotFound("export mapping", s.Name.String())
+		}
+		return mdlerrors.NewBackend("get export mapping", err)
 	}
 
 	if err := e.writer.DeleteExportMapping(em.ID); err != nil {

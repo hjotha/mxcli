@@ -17,7 +17,7 @@ import (
 // execCreatePageV3 handles CREATE PAGE statement with V3 syntax.
 func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 	if e.writer == nil {
-		return mdlerrors.NewNotConnected()
+		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Version pre-check: page parameters require 11.0+
@@ -101,7 +101,7 @@ func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 // execCreateSnippetV3 handles CREATE SNIPPET statement with V3 syntax.
 func (e *Executor) execCreateSnippetV3(s *ast.CreateSnippetStmtV3) error {
 	if e.writer == nil {
-		return mdlerrors.NewNotConnected()
+		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Find or auto-create module

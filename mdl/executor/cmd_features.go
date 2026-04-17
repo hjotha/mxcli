@@ -75,7 +75,7 @@ func (e *Executor) execShowFeatures(s *ast.ShowFeaturesStmt) error {
 	default:
 		// SHOW FEATURES [IN area] — requires project connection
 		if e.reader == nil {
-			return mdlerrors.NewNotConnected()
+			return mdlerrors.NewNotConnectedMsg("not connected to a project\n  hint: use SHOW FEATURES FOR VERSION x.y without a project connection")
 		}
 		rpv := e.reader.ProjectVersion()
 		pv = versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}

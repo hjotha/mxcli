@@ -33,6 +33,11 @@ func NewNotConnected() *NotConnectedError {
 	return &NotConnectedError{msg: "not connected to a project"}
 }
 
+// NewNotConnectedMsg creates a NotConnectedError with a custom message.
+func NewNotConnectedMsg(msg string) *NotConnectedError {
+	return &NotConnectedError{msg: msg}
+}
+
 // NewNotConnectedWrite creates a NotConnectedError for write access.
 func NewNotConnectedWrite() *NotConnectedError {
 	return &NotConnectedError{WriteMode: true, msg: "not connected to a project in write mode"}

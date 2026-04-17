@@ -40,7 +40,7 @@ func (e *Executor) createDatabaseConnection(stmt *ast.CreateDatabaseConnectionSt
 					return mdlerrors.NewBackend("delete existing connection", err)
 				}
 			} else {
-				return mdlerrors.NewAlreadyExistsMsg("database connection", modName+"."+ex.Name, "use CREATE OR MODIFY to update")
+				return mdlerrors.NewAlreadyExistsMsg("database connection", modName+"."+ex.Name, fmt.Sprintf("database connection already exists: %s.%s (use CREATE OR MODIFY to update)", modName, ex.Name))
 			}
 		}
 	}

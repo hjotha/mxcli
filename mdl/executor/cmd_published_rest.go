@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -171,7 +172,7 @@ func (e *Executor) findPublishedRestService(moduleName, name string) (*model.Pub
 			return svc, nil
 		}
 	}
-	return nil, mdlerrors.NewNotFoundMsg("published REST service", "", "not found")
+	return nil, mdlerrors.NewNotFound("published REST service", moduleName+"."+name)
 }
 
 // execCreatePublishedRestService creates a new published REST service.
@@ -188,7 +189,12 @@ func (e *Executor) execCreatePublishedRestService(s *ast.CreatePublishedRestServ
 
 	// Handle CREATE OR REPLACE — delete existing if found
 	if s.CreateOrReplace {
-		if existing, _ := e.findPublishedRestService(s.Name.Module, s.Name.Name); existing != nil {
+		existing, findErr := e.findPublishedRestService(s.Name.Module, s.Name.Name)
+		var nfe *mdlerrors.NotFoundError
+		if findErr != nil && !errors.As(findErr, &nfe) {
+			return mdlerrors.NewBackend("find existing service", findErr)
+		}
+		if existing != nil {
 			if err := e.writer.DeletePublishedRestService(existing.ID); err != nil {
 				return mdlerrors.NewBackend("replace existing service", err)
 			}
@@ -307,7 +313,7 @@ func (e *Executor) execAlterPublishedRestService(s *ast.AlterPublishedRestServic
 
 	svc, err := e.findPublishedRestService(s.Name.Module, s.Name.Name)
 	if err != nil {
-		return mdlerrors.NewNotFound("published REST service", s.Name.Module+"."+s.Name.Name)
+		return err
 	}
 
 	for _, action := range s.Actions {
