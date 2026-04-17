@@ -25,11 +25,10 @@ func isBuiltinModuleEntity(moduleName string) bool {
 // execCreateMicroflow handles CREATE MICROFLOW statements.
 // loadRestServices returns all consumed REST services, or nil if no reader.
 func loadRestServices(ctx *ExecContext) ([]*model.ConsumedRestService, error) {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return nil, nil
 	}
-	svcs, err := e.reader.ListConsumedRestServices()
+	svcs, err := ctx.Backend.ListConsumedRestServices()
 	return svcs, err
 }
 
@@ -58,7 +57,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 	// Check if microflow with same name already exists in this module
 	var existingID model.ID
 	var existingContainerID model.ID
-	existingMicroflows, err := e.reader.ListMicroflows()
+	existingMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("check existing microflows", err)
 	}
@@ -99,11 +98,11 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 	// Build entity resolver function for parameter/return types
 	entityResolver := func(qn ast.QualifiedName) model.ID {
 		// Get all domain models and build module name map
-		dms, err := e.reader.ListDomainModels()
+		dms, err := ctx.Backend.ListDomainModels()
 		if err != nil {
 			return ""
 		}
-		modules, _ := e.reader.ListModules()
+		modules, _ := ctx.Backend.ListModules()
 		moduleNames := make(map[model.ID]string)
 		for _, m := range modules {
 			moduleNames[m.ID] = m.Name
@@ -234,12 +233,12 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 
 	// Create or update the microflow
 	if existingID != "" {
-		if err := e.writer.UpdateMicroflow(mf); err != nil {
+		if err := ctx.Backend.UpdateMicroflow(mf); err != nil {
 			return mdlerrors.NewBackend("update microflow", err)
 		}
 		fmt.Fprintf(ctx.Output, "Replaced microflow: %s.%s\n", s.Name.Module, s.Name.Name)
 	} else {
-		if err := e.writer.CreateMicroflow(mf); err != nil {
+		if err := ctx.Backend.CreateMicroflow(mf); err != nil {
 			return mdlerrors.NewBackend("create microflow", err)
 		}
 		fmt.Fprintf(ctx.Output, "Created microflow: %s.%s\n", s.Name.Module, s.Name.Name)

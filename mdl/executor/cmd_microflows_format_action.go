@@ -92,7 +92,6 @@ func formatAction(
 	entityNames map[model.ID]string,
 	microflowNames map[model.ID]string,
 ) string {
-	e := ctx.executor
 	if action == nil {
 		return "-- Empty action"
 	}
@@ -500,7 +499,7 @@ func formatAction(
 		pageName := a.PageName
 		if pageName == "" && a.PageID != "" && ctx.Connected() {
 			// Fall back to looking up by ID (legacy format)
-			pages, _ := e.reader.ListPages()
+			pages, _ := ctx.Backend.ListPages()
 			for _, p := range pages {
 				if p.ID == a.PageID {
 					h, _ := getHierarchy(ctx)

@@ -19,7 +19,6 @@ import (
 
 // showJavaActions handles SHOW JAVA ACTIONS command.
 func showJavaActions(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -27,7 +26,7 @@ func showJavaActions(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all Java actions
-	javaActions, err := e.reader.ListJavaActions()
+	javaActions, err := ctx.Backend.ListJavaActions()
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -68,9 +67,8 @@ func showJavaActions(ctx *ExecContext, moduleName string) error {
 
 // describeJavaAction handles DESCRIBE JAVA ACTION command - outputs MDL-style representation.
 func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	qualifiedName := name.Module + "." + name.Name
-	ja, err := e.reader.ReadJavaActionByName(qualifiedName)
+	ja, err := ctx.Backend.ReadJavaActionByName(qualifiedName)
 	if err != nil {
 		return mdlerrors.NewNotFound("java action", qualifiedName)
 	}
@@ -162,7 +160,7 @@ func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Try to read and include Java source code
-	javaCode := readJavaActionUserCode(e.mprPath, name.Module, name.Name)
+	javaCode := readJavaActionUserCode(ctx.MprPath, name.Module, name.Name)
 	if javaCode != "" {
 		sb.WriteString("\nAS $$\n")
 		sb.WriteString(javaCode)
@@ -249,7 +247,6 @@ func formatJavaActionReturnType(t javaactions.CodeActionReturnType) string {
 
 // execDropJavaAction handles DROP JAVA ACTION statements.
 func execDropJavaAction(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -261,7 +258,7 @@ func execDropJavaAction(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 	}
 
 	// Find and delete the Java action
-	jas, err := e.reader.ListJavaActions()
+	jas, err := ctx.Backend.ListJavaActions()
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -270,7 +267,7 @@ func execDropJavaAction(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 		modID := h.FindModuleID(ja.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && ja.Name == s.Name.Name {
-			if err := e.writer.DeleteJavaAction(ja.ID); err != nil {
+			if err := ctx.Backend.DeleteJavaAction(ja.ID); err != nil {
 				return mdlerrors.NewBackend("delete java action", err)
 			}
 			fmt.Fprintf(ctx.Output, "Dropped java action: %s.%s\n", s.Name.Module, s.Name.Name)
@@ -283,7 +280,6 @@ func execDropJavaAction(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 
 // execCreateJavaAction handles CREATE JAVA ACTION statements.
 func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -295,7 +291,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	}
 
 	// Find the module
-	modules, err := e.reader.ListModules()
+	modules, err := ctx.Backend.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("get modules", err)
 	}
@@ -314,7 +310,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	}
 
 	// Check if Java action already exists
-	jas, err := e.reader.ListJavaActions()
+	jas, err := ctx.Backend.ListJavaActions()
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -414,19 +410,19 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	}
 
 	// Create in MPR
-	if err := e.writer.CreateJavaAction(ja); err != nil {
+	if err := ctx.Backend.CreateJavaAction(ja); err != nil {
 		return mdlerrors.NewBackend("create java action", err)
 	}
 
 	// Write Java source file if code is provided
 	if s.JavaCode != "" {
-		if err := e.writer.WriteJavaSourceFile(moduleName, s.Name.Name, s.JavaCode, ja.Parameters, ja.ReturnType); err != nil {
+		if err := ctx.Backend.WriteJavaSourceFile(moduleName, s.Name.Name, s.JavaCode, ja.Parameters, ja.ReturnType); err != nil {
 			return mdlerrors.NewBackend("write java source file", err)
 		}
 	}
 
 	// Clear cache
-	e.cache = nil
+	ctx.Cache = nil
 
 	fmt.Fprintf(ctx.Output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil

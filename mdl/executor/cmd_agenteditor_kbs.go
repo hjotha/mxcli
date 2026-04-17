@@ -18,12 +18,11 @@ import (
 
 // showAgentEditorKnowledgeBases handles SHOW KNOWLEDGE BASES [IN module].
 func showAgentEditorKnowledgeBases(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	kbs, err := e.reader.ListAgentEditorKnowledgeBases()
+	kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases()
 	if err != nil {
 		return mdlerrors.NewBackend("list knowledge bases", err)
 	}
@@ -127,8 +126,7 @@ func describeAgentEditorKnowledgeBase(ctx *ExecContext, name ast.QualifiedName) 
 
 // findAgentEditorKnowledgeBase looks up a KB by module and name.
 func findAgentEditorKnowledgeBase(ctx *ExecContext, moduleName, kbName string) *agenteditor.KnowledgeBase {
-	e := ctx.executor
-	kbs, err := e.reader.ListAgentEditorKnowledgeBases()
+	kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases()
 	if err != nil {
 		return nil
 	}

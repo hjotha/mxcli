@@ -16,12 +16,11 @@ import (
 
 // showImportMappings prints a table of all import mapping documents.
 func showImportMappings(ctx *ExecContext, inModule string) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	all, err := e.reader.ListImportMappings()
+	all, err := ctx.Backend.ListImportMappings()
 	if err != nil {
 		return mdlerrors.NewBackend("list import mappings", err)
 	}
@@ -80,12 +79,11 @@ func showImportMappings(ctx *ExecContext, inModule string) error {
 
 // describeImportMapping prints the MDL representation of an import mapping.
 func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	im, err := e.reader.GetImportMappingByQualifiedName(name.Module, name.Name)
+	im, err := ctx.Backend.GetImportMappingByQualifiedName(name.Module, name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("import mapping", name.String())
@@ -220,7 +218,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 	// Build path→JsonElement map from JSON structure — mapping elements clone from this
 	jsElementsByPath := map[string]*mpr.JsonElement{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
-		if js, err2 := e.reader.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
+		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
 			buildJsonElementPathMap(js.Elements, jsElementsByPath)
 		}
 	}
@@ -231,7 +229,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 		im.Elements = append(im.Elements, root)
 	}
 
-	if err := e.writer.CreateImportMapping(im); err != nil {
+	if err := ctx.Backend.CreateImportMapping(im); err != nil {
 		return mdlerrors.NewBackend("create import mapping", err)
 	}
 
@@ -378,12 +376,11 @@ func resolveAttributeType(entityQN, attrName string, reader *mpr.Reader) string 
 
 // execDropImportMapping deletes an import mapping.
 func execDropImportMapping(ctx *ExecContext, s *ast.DropImportMappingStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	im, err := e.reader.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	im, err := ctx.Backend.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("import mapping", s.Name.String())
@@ -391,7 +388,7 @@ func execDropImportMapping(ctx *ExecContext, s *ast.DropImportMappingStmt) error
 		return mdlerrors.NewBackend("get import mapping", err)
 	}
 
-	if err := e.writer.DeleteImportMapping(im.ID); err != nil {
+	if err := ctx.Backend.DeleteImportMapping(im.ID); err != nil {
 		return mdlerrors.NewBackend("drop import mapping", err)
 	}
 

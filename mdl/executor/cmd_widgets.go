@@ -218,10 +218,9 @@ func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs [
 
 // updateWidgetsInPage updates widgets in a page using raw BSON.
 func updateWidgetsInPage(ctx *ExecContext, containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
-	e := ctx.executor
 
 	// Load raw BSON as ordered document (preserves field ordering)
-	rawBytes, err := e.reader.GetRawUnitBytes(model.ID(containerID))
+	rawBytes, err := ctx.Backend.GetRawUnitBytes(model.ID(containerID))
 	if err != nil {
 		return 0, mdlerrors.NewBackend(fmt.Sprintf("load page %s", containerName), err)
 	}
@@ -257,7 +256,7 @@ func updateWidgetsInPage(ctx *ExecContext, containerID, containerName string, wi
 		if err != nil {
 			return updated, mdlerrors.NewBackend(fmt.Sprintf("marshal page %s", containerName), err)
 		}
-		if err := e.writer.UpdateRawUnit(containerID, outBytes); err != nil {
+		if err := ctx.Backend.UpdateRawUnit(containerID, outBytes); err != nil {
 			return updated, mdlerrors.NewBackend(fmt.Sprintf("save page %s", containerName), err)
 		}
 	}
@@ -267,10 +266,9 @@ func updateWidgetsInPage(ctx *ExecContext, containerID, containerName string, wi
 
 // updateWidgetsInSnippet updates widgets in a snippet using raw BSON.
 func updateWidgetsInSnippet(ctx *ExecContext, containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
-	e := ctx.executor
 
 	// Load raw BSON as ordered document (preserves field ordering)
-	rawBytes, err := e.reader.GetRawUnitBytes(model.ID(containerID))
+	rawBytes, err := ctx.Backend.GetRawUnitBytes(model.ID(containerID))
 	if err != nil {
 		return 0, mdlerrors.NewBackend(fmt.Sprintf("load snippet %s", containerName), err)
 	}
@@ -306,7 +304,7 @@ func updateWidgetsInSnippet(ctx *ExecContext, containerID, containerName string,
 		if err != nil {
 			return updated, mdlerrors.NewBackend(fmt.Sprintf("marshal snippet %s", containerName), err)
 		}
-		if err := e.writer.UpdateRawUnit(containerID, outBytes); err != nil {
+		if err := ctx.Backend.UpdateRawUnit(containerID, outBytes); err != nil {
 			return updated, mdlerrors.NewBackend(fmt.Sprintf("save snippet %s", containerName), err)
 		}
 	}

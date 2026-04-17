@@ -33,7 +33,7 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	existingWorkflows, err := e.reader.ListWorkflows()
+	existingWorkflows, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -114,12 +114,12 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 
 	if existingID != "" {
 		// Delete existing and recreate
-		if err := e.writer.DeleteWorkflow(existingID); err != nil {
+		if err := ctx.Backend.DeleteWorkflow(existingID); err != nil {
 			return mdlerrors.NewBackend("delete existing workflow", err)
 		}
 	}
 
-	if err := e.writer.CreateWorkflow(wf); err != nil {
+	if err := ctx.Backend.CreateWorkflow(wf); err != nil {
 		return mdlerrors.NewBackend("create workflow", err)
 	}
 
@@ -130,7 +130,6 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 
 // execDropWorkflow handles DROP WORKFLOW statements.
 func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -140,7 +139,7 @@ func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	wfs, err := e.reader.ListWorkflows()
+	wfs, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -149,7 +148,7 @@ func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		modID := h.FindModuleID(wf.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && wf.Name == s.Name.Name {
-			if err := e.writer.DeleteWorkflow(wf.ID); err != nil {
+			if err := ctx.Backend.DeleteWorkflow(wf.ID); err != nil {
 				return mdlerrors.NewBackend("delete workflow", err)
 			}
 			invalidateHierarchy(ctx)

@@ -125,8 +125,8 @@ func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() erro
 	origEOutput := e.output
 	origGuard := e.guard
 	ctx.Output = &buf
-	e.output = &buf
-	e.guard = nil // disable line guard for capture
+	e.output = &buf // sync executor output for closures that write to e.output
+	e.guard = nil   // disable line guard for capture
 	err := fn()
 	ctx.Output = origOutput
 	e.output = origEOutput

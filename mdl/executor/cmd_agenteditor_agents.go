@@ -18,12 +18,11 @@ import (
 
 // showAgentEditorAgents handles SHOW AGENTS [IN module].
 func showAgentEditorAgents(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	agents, err := e.reader.ListAgentEditorAgents()
+	agents, err := ctx.Backend.ListAgentEditorAgents()
 	if err != nil {
 		return mdlerrors.NewBackend("list agents", err)
 	}
@@ -231,8 +230,7 @@ func emitKBBlock(ctx *ExecContext, kb agenteditor.AgentKBTool) {
 
 // findAgentEditorAgent looks up an agent by module and name.
 func findAgentEditorAgent(ctx *ExecContext, moduleName, agentName string) *agenteditor.Agent {
-	e := ctx.executor
-	agents, err := e.reader.ListAgentEditorAgents()
+	agents, err := ctx.Backend.ListAgentEditorAgents()
 	if err != nil {
 		return nil
 	}

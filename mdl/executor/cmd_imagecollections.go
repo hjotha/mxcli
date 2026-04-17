@@ -16,7 +16,6 @@ import (
 
 // execCreateImageCollection handles CREATE IMAGE COLLECTION statements.
 func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStmt) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -63,7 +62,7 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 		})
 	}
 
-	if err := e.writer.CreateImageCollection(ic); err != nil {
+	if err := ctx.Backend.CreateImageCollection(ic); err != nil {
 		return mdlerrors.NewBackend("create image collection", err)
 	}
 
@@ -76,7 +75,6 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 
 // execDropImageCollection handles DROP IMAGE COLLECTION statements.
 func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -86,7 +84,7 @@ func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) e
 		return mdlerrors.NewNotFound("image collection", s.Name.String())
 	}
 
-	if err := e.writer.DeleteImageCollection(string(ic.ID)); err != nil {
+	if err := ctx.Backend.DeleteImageCollection(string(ic.ID)); err != nil {
 		return mdlerrors.NewBackend("delete image collection", err)
 	}
 
@@ -200,8 +198,7 @@ func extToImageFormat(ext string) string {
 
 // showImageCollections handles SHOW IMAGE COLLECTION [IN module].
 func showImageCollections(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
-	collections, err := e.reader.ListImageCollections()
+	collections, err := ctx.Backend.ListImageCollections()
 	if err != nil {
 		return mdlerrors.NewBackend("list image collections", err)
 	}
@@ -236,8 +233,7 @@ func showImageCollections(ctx *ExecContext, moduleName string) error {
 
 // findImageCollection finds an image collection by module and name.
 func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *mpr.ImageCollection {
-	e := ctx.executor
-	collections, err := e.reader.ListImageCollections()
+	collections, err := ctx.Backend.ListImageCollections()
 	if err != nil {
 		return nil
 	}

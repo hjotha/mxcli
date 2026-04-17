@@ -164,7 +164,6 @@ func diffStatement(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
 
 // diffEntity compares a CREATE ENTITY statement against the project
 func diffEntity(ctx *ExecContext, s *ast.CreateEntityStmt) (*DiffResult, error) {
-	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "Entity",
 		ObjectName: s.Name,
@@ -178,7 +177,7 @@ func diffEntity(ctx *ExecContext, s *ast.CreateEntityStmt) (*DiffResult, error) 
 		return result, nil
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -199,7 +198,6 @@ func diffEntity(ctx *ExecContext, s *ast.CreateEntityStmt) (*DiffResult, error) 
 
 // diffViewEntity compares a CREATE VIEW ENTITY statement against the project
 func diffViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) (*DiffResult, error) {
-	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "View Entity",
 		ObjectName: s.Name,
@@ -212,7 +210,7 @@ func diffViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) (*DiffResult,
 		return result, nil
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -254,7 +252,6 @@ func diffEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) (*DiffResul
 
 // diffAssociation compares a CREATE ASSOCIATION statement against the project
 func diffAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) (*DiffResult, error) {
-	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "Association",
 		ObjectName: s.Name,
@@ -267,7 +264,7 @@ func diffAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) (*DiffResul
 		return result, nil
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -286,7 +283,6 @@ func diffAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) (*DiffResul
 
 // diffMicroflow compares a CREATE MICROFLOW statement against the project
 func diffMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult, error) {
-	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "Microflow",
 		ObjectName: s.Name,
@@ -300,7 +296,7 @@ func diffMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult, e
 		return result, nil
 	}
 
-	mfs, err := e.reader.ListMicroflows()
+	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -312,10 +308,10 @@ func diffMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult, e
 		if modName == s.Name.Module && mf.Name == s.Name.Name {
 			// Capture current MDL representation
 			var buf bytes.Buffer
-			oldOutput := e.output
-			e.output = &buf
+			oldOutput := ctx.Output
+			ctx.Output = &buf
 			describeMicroflow(ctx, s.Name)
-			e.output = oldOutput
+			ctx.Output = oldOutput
 			result.Current = strings.TrimSuffix(buf.String(), "\n")
 			result.Changes = compareMicroflows(ctx, result.Current, result.Proposed)
 			return result, nil

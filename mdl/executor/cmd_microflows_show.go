@@ -16,7 +16,6 @@ import (
 
 // showMicroflows handles SHOW MICROFLOWS command.
 func showMicroflows(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -24,7 +23,7 @@ func showMicroflows(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all microflows
-	microflows, err := e.reader.ListMicroflows()
+	microflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -81,7 +80,6 @@ func showMicroflows(ctx *ExecContext, moduleName string) error {
 
 // showNanoflows handles SHOW NANOFLOWS command.
 func showNanoflows(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -89,7 +87,7 @@ func showNanoflows(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all nanoflows
-	nanoflows, err := e.reader.ListNanoflows()
+	nanoflows, err := ctx.Backend.ListNanoflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list nanoflows", err)
 	}
@@ -192,7 +190,7 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 	microflowNames := e.getMicroflowNames(h)
 
 	// Find the microflow
-	allMicroflows, err := e.reader.ListMicroflows()
+	allMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -309,7 +307,6 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 // describeNanoflow generates re-executable CREATE OR MODIFY NANOFLOW MDL output
 // with activities and control flows listed as comments.
 func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -317,7 +314,7 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Build entity name lookup
 	entityNames := make(map[model.ID]string)
-	domainModels, _ := e.reader.ListDomainModels()
+	domainModels, _ := ctx.Backend.ListDomainModels()
 	for _, dm := range domainModels {
 		modName := h.GetModuleName(dm.ContainerID)
 		for _, entity := range dm.Entities {
@@ -327,13 +324,13 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Build microflow/nanoflow name lookup (used for call actions)
 	microflowNames := make(map[model.ID]string)
-	allMicroflows, _ := e.reader.ListMicroflows()
+	allMicroflows, _ := ctx.Backend.ListMicroflows()
 	for _, mf := range allMicroflows {
 		microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
 	}
 
 	// Find the nanoflow
-	allNanoflows, err := e.reader.ListNanoflows()
+	allNanoflows, err := ctx.Backend.ListNanoflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list nanoflows", err)
 	}
@@ -426,14 +423,13 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 // describeMicroflowToString generates MDL source for a microflow and returns it as a string
 // along with a source map mapping node IDs to line ranges.
 func describeMicroflowToString(ctx *ExecContext, name ast.QualifiedName) (string, map[string]elkSourceRange, error) {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return "", nil, mdlerrors.NewBackend("build hierarchy", err)
 	}
 
 	entityNames := make(map[model.ID]string)
-	domainModels, _ := e.reader.ListDomainModels()
+	domainModels, _ := ctx.Backend.ListDomainModels()
 	for _, dm := range domainModels {
 		modName := h.GetModuleName(dm.ContainerID)
 		for _, entity := range dm.Entities {
@@ -442,7 +438,7 @@ func describeMicroflowToString(ctx *ExecContext, name ast.QualifiedName) (string
 	}
 
 	microflowNames := make(map[model.ID]string)
-	allMicroflows, err := e.reader.ListMicroflows()
+	allMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return "", nil, mdlerrors.NewBackend("list microflows", err)
 	}

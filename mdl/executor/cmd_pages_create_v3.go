@@ -38,7 +38,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	moduleID := module.ID
 
 	// Check if page already exists - collect ALL duplicates
-	existingPages, _ := e.reader.ListPages()
+	existingPages, _ := ctx.Backend.ListPages()
 	var pagesToDelete []model.ID
 	for _, p := range existingPages {
 		modID := getModuleID(ctx, p.ContainerID)
@@ -60,8 +60,8 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 		widgetScope:      make(map[string]model.ID),
 		paramScope:       make(map[string]model.ID),
 		paramEntityNames: make(map[string]string),
-		execCache:        e.cache,
-		fragments:        e.fragments,
+		execCache:        ctx.Cache,
+		fragments:        ctx.Fragments,
 		themeRegistry:    e.getThemeRegistry(),
 	}
 
@@ -74,17 +74,17 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	if len(pagesToDelete) > 0 {
 		// Reuse first existing page's UUID to avoid git delete+add (which crashes Studio Pro RevStatusCache)
 		page.ID = pagesToDelete[0]
-		if err := e.writer.UpdatePage(page); err != nil {
+		if err := ctx.Backend.UpdatePage(page); err != nil {
 			return mdlerrors.NewBackend("update page", err)
 		}
 		// Delete any additional duplicates
 		for _, id := range pagesToDelete[1:] {
-			if err := e.writer.DeletePage(id); err != nil {
+			if err := ctx.Backend.DeletePage(id); err != nil {
 				return mdlerrors.NewBackend("delete duplicate page", err)
 			}
 		}
 	} else {
-		if err := e.writer.CreatePage(page); err != nil {
+		if err := ctx.Backend.CreatePage(page); err != nil {
 			return mdlerrors.NewBackend("create page", err)
 		}
 	}
@@ -114,7 +114,7 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 	moduleID := module.ID
 
 	// Check if snippet already exists - collect ALL duplicates
-	existingSnippets, _ := e.reader.ListSnippets()
+	existingSnippets, _ := ctx.Backend.ListSnippets()
 	var snippetsToDelete []model.ID
 	for _, snip := range existingSnippets {
 		modID := getModuleID(ctx, snip.ContainerID)
@@ -136,8 +136,8 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 		widgetScope:      make(map[string]model.ID),
 		paramScope:       make(map[string]model.ID),
 		paramEntityNames: make(map[string]string),
-		execCache:        e.cache,
-		fragments:        e.fragments,
+		execCache:        ctx.Cache,
+		fragments:        ctx.Fragments,
 		themeRegistry:    e.getThemeRegistry(),
 	}
 
@@ -148,13 +148,13 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 
 	// Delete old snippets only after successful build
 	for _, id := range snippetsToDelete {
-		if err := e.writer.DeleteSnippet(id); err != nil {
+		if err := ctx.Backend.DeleteSnippet(id); err != nil {
 			return mdlerrors.NewBackend("delete existing snippet", err)
 		}
 	}
 
 	// Create the snippet in the MPR
-	if err := e.writer.CreateSnippet(snippet); err != nil {
+	if err := ctx.Backend.CreateSnippet(snippet); err != nil {
 		return mdlerrors.NewBackend("create snippet", err)
 	}
 

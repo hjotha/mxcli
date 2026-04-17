@@ -15,9 +15,8 @@ import (
 
 // showPublishedRestServices handles SHOW PUBLISHED REST SERVICES [IN module] command.
 func showPublishedRestServices(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 
-	services, err := e.reader.ListPublishedRestServices()
+	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published REST services", err)
 	}
@@ -79,9 +78,8 @@ func showPublishedRestServices(ctx *ExecContext, moduleName string) error {
 
 // describePublishedRestService handles DESCRIBE PUBLISHED REST SERVICE command.
 func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 
-	services, err := e.reader.ListPublishedRestServices()
+	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published REST services", err)
 	}
@@ -161,9 +159,8 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 
 // findPublishedRestService looks up a published REST service by module and name.
 func findPublishedRestService(ctx *ExecContext, moduleName, name string) (*model.PublishedRestService, error) {
-	e := ctx.executor
 
-	services, err := e.reader.ListPublishedRestServices()
+	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
 		return nil, err
 	}
@@ -183,8 +180,6 @@ func findPublishedRestService(ctx *ExecContext, moduleName, name string) (*model
 
 // execCreatePublishedRestService creates a new published REST service.
 func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRestServiceStmt) error {
-	e := ctx.executor
-
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -203,7 +198,7 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 			return mdlerrors.NewBackend("find existing service", findErr)
 		}
 		if existing != nil {
-			if err := e.writer.DeletePublishedRestService(existing.ID); err != nil {
+			if err := ctx.Backend.DeletePublishedRestService(existing.ID); err != nil {
 				return mdlerrors.NewBackend("replace existing service", err)
 			}
 		}
@@ -248,11 +243,11 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 		svc.Resources = append(svc.Resources, resource)
 	}
 
-	if err := e.writer.CreatePublishedRestService(svc); err != nil {
+	if err := ctx.Backend.CreatePublishedRestService(svc); err != nil {
 		return mdlerrors.NewBackend("create published REST service", err)
 	}
 
-	if !e.quiet {
+	if !ctx.Quiet {
 		fmt.Fprintf(ctx.Output, "Created published REST service %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
@@ -260,13 +255,11 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 
 // execDropPublishedRestService deletes a published REST service.
 func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServiceStmt) error {
-	e := ctx.executor
-
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := e.reader.ListPublishedRestServices()
+	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published REST services", err)
 	}
@@ -280,10 +273,10 @@ func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServ
 		modID := h.FindModuleID(svc.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && svc.Name == s.Name.Name {
-			if err := e.writer.DeletePublishedRestService(svc.ID); err != nil {
+			if err := ctx.Backend.DeletePublishedRestService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("drop published REST service", err)
 			}
-			if !e.quiet {
+			if !ctx.Quiet {
 				fmt.Fprintf(ctx.Output, "Dropped published REST service %s.%s\n", s.Name.Module, s.Name.Name)
 			}
 			return nil
@@ -311,8 +304,6 @@ func astResourceDefToModel(def *ast.PublishedRestResourceDef) *model.PublishedRe
 // execAlterPublishedRestService applies SET / ADD RESOURCE / DROP RESOURCE
 // actions to an existing published REST service.
 func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestServiceStmt) error {
-	e := ctx.executor
-
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -371,11 +362,11 @@ func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestSe
 		}
 	}
 
-	if err := e.writer.UpdatePublishedRestService(svc); err != nil {
+	if err := ctx.Backend.UpdatePublishedRestService(svc); err != nil {
 		return mdlerrors.NewBackend("alter published REST service", err)
 	}
 
-	if !e.quiet {
+	if !ctx.Quiet {
 		fmt.Fprintf(ctx.Output, "Altered published REST service %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil

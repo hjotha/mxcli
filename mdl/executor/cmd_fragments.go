@@ -86,7 +86,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 
 	switch s.ContainerType {
 	case "PAGE":
-		allPages, err := e.reader.ListPages()
+		allPages, err := ctx.Backend.ListPages()
 		if err != nil {
 			return mdlerrors.NewBackend("list pages", err)
 		}
@@ -105,7 +105,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
 
 	case "SNIPPET":
-		allSnippets, err := e.reader.ListSnippets()
+		allSnippets, err := ctx.Backend.ListSnippets()
 		if err != nil {
 			return mdlerrors.NewBackend("list snippets", err)
 		}

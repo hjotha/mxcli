@@ -14,8 +14,6 @@ import (
 
 // createDatabaseConnection handles CREATE DATABASE CONNECTION command.
 func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnectionStmt) error {
-	e := ctx.executor
-
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -30,7 +28,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 	}
 
 	// Check for existing connection
-	existing, _ := e.reader.ListDatabaseConnections()
+	existing, _ := ctx.Backend.ListDatabaseConnections()
 	h, _ := getHierarchy(ctx)
 
 	for _, ex := range existing {
@@ -38,7 +36,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(ex.Name, stmt.Name.Name) {
 			if stmt.CreateOrModify {
-				if err := e.writer.DeleteDatabaseConnection(ex.ID); err != nil {
+				if err := ctx.Backend.DeleteDatabaseConnection(ex.ID); err != nil {
 					return mdlerrors.NewBackend("delete existing connection", err)
 				}
 			} else {
@@ -113,7 +111,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 		conn.Queries = append(conn.Queries, q)
 	}
 
-	if err := e.writer.CreateDatabaseConnection(conn); err != nil {
+	if err := ctx.Backend.CreateDatabaseConnection(conn); err != nil {
 		return mdlerrors.NewBackend("create database connection", err)
 	}
 
@@ -124,9 +122,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 
 // showDatabaseConnections handles SHOW DATABASE CONNECTIONS command.
 func showDatabaseConnections(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
-
-	connections, err := e.reader.ListDatabaseConnections()
+	connections, err := ctx.Backend.ListDatabaseConnections()
 	if err != nil {
 		return mdlerrors.NewBackend("list database connections", err)
 	}
@@ -180,9 +176,7 @@ func showDatabaseConnections(ctx *ExecContext, moduleName string) error {
 
 // describeDatabaseConnection handles DESCRIBE DATABASE CONNECTION command.
 func describeDatabaseConnection(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
-
-	connections, err := e.reader.ListDatabaseConnections()
+	connections, err := ctx.Backend.ListDatabaseConnections()
 	if err != nil {
 		return mdlerrors.NewBackend("list database connections", err)
 	}
@@ -278,9 +272,7 @@ func outputDatabaseConnectionMDL(ctx *ExecContext, conn *model.DatabaseConnectio
 
 // resolveConstantDefault looks up a constant by qualified name and returns its default value.
 func resolveConstantDefault(ctx *ExecContext, qualifiedName string) string {
-	e := ctx.executor
-
-	constants, err := e.reader.ListConstants()
+	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return ""
 	}

@@ -38,7 +38,7 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 	lintCtx.SetReader(e.reader)
 
 	// Load configuration
-	projectDir := filepath.Dir(e.mprPath)
+	projectDir := filepath.Dir(ctx.MprPath)
 	configPath := linter.FindConfigFile(projectDir)
 	config, err := linter.LoadConfig(configPath)
 	if err != nil {
@@ -115,7 +115,6 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 
 // showLintRules displays available lint rules.
 func showLintRules(ctx *ExecContext) error {
-	e := ctx.executor
 	fmt.Fprintln(ctx.Output, "Built-in rules:")
 	fmt.Fprintln(ctx.Output)
 
@@ -136,8 +135,8 @@ func showLintRules(ctx *ExecContext) error {
 	}
 
 	// Show custom Starlark rules if connected
-	if e.mprPath != "" {
-		projectDir := filepath.Dir(e.mprPath)
+	if ctx.MprPath != "" {
+		projectDir := filepath.Dir(ctx.MprPath)
 		rulesDir := filepath.Join(projectDir, ".claude", "lint-rules")
 		starlarkRules, err := linter.LoadStarlarkRulesFromDir(rulesDir)
 		if err == nil && len(starlarkRules) > 0 {

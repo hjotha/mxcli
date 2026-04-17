@@ -316,8 +316,7 @@ func outputContractEntityMDL(ctx *ExecContext, et *mpr.EdmEntityType, svcQN stri
 
 // parseServiceContract finds a consumed OData service by name and parses its cached $metadata.
 func parseServiceContract(ctx *ExecContext, name ast.QualifiedName) (*mpr.EdmxDocument, string, error) {
-	e := ctx.executor
-	services, err := e.reader.ListConsumedODataServices()
+	services, err := ctx.Backend.ListConsumedODataServices()
 	if err != nil {
 		return nil, "", mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -447,7 +446,6 @@ var reservedEntityAttrNames = map[string]bool{
 // populating Source, Key, and per-attribute RemoteName/RemoteType fields so the resulting BSON matches
 // what Studio Pro produces.
 func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -481,7 +479,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	if err != nil {
 		return err
 	}
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -634,7 +632,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 					continue
 				}
 				applyExternalEntityFields(existingEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
-				if err := e.writer.UpdateEntity(dm.ID, existingEntity); err != nil {
+				if err := ctx.Backend.UpdateEntity(dm.ID, existingEntity); err != nil {
 					fmt.Fprintf(ctx.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 					failed++
 					continue
@@ -650,7 +648,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 			}
 			newEntity.ID = model.ID(mpr.GenerateID())
 			applyExternalEntityFields(newEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
-			if err := e.writer.CreateEntity(dm.ID, newEntity); err != nil {
+			if err := ctx.Backend.CreateEntity(dm.ID, newEntity); err != nil {
 				fmt.Fprintf(ctx.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 				failed++
 				continue
@@ -662,7 +660,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	// Second pass: create primitive-collection NPEs (e.g. TripTag for
 	// Trip.Tags = Collection(Edm.String)) and the association from the
 	// parent entity to each NPE.
-	dm, err = e.reader.GetDomainModel(module.ID)
+	dm, err = ctx.Backend.GetDomainModel(module.ID)
 	if err == nil {
 		npesCreated := createPrimitiveCollectionNPEs(ctx, dm, doc, typeByQualified, esMap, serviceRef)
 		if npesCreated > 0 {
@@ -673,7 +671,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	// Third pass: walk navigation properties and create associations between
 	// the entities we just created. Re-read the domain model so the NPEs
 	// from the previous pass are visible.
-	dm, err = e.reader.GetDomainModel(module.ID)
+	dm, err = ctx.Backend.GetDomainModel(module.ID)
 	if err == nil {
 		assocsCreated := createNavigationAssociations(ctx, dm, doc, typeByQualified, esMap, serviceRef)
 		if assocsCreated > 0 {
@@ -706,7 +704,6 @@ func createPrimitiveCollectionNPEs(
 	esMap map[string]string,
 	serviceRef string,
 ) int {
-	e := ctx.executor
 	// Lookup parent Mendix entity by EDMX type qualified name.
 	parentByQN := make(map[string]*domainmodel.Entity)
 	for qn, et := range typeByQualified {
@@ -788,7 +785,7 @@ func createPrimitiveCollectionNPEs(
 				}
 				npe.ID = model.ID(mpr.GenerateID())
 
-				if err := e.writer.CreateEntity(dm.ID, npe); err != nil {
+				if err := ctx.Backend.CreateEntity(dm.ID, npe); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE FAILED: %s — %v\n", npeName, err)
 					continue
 				}
@@ -809,7 +806,7 @@ func createPrimitiveCollectionNPEs(
 					Source:        "Rest$ODataPrimitiveCollectionAssociationSource",
 				}
 				assoc.ID = model.ID(mpr.GenerateID())
-				if err := e.writer.CreateAssociation(dm.ID, assoc); err != nil {
+				if err := ctx.Backend.CreateAssociation(dm.ID, assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE ASSOC FAILED: %s — %v\n", assocName, err)
 				}
 			}
@@ -890,7 +887,6 @@ func createNavigationAssociations(
 	esMap map[string]string,
 	serviceRef string,
 ) int {
-	e := ctx.executor
 	// Build per-entity-type lookup of nav property name → restricted flags,
 	// plus a direct entity-set lookup so we can read the base Insertable /
 	// Updatable defaults for the FROM entity.
@@ -1033,7 +1029,7 @@ func createNavigationAssociations(
 				}
 				assoc.ID = model.ID(mpr.GenerateID())
 
-				if err := e.writer.CreateAssociation(dm.ID, assoc); err != nil {
+				if err := ctx.Backend.CreateAssociation(dm.ID, assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  ASSOC FAILED: %s.%s — %v\n", parentEnt.Name, assocName, err)
 					continue
 				}
@@ -1385,8 +1381,7 @@ func describeContractMessage(ctx *ExecContext, name ast.QualifiedName) error {
 
 // parseAsyncAPIContract finds a business event service by name and parses its cached AsyncAPI document.
 func parseAsyncAPIContract(ctx *ExecContext, name ast.QualifiedName) (*mpr.AsyncAPIDocument, string, error) {
-	e := ctx.executor
-	services, err := e.reader.ListBusinessEventServices()
+	services, err := ctx.Backend.ListBusinessEventServices()
 	if err != nil {
 		return nil, "", mdlerrors.NewBackend("list business event services", err)
 	}

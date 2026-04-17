@@ -336,12 +336,11 @@ func (pb *pageBuilder) createFolder(name string, containerID model.ID) (model.ID
 
 // execDropPage handles DROP PAGE statement.
 func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	pages, err := e.reader.ListPages()
+	pages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -350,7 +349,7 @@ func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
 		modID := getModuleID(ctx, p.ContainerID)
 		modName := getModuleName(ctx, modID)
 		if modName == s.Name.Module && p.Name == s.Name.Name {
-			if err := e.writer.DeletePage(p.ID); err != nil {
+			if err := ctx.Backend.DeletePage(p.ID); err != nil {
 				return mdlerrors.NewBackend("delete page", err)
 			}
 			fmt.Fprintf(ctx.Output, "Dropped page %s\n", s.Name.String())
@@ -363,12 +362,11 @@ func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
 
 // execDropSnippet handles DROP SNIPPET statement.
 func execDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	snippets, err := e.reader.ListSnippets()
+	snippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
@@ -377,7 +375,7 @@ func execDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
 		modID := getModuleID(ctx, snip.ContainerID)
 		modName := getModuleName(ctx, modID)
 		if modName == s.Name.Module && snip.Name == s.Name.Name {
-			if err := e.writer.DeleteSnippet(snip.ID); err != nil {
+			if err := ctx.Backend.DeleteSnippet(snip.ID); err != nil {
 				return mdlerrors.NewBackend("delete snippet", err)
 			}
 			fmt.Fprintf(ctx.Output, "Dropped snippet %s\n", s.Name.String())

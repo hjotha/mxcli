@@ -14,12 +14,11 @@ import (
 
 // showSettings displays an overview table of all settings parts.
 func showSettings(ctx *ExecContext) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	ps, err := e.reader.GetProjectSettings()
+	ps, err := ctx.Backend.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -85,12 +84,11 @@ func showSettings(ctx *ExecContext) error {
 
 // describeSettings outputs the full MDL description of all settings.
 func describeSettings(ctx *ExecContext) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	ps, err := e.reader.GetProjectSettings()
+	ps, err := ctx.Backend.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -171,12 +169,11 @@ func describeSettings(ctx *ExecContext) error {
 
 // alterSettings modifies project settings based on ALTER SETTINGS statement.
 func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	ps, err := e.reader.GetProjectSettings()
+	ps, err := ctx.Backend.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -262,7 +259,7 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 	}
 
 	// Write updated settings
-	if err := e.writer.UpdateProjectSettings(ps); err != nil {
+	if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
@@ -271,7 +268,6 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 }
 
 func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
-	e := ctx.executor
 	if ps.Configuration == nil {
 		return mdlerrors.NewNotFound("settings section", "configuration")
 	}
@@ -316,7 +312,7 @@ func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stm
 		}
 	}
 
-	if err := e.writer.UpdateProjectSettings(ps); err != nil {
+	if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
@@ -325,7 +321,6 @@ func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stm
 }
 
 func alterSettingsConstant(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
-	e := ctx.executor
 	if ps.Configuration == nil {
 		return mdlerrors.NewNotFound("settings section", "configuration")
 	}
@@ -357,7 +352,7 @@ func alterSettingsConstant(ctx *ExecContext, ps *model.ProjectSettings, stmt *as
 		for i, cv := range cfg.ConstantValues {
 			if cv.ConstantId == stmt.ConstantId {
 				cfg.ConstantValues = append(cfg.ConstantValues[:i], cfg.ConstantValues[i+1:]...)
-				if err := e.writer.UpdateProjectSettings(ps); err != nil {
+				if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
 					return mdlerrors.NewBackend("update project settings", err)
 				}
 				fmt.Fprintf(ctx.Output, "Dropped constant '%s' from configuration '%s'\n",
@@ -386,7 +381,7 @@ func alterSettingsConstant(ctx *ExecContext, ps *model.ProjectSettings, stmt *as
 		cfg.ConstantValues = append(cfg.ConstantValues, cv)
 	}
 
-	if err := e.writer.UpdateProjectSettings(ps); err != nil {
+	if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
@@ -397,12 +392,11 @@ func alterSettingsConstant(ctx *ExecContext, ps *model.ProjectSettings, stmt *as
 
 // createConfiguration handles CREATE CONFIGURATION 'name' [properties...].
 func createConfiguration(ctx *ExecContext, stmt *ast.CreateConfigurationStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	ps, err := e.reader.GetProjectSettings()
+	ps, err := ctx.Backend.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -457,7 +451,7 @@ func createConfiguration(ctx *ExecContext, stmt *ast.CreateConfigurationStmt) er
 
 	ps.Configuration.Configurations = append(ps.Configuration.Configurations, newCfg)
 
-	if err := e.writer.UpdateProjectSettings(ps); err != nil {
+	if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
@@ -467,12 +461,11 @@ func createConfiguration(ctx *ExecContext, stmt *ast.CreateConfigurationStmt) er
 
 // dropConfiguration handles DROP CONFIGURATION 'name'.
 func dropConfiguration(ctx *ExecContext, stmt *ast.DropConfigurationStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	ps, err := e.reader.GetProjectSettings()
+	ps, err := ctx.Backend.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -487,7 +480,7 @@ func dropConfiguration(ctx *ExecContext, stmt *ast.DropConfigurationStmt) error 
 				ps.Configuration.Configurations[:i],
 				ps.Configuration.Configurations[i+1:]...,
 			)
-			if err := e.writer.UpdateProjectSettings(ps); err != nil {
+			if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
 				return mdlerrors.NewBackend("update project settings", err)
 			}
 			fmt.Fprintf(ctx.Output, "Dropped configuration: %s\n", stmt.Name)

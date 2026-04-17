@@ -20,13 +20,12 @@ import (
 // ============================================================================
 
 func execShowDesignProperties(ctx *ExecContext, s *ast.ShowDesignPropertiesStmt) error {
-	e := ctx.executor
 
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	projectDir := filepath.Dir(e.mprPath)
+	projectDir := filepath.Dir(ctx.MprPath)
 	registry, err := loadThemeRegistry(projectDir)
 	if err != nil {
 		return mdlerrors.NewBackend("load theme registry", err)
@@ -113,7 +112,6 @@ func printOneProperty(ctx *ExecContext, p ThemeProperty) {
 // ============================================================================
 
 func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
-	e := ctx.executor
 
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -128,7 +126,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 
 	if s.ContainerType == "PAGE" {
 		// Find page
-		allPages, err := e.reader.ListPages()
+		allPages, err := ctx.Backend.ListPages()
 		if err != nil {
 			return mdlerrors.NewBackend("list pages", err)
 		}
@@ -148,7 +146,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
 	} else if s.ContainerType == "SNIPPET" {
 		// Find snippet
-		allSnippets, err := e.reader.ListSnippets()
+		allSnippets, err := ctx.Backend.ListSnippets()
 		if err != nil {
 			return mdlerrors.NewBackend("list snippets", err)
 		}
@@ -280,10 +278,9 @@ func execAlterStyling(ctx *ExecContext, s *ast.AlterStylingStmt) error {
 }
 
 func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
-	e := ctx.executor
 
 	// Find page
-	allPages, err := e.reader.ListPages()
+	allPages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -320,7 +317,7 @@ func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerH
 	}
 
 	// Save the page
-	if err := e.writer.UpdatePage(page); err != nil {
+	if err := ctx.Backend.UpdatePage(page); err != nil {
 		return mdlerrors.NewBackend("save page", err)
 	}
 
@@ -329,10 +326,9 @@ func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerH
 }
 
 func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
-	e := ctx.executor
 
 	// Find snippet
-	allSnippets, err := e.reader.ListSnippets()
+	allSnippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
@@ -369,7 +365,7 @@ func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *Contain
 	}
 
 	// Save the snippet
-	if err := e.writer.UpdateSnippet(snippet); err != nil {
+	if err := ctx.Backend.UpdateSnippet(snippet); err != nil {
 		return mdlerrors.NewBackend("save snippet", err)
 	}
 
@@ -519,9 +515,8 @@ func setDesignProperty(baseWidget reflect.Value, a ast.StylingAssignment) error 
 
 // findPageByName looks up a page by qualified name.
 func findPageByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (*pages.Page, error) {
-	e := ctx.executor
 
-	allPages, err := e.reader.ListPages()
+	allPages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return nil, mdlerrors.NewBackend("list pages", err)
 	}
@@ -537,9 +532,8 @@ func findPageByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierar
 
 // findSnippetByName looks up a snippet by qualified name.
 func findSnippetByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (*pages.Snippet, model.ID, error) {
-	e := ctx.executor
 
-	allSnippets, err := e.reader.ListSnippets()
+	allSnippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return nil, "", mdlerrors.NewBackend("list snippets", err)
 	}

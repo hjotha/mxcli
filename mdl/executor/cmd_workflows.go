@@ -15,13 +15,12 @@ import (
 
 // showWorkflows handles SHOW WORKFLOWS command.
 func showWorkflows(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	wfs, err := e.reader.ListWorkflows()
+	wfs, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -143,13 +142,12 @@ func describeWorkflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 // describeWorkflowToString generates MDL-like output for a workflow and returns it as a string.
 func describeWorkflowToString(ctx *ExecContext, name ast.QualifiedName) (string, map[string]elkSourceRange, error) {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return "", nil, mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	allWorkflows, err := e.reader.ListWorkflows()
+	allWorkflows, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return "", nil, mdlerrors.NewBackend("list workflows", err)
 	}

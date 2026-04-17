@@ -18,12 +18,11 @@ import (
 
 // showAgentEditorModels handles SHOW MODELS [IN module].
 func showAgentEditorModels(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	models, err := e.reader.ListAgentEditorModels()
+	models, err := ctx.Backend.ListAgentEditorModels()
 	if err != nil {
 		return mdlerrors.NewBackend("list models", err)
 	}
@@ -133,8 +132,7 @@ func describeAgentEditorModel(ctx *ExecContext, name ast.QualifiedName) error {
 
 // findAgentEditorModel looks up a model by module and name.
 func findAgentEditorModel(ctx *ExecContext, moduleName, modelName string) *agenteditor.Model {
-	e := ctx.executor
-	models, err := e.reader.ListAgentEditorModels()
+	models, err := ctx.Backend.ListAgentEditorModels()
 	if err != nil {
 		return nil
 	}

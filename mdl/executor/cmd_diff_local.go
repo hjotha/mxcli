@@ -30,17 +30,16 @@ import (
 //   - A single ref (e.g., "HEAD", "main") — compares working tree vs ref
 //   - A range "base..target" — compares two revisions (no working tree)
 func diffLocal(ctx *ExecContext, ref string, opts DiffOptions) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// Check MPR version
-	if e.reader.Version() != 2 {
+	if ctx.Backend.Version() != 2 {
 		return mdlerrors.NewUnsupported("diff-local only supports MPR v2 format (Mendix 10.18+)")
 	}
 
-	contentsDir := e.reader.ContentsDir()
+	contentsDir := ctx.Backend.ContentsDir()
 	if contentsDir == "" {
 		return mdlerrors.NewValidation("mprcontents directory not found")
 	}
@@ -518,7 +517,6 @@ func splitQualifiedName(qualifiedName string) ast.QualifiedName {
 // receive IDs (e.g. entity references) and want to resolve them against
 // the working-tree model. Returns empty maps if the reader is unavailable.
 func buildNameLookups(ctx *ExecContext) (map[model.ID]string, map[model.ID]string) {
-	e := ctx.executor
 	entityNames := make(map[model.ID]string)
 	microflowNames := make(map[model.ID]string)
 	if !ctx.Connected() {
@@ -528,7 +526,7 @@ func buildNameLookups(ctx *ExecContext) (map[model.ID]string, map[model.ID]strin
 	if err != nil {
 		return entityNames, microflowNames
 	}
-	if domainModels, err := e.reader.ListDomainModels(); err == nil {
+	if domainModels, err := ctx.Backend.ListDomainModels(); err == nil {
 		for _, dm := range domainModels {
 			modName := h.GetModuleName(dm.ContainerID)
 			for _, entity := range dm.Entities {
@@ -536,7 +534,7 @@ func buildNameLookups(ctx *ExecContext) (map[model.ID]string, map[model.ID]strin
 			}
 		}
 	}
-	if microflows, err := e.reader.ListMicroflows(); err == nil {
+	if microflows, err := ctx.Backend.ListMicroflows(); err == nil {
 		for _, mf := range microflows {
 			microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
 		}

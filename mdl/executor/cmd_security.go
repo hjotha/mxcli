@@ -15,8 +15,7 @@ import (
 
 // showProjectSecurity handles SHOW PROJECT SECURITY.
 func showProjectSecurity(ctx *ExecContext) error {
-	e := ctx.executor
-	ps, err := e.reader.GetProjectSecurity()
+	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -49,13 +48,12 @@ func showProjectSecurity(ctx *ExecContext) error {
 
 // showModuleRoles handles SHOW MODULE ROLES [IN module].
 func showModuleRoles(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	allMS, err := e.reader.ListModuleSecurity()
+	allMS, err := ctx.Backend.ListModuleSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read module security", err)
 	}
@@ -84,8 +82,7 @@ func showModuleRoles(ctx *ExecContext, moduleName string) error {
 
 // showUserRoles handles SHOW USER ROLES.
 func showUserRoles(ctx *ExecContext) error {
-	e := ctx.executor
-	ps, err := e.reader.GetProjectSecurity()
+	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -112,8 +109,7 @@ func showUserRoles(ctx *ExecContext) error {
 
 // showDemoUsers handles SHOW DEMO USERS.
 func showDemoUsers(ctx *ExecContext) error {
-	e := ctx.executor
-	ps, err := e.reader.GetProjectSecurity()
+	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -139,7 +135,6 @@ func showDemoUsers(ctx *ExecContext) error {
 
 // showAccessOnEntity handles SHOW ACCESS ON Module.Entity.
 func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
-	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}
@@ -149,7 +144,7 @@ func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -251,7 +246,6 @@ func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 
 // showAccessOnMicroflow handles SHOW ACCESS ON MICROFLOW Module.MF.
 func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
-	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("microflow name required")
 	}
@@ -261,7 +255,7 @@ func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	mfs, err := e.reader.ListMicroflows()
+	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -286,7 +280,6 @@ func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 
 // showAccessOnPage handles SHOW ACCESS ON PAGE Module.Page.
 func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
-	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("page name required")
 	}
@@ -296,7 +289,7 @@ func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	pages, err := e.reader.ListPages()
+	pages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -326,8 +319,7 @@ func showAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
 
 // showSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
 func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
-	if e.format == FormatJSON {
+	if ctx.Format == FormatJSON {
 		return showSecurityMatrixJSON(ctx, moduleName)
 	}
 
@@ -337,7 +329,7 @@ func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Collect all module roles
-	allMS, err := e.reader.ListModuleSecurity()
+	allMS, err := ctx.Backend.ListModuleSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read module security", err)
 	}
@@ -377,7 +369,7 @@ func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Collect entities with access rules
-	dms, err := e.reader.ListDomainModels()
+	dms, err := ctx.Backend.ListDomainModels()
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
@@ -458,7 +450,7 @@ func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	fmt.Fprintln(ctx.Output, "## Microflow Access")
 	fmt.Fprintln(ctx.Output)
 
-	mfs, err := e.reader.ListMicroflows()
+	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -489,7 +481,7 @@ func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	fmt.Fprintln(ctx.Output, "## Page Access")
 	fmt.Fprintln(ctx.Output)
 
-	pages, err := e.reader.ListPages()
+	pages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -528,7 +520,6 @@ func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
 // showSecurityMatrixJSON emits the security matrix as a JSON table
 // with one row per access rule across entities, microflows, pages, and workflows.
 func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -539,7 +530,7 @@ func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Entities
-	dms, _ := e.reader.ListDomainModels()
+	dms, _ := ctx.Backend.ListDomainModels()
 	for _, dm := range dms {
 		modID := h.FindModuleID(dm.ContainerID)
 		modName := h.GetModuleName(modID)
@@ -594,7 +585,7 @@ func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Microflows
-	mfs, _ := e.reader.ListMicroflows()
+	mfs, _ := ctx.Backend.ListMicroflows()
 	for _, mf := range mfs {
 		if len(mf.AllowedModuleRoles) == 0 {
 			continue
@@ -617,7 +608,7 @@ func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Pages
-	pages, _ := e.reader.ListPages()
+	pages, _ := ctx.Backend.ListPages()
 	for _, pg := range pages {
 		if len(pg.AllowedRoles) == 0 {
 			continue
@@ -644,13 +635,12 @@ func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
 
 // describeModuleRole handles DESCRIBE MODULE ROLE Module.RoleName.
 func describeModuleRole(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	allMS, err := e.reader.ListModuleSecurity()
+	allMS, err := ctx.Backend.ListModuleSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read module security", err)
 	}
@@ -671,7 +661,7 @@ func describeModuleRole(ctx *ExecContext, name ast.QualifiedName) error {
 
 				// Show which user roles include this module role
 				qualifiedRole := modName + "." + mr.Name
-				ps, err := e.reader.GetProjectSecurity()
+				ps, err := ctx.Backend.GetProjectSecurity()
 				if err == nil {
 					var includedBy []string
 					for _, ur := range ps.UserRoles {
@@ -696,8 +686,7 @@ func describeModuleRole(ctx *ExecContext, name ast.QualifiedName) error {
 
 // describeDemoUser handles DESCRIBE DEMO USER 'name'.
 func describeDemoUser(ctx *ExecContext, userName string) error {
-	e := ctx.executor
-	ps, err := e.reader.GetProjectSecurity()
+	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -722,8 +711,7 @@ func describeDemoUser(ctx *ExecContext, userName string) error {
 
 // describeUserRole handles DESCRIBE USER ROLE Name.
 func describeUserRole(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
-	ps, err := e.reader.GetProjectSecurity()
+	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}

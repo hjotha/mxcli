@@ -164,7 +164,6 @@ func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attr
 // formatAccessRuleResult re-reads the entity and formats the resulting access state
 // for the given roles. Returns a string like "  Result: CREATE, READ (Name, Price)\n".
 func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, roleNames []string) string {
-	e := ctx.executor
 	invalidateDomainModelsCache(ctx)
 
 	module, err := findModule(ctx, moduleName)
@@ -172,7 +171,7 @@ func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, rol
 		return ""
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return ""
 	}

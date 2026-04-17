@@ -42,7 +42,7 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	}
 
 	// Find workflow by qualified name
-	allWorkflows, err := e.reader.ListWorkflows()
+	allWorkflows, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -61,7 +61,7 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	}
 
 	// Load raw BSON as ordered document
-	rawBytes, err := e.reader.GetRawUnitBytes(wfID)
+	rawBytes, err := ctx.Backend.GetRawUnitBytes(wfID)
 	if err != nil {
 		return mdlerrors.NewBackend("load raw workflow data", err)
 	}
@@ -137,7 +137,7 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	}
 
 	// Save
-	if err := e.writer.UpdateRawUnit(string(wfID), outBytes); err != nil {
+	if err := ctx.Backend.UpdateRawUnit(string(wfID), outBytes); err != nil {
 		return mdlerrors.NewBackend("save modified workflow", err)
 	}
 

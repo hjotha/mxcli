@@ -17,13 +17,12 @@ import (
 
 // showJavaScriptActions handles SHOW JAVASCRIPT ACTIONS command.
 func showJavaScriptActions(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	jsActions, err := e.reader.ListJavaScriptActions()
+	jsActions, err := ctx.Backend.ListJavaScriptActions()
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
 	}
@@ -67,9 +66,8 @@ func showJavaScriptActions(ctx *ExecContext, moduleName string) error {
 
 // describeJavaScriptAction handles DESCRIBE JAVASCRIPT ACTION command.
 func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	qualifiedName := name.Module + "." + name.Name
-	jsa, err := e.reader.ReadJavaScriptActionByName(qualifiedName)
+	jsa, err := ctx.Backend.ReadJavaScriptActionByName(qualifiedName)
 	if err != nil {
 		return mdlerrors.NewNotFound("javascript action", qualifiedName)
 	}
@@ -180,7 +178,7 @@ func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// JavaScript source code
-	userCode, extraCode := readJavaScriptActionSource(e.mprPath, name.Module, name.Name)
+	userCode, extraCode := readJavaScriptActionSource(ctx.MprPath, name.Module, name.Name)
 	if userCode != "" {
 		sb.WriteString("\nAS $$\n")
 		sb.WriteString(userCode)

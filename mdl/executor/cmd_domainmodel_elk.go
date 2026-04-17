@@ -68,7 +68,6 @@ const (
 // domainModelELK generates a JSON graph of a module's domain model for rendering with ELK.js.
 // If name contains a dot (e.g. "Module.Entity"), it delegates to entityFocusELK for a focused view.
 func domainModelELK(ctx *ExecContext, name string) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -84,7 +83,7 @@ func domainModelELK(ctx *ExecContext, name string) error {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -157,7 +156,6 @@ func domainModelELK(ctx *ExecContext, name string) error {
 // entityFocusELK generates a focused ELK diagram showing only the selected entity
 // and entities directly connected to it via associations or generalization.
 func entityFocusELK(ctx *ExecContext, qualifiedName string) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -173,7 +171,7 @@ func entityFocusELK(ctx *ExecContext, qualifiedName string) error {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -218,7 +216,7 @@ func entityFocusELK(ctx *ExecContext, qualifiedName string) error {
 	}
 
 	// Also scan all domain models for cross-module associations referencing this entity
-	allDMs, _ := e.reader.ListDomainModels()
+	allDMs, _ := ctx.Backend.ListDomainModels()
 	for _, otherDM := range allDMs {
 		if otherDM.ID == dm.ID {
 			continue
@@ -325,14 +323,13 @@ func entityFocusELK(ctx *ExecContext, qualifiedName string) error {
 // buildAllEntityNames loads all entities across all modules.
 // Returns ID -> "Module.Entity" map and ID -> module name map.
 func buildAllEntityNames(ctx *ExecContext) (map[model.ID]string, map[model.ID]string) {
-	e := ctx.executor
 	allEntityNames := make(map[model.ID]string)
 	allEntityModules := make(map[model.ID]string)
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return allEntityNames, allEntityModules
 	}
-	domainModels, _ := e.reader.ListDomainModels()
+	domainModels, _ := ctx.Backend.ListDomainModels()
 	for _, otherDM := range domainModels {
 		modName := h.GetModuleName(otherDM.ContainerID)
 		for _, entity := range otherDM.Entities {

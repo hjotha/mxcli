@@ -97,10 +97,9 @@ func execMove(ctx *ExecContext, s *ast.MoveStmt) error {
 
 // updateQualifiedNameRefs updates all BY_NAME references to an element after a cross-module move.
 func updateQualifiedNameRefs(ctx *ExecContext, name ast.QualifiedName, newModule string) error {
-	e := ctx.executor
 	oldQN := name.String()               // "OldModule.ElementName"
 	newQN := newModule + "." + name.Name // "NewModule.ElementName"
-	updated, err := e.writer.UpdateQualifiedNameInAllUnits(oldQN, newQN)
+	updated, err := ctx.Backend.UpdateQualifiedNameInAllUnits(oldQN, newQN)
 	if err != nil {
 		return mdlerrors.NewBackend("update references", err)
 	}
@@ -112,9 +111,8 @@ func updateQualifiedNameRefs(ctx *ExecContext, name ast.QualifiedName, newModule
 
 // movePage moves a page to a new container.
 func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	e := ctx.executor
 	// Find the page
-	pages, err := e.reader.ListPages()
+	pages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -130,7 +128,7 @@ func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.
 		if modName == name.Module && p.Name == name.Name {
 			// Update container ID and move the unit
 			p.ContainerID = targetContainerID
-			if err := e.writer.MovePage(p); err != nil {
+			if err := ctx.Backend.MovePage(p); err != nil {
 				return mdlerrors.NewBackend("move page", err)
 			}
 			fmt.Fprintf(ctx.Output, "Moved page %s to new location\n", name.String())
@@ -143,9 +141,8 @@ func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.
 
 // moveMicroflow moves a microflow to a new container.
 func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	e := ctx.executor
 	// Find the microflow
-	mfs, err := e.reader.ListMicroflows()
+	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -161,7 +158,7 @@ func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID m
 		if modName == name.Module && mf.Name == name.Name {
 			// Update container ID and move the unit
 			mf.ContainerID = targetContainerID
-			if err := e.writer.MoveMicroflow(mf); err != nil {
+			if err := ctx.Backend.MoveMicroflow(mf); err != nil {
 				return mdlerrors.NewBackend("move microflow", err)
 			}
 			fmt.Fprintf(ctx.Output, "Moved microflow %s to new location\n", name.String())
@@ -174,9 +171,8 @@ func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID m
 
 // moveSnippet moves a snippet to a new container.
 func moveSnippet(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	e := ctx.executor
 	// Find the snippet
-	snippets, err := e.reader.ListSnippets()
+	snippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
@@ -192,7 +188,7 @@ func moveSnippet(ctx *ExecContext, name ast.QualifiedName, targetContainerID mod
 		if modName == name.Module && s.Name == name.Name {
 			// Update container ID and move the unit
 			s.ContainerID = targetContainerID
-			if err := e.writer.MoveSnippet(s); err != nil {
+			if err := ctx.Backend.MoveSnippet(s); err != nil {
 				return mdlerrors.NewBackend("move snippet", err)
 			}
 			fmt.Fprintf(ctx.Output, "Moved snippet %s to new location\n", name.String())
@@ -205,9 +201,8 @@ func moveSnippet(ctx *ExecContext, name ast.QualifiedName, targetContainerID mod
 
 // moveNanoflow moves a nanoflow to a new container.
 func moveNanoflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	e := ctx.executor
 	// Find the nanoflow
-	nfs, err := e.reader.ListNanoflows()
+	nfs, err := ctx.Backend.ListNanoflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list nanoflows", err)
 	}
@@ -223,7 +218,7 @@ func moveNanoflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID mo
 		if modName == name.Module && nf.Name == name.Name {
 			// Update container ID and move the unit
 			nf.ContainerID = targetContainerID
-			if err := e.writer.MoveNanoflow(nf); err != nil {
+			if err := ctx.Backend.MoveNanoflow(nf); err != nil {
 				return mdlerrors.NewBackend("move nanoflow", err)
 			}
 			fmt.Fprintf(ctx.Output, "Moved nanoflow %s to new location\n", name.String())
@@ -239,9 +234,8 @@ func moveNanoflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID mo
 // Associations referencing the entity are converted to CrossAssociations.
 // ViewEntitySourceDocuments for view entities are also moved.
 func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetModule *model.Module) error {
-	e := ctx.executor
 	// Get source domain model
-	sourceDM, err := e.reader.GetDomainModel(sourceModule.ID)
+	sourceDM, err := ctx.Backend.GetDomainModel(sourceModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get source domain model", err)
 	}
@@ -259,13 +253,13 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	}
 
 	// Get target domain model
-	targetDM, err := e.reader.GetDomainModel(targetModule.ID)
+	targetDM, err := ctx.Backend.GetDomainModel(targetModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get target domain model", err)
 	}
 
 	// Move entity via writer (converts associations to CrossAssociations, updates validation rule refs)
-	convertedAssocs, err := e.writer.MoveEntity(entity, sourceDM.ID, targetDM.ID, sourceModule.Name, targetModule.Name)
+	convertedAssocs, err := ctx.Backend.MoveEntity(entity, sourceDM.ID, targetDM.ID, sourceModule.Name, targetModule.Name)
 	if err != nil {
 		return mdlerrors.NewBackend("move entity", err)
 	}
@@ -275,7 +269,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 		// The SourceDocumentRef was already updated by MoveEntity to use the new module name.
 		// Extract the original doc name (before the module prefix was changed).
 		docName := name.Name // ViewEntitySourceDocument name matches the entity name
-		if err := e.writer.MoveViewEntitySourceDocument(sourceModule.Name, targetModule.ID, docName); err != nil {
+		if err := ctx.Backend.MoveViewEntitySourceDocument(sourceModule.Name, targetModule.ID, docName); err != nil {
 			fmt.Fprintf(ctx.Output, "Warning: Could not move ViewEntitySourceDocument: %v\n", err)
 		}
 	}
@@ -283,7 +277,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	// Update OQL queries in all ViewEntitySourceDocuments that reference the moved entity
 	oldQualifiedName := name.String()                       // e.g., "DmTest.Customer"
 	newQualifiedName := targetModule.Name + "." + name.Name // e.g., "DmTest2.Customer"
-	if oqlUpdated, err := e.writer.UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName); err != nil {
+	if oqlUpdated, err := ctx.Backend.UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName); err != nil {
 		fmt.Fprintf(ctx.Output, "Warning: Could not update OQL queries: %v\n", err)
 	} else if oqlUpdated > 0 {
 		fmt.Fprintf(ctx.Output, "Updated %d OQL query(ies) referencing %s\n", oqlUpdated, oldQualifiedName)
@@ -302,7 +296,6 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 // moveEnumeration moves an enumeration to a new container.
 // For cross-module moves, updates all EnumerationAttributeType references across all domain models.
 func moveEnumeration(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID, targetModuleName string) error {
-	e := ctx.executor
 	enum := findEnumeration(ctx, name.Module, name.Name)
 	if enum == nil {
 		return mdlerrors.NewNotFound("enumeration", name.String())
@@ -310,14 +303,14 @@ func moveEnumeration(ctx *ExecContext, name ast.QualifiedName, targetContainerID
 
 	oldQualifiedName := name.String() // e.g., "DmTest.Country"
 	enum.ContainerID = targetContainerID
-	if err := e.writer.MoveEnumeration(enum); err != nil {
+	if err := ctx.Backend.MoveEnumeration(enum); err != nil {
 		return mdlerrors.NewBackend("move enumeration", err)
 	}
 
 	// For cross-module moves, update enumeration references in all domain models
 	if targetModuleName != "" && targetModuleName != name.Module {
 		newQualifiedName := targetModuleName + "." + name.Name
-		if err := e.writer.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
+		if err := ctx.Backend.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
 			fmt.Fprintf(ctx.Output, "Warning: Could not update enumeration references: %v\n", err)
 		} else {
 			fmt.Fprintf(ctx.Output, "Updated enumeration references: %s -> %s\n", oldQualifiedName, newQualifiedName)
@@ -330,8 +323,7 @@ func moveEnumeration(ctx *ExecContext, name ast.QualifiedName, targetContainerID
 
 // moveConstant moves a constant to a new container.
 func moveConstant(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	e := ctx.executor
-	constants, err := e.reader.ListConstants()
+	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -346,7 +338,7 @@ func moveConstant(ctx *ExecContext, name ast.QualifiedName, targetContainerID mo
 		modName := h.GetModuleName(modID)
 		if modName == name.Module && c.Name == name.Name {
 			c.ContainerID = targetContainerID
-			if err := e.writer.MoveConstant(c); err != nil {
+			if err := ctx.Backend.MoveConstant(c); err != nil {
 				return mdlerrors.NewBackend("move constant", err)
 			}
 			fmt.Fprintf(ctx.Output, "Moved constant %s to new location\n", name.String())
@@ -359,8 +351,7 @@ func moveConstant(ctx *ExecContext, name ast.QualifiedName, targetContainerID mo
 
 // moveDatabaseConnection moves a database connection to a new container.
 func moveDatabaseConnection(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
-	e := ctx.executor
-	connections, err := e.reader.ListDatabaseConnections()
+	connections, err := ctx.Backend.ListDatabaseConnections()
 	if err != nil {
 		return mdlerrors.NewBackend("list database connections", err)
 	}
@@ -375,7 +366,7 @@ func moveDatabaseConnection(ctx *ExecContext, name ast.QualifiedName, targetCont
 		modName := h.GetModuleName(modID)
 		if modName == name.Module && conn.Name == name.Name {
 			conn.ContainerID = targetContainerID
-			if err := e.writer.MoveDatabaseConnection(conn); err != nil {
+			if err := ctx.Backend.MoveDatabaseConnection(conn); err != nil {
 				return mdlerrors.NewBackend("move database connection", err)
 			}
 			fmt.Fprintf(ctx.Output, "Moved database connection %s to new location\n", name.String())
