@@ -15,14 +15,15 @@ import (
 // ============================================================================
 
 // execCreatePageV3 handles CREATE PAGE statement with V3 syntax.
-func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
+func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Version pre-check: page parameters require 11.0+
 	if len(s.Parameters) > 0 {
-		if err := e.checkFeature("pages", "page_parameters",
+		if err := checkFeature(ctx, "pages", "page_parameters",
 			"CREATE PAGE with parameters",
 			"pass data via a non-persistent entity or microflow parameter instead"); err != nil {
 			return err
@@ -30,7 +31,7 @@ func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 	}
 
 	// Find or auto-create module
-	module, err := e.findOrCreateModule(s.Name.Module)
+	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("find module %s", s.Name.Module), err)
 	}
@@ -40,8 +41,8 @@ func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 	existingPages, _ := e.reader.ListPages()
 	var pagesToDelete []model.ID
 	for _, p := range existingPages {
-		modID := e.getModuleID(p.ContainerID)
-		modName := e.getModuleName(modID)
+		modID := getModuleID(ctx, p.ContainerID)
+		modName := getModuleName(ctx, modID)
 		if modName == s.Name.Module && p.Name == s.Name.Name {
 			if !s.IsReplace && !s.IsModify && len(pagesToDelete) == 0 {
 				return mdlerrors.NewAlreadyExists("page", s.Name.String())
@@ -92,20 +93,21 @@ func (e *Executor) execCreatePageV3(s *ast.CreatePageStmtV3) error {
 	e.trackCreatedPage(s.Name.Module, s.Name.Name, page.ID, moduleID)
 
 	// Invalidate hierarchy cache so the new page's container is visible
-	e.invalidateHierarchy()
+	invalidateHierarchy(ctx)
 
-	fmt.Fprintf(e.output, "Created page %s\n", s.Name.String())
+	fmt.Fprintf(ctx.Output, "Created page %s\n", s.Name.String())
 	return nil
 }
 
 // execCreateSnippetV3 handles CREATE SNIPPET statement with V3 syntax.
-func (e *Executor) execCreateSnippetV3(s *ast.CreateSnippetStmtV3) error {
+func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Find or auto-create module
-	module, err := e.findOrCreateModule(s.Name.Module)
+	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("find module %s", s.Name.Module), err)
 	}
@@ -115,8 +117,8 @@ func (e *Executor) execCreateSnippetV3(s *ast.CreateSnippetStmtV3) error {
 	existingSnippets, _ := e.reader.ListSnippets()
 	var snippetsToDelete []model.ID
 	for _, snip := range existingSnippets {
-		modID := e.getModuleID(snip.ContainerID)
-		modName := e.getModuleName(modID)
+		modID := getModuleID(ctx, snip.ContainerID)
+		modName := getModuleName(ctx, modID)
 		if modName == s.Name.Module && snip.Name == s.Name.Name {
 			if !s.IsReplace && !s.IsModify && len(snippetsToDelete) == 0 {
 				return mdlerrors.NewAlreadyExists("snippet", s.Name.String())
@@ -160,8 +162,8 @@ func (e *Executor) execCreateSnippetV3(s *ast.CreateSnippetStmtV3) error {
 	e.trackCreatedSnippet(s.Name.Module, s.Name.Name, snippet.ID, moduleID)
 
 	// Invalidate hierarchy cache so the new snippet's container is visible
-	e.invalidateHierarchy()
+	invalidateHierarchy(ctx)
 
-	fmt.Fprintf(e.output, "Created snippet %s\n", s.Name.String())
+	fmt.Fprintf(ctx.Output, "Created snippet %s\n", s.Name.String())
 	return nil
 }

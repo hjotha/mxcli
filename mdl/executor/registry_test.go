@@ -42,7 +42,7 @@ func TestRegistry_Dispatch_UnknownStatement(t *testing.T) {
 
 func TestRegistry_Register_Duplicate_Panics(t *testing.T) {
 	r := emptyRegistry()
-	handler := func(e *Executor, stmt ast.Statement) error { return nil }
+	handler := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
 
 	r.Register(&ast.ConnectStmt{}, handler)
 
@@ -57,7 +57,7 @@ func TestRegistry_Register_Duplicate_Panics(t *testing.T) {
 func TestRegistry_Dispatch_Success(t *testing.T) {
 	r := emptyRegistry()
 	called := false
-	r.Register(&ast.ConnectStmt{}, func(e *Executor, stmt ast.Statement) error {
+	r.Register(&ast.ConnectStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		called = true
 		if _, ok := stmt.(*ast.ConnectStmt); !ok {
 			t.Fatalf("expected *ConnectStmt, got %T", stmt)
@@ -77,7 +77,7 @@ func TestRegistry_Dispatch_Success(t *testing.T) {
 func TestRegistry_Dispatch_HandlerError(t *testing.T) {
 	r := emptyRegistry()
 	sentinel := errors.New("test error")
-	r.Register(&ast.ConnectStmt{}, func(e *Executor, stmt ast.Statement) error {
+	r.Register(&ast.ConnectStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return sentinel
 	})
 
@@ -102,7 +102,7 @@ func TestRegistry_Validate_Empty(t *testing.T) {
 
 func TestRegistry_Validate_Complete(t *testing.T) {
 	r := emptyRegistry()
-	noop := func(e *Executor, stmt ast.Statement) error { return nil }
+	noop := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
 	r.Register(&ast.ConnectStmt{}, noop)
 	r.Register(&ast.DisconnectStmt{}, noop)
 
@@ -118,7 +118,7 @@ func TestRegistry_Validate_Complete(t *testing.T) {
 
 func TestRegistry_Validate_Partial(t *testing.T) {
 	r := emptyRegistry()
-	noop := func(e *Executor, stmt ast.Statement) error { return nil }
+	noop := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
 	r.Register(&ast.ConnectStmt{}, noop)
 
 	knownTypes := []ast.Statement{
@@ -146,7 +146,7 @@ func TestRegistry_HandlerCount(t *testing.T) {
 	if r.HandlerCount() != 0 {
 		t.Fatalf("expected 0, got %d", r.HandlerCount())
 	}
-	noop := func(e *Executor, stmt ast.Statement) error { return nil }
+	noop := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
 	r.Register(&ast.ConnectStmt{}, noop)
 	if r.HandlerCount() != 1 {
 		t.Fatalf("expected 1, got %d", r.HandlerCount())

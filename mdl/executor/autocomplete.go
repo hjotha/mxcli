@@ -4,8 +4,11 @@
 // Returns qualified names for modules, entities, microflows, pages, etc.
 package executor
 
-// GetModuleNames returns a list of all module names for autocomplete.
-func (e *Executor) GetModuleNames() []string {
+import "context"
+
+// getModuleNames returns a list of all module names for autocomplete.
+func getModuleNames(ctx *ExecContext) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
@@ -20,12 +23,13 @@ func (e *Executor) GetModuleNames() []string {
 	return names
 }
 
-// GetMicroflowNames returns qualified microflow names, optionally filtered by module.
-func (e *Executor) GetMicroflowNames(moduleFilter string) []string {
+// getMicroflowNamesAC returns qualified microflow names, optionally filtered by module.
+func getMicroflowNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -44,12 +48,13 @@ func (e *Executor) GetMicroflowNames(moduleFilter string) []string {
 	return names
 }
 
-// GetEntityNames returns qualified entity names, optionally filtered by module.
-func (e *Executor) GetEntityNames(moduleFilter string) []string {
+// getEntityNamesAC returns qualified entity names, optionally filtered by module.
+func getEntityNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -70,12 +75,13 @@ func (e *Executor) GetEntityNames(moduleFilter string) []string {
 	return names
 }
 
-// GetPageNames returns qualified page names, optionally filtered by module.
-func (e *Executor) GetPageNames(moduleFilter string) []string {
+// getPageNamesAC returns qualified page names, optionally filtered by module.
+func getPageNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -94,12 +100,13 @@ func (e *Executor) GetPageNames(moduleFilter string) []string {
 	return names
 }
 
-// GetSnippetNames returns qualified snippet names, optionally filtered by module.
-func (e *Executor) GetSnippetNames(moduleFilter string) []string {
+// getSnippetNamesAC returns qualified snippet names, optionally filtered by module.
+func getSnippetNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -118,12 +125,13 @@ func (e *Executor) GetSnippetNames(moduleFilter string) []string {
 	return names
 }
 
-// GetAssociationNames returns qualified association names, optionally filtered by module.
-func (e *Executor) GetAssociationNames(moduleFilter string) []string {
+// getAssociationNamesAC returns qualified association names, optionally filtered by module.
+func getAssociationNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -144,12 +152,13 @@ func (e *Executor) GetAssociationNames(moduleFilter string) []string {
 	return names
 }
 
-// GetEnumerationNames returns qualified enumeration names, optionally filtered by module.
-func (e *Executor) GetEnumerationNames(moduleFilter string) []string {
+// getEnumerationNamesAC returns qualified enumeration names, optionally filtered by module.
+func getEnumerationNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -168,12 +177,13 @@ func (e *Executor) GetEnumerationNames(moduleFilter string) []string {
 	return names
 }
 
-// GetLayoutNames returns qualified layout names, optionally filtered by module.
-func (e *Executor) GetLayoutNames(moduleFilter string) []string {
+// getLayoutNamesAC returns qualified layout names, optionally filtered by module.
+func getLayoutNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -192,12 +202,13 @@ func (e *Executor) GetLayoutNames(moduleFilter string) []string {
 	return names
 }
 
-// GetJavaActionNames returns qualified Java action names, optionally filtered by module.
-func (e *Executor) GetJavaActionNames(moduleFilter string) []string {
+// getJavaActionNamesAC returns qualified Java action names, optionally filtered by module.
+func getJavaActionNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -216,12 +227,13 @@ func (e *Executor) GetJavaActionNames(moduleFilter string) []string {
 	return names
 }
 
-// GetODataClientNames returns qualified consumed OData service names, optionally filtered by module.
-func (e *Executor) GetODataClientNames(moduleFilter string) []string {
+// getODataClientNamesAC returns qualified consumed OData service names, optionally filtered by module.
+func getODataClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -240,12 +252,13 @@ func (e *Executor) GetODataClientNames(moduleFilter string) []string {
 	return names
 }
 
-// GetODataServiceNames returns qualified published OData service names, optionally filtered by module.
-func (e *Executor) GetODataServiceNames(moduleFilter string) []string {
+// getODataServiceNamesAC returns qualified published OData service names, optionally filtered by module.
+func getODataServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -264,12 +277,13 @@ func (e *Executor) GetODataServiceNames(moduleFilter string) []string {
 	return names
 }
 
-// GetRestClientNames returns qualified consumed REST service names, optionally filtered by module.
-func (e *Executor) GetRestClientNames(moduleFilter string) []string {
+// getRestClientNamesAC returns qualified consumed REST service names, optionally filtered by module.
+func getRestClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -288,12 +302,13 @@ func (e *Executor) GetRestClientNames(moduleFilter string) []string {
 	return names
 }
 
-// GetDatabaseConnectionNames returns qualified database connection names, optionally filtered by module.
-func (e *Executor) GetDatabaseConnectionNames(moduleFilter string) []string {
+// getDatabaseConnectionNamesAC returns qualified database connection names, optionally filtered by module.
+func getDatabaseConnectionNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -312,12 +327,13 @@ func (e *Executor) GetDatabaseConnectionNames(moduleFilter string) []string {
 	return names
 }
 
-// GetBusinessEventServiceNames returns qualified business event service names, optionally filtered by module.
-func (e *Executor) GetBusinessEventServiceNames(moduleFilter string) []string {
+// getBusinessEventServiceNamesAC returns qualified business event service names, optionally filtered by module.
+func getBusinessEventServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -336,12 +352,13 @@ func (e *Executor) GetBusinessEventServiceNames(moduleFilter string) []string {
 	return names
 }
 
-// GetJsonStructureNames returns qualified JSON structure names, optionally filtered by module.
-func (e *Executor) GetJsonStructureNames(moduleFilter string) []string {
+// getJsonStructureNamesAC returns qualified JSON structure names, optionally filtered by module.
+func getJsonStructureNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -358,4 +375,83 @@ func (e *Executor) GetJsonStructureNames(moduleFilter string) []string {
 		}
 	}
 	return names
+}
+
+// ----------------------------------------------------------------------------
+// Exported Executor method wrappers (public API for external callers)
+// ----------------------------------------------------------------------------
+
+// GetModuleNames returns a list of all module names for autocomplete.
+func (e *Executor) GetModuleNames() []string {
+	return getModuleNames(e.newExecContext(context.Background()))
+}
+
+// GetMicroflowNames returns qualified microflow names, optionally filtered by module.
+func (e *Executor) GetMicroflowNames(moduleFilter string) []string {
+	return getMicroflowNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetEntityNames returns qualified entity names, optionally filtered by module.
+func (e *Executor) GetEntityNames(moduleFilter string) []string {
+	return getEntityNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetPageNames returns qualified page names, optionally filtered by module.
+func (e *Executor) GetPageNames(moduleFilter string) []string {
+	return getPageNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetSnippetNames returns qualified snippet names, optionally filtered by module.
+func (e *Executor) GetSnippetNames(moduleFilter string) []string {
+	return getSnippetNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetAssociationNames returns qualified association names, optionally filtered by module.
+func (e *Executor) GetAssociationNames(moduleFilter string) []string {
+	return getAssociationNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetEnumerationNames returns qualified enumeration names, optionally filtered by module.
+func (e *Executor) GetEnumerationNames(moduleFilter string) []string {
+	return getEnumerationNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetLayoutNames returns qualified layout names, optionally filtered by module.
+func (e *Executor) GetLayoutNames(moduleFilter string) []string {
+	return getLayoutNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetJavaActionNames returns qualified Java action names, optionally filtered by module.
+func (e *Executor) GetJavaActionNames(moduleFilter string) []string {
+	return getJavaActionNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetODataClientNames returns qualified consumed OData service names, optionally filtered by module.
+func (e *Executor) GetODataClientNames(moduleFilter string) []string {
+	return getODataClientNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetODataServiceNames returns qualified published OData service names, optionally filtered by module.
+func (e *Executor) GetODataServiceNames(moduleFilter string) []string {
+	return getODataServiceNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetRestClientNames returns qualified consumed REST service names, optionally filtered by module.
+func (e *Executor) GetRestClientNames(moduleFilter string) []string {
+	return getRestClientNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetDatabaseConnectionNames returns qualified database connection names, optionally filtered by module.
+func (e *Executor) GetDatabaseConnectionNames(moduleFilter string) []string {
+	return getDatabaseConnectionNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetBusinessEventServiceNames returns qualified business event service names, optionally filtered by module.
+func (e *Executor) GetBusinessEventServiceNames(moduleFilter string) []string {
+	return getBusinessEventServiceNamesAC(e.newExecContext(context.Background()), moduleFilter)
+}
+
+// GetJsonStructureNames returns qualified JSON structure names, optionally filtered by module.
+func (e *Executor) GetJsonStructureNames(moduleFilter string) []string {
+	return getJsonStructureNamesAC(e.newExecContext(context.Background()), moduleFilter)
 }

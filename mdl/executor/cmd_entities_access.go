@@ -11,7 +11,7 @@ import (
 )
 
 // outputEntityAccessGrants outputs GRANT statements for entity access rules.
-func (e *Executor) outputEntityAccessGrants(entity *domainmodel.Entity, moduleName, entityName string) {
+func outputEntityAccessGrants(ctx *ExecContext, entity *domainmodel.Entity, moduleName, entityName string) {
 	if len(entity.AccessRules) == 0 {
 		return
 	}
@@ -37,7 +37,7 @@ func (e *Executor) outputEntityAccessGrants(entity *domainmodel.Entity, moduleNa
 			continue
 		}
 
-		rightsStr := e.formatAccessRuleRights(rule, attrNames)
+		rightsStr := formatAccessRuleRights(ctx, rule, attrNames)
 		if rightsStr == "" {
 			continue
 		}
@@ -50,13 +50,13 @@ func (e *Executor) outputEntityAccessGrants(entity *domainmodel.Entity, moduleNa
 		}
 		grantLine += ";"
 
-		fmt.Fprintln(e.output, grantLine)
+		fmt.Fprintln(ctx.Output, grantLine)
 	}
 }
 
 // resolveEntityMemberAccess determines per-member READ/WRITE access.
 // Returns nil slices for "all members" (*), or specific member name lists.
-func (e *Executor) resolveEntityMemberAccess(rule *domainmodel.AccessRule, attrNames map[string]string) (readMembers []string, writeMembers []string) {
+func resolveEntityMemberAccess(_ *ExecContext, rule *domainmodel.AccessRule, attrNames map[string]string) (readMembers []string, writeMembers []string) {
 	if len(rule.MemberAccesses) == 0 {
 		// No per-member overrides: use default
 		return nil, nil
@@ -117,7 +117,7 @@ func (e *Executor) resolveEntityMemberAccess(rule *domainmodel.AccessRule, attrN
 
 // formatAccessRuleRights formats the rights portion of an access rule as a string.
 // Returns a string like "CREATE, DELETE, READ (Name, Price), WRITE (Price)" or empty if no rights.
-func (e *Executor) formatAccessRuleRights(rule *domainmodel.AccessRule, attrNames map[string]string) string {
+func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attrNames map[string]string) string {
 	var rights []string
 	if rule.AllowCreate {
 		rights = append(rights, "CREATE")
@@ -141,7 +141,7 @@ func (e *Executor) formatAccessRuleRights(rule *domainmodel.AccessRule, attrName
 		}
 	}
 
-	readMembers, writeMembers := e.resolveEntityMemberAccess(rule, attrNames)
+	readMembers, writeMembers := resolveEntityMemberAccess(ctx, rule, attrNames)
 
 	if hasRead {
 		if readMembers == nil {
@@ -163,10 +163,11 @@ func (e *Executor) formatAccessRuleRights(rule *domainmodel.AccessRule, attrName
 
 // formatAccessRuleResult re-reads the entity and formats the resulting access state
 // for the given roles. Returns a string like "  Result: CREATE, READ (Name, Price)\n".
-func (e *Executor) formatAccessRuleResult(moduleName, entityName string, roleNames []string) string {
-	e.invalidateDomainModelsCache()
+func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, roleNames []string) string {
+	e := ctx.executor
+	invalidateDomainModelsCache(ctx)
 
-	module, err := e.findModule(moduleName)
+	module, err := findModule(ctx, moduleName)
 	if err != nil {
 		return ""
 	}
@@ -204,7 +205,7 @@ func (e *Executor) formatAccessRuleResult(moduleName, entityName string, roleNam
 			continue
 		}
 		// Found a matching rule
-		rightsStr := e.formatAccessRuleRights(rule, attrNames)
+		rightsStr := formatAccessRuleRights(ctx, rule, attrNames)
 		if rightsStr == "" {
 			return "  Result: (no access)\n"
 		}
@@ -213,3 +214,5 @@ func (e *Executor) formatAccessRuleResult(moduleName, entityName string, roleNam
 
 	return "  Result: (no access)\n"
 }
+
+// --- Executor method wrappers for callers not yet migrated ---

@@ -10,7 +10,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
-func (e *Executor) execConnect(s *ast.ConnectStmt) error {
+func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
+	e := ctx.executor
 	if e.writer != nil {
 		e.writer.Close()
 	}
@@ -27,18 +28,19 @@ func (e *Executor) execConnect(s *ast.ConnectStmt) error {
 
 	// Display connection info with version
 	pv := e.reader.ProjectVersion()
-	if !e.quiet {
-		fmt.Fprintf(e.output, "Connected to: %s (Mendix %s)\n", s.Path, pv.ProductVersion)
+	if !ctx.Quiet {
+		fmt.Fprintf(ctx.Output, "Connected to: %s (Mendix %s)\n", s.Path, pv.ProductVersion)
 	}
-	if e.logger != nil {
-		e.logger.Connect(s.Path, pv.ProductVersion, pv.FormatVersion)
+	if ctx.Logger != nil {
+		ctx.Logger.Connect(s.Path, pv.ProductVersion, pv.FormatVersion)
 	}
 	return nil
 }
 
 // reconnect closes the current connection and reopens it.
 // This is needed when the project file has been modified externally.
-func (e *Executor) reconnect() error {
+func reconnect(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.mprPath == "" {
 		return mdlerrors.NewNotConnected()
 	}
@@ -60,19 +62,20 @@ func (e *Executor) reconnect() error {
 	return nil
 }
 
-func (e *Executor) execDisconnect() error {
+func execDisconnect(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.writer == nil {
-		fmt.Fprintln(e.output, "Not connected")
+		fmt.Fprintln(ctx.Output, "Not connected")
 		return nil
 	}
 
 	// Reconcile any pending security changes before closing
 	if err := e.finalizeProgramExecution(); err != nil {
-		fmt.Fprintf(e.output, "Warning: finalization error: %v\n", err)
+		fmt.Fprintf(ctx.Output, "Warning: finalization error: %v\n", err)
 	}
 
 	e.writer.Close()
-	fmt.Fprintf(e.output, "Disconnected from: %s\n", e.mprPath)
+	fmt.Fprintf(ctx.Output, "Disconnected from: %s\n", e.mprPath)
 	e.writer = nil
 	e.reader = nil
 	e.mprPath = ""
@@ -80,22 +83,26 @@ func (e *Executor) execDisconnect() error {
 	return nil
 }
 
-func (e *Executor) execStatus() error {
+// Executor method wrappers — kept during migration for callers not yet
+// converted to free functions. Remove once all callers are migrated.
+
+func execStatus(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.writer == nil {
-		fmt.Fprintln(e.output, "Status: Not connected")
+		fmt.Fprintln(ctx.Output, "Status: Not connected")
 		return nil
 	}
 
 	pv := e.reader.ProjectVersion()
-	fmt.Fprintf(e.output, "Status: Connected\n")
-	fmt.Fprintf(e.output, "Project: %s\n", e.mprPath)
-	fmt.Fprintf(e.output, "Mendix Version: %s\n", pv.ProductVersion)
-	fmt.Fprintf(e.output, "MPR Format: v%d\n", pv.FormatVersion)
+	fmt.Fprintf(ctx.Output, "Status: Connected\n")
+	fmt.Fprintf(ctx.Output, "Project: %s\n", e.mprPath)
+	fmt.Fprintf(ctx.Output, "Mendix Version: %s\n", pv.ProductVersion)
+	fmt.Fprintf(ctx.Output, "MPR Format: v%d\n", pv.FormatVersion)
 
 	// Show module count
 	modules, err := e.reader.ListModules()
 	if err == nil {
-		fmt.Fprintf(e.output, "Modules: %d\n", len(modules))
+		fmt.Fprintf(ctx.Output, "Modules: %d\n", len(modules))
 	}
 
 	return nil

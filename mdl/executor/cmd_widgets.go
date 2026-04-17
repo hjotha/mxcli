@@ -15,13 +15,15 @@ import (
 )
 
 // execShowWidgets handles the SHOW WIDGETS statement.
-func (e *Executor) execShowWidgets(s *ast.ShowWidgetsStmt) error {
+func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
+	e := ctx.executor
+
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// Ensure catalog is built (full mode for widgets)
-	if err := e.ensureCatalog(true); err != nil {
+	if err := ensureCatalog(ctx, true); err != nil {
 		return mdlerrors.NewBackend("build catalog", err)
 	}
 
@@ -48,21 +50,21 @@ func (e *Executor) execShowWidgets(s *ast.ShowWidgetsStmt) error {
 	query.WriteString(" ORDER BY ModuleName, ContainerQualifiedName, Name")
 
 	// Execute query using SQLite parameterization
-	result, err := e.executeCatalogQueryWithArgs(query.String(), args...)
+	result, err := executeCatalogQueryWithArgs(ctx, query.String(), args...)
 	if err != nil {
 		return mdlerrors.NewBackend("query widgets", err)
 	}
 
 	// Output results as table
 	if result.Count == 0 {
-		fmt.Fprintln(e.output, "No widgets found matching the criteria")
+		fmt.Fprintln(ctx.Output, "No widgets found matching the criteria")
 		return nil
 	}
 
 	// Print header
-	fmt.Fprintf(e.output, "\n%-30s %-40s %-40s %-20s\n",
+	fmt.Fprintf(ctx.Output, "\n%-30s %-40s %-40s %-20s\n",
 		"NAME", "WIDGET TYPE", "CONTAINER", "MODULE")
-	fmt.Fprintln(e.output, strings.Repeat("-", 130))
+	fmt.Fprintln(ctx.Output, strings.Repeat("-", 130))
 
 	// Print rows
 	for _, row := range result.Rows {
@@ -70,15 +72,17 @@ func (e *Executor) execShowWidgets(s *ast.ShowWidgetsStmt) error {
 		widgetType := formatCell(row[1], 40)
 		container := formatCell(row[2], 40)
 		module := formatCell(row[3], 20)
-		fmt.Fprintf(e.output, "%-30s %-40s %-40s %-20s\n", name, widgetType, container, module)
+		fmt.Fprintf(ctx.Output, "%-30s %-40s %-40s %-20s\n", name, widgetType, container, module)
 	}
 
-	fmt.Fprintf(e.output, "\n%d widget(s) found\n", result.Count)
+	fmt.Fprintf(ctx.Output, "\n%d widget(s) found\n", result.Count)
 	return nil
 }
 
 // execUpdateWidgets handles the UPDATE WIDGETS statement.
-func (e *Executor) execUpdateWidgets(s *ast.UpdateWidgetsStmt) error {
+func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
+	e := ctx.executor
+
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -87,18 +91,18 @@ func (e *Executor) execUpdateWidgets(s *ast.UpdateWidgetsStmt) error {
 	}
 
 	// Ensure catalog is built (full mode for widgets)
-	if err := e.ensureCatalog(true); err != nil {
+	if err := ensureCatalog(ctx, true); err != nil {
 		return mdlerrors.NewBackend("build catalog", err)
 	}
 
 	// Find matching widgets
-	widgets, err := e.findMatchingWidgets(s.Filters, s.InModule)
+	widgets, err := findMatchingWidgets(ctx, s.Filters, s.InModule)
 	if err != nil {
 		return mdlerrors.NewBackend("find widgets", err)
 	}
 
 	if len(widgets) == 0 {
-		fmt.Fprintln(e.output, "No widgets found matching the criteria")
+		fmt.Fprintln(ctx.Output, "No widgets found matching the criteria")
 		return nil
 	}
 
@@ -106,30 +110,30 @@ func (e *Executor) execUpdateWidgets(s *ast.UpdateWidgetsStmt) error {
 	containers := groupWidgetsByContainer(widgets)
 
 	// Report what will be updated
-	fmt.Fprintf(e.output, "\nFound %d widget(s) in %d container(s) matching the criteria\n",
+	fmt.Fprintf(ctx.Output, "\nFound %d widget(s) in %d container(s) matching the criteria\n",
 		len(widgets), len(containers))
 
 	if s.DryRun {
-		fmt.Fprintln(e.output, "\n[DRY RUN] The following changes would be made:")
+		fmt.Fprintln(ctx.Output, "\n[DRY RUN] The following changes would be made:")
 	}
 
 	// Process each container
 	totalUpdated := 0
 	for containerID, widgetRefs := range containers {
-		updated, err := e.updateWidgetsInContainer(containerID, widgetRefs, s.Assignments, s.DryRun)
+		updated, err := updateWidgetsInContainer(ctx, containerID, widgetRefs, s.Assignments, s.DryRun)
 		if err != nil {
-			fmt.Fprintf(e.output, "Warning: Failed to update widgets in %s: %v\n", containerID, err)
+			fmt.Fprintf(ctx.Output, "Warning: Failed to update widgets in %s: %v\n", containerID, err)
 			continue
 		}
 		totalUpdated += updated
 	}
 
 	if s.DryRun {
-		fmt.Fprintf(e.output, "\n[DRY RUN] Would update %d widget(s)\n", totalUpdated)
-		fmt.Fprintln(e.output, "\nRun without DRY RUN to apply changes.")
+		fmt.Fprintf(ctx.Output, "\n[DRY RUN] Would update %d widget(s)\n", totalUpdated)
+		fmt.Fprintln(ctx.Output, "\nRun without DRY RUN to apply changes.")
 	} else {
-		fmt.Fprintf(e.output, "\nUpdated %d widget(s)\n", totalUpdated)
-		fmt.Fprintln(e.output, "\nNote: Run 'REFRESH CATALOG FULL FORCE' to update the catalog with changes.")
+		fmt.Fprintf(ctx.Output, "\nUpdated %d widget(s)\n", totalUpdated)
+		fmt.Fprintln(ctx.Output, "\nNote: Run 'REFRESH CATALOG FULL FORCE' to update the catalog with changes.")
 	}
 
 	return nil
@@ -146,7 +150,7 @@ type widgetRef struct {
 }
 
 // findMatchingWidgets queries the catalog for widgets matching the filters.
-func (e *Executor) findMatchingWidgets(filters []ast.WidgetFilter, module string) ([]widgetRef, error) {
+func findMatchingWidgets(ctx *ExecContext, filters []ast.WidgetFilter, module string) ([]widgetRef, error) {
 	var query strings.Builder
 	query.WriteString(`SELECT Id, Name, WidgetType, ContainerId, ContainerQualifiedName, ContainerType
 	          FROM widgets WHERE 1=1`)
@@ -167,7 +171,7 @@ func (e *Executor) findMatchingWidgets(filters []ast.WidgetFilter, module string
 		args = append(args, module)
 	}
 
-	result, err := e.executeCatalogQueryWithArgs(query.String(), args...)
+	result, err := executeCatalogQueryWithArgs(ctx, query.String(), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +201,7 @@ func groupWidgetsByContainer(widgets []widgetRef) map[string][]widgetRef {
 }
 
 // updateWidgetsInContainer updates widgets within a single page or snippet.
-func (e *Executor) updateWidgetsInContainer(containerID string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
+func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
 	if len(widgetRefs) == 0 {
 		return 0, nil
 	}
@@ -207,16 +211,18 @@ func (e *Executor) updateWidgetsInContainer(containerID string, widgetRefs []wid
 
 	// Load the page or snippet
 	if strings.ToLower(containerType) == "page" {
-		return e.updateWidgetsInPage(containerID, containerName, widgetRefs, assignments, dryRun)
+		return updateWidgetsInPage(ctx, containerID, containerName, widgetRefs, assignments, dryRun)
 	} else if strings.ToLower(containerType) == "snippet" {
-		return e.updateWidgetsInSnippet(containerID, containerName, widgetRefs, assignments, dryRun)
+		return updateWidgetsInSnippet(ctx, containerID, containerName, widgetRefs, assignments, dryRun)
 	}
 
 	return 0, mdlerrors.NewUnsupported(fmt.Sprintf("unsupported container type: %s", containerType))
 }
 
 // updateWidgetsInPage updates widgets in a page using raw BSON.
-func (e *Executor) updateWidgetsInPage(containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
+func updateWidgetsInPage(ctx *ExecContext, containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
+	e := ctx.executor
+
 	// Load raw BSON as ordered document (preserves field ordering)
 	rawBytes, err := e.reader.GetRawUnitBytes(model.ID(containerID))
 	if err != nil {
@@ -231,16 +237,16 @@ func (e *Executor) updateWidgetsInPage(containerID, containerName string, widget
 	for _, ref := range widgetRefs {
 		result := findBsonWidget(rawData, ref.Name)
 		if result == nil {
-			fmt.Fprintf(e.output, "  Warning: Widget %q not found in page %s\n", ref.Name, containerName)
+			fmt.Fprintf(ctx.Output, "  Warning: Widget %q not found in page %s\n", ref.Name, containerName)
 			continue
 		}
 		for _, assignment := range assignments {
 			if dryRun {
-				fmt.Fprintf(e.output, "  Would set '%s' = %v on %s (%s) in %s\n",
+				fmt.Fprintf(ctx.Output, "  Would set '%s' = %v on %s (%s) in %s\n",
 					assignment.PropertyPath, assignment.Value, ref.Name, ref.WidgetType, containerName)
 			} else {
 				if err := setRawWidgetProperty(result.widget, assignment.PropertyPath, assignment.Value); err != nil {
-					fmt.Fprintf(e.output, "  Warning: Failed to set '%s' on %s: %v\n",
+					fmt.Fprintf(ctx.Output, "  Warning: Failed to set '%s' on %s: %v\n",
 						assignment.PropertyPath, ref.Name, err)
 				}
 			}
@@ -263,7 +269,9 @@ func (e *Executor) updateWidgetsInPage(containerID, containerName string, widget
 }
 
 // updateWidgetsInSnippet updates widgets in a snippet using raw BSON.
-func (e *Executor) updateWidgetsInSnippet(containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
+func updateWidgetsInSnippet(ctx *ExecContext, containerID, containerName string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
+	e := ctx.executor
+
 	// Load raw BSON as ordered document (preserves field ordering)
 	rawBytes, err := e.reader.GetRawUnitBytes(model.ID(containerID))
 	if err != nil {
@@ -278,16 +286,16 @@ func (e *Executor) updateWidgetsInSnippet(containerID, containerName string, wid
 	for _, ref := range widgetRefs {
 		result := findBsonWidgetInSnippet(rawData, ref.Name)
 		if result == nil {
-			fmt.Fprintf(e.output, "  Warning: Widget %q not found in snippet %s\n", ref.Name, containerName)
+			fmt.Fprintf(ctx.Output, "  Warning: Widget %q not found in snippet %s\n", ref.Name, containerName)
 			continue
 		}
 		for _, assignment := range assignments {
 			if dryRun {
-				fmt.Fprintf(e.output, "  Would set '%s' = %v on %s (%s) in %s\n",
+				fmt.Fprintf(ctx.Output, "  Would set '%s' = %v on %s (%s) in %s\n",
 					assignment.PropertyPath, assignment.Value, ref.Name, ref.WidgetType, containerName)
 			} else {
 				if err := setRawWidgetProperty(result.widget, assignment.PropertyPath, assignment.Value); err != nil {
-					fmt.Fprintf(e.output, "  Warning: Failed to set '%s' on %s: %v\n",
+					fmt.Fprintf(ctx.Output, "  Warning: Failed to set '%s' on %s: %v\n",
 						assignment.PropertyPath, ref.Name, err)
 				}
 			}
@@ -326,7 +334,7 @@ func mapWidgetFilterField(field string) string {
 }
 
 // executeCatalogQueryWithArgs executes a parameterized SQL query against the catalog.
-func (e *Executor) executeCatalogQueryWithArgs(query string, args ...any) (*catalogQueryResult, error) {
+func executeCatalogQueryWithArgs(ctx *ExecContext, query string, args ...any) (*catalogQueryResult, error) {
 	// Replace ? placeholders with values for SQLite
 	// Note: This is a simplified implementation; production code should use prepared statements
 	finalQuery := query
@@ -337,7 +345,7 @@ func (e *Executor) executeCatalogQueryWithArgs(query string, args ...any) (*cata
 		finalQuery = strings.Replace(finalQuery, "?", fmt.Sprintf("'%s'", strVal), 1)
 	}
 
-	result, err := e.catalog.Query(finalQuery)
+	result, err := ctx.Catalog.Query(finalQuery)
 	if err != nil {
 		return nil, err
 	}

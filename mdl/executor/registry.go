@@ -12,7 +12,7 @@ import (
 
 // StmtHandler executes a single statement type.
 // Implementations receive the concrete statement via type assertion.
-type StmtHandler func(e *Executor, stmt ast.Statement) error
+type StmtHandler func(ctx *ExecContext, stmt ast.Statement) error
 
 // Registry maps AST statement types to their handler functions.
 type Registry struct {
@@ -76,12 +76,12 @@ func (r *Registry) Lookup(stmt ast.Statement) StmtHandler {
 
 // Dispatch finds and executes the handler for stmt. Returns an
 // UnsupportedError if no handler is registered.
-func (r *Registry) Dispatch(e *Executor, stmt ast.Statement) error {
+func (r *Registry) Dispatch(ctx *ExecContext, stmt ast.Statement) error {
 	h := r.Lookup(stmt)
 	if h == nil {
 		return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %T", stmt))
 	}
-	return h(e, stmt)
+	return h(ctx, stmt)
 }
 
 // Validate checks that every known AST statement type has a registered

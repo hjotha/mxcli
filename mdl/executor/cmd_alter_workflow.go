@@ -20,7 +20,8 @@ import (
 const bsonArrayMarker = int32(3)
 
 // execAlterWorkflow handles ALTER WORKFLOW Module.Name { operations }.
-func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
+func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -29,13 +30,13 @@ func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
 	}
 
 	// Version pre-check: workflows require Mendix 9.12+
-	if err := e.checkFeature("workflows", "basic",
+	if err := checkFeature(ctx, "workflows", "basic",
 		"ALTER WORKFLOW",
 		"upgrade your project to Mendix 9.12+ to use workflows"); err != nil {
 		return err
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -81,7 +82,7 @@ func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
 				return mdlerrors.NewBackend("SET ACTIVITY", err)
 			}
 		case *ast.InsertAfterOp:
-			if err := e.applyInsertAfterActivity(rawData, o); err != nil {
+			if err := applyInsertAfterActivity(e, rawData, o); err != nil {
 				return mdlerrors.NewBackend("INSERT AFTER", err)
 			}
 		case *ast.DropActivityOp:
@@ -89,11 +90,11 @@ func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
 				return mdlerrors.NewBackend("DROP ACTIVITY", err)
 			}
 		case *ast.ReplaceActivityOp:
-			if err := e.applyReplaceActivity(rawData, o); err != nil {
+			if err := applyReplaceActivity(e, rawData, o); err != nil {
 				return mdlerrors.NewBackend("REPLACE ACTIVITY", err)
 			}
 		case *ast.InsertOutcomeOp:
-			if err := e.applyInsertOutcome(rawData, o); err != nil {
+			if err := applyInsertOutcome(e, rawData, o); err != nil {
 				return mdlerrors.NewBackend("INSERT OUTCOME", err)
 			}
 		case *ast.DropOutcomeOp:
@@ -101,7 +102,7 @@ func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
 				return mdlerrors.NewBackend("DROP OUTCOME", err)
 			}
 		case *ast.InsertPathOp:
-			if err := e.applyInsertPath(rawData, o); err != nil {
+			if err := applyInsertPath(e, rawData, o); err != nil {
 				return mdlerrors.NewBackend("INSERT PATH", err)
 			}
 		case *ast.DropPathOp:
@@ -109,7 +110,7 @@ func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
 				return mdlerrors.NewBackend("DROP PATH", err)
 			}
 		case *ast.InsertBranchOp:
-			if err := e.applyInsertBranch(rawData, o); err != nil {
+			if err := applyInsertBranch(e, rawData, o); err != nil {
 				return mdlerrors.NewBackend("INSERT BRANCH", err)
 			}
 		case *ast.DropBranchOp:
@@ -117,7 +118,7 @@ func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
 				return mdlerrors.NewBackend("DROP BRANCH", err)
 			}
 		case *ast.InsertBoundaryEventOp:
-			if err := e.applyInsertBoundaryEvent(rawData, o); err != nil {
+			if err := applyInsertBoundaryEvent(e, rawData, o); err != nil {
 				return mdlerrors.NewBackend("INSERT BOUNDARY EVENT", err)
 			}
 		case *ast.DropBoundaryEventOp:
@@ -140,8 +141,8 @@ func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
 		return mdlerrors.NewBackend("save modified workflow", err)
 	}
 
-	e.invalidateHierarchy()
-	fmt.Fprintf(e.output, "Altered workflow %s.%s\n", s.Name.Module, s.Name.Name)
+	invalidateHierarchy(ctx)
+	fmt.Fprintf(ctx.Output, "Altered workflow %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
 }
 
@@ -483,9 +484,9 @@ func deduplicateNewActivityName(act workflows.WorkflowActivity, existingNames ma
 
 // buildSubFlowBson builds a Workflows$Flow BSON document from AST activity nodes,
 // with auto-binding and name deduplication against existing workflow activities.
-func (e *Executor) buildSubFlowBson(doc bson.D, activities []ast.WorkflowActivityNode) bson.D {
+func buildSubFlowBson(e *Executor, doc bson.D, activities []ast.WorkflowActivityNode) bson.D {
 	subActs := buildWorkflowActivities(activities)
-	e.autoBindActivitiesInFlow(subActs)
+	autoBindActivitiesInFlow(e, subActs)
 	existingNames := collectAllActivityNames(doc)
 	for _, act := range subActs {
 		deduplicateNewActivityName(act, existingNames)
@@ -506,7 +507,7 @@ func (e *Executor) buildSubFlowBson(doc bson.D, activities []ast.WorkflowActivit
 }
 
 // applyInsertAfterActivity inserts a new activity after a named activity.
-func (e *Executor) applyInsertAfterActivity(doc bson.D, op *ast.InsertAfterOp) error {
+func applyInsertAfterActivity(e *Executor, doc bson.D, op *ast.InsertAfterOp) error {
 	idx, activities, containingFlow, err := findActivityIndex(doc, op.ActivityRef, op.AtPosition)
 	if err != nil {
 		return err
@@ -518,7 +519,7 @@ func (e *Executor) applyInsertAfterActivity(doc bson.D, op *ast.InsertAfterOp) e
 	}
 
 	// Auto-bind parameters and deduplicate against existing workflow names
-	e.autoBindActivitiesInFlow(newActs)
+	autoBindActivitiesInFlow(e, newActs)
 	existingNames := collectAllActivityNames(doc)
 	for _, act := range newActs {
 		deduplicateNewActivityName(act, existingNames)
@@ -558,7 +559,7 @@ func applyDropActivity(doc bson.D, op *ast.DropActivityOp) error {
 }
 
 // applyReplaceActivity replaces an activity in place.
-func (e *Executor) applyReplaceActivity(doc bson.D, op *ast.ReplaceActivityOp) error {
+func applyReplaceActivity(e *Executor, doc bson.D, op *ast.ReplaceActivityOp) error {
 	idx, activities, containingFlow, err := findActivityIndex(doc, op.ActivityRef, op.AtPosition)
 	if err != nil {
 		return err
@@ -569,7 +570,7 @@ func (e *Executor) applyReplaceActivity(doc bson.D, op *ast.ReplaceActivityOp) e
 		return mdlerrors.NewValidation("failed to build replacement activity")
 	}
 
-	e.autoBindActivitiesInFlow(newActs)
+	autoBindActivitiesInFlow(e, newActs)
 	existingNames := collectAllActivityNames(doc)
 	for _, act := range newActs {
 		deduplicateNewActivityName(act, existingNames)
@@ -593,7 +594,7 @@ func (e *Executor) applyReplaceActivity(doc bson.D, op *ast.ReplaceActivityOp) e
 }
 
 // applyInsertOutcome adds a new outcome to a user task.
-func (e *Executor) applyInsertOutcome(doc bson.D, op *ast.InsertOutcomeOp) error {
+func applyInsertOutcome(e *Executor, doc bson.D, op *ast.InsertOutcomeOp) error {
 	actDoc, err := findActivityByCaption(doc, op.ActivityRef, op.AtPosition)
 	if err != nil {
 		return err
@@ -607,7 +608,7 @@ func (e *Executor) applyInsertOutcome(doc bson.D, op *ast.InsertOutcomeOp) error
 
 	// Build sub-flow if activities provided
 	if len(op.Activities) > 0 {
-		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: e.buildSubFlowBson(doc, op.Activities)})
+		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: buildSubFlowBson(e, doc, op.Activities)})
 	}
 
 	outcomeDoc = append(outcomeDoc,
@@ -659,7 +660,7 @@ func applyDropOutcome(doc bson.D, op *ast.DropOutcomeOp) error {
 }
 
 // applyInsertPath adds a new path to a parallel split.
-func (e *Executor) applyInsertPath(doc bson.D, op *ast.InsertPathOp) error {
+func applyInsertPath(e *Executor, doc bson.D, op *ast.InsertPathOp) error {
 	actDoc, err := findActivityByCaption(doc, op.ActivityRef, op.AtPosition)
 	if err != nil {
 		return err
@@ -671,7 +672,7 @@ func (e *Executor) applyInsertPath(doc bson.D, op *ast.InsertPathOp) error {
 	}
 
 	if len(op.Activities) > 0 {
-		pathDoc = append(pathDoc, bson.E{Key: "Flow", Value: e.buildSubFlowBson(doc, op.Activities)})
+		pathDoc = append(pathDoc, bson.E{Key: "Flow", Value: buildSubFlowBson(e, doc, op.Activities)})
 	}
 
 	pathDoc = append(pathDoc, bson.E{Key: "PersistentId", Value: mpr.IDToBsonBinary(mpr.GenerateID())})
@@ -718,7 +719,7 @@ func applyDropPath(doc bson.D, op *ast.DropPathOp) error {
 }
 
 // applyInsertBranch adds a new branch to a decision.
-func (e *Executor) applyInsertBranch(doc bson.D, op *ast.InsertBranchOp) error {
+func applyInsertBranch(e *Executor, doc bson.D, op *ast.InsertBranchOp) error {
 	actDoc, err := findActivityByCaption(doc, op.ActivityRef, op.AtPosition)
 	if err != nil {
 		return err
@@ -753,7 +754,7 @@ func (e *Executor) applyInsertBranch(doc bson.D, op *ast.InsertBranchOp) error {
 	}
 
 	if len(op.Activities) > 0 {
-		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: e.buildSubFlowBson(doc, op.Activities)})
+		outcomeDoc = append(outcomeDoc, bson.E{Key: "Flow", Value: buildSubFlowBson(e, doc, op.Activities)})
 	}
 
 	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
@@ -819,7 +820,7 @@ func applyDropBranch(doc bson.D, op *ast.DropBranchOp) error {
 }
 
 // applyInsertBoundaryEvent adds a boundary event to an activity.
-func (e *Executor) applyInsertBoundaryEvent(doc bson.D, op *ast.InsertBoundaryEventOp) error {
+func applyInsertBoundaryEvent(e *Executor, doc bson.D, op *ast.InsertBoundaryEventOp) error {
 	actDoc, err := findActivityByCaption(doc, op.ActivityRef, op.AtPosition)
 	if err != nil {
 		return err
@@ -844,7 +845,7 @@ func (e *Executor) applyInsertBoundaryEvent(doc bson.D, op *ast.InsertBoundaryEv
 	}
 
 	if len(op.Activities) > 0 {
-		eventDoc = append(eventDoc, bson.E{Key: "Flow", Value: e.buildSubFlowBson(doc, op.Activities)})
+		eventDoc = append(eventDoc, bson.E{Key: "Flow", Value: buildSubFlowBson(e, doc, op.Activities)})
 	}
 
 	eventDoc = append(eventDoc, bson.E{Key: "PersistentId", Value: mpr.IDToBsonBinary(mpr.GenerateID())})

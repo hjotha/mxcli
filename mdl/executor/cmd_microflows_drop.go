@@ -11,13 +11,14 @@ import (
 )
 
 // execDropMicroflow handles DROP MICROFLOW statements.
-func (e *Executor) execDropMicroflow(s *ast.DropMicroflowStmt) error {
+func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Get hierarchy for module/folder resolution
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -40,8 +41,8 @@ func (e *Executor) execDropMicroflow(s *ast.DropMicroflowStmt) error {
 			if e.cache != nil && e.cache.createdMicroflows != nil {
 				delete(e.cache.createdMicroflows, qualifiedName)
 			}
-			e.invalidateHierarchy()
-			fmt.Fprintf(e.output, "Dropped microflow: %s.%s\n", s.Name.Module, s.Name.Name)
+			invalidateHierarchy(ctx)
+			fmt.Fprintf(ctx.Output, "Dropped microflow: %s.%s\n", s.Name.Module, s.Name.Name)
 			return nil
 		}
 	}

@@ -16,7 +16,8 @@ import (
 )
 
 // execAlterPage handles ALTER PAGE/SNIPPET Module.Name { operations }.
-func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
+func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -24,7 +25,7 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -37,14 +38,14 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 	}
 
 	if containerType == "SNIPPET" {
-		snippet, modID, err := e.findSnippetByName(s.PageName, h)
+		snippet, modID, err := findSnippetByName(ctx, s.PageName, h)
 		if err != nil {
 			return err
 		}
 		unitID = snippet.ID
 		containerID = modID
 	} else {
-		page, err := e.findPageByName(s.PageName, h)
+		page, err := findPageByName(ctx, s.PageName, h)
 		if err != nil {
 			return err
 		}
@@ -79,7 +80,7 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 				return mdlerrors.NewBackend("SET", err)
 			}
 		case *ast.InsertWidgetOp:
-			if err := e.applyInsertWidgetWith(rawData, o, modName, containerID, findWidget); err != nil {
+			if err := applyInsertWidgetWith(ctx, rawData, o, modName, containerID, findWidget); err != nil {
 				return mdlerrors.NewBackend("INSERT", err)
 			}
 		case *ast.DropWidgetOp:
@@ -87,7 +88,7 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 				return mdlerrors.NewBackend("DROP", err)
 			}
 		case *ast.ReplaceWidgetOp:
-			if err := e.applyReplaceWidgetWith(rawData, o, modName, containerID, findWidget); err != nil {
+			if err := applyReplaceWidgetWith(ctx, rawData, o, modName, containerID, findWidget); err != nil {
 				return mdlerrors.NewBackend("REPLACE", err)
 			}
 		case *ast.AddVariableOp:
@@ -121,7 +122,7 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 		return mdlerrors.NewBackend("save modified "+strings.ToLower(containerType), err)
 	}
 
-	fmt.Fprintf(e.output, "Altered %s %s\n", strings.ToLower(containerType), s.PageName.String())
+	fmt.Fprintf(ctx.Output, "Altered %s %s\n", strings.ToLower(containerType), s.PageName.String())
 	return nil
 }
 
@@ -1168,12 +1169,12 @@ func setPluggableWidgetProperty(widget bson.D, propName string, value interface{
 // ============================================================================
 
 // applyInsertWidget inserts new widgets before or after a target widget (page format).
-func (e *Executor) applyInsertWidget(rawData bson.D, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID) error {
-	return e.applyInsertWidgetWith(rawData, op, moduleName, moduleID, findBsonWidget)
+func applyInsertWidget(ctx *ExecContext, rawData bson.D, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID) error {
+	return applyInsertWidgetWith(ctx, rawData, op, moduleName, moduleID, findBsonWidget)
 }
 
 // applyInsertWidgetWith inserts new widgets using the given widget finder.
-func (e *Executor) applyInsertWidgetWith(rawData bson.D, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
+func applyInsertWidgetWith(ctx *ExecContext, rawData bson.D, op *ast.InsertWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
 	var result *bsonWidgetResult
 	if op.Target.IsColumn() {
 		result = findBsonColumn(rawData, op.Target.Widget, op.Target.Column, find)
@@ -1195,7 +1196,7 @@ func (e *Executor) applyInsertWidgetWith(rawData bson.D, op *ast.InsertWidgetOp,
 	entityCtx := findEnclosingEntityContext(rawData, op.Target.Widget)
 
 	// Build new widget BSON from AST (pass rawData for page param + widget scope resolution)
-	newBsonWidgets, err := e.buildWidgetsBson(op.Widgets, moduleName, moduleID, entityCtx, rawData)
+	newBsonWidgets, err := buildWidgetsBson(ctx, op.Widgets, moduleName, moduleID, entityCtx, rawData)
 	if err != nil {
 		return mdlerrors.NewBackend("build widgets", err)
 	}
@@ -1256,12 +1257,12 @@ func applyDropWidgetWith(rawData bson.D, op *ast.DropWidgetOp, find widgetFinder
 // ============================================================================
 
 // applyReplaceWidget replaces a widget with new widgets (page format).
-func (e *Executor) applyReplaceWidget(rawData bson.D, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID) error {
-	return e.applyReplaceWidgetWith(rawData, op, moduleName, moduleID, findBsonWidget)
+func applyReplaceWidget(ctx *ExecContext, rawData bson.D, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID) error {
+	return applyReplaceWidgetWith(ctx, rawData, op, moduleName, moduleID, findBsonWidget)
 }
 
 // applyReplaceWidgetWith replaces a widget using the given widget finder.
-func (e *Executor) applyReplaceWidgetWith(rawData bson.D, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
+func applyReplaceWidgetWith(ctx *ExecContext, rawData bson.D, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID, find widgetFinder) error {
 	var result *bsonWidgetResult
 	if op.Target.IsColumn() {
 		result = findBsonColumn(rawData, op.Target.Widget, op.Target.Column, find)
@@ -1283,7 +1284,7 @@ func (e *Executor) applyReplaceWidgetWith(rawData bson.D, op *ast.ReplaceWidgetO
 	entityCtx := findEnclosingEntityContext(rawData, op.Target.Widget)
 
 	// Build new widget BSON from AST (pass rawData for page param + widget scope resolution)
-	newBsonWidgets, err := e.buildWidgetsBson(op.NewWidgets, moduleName, moduleID, entityCtx, rawData)
+	newBsonWidgets, err := buildWidgetsBson(ctx, op.NewWidgets, moduleName, moduleID, entityCtx, rawData)
 	if err != nil {
 		return mdlerrors.NewBackend("build replacement widgets", err)
 	}
@@ -1532,7 +1533,8 @@ func applyDropVariable(rawData bson.D, op *ast.DropVariableOp) error {
 // Returns bson.D elements (not map[string]any) to preserve field ordering.
 // rawPageData is the full page/snippet BSON, used to extract page parameters
 // and existing widget IDs for PARAMETER/SELECTION DataSource resolution.
-func (e *Executor) buildWidgetsBson(widgets []*ast.WidgetV3, moduleName string, moduleID model.ID, entityContext string, rawPageData bson.D) ([]any, error) {
+func buildWidgetsBson(ctx *ExecContext, widgets []*ast.WidgetV3, moduleName string, moduleID model.ID, entityContext string, rawPageData bson.D) ([]any, error) {
+	e := ctx.executor
 	paramScope, paramEntityNames := extractPageParamsFromBSON(rawPageData)
 	widgetScope := extractWidgetScopeFromBSON(rawPageData)
 

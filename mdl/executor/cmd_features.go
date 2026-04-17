@@ -14,7 +14,9 @@ import (
 // checkFeature verifies that a feature is available in the connected project's
 // version. Returns nil if available, or an actionable error with the version
 // requirement and a hint. Safe to call when e.reader is nil (returns nil).
-func (e *Executor) checkFeature(area, name, statement, hint string) error {
+func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
+	e := ctx.executor
+
 	if e.reader == nil {
 		return nil // No project connected; skip check
 	}
@@ -47,7 +49,9 @@ func (e *Executor) checkFeature(area, name, statement, hint string) error {
 
 // execShowFeatures handles SHOW FEATURES, SHOW FEATURES FOR VERSION, and
 // SHOW FEATURES ADDED SINCE commands.
-func (e *Executor) execShowFeatures(s *ast.ShowFeaturesStmt) error {
+func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
+	e := ctx.executor
+
 	reg, err := versions.Load()
 	if err != nil {
 		return mdlerrors.NewBackend("load version registry", err)
@@ -63,7 +67,7 @@ func (e *Executor) execShowFeatures(s *ast.ShowFeaturesStmt) error {
 		if err != nil {
 			return mdlerrors.NewValidationf("invalid version %q: %v", s.AddedSince, err)
 		}
-		return e.showFeaturesAddedSince(reg, sinceV)
+		return showFeaturesAddedSince(ctx, reg, sinceV)
 
 	case s.ForVersion != "":
 		// SHOW FEATURES FOR VERSION x.y — no project connection needed
@@ -82,19 +86,19 @@ func (e *Executor) execShowFeatures(s *ast.ShowFeaturesStmt) error {
 	}
 
 	if s.InArea != "" {
-		return e.showFeaturesInArea(reg, pv, s.InArea)
+		return showFeaturesInArea(ctx, reg, pv, s.InArea)
 	}
-	return e.showFeaturesAll(reg, pv)
+	return showFeaturesAll(ctx, reg, pv)
 }
 
-func (e *Executor) showFeaturesAll(reg *versions.Registry, pv versions.SemVer) error {
+func showFeaturesAll(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer) error {
 	features := reg.FeaturesForVersion(pv)
 	if len(features) == 0 {
-		fmt.Fprintf(e.output, "No features found for version %s\n", pv)
+		fmt.Fprintf(ctx.Output, "No features found for version %s\n", pv)
 		return nil
 	}
 
-	fmt.Fprintf(e.output, "Features for Mendix %s:\n\n", pv)
+	fmt.Fprintf(ctx.Output, "Features for Mendix %s:\n\n", pv)
 
 	available, unavailable := 0, 0
 	tr := &TableResult{
@@ -118,20 +122,20 @@ func (e *Executor) showFeaturesAll(reg *versions.Registry, pv versions.SemVer) e
 		tr.Rows = append(tr.Rows, []any{f.DisplayName(), avail, fmt.Sprintf("%s", f.MinVersion), notes})
 	}
 	tr.Summary = fmt.Sprintf("(%d available, %d not available in %s)", available, unavailable, pv)
-	return e.writeResult(tr)
+	return writeResult(ctx, tr)
 }
 
-func (e *Executor) showFeaturesInArea(reg *versions.Registry, pv versions.SemVer, area string) error {
+func showFeaturesInArea(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer, area string) error {
 	features := reg.FeaturesInArea(area, pv)
 	if len(features) == 0 {
 		// Check if the area exists at all.
 		areas := reg.Areas()
-		fmt.Fprintf(e.output, "No features found in area %q for version %s\n", area, pv)
-		fmt.Fprintf(e.output, "Available areas: %s\n", strings.Join(areas, ", "))
+		fmt.Fprintf(ctx.Output, "No features found in area %q for version %s\n", area, pv)
+		fmt.Fprintf(ctx.Output, "Available areas: %s\n", strings.Join(areas, ", "))
 		return nil
 	}
 
-	fmt.Fprintf(e.output, "Features in %s for Mendix %s:\n\n", area, pv)
+	fmt.Fprintf(ctx.Output, "Features in %s for Mendix %s:\n\n", area, pv)
 
 	tr := &TableResult{
 		Columns: []string{"Feature", "Available", "Since", "Notes"},
@@ -150,17 +154,17 @@ func (e *Executor) showFeaturesInArea(reg *versions.Registry, pv versions.SemVer
 		}
 		tr.Rows = append(tr.Rows, []any{f.DisplayName(), avail, fmt.Sprintf("%s", f.MinVersion), notes})
 	}
-	return e.writeResult(tr)
+	return writeResult(ctx, tr)
 }
 
-func (e *Executor) showFeaturesAddedSince(reg *versions.Registry, sinceV versions.SemVer) error {
+func showFeaturesAddedSince(ctx *ExecContext, reg *versions.Registry, sinceV versions.SemVer) error {
 	added := reg.FeaturesAddedSince(sinceV)
 	if len(added) == 0 {
-		fmt.Fprintf(e.output, "No new features found since %s\n", sinceV)
+		fmt.Fprintf(ctx.Output, "No new features found since %s\n", sinceV)
 		return nil
 	}
 
-	fmt.Fprintf(e.output, "Features added since Mendix %s:\n\n", sinceV)
+	fmt.Fprintf(ctx.Output, "Features added since Mendix %s:\n\n", sinceV)
 
 	tr := &TableResult{
 		Columns: []string{"Feature", "Area", "Since", "Notes"},
@@ -176,5 +180,5 @@ func (e *Executor) showFeaturesAddedSince(reg *versions.Registry, sinceV version
 		}
 		tr.Rows = append(tr.Rows, []any{f.DisplayName(), f.Area, fmt.Sprintf("%s", f.MinVersion), notes})
 	}
-	return e.writeResult(tr)
+	return writeResult(ctx, tr)
 }

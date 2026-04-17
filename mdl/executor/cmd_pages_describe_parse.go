@@ -23,7 +23,7 @@ func extractConditionalSettings(widget *rawWidget, w map[string]any) {
 	}
 }
 
-func (e *Executor) parseRawWidget(w map[string]any, parentEntityContext ...string) []rawWidget {
+func parseRawWidget(ctx *ExecContext, w map[string]any, parentEntityContext ...string) []rawWidget {
 	inheritedCtx := ""
 	if len(parentEntityContext) > 0 {
 		inheritedCtx = parentEntityContext[0]
@@ -52,10 +52,10 @@ func (e *Executor) parseRawWidget(w map[string]any, parentEntityContext ...strin
 		if typeName == "Forms$GroupBox" || typeName == "Pages$GroupBox" {
 			// Caption is stored as CaptionTemplate (Forms$ClientTemplate)
 			if ct, ok := w["CaptionTemplate"].(map[string]any); ok {
-				widget.Caption = e.extractTextFromTemplate(ct)
+				widget.Caption = extractTextFromTemplate(ctx, ct)
 			} else {
 				// Fallback to legacy Caption field
-				widget.Caption = e.extractTextCaption(w)
+				widget.Caption = extractTextCaption(ctx, w)
 			}
 			if collapsible, ok := w["Collapsible"].(string); ok {
 				widget.Collapsible = collapsible
@@ -69,7 +69,7 @@ func (e *Executor) parseRawWidget(w map[string]any, parentEntityContext ...strin
 		if children != nil {
 			for _, c := range children {
 				if cMap, ok := c.(map[string]any); ok {
-					widget.Children = append(widget.Children, e.parseRawWidget(cMap, inheritedCtx)...)
+					widget.Children = append(widget.Children, parseRawWidget(ctx, cMap, inheritedCtx)...)
 				}
 			}
 		}
@@ -95,167 +95,167 @@ func (e *Executor) parseRawWidget(w map[string]any, parentEntityContext ...strin
 
 	switch typeName {
 	case "Forms$LayoutGrid", "Pages$LayoutGrid":
-		widget.Rows = e.parseLayoutGridRows(w, inheritedCtx)
+		widget.Rows = parseLayoutGridRows(ctx, w, inheritedCtx)
 		return []rawWidget{widget}
 
 	case "Forms$DynamicText", "Pages$DynamicText":
-		widget.Content = e.extractTextContent(w, "Content")
-		widget.Parameters = e.extractClientTemplateParameters(w, "Content")
+		widget.Content = extractTextContent(ctx, w, "Content")
+		widget.Parameters = extractClientTemplateParameters(ctx, w, "Content")
 		if rm, ok := w["RenderMode"].(string); ok {
 			widget.RenderMode = rm
 		}
 		return []rawWidget{widget}
 
 	case "Forms$ActionButton", "Pages$ActionButton":
-		widget.Caption = e.extractButtonCaption(w)
-		widget.Parameters = e.extractButtonCaptionParameters(w)
-		widget.ButtonStyle = e.extractButtonStyle(w)
-		widget.Action = e.extractButtonAction(w)
+		widget.Caption = extractButtonCaption(ctx, w)
+		widget.Parameters = extractButtonCaptionParameters(ctx, w)
+		widget.ButtonStyle = extractButtonStyle(ctx, w)
+		widget.Action = extractButtonAction(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$Text", "Pages$Text":
-		widget.Content = e.extractTextCaption(w)
+		widget.Content = extractTextCaption(ctx, w)
 		if rm, ok := w["RenderMode"].(string); ok {
 			widget.RenderMode = rm
 		}
 		return []rawWidget{widget}
 
 	case "Forms$Title", "Pages$Title":
-		widget.Caption = e.extractTextCaption(w)
+		widget.Caption = extractTextCaption(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$DataView", "Pages$DataView":
-		widget.DataSource = e.extractDataViewDataSource(w)
+		widget.DataSource = extractDataViewDataSource(ctx, w)
 		if widget.DataSource != nil && widget.DataSource.Reference != "" {
 			widget.EntityContext = widget.DataSource.Reference
 		} else if inheritedCtx != "" {
 			widget.EntityContext = inheritedCtx
 		}
-		widget.Children = e.parseDataViewChildren(w, widget.EntityContext)
+		widget.Children = parseDataViewChildren(ctx, w, widget.EntityContext)
 		return []rawWidget{widget}
 
 	case "Forms$TextBox", "Pages$TextBox":
-		widget.Caption = e.extractLabelText(w)
-		widget.Content = e.extractAttributeRef(w)
+		widget.Caption = extractLabelText(ctx, w)
+		widget.Content = extractAttributeRef(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$TextArea", "Pages$TextArea":
-		widget.Caption = e.extractLabelText(w)
-		widget.Content = e.extractAttributeRef(w)
+		widget.Caption = extractLabelText(ctx, w)
+		widget.Content = extractAttributeRef(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$DatePicker", "Pages$DatePicker":
-		widget.Caption = e.extractLabelText(w)
-		widget.Content = e.extractAttributeRef(w)
+		widget.Caption = extractLabelText(ctx, w)
+		widget.Content = extractAttributeRef(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$RadioButtons", "Pages$RadioButtons", "Forms$RadioButtonGroup", "Pages$RadioButtonGroup":
 		widget.Type = "Forms$RadioButtons" // Normalize type
-		widget.Caption = e.extractLabelText(w)
-		widget.Content = e.extractAttributeRef(w)
+		widget.Caption = extractLabelText(ctx, w)
+		widget.Content = extractAttributeRef(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$CheckBox", "Pages$CheckBox":
-		widget.Caption = e.extractLabelText(w)
-		widget.Content = e.extractAttributeRef(w)
-		widget.Editable = e.extractEditable(w)
-		widget.ReadOnlyStyle = e.extractReadOnlyStyle(w)
-		widget.ShowLabel = e.extractShowLabel(w)
+		widget.Caption = extractLabelText(ctx, w)
+		widget.Content = extractAttributeRef(ctx, w)
+		widget.Editable = extractEditable(ctx, w)
+		widget.ReadOnlyStyle = extractReadOnlyStyle(ctx, w)
+		widget.ShowLabel = extractShowLabel(ctx, w)
 		return []rawWidget{widget}
 
 	case "CustomWidgets$CustomWidget":
-		widget.Caption = e.extractLabelText(w)
-		widget.Content = e.extractCustomWidgetAttribute(w)
-		widget.RenderMode = e.extractCustomWidgetType(w) // Store widget type in RenderMode
-		widget.WidgetID = e.extractCustomWidgetID(w)
+		widget.Caption = extractLabelText(ctx, w)
+		widget.Content = extractCustomWidgetAttribute(ctx, w)
+		widget.RenderMode = extractCustomWidgetType(ctx, w) // Store widget type in RenderMode
+		widget.WidgetID = extractCustomWidgetID(ctx, w)
 		// For ComboBox, extract datasource and association attribute for association mode.
 		// In association mode the Attribute binding is stored as EntityRef (not AttributeRef),
 		// so we must use extractCustomWidgetPropertyAssociation instead of the generic scan.
 		if widget.RenderMode == "COMBOBOX" {
-			widget.DataSource = e.extractComboBoxDataSource(w)
+			widget.DataSource = extractComboBoxDataSource(ctx, w)
 			if widget.DataSource != nil {
-				widget.Content = e.extractCustomWidgetPropertyAssociation(w, "attributeAssociation")
-				widget.CaptionAttribute = e.extractCustomWidgetPropertyAttributeRef(w, "optionsSourceAssociationCaptionAttribute")
+				widget.Content = extractCustomWidgetPropertyAssociation(ctx, w, "attributeAssociation")
+				widget.CaptionAttribute = extractCustomWidgetPropertyAttributeRef(ctx, w, "optionsSourceAssociationCaptionAttribute")
 			}
 		}
 		// For DataGrid2, also extract datasource, columns, CONTROLBAR widgets, paging, and selection
 		if widget.RenderMode == "DATAGRID2" {
-			widget.DataSource = e.extractDataGrid2DataSource(w)
-			widget.PageSize = e.extractCustomWidgetPropertyString(w, "pageSize")
-			widget.Pagination = e.extractCustomWidgetPropertyString(w, "pagination")
-			widget.PagingPosition = e.extractCustomWidgetPropertyString(w, "pagingPosition")
-			widget.ShowPagingButtons = e.extractCustomWidgetPropertyString(w, "showPagingButtons")
+			widget.DataSource = extractDataGrid2DataSource(ctx, w)
+			widget.PageSize = extractCustomWidgetPropertyString(ctx, w, "pageSize")
+			widget.Pagination = extractCustomWidgetPropertyString(ctx, w, "pagination")
+			widget.PagingPosition = extractCustomWidgetPropertyString(ctx, w, "pagingPosition")
+			widget.ShowPagingButtons = extractCustomWidgetPropertyString(ctx, w, "showPagingButtons")
 			// showNumberOfRows: not yet fully supported in DataGrid2, skip to avoid CE0463
-			widget.Selection = e.extractGallerySelection(w)
+			widget.Selection = extractGallerySelection(ctx, w)
 			if widget.DataSource != nil && widget.DataSource.Reference != "" {
 				widget.EntityContext = widget.DataSource.Reference
 			} else if inheritedCtx != "" {
 				widget.EntityContext = inheritedCtx
 			}
-			widget.DataGridColumns = e.extractDataGrid2Columns(w, widget.EntityContext)
-			widget.ControlBar = e.extractDataGrid2ControlBar(w)
+			widget.DataGridColumns = extractDataGrid2Columns(ctx, w, widget.EntityContext)
+			widget.ControlBar = extractDataGrid2ControlBar(ctx, w)
 		}
 		// For Gallery, extract datasource, content widgets, filter widgets, and selection mode
 		if widget.RenderMode == "GALLERY" {
-			widget.DataSource = e.extractGalleryDataSource(w)
-			widget.Selection = e.extractGallerySelection(w)
-			widget.DesktopColumns = e.extractCustomWidgetPropertyString(w, "desktopItems")
-			widget.TabletColumns = e.extractCustomWidgetPropertyString(w, "tabletItems")
-			widget.PhoneColumns = e.extractCustomWidgetPropertyString(w, "phoneItems")
+			widget.DataSource = extractGalleryDataSource(ctx, w)
+			widget.Selection = extractGallerySelection(ctx, w)
+			widget.DesktopColumns = extractCustomWidgetPropertyString(ctx, w, "desktopItems")
+			widget.TabletColumns = extractCustomWidgetPropertyString(ctx, w, "tabletItems")
+			widget.PhoneColumns = extractCustomWidgetPropertyString(ctx, w, "phoneItems")
 			if widget.DataSource != nil && widget.DataSource.Reference != "" {
 				widget.EntityContext = widget.DataSource.Reference
 			} else if inheritedCtx != "" {
 				widget.EntityContext = inheritedCtx
 			}
-			widget.Children = e.extractGalleryContent(w, widget.EntityContext)
-			widget.FilterWidgets = e.extractGalleryFilters(w)
+			widget.Children = extractGalleryContent(ctx, w, widget.EntityContext)
+			widget.FilterWidgets = extractGalleryFilters(ctx, w)
 		}
 		// For filter widgets, extract filter attributes and expression
 		if widget.RenderMode == "TEXTFILTER" || widget.RenderMode == "NUMBERFILTER" || widget.RenderMode == "DROPDOWNFILTER" || widget.RenderMode == "DATEFILTER" {
-			widget.FilterAttributes = e.extractFilterAttributes(w)
-			widget.FilterExpression = e.extractFilterExpression(w)
+			widget.FilterAttributes = extractFilterAttributes(ctx, w)
+			widget.FilterExpression = extractFilterExpression(ctx, w)
 		}
 		// For pluggable Image widget, extract image-specific properties
 		if widget.RenderMode == "IMAGE" {
-			e.extractImageProperties(w, &widget)
+			extractImageProperties(ctx, w, &widget)
 		}
 		// For generic pluggable widgets (not handled by dedicated extractors above),
 		// extract all non-default properties as explicit key-value pairs.
 		if !isKnownCustomWidgetType(widget.RenderMode) {
-			widget.ExplicitProperties = e.extractExplicitProperties(w)
+			widget.ExplicitProperties = extractExplicitProperties(ctx, w)
 		}
 		return []rawWidget{widget}
 
 	case "Forms$Label", "Pages$Label":
-		widget.Content = e.extractTextCaption(w)
+		widget.Content = extractTextCaption(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$NavigationList", "Pages$NavigationList":
-		widget.Children = e.parseNavigationListItems(w)
+		widget.Children = parseNavigationListItems(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$Gallery", "Pages$Gallery":
-		widget.DataSource = e.extractGalleryDataSource(w)
+		widget.DataSource = extractGalleryDataSource(ctx, w)
 		if widget.DataSource != nil && widget.DataSource.Reference != "" {
 			widget.EntityContext = widget.DataSource.Reference
 		} else if inheritedCtx != "" {
 			widget.EntityContext = inheritedCtx
 		}
-		widget.Children = e.parseGalleryContent(w, widget.EntityContext)
+		widget.Children = parseGalleryContent(ctx, w, widget.EntityContext)
 		return []rawWidget{widget}
 
 	case "Forms$SnippetCallWidget", "Pages$SnippetCallWidget":
-		widget.Content = e.extractSnippetRef(w)
+		widget.Content = extractSnippetRef(ctx, w)
 		return []rawWidget{widget}
 
 	case "Forms$ListView", "Pages$ListView":
-		widget.DataSource = e.extractListViewDataSource(w)
+		widget.DataSource = extractListViewDataSource(ctx, w)
 		if widget.DataSource != nil && widget.DataSource.Reference != "" {
 			widget.EntityContext = widget.DataSource.Reference
 		} else if inheritedCtx != "" {
 			widget.EntityContext = inheritedCtx
 		}
-		widget.Children = e.parseListViewContent(w, widget.EntityContext)
+		widget.Children = parseListViewContent(ctx, w, widget.EntityContext)
 		return []rawWidget{widget}
 
 	default:
@@ -264,10 +264,10 @@ func (e *Executor) parseRawWidget(w map[string]any, parentEntityContext ...strin
 	}
 }
 
-func (e *Executor) parseLayoutGridRows(w map[string]any, entityContext ...string) []rawWidgetRow {
-	ctx := ""
+func parseLayoutGridRows(ctx *ExecContext, w map[string]any, entityContext ...string) []rawWidgetRow {
+	entCtx := ""
 	if len(entityContext) > 0 {
-		ctx = entityContext[0]
+		entCtx = entityContext[0]
 	}
 	rows := getBsonArrayElements(w["Rows"])
 	if rows == nil {
@@ -304,7 +304,7 @@ func (e *Executor) parseLayoutGridRows(w map[string]any, entityContext ...string
 			colWidgets := getBsonArrayElements(cMap["Widgets"])
 			for _, cw := range colWidgets {
 				if cwMap, ok := cw.(map[string]any); ok {
-					col.Widgets = append(col.Widgets, e.parseRawWidget(cwMap, ctx)...)
+					col.Widgets = append(col.Widgets, parseRawWidget(ctx, cwMap, entCtx)...)
 				}
 			}
 			row.Columns = append(row.Columns, col)
@@ -315,7 +315,7 @@ func (e *Executor) parseLayoutGridRows(w map[string]any, entityContext ...string
 }
 
 // parseNavigationListItems extracts items from a NavigationList widget.
-func (e *Executor) parseNavigationListItems(w map[string]any) []rawWidget {
+func parseNavigationListItems(ctx *ExecContext, w map[string]any) []rawWidget {
 	items := getBsonArrayElements(w["Items"])
 	if items == nil {
 		return nil
@@ -342,12 +342,12 @@ func (e *Executor) parseNavigationListItems(w map[string]any) []rawWidget {
 			if !ok {
 				continue
 			}
-			parsed := e.parseRawWidget(wMap)
+			parsed := parseRawWidget(ctx, wMap)
 			rw.Children = append(rw.Children, parsed...)
 		}
 
 		// Extract action
-		rw.Action = e.extractNavigationListItemAction(itemMap)
+		rw.Action = extractNavigationListItemAction(ctx, itemMap)
 
 		// Extract style from Appearance class
 		if appearance, ok := itemMap["Appearance"].(map[string]any); ok {
@@ -364,7 +364,7 @@ func (e *Executor) parseNavigationListItems(w map[string]any) []rawWidget {
 // extractNavigationListItemAction extracts action from a NavigationListItem.
 // NavigationListItem uses Forms$FormAction with FormSettings.Form for page references,
 // which differs from ActionButton's action format.
-func (e *Executor) extractNavigationListItemAction(w map[string]any) string {
+func extractNavigationListItemAction(ctx *ExecContext, w map[string]any) string {
 	action, ok := w["Action"].(map[string]any)
 	if !ok {
 		return ""
@@ -386,7 +386,7 @@ func (e *Executor) extractNavigationListItemAction(w map[string]any) string {
 		}
 		// Fall back to Page field (binary ID from mxcli serialization)
 		if pageID := extractBinaryID(action["Page"]); pageID != "" {
-			pageName := e.getPageQualifiedName(model.ID(pageID))
+			pageName := getPageQualifiedName(ctx, model.ID(pageID))
 			if pageName != "" {
 				return "SHOW_PAGE '" + pageName + "'"
 			}
@@ -394,16 +394,16 @@ func (e *Executor) extractNavigationListItemAction(w map[string]any) string {
 		return "SHOW_PAGE"
 	default:
 		// Delegate to the standard action extractor
-		return e.extractButtonAction(w)
+		return extractButtonAction(ctx, w)
 	}
 }
 
 // parseDataViewChildren extracts child widgets from a DataView.
 // entityContext is the resolved entity context from the enclosing data container.
-func (e *Executor) parseDataViewChildren(w map[string]any, entityContext ...string) []rawWidget {
-	ctx := ""
+func parseDataViewChildren(ctx *ExecContext, w map[string]any, entityContext ...string) []rawWidget {
+	entCtx := ""
 	if len(entityContext) > 0 {
-		ctx = entityContext[0]
+		entCtx = entityContext[0]
 	}
 	var result []rawWidget
 
@@ -411,7 +411,7 @@ func (e *Executor) parseDataViewChildren(w map[string]any, entityContext ...stri
 	widgets := getBsonArrayElements(w["Widgets"])
 	for _, child := range widgets {
 		if childMap, ok := child.(map[string]any); ok {
-			result = append(result, e.parseRawWidget(childMap, ctx)...)
+			result = append(result, parseRawWidget(ctx, childMap, entCtx)...)
 		}
 	}
 
@@ -422,7 +422,7 @@ func (e *Executor) parseDataViewChildren(w map[string]any, entityContext ...stri
 		footer := rawWidget{Type: "Footer", Name: "footer1"}
 		for _, child := range footerWidgets {
 			if childMap, ok := child.(map[string]any); ok {
-				footer.Children = append(footer.Children, e.parseRawWidget(childMap, ctx)...)
+				footer.Children = append(footer.Children, parseRawWidget(ctx, childMap, entCtx)...)
 			}
 		}
 		result = append(result, footer)
@@ -432,7 +432,7 @@ func (e *Executor) parseDataViewChildren(w map[string]any, entityContext ...stri
 }
 
 // extractDataViewDataSource extracts the data source from a DataView widget.
-func (e *Executor) extractDataViewDataSource(w map[string]any) *rawDataSource {
+func extractDataViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSource {
 	ds, ok := w["DataSource"].(map[string]any)
 	if !ok {
 		return nil
@@ -471,17 +471,17 @@ func (e *Executor) extractDataViewDataSource(w map[string]any) *rawDataSource {
 }
 
 // extractLabelText extracts the label text from an input widget.
-func (e *Executor) extractLabelText(w map[string]any) string {
+func extractLabelText(ctx *ExecContext, w map[string]any) string {
 	labelTemplate, ok := w["LabelTemplate"].(map[string]any)
 	if !ok {
 		return ""
 	}
-	return e.extractTextFromTemplate(labelTemplate)
+	return extractTextFromTemplate(ctx, labelTemplate)
 }
 
 // extractEditable extracts the Editable setting from an input widget.
 // Returns "Always", "Never", or "Conditional".
-func (e *Executor) extractEditable(w map[string]any) string {
+func extractEditable(ctx *ExecContext, w map[string]any) string {
 	if editable, ok := w["Editable"].(string); ok {
 		return editable
 	}
@@ -490,7 +490,7 @@ func (e *Executor) extractEditable(w map[string]any) string {
 
 // extractReadOnlyStyle extracts the ReadOnlyStyle from an input widget.
 // Returns "Inherit", "Control", or "Text".
-func (e *Executor) extractReadOnlyStyle(w map[string]any) string {
+func extractReadOnlyStyle(ctx *ExecContext, w map[string]any) string {
 	if style, ok := w["ReadOnlyStyle"].(string); ok {
 		return style
 	}
@@ -498,7 +498,7 @@ func (e *Executor) extractReadOnlyStyle(w map[string]any) string {
 }
 
 // extractShowLabel extracts whether the label is visible from LabelTemplate.
-func (e *Executor) extractShowLabel(w map[string]any) bool {
+func extractShowLabel(ctx *ExecContext, w map[string]any) bool {
 	labelTemplate, ok := w["LabelTemplate"].(map[string]any)
 	if !ok {
 		return true // Default to showing label
@@ -512,7 +512,7 @@ func (e *Executor) extractShowLabel(w map[string]any) bool {
 
 // extractTextFromTemplate extracts text from a ClientTemplate.
 // ClientTemplate structure: Template.Items[] contains Texts$Translation with Text field
-func (e *Executor) extractTextFromTemplate(template map[string]any) string {
+func extractTextFromTemplate(ctx *ExecContext, template map[string]any) string {
 	// For ClientTemplate (Forms$ClientTemplate), the text is in Template.Items[].Text
 	if innerTemplate, ok := template["Template"].(map[string]any); ok {
 		items := getBsonArrayElements(innerTemplate["Items"])
@@ -552,7 +552,7 @@ func shortAttributeName(attr string) string {
 
 // extractAttributeRef extracts the attribute reference from an input widget.
 // Returns just the attribute name (last segment).
-func (e *Executor) extractAttributeRef(w map[string]any) string {
+func extractAttributeRef(ctx *ExecContext, w map[string]any) string {
 	attrRef, ok := w["AttributeRef"].(map[string]any)
 	if !ok {
 		return ""
@@ -566,10 +566,10 @@ func (e *Executor) extractAttributeRef(w map[string]any) string {
 
 // parseGalleryContent extracts the content widget from a Gallery.
 // entityContext is the resolved entity context from the Gallery's datasource.
-func (e *Executor) parseGalleryContent(w map[string]any, entityContext ...string) []rawWidget {
-	ctx := ""
+func parseGalleryContent(ctx *ExecContext, w map[string]any, entityContext ...string) []rawWidget {
+	entCtx := ""
 	if len(entityContext) > 0 {
-		ctx = entityContext[0]
+		entCtx = entityContext[0]
 	}
 	content := w["ContentWidget"]
 	if content == nil {
@@ -579,15 +579,15 @@ func (e *Executor) parseGalleryContent(w map[string]any, entityContext ...string
 	if !ok {
 		return nil
 	}
-	return e.parseRawWidget(contentMap, ctx)
+	return parseRawWidget(ctx, contentMap, entCtx)
 }
 
 // parseListViewContent extracts the content widgets from a ListView.
 // entityContext is the resolved entity context from the enclosing list container.
-func (e *Executor) parseListViewContent(w map[string]any, entityContext ...string) []rawWidget {
-	ctx := ""
+func parseListViewContent(ctx *ExecContext, w map[string]any, entityContext ...string) []rawWidget {
+	entCtx := ""
 	if len(entityContext) > 0 {
-		ctx = entityContext[0]
+		entCtx = entityContext[0]
 	}
 	widgets := getBsonArrayElements(w["Widgets"])
 	if widgets == nil {
@@ -599,13 +599,13 @@ func (e *Executor) parseListViewContent(w map[string]any, entityContext ...strin
 		if !ok {
 			continue
 		}
-		result = append(result, e.parseRawWidget(wgtMap, ctx)...)
+		result = append(result, parseRawWidget(ctx, wgtMap, entCtx)...)
 	}
 	return result
 }
 
 // extractListViewDataSource extracts the datasource from a ListView widget.
-func (e *Executor) extractListViewDataSource(w map[string]any) *rawDataSource {
+func extractListViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSource {
 	ds, ok := w["DataSource"].(map[string]any)
 	if !ok || ds == nil {
 		return nil
@@ -665,7 +665,8 @@ func (e *Executor) extractListViewDataSource(w map[string]any) *rawDataSource {
 }
 
 // extractSnippetRef extracts the snippet reference from a SnippetCallWidget.
-func (e *Executor) extractSnippetRef(w map[string]any) string {
+func extractSnippetRef(ctx *ExecContext, w map[string]any) string {
+	e := ctx.executor
 	// First try the FormCall.Form path (used for BY_NAME_REFERENCE)
 	if formCall, ok := w["FormCall"].(map[string]any); ok {
 		if form, ok := formCall["Form"].(string); ok && form != "" {

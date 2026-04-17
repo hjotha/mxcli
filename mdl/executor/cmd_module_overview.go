@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -46,18 +47,19 @@ var systemModuleNames = map[string]bool{
 
 // ModuleOverview generates a JSON graph of all project modules and their
 // cross-module dependencies, suitable for rendering with ELK.js.
-func (e *Executor) ModuleOverview() error {
+func ModuleOverview(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// Ensure catalog is built with full mode for refs
-	if err := e.ensureCatalog(true); err != nil {
+	if err := ensureCatalog(ctx, true); err != nil {
 		return mdlerrors.NewBackend("build catalog", err)
 	}
 
 	// Get all module names
-	moduleResult, err := e.catalog.Query("SELECT Name FROM modules")
+	moduleResult, err := ctx.Catalog.Query("SELECT Name FROM modules")
 	if err != nil {
 		return mdlerrors.NewBackend("query modules", err)
 	}
@@ -71,7 +73,7 @@ func (e *Executor) ModuleOverview() error {
 
 	// Get entity counts per module
 	entityCounts := make(map[string]int)
-	result, err := e.catalog.Query("SELECT ModuleName, COUNT(*) FROM entities GROUP BY ModuleName")
+	result, err := ctx.Catalog.Query("SELECT ModuleName, COUNT(*) FROM entities GROUP BY ModuleName")
 	if err == nil {
 		for _, row := range result.Rows {
 			if name, ok := row[0].(string); ok {
@@ -82,7 +84,7 @@ func (e *Executor) ModuleOverview() error {
 
 	// Get microflow counts per module
 	mfCounts := make(map[string]int)
-	result, err = e.catalog.Query("SELECT ModuleName, COUNT(*) FROM microflows GROUP BY ModuleName")
+	result, err = ctx.Catalog.Query("SELECT ModuleName, COUNT(*) FROM microflows GROUP BY ModuleName")
 	if err == nil {
 		for _, row := range result.Rows {
 			if name, ok := row[0].(string); ok {
@@ -93,7 +95,7 @@ func (e *Executor) ModuleOverview() error {
 
 	// Get page counts per module
 	pageCounts := make(map[string]int)
-	result, err = e.catalog.Query("SELECT ModuleName, COUNT(*) FROM pages GROUP BY ModuleName")
+	result, err = ctx.Catalog.Query("SELECT ModuleName, COUNT(*) FROM pages GROUP BY ModuleName")
 	if err == nil {
 		for _, row := range result.Rows {
 			if name, ok := row[0].(string); ok {
@@ -119,7 +121,7 @@ func (e *Executor) ModuleOverview() error {
 	sortModuleNodes(modules)
 
 	// Query cross-module dependency edges from REFS
-	edgeResult, err := e.catalog.Query(`
+	edgeResult, err := ctx.Catalog.Query(`
 		SELECT
 			SUBSTR(SourceName, 1, INSTR(SourceName, '.') - 1) as SourceModule,
 			SUBSTR(TargetName, 1, INSTR(TargetName, '.') - 1) as TargetModule,
@@ -186,7 +188,7 @@ func (e *Executor) ModuleOverview() error {
 		return mdlerrors.NewBackend("marshal JSON", err)
 	}
 
-	fmt.Fprint(e.output, string(out))
+	fmt.Fprint(ctx.Output, string(out))
 	return nil
 }
 
@@ -225,4 +227,10 @@ func sortModuleEdges(edges []moduleOverviewEdge) {
 			}
 		}
 	}
+}
+
+// --- Executor method wrapper for backward compatibility ---
+
+func (e *Executor) ModuleOverview() error {
+	return ModuleOverview(e.newExecContext(context.Background()))
 }

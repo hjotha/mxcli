@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -14,9 +15,10 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
-// DescribeMermaid generates a Mermaid diagram for the given object type and name.
+// describeMermaid generates a Mermaid diagram for the given object type and name.
 // Supported types: entity (renders full domain model), microflow, page.
-func (e *Executor) DescribeMermaid(objectType, name string) error {
+func describeMermaid(ctx *ExecContext, objectType, name string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -31,19 +33,25 @@ func (e *Executor) DescribeMermaid(objectType, name string) error {
 
 	switch strings.ToUpper(objectType) {
 	case "ENTITY", "DOMAINMODEL":
-		return e.domainModelToMermaid(qn.Module)
+		return domainModelToMermaid(ctx, qn.Module)
 	case "MICROFLOW":
-		return e.microflowToMermaid(qn)
+		return microflowToMermaid(ctx, qn)
 	case "PAGE":
-		return e.pageToMermaid(qn)
+		return pageToMermaid(ctx, qn)
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("mermaid format not supported for type: %s", objectType))
 	}
 }
 
+// DescribeMermaid is a method wrapper for external callers.
+func (e *Executor) DescribeMermaid(objectType, name string) error {
+	return describeMermaid(e.newExecContext(context.Background()), objectType, name)
+}
+
 // domainModelToMermaid generates a Mermaid erDiagram for a module's domain model.
-func (e *Executor) domainModelToMermaid(moduleName string) error {
-	module, err := e.findModule(moduleName)
+func domainModelToMermaid(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
+	module, err := findModule(ctx, moduleName)
 	if err != nil {
 		return err
 	}
@@ -61,7 +69,7 @@ func (e *Executor) domainModelToMermaid(moduleName string) error {
 
 	// Also load entities from all modules for cross-module associations
 	allEntityNames := make(map[model.ID]string)
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err == nil {
 		domainModels, _ := e.reader.ListDomainModels()
 		for _, otherDM := range domainModels {
@@ -176,13 +184,14 @@ func (e *Executor) domainModelToMermaid(moduleName string) error {
 	}
 	sb.WriteString("}\n")
 
-	fmt.Fprint(e.output, sb.String())
+	fmt.Fprint(ctx.Output, sb.String())
 	return nil
 }
 
 // microflowToMermaid generates a Mermaid flowchart for a microflow.
-func (e *Executor) microflowToMermaid(name ast.QualifiedName) error {
-	h, err := e.getHierarchy()
+func microflowToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -217,17 +226,17 @@ func (e *Executor) microflowToMermaid(name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("microflow", name.String())
 	}
 
-	return e.renderMicroflowMermaid(targetMf, entityNames)
+	return renderMicroflowMermaid(ctx, targetMf, entityNames)
 }
 
 // renderMicroflowMermaid renders a microflow as a Mermaid flowchart.
-func (e *Executor) renderMicroflowMermaid(mf *microflows.Microflow, entityNames map[model.ID]string) error {
+func renderMicroflowMermaid(ctx *ExecContext, mf *microflows.Microflow, entityNames map[model.ID]string) error {
 	var sb strings.Builder
 	sb.WriteString("flowchart LR\n")
 
 	if mf.ObjectCollection == nil || len(mf.ObjectCollection.Objects) == 0 {
 		sb.WriteString("    start([Start]) --> stop([End])\n")
-		fmt.Fprint(e.output, sb.String())
+		fmt.Fprint(ctx.Output, sb.String())
 		return nil
 	}
 
@@ -354,13 +363,14 @@ func (e *Executor) renderMicroflowMermaid(mf *microflows.Microflow, entityNames 
 		sb.WriteString("}\n")
 	}
 
-	fmt.Fprint(e.output, sb.String())
+	fmt.Fprint(ctx.Output, sb.String())
 	return nil
 }
 
 // pageToMermaid generates a Mermaid block diagram for a page's widget structure.
-func (e *Executor) pageToMermaid(name ast.QualifiedName) error {
-	h, err := e.getHierarchy()
+func pageToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -385,7 +395,7 @@ func (e *Executor) pageToMermaid(name ast.QualifiedName) error {
 	}
 
 	// Use raw widget data (same approach as describePage)
-	rawWidgets := e.getPageWidgetsFromRaw(foundPage.ID)
+	rawWidgets := getPageWidgetsFromRaw(ctx, foundPage.ID)
 
 	var sb strings.Builder
 	sb.WriteString("block-beta\n")
@@ -396,17 +406,17 @@ func (e *Executor) pageToMermaid(name ast.QualifiedName) error {
 	sb.WriteString(fmt.Sprintf("    page_title[\"%s\"]\n", sanitizeMermaidLabel(title)))
 
 	// Render widget tree
-	e.renderRawWidgetMermaid(&sb, rawWidgets, 1, 0)
+	renderRawWidgetMermaid(ctx, &sb, rawWidgets, 1, 0)
 
 	// Emit metadata for the webview
 	sb.WriteString("\n%% @type block\n")
 
-	fmt.Fprint(e.output, sb.String())
+	fmt.Fprint(ctx.Output, sb.String())
 	return nil
 }
 
 // renderRawWidgetMermaid recursively renders raw widgets in Mermaid block-beta syntax.
-func (e *Executor) renderRawWidgetMermaid(sb *strings.Builder, widgets []rawWidget, depth int, counter int) int {
+func renderRawWidgetMermaid(ctx *ExecContext, sb *strings.Builder, widgets []rawWidget, depth int, counter int) int {
 	for _, w := range widgets {
 		counter++
 		id := fmt.Sprintf("w%d", counter)
@@ -418,7 +428,7 @@ func (e *Executor) renderRawWidgetMermaid(sb *strings.Builder, widgets []rawWidg
 
 		if len(w.Children) > 0 {
 			fmt.Fprintf(sb, "%s%s[\"%s\"]:\n", indent, id, sanitizeMermaidLabel(label))
-			counter = e.renderRawWidgetMermaid(sb, w.Children, depth+1, counter)
+			counter = renderRawWidgetMermaid(ctx, sb, w.Children, depth+1, counter)
 		} else {
 			fmt.Fprintf(sb, "%s%s[\"%s\"]\n", indent, id, sanitizeMermaidLabel(label))
 		}

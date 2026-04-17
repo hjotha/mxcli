@@ -5,6 +5,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 
@@ -66,7 +67,8 @@ const (
 )
 
 // DiffProgram compares an MDL program against the current project state
-func (e *Executor) DiffProgram(prog *ast.Program, opts DiffOptions) error {
+func diffProgram(ctx *ExecContext, prog *ast.Program, opts DiffOptions) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -87,7 +89,7 @@ func (e *Executor) DiffProgram(prog *ast.Program, opts DiffOptions) error {
 
 	// Process each statement
 	for _, stmt := range prog.Statements {
-		result, err := e.diffStatement(stmt)
+		result, err := diffStatement(ctx, stmt)
 		if err != nil {
 			// Skip statements that can't be diffed (e.g., connection statements)
 			continue
@@ -123,49 +125,55 @@ func (e *Executor) DiffProgram(prog *ast.Program, opts DiffOptions) error {
 
 		switch opts.Format {
 		case DiffFormatUnified:
-			e.outputUnifiedDiff(result, opts.UseColor)
+			outputUnifiedDiff(ctx, result, opts.UseColor)
 		case DiffFormatSideBySide:
-			e.outputSideBySideDiff(result, opts.Width, opts.UseColor)
+			outputSideBySideDiff(ctx, result, opts.Width, opts.UseColor)
 		case DiffFormatStructural:
-			e.outputStructuralDiff(result, opts.UseColor)
+			outputStructuralDiff(ctx, result, opts.UseColor)
 		}
 	}
 
 	// Output summary
-	fmt.Fprintf(e.output, "\nSummary: %d new, %d modified, %d unchanged\n",
+	fmt.Fprintf(ctx.Output, "\nSummary: %d new, %d modified, %d unchanged\n",
 		newCount, modifiedCount, unchangedCount)
 
 	return nil
 }
 
+// DiffProgram is a method wrapper for external callers.
+func (e *Executor) DiffProgram(prog *ast.Program, opts DiffOptions) error {
+	return diffProgram(e.newExecContext(context.Background()), prog, opts)
+}
+
 // diffStatement generates a diff result for a single statement
-func (e *Executor) diffStatement(stmt ast.Statement) (*DiffResult, error) {
+func diffStatement(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
 	switch s := stmt.(type) {
 	case *ast.CreateEntityStmt:
-		return e.diffEntity(s)
+		return diffEntity(ctx, s)
 	case *ast.CreateViewEntityStmt:
-		return e.diffViewEntity(s)
+		return diffViewEntity(ctx, s)
 	case *ast.CreateEnumerationStmt:
-		return e.diffEnumeration(s)
+		return diffEnumeration(ctx, s)
 	case *ast.CreateAssociationStmt:
-		return e.diffAssociation(s)
+		return diffAssociation(ctx, s)
 	case *ast.CreateMicroflowStmt:
-		return e.diffMicroflow(s)
+		return diffMicroflow(ctx, s)
 	default:
 		return nil, nil // Skip unsupported statements
 	}
 }
 
 // diffEntity compares a CREATE ENTITY statement against the project
-func (e *Executor) diffEntity(s *ast.CreateEntityStmt) (*DiffResult, error) {
+func diffEntity(ctx *ExecContext, s *ast.CreateEntityStmt) (*DiffResult, error) {
+	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "Entity",
 		ObjectName: s.Name,
-		Proposed:   e.entityStmtToMDL(s),
+		Proposed:   entityStmtToMDL(ctx, s),
 	}
 
 	// Try to find existing entity
-	module, err := e.findModule(s.Name.Module)
+	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -180,8 +188,8 @@ func (e *Executor) diffEntity(s *ast.CreateEntityStmt) (*DiffResult, error) {
 	for _, entity := range dm.Entities {
 		if entity.Name == s.Name.Name {
 			// Found existing entity - get its MDL representation
-			result.Current = e.entityToMDL(module.Name, entity, dm)
-			result.Changes = e.compareEntities(result.Current, result.Proposed)
+			result.Current = entityToMDL(ctx, module.Name, entity, dm)
+			result.Changes = compareEntities(ctx, result.Current, result.Proposed)
 			return result, nil
 		}
 	}
@@ -191,14 +199,15 @@ func (e *Executor) diffEntity(s *ast.CreateEntityStmt) (*DiffResult, error) {
 }
 
 // diffViewEntity compares a CREATE VIEW ENTITY statement against the project
-func (e *Executor) diffViewEntity(s *ast.CreateViewEntityStmt) (*DiffResult, error) {
+func diffViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) (*DiffResult, error) {
+	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "View Entity",
 		ObjectName: s.Name,
-		Proposed:   e.viewEntityStmtToMDL(s),
+		Proposed:   viewEntityStmtToMDL(ctx, s),
 	}
 
-	module, err := e.findModule(s.Name.Module)
+	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -212,7 +221,7 @@ func (e *Executor) diffViewEntity(s *ast.CreateViewEntityStmt) (*DiffResult, err
 
 	for _, entity := range dm.Entities {
 		if entity.Name == s.Name.Name {
-			result.Current = e.viewEntityFromProjectToMDL(module.Name, entity, dm)
+			result.Current = viewEntityFromProjectToMDL(ctx, module.Name, entity, dm)
 			return result, nil
 		}
 	}
@@ -222,37 +231,38 @@ func (e *Executor) diffViewEntity(s *ast.CreateViewEntityStmt) (*DiffResult, err
 }
 
 // diffEnumeration compares a CREATE ENUMERATION statement against the project
-func (e *Executor) diffEnumeration(s *ast.CreateEnumerationStmt) (*DiffResult, error) {
+func diffEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) (*DiffResult, error) {
 	result := &DiffResult{
 		ObjectType: "Enumeration",
 		ObjectName: s.Name,
-		Proposed:   e.enumerationStmtToMDL(s),
+		Proposed:   enumerationStmtToMDL(ctx, s),
 	}
 
 	// Try to find existing enumeration
-	existingEnum := e.findEnumeration(s.Name.Module, s.Name.Name)
+	existingEnum := findEnumeration(ctx, s.Name.Module, s.Name.Name)
 	if existingEnum == nil {
 		result.IsNew = true
 		return result, nil
 	}
 
-	h, _ := e.getHierarchy()
+	h, _ := getHierarchy(ctx)
 	modName := h.GetModuleName(existingEnum.ContainerID)
-	result.Current = e.enumerationToMDL(modName, existingEnum)
-	result.Changes = e.compareEnumerations(result.Current, result.Proposed)
+	result.Current = enumerationToMDL(ctx, modName, existingEnum)
+	result.Changes = compareEnumerations(ctx, result.Current, result.Proposed)
 
 	return result, nil
 }
 
 // diffAssociation compares a CREATE ASSOCIATION statement against the project
-func (e *Executor) diffAssociation(s *ast.CreateAssociationStmt) (*DiffResult, error) {
+func diffAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) (*DiffResult, error) {
+	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "Association",
 		ObjectName: s.Name,
-		Proposed:   e.associationStmtToMDL(s),
+		Proposed:   associationStmtToMDL(ctx, s),
 	}
 
-	module, err := e.findModule(s.Name.Module)
+	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -266,7 +276,7 @@ func (e *Executor) diffAssociation(s *ast.CreateAssociationStmt) (*DiffResult, e
 
 	for _, assoc := range dm.Associations {
 		if assoc.Name == s.Name.Name {
-			result.Current = e.associationToMDL(module.Name, assoc, dm)
+			result.Current = associationToMDL(ctx, module.Name, assoc, dm)
 			return result, nil
 		}
 	}
@@ -276,15 +286,16 @@ func (e *Executor) diffAssociation(s *ast.CreateAssociationStmt) (*DiffResult, e
 }
 
 // diffMicroflow compares a CREATE MICROFLOW statement against the project
-func (e *Executor) diffMicroflow(s *ast.CreateMicroflowStmt) (*DiffResult, error) {
+func diffMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult, error) {
+	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "Microflow",
 		ObjectName: s.Name,
-		Proposed:   e.microflowStmtToMDL(s),
+		Proposed:   microflowStmtToMDL(ctx, s),
 	}
 
 	// Try to find existing microflow
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		result.IsNew = true
 		return result, nil
@@ -304,10 +315,10 @@ func (e *Executor) diffMicroflow(s *ast.CreateMicroflowStmt) (*DiffResult, error
 			var buf bytes.Buffer
 			oldOutput := e.output
 			e.output = &buf
-			e.describeMicroflow(s.Name)
+			describeMicroflow(ctx, s.Name)
 			e.output = oldOutput
 			result.Current = strings.TrimSuffix(buf.String(), "\n")
-			result.Changes = e.compareMicroflows(result.Current, result.Proposed)
+			result.Changes = compareMicroflows(ctx, result.Current, result.Proposed)
 			return result, nil
 		}
 	}
@@ -321,7 +332,7 @@ func (e *Executor) diffMicroflow(s *ast.CreateMicroflowStmt) (*DiffResult, error
 // ============================================================================
 
 // compareEntities extracts structural changes between two entity MDL representations
-func (e *Executor) compareEntities(current, proposed string) []StructuralChange {
+func compareEntities(ctx *ExecContext, current, proposed string) []StructuralChange {
 	var changes []StructuralChange
 
 	// Simple line-based comparison for now
@@ -329,8 +340,8 @@ func (e *Executor) compareEntities(current, proposed string) []StructuralChange 
 	proposedLines := strings.Split(proposed, "\n")
 
 	// Extract attributes from both
-	currentAttrs := e.extractAttributes(currentLines)
-	proposedAttrs := e.extractAttributes(proposedLines)
+	currentAttrs := extractAttributes(ctx, currentLines)
+	proposedAttrs := extractAttributes(ctx, proposedLines)
 
 	// Find added attributes
 	for name, proposed := range proposedAttrs {
@@ -371,11 +382,11 @@ func (e *Executor) compareEntities(current, proposed string) []StructuralChange 
 }
 
 // compareEnumerations extracts structural changes between two enumeration MDL representations
-func (e *Executor) compareEnumerations(current, proposed string) []StructuralChange {
+func compareEnumerations(ctx *ExecContext, current, proposed string) []StructuralChange {
 	var changes []StructuralChange
 
-	currentValues := e.extractEnumValues(strings.Split(current, "\n"))
-	proposedValues := e.extractEnumValues(strings.Split(proposed, "\n"))
+	currentValues := extractEnumValues(ctx, strings.Split(current, "\n"))
+	proposedValues := extractEnumValues(ctx, strings.Split(proposed, "\n"))
 
 	for name := range proposedValues {
 		if _, exists := currentValues[name]; !exists {
@@ -401,11 +412,11 @@ func (e *Executor) compareEnumerations(current, proposed string) []StructuralCha
 }
 
 // compareMicroflows extracts structural changes between two microflow MDL representations
-func (e *Executor) compareMicroflows(current, proposed string) []StructuralChange {
+func compareMicroflows(ctx *ExecContext, current, proposed string) []StructuralChange {
 	var changes []StructuralChange
 
-	currentParams := e.extractParameters(strings.Split(current, "\n"))
-	proposedParams := e.extractParameters(strings.Split(proposed, "\n"))
+	currentParams := extractParameters(ctx, strings.Split(current, "\n"))
+	proposedParams := extractParameters(ctx, strings.Split(proposed, "\n"))
 
 	for name := range proposedParams {
 		if _, exists := currentParams[name]; !exists {
@@ -428,8 +439,8 @@ func (e *Executor) compareMicroflows(current, proposed string) []StructuralChang
 	}
 
 	// Count body statements
-	currentStmts := e.countBodyStatements(current)
-	proposedStmts := e.countBodyStatements(proposed)
+	currentStmts := countBodyStatements(ctx, current)
+	proposedStmts := countBodyStatements(ctx, proposed)
 	if currentStmts != proposedStmts {
 		diff := proposedStmts - currentStmts
 		if diff > 0 {
@@ -453,7 +464,7 @@ func (e *Executor) compareMicroflows(current, proposed string) []StructuralChang
 }
 
 // extractAttributes extracts attribute definitions from MDL lines
-func (e *Executor) extractAttributes(lines []string) map[string]string {
+func extractAttributes(_ *ExecContext, lines []string) map[string]string {
 	attrs := make(map[string]string)
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -471,7 +482,7 @@ func (e *Executor) extractAttributes(lines []string) map[string]string {
 }
 
 // extractEnumValues extracts enumeration values from MDL lines
-func (e *Executor) extractEnumValues(lines []string) map[string]bool {
+func extractEnumValues(_ *ExecContext, lines []string) map[string]bool {
 	values := make(map[string]bool)
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -489,7 +500,7 @@ func (e *Executor) extractEnumValues(lines []string) map[string]bool {
 }
 
 // extractParameters extracts parameter names from MDL lines
-func (e *Executor) extractParameters(lines []string) map[string]bool {
+func extractParameters(_ *ExecContext, lines []string) map[string]bool {
 	params := make(map[string]bool)
 	inParams := false
 	for _, line := range lines {
@@ -517,7 +528,7 @@ func (e *Executor) extractParameters(lines []string) map[string]bool {
 }
 
 // countBodyStatements counts statements in a microflow body
-func (e *Executor) countBodyStatements(mdl string) int {
+func countBodyStatements(_ *ExecContext, mdl string) int {
 	count := 0
 	inBody := false
 	for line := range strings.SplitSeq(mdl, "\n") {

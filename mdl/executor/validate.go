@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -150,9 +151,10 @@ func (sc *scriptContext) has(name string) bool {
 		sc.microflows[name] || sc.pages[name] || sc.snippets[name]
 }
 
-// ValidateProgram validates all statements in a program, skipping references
+// validateProgram validates all statements in a program, skipping references
 // to objects that are defined within the script itself.
-func (e *Executor) ValidateProgram(prog *ast.Program) []error {
+func validateProgram(ctx *ExecContext, prog *ast.Program) []error {
+	e := ctx.executor
 	if e.reader == nil {
 		return []error{mdlerrors.NewNotConnected()}
 	}
@@ -164,20 +166,27 @@ func (e *Executor) ValidateProgram(prog *ast.Program) []error {
 	// Validate each statement
 	var errors []error
 	for i, stmt := range prog.Statements {
-		if err := e.validateWithContext(stmt, sc); err != nil {
+		if err := validateWithContext(ctx, stmt, sc); err != nil {
 			errors = append(errors, fmt.Errorf("statement %d: %w", i+1, err))
 		}
 	}
 	return errors
 }
 
+// ValidateProgram validates all statements in a program, skipping references
+// to objects that are defined within the script itself.
+func (e *Executor) ValidateProgram(prog *ast.Program) []error {
+	return validateProgram(e.newExecContext(context.Background()), prog)
+}
+
 // validateWithContext validates a statement, considering objects defined in the script.
-func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) error {
+func validateWithContext(ctx *ExecContext, stmt ast.Statement, sc *scriptContext) error {
+	e := ctx.executor
 	switch s := stmt.(type) {
 	// Statements that reference modules
 	case *ast.CreateEntityStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
@@ -196,7 +205,7 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 				// Check if enumeration exists (in project or script)
 				enumQN := enumRef.String()
 				if !sc.enumerations[enumQN] {
-					if !e.enumerationExists(enumQN) {
+					if !enumerationExists(ctx, enumQN) {
 						return mdlerrors.NewNotFoundMsg("enumeration", enumQN, fmt.Sprintf("attribute '%s': enumeration not found: %s", attr.Name, enumQN))
 					}
 				}
@@ -216,42 +225,42 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 		}
 	case *ast.CreateAssociationStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 		// Check parent and child entity references
 		if s.Parent.Module != "" && !sc.modules[s.Parent.Module] {
-			if _, err := e.findModule(s.Parent.Module); err != nil {
+			if _, err := findModule(ctx, s.Parent.Module); err != nil {
 				return mdlerrors.NewNotFoundMsg("module", s.Parent.Module, "parent entity module not found: "+s.Parent.Module)
 			}
 		}
 		if s.Child.Module != "" && !sc.modules[s.Child.Module] {
-			if _, err := e.findModule(s.Child.Module); err != nil {
+			if _, err := findModule(ctx, s.Child.Module); err != nil {
 				return mdlerrors.NewNotFoundMsg("module", s.Child.Module, "child entity module not found: "+s.Child.Module)
 			}
 		}
 	case *ast.CreateImageCollectionStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 	case *ast.DropImageCollectionStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 	case *ast.CreateEnumerationStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 	case *ast.CreateMicroflowStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
@@ -261,18 +270,18 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 				s.Name.String(), strings.Join(validationErrors, "\n  - "))
 		}
 		// Validate references inside microflow body (pages, microflows, java actions, entities)
-		if refErrors := e.validateMicroflowReferences(s, sc); len(refErrors) > 0 {
+		if refErrors := validateMicroflowReferences(ctx, s, sc); len(refErrors) > 0 {
 			return mdlerrors.NewValidationf("microflow '%s' has reference errors:\n  - %s",
 				s.Name.String(), strings.Join(refErrors, "\n  - "))
 		}
 	case *ast.CreatePageStmtV3:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 		// Validate widget references (DataSource, Action, Snippet)
-		if refErrors := e.validateWidgetReferences(s.Widgets, sc); len(refErrors) > 0 {
+		if refErrors := validateWidgetReferences(ctx, s.Widgets, sc); len(refErrors) > 0 {
 			return mdlerrors.NewValidationf("page '%s' has reference errors:\n  - %s",
 				s.Name.String(), strings.Join(refErrors, "\n  - "))
 		}
@@ -283,12 +292,12 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 		}
 	case *ast.CreateSnippetStmtV3:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 		// Validate widget references (DataSource, Action, Snippet)
-		if refErrors := e.validateWidgetReferences(s.Widgets, sc); len(refErrors) > 0 {
+		if refErrors := validateWidgetReferences(ctx, s.Widgets, sc); len(refErrors) > 0 {
 			return mdlerrors.NewValidationf("snippet '%s' has reference errors:\n  - %s",
 				s.Name.String(), strings.Join(refErrors, "\n  - "))
 		}
@@ -299,18 +308,18 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 		}
 	case *ast.CreateViewEntityStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 		// Validate OQL types match declared attribute types
-		if typeErrors := e.ValidateViewEntityTypes(s); len(typeErrors) > 0 {
+		if typeErrors := validateViewEntityTypes(ctx, s); len(typeErrors) > 0 {
 			return mdlerrors.NewValidationf("view entity '%s' has type mismatches:\n  - %s",
 				s.Name.String(), strings.Join(typeErrors, "\n  - "))
 		}
 	case *ast.AlterEntityStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
@@ -325,7 +334,7 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 				}
 				enumQN := enumRef.String()
 				if !sc.enumerations[enumQN] {
-					if !e.enumerationExists(enumQN) {
+					if !enumerationExists(ctx, enumQN) {
 						return mdlerrors.NewNotFoundMsg("enumeration", enumQN, fmt.Sprintf("attribute '%s': enumeration not found: %s", attr.Name, enumQN))
 					}
 				}
@@ -333,14 +342,14 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 		}
 	case *ast.DropEntityStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
-			if _, err := e.findModule(s.Name.Module); err != nil {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
 	case *ast.DropModuleStmt:
 		// For DROP, check if module exists in project OR will be created in script
 		if !sc.modules[s.Name] {
-			if _, err := e.findModule(s.Name); err != nil {
+			if _, err := findModule(ctx, s.Name); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name)
 			}
 		}
@@ -362,16 +371,22 @@ func (e *Executor) validateWithContext(stmt ast.Statement, sc *scriptContext) er
 		return nil
 	}
 
+	_ = e // suppress unused warning if e not referenced in all paths
 	return nil
 }
 
-// Validate checks if a statement's references are valid without executing it.
+// validate checks if a statement's references are valid without executing it.
 // This requires being connected to a project.
 // Note: For validating entire programs with proper handling of script-defined objects,
-// use ValidateProgram instead.
-func (e *Executor) Validate(stmt ast.Statement) error {
+// use validateProgram instead.
+func validate(ctx *ExecContext, stmt ast.Statement) error {
 	// Use validateWithContext with an empty script context for single statements
-	return e.validateWithContext(stmt, newScriptContext())
+	return validateWithContext(ctx, stmt, newScriptContext())
+}
+
+// Validate checks if a statement's references are valid without executing it.
+func (e *Executor) Validate(stmt ast.Statement) error {
+	return validate(e.newExecContext(context.Background()), stmt)
 }
 
 // ----------------------------------------------------------------------------
@@ -380,7 +395,8 @@ func (e *Executor) Validate(stmt ast.Statement) error {
 
 // validateMicroflowReferences validates that all qualified name references in a
 // microflow body (pages, microflows, java actions, entities) point to existing objects.
-func (e *Executor) validateMicroflowReferences(s *ast.CreateMicroflowStmt, sc *scriptContext) []string {
+func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, sc *scriptContext) []string {
+	e := ctx.executor
 	if e.reader == nil || len(s.Body) == 0 {
 		return nil
 	}
@@ -396,7 +412,7 @@ func (e *Executor) validateMicroflowReferences(s *ast.CreateMicroflowStmt, sc *s
 	var errors []string
 
 	if len(refs.pages) > 0 {
-		known := e.buildPageQualifiedNames()
+		known := buildPageQualifiedNames(ctx)
 		for _, ref := range refs.pages {
 			if !known[ref] && !sc.pages[ref] {
 				errors = append(errors, fmt.Sprintf("page not found: %s (referenced by SHOW PAGE)", ref))
@@ -405,7 +421,7 @@ func (e *Executor) validateMicroflowReferences(s *ast.CreateMicroflowStmt, sc *s
 	}
 
 	if len(refs.microflows) > 0 {
-		known := e.buildMicroflowQualifiedNames()
+		known := buildMicroflowQualifiedNames(ctx)
 		for _, ref := range refs.microflows {
 			if !known[ref] && !sc.microflows[ref] {
 				errors = append(errors, fmt.Sprintf("microflow not found: %s (referenced by CALL MICROFLOW)", ref))
@@ -414,7 +430,7 @@ func (e *Executor) validateMicroflowReferences(s *ast.CreateMicroflowStmt, sc *s
 	}
 
 	if len(refs.javaActions) > 0 {
-		known := e.buildJavaActionQualifiedNames()
+		known := buildJavaActionQualifiedNames(ctx)
 		for _, ref := range refs.javaActions {
 			if !known[ref] {
 				errors = append(errors, fmt.Sprintf("java action not found: %s (referenced by CALL JAVA ACTION)", ref))
@@ -423,7 +439,7 @@ func (e *Executor) validateMicroflowReferences(s *ast.CreateMicroflowStmt, sc *s
 	}
 
 	if len(refs.entities) > 0 {
-		known := e.buildEntityQualifiedNames()
+		known := buildEntityQualifiedNames(ctx)
 		for _, ref := range refs.entities {
 			if !known[ref.name] && !sc.entities[ref.name] {
 				errors = append(errors, fmt.Sprintf("entity not found: %s (referenced by %s)", ref.name, ref.source))

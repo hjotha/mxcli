@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -124,7 +125,7 @@ func outputDataContainerContext(w io.Writer, prefix string, widgetName string, e
 
 // outputWidgetMDLV3 outputs a widget in MDL V3 syntax.
 // V3 syntax uses WIDGET Name (Props) { children } format.
-func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
+func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 	prefix := strings.Repeat("  ", indent)
 
 	switch w.Type {
@@ -132,13 +133,13 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		header := fmt.Sprintf("CONTAINER %s", w.Name)
 		props := appendAppearanceProps(nil, w)
 		if len(w.Children) > 0 {
-			formatWidgetProps(e.output, prefix, header, props, " {\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
 			for _, child := range w.Children {
-				e.outputWidgetMDLV3(child, indent+1)
+				outputWidgetMDLV3(ctx, child, indent+1)
 			}
-			fmt.Fprintf(e.output, "%s}\n", prefix)
+			fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 		} else {
-			formatWidgetProps(e.output, prefix, header, props, "\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		}
 
 	case "Forms$GroupBox", "Pages$GroupBox":
@@ -162,13 +163,13 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		}
 		props = appendAppearanceProps(props, w)
 		if len(w.Children) > 0 {
-			formatWidgetProps(e.output, prefix, header, props, " {\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
 			for _, child := range w.Children {
-				e.outputWidgetMDLV3(child, indent+1)
+				outputWidgetMDLV3(ctx, child, indent+1)
 			}
-			fmt.Fprintf(e.output, "%s}\n", prefix)
+			fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 		} else {
-			formatWidgetProps(e.output, prefix, header, props, "\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		}
 
 	case "Forms$LayoutGrid", "Pages$LayoutGrid":
@@ -177,9 +178,9 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			header += " " + w.Name
 		}
 		props := appendAppearanceProps(nil, w)
-		formatWidgetProps(e.output, prefix, header, props, " {\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
 		for rowIdx, row := range w.Rows {
-			fmt.Fprintf(e.output, "%s  ROW row%d {\n", prefix, rowIdx+1)
+			fmt.Fprintf(ctx.Output, "%s  ROW row%d {\n", prefix, rowIdx+1)
 			for colIdx, col := range row.Columns {
 				var colProps []string
 				widthStr := "AutoFill"
@@ -193,15 +194,15 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 				if col.PhoneWidth > 0 && col.PhoneWidth <= 12 {
 					colProps = append(colProps, fmt.Sprintf("PhoneWidth: %d", col.PhoneWidth))
 				}
-				fmt.Fprintf(e.output, "%s    COLUMN col%d (%s) {\n", prefix, colIdx+1, strings.Join(colProps, ", "))
+				fmt.Fprintf(ctx.Output, "%s    COLUMN col%d (%s) {\n", prefix, colIdx+1, strings.Join(colProps, ", "))
 				for _, cw := range col.Widgets {
-					e.outputWidgetMDLV3(cw, indent+3)
+					outputWidgetMDLV3(ctx, cw, indent+3)
 				}
-				fmt.Fprintf(e.output, "%s    }\n", prefix)
+				fmt.Fprintf(ctx.Output, "%s    }\n", prefix)
 			}
-			fmt.Fprintf(e.output, "%s  }\n", prefix)
+			fmt.Fprintf(ctx.Output, "%s  }\n", prefix)
 		}
-		fmt.Fprintf(e.output, "%s}\n", prefix)
+		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$DynamicText", "Pages$DynamicText":
 		header := fmt.Sprintf("DYNAMICTEXT %s", w.Name)
@@ -216,7 +217,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("ContentParams: [%s]", strings.Join(formatParametersV3(w.Parameters), ", ")))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$ActionButton", "Pages$ActionButton":
 		header := fmt.Sprintf("ACTIONBUTTON %s", w.Name)
@@ -234,7 +235,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("ButtonStyle: %s", w.ButtonStyle))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$Text", "Pages$Text":
 		props := []string{}
@@ -242,7 +243,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Content)))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, "STATICTEXT", props, "\n")
+		formatWidgetProps(ctx.Output, prefix, "STATICTEXT", props, "\n")
 
 	case "Forms$Title", "Pages$Title":
 		header := fmt.Sprintf("TITLE %s", w.Name)
@@ -251,7 +252,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Caption)))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$DataView", "Pages$DataView":
 		header := fmt.Sprintf("DATAVIEW %s", w.Name)
@@ -267,12 +268,12 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			}
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, " {\n")
-		outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, false)
+		formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
+		outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, false)
 		for _, child := range w.Children {
-			e.outputWidgetMDLV3(child, indent+1)
+			outputWidgetMDLV3(ctx, child, indent+1)
 		}
-		fmt.Fprintf(e.output, "%s}\n", prefix)
+		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$TextBox", "Pages$TextBox":
 		header := fmt.Sprintf("TEXTBOX %s", w.Name)
@@ -284,7 +285,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$TextArea", "Pages$TextArea":
 		header := fmt.Sprintf("TEXTAREA %s", w.Name)
@@ -296,7 +297,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$DatePicker", "Pages$DatePicker":
 		header := fmt.Sprintf("DATEPICKER %s", w.Name)
@@ -308,7 +309,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$RadioButtons", "Pages$RadioButtons":
 		header := fmt.Sprintf("RADIOBUTTONS %s", w.Name)
@@ -320,7 +321,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$CheckBox", "Pages$CheckBox":
 		header := fmt.Sprintf("CHECKBOX %s", w.Name)
@@ -344,7 +345,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, "ShowLabel: No")
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "CustomWidgets$CustomWidget":
 		widgetType := w.RenderMode // We stored widget type in RenderMode
@@ -390,24 +391,24 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			// Output CONTROLBAR and columns as children
 			hasContent := len(w.ControlBar) > 0 || len(w.DataGridColumns) > 0
 			if hasContent {
-				formatWidgetProps(e.output, prefix, header, props, " {\n")
-				outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
+				formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
+				outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
 				// Output CONTROLBAR section if control bar widgets present
 				if len(w.ControlBar) > 0 {
-					fmt.Fprintf(e.output, "%s  CONTROLBAR controlBar1 {\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  CONTROLBAR controlBar1 {\n", prefix)
 					for _, cb := range w.ControlBar {
-						e.outputWidgetMDLV3(cb, indent+2)
+						outputWidgetMDLV3(ctx, cb, indent+2)
 					}
-					fmt.Fprintf(e.output, "%s  }\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  }\n", prefix)
 				}
 				// Output columns — derive name from attribute or caption, fall back to col%d
 				for i, col := range w.DataGridColumns {
 					colName := deriveColumnName(col, i)
-					e.outputDataGrid2ColumnV3(prefix+"  ", colName, col)
+					outputDataGrid2ColumnV3(ctx, prefix+"  ", colName, col)
 				}
-				fmt.Fprintf(e.output, "%s}\n", prefix)
+				fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 			} else {
-				formatWidgetProps(e.output, prefix, header, props, "\n")
+				formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 			}
 		} else if widgetType == "GALLERY" {
 			// Handle Gallery specially with datasource, selection, filter and content widgets
@@ -455,27 +456,27 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			// Output filter and content widgets
 			hasContent := len(w.Children) > 0 || len(w.FilterWidgets) > 0
 			if hasContent {
-				formatWidgetProps(e.output, prefix, header, props, " {\n")
-				outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
+				formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
+				outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
 				// Output FILTER section if filter widgets present
 				if len(w.FilterWidgets) > 0 {
-					fmt.Fprintf(e.output, "%s  FILTER filter1 {\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  FILTER filter1 {\n", prefix)
 					for _, filter := range w.FilterWidgets {
-						e.outputWidgetMDLV3(filter, indent+2)
+						outputWidgetMDLV3(ctx, filter, indent+2)
 					}
-					fmt.Fprintf(e.output, "%s  }\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  }\n", prefix)
 				}
 				// Output TEMPLATE section if content widgets present
 				if len(w.Children) > 0 {
-					fmt.Fprintf(e.output, "%s  TEMPLATE template1 {\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  TEMPLATE template1 {\n", prefix)
 					for _, child := range w.Children {
-						e.outputWidgetMDLV3(child, indent+2)
+						outputWidgetMDLV3(ctx, child, indent+2)
 					}
-					fmt.Fprintf(e.output, "%s  }\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  }\n", prefix)
 				}
-				fmt.Fprintf(e.output, "%s}\n", prefix)
+				fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 			} else {
-				formatWidgetProps(e.output, prefix, header, props, "\n")
+				formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 			}
 		} else if widgetType == "IMAGE" {
 			header := fmt.Sprintf("IMAGE %s", w.Name)
@@ -515,7 +516,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			}
 			props = appendConditionalProps(props, w)
 			props = appendAppearanceProps(props, w)
-			formatWidgetProps(e.output, prefix, header, props, "\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		} else if len(w.ExplicitProperties) > 0 && w.WidgetID != "" {
 			// Generic pluggable widget with explicit properties
 			header := fmt.Sprintf("PLUGGABLEWIDGET '%s' %s", w.WidgetID, w.Name)
@@ -527,7 +528,7 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 				props = append(props, fmt.Sprintf("%s: %s", ep.Key, ep.Value))
 			}
 			props = appendAppearanceProps(props, w)
-			formatWidgetProps(e.output, prefix, header, props, "\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		} else {
 			header := fmt.Sprintf("%s %s", widgetType, w.Name)
 			props := []string{}
@@ -558,11 +559,11 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 				props = append(props, fmt.Sprintf("FilterType: %s", w.FilterExpression))
 			}
 			props = appendAppearanceProps(props, w)
-			formatWidgetProps(e.output, prefix, header, props, "\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		}
 
 	case "Forms$NavigationList", "Pages$NavigationList":
-		fmt.Fprintf(e.output, "%sNAVIGATIONLIST %s {\n", prefix, w.Name)
+		fmt.Fprintf(ctx.Output, "%sNAVIGATIONLIST %s {\n", prefix, w.Name)
 		for _, child := range w.Children {
 			itemHeader := fmt.Sprintf("ITEM %s", child.Name)
 			props := []string{}
@@ -572,16 +573,16 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			if child.ButtonStyle != "" && child.ButtonStyle != "Default" {
 				props = append(props, fmt.Sprintf("ButtonStyle: %s", child.ButtonStyle))
 			}
-			formatWidgetProps(e.output, prefix+"  ", itemHeader, props, " {\n")
+			formatWidgetProps(ctx.Output, prefix+"  ", itemHeader, props, " {\n")
 			for _, cw := range child.Children {
-				e.outputWidgetMDLV3(cw, indent+2)
+				outputWidgetMDLV3(ctx, cw, indent+2)
 			}
-			fmt.Fprintf(e.output, "%s  }\n", prefix)
+			fmt.Fprintf(ctx.Output, "%s  }\n", prefix)
 		}
-		fmt.Fprintf(e.output, "%s}\n", prefix)
+		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$Label", "Pages$Label":
-		fmt.Fprintf(e.output, "%sSTATICTEXT (Content: %s)\n", prefix, mdlQuote(w.Content))
+		fmt.Fprintf(ctx.Output, "%sSTATICTEXT (Content: %s)\n", prefix, mdlQuote(w.Content))
 
 	case "Forms$Gallery", "Pages$Gallery":
 		header := fmt.Sprintf("GALLERY %s", w.Name)
@@ -613,14 +614,14 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		}
 		props = appendAppearanceProps(props, w)
 		if len(w.Children) > 0 {
-			formatWidgetProps(e.output, prefix, header, props, " {\n")
-			outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
+			formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
+			outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
 			for _, child := range w.Children {
-				e.outputWidgetMDLV3(child, indent+1)
+				outputWidgetMDLV3(ctx, child, indent+1)
 			}
-			fmt.Fprintf(e.output, "%s}\n", prefix)
+			fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 		} else {
-			formatWidgetProps(e.output, prefix, header, props, "\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		}
 
 	case "Forms$SnippetCallWidget", "Pages$SnippetCallWidget":
@@ -630,14 +631,14 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Snippet: %s", w.Content))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Footer":
-		fmt.Fprintf(e.output, "%sFOOTER %s {\n", prefix, w.Name)
+		fmt.Fprintf(ctx.Output, "%sFOOTER %s {\n", prefix, w.Name)
 		for _, child := range w.Children {
-			e.outputWidgetMDLV3(child, indent+1)
+			outputWidgetMDLV3(ctx, child, indent+1)
 		}
-		fmt.Fprintf(e.output, "%s}\n", prefix)
+		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$ListView", "Pages$ListView":
 		// ListView (also used for Gallery serialization)
@@ -665,23 +666,23 @@ func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
 		}
 		props = appendAppearanceProps(props, w)
 		if len(w.Children) > 0 {
-			formatWidgetProps(e.output, prefix, header, props, " {\n")
-			outputDataContainerContext(e.output, prefix+"  ", w.Name, w.EntityContext, true)
+			formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
+			outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
 			for _, child := range w.Children {
-				e.outputWidgetMDLV3(child, indent+1)
+				outputWidgetMDLV3(ctx, child, indent+1)
 			}
-			fmt.Fprintf(e.output, "%s}\n", prefix)
+			fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 		} else {
-			formatWidgetProps(e.output, prefix, header, props, "\n")
+			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		}
 
 	default:
 		// Output unknown widget type as comment
-		fmt.Fprintf(e.output, "%s-- %s", prefix, w.Type)
+		fmt.Fprintf(ctx.Output, "%s-- %s", prefix, w.Type)
 		if w.Name != "" {
-			fmt.Fprintf(e.output, " (%s)", w.Name)
+			fmt.Fprintf(ctx.Output, " (%s)", w.Name)
 		}
-		fmt.Fprint(e.output, "\n")
+		fmt.Fprint(ctx.Output, "\n")
 	}
 }
 
@@ -711,7 +712,7 @@ func deriveColumnName(col rawDataGridColumn, index int) string {
 }
 
 // outputDataGrid2ColumnV3 outputs a single DataGrid2 column in V3 MDL syntax.
-func (e *Executor) outputDataGrid2ColumnV3(prefix, colName string, col rawDataGridColumn) {
+func outputDataGrid2ColumnV3(ctx *ExecContext, prefix, colName string, col rawDataGridColumn) {
 	// Build the main column properties
 	var props []string
 	if col.Attribute != "" {
@@ -782,18 +783,18 @@ func (e *Executor) outputDataGrid2ColumnV3(prefix, colName string, col rawDataGr
 
 	if hasContent {
 		// Output column with content block
-		formatWidgetProps(e.output, prefix, header, props, " {\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
 		for _, widget := range col.ContentWidgets {
-			e.outputWidgetMDLV3(widget, len(prefix)/2+1)
+			outputWidgetMDLV3(ctx, widget, len(prefix)/2+1)
 		}
-		fmt.Fprintf(e.output, "%s}\n", prefix)
+		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 	} else {
 		// Output simple column line
-		formatWidgetProps(e.output, prefix, header, props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 	}
 }
 
-func (e *Executor) extractTextContent(w map[string]any, field string) string {
+func extractTextContent(ctx *ExecContext, w map[string]any, field string) string {
 	content, ok := w[field].(map[string]any)
 	if !ok {
 		return ""
@@ -818,34 +819,34 @@ func (e *Executor) extractTextContent(w map[string]any, field string) string {
 	return ""
 }
 
-func (e *Executor) extractButtonCaption(w map[string]any) string {
+func extractButtonCaption(ctx *ExecContext, w map[string]any) string {
 	// Try Caption first (legacy format)
-	if caption := e.extractTextContent(w, "Caption"); caption != "" {
+	if caption := extractTextContent(ctx, w, "Caption"); caption != "" {
 		return caption
 	}
 	// Try CaptionTemplate (modern format used by ActionButton)
-	return e.extractTextContent(w, "CaptionTemplate")
+	return extractTextContent(ctx, w, "CaptionTemplate")
 }
 
 // extractButtonCaptionParameters extracts parameters from ActionButton caption.
 // Tries CaptionTemplate first (modern format), then Caption (legacy format).
-func (e *Executor) extractButtonCaptionParameters(w map[string]any) []string {
+func extractButtonCaptionParameters(ctx *ExecContext, w map[string]any) []string {
 	// Try CaptionTemplate first (modern format used by ActionButton)
-	if params := e.extractClientTemplateParameters(w, "CaptionTemplate"); params != nil {
+	if params := extractClientTemplateParameters(ctx, w, "CaptionTemplate"); params != nil {
 		return params
 	}
 	// Fall back to Caption (legacy format)
-	return e.extractClientTemplateParameters(w, "Caption")
+	return extractClientTemplateParameters(ctx, w, "Caption")
 }
 
-func (e *Executor) extractButtonStyle(w map[string]any) string {
+func extractButtonStyle(ctx *ExecContext, w map[string]any) string {
 	if style, ok := w["ButtonStyle"].(string); ok {
 		return style
 	}
 	return "Default"
 }
 
-func (e *Executor) extractButtonAction(w map[string]any) string {
+func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 	action, ok := w["Action"].(map[string]any)
 	if !ok {
 		// Try primitive.M type
@@ -891,7 +892,7 @@ func (e *Executor) extractButtonAction(w map[string]any) string {
 			if pageName, ok := pageSettings["Form"].(string); ok && pageName != "" {
 				pageAction := "SHOW_PAGE " + pageName
 				// Extract page parameters
-				params := e.extractPageParameters(pageSettings)
+				params := extractPageParameters(ctx, pageSettings)
 				if params != "" {
 					pageAction += "(" + params + ")"
 				}
@@ -905,7 +906,7 @@ func (e *Executor) extractButtonAction(w map[string]any) string {
 		if formSettings, ok := action["FormSettings"].(map[string]any); ok {
 			if pageName, ok := formSettings["Form"].(string); ok && pageName != "" {
 				result := "SHOW_PAGE " + pageName
-				params := e.extractPageParameters(formSettings)
+				params := extractPageParameters(ctx, formSettings)
 				if params != "" {
 					result += "(" + params + ")"
 				}
@@ -915,7 +916,7 @@ func (e *Executor) extractButtonAction(w map[string]any) string {
 		if pageSettings, ok := action["PageSettings"].(map[string]any); ok {
 			if pageName, ok := pageSettings["Form"].(string); ok && pageName != "" {
 				result := "SHOW_PAGE " + pageName
-				params := e.extractPageParameters(pageSettings)
+				params := extractPageParameters(ctx, pageSettings)
 				if params != "" {
 					result += "(" + params + ")"
 				}
@@ -924,7 +925,7 @@ func (e *Executor) extractButtonAction(w map[string]any) string {
 		}
 		// Fall back to Page field (binary ID from legacy serialization)
 		if pageID := extractBinaryID(action["Page"]); pageID != "" {
-			pageName := e.getPageQualifiedName(model.ID(pageID))
+			pageName := getPageQualifiedName(ctx, model.ID(pageID))
 			if pageName != "" {
 				return "SHOW_PAGE " + pageName
 			}
@@ -936,7 +937,7 @@ func (e *Executor) extractButtonAction(w map[string]any) string {
 			if mfName, ok := settings["Microflow"].(string); ok && mfName != "" {
 				result := "CALL_MICROFLOW " + mfName
 				// Extract parameter mappings
-				params := e.extractMicroflowParameters(settings)
+				params := extractMicroflowParameters(ctx, settings)
 				if params != "" {
 					result += "(" + params + ")"
 				}
@@ -948,7 +949,7 @@ func (e *Executor) extractButtonAction(w map[string]any) string {
 		if nfName, ok := action["Nanoflow"].(string); ok && nfName != "" {
 			result := "CALL_NANOFLOW " + nfName
 			// Extract parameter mappings (directly in the action)
-			params := e.extractNanoflowParameters(action)
+			params := extractNanoflowParameters(ctx, action)
 			if params != "" {
 				result += "(" + params + ")"
 			}
@@ -966,7 +967,8 @@ func (e *Executor) extractButtonAction(w map[string]any) string {
 }
 
 // getPageQualifiedName resolves a page ID to its qualified name.
-func (e *Executor) getPageQualifiedName(pageID model.ID) string {
+func getPageQualifiedName(ctx *ExecContext, pageID model.ID) string {
+	e := ctx.executor
 	if pageID == "" {
 		return ""
 	}
@@ -974,7 +976,7 @@ func (e *Executor) getPageQualifiedName(pageID model.ID) string {
 	if err != nil {
 		return ""
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return ""
 	}
@@ -989,7 +991,7 @@ func (e *Executor) getPageQualifiedName(pageID model.ID) string {
 
 // extractPageParameters extracts page parameter mappings from a FormSettings/PageSettings object.
 // Returns formatted string like "Product: $currentObject" or empty string if no params.
-func (e *Executor) extractPageParameters(settings map[string]any) string {
+func extractPageParameters(ctx *ExecContext, settings map[string]any) string {
 	mappings := getBsonArrayElements(settings["ParameterMappings"])
 	if len(mappings) == 0 {
 		return ""
@@ -1051,7 +1053,7 @@ func (e *Executor) extractPageParameters(settings map[string]any) string {
 
 // extractMicroflowParameters extracts microflow parameter mappings from a MicroflowSettings object.
 // Returns formatted string like "Product = $currentObject" or empty string if no params.
-func (e *Executor) extractMicroflowParameters(settings map[string]any) string {
+func extractMicroflowParameters(ctx *ExecContext, settings map[string]any) string {
 	mappings := getBsonArrayElements(settings["ParameterMappings"])
 	if len(mappings) == 0 {
 		return ""
@@ -1112,7 +1114,7 @@ func (e *Executor) extractMicroflowParameters(settings map[string]any) string {
 
 // extractNanoflowParameters extracts nanoflow parameter mappings from an action object.
 // Returns formatted string like "Product = $currentObject" or empty string if no params.
-func (e *Executor) extractNanoflowParameters(action map[string]any) string {
+func extractNanoflowParameters(ctx *ExecContext, action map[string]any) string {
 	mappings := getBsonArrayElements(action["ParameterMappings"])
 	if len(mappings) == 0 {
 		return ""
@@ -1171,7 +1173,7 @@ func (e *Executor) extractNanoflowParameters(action map[string]any) string {
 	return strings.Join(params, ", ")
 }
 
-func (e *Executor) extractTextCaption(w map[string]any) string {
+func extractTextCaption(ctx *ExecContext, w map[string]any) string {
 	caption, ok := w["Caption"].(map[string]any)
 	if !ok {
 		return ""
@@ -1190,7 +1192,7 @@ func (e *Executor) extractTextCaption(w map[string]any) string {
 }
 
 // extractClientTemplateParameters extracts parameter values from a ClientTemplate field (Content or Caption).
-func (e *Executor) extractClientTemplateParameters(w map[string]any, fieldName string) []string {
+func extractClientTemplateParameters(ctx *ExecContext, w map[string]any, fieldName string) []string {
 	template, ok := w[fieldName].(map[string]any)
 	if !ok {
 		return nil
@@ -1242,4 +1244,8 @@ func (e *Executor) extractClientTemplateParameters(w map[string]any, fieldName s
 		result = append(result, "<unbound>")
 	}
 	return result
+}
+
+func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
+	outputWidgetMDLV3(e.newExecContext(context.Background()), w, indent)
 }

@@ -47,4 +47,10 @@ type ExecContext struct {
 
 	// Cache holds per-session cached data for performance.
 	Cache *executorCache
+
+	// executor is a temporary back-reference used during incremental migration.
+	// Handlers that have not yet been migrated to use Backend can access the
+	// original Executor through this field. It will be removed once all handlers
+	// are migrated.
+	executor *Executor
 }

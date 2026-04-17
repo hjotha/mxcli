@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -110,37 +111,47 @@ func (h *ContainerHierarchy) GetQualifiedName(containerID model.ID, name string)
 }
 
 // getHierarchy returns a cached ContainerHierarchy or creates a new one.
-func (e *Executor) getHierarchy() (*ContainerHierarchy, error) {
+func getHierarchy(ctx *ExecContext) (*ContainerHierarchy, error) {
+	e := ctx.executor
 	// Ensure cache exists
 	if e.reader == nil {
 		return nil, nil
 	}
-	if e.cache == nil {
-		e.cache = &executorCache{}
+	if ctx.Cache == nil {
+		ctx.Cache = &executorCache{}
+		e.cache = ctx.Cache
 	}
-	if e.cache.hierarchy != nil {
-		return e.cache.hierarchy, nil
+	if ctx.Cache.hierarchy != nil {
+		return ctx.Cache.hierarchy, nil
 	}
 	h, err := NewContainerHierarchy(e.reader)
 	if err != nil {
 		return nil, err
 	}
-	e.cache.hierarchy = h
+	ctx.Cache.hierarchy = h
 	return h, nil
 }
 
 // invalidateHierarchy clears the cached hierarchy so it will be rebuilt on next access.
 // This should be called after any write operation that creates or deletes units.
-func (e *Executor) invalidateHierarchy() {
-	if e.cache != nil {
-		e.cache.hierarchy = nil
+func invalidateHierarchy(ctx *ExecContext) {
+	if ctx.Cache != nil {
+		ctx.Cache.hierarchy = nil
 	}
 }
 
 // invalidateDomainModelsCache clears the cached domain models so they will be reloaded.
 // This should be called after any write operation that creates or modifies entities.
-func (e *Executor) invalidateDomainModelsCache() {
-	if e.cache != nil {
-		e.cache.domainModels = nil
+func invalidateDomainModelsCache(ctx *ExecContext) {
+	if ctx.Cache != nil {
+		ctx.Cache.domainModels = nil
 	}
+}
+
+// ----------------------------------------------------------------------------
+// Executor method wrappers (for callers in unmigrated files)
+// ----------------------------------------------------------------------------
+
+func (e *Executor) getHierarchy() (*ContainerHierarchy, error) {
+	return getHierarchy(e.newExecContext(context.Background()))
 }

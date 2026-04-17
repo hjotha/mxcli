@@ -13,7 +13,8 @@ import (
 )
 
 // showSettings displays an overview table of all settings parts.
-func (e *Executor) showSettings() error {
+func showSettings(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -79,11 +80,12 @@ func (e *Executor) showSettings() error {
 		tr.Rows = append(tr.Rows, []any{"Web UI Settings", "OptimizedClient: " + ps.WebUI.UseOptimizedClient})
 	}
 
-	return e.writeResult(tr)
+	return writeResult(ctx, tr)
 }
 
 // describeSettings outputs the full MDL description of all settings.
-func (e *Executor) describeSettings() error {
+func describeSettings(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -114,7 +116,7 @@ func (e *Executor) describeSettings() error {
 		if ms.ScheduledEventTimeZoneCode != "" {
 			parts = append(parts, fmt.Sprintf("  ScheduledEventTimeZoneCode = '%s'", ms.ScheduledEventTimeZoneCode))
 		}
-		fmt.Fprintf(e.output, "ALTER SETTINGS MODEL\n%s;\n\n", strings.Join(parts, ",\n"))
+		fmt.Fprintf(ctx.Output, "ALTER SETTINGS MODEL\n%s;\n\n", strings.Join(parts, ",\n"))
 	}
 
 	// Configuration settings
@@ -131,11 +133,11 @@ func (e *Executor) describeSettings() error {
 			if cfg.ApplicationRootUrl != "" {
 				parts = append(parts, fmt.Sprintf("  ApplicationRootUrl = '%s'", cfg.ApplicationRootUrl))
 			}
-			fmt.Fprintf(e.output, "ALTER SETTINGS CONFIGURATION '%s'\n%s;\n\n", cfg.Name, strings.Join(parts, ",\n"))
+			fmt.Fprintf(ctx.Output, "ALTER SETTINGS CONFIGURATION '%s'\n%s;\n\n", cfg.Name, strings.Join(parts, ",\n"))
 
 			// Output constant overrides
 			for _, cv := range cfg.ConstantValues {
-				fmt.Fprintf(e.output, "ALTER SETTINGS CONSTANT '%s' VALUE '%s'\n  IN CONFIGURATION '%s';\n\n",
+				fmt.Fprintf(ctx.Output, "ALTER SETTINGS CONSTANT '%s' VALUE '%s'\n  IN CONFIGURATION '%s';\n\n",
 					cv.ConstantId, cv.Value, cfg.Name)
 			}
 		}
@@ -143,7 +145,7 @@ func (e *Executor) describeSettings() error {
 
 	// Language settings
 	if ps.Language != nil {
-		fmt.Fprintf(e.output, "ALTER SETTINGS LANGUAGE\n  DefaultLanguageCode = '%s';\n\n", ps.Language.DefaultLanguageCode)
+		fmt.Fprintf(ctx.Output, "ALTER SETTINGS LANGUAGE\n  DefaultLanguageCode = '%s';\n\n", ps.Language.DefaultLanguageCode)
 	}
 
 	// Workflow settings
@@ -160,7 +162,7 @@ func (e *Executor) describeSettings() error {
 			parts = append(parts, fmt.Sprintf("  WorkflowEngineParallelism = %d", ws.WorkflowEngineParallelism))
 		}
 		if len(parts) > 0 {
-			fmt.Fprintf(e.output, "ALTER SETTINGS WORKFLOWS\n%s;\n\n", strings.Join(parts, ",\n"))
+			fmt.Fprintf(ctx.Output, "ALTER SETTINGS WORKFLOWS\n%s;\n\n", strings.Join(parts, ",\n"))
 		}
 	}
 
@@ -168,7 +170,8 @@ func (e *Executor) describeSettings() error {
 }
 
 // alterSettings modifies project settings based on ALTER SETTINGS statement.
-func (e *Executor) alterSettings(stmt *ast.AlterSettingsStmt) error {
+func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -249,10 +252,10 @@ func (e *Executor) alterSettings(stmt *ast.AlterSettingsStmt) error {
 		}
 
 	case "CONFIGURATION":
-		return e.alterSettingsConfiguration(ps, stmt)
+		return alterSettingsConfiguration(ctx, ps, stmt)
 
 	case "CONSTANT":
-		return e.alterSettingsConstant(ps, stmt)
+		return alterSettingsConstant(ctx, ps, stmt)
 
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("unknown settings section: %s (expected MODEL, CONFIGURATION, CONSTANT, LANGUAGE, or WORKFLOWS)", section))
@@ -263,11 +266,12 @@ func (e *Executor) alterSettings(stmt *ast.AlterSettingsStmt) error {
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
-	fmt.Fprintf(e.output, "Updated %s settings\n", section)
+	fmt.Fprintf(ctx.Output, "Updated %s settings\n", section)
 	return nil
 }
 
-func (e *Executor) alterSettingsConfiguration(ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
+func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
+	e := ctx.executor
 	if ps.Configuration == nil {
 		return mdlerrors.NewNotFound("settings section", "configuration")
 	}
@@ -316,11 +320,12 @@ func (e *Executor) alterSettingsConfiguration(ps *model.ProjectSettings, stmt *a
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
-	fmt.Fprintf(e.output, "Updated configuration '%s'\n", stmt.ConfigName)
+	fmt.Fprintf(ctx.Output, "Updated configuration '%s'\n", stmt.ConfigName)
 	return nil
 }
 
-func (e *Executor) alterSettingsConstant(ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
+func alterSettingsConstant(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
+	e := ctx.executor
 	if ps.Configuration == nil {
 		return mdlerrors.NewNotFound("settings section", "configuration")
 	}
@@ -355,7 +360,7 @@ func (e *Executor) alterSettingsConstant(ps *model.ProjectSettings, stmt *ast.Al
 				if err := e.writer.UpdateProjectSettings(ps); err != nil {
 					return mdlerrors.NewBackend("update project settings", err)
 				}
-				fmt.Fprintf(e.output, "Dropped constant '%s' from configuration '%s'\n",
+				fmt.Fprintf(ctx.Output, "Dropped constant '%s' from configuration '%s'\n",
 					stmt.ConstantId, targetConfig)
 				return nil
 			}
@@ -385,13 +390,14 @@ func (e *Executor) alterSettingsConstant(ps *model.ProjectSettings, stmt *ast.Al
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
-	fmt.Fprintf(e.output, "Updated constant '%s' = '%s' in configuration '%s'\n",
+	fmt.Fprintf(ctx.Output, "Updated constant '%s' = '%s' in configuration '%s'\n",
 		stmt.ConstantId, stmt.Value, targetConfig)
 	return nil
 }
 
 // createConfiguration handles CREATE CONFIGURATION 'name' [properties...].
-func (e *Executor) createConfiguration(stmt *ast.CreateConfigurationStmt) error {
+func createConfiguration(ctx *ExecContext, stmt *ast.CreateConfigurationStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -455,12 +461,13 @@ func (e *Executor) createConfiguration(stmt *ast.CreateConfigurationStmt) error 
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 
-	fmt.Fprintf(e.output, "Created configuration: %s\n", stmt.Name)
+	fmt.Fprintf(ctx.Output, "Created configuration: %s\n", stmt.Name)
 	return nil
 }
 
 // dropConfiguration handles DROP CONFIGURATION 'name'.
-func (e *Executor) dropConfiguration(stmt *ast.DropConfigurationStmt) error {
+func dropConfiguration(ctx *ExecContext, stmt *ast.DropConfigurationStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -483,7 +490,7 @@ func (e *Executor) dropConfiguration(stmt *ast.DropConfigurationStmt) error {
 			if err := e.writer.UpdateProjectSettings(ps); err != nil {
 				return mdlerrors.NewBackend("update project settings", err)
 			}
-			fmt.Fprintf(e.output, "Dropped configuration: %s\n", stmt.Name)
+			fmt.Fprintf(ctx.Output, "Dropped configuration: %s\n", stmt.Name)
 			return nil
 		}
 	}

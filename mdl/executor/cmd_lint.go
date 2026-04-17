@@ -14,44 +14,45 @@ import (
 )
 
 // execLint executes a LINT statement.
-func (e *Executor) execLint(s *ast.LintStmt) error {
+func execLint(ctx *ExecContext, s *ast.LintStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// Handle SHOW LINT RULES
 	if s.ShowRules {
-		return e.showLintRules()
+		return showLintRules(ctx)
 	}
 
 	// Ensure catalog is built
-	if e.catalog == nil {
-		fmt.Fprintln(e.output, "Building catalog for linting...")
-		if err := e.buildCatalog(false); err != nil {
+	if ctx.Catalog == nil {
+		fmt.Fprintln(ctx.Output, "Building catalog for linting...")
+		if err := buildCatalog(ctx, false); err != nil {
 			return mdlerrors.NewBackend("build catalog", err)
 		}
 	}
 
 	// Create lint context
-	ctx := linter.NewLintContext(e.catalog)
-	ctx.SetReader(e.reader)
+	lintCtx := linter.NewLintContext(ctx.Catalog)
+	lintCtx.SetReader(e.reader)
 
 	// Load configuration
 	projectDir := filepath.Dir(e.mprPath)
 	configPath := linter.FindConfigFile(projectDir)
 	config, err := linter.LoadConfig(configPath)
 	if err != nil {
-		fmt.Fprintf(e.output, "Warning: failed to load lint config: %v\n", err)
+		fmt.Fprintf(ctx.Output, "Warning: failed to load lint config: %v\n", err)
 		config = linter.DefaultConfig()
 	}
 
 	// Set excluded modules from config
 	if len(config.ExcludeModules) > 0 {
-		ctx.SetExcludedModules(config.ExcludeModules)
+		lintCtx.SetExcludedModules(config.ExcludeModules)
 	}
 
 	// Create linter and register built-in rules
-	lint := linter.New(ctx)
+	lint := linter.New(lintCtx)
 	lint.AddRule(rules.NewNamingConventionRule())
 	lint.AddRule(rules.NewEmptyMicroflowRule())
 	lint.AddRule(rules.NewDomainModelSizeRule())
@@ -63,7 +64,7 @@ func (e *Executor) execLint(s *ast.LintStmt) error {
 	rulesDir := filepath.Join(projectDir, ".claude", "lint-rules")
 	starlarkRules, err := linter.LoadStarlarkRulesFromDir(rulesDir)
 	if err != nil {
-		fmt.Fprintf(e.output, "Warning: failed to load custom rules: %v\n", err)
+		fmt.Fprintf(ctx.Output, "Warning: failed to load custom rules: %v\n", err)
 	}
 	for _, rule := range starlarkRules {
 		lint.AddRule(rule)
@@ -75,9 +76,9 @@ func (e *Executor) execLint(s *ast.LintStmt) error {
 	// Handle module filtering
 	if s.Target != nil && s.ModuleOnly {
 		// Only lint specific module - set all others as excluded
-		ctx.SetExcludedModules(nil) // Clear any existing exclusions
+		lintCtx.SetExcludedModules(nil) // Clear any existing exclusions
 		// This is a simplified approach - ideally we'd filter in the linter
-		fmt.Fprintf(e.output, "Linting module: %s\n", s.Target.Module)
+		fmt.Fprintf(ctx.Output, "Linting module: %s\n", s.Target.Module)
 	}
 
 	// Run linting
@@ -109,13 +110,14 @@ func (e *Executor) execLint(s *ast.LintStmt) error {
 	}
 
 	formatter := linter.GetFormatter(format, false)
-	return formatter.Format(violations, e.output)
+	return formatter.Format(violations, ctx.Output)
 }
 
 // showLintRules displays available lint rules.
-func (e *Executor) showLintRules() error {
-	fmt.Fprintln(e.output, "Built-in rules:")
-	fmt.Fprintln(e.output)
+func showLintRules(ctx *ExecContext) error {
+	e := ctx.executor
+	fmt.Fprintln(ctx.Output, "Built-in rules:")
+	fmt.Fprintln(ctx.Output)
 
 	// Create a temporary linter with built-in rules
 	lint := linter.New(nil)
@@ -127,10 +129,10 @@ func (e *Executor) showLintRules() error {
 	lint.AddRule(rules.NewMissingTranslationsRule())
 
 	for _, rule := range lint.Rules() {
-		fmt.Fprintf(e.output, "  %s (%s)\n", rule.ID(), rule.Name())
-		fmt.Fprintf(e.output, "    %s\n", rule.Description())
-		fmt.Fprintf(e.output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
-		fmt.Fprintln(e.output)
+		fmt.Fprintf(ctx.Output, "  %s (%s)\n", rule.ID(), rule.Name())
+		fmt.Fprintf(ctx.Output, "    %s\n", rule.Description())
+		fmt.Fprintf(ctx.Output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
+		fmt.Fprintln(ctx.Output)
 	}
 
 	// Show custom Starlark rules if connected
@@ -139,16 +141,18 @@ func (e *Executor) showLintRules() error {
 		rulesDir := filepath.Join(projectDir, ".claude", "lint-rules")
 		starlarkRules, err := linter.LoadStarlarkRulesFromDir(rulesDir)
 		if err == nil && len(starlarkRules) > 0 {
-			fmt.Fprintln(e.output, "Custom rules (from .claude/lint-rules/):")
-			fmt.Fprintln(e.output)
+			fmt.Fprintln(ctx.Output, "Custom rules (from .claude/lint-rules/):")
+			fmt.Fprintln(ctx.Output)
 			for _, rule := range starlarkRules {
-				fmt.Fprintf(e.output, "  %s (%s)\n", rule.ID(), rule.Name())
-				fmt.Fprintf(e.output, "    %s\n", rule.Description())
-				fmt.Fprintf(e.output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
-				fmt.Fprintln(e.output)
+				fmt.Fprintf(ctx.Output, "  %s (%s)\n", rule.ID(), rule.Name())
+				fmt.Fprintf(ctx.Output, "    %s\n", rule.Description())
+				fmt.Fprintf(ctx.Output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
+				fmt.Fprintln(ctx.Output)
 			}
 		}
 	}
 
 	return nil
 }
+
+// --- Executor method wrappers for backward compatibility ---

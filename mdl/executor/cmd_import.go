@@ -15,7 +15,8 @@ import (
 )
 
 // execImport handles IMPORT FROM <alias> QUERY '<sql>' INTO Module.Entity MAP (...) [LINK (...)] [BATCH n] [LIMIT n]
-func (e *Executor) execImport(s *ast.ImportStmt) error {
+func execImport(ctx *ExecContext, s *ast.ImportStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -27,13 +28,13 @@ func (e *Executor) execImport(s *ast.ImportStmt) error {
 	}
 
 	// Get source connection (auto-connects from config if needed)
-	sourceConn, err := e.getOrAutoConnect(s.SourceAlias)
+	sourceConn, err := getOrAutoConnect(ctx, s.SourceAlias)
 	if err != nil {
 		return fmt.Errorf("source connection: %w", err)
 	}
 
 	// Get or create Mendix DB connection
-	targetConn, err := e.ensureMendixDBConnection()
+	targetConn, err := ensureMendixDBConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -48,10 +49,10 @@ func (e *Executor) execImport(s *ast.ImportStmt) error {
 	}
 
 	// Resolve association LINK mappings
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	goCtx, cancel := context.WithTimeout(ctx.Context, 10*time.Minute)
 	defer cancel()
 
-	assocs, err := e.resolveImportLinks(ctx, targetConn, s)
+	assocs, err := resolveImportLinks(ctx, goCtx, targetConn, s)
 	if err != nil {
 		return err
 	}
@@ -70,15 +71,15 @@ func (e *Executor) execImport(s *ast.ImportStmt) error {
 
 	start := time.Now()
 
-	result, err := sqllib.ExecuteImport(ctx, cfg, func(batch, rows int) {
-		fmt.Fprintf(e.output, "  batch %d: %d rows imported\n", batch, rows)
+	result, err := sqllib.ExecuteImport(goCtx, cfg, func(batch, rows int) {
+		fmt.Fprintf(ctx.Output, "  batch %d: %d rows imported\n", batch, rows)
 	})
 	if err != nil {
 		return mdlerrors.NewBackend("import", err)
 	}
 
 	elapsed := time.Since(start)
-	fmt.Fprintf(e.output, "Imported %d rows into %s (%d batches, %s)\n",
+	fmt.Fprintf(ctx.Output, "Imported %d rows into %s (%d batches, %s)\n",
 		result.TotalRows, s.TargetEntity, result.BatchesWritten, elapsed.Round(time.Millisecond))
 
 	// Report association link stats
@@ -86,10 +87,10 @@ func (e *Executor) execImport(s *ast.ImportStmt) error {
 		linked := result.LinksCreated[a.AssociationName]
 		missed := result.LinksMissed[a.AssociationName]
 		if missed > 0 {
-			fmt.Fprintf(e.output, "  %s: linked %d/%d rows (%d NULL — lookup value not found)\n",
+			fmt.Fprintf(ctx.Output, "  %s: linked %d/%d rows (%d NULL — lookup value not found)\n",
 				a.AssociationName, linked, linked+missed, missed)
 		} else if linked > 0 {
-			fmt.Fprintf(e.output, "  %s: linked %d rows\n", a.AssociationName, linked)
+			fmt.Fprintf(ctx.Output, "  %s: linked %d rows\n", a.AssociationName, linked)
 		}
 	}
 
@@ -98,12 +99,13 @@ func (e *Executor) execImport(s *ast.ImportStmt) error {
 
 // resolveImportLinks resolves LINK mappings from the AST into AssocInfo structs
 // by looking up association metadata from the MPR and the Mendix system tables.
-func (e *Executor) resolveImportLinks(ctx context.Context, mendixConn *sqllib.Connection, s *ast.ImportStmt) ([]*sqllib.AssocInfo, error) {
+func resolveImportLinks(ctx *ExecContext, goCtx context.Context, mendixConn *sqllib.Connection, s *ast.ImportStmt) ([]*sqllib.AssocInfo, error) {
+	e := ctx.executor
 	if len(s.Links) == 0 {
 		return nil, nil
 	}
 
-	fmt.Fprintf(e.output, "Resolving associations...\n")
+	fmt.Fprintf(ctx.Output, "Resolving associations...\n")
 
 	// Parse target entity module
 	targetParts := strings.SplitN(s.TargetEntity, ".", 2)
@@ -118,7 +120,7 @@ func (e *Executor) resolveImportLinks(ctx context.Context, mendixConn *sqllib.Co
 		return nil, mdlerrors.NewBackend("list domain models", err)
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("get hierarchy", err)
 	}
@@ -136,18 +138,18 @@ func (e *Executor) resolveImportLinks(ctx context.Context, mendixConn *sqllib.Co
 	// Resolve each LINK mapping
 	var assocs []*sqllib.AssocInfo
 	for _, link := range s.Links {
-		info, err := e.resolveOneLink(ctx, mendixConn, link, targetModule, dms, h, entityNames)
+		info, err := resolveOneLink(ctx, goCtx, mendixConn, link, targetModule, dms, h, entityNames)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Fprintf(e.output, "  %s: %s storage", info.AssociationName, info.StorageFormat)
+		fmt.Fprintf(ctx.Output, "  %s: %s storage", info.AssociationName, info.StorageFormat)
 		if info.LookupAttr != "" {
-			fmt.Fprintf(e.output, ", lookup by %s.%s (%d values cached)",
+			fmt.Fprintf(ctx.Output, ", lookup by %s.%s (%d values cached)",
 				info.ChildEntity, info.LookupAttr, len(info.LookupCache))
 		} else {
-			fmt.Fprintf(e.output, ", direct ID")
+			fmt.Fprintf(ctx.Output, ", direct ID")
 		}
-		fmt.Fprintln(e.output)
+		fmt.Fprintln(ctx.Output)
 		assocs = append(assocs, info)
 	}
 
@@ -155,8 +157,9 @@ func (e *Executor) resolveImportLinks(ctx context.Context, mendixConn *sqllib.Co
 }
 
 // resolveOneLink resolves a single LINK mapping to an AssocInfo.
-func (e *Executor) resolveOneLink(
-	ctx context.Context,
+func resolveOneLink(
+	ctx *ExecContext,
+	goCtx context.Context,
 	mendixConn *sqllib.Connection,
 	link ast.LinkMapping,
 	targetModule string,
@@ -239,7 +242,7 @@ func (e *Executor) resolveOneLink(
 	}
 
 	// Try to get exact column/table names from mendixsystem$association
-	sysInfo, err := sqllib.LookupAssociationInfo(ctx, mendixConn, assocQualName)
+	sysInfo, err := sqllib.LookupAssociationInfo(goCtx, mendixConn, assocQualName)
 	if err != nil {
 		return nil, err
 	}
@@ -282,13 +285,13 @@ func (e *Executor) resolveOneLink(
 			return nil, fmt.Errorf("invalid child entity %q: %w", childEntity, err)
 		}
 		lookupCol := sqllib.AttributeToColumnName(link.LookupAttr)
-		cache, err := sqllib.BuildLookupCache(ctx, mendixConn, childTable, lookupCol)
+		cache, err := sqllib.BuildLookupCache(goCtx, mendixConn, childTable, lookupCol)
 		if err != nil {
 			return nil, mdlerrors.NewBackend(fmt.Sprintf("build lookup cache for %s", assocQualName), err)
 		}
 		info.LookupCache = cache
 		if len(cache) == 0 {
-			fmt.Fprintf(e.output, "  WARNING: child table %q is empty; all %s associations will be NULL\n",
+			fmt.Fprintf(ctx.Output, "  WARNING: child table %q is empty; all %s associations will be NULL\n",
 				childTable, assocQualName)
 		}
 	}
@@ -314,8 +317,9 @@ func getParentEntityName(a *domainmodel.Association, ca *domainmodel.CrossModule
 }
 
 // ensureMendixDBConnection reads the project settings and auto-connects to the Mendix app DB.
-func (e *Executor) ensureMendixDBConnection() (*sqllib.Connection, error) {
-	mgr := e.ensureSQLManager()
+func ensureMendixDBConnection(ctx *ExecContext) (*sqllib.Connection, error) {
+	e := ctx.executor
+	mgr := ensureSQLManager(ctx)
 
 	// Check if already connected
 	if conn, err := mgr.Get(sqllib.MendixDBAlias); err == nil {
@@ -345,7 +349,7 @@ func (e *Executor) ensureMendixDBConnection() (*sqllib.Connection, error) {
 		return nil, mdlerrors.NewBackend("connect to Mendix app database", err)
 	}
 
-	fmt.Fprintf(e.output, "Auto-connected to Mendix app database as '%s'\n", sqllib.MendixDBAlias)
+	fmt.Fprintf(ctx.Output, "Auto-connected to Mendix app database as '%s'\n", sqllib.MendixDBAlias)
 
 	conn, err := mgr.Get(sqllib.MendixDBAlias)
 	if err != nil {

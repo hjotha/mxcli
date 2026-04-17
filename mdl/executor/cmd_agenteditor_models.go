@@ -17,7 +17,8 @@ import (
 )
 
 // showAgentEditorModels handles SHOW MODELS [IN module].
-func (e *Executor) showAgentEditorModels(moduleName string) error {
+func showAgentEditorModels(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -27,7 +28,7 @@ func (e *Executor) showAgentEditorModels(moduleName string) error {
 		return mdlerrors.NewBackend("list models", err)
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return err
 	}
@@ -59,22 +60,23 @@ func (e *Executor) showAgentEditorModels(moduleName string) error {
 	}
 
 	result.Summary = fmt.Sprintf("(%d model(s))", len(result.Rows))
-	return e.writeResult(result)
+	return writeResult(ctx, result)
 }
 
 // describeAgentEditorModel handles DESCRIBE MODEL Module.Name.
 // Emits a round-trippable CREATE MODEL statement.
-func (e *Executor) describeAgentEditorModel(name ast.QualifiedName) error {
+func describeAgentEditorModel(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
-	m := e.findAgentEditorModel(name.Module, name.Name)
+	m := findAgentEditorModel(ctx, name.Module, name.Name)
 	if m == nil {
 		return mdlerrors.NewNotFound("model", name.String())
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return err
 	}
@@ -83,10 +85,10 @@ func (e *Executor) describeAgentEditorModel(name ast.QualifiedName) error {
 	qualifiedName := fmt.Sprintf("%s.%s", modName, m.Name)
 
 	if m.Documentation != "" {
-		fmt.Fprintf(e.output, "/**\n * %s\n */\n", m.Documentation)
+		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", m.Documentation)
 	}
 
-	fmt.Fprintf(e.output, "CREATE MODEL %s (\n", qualifiedName)
+	fmt.Fprintf(ctx.Output, "CREATE MODEL %s (\n", qualifiedName)
 
 	// Emit properties in stable order. User-set properties (Provider, Key)
 	// come first; Portal-populated metadata comes last and only if non-empty.
@@ -119,24 +121,25 @@ func (e *Executor) describeAgentEditorModel(name ast.QualifiedName) error {
 
 	for i, line := range lines {
 		if i < len(lines)-1 {
-			fmt.Fprintln(e.output, line+",")
+			fmt.Fprintln(ctx.Output, line+",")
 		} else {
-			fmt.Fprintln(e.output, line)
+			fmt.Fprintln(ctx.Output, line)
 		}
 	}
 
-	fmt.Fprintln(e.output, ");")
-	fmt.Fprintln(e.output, "/")
+	fmt.Fprintln(ctx.Output, ");")
+	fmt.Fprintln(ctx.Output, "/")
 	return nil
 }
 
 // findAgentEditorModel looks up a model by module and name.
-func (e *Executor) findAgentEditorModel(moduleName, modelName string) *agenteditor.Model {
+func findAgentEditorModel(ctx *ExecContext, moduleName, modelName string) *agenteditor.Model {
+	e := ctx.executor
 	models, err := e.reader.ListAgentEditorModels()
 	if err != nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -149,3 +152,5 @@ func (e *Executor) findAgentEditorModel(moduleName, modelName string) *agentedit
 	}
 	return nil
 }
+
+// --- Executor method wrappers for backward compatibility ---

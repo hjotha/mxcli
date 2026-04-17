@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -88,7 +89,8 @@ func (c *wireframeCounter) next() string {
 }
 
 // PageWireframeJSON generates wireframe JSON for a page.
-func (e *Executor) PageWireframeJSON(name string) error {
+func PageWireframeJSON(ctx *ExecContext, name string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -100,7 +102,7 @@ func (e *Executor) PageWireframeJSON(name string) error {
 
 	qn := ast.QualifiedName{Module: parts[0], Name: parts[1]}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -146,7 +148,7 @@ func (e *Executor) PageWireframeJSON(name string) error {
 	if rawData != nil {
 		if formCall, ok := rawData["FormCall"].(map[string]any); ok {
 			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {
-				layoutName = e.resolveLayoutName(model.ID(layoutID))
+				layoutName = resolveLayoutName(ctx, model.ID(layoutID))
 			} else if formName, ok := formCall["Form"].(string); ok && formName != "" {
 				layoutName = formName
 			}
@@ -167,7 +169,7 @@ func (e *Executor) PageWireframeJSON(name string) error {
 	}
 
 	// Get widget tree
-	rawWidgets := e.getPageWidgetsFromRaw(foundPage.ID)
+	rawWidgets := getPageWidgetsFromRaw(ctx, foundPage.ID)
 
 	// Convert to wireframe nodes
 	counter := &wireframeCounter{}
@@ -177,7 +179,7 @@ func (e *Executor) PageWireframeJSON(name string) error {
 	}
 
 	// Generate MDL source
-	mdlSource, sourceMap := e.pageToMdlString(qn, root)
+	mdlSource, sourceMap := pageToMdlString(ctx, qn, root)
 
 	data := pageWireframeData{
 		Format:     "wireframe",
@@ -196,17 +198,18 @@ func (e *Executor) PageWireframeJSON(name string) error {
 		return mdlerrors.NewBackend("marshal wireframe JSON", err)
 	}
 
-	fmt.Fprint(e.output, string(jsonBytes))
+	fmt.Fprint(ctx.Output, string(jsonBytes))
 	return nil
 }
 
 // SnippetWireframeJSON generates wireframe JSON for a snippet.
-func (e *Executor) SnippetWireframeJSON(name string) error {
+func SnippetWireframeJSON(ctx *ExecContext, name string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -240,7 +243,7 @@ func (e *Executor) SnippetWireframeJSON(name string) error {
 	modName := h.GetModuleName(modID)
 	qualifiedName := modName + "." + foundSnippet.Name
 
-	rawWidgets := e.getSnippetWidgetsFromRaw(foundSnippet.ID)
+	rawWidgets := getSnippetWidgetsFromRaw(ctx, foundSnippet.ID)
 
 	counter := &wireframeCounter{}
 	var root []wireframeNode
@@ -260,7 +263,7 @@ func (e *Executor) SnippetWireframeJSON(name string) error {
 		return mdlerrors.NewBackend("marshal wireframe JSON", err)
 	}
 
-	fmt.Fprint(e.output, string(jsonBytes))
+	fmt.Fprint(ctx.Output, string(jsonBytes))
 	return nil
 }
 
@@ -480,12 +483,12 @@ func normalizeWidgetType(typeName string) string {
 }
 
 // pageToMdlString generates MDL source for the page using the output-swap technique.
-func (e *Executor) pageToMdlString(name ast.QualifiedName, root []wireframeNode) (string, map[string]elkSourceRange) {
+func pageToMdlString(ctx *ExecContext, name ast.QualifiedName, root []wireframeNode) (string, map[string]elkSourceRange) {
 	var buf strings.Builder
-	origOutput := e.output
-	e.output = &buf
-	_ = e.describePage(name)
-	e.output = origOutput
+	origOutput := ctx.Output
+	ctx.Output = &buf
+	_ = describePage(ctx, name)
+	ctx.Output = origOutput
 
 	mdlSource := buf.String()
 	if mdlSource == "" {
@@ -533,4 +536,12 @@ func mapWidgetToLines(nodes []wireframeNode, lines []string, sourceMap map[strin
 			mapWidgetToLines(tab.Children, lines, sourceMap)
 		}
 	}
+}
+
+func (e *Executor) PageWireframeJSON(name string) error {
+	return PageWireframeJSON(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) SnippetWireframeJSON(name string) error {
+	return SnippetWireframeJSON(e.newExecContext(context.Background()), name)
 }

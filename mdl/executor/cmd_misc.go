@@ -20,31 +20,33 @@ import (
 var ErrExit = mdlerrors.ErrExit
 
 // execUpdate handles UPDATE statements (refresh from disk).
-func (e *Executor) execUpdate() error {
+func execUpdate(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.mprPath == "" {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// Reconnect to refresh
 	path := e.mprPath
-	e.execDisconnect()
-	return e.execConnect(&ast.ConnectStmt{Path: path})
+	execDisconnect(ctx)
+	return execConnect(ctx, &ast.ConnectStmt{Path: path})
 }
 
 // execRefresh handles REFRESH statements (alias for UPDATE).
-func (e *Executor) execRefresh() error {
-	return e.execUpdate()
+func execRefresh(ctx *ExecContext) error {
+	return execUpdate(ctx)
 }
 
 // execSet handles SET statements.
-func (e *Executor) execSet(s *ast.SetStmt) error {
+func execSet(ctx *ExecContext, s *ast.SetStmt) error {
+	e := ctx.executor
 	e.settings[s.Key] = s.Value
-	fmt.Fprintf(e.output, "Set %s = %v\n", s.Key, s.Value)
+	fmt.Fprintf(ctx.Output, "Set %s = %v\n", s.Key, s.Value)
 	return nil
 }
 
 // execHelp handles HELP statements.
-func (e *Executor) execHelp() error {
+func execHelp(ctx *ExecContext) error {
 	help := `MDL Commands:
 
 Connection:
@@ -317,22 +319,23 @@ Other:
 Statement Terminator:
   Use ; or / to end statements
 `
-	fmt.Fprint(e.output, help)
+	fmt.Fprint(ctx.Output, help)
 	return nil
 }
 
 // showVersion displays Mendix project version information.
-func (e *Executor) showVersion() error {
+func showVersion(ctx *ExecContext) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
 	pv := e.reader.ProjectVersion()
-	fmt.Fprintf(e.output, "Mendix Version: %s\n", pv.ProductVersion)
-	fmt.Fprintf(e.output, "Build Version:  %s\n", pv.BuildVersion)
-	fmt.Fprintf(e.output, "MPR Format:     v%d\n", pv.FormatVersion)
+	fmt.Fprintf(ctx.Output, "Mendix Version: %s\n", pv.ProductVersion)
+	fmt.Fprintf(ctx.Output, "Build Version:  %s\n", pv.BuildVersion)
+	fmt.Fprintf(ctx.Output, "MPR Format:     v%d\n", pv.FormatVersion)
 	if pv.SchemaHash != "" {
-		fmt.Fprintf(e.output, "Schema Hash:    %s\n", pv.SchemaHash)
+		fmt.Fprintf(ctx.Output, "Schema Hash:    %s\n", pv.SchemaHash)
 	}
 	return nil
 }
@@ -342,12 +345,13 @@ func (e *Executor) showVersion() error {
 // is done by the caller (CLI/REPL) when they handle ErrExit at the top level.
 // This allows exit within nested scripts to stop just that script without
 // closing the database connection.
-func (e *Executor) execExit() error {
+func execExit(ctx *ExecContext) error {
 	return ErrExit
 }
 
 // execExecuteScript handles EXECUTE SCRIPT statements.
-func (e *Executor) execExecuteScript(s *ast.ExecuteScriptStmt) error {
+func execExecuteScript(ctx *ExecContext, s *ast.ExecuteScriptStmt) error {
+	e := ctx.executor
 	// Resolve path relative to current working directory
 	scriptPath := s.Path
 	if !filepath.IsAbs(scriptPath) {
@@ -372,24 +376,24 @@ func (e *Executor) execExecuteScript(s *ast.ExecuteScriptStmt) error {
 	prog, errs := visitor.Build(processedContent)
 	if len(errs) > 0 {
 		for _, err := range errs {
-			fmt.Fprintf(e.output, "Parse error in %s: %v\n", s.Path, err)
+			fmt.Fprintf(ctx.Output, "Parse error in %s: %v\n", s.Path, err)
 		}
 		return mdlerrors.NewValidationf("script '%s' has parse errors", s.Path)
 	}
 
 	// Execute all statements in the script
-	fmt.Fprintf(e.output, "Executing script: %s\n", s.Path)
+	fmt.Fprintf(ctx.Output, "Executing script: %s\n", s.Path)
 	for _, stmt := range prog.Statements {
 		if err := e.Execute(stmt); err != nil {
 			// Exit within a script just stops the script, doesn't exit mxcli
 			if errors.Is(err, ErrExit) {
-				fmt.Fprintf(e.output, "Script exited: %s\n", s.Path)
+				fmt.Fprintf(ctx.Output, "Script exited: %s\n", s.Path)
 				return nil
 			}
 			return fmt.Errorf("error in script '%s': %w", s.Path, err)
 		}
 	}
-	fmt.Fprintf(e.output, "Script completed: %s\n", s.Path)
+	fmt.Fprintf(ctx.Output, "Script completed: %s\n", s.Path)
 
 	return nil
 }

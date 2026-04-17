@@ -4,6 +4,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -26,17 +27,17 @@ type TableResult struct {
 	Summary string   // optional summary line, e.g. "(42 entities)"
 }
 
-// writeResult renders a TableResult to e.output in the current format.
-func (e *Executor) writeResult(r *TableResult) error {
-	if e.format == FormatJSON {
-		return e.writeResultJSON(r)
+// writeResult renders a TableResult to ctx.Output in the current format.
+func writeResult(ctx *ExecContext, r *TableResult) error {
+	if ctx.Format == FormatJSON {
+		return writeResultJSON(ctx, r)
 	}
-	e.writeResultTable(r)
+	writeResultTable(ctx, r)
 	return nil
 }
 
 // writeResultTable renders a TableResult as a pipe-delimited markdown table.
-func (e *Executor) writeResultTable(r *TableResult) {
+func writeResultTable(ctx *ExecContext, r *TableResult) {
 	if len(r.Columns) == 0 {
 		return
 	}
@@ -59,40 +60,40 @@ func (e *Executor) writeResultTable(r *TableResult) {
 	}
 
 	// Print header.
-	fmt.Fprint(e.output, "|")
+	fmt.Fprint(ctx.Output, "|")
 	for i, col := range r.Columns {
-		fmt.Fprintf(e.output, " %-*s |", widths[i], col)
+		fmt.Fprintf(ctx.Output, " %-*s |", widths[i], col)
 	}
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output)
 
 	// Print separator.
-	fmt.Fprint(e.output, "|")
+	fmt.Fprint(ctx.Output, "|")
 	for _, w := range widths {
-		fmt.Fprintf(e.output, "-%s-|", strings.Repeat("-", w))
+		fmt.Fprintf(ctx.Output, "-%s-|", strings.Repeat("-", w))
 	}
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output)
 
 	// Print rows.
 	for _, row := range r.Rows {
-		fmt.Fprint(e.output, "|")
+		fmt.Fprint(ctx.Output, "|")
 		for i := range r.Columns {
 			var s string
 			if i < len(row) {
 				s = formatCellValue(row[i])
 			}
-			fmt.Fprintf(e.output, " %-*s |", widths[i], s)
+			fmt.Fprintf(ctx.Output, " %-*s |", widths[i], s)
 		}
-		fmt.Fprintln(e.output)
+		fmt.Fprintln(ctx.Output)
 	}
 
 	// Print summary.
 	if r.Summary != "" {
-		fmt.Fprintf(e.output, "\n%s\n", r.Summary)
+		fmt.Fprintf(ctx.Output, "\n%s\n", r.Summary)
 	}
 }
 
 // writeResultJSON renders a TableResult as a JSON array of objects.
-func (e *Executor) writeResultJSON(r *TableResult) error {
+func writeResultJSON(ctx *ExecContext, r *TableResult) error {
 	objects := make([]map[string]any, 0, len(r.Rows))
 	for _, row := range r.Rows {
 		obj := make(map[string]any, len(r.Columns))
@@ -104,7 +105,7 @@ func (e *Executor) writeResultJSON(r *TableResult) error {
 		objects = append(objects, obj)
 	}
 
-	enc := json.NewEncoder(e.output)
+	enc := json.NewEncoder(ctx.Output)
 	enc.SetIndent("", "  ")
 	return enc.Encode(objects)
 }
@@ -112,19 +113,23 @@ func (e *Executor) writeResultJSON(r *TableResult) error {
 // writeDescribeJSON wraps a describe handler's output in a JSON envelope.
 // In table/text mode it calls fn directly. In JSON mode it captures fn's output
 // and wraps it as {"name": ..., "type": ..., "mdl": ...}.
-func (e *Executor) writeDescribeJSON(name, objectType string, fn func() error) error {
-	if e.format != FormatJSON {
+func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() error) error {
+	e := ctx.executor
+	if ctx.Format != FormatJSON {
 		return fn()
 	}
 
 	// Capture the text output from fn.
 	var buf bytes.Buffer
-	origOutput := e.output
+	origOutput := ctx.Output
+	origEOutput := e.output
 	origGuard := e.guard
+	ctx.Output = &buf
 	e.output = &buf
 	e.guard = nil // disable line guard for capture
 	err := fn()
-	e.output = origOutput
+	ctx.Output = origOutput
+	e.output = origEOutput
 	e.guard = origGuard
 	if err != nil {
 		return err
@@ -135,9 +140,21 @@ func (e *Executor) writeDescribeJSON(name, objectType string, fn func() error) e
 		"type": objectType,
 		"mdl":  buf.String(),
 	}
-	enc := json.NewEncoder(e.output)
+	enc := json.NewEncoder(ctx.Output)
 	enc.SetIndent("", "  ")
 	return enc.Encode(result)
+}
+
+// ----------------------------------------------------------------------------
+// Executor method wrappers (for callers in unmigrated files)
+// ----------------------------------------------------------------------------
+
+func (e *Executor) writeResult(r *TableResult) error {
+	return writeResult(e.newExecContext(context.Background()), r)
+}
+
+func (e *Executor) writeDescribeJSON(name, objectType string, fn func() error) error {
+	return writeDescribeJSON(e.newExecContext(context.Background()), name, objectType, fn)
 }
 
 // formatCellValue formats a value for table cell display.

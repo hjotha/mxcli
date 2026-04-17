@@ -17,7 +17,8 @@ import (
 )
 
 // showAgentEditorKnowledgeBases handles SHOW KNOWLEDGE BASES [IN module].
-func (e *Executor) showAgentEditorKnowledgeBases(moduleName string) error {
+func showAgentEditorKnowledgeBases(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -27,7 +28,7 @@ func (e *Executor) showAgentEditorKnowledgeBases(moduleName string) error {
 		return mdlerrors.NewBackend("list knowledge bases", err)
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return err
 	}
@@ -57,21 +58,22 @@ func (e *Executor) showAgentEditorKnowledgeBases(moduleName string) error {
 	}
 
 	result.Summary = fmt.Sprintf("(%d knowledge base(s))", len(result.Rows))
-	return e.writeResult(result)
+	return writeResult(ctx, result)
 }
 
 // describeAgentEditorKnowledgeBase handles DESCRIBE KNOWLEDGE BASE Module.Name.
-func (e *Executor) describeAgentEditorKnowledgeBase(name ast.QualifiedName) error {
+func describeAgentEditorKnowledgeBase(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
-	k := e.findAgentEditorKnowledgeBase(name.Module, name.Name)
+	k := findAgentEditorKnowledgeBase(ctx, name.Module, name.Name)
 	if k == nil {
 		return mdlerrors.NewNotFound("knowledge base", name.String())
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return err
 	}
@@ -80,10 +82,10 @@ func (e *Executor) describeAgentEditorKnowledgeBase(name ast.QualifiedName) erro
 	qualifiedName := fmt.Sprintf("%s.%s", modName, k.Name)
 
 	if k.Documentation != "" {
-		fmt.Fprintf(e.output, "/**\n * %s\n */\n", k.Documentation)
+		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", k.Documentation)
 	}
 
-	fmt.Fprintf(e.output, "CREATE KNOWLEDGE BASE %s (\n", qualifiedName)
+	fmt.Fprintf(ctx.Output, "CREATE KNOWLEDGE BASE %s (\n", qualifiedName)
 
 	var lines []string
 	if k.Provider != "" {
@@ -113,24 +115,25 @@ func (e *Executor) describeAgentEditorKnowledgeBase(name ast.QualifiedName) erro
 
 	for i, line := range lines {
 		if i < len(lines)-1 {
-			fmt.Fprintln(e.output, line+",")
+			fmt.Fprintln(ctx.Output, line+",")
 		} else {
-			fmt.Fprintln(e.output, line)
+			fmt.Fprintln(ctx.Output, line)
 		}
 	}
 
-	fmt.Fprintln(e.output, ");")
-	fmt.Fprintln(e.output, "/")
+	fmt.Fprintln(ctx.Output, ");")
+	fmt.Fprintln(ctx.Output, "/")
 	return nil
 }
 
 // findAgentEditorKnowledgeBase looks up a KB by module and name.
-func (e *Executor) findAgentEditorKnowledgeBase(moduleName, kbName string) *agenteditor.KnowledgeBase {
+func findAgentEditorKnowledgeBase(ctx *ExecContext, moduleName, kbName string) *agenteditor.KnowledgeBase {
+	e := ctx.executor
 	kbs, err := e.reader.ListAgentEditorKnowledgeBases()
 	if err != nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -143,3 +146,5 @@ func (e *Executor) findAgentEditorKnowledgeBase(moduleName, kbName string) *agen
 	}
 	return nil
 }
+
+// --- Executor method wrappers for backward compatibility ---

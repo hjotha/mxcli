@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -222,8 +223,8 @@ func (pb *pageBuilder) resolveEntity(entityRef ast.QualifiedName) (model.ID, err
 
 // getModuleID returns the module ID for any container by using the hierarchy.
 // Deprecated: prefer using getHierarchy().FindModuleID() directly.
-func (e *Executor) getModuleID(containerID model.ID) model.ID {
-	h, err := e.getHierarchy()
+func getModuleID(ctx *ExecContext, containerID model.ID) model.ID {
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return containerID
 	}
@@ -232,8 +233,8 @@ func (e *Executor) getModuleID(containerID model.ID) model.ID {
 
 // getModuleName returns the module name for a module ID.
 // Deprecated: prefer using getHierarchy().GetModuleName() directly.
-func (e *Executor) getModuleName(moduleID model.ID) string {
-	h, err := e.getHierarchy()
+func getModuleName(ctx *ExecContext, moduleID model.ID) string {
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return ""
 	}
@@ -334,7 +335,8 @@ func (pb *pageBuilder) createFolder(name string, containerID model.ID) (model.ID
 }
 
 // execDropPage handles DROP PAGE statement.
-func (e *Executor) execDropPage(s *ast.DropPageStmt) error {
+func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -345,13 +347,13 @@ func (e *Executor) execDropPage(s *ast.DropPageStmt) error {
 	}
 
 	for _, p := range pages {
-		modID := e.getModuleID(p.ContainerID)
-		modName := e.getModuleName(modID)
+		modID := getModuleID(ctx, p.ContainerID)
+		modName := getModuleName(ctx, modID)
 		if modName == s.Name.Module && p.Name == s.Name.Name {
 			if err := e.writer.DeletePage(p.ID); err != nil {
 				return mdlerrors.NewBackend("delete page", err)
 			}
-			fmt.Fprintf(e.output, "Dropped page %s\n", s.Name.String())
+			fmt.Fprintf(ctx.Output, "Dropped page %s\n", s.Name.String())
 			return nil
 		}
 	}
@@ -360,7 +362,8 @@ func (e *Executor) execDropPage(s *ast.DropPageStmt) error {
 }
 
 // execDropSnippet handles DROP SNIPPET statement.
-func (e *Executor) execDropSnippet(s *ast.DropSnippetStmt) error {
+func execDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -371,16 +374,20 @@ func (e *Executor) execDropSnippet(s *ast.DropSnippetStmt) error {
 	}
 
 	for _, snip := range snippets {
-		modID := e.getModuleID(snip.ContainerID)
-		modName := e.getModuleName(modID)
+		modID := getModuleID(ctx, snip.ContainerID)
+		modName := getModuleName(ctx, modID)
 		if modName == s.Name.Module && snip.Name == s.Name.Name {
 			if err := e.writer.DeleteSnippet(snip.ID); err != nil {
 				return mdlerrors.NewBackend("delete snippet", err)
 			}
-			fmt.Fprintf(e.output, "Dropped snippet %s\n", s.Name.String())
+			fmt.Fprintf(ctx.Output, "Dropped snippet %s\n", s.Name.String())
 			return nil
 		}
 	}
 
 	return mdlerrors.NewNotFound("snippet", s.Name.String())
+}
+
+func (e *Executor) getModuleName(moduleID model.ID) string {
+	return getModuleName(e.newExecContext(context.Background()), moduleID)
 }

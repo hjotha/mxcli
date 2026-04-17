@@ -199,7 +199,7 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		ch <- result{e.executeInner(stmt)}
+		ch <- result{e.executeInner(ctx, stmt)}
 	}()
 
 	var err error

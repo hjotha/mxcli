@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -12,7 +13,8 @@ import (
 )
 
 // formatActivity formats a single microflow activity as an MDL statement.
-func (e *Executor) formatActivity(
+func formatActivity(
+	ctx *ExecContext,
 	obj microflows.MicroflowObject,
 	entityNames map[model.ID]string,
 	microflowNames map[model.ID]string,
@@ -34,7 +36,7 @@ func (e *Executor) formatActivity(
 		return "" // Skip end events without return value
 
 	case *microflows.ActionActivity:
-		return e.formatAction(activity.Action, entityNames, microflowNames)
+		return formatAction(ctx, activity.Action, entityNames, microflowNames)
 
 	case *microflows.ExclusiveSplit:
 		condition := "true"
@@ -84,11 +86,13 @@ func (e *Executor) formatActivity(
 }
 
 // formatAction formats a microflow action as an MDL statement.
-func (e *Executor) formatAction(
+func formatAction(
+	ctx *ExecContext,
 	action microflows.MicroflowAction,
 	entityNames map[model.ID]string,
 	microflowNames map[model.ID]string,
 ) string {
+	e := ctx.executor
 	if action == nil {
 		return "-- Empty action"
 	}
@@ -97,7 +101,7 @@ func (e *Executor) formatAction(
 	case *microflows.CreateVariableAction:
 		varType := "Object"
 		if a.DataType != nil {
-			varType = e.formatMicroflowDataType(a.DataType, entityNames)
+			varType = formatMicroflowDataType(ctx, a.DataType, entityNames)
 		}
 		initialValue := strings.TrimSuffix(a.InitialValue, "\n")
 		if initialValue == "" {
@@ -255,7 +259,7 @@ func (e *Executor) formatAction(
 		if outputVar == "" {
 			outputVar = "Result"
 		}
-		return e.formatListOperation(a.Operation, outputVar)
+		return formatListOperation(ctx, a.Operation, outputVar)
 
 	case *microflows.AggregateListAction:
 		outputVar := a.OutputVariable
@@ -499,7 +503,7 @@ func (e *Executor) formatAction(
 			pages, _ := e.reader.ListPages()
 			for _, p := range pages {
 				if p.ID == a.PageID {
-					h, _ := e.getHierarchy()
+					h, _ := getHierarchy(ctx)
 					if h != nil {
 						pageName = h.GetQualifiedName(p.ContainerID, p.Name)
 					}
@@ -592,19 +596,19 @@ func (e *Executor) formatAction(
 		return fmt.Sprintf("VALIDATION FEEDBACK %s MESSAGE %s;", attrPath, msgText)
 
 	case *microflows.RestCallAction:
-		return e.formatRestCallAction(a)
+		return formatRestCallAction(ctx, a)
 
 	case *microflows.RestOperationCallAction:
-		return e.formatRestOperationCallAction(a)
+		return formatRestOperationCallAction(ctx, a)
 
 	case *microflows.ExecuteDatabaseQueryAction:
-		return e.formatExecuteDatabaseQueryAction(a)
+		return formatExecuteDatabaseQueryAction(ctx, a)
 
 	case *microflows.ImportXmlAction:
-		return e.formatImportXmlAction(a, entityNames)
+		return formatImportXmlAction(ctx, a, entityNames)
 
 	case *microflows.ExportXmlAction:
-		return e.formatExportXmlAction(a)
+		return formatExportXmlAction(ctx, a)
 
 	case *microflows.TransformJsonAction:
 		return formatTransformJsonAction(a)
@@ -635,7 +639,7 @@ func (e *Executor) formatAction(
 		return fmt.Sprintf("GET WORKFLOW ACTIVITY RECORDS $%s;", a.WorkflowVariable)
 
 	case *microflows.WorkflowOperationAction:
-		return e.formatWorkflowOperationAction(a)
+		return formatWorkflowOperationAction(ctx, a)
 
 	case *microflows.SetTaskOutcomeAction:
 		return fmt.Sprintf("SET TASK OUTCOME $%s '%s';", a.WorkflowTaskVariable, a.OutcomeValue)
@@ -679,7 +683,7 @@ func (e *Executor) formatAction(
 }
 
 // formatWorkflowOperationAction formats a workflow operation action as MDL.
-func (e *Executor) formatWorkflowOperationAction(a *microflows.WorkflowOperationAction) string {
+func formatWorkflowOperationAction(ctx *ExecContext, a *microflows.WorkflowOperationAction) string {
 	if a.Operation == nil {
 		return "WORKFLOW OPERATION ...;"
 	}
@@ -705,7 +709,7 @@ func (e *Executor) formatWorkflowOperationAction(a *microflows.WorkflowOperation
 }
 
 // formatListOperation formats a list operation as MDL.
-func (e *Executor) formatListOperation(op microflows.ListOperation, outputVar string) string {
+func formatListOperation(ctx *ExecContext, op microflows.ListOperation, outputVar string) string {
 	if op == nil {
 		return fmt.Sprintf("$%s = LIST OPERATION ...;", outputVar)
 	}
@@ -759,7 +763,7 @@ func (e *Executor) formatListOperation(op microflows.ListOperation, outputVar st
 }
 
 // formatRestCallAction formats a REST call action as MDL.
-func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
+func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string {
 	var sb strings.Builder
 
 	// Output variable assignment (may be on RestCallAction or ResultHandling)
@@ -905,7 +909,7 @@ func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
 }
 
 // formatRestOperationCallAction formats a RestOperationCallAction as MDL.
-func (e *Executor) formatRestOperationCallAction(a *microflows.RestOperationCallAction) string {
+func formatRestOperationCallAction(ctx *ExecContext, a *microflows.RestOperationCallAction) string {
 	var sb strings.Builder
 
 	if a.OutputVariable != nil && a.OutputVariable.VariableName != "" {
@@ -961,7 +965,7 @@ func (e *Executor) formatRestOperationCallAction(a *microflows.RestOperationCall
 }
 
 // formatExecuteDatabaseQueryAction formats a DatabaseConnector ExecuteDatabaseQueryAction as MDL.
-func (e *Executor) formatExecuteDatabaseQueryAction(a *microflows.ExecuteDatabaseQueryAction) string {
+func formatExecuteDatabaseQueryAction(ctx *ExecContext, a *microflows.ExecuteDatabaseQueryAction) string {
 	var sb strings.Builder
 
 	if a.OutputVariableName != "" {
@@ -1022,7 +1026,7 @@ func isQualifiedEnumLiteral(s string) bool {
 
 // formatImportXmlAction formats an import mapping action as MDL.
 // Syntax: [$Var =] IMPORT FROM MAPPING Module.IMM($SourceVar);
-func (e *Executor) formatImportXmlAction(a *microflows.ImportXmlAction, entityNames map[model.ID]string) string {
+func formatImportXmlAction(ctx *ExecContext, a *microflows.ImportXmlAction, entityNames map[model.ID]string) string {
 	var sb strings.Builder
 
 	// Resolve mapping qualified name
@@ -1051,7 +1055,7 @@ func (e *Executor) formatImportXmlAction(a *microflows.ImportXmlAction, entityNa
 
 // formatExportXmlAction formats an export mapping action as MDL.
 // Syntax: $Var = EXPORT TO MAPPING Module.EMM($SourceVar);
-func (e *Executor) formatExportXmlAction(a *microflows.ExportXmlAction) string {
+func formatExportXmlAction(ctx *ExecContext, a *microflows.ExportXmlAction) string {
 	var sb strings.Builder
 
 	// Output variable
@@ -1096,4 +1100,22 @@ func formatTransformJsonAction(a *microflows.TransformJsonAction) string {
 	sb.WriteString(a.Transformation)
 	sb.WriteString(";")
 	return sb.String()
+}
+
+// --- Executor method wrappers for callers in unmigrated code and tests ---
+
+func (e *Executor) formatActivity(obj microflows.MicroflowObject, entityNames map[model.ID]string, microflowNames map[model.ID]string) string {
+	return formatActivity(e.newExecContext(context.Background()), obj, entityNames, microflowNames)
+}
+
+func (e *Executor) formatAction(action microflows.MicroflowAction, entityNames map[model.ID]string, microflowNames map[model.ID]string) string {
+	return formatAction(e.newExecContext(context.Background()), action, entityNames, microflowNames)
+}
+
+func (e *Executor) formatListOperation(op microflows.ListOperation, outputVar string) string {
+	return formatListOperation(e.newExecContext(context.Background()), op, outputVar)
+}
+
+func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
+	return formatRestCallAction(e.newExecContext(context.Background()), a)
 }

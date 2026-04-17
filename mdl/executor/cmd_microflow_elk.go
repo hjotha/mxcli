@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -59,8 +60,9 @@ type microflowELKEdge struct {
 	IsErrorHandler bool   `json:"isErrorHandler,omitempty"`
 }
 
-// MicroflowELK generates a JSON graph of a microflow for rendering with ELK.js.
-func (e *Executor) MicroflowELK(name string) error {
+// microflowELK generates a JSON graph of a microflow for rendering with ELK.js.
+func microflowELK(ctx *ExecContext, name string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -72,7 +74,7 @@ func (e *Executor) MicroflowELK(name string) error {
 
 	qn := ast.QualifiedName{Module: parts[0], Name: parts[1]}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -108,12 +110,12 @@ func (e *Executor) MicroflowELK(name string) error {
 	}
 
 	// Generate MDL source with source map
-	mdlSource, sourceMap, _ := e.describeMicroflowToString(qn)
+	mdlSource, sourceMap, _ := describeMicroflowToString(ctx, qn)
 
-	return e.buildMicroflowELK(targetMf, name, entityNames, mdlSource, sourceMap)
+	return buildMicroflowELK(ctx, targetMf, name, entityNames, mdlSource, sourceMap)
 }
 
-func (e *Executor) buildMicroflowELK(mf *microflows.Microflow, qualifiedName string, entityNames map[model.ID]string, mdlSource string, sourceMap map[string]elkSourceRange) error {
+func buildMicroflowELK(ctx *ExecContext, mf *microflows.Microflow, qualifiedName string, entityNames map[model.ID]string, mdlSource string, sourceMap map[string]elkSourceRange) error {
 	returnType := ""
 	if mf.ReturnType != nil {
 		returnType = mf.ReturnType.GetTypeName()
@@ -149,7 +151,7 @@ func (e *Executor) buildMicroflowELK(mf *microflows.Microflow, qualifiedName str
 		data.Edges = []microflowELKEdge{
 			{ID: "edge-0", SourceID: "node-start", TargetID: "node-end"},
 		}
-		return e.emitMicroflowELK(data)
+		return emitMicroflowELK(ctx, data)
 	}
 
 	// Build nodes — loops become compound nodes with children
@@ -164,7 +166,7 @@ func (e *Executor) buildMicroflowELK(mf *microflows.Microflow, qualifiedName str
 		data.Edges = append(data.Edges, edge)
 	}
 
-	return e.emitMicroflowELK(data)
+	return emitMicroflowELK(ctx, data)
 }
 
 func buildMicroflowELKNode(obj microflows.MicroflowObject, entityNames map[model.ID]string) microflowELKNode {
@@ -403,11 +405,16 @@ func collectAllObjectsAndFlows(oc *microflows.MicroflowObjectCollection) ([]micr
 }
 
 // emitMicroflowELK marshals and writes the microflow ELK data to output.
-func (e *Executor) emitMicroflowELK(data microflowELKData) error {
+func emitMicroflowELK(ctx *ExecContext, data microflowELKData) error {
 	out, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return mdlerrors.NewBackend("marshal JSON", err)
 	}
-	fmt.Fprint(e.output, string(out))
+	fmt.Fprint(ctx.Output, string(out))
 	return nil
+}
+
+// MicroflowELK is an Executor method wrapper for callers in unmigrated code.
+func (e *Executor) MicroflowELK(name string) error {
+	return microflowELK(e.newExecContext(context.Background()), name)
 }

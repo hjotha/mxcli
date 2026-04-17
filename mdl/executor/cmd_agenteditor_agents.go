@@ -17,7 +17,8 @@ import (
 )
 
 // showAgentEditorAgents handles SHOW AGENTS [IN module].
-func (e *Executor) showAgentEditorAgents(moduleName string) error {
+func showAgentEditorAgents(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -27,7 +28,7 @@ func (e *Executor) showAgentEditorAgents(moduleName string) error {
 		return mdlerrors.NewBackend("list agents", err)
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return err
 	}
@@ -58,22 +59,23 @@ func (e *Executor) showAgentEditorAgents(moduleName string) error {
 	}
 
 	result.Summary = fmt.Sprintf("(%d agent(s))", len(result.Rows))
-	return e.writeResult(result)
+	return writeResult(ctx, result)
 }
 
 // describeAgentEditorAgent handles DESCRIBE AGENT Module.Name. Emits a
 // round-trippable CREATE AGENT statement reflecting the Contents JSON.
-func (e *Executor) describeAgentEditorAgent(name ast.QualifiedName) error {
+func describeAgentEditorAgent(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
-	a := e.findAgentEditorAgent(name.Module, name.Name)
+	a := findAgentEditorAgent(ctx, name.Module, name.Name)
 	if a == nil {
 		return mdlerrors.NewNotFound("agent", name.String())
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return err
 	}
@@ -82,10 +84,10 @@ func (e *Executor) describeAgentEditorAgent(name ast.QualifiedName) error {
 	qualifiedName := fmt.Sprintf("%s.%s", modName, a.Name)
 
 	if a.Documentation != "" {
-		fmt.Fprintf(e.output, "/**\n * %s\n */\n", a.Documentation)
+		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", a.Documentation)
 	}
 
-	fmt.Fprintf(e.output, "CREATE AGENT %s (\n", qualifiedName)
+	fmt.Fprintf(ctx.Output, "CREATE AGENT %s (\n", qualifiedName)
 
 	// Build property lines. User-set properties are emitted in a stable
 	// order; empty values are omitted.
@@ -134,107 +136,108 @@ func (e *Executor) describeAgentEditorAgent(name ast.QualifiedName) error {
 
 	for i, line := range lines {
 		if i < len(lines)-1 {
-			fmt.Fprintln(e.output, line+",")
+			fmt.Fprintln(ctx.Output, line+",")
 		} else {
-			fmt.Fprintln(e.output, line)
+			fmt.Fprintln(ctx.Output, line)
 		}
 	}
 
 	// Body with TOOL / MCP SERVICE / KNOWLEDGE BASE blocks if present.
 	hasBody := len(a.Tools) > 0 || len(a.KBTools) > 0
 	if hasBody {
-		fmt.Fprintln(e.output, ")")
-		fmt.Fprintln(e.output, "{")
+		fmt.Fprintln(ctx.Output, ")")
+		fmt.Fprintln(ctx.Output, "{")
 
 		for i, t := range a.Tools {
-			emitToolBlock(e, t)
+			emitToolBlock(ctx, t)
 			if i < len(a.Tools)-1 || len(a.KBTools) > 0 {
-				fmt.Fprintln(e.output)
+				fmt.Fprintln(ctx.Output)
 			}
 		}
 		for i, kb := range a.KBTools {
-			emitKBBlock(e, kb)
+			emitKBBlock(ctx, kb)
 			if i < len(a.KBTools)-1 {
-				fmt.Fprintln(e.output)
+				fmt.Fprintln(ctx.Output)
 			}
 		}
 
-		fmt.Fprintln(e.output, "};")
+		fmt.Fprintln(ctx.Output, "};")
 	} else {
-		fmt.Fprintln(e.output, ");")
+		fmt.Fprintln(ctx.Output, ");")
 	}
-	fmt.Fprintln(e.output, "/")
+	fmt.Fprintln(ctx.Output, "/")
 	return nil
 }
 
 // emitToolBlock writes one TOOL or MCP SERVICE block for the agent body.
-func emitToolBlock(e *Executor, t agenteditor.AgentTool) {
+func emitToolBlock(ctx *ExecContext, t agenteditor.AgentTool) {
 	switch t.ToolType {
 	case "MCP":
 		if t.Document == nil {
 			// malformed — skip
 			return
 		}
-		fmt.Fprintf(e.output, "  MCP SERVICE %s {\n", t.Document.QualifiedName)
-		fmt.Fprintf(e.output, "    Enabled: %t\n", t.Enabled)
+		fmt.Fprintf(ctx.Output, "  MCP SERVICE %s {\n", t.Document.QualifiedName)
+		fmt.Fprintf(ctx.Output, "    Enabled: %t\n", t.Enabled)
 		if t.Description != "" {
-			fmt.Fprintf(e.output, "    Description: '%s'\n", escapeSQLString(t.Description))
+			fmt.Fprintf(ctx.Output, "    Description: '%s'\n", escapeSQLString(t.Description))
 		}
-		fmt.Fprintln(e.output, "  }")
+		fmt.Fprintln(ctx.Output, "  }")
 	default:
 		// Microflow or unknown tool type — emit generic TOOL block.
 		name := t.Name
 		if name == "" {
 			name = "Tool_" + strings.ReplaceAll(t.ID, "-", "")[:8]
 		}
-		fmt.Fprintf(e.output, "  TOOL %s {\n", name)
+		fmt.Fprintf(ctx.Output, "  TOOL %s {\n", name)
 		if t.ToolType != "" {
-			fmt.Fprintf(e.output, "    ToolType: %s,\n", t.ToolType)
+			fmt.Fprintf(ctx.Output, "    ToolType: %s,\n", t.ToolType)
 		}
 		if t.Document != nil && t.Document.QualifiedName != "" {
-			fmt.Fprintf(e.output, "    Document: %s,\n", t.Document.QualifiedName)
+			fmt.Fprintf(ctx.Output, "    Document: %s,\n", t.Document.QualifiedName)
 		}
-		fmt.Fprintf(e.output, "    Enabled: %t", t.Enabled)
+		fmt.Fprintf(ctx.Output, "    Enabled: %t", t.Enabled)
 		if t.Description != "" {
-			fmt.Fprintln(e.output, ",")
-			fmt.Fprintf(e.output, "    Description: '%s'\n", escapeSQLString(t.Description))
+			fmt.Fprintln(ctx.Output, ",")
+			fmt.Fprintf(ctx.Output, "    Description: '%s'\n", escapeSQLString(t.Description))
 		} else {
-			fmt.Fprintln(e.output)
+			fmt.Fprintln(ctx.Output)
 		}
-		fmt.Fprintln(e.output, "  }")
+		fmt.Fprintln(ctx.Output, "  }")
 	}
 }
 
 // emitKBBlock writes one KNOWLEDGE BASE block for the agent body.
-func emitKBBlock(e *Executor, kb agenteditor.AgentKBTool) {
+func emitKBBlock(ctx *ExecContext, kb agenteditor.AgentKBTool) {
 	name := kb.Name
 	if name == "" {
 		name = "KB_" + strings.ReplaceAll(kb.ID, "-", "")[:8]
 	}
-	fmt.Fprintf(e.output, "  KNOWLEDGE BASE %s {\n", name)
+	fmt.Fprintf(ctx.Output, "  KNOWLEDGE BASE %s {\n", name)
 	if kb.Document != nil && kb.Document.QualifiedName != "" {
-		fmt.Fprintf(e.output, "    Source: %s,\n", kb.Document.QualifiedName)
+		fmt.Fprintf(ctx.Output, "    Source: %s,\n", kb.Document.QualifiedName)
 	}
 	if kb.CollectionIdentifier != "" {
-		fmt.Fprintf(e.output, "    Collection: '%s',\n", escapeSQLString(kb.CollectionIdentifier))
+		fmt.Fprintf(ctx.Output, "    Collection: '%s',\n", escapeSQLString(kb.CollectionIdentifier))
 	}
 	if kb.MaxResults != 0 {
-		fmt.Fprintf(e.output, "    MaxResults: %d,\n", kb.MaxResults)
+		fmt.Fprintf(ctx.Output, "    MaxResults: %d,\n", kb.MaxResults)
 	}
 	if kb.Description != "" {
-		fmt.Fprintf(e.output, "    Description: '%s',\n", escapeSQLString(kb.Description))
+		fmt.Fprintf(ctx.Output, "    Description: '%s',\n", escapeSQLString(kb.Description))
 	}
-	fmt.Fprintf(e.output, "    Enabled: %t\n", kb.Enabled)
-	fmt.Fprintln(e.output, "  }")
+	fmt.Fprintf(ctx.Output, "    Enabled: %t\n", kb.Enabled)
+	fmt.Fprintln(ctx.Output, "  }")
 }
 
 // findAgentEditorAgent looks up an agent by module and name.
-func (e *Executor) findAgentEditorAgent(moduleName, agentName string) *agenteditor.Agent {
+func findAgentEditorAgent(ctx *ExecContext, moduleName, agentName string) *agenteditor.Agent {
+	e := ctx.executor
 	agents, err := e.reader.ListAgentEditorAgents()
 	if err != nil {
 		return nil
 	}
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -247,3 +250,5 @@ func (e *Executor) findAgentEditorAgent(moduleName, agentName string) *agentedit
 	}
 	return nil
 }
+
+// --- Executor method wrappers for backward compatibility ---

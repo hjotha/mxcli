@@ -15,7 +15,8 @@ import (
 )
 
 // ensureSQLManager lazily initializes the SQL connection manager.
-func (e *Executor) ensureSQLManager() *sqllib.Manager {
+func ensureSQLManager(ctx *ExecContext) *sqllib.Manager {
+	e := ctx.executor
 	if e.sqlMgr == nil {
 		e.sqlMgr = sqllib.NewManager()
 	}
@@ -23,15 +24,15 @@ func (e *Executor) ensureSQLManager() *sqllib.Manager {
 }
 
 // getOrAutoConnect returns an existing connection or auto-connects using connections.yaml.
-func (e *Executor) getOrAutoConnect(alias string) (*sqllib.Connection, error) {
-	mgr := e.ensureSQLManager()
+func getOrAutoConnect(ctx *ExecContext, alias string) (*sqllib.Connection, error) {
+	mgr := ensureSQLManager(ctx)
 	conn, err := mgr.Get(alias)
 	if err == nil {
 		return conn, nil
 	}
 
 	// Not connected yet — try auto-connect from config
-	if acErr := e.autoConnect(alias); acErr != nil {
+	if acErr := autoConnect(ctx, alias); acErr != nil {
 		return nil, mdlerrors.NewNotFoundMsg("connection", alias, fmt.Sprintf("no connection '%s' (and auto-connect failed: %v)", alias, acErr))
 	}
 	return mgr.Get(alias)
@@ -39,10 +40,10 @@ func (e *Executor) getOrAutoConnect(alias string) (*sqllib.Connection, error) {
 
 // execSQLConnect handles SQL CONNECT <driver> '<dsn>' AS <alias>
 // and SQL CONNECT <alias> (resolve from connections.yaml).
-func (e *Executor) execSQLConnect(s *ast.SQLConnectStmt) error {
+func execSQLConnect(ctx *ExecContext, s *ast.SQLConnectStmt) error {
 	if s.DSN == "" && s.Driver == "" {
 		// Short form: SQL CONNECT <alias> — resolve from config
-		return e.autoConnect(s.Alias)
+		return autoConnect(ctx, s.Alias)
 	}
 
 	driver, err := sqllib.ParseDriver(s.Driver)
@@ -50,50 +51,50 @@ func (e *Executor) execSQLConnect(s *ast.SQLConnectStmt) error {
 		return err
 	}
 
-	mgr := e.ensureSQLManager()
+	mgr := ensureSQLManager(ctx)
 	if err := mgr.Connect(driver, s.DSN, s.Alias); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(e.output, "Connected to %s database as '%s'\n", driver, s.Alias)
+	fmt.Fprintf(ctx.Output, "Connected to %s database as '%s'\n", driver, s.Alias)
 	return nil
 }
 
 // autoConnect resolves a connection alias from env vars or .mxcli/connections.yaml
 // and connects automatically.
-func (e *Executor) autoConnect(alias string) error {
+func autoConnect(ctx *ExecContext, alias string) error {
 	rc, err := sqllib.ResolveConnection(sqllib.ResolveOptions{Alias: alias})
 	if err != nil {
 		return fmt.Errorf("cannot resolve connection '%s': %w\nAdd it to .mxcli/connections.yaml or use: SQL CONNECT <driver> '<dsn>' AS %s", alias, err, alias)
 	}
 
-	mgr := e.ensureSQLManager()
+	mgr := ensureSQLManager(ctx)
 	if err := mgr.Connect(rc.Driver, rc.DSN, alias); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(e.output, "Connected to %s database as '%s' (from config)\n", rc.Driver, alias)
+	fmt.Fprintf(ctx.Output, "Connected to %s database as '%s' (from config)\n", rc.Driver, alias)
 	return nil
 }
 
 // execSQLDisconnect handles SQL DISCONNECT <alias>
-func (e *Executor) execSQLDisconnect(s *ast.SQLDisconnectStmt) error {
-	mgr := e.ensureSQLManager()
+func execSQLDisconnect(ctx *ExecContext, s *ast.SQLDisconnectStmt) error {
+	mgr := ensureSQLManager(ctx)
 	if err := mgr.Disconnect(s.Alias); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(e.output, "Disconnected '%s'\n", s.Alias)
+	fmt.Fprintf(ctx.Output, "Disconnected '%s'\n", s.Alias)
 	return nil
 }
 
 // execSQLConnections handles SQL CONNECTIONS
-func (e *Executor) execSQLConnections() error {
-	mgr := e.ensureSQLManager()
+func execSQLConnections(ctx *ExecContext) error {
+	mgr := ensureSQLManager(ctx)
 	infos := mgr.List()
 
 	if len(infos) == 0 {
-		fmt.Fprintln(e.output, "No active SQL connections")
+		fmt.Fprintln(ctx.Output, "No active SQL connections")
 		return nil
 	}
 
@@ -108,98 +109,98 @@ func (e *Executor) execSQLConnections() error {
 	for _, info := range infos {
 		result.Rows = append(result.Rows, []any{info.Alias, string(info.Driver)})
 	}
-	sqllib.FormatTable(e.output, result)
+	sqllib.FormatTable(ctx.Output, result)
 	return nil
 }
 
 // execSQLQuery handles SQL <alias> <raw-sql>
-func (e *Executor) execSQLQuery(s *ast.SQLQueryStmt) error {
-	conn, err := e.getOrAutoConnect(s.Alias)
+func execSQLQuery(ctx *ExecContext, s *ast.SQLQueryStmt) error {
+	conn, err := getOrAutoConnect(ctx, s.Alias)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	goCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	result, err := sqllib.Execute(ctx, conn, s.Query)
+	result, err := sqllib.Execute(goCtx, conn, s.Query)
 	if err != nil {
 		return err
 	}
 
-	sqllib.FormatTable(e.output, result)
-	fmt.Fprintf(e.output, "(%d rows)\n", len(result.Rows))
+	sqllib.FormatTable(ctx.Output, result)
+	fmt.Fprintf(ctx.Output, "(%d rows)\n", len(result.Rows))
 	return nil
 }
 
 // execSQLShowTables handles SQL <alias> SHOW TABLES
-func (e *Executor) execSQLShowTables(s *ast.SQLShowTablesStmt) error {
-	conn, err := e.getOrAutoConnect(s.Alias)
+func execSQLShowTables(ctx *ExecContext, s *ast.SQLShowTablesStmt) error {
+	conn, err := getOrAutoConnect(ctx, s.Alias)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	goCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	result, err := sqllib.ShowTables(ctx, conn)
+	result, err := sqllib.ShowTables(goCtx, conn)
 	if err != nil {
 		return err
 	}
 
-	sqllib.FormatTable(e.output, result)
-	fmt.Fprintf(e.output, "(%d tables)\n", len(result.Rows))
+	sqllib.FormatTable(ctx.Output, result)
+	fmt.Fprintf(ctx.Output, "(%d tables)\n", len(result.Rows))
 	return nil
 }
 
 // execSQLShowViews handles SQL <alias> SHOW VIEWS
-func (e *Executor) execSQLShowViews(s *ast.SQLShowViewsStmt) error {
-	conn, err := e.getOrAutoConnect(s.Alias)
+func execSQLShowViews(ctx *ExecContext, s *ast.SQLShowViewsStmt) error {
+	conn, err := getOrAutoConnect(ctx, s.Alias)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	goCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	result, err := sqllib.ShowViews(ctx, conn)
+	result, err := sqllib.ShowViews(goCtx, conn)
 	if err != nil {
 		return err
 	}
 
-	sqllib.FormatTable(e.output, result)
-	fmt.Fprintf(e.output, "(%d views)\n", len(result.Rows))
+	sqllib.FormatTable(ctx.Output, result)
+	fmt.Fprintf(ctx.Output, "(%d views)\n", len(result.Rows))
 	return nil
 }
 
 // execSQLShowFunctions handles SQL <alias> SHOW FUNCTIONS
-func (e *Executor) execSQLShowFunctions(s *ast.SQLShowFunctionsStmt) error {
-	conn, err := e.getOrAutoConnect(s.Alias)
+func execSQLShowFunctions(ctx *ExecContext, s *ast.SQLShowFunctionsStmt) error {
+	conn, err := getOrAutoConnect(ctx, s.Alias)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	goCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	result, err := sqllib.ShowFunctions(ctx, conn)
+	result, err := sqllib.ShowFunctions(goCtx, conn)
 	if err != nil {
 		return err
 	}
 
-	sqllib.FormatTable(e.output, result)
-	fmt.Fprintf(e.output, "(%d functions)\n", len(result.Rows))
+	sqllib.FormatTable(ctx.Output, result)
+	fmt.Fprintf(ctx.Output, "(%d functions)\n", len(result.Rows))
 	return nil
 }
 
 // execSQLGenerateConnector handles SQL <alias> GENERATE CONNECTOR INTO <module> [TABLES (...)] [VIEWS (...)] [EXEC]
-func (e *Executor) execSQLGenerateConnector(s *ast.SQLGenerateConnectorStmt) error {
-	conn, err := e.getOrAutoConnect(s.Alias)
+func execSQLGenerateConnector(ctx *ExecContext, s *ast.SQLGenerateConnectorStmt) error {
+	conn, err := getOrAutoConnect(ctx, s.Alias)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	goCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
 	cfg := &sqllib.GenerateConfig{
@@ -210,37 +211,38 @@ func (e *Executor) execSQLGenerateConnector(s *ast.SQLGenerateConnectorStmt) err
 		Views:  s.Views,
 	}
 
-	result, err := sqllib.GenerateConnector(ctx, cfg)
+	result, err := sqllib.GenerateConnector(goCtx, cfg)
 	if err != nil {
 		return err
 	}
 
 	// Report skipped columns
 	for _, skip := range result.SkippedCols {
-		fmt.Fprintf(e.output, "-- WARNING: skipped unmappable column: %s\n", skip)
+		fmt.Fprintf(ctx.Output, "-- WARNING: skipped unmappable column: %s\n", skip)
 	}
 
 	if s.Exec {
 		// Execute constants + entities (parseable by mxcli)
-		fmt.Fprintf(e.output, "Generating connector (%d tables, %d views)...\n",
+		fmt.Fprintf(ctx.Output, "Generating connector (%d tables, %d views)...\n",
 			result.TableCount, result.ViewCount)
-		if err := e.executeGeneratedMDL(result.ExecutableMDL); err != nil {
+		if err := executeGeneratedMDL(ctx, result.ExecutableMDL); err != nil {
 			return err
 		}
 		// Print DATABASE CONNECTION as reference (not yet executable)
-		fmt.Fprintf(e.output, "\n-- Database Connection definition (configure in Studio Pro with Database Connector module):\n")
-		fmt.Fprint(e.output, result.ConnectionMDL)
+		fmt.Fprintf(ctx.Output, "\n-- Database Connection definition (configure in Studio Pro with Database Connector module):\n")
+		fmt.Fprint(ctx.Output, result.ConnectionMDL)
 		return nil
 	}
 
 	// Print complete MDL to output
-	fmt.Fprint(e.output, result.MDL)
-	fmt.Fprintf(e.output, "\n-- Generated: %d tables, %d views\n", result.TableCount, result.ViewCount)
+	fmt.Fprint(ctx.Output, result.MDL)
+	fmt.Fprintf(ctx.Output, "\n-- Generated: %d tables, %d views\n", result.TableCount, result.ViewCount)
 	return nil
 }
 
 // executeGeneratedMDL parses and executes MDL text as if it were a script.
-func (e *Executor) executeGeneratedMDL(mdl string) error {
+func executeGeneratedMDL(ctx *ExecContext, mdl string) error {
+	e := ctx.executor
 	prog, errs := visitor.Build(mdl)
 	if len(errs) > 0 {
 		return mdlerrors.NewBackend("parse generated MDL", fmt.Errorf("%v", errs[0]))
@@ -249,21 +251,23 @@ func (e *Executor) executeGeneratedMDL(mdl string) error {
 }
 
 // execSQLDescribeTable handles SQL <alias> DESCRIBE <table>
-func (e *Executor) execSQLDescribeTable(s *ast.SQLDescribeTableStmt) error {
-	conn, err := e.getOrAutoConnect(s.Alias)
+func execSQLDescribeTable(ctx *ExecContext, s *ast.SQLDescribeTableStmt) error {
+	conn, err := getOrAutoConnect(ctx, s.Alias)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	goCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	result, err := sqllib.DescribeTable(ctx, conn, s.Table)
+	result, err := sqllib.DescribeTable(goCtx, conn, s.Table)
 	if err != nil {
 		return err
 	}
 
-	sqllib.FormatTable(e.output, result)
-	fmt.Fprintf(e.output, "(%d columns)\n", len(result.Rows))
+	sqllib.FormatTable(ctx.Output, result)
+	fmt.Fprintf(ctx.Output, "(%d columns)\n", len(result.Rows))
 	return nil
 }
+
+// Executor wrappers for unmigrated callers.

@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -64,20 +65,21 @@ const (
 	elkMinWidth       = 100.0
 )
 
-// DomainModelELK generates a JSON graph of a module's domain model for rendering with ELK.js.
-// If name contains a dot (e.g. "Module.Entity"), it delegates to EntityFocusELK for a focused view.
-func (e *Executor) DomainModelELK(name string) error {
+// domainModelELK generates a JSON graph of a module's domain model for rendering with ELK.js.
+// If name contains a dot (e.g. "Module.Entity"), it delegates to entityFocusELK for a focused view.
+func domainModelELK(ctx *ExecContext, name string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// If name is qualified (Module.Entity), render focused entity diagram
 	if strings.Contains(name, ".") {
-		return e.EntityFocusELK(name)
+		return entityFocusELK(ctx, name)
 	}
 
 	moduleName := name
-	module, err := e.findModule(moduleName)
+	module, err := findModule(ctx, moduleName)
 	if err != nil {
 		return err
 	}
@@ -87,7 +89,7 @@ func (e *Executor) DomainModelELK(name string) error {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
 
-	allEntityNames, _ := e.buildAllEntityNames()
+	allEntityNames, _ := buildAllEntityNames(ctx)
 
 	// Track which entity IDs are in the current module
 	moduleEntityIDs := make(map[model.ID]bool)
@@ -138,9 +140,9 @@ func (e *Executor) DomainModelELK(name string) error {
 	}
 
 	// Generate MDL source with source map
-	mdlSource, sourceMap := e.buildDomainModelMdlSource(dm.Entities, moduleName)
+	mdlSource, sourceMap := buildDomainModelMdlSource(ctx, dm.Entities, moduleName)
 
-	return e.emitDomainModelELK(domainModelELKData{
+	return emitDomainModelELK(ctx, domainModelELKData{
 		Format:          "elk",
 		Type:            "domainmodel",
 		ModuleName:      moduleName,
@@ -152,9 +154,10 @@ func (e *Executor) DomainModelELK(name string) error {
 	})
 }
 
-// EntityFocusELK generates a focused ELK diagram showing only the selected entity
+// entityFocusELK generates a focused ELK diagram showing only the selected entity
 // and entities directly connected to it via associations or generalization.
-func (e *Executor) EntityFocusELK(qualifiedName string) error {
+func entityFocusELK(ctx *ExecContext, qualifiedName string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -165,7 +168,7 @@ func (e *Executor) EntityFocusELK(qualifiedName string) error {
 	}
 	moduleName, entityName := parts[0], parts[1]
 
-	module, err := e.findModule(moduleName)
+	module, err := findModule(ctx, moduleName)
 	if err != nil {
 		return err
 	}
@@ -189,10 +192,10 @@ func (e *Executor) EntityFocusELK(qualifiedName string) error {
 
 	// If this is a view entity with an OQL query, render query plan instead
 	if classifyEntity(focusEntity) == "view" && focusEntity.OqlQuery != "" {
-		return e.OqlQueryPlanELK(qualifiedName, focusEntity)
+		return OqlQueryPlanELK(ctx, qualifiedName, focusEntity)
 	}
 
-	allEntityNames, _ := e.buildAllEntityNames()
+	allEntityNames, _ := buildAllEntityNames(ctx)
 
 	// Build map of all entities in this module by ID for quick lookup
 	moduleEntitiesByID := make(map[model.ID]*domainmodel.Entity)
@@ -302,9 +305,9 @@ func (e *Executor) EntityFocusELK(qualifiedName string) error {
 	}
 
 	// Generate MDL source with source map for focus entity
-	mdlSource, sourceMap := e.buildDomainModelMdlSource([]*domainmodel.Entity{focusEntity}, moduleName)
+	mdlSource, sourceMap := buildDomainModelMdlSource(ctx, []*domainmodel.Entity{focusEntity}, moduleName)
 
-	return e.emitDomainModelELK(domainModelELKData{
+	return emitDomainModelELK(ctx, domainModelELKData{
 		Format:          "elk",
 		Type:            "domainmodel",
 		ModuleName:      moduleName,
@@ -321,10 +324,11 @@ func (e *Executor) EntityFocusELK(qualifiedName string) error {
 
 // buildAllEntityNames loads all entities across all modules.
 // Returns ID -> "Module.Entity" map and ID -> module name map.
-func (e *Executor) buildAllEntityNames() (map[model.ID]string, map[model.ID]string) {
+func buildAllEntityNames(ctx *ExecContext) (map[model.ID]string, map[model.ID]string) {
+	e := ctx.executor
 	allEntityNames := make(map[model.ID]string)
 	allEntityModules := make(map[model.ID]string)
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return allEntityNames, allEntityModules
 	}
@@ -449,14 +453,14 @@ func assocTypeStr(t domainmodel.AssociationType) string {
 
 // buildDomainModelMdlSource generates combined MDL source for a set of entities
 // and returns the source string and a source map mapping entity ELK IDs to line ranges.
-func (e *Executor) buildDomainModelMdlSource(entities []*domainmodel.Entity, moduleName string) (string, map[string]elkSourceRange) {
+func buildDomainModelMdlSource(ctx *ExecContext, entities []*domainmodel.Entity, moduleName string) (string, map[string]elkSourceRange) {
 	sourceMap := make(map[string]elkSourceRange)
 	var allSource strings.Builder
 	lineCount := 0
 
 	for i, entity := range entities {
 		qn := ast.QualifiedName{Module: moduleName, Name: entity.Name}
-		entityMdl, err := e.describeEntityToString(qn)
+		entityMdl, err := describeEntityToString(ctx, qn)
 		if err != nil {
 			continue
 		}
@@ -483,12 +487,12 @@ func (e *Executor) buildDomainModelMdlSource(entities []*domainmodel.Entity, mod
 }
 
 // emitDomainModelELK marshals and writes the domain model ELK data to output.
-func (e *Executor) emitDomainModelELK(data domainModelELKData) error {
+func emitDomainModelELK(ctx *ExecContext, data domainModelELKData) error {
 	out, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return mdlerrors.NewBackend("marshal JSON", err)
 	}
-	fmt.Fprint(e.output, string(out))
+	fmt.Fprint(ctx.Output, string(out))
 	return nil
 }
 
@@ -504,4 +508,11 @@ func classifyEntity(entity *domainmodel.Entity) string {
 		return "nonpersistent"
 	}
 	return "persistent"
+}
+
+// --- Executor method wrappers for callers not yet migrated ---
+
+// DomainModelELK is the exported Executor method, called from outside the package.
+func (e *Executor) DomainModelELK(name string) error {
+	return domainModelELK(e.newExecContext(context.Background()), name)
 }

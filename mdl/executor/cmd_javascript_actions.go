@@ -16,8 +16,9 @@ import (
 )
 
 // showJavaScriptActions handles SHOW JAVASCRIPT ACTIONS command.
-func (e *Executor) showJavaScriptActions(moduleName string) error {
-	h, err := e.getHierarchy()
+func showJavaScriptActions(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -61,11 +62,12 @@ func (e *Executor) showJavaScriptActions(moduleName string) error {
 	for _, r := range rows {
 		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.platform, r.folderPath})
 	}
-	return e.writeResult(result)
+	return writeResult(ctx, result)
 }
 
 // describeJavaScriptAction handles DESCRIBE JAVASCRIPT ACTION command.
-func (e *Executor) describeJavaScriptAction(name ast.QualifiedName) error {
+func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	qualifiedName := name.Module + "." + name.Name
 	jsa, err := e.reader.ReadJavaScriptActionByName(qualifiedName)
 	if err != nil {
@@ -178,7 +180,7 @@ func (e *Executor) describeJavaScriptAction(name ast.QualifiedName) error {
 	}
 
 	// JavaScript source code
-	userCode, extraCode := e.readJavaScriptActionSource(name.Module, name.Name)
+	userCode, extraCode := readJavaScriptActionSource(e.mprPath, name.Module, name.Name)
 	if userCode != "" {
 		sb.WriteString("\nAS $$\n")
 		sb.WriteString(userCode)
@@ -187,24 +189,24 @@ func (e *Executor) describeJavaScriptAction(name ast.QualifiedName) error {
 
 	sb.WriteString(";")
 
-	fmt.Fprintln(e.output, sb.String())
+	fmt.Fprintln(ctx.Output, sb.String())
 
 	// Additional info as comments
 	if jsa.ExportLevel != "" && jsa.ExportLevel != "Hidden" {
-		fmt.Fprintf(e.output, "-- EXPORT LEVEL: %s\n", jsa.ExportLevel)
+		fmt.Fprintf(ctx.Output, "-- EXPORT LEVEL: %s\n", jsa.ExportLevel)
 	}
 	if jsa.Excluded {
-		fmt.Fprintln(e.output, "-- EXCLUDED: true")
+		fmt.Fprintln(ctx.Output, "-- EXCLUDED: true")
 	}
 	if platform != "All" {
 		// already shown inline
 	} else {
-		fmt.Fprintln(e.output, "-- PLATFORM: All")
+		fmt.Fprintln(ctx.Output, "-- PLATFORM: All")
 	}
 	if extraCode != "" {
-		fmt.Fprintln(e.output, "-- EXTRA CODE:")
+		fmt.Fprintln(ctx.Output, "-- EXTRA CODE:")
 		for line := range strings.SplitSeq(extraCode, "\n") {
-			fmt.Fprintf(e.output, "-- %s\n", line)
+			fmt.Fprintf(ctx.Output, "-- %s\n", line)
 		}
 	}
 
@@ -212,12 +214,12 @@ func (e *Executor) describeJavaScriptAction(name ast.QualifiedName) error {
 }
 
 // readJavaScriptActionSource reads the JavaScript source file and extracts user code and extra code.
-func (e *Executor) readJavaScriptActionSource(moduleName, actionName string) (userCode, extraCode string) {
-	if e.mprPath == "" {
+func readJavaScriptActionSource(mprPath, moduleName, actionName string) (userCode, extraCode string) {
+	if mprPath == "" {
 		return "", ""
 	}
 
-	projectRoot := filepath.Dir(e.mprPath)
+	projectRoot := filepath.Dir(mprPath)
 	// JavaScript source uses original module name casing (not lowercased like javasource)
 	jsPath := filepath.Join(projectRoot, "javascriptsource", moduleName, "actions", actionName+".js")
 

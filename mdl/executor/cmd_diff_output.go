@@ -15,7 +15,7 @@ import (
 // ============================================================================
 
 // outputUnifiedDiff outputs diff in unified format
-func (e *Executor) outputUnifiedDiff(result DiffResult, useColor bool) {
+func outputUnifiedDiff(ctx *ExecContext, result DiffResult, useColor bool) {
 	if result.IsNew {
 		// New object - show all as additions
 		header := fmt.Sprintf("--- /dev/null\n+++ %s.%s (new)\n",
@@ -23,16 +23,16 @@ func (e *Executor) outputUnifiedDiff(result DiffResult, useColor bool) {
 		if useColor {
 			header = colorCyan + header + colorReset
 		}
-		fmt.Fprint(e.output, header)
+		fmt.Fprint(ctx.Output, header)
 
 		for line := range strings.SplitSeq(result.Proposed, "\n") {
 			if useColor {
-				fmt.Fprintf(e.output, "%s+%s%s\n", colorGreen, line, colorReset)
+				fmt.Fprintf(ctx.Output, "%s+%s%s\n", colorGreen, line, colorReset)
 			} else {
-				fmt.Fprintf(e.output, "+%s\n", line)
+				fmt.Fprintf(ctx.Output, "+%s\n", line)
 			}
 		}
-		fmt.Fprintln(e.output)
+		fmt.Fprintln(ctx.Output)
 		return
 	}
 
@@ -55,23 +55,23 @@ func (e *Executor) outputUnifiedDiff(result DiffResult, useColor bool) {
 		lines := strings.SplitSeq(text, "\n")
 		for line := range lines {
 			if strings.HasPrefix(line, "+++") || strings.HasPrefix(line, "---") || strings.HasPrefix(line, "@@") {
-				fmt.Fprintf(e.output, "%s%s%s\n", colorCyan, line, colorReset)
+				fmt.Fprintf(ctx.Output, "%s%s%s\n", colorCyan, line, colorReset)
 			} else if strings.HasPrefix(line, "+") {
-				fmt.Fprintf(e.output, "%s%s%s\n", colorGreen, line, colorReset)
+				fmt.Fprintf(ctx.Output, "%s%s%s\n", colorGreen, line, colorReset)
 			} else if strings.HasPrefix(line, "-") {
-				fmt.Fprintf(e.output, "%s%s%s\n", colorRed, line, colorReset)
+				fmt.Fprintf(ctx.Output, "%s%s%s\n", colorRed, line, colorReset)
 			} else {
-				fmt.Fprintln(e.output, line)
+				fmt.Fprintln(ctx.Output, line)
 			}
 		}
 	} else {
-		fmt.Fprint(e.output, text)
+		fmt.Fprint(ctx.Output, text)
 	}
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output)
 }
 
 // outputSideBySideDiff outputs diff in side-by-side format
-func (e *Executor) outputSideBySideDiff(result DiffResult, width int, useColor bool) {
+func outputSideBySideDiff(ctx *ExecContext, result DiffResult, width int, useColor bool) {
 	colWidth := (width - 3) / 2 // 3 for separator " | "
 
 	// Header
@@ -79,16 +79,16 @@ func (e *Executor) outputSideBySideDiff(result DiffResult, width int, useColor b
 	if useColor {
 		header = colorCyan + header + colorReset
 	}
-	fmt.Fprintln(e.output, header)
-	fmt.Fprintln(e.output, strings.Repeat("─", width))
+	fmt.Fprintln(ctx.Output, header)
+	fmt.Fprintln(ctx.Output, strings.Repeat("─", width))
 
 	leftHeader := "Current"
 	rightHeader := "Script"
 	if result.IsNew {
 		leftHeader = "(new)"
 	}
-	fmt.Fprintf(e.output, "%-*s │ %s\n", colWidth, leftHeader, rightHeader)
-	fmt.Fprintln(e.output, strings.Repeat("─", width))
+	fmt.Fprintf(ctx.Output, "%-*s │ %s\n", colWidth, leftHeader, rightHeader)
+	fmt.Fprintln(ctx.Output, strings.Repeat("─", width))
 
 	currentLines := strings.Split(result.Current, "\n")
 	proposedLines := strings.Split(result.Proposed, "\n")
@@ -129,33 +129,33 @@ func (e *Executor) outputSideBySideDiff(result DiffResult, width int, useColor b
 			}
 		}
 
-		fmt.Fprintf(e.output, "%-*s │ %s %s\n", colWidth, left, right, marker)
+		fmt.Fprintf(ctx.Output, "%-*s │ %s %s\n", colWidth, left, right, marker)
 	}
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output)
 }
 
 // outputStructuralDiff outputs diff in structural format
-func (e *Executor) outputStructuralDiff(result DiffResult, useColor bool) {
+func outputStructuralDiff(ctx *ExecContext, result DiffResult, useColor bool) {
 	header := fmt.Sprintf("%s: %s", result.ObjectType, result.ObjectName)
 	if useColor {
 		header = colorCyan + header + colorReset
 	}
-	fmt.Fprintln(e.output, header)
+	fmt.Fprintln(ctx.Output, header)
 
 	if result.IsNew {
 		if useColor {
-			fmt.Fprintf(e.output, "  %s+ New%s\n", colorGreen, colorReset)
+			fmt.Fprintf(ctx.Output, "  %s+ New%s\n", colorGreen, colorReset)
 		} else {
-			fmt.Fprintln(e.output, "  + New")
+			fmt.Fprintln(ctx.Output, "  + New")
 		}
 	} else if result.Current == result.Proposed {
-		fmt.Fprintln(e.output, "  (no changes)")
+		fmt.Fprintln(ctx.Output, "  (no changes)")
 	} else if len(result.Changes) == 0 {
 		// Modified but no specific changes detected - show generic message
 		if useColor {
-			fmt.Fprintf(e.output, "  %s~ Modified%s\n", colorYellow, colorReset)
+			fmt.Fprintf(ctx.Output, "  %s~ Modified%s\n", colorYellow, colorReset)
 		} else {
-			fmt.Fprintln(e.output, "  ~ Modified")
+			fmt.Fprintln(ctx.Output, "  ~ Modified")
 		}
 	}
 
@@ -178,9 +178,9 @@ func (e *Executor) outputStructuralDiff(result DiffResult, useColor bool) {
 				line = fmt.Sprintf("  %s%s %s %s%s%s", colorYellow, marker, change.ElementType, change.ElementName, details, colorReset)
 			}
 		}
-		fmt.Fprintln(e.output, line)
+		fmt.Fprintln(ctx.Output, line)
 	}
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output)
 }
 
 // truncateLine truncates a string to the given width for diff display

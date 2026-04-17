@@ -24,7 +24,8 @@ func isBuiltinModuleEntity(moduleName string) bool {
 
 // execCreateMicroflow handles CREATE MICROFLOW statements.
 // loadRestServices returns all consumed REST services, or nil if no reader.
-func (e *Executor) loadRestServices() ([]*model.ConsumedRestService, error) {
+func loadRestServices(ctx *ExecContext) ([]*model.ConsumedRestService, error) {
+	e := ctx.executor
 	if e.reader == nil {
 		return nil, nil
 	}
@@ -32,13 +33,14 @@ func (e *Executor) loadRestServices() ([]*model.ConsumedRestService, error) {
 	return svcs, err
 }
 
-func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
+func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Find or auto-create module
-	module, err := e.findOrCreateModule(s.Name.Module)
+	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,7 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 	// Resolve folder if specified
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := e.resolveFolder(module.ID, s.Folder)
+		folderID, err := resolveFolder(ctx, module.ID, s.Folder)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve folder "+s.Folder, err)
 		}
@@ -61,7 +63,7 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		return mdlerrors.NewBackend("check existing microflows", err)
 	}
 	for _, existing := range existingMicroflows {
-		if existing.Name == s.Name.Name && e.getModuleID(existing.ContainerID) == module.ID {
+		if existing.Name == s.Name.Name && getModuleID(ctx, existing.ContainerID) == module.ID {
 			if !s.CreateOrModify {
 				return mdlerrors.NewAlreadyExistsMsg("microflow", s.Name.Module+"."+s.Name.Name, "microflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use CREATE OR REPLACE to overwrite)")
 			}
@@ -135,7 +137,7 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		}
 		// Validate enumeration references for Enumeration types
 		if p.Type.Kind == ast.TypeEnumeration && p.Type.EnumRef != nil {
-			if found := e.findEnumeration(p.Type.EnumRef.Module, p.Type.EnumRef.Name); found == nil {
+			if found := findEnumeration(ctx, p.Type.EnumRef.Module, p.Type.EnumRef.Name); found == nil {
 				return mdlerrors.NewNotFoundMsg("enumeration", p.Type.EnumRef.Module+"."+p.Type.EnumRef.Name,
 					fmt.Sprintf("enumeration '%s.%s' not found for parameter '%s'", p.Type.EnumRef.Module, p.Type.EnumRef.Name, p.Name))
 			}
@@ -165,7 +167,7 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		}
 		// Validate enumeration references for return type
 		if s.ReturnType.Type.Kind == ast.TypeEnumeration && s.ReturnType.Type.EnumRef != nil {
-			if found := e.findEnumeration(s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name); found == nil {
+			if found := findEnumeration(ctx, s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name); found == nil {
 				return mdlerrors.NewNotFoundMsg("enumeration", s.ReturnType.Type.EnumRef.Module+"."+s.ReturnType.Type.EnumRef.Name,
 					fmt.Sprintf("enumeration '%s.%s' not found for return type", s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name))
 			}
@@ -200,9 +202,9 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		}
 	}
 	// Get hierarchy for resolving page/microflow references
-	hierarchy, _ := e.getHierarchy()
+	hierarchy, _ := getHierarchy(ctx)
 
-	restServices, _ := e.loadRestServices()
+	restServices, _ := loadRestServices(ctx)
 
 	builder := &flowBuilder{
 		posX:         200,
@@ -235,12 +237,12 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		if err := e.writer.UpdateMicroflow(mf); err != nil {
 			return mdlerrors.NewBackend("update microflow", err)
 		}
-		fmt.Fprintf(e.output, "Replaced microflow: %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(ctx.Output, "Replaced microflow: %s.%s\n", s.Name.Module, s.Name.Name)
 	} else {
 		if err := e.writer.CreateMicroflow(mf); err != nil {
 			return mdlerrors.NewBackend("create microflow", err)
 		}
-		fmt.Fprintf(e.output, "Created microflow: %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(ctx.Output, "Created microflow: %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 
 	// Track the created microflow so it can be resolved by subsequent page creations
@@ -248,6 +250,6 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 	e.trackCreatedMicroflow(s.Name.Module, s.Name.Name, mf.ID, containerID, returnEntityName)
 
 	// Invalidate hierarchy cache so the new microflow's container is visible
-	e.invalidateHierarchy()
+	invalidateHierarchy(ctx)
 	return nil
 }

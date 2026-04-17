@@ -7,142 +7,144 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
-func (e *Executor) execShow(s *ast.ShowStmt) error {
+func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
+	e := ctx.executor
 	if e.reader == nil && s.ObjectType != ast.ShowModules && s.ObjectType != ast.ShowFragments {
 		return mdlerrors.NewNotConnected()
 	}
 
 	switch s.ObjectType {
 	case ast.ShowModules:
-		return e.showModules()
+		return showModules(ctx)
 	case ast.ShowEnumerations:
-		return e.showEnumerations(s.InModule)
+		return showEnumerations(ctx, s.InModule)
 	case ast.ShowConstants:
-		return e.showConstants(s.InModule)
+		return showConstants(ctx, s.InModule)
 	case ast.ShowConstantValues:
-		return e.showConstantValues(s.InModule)
+		return showConstantValues(ctx, s.InModule)
 	case ast.ShowEntities:
-		return e.showEntities(s.InModule)
+		return showEntities(ctx, s.InModule)
 	case ast.ShowEntity:
-		return e.showEntity(s.Name)
+		return showEntity(ctx, s.Name)
 	case ast.ShowAssociations:
-		return e.showAssociations(s.InModule)
+		return showAssociations(ctx, s.InModule)
 	case ast.ShowAssociation:
-		return e.showAssociation(s.Name)
+		return showAssociation(ctx, s.Name)
 	case ast.ShowMicroflows:
-		return e.showMicroflows(s.InModule)
+		return showMicroflows(ctx, s.InModule)
 	case ast.ShowNanoflows:
-		return e.showNanoflows(s.InModule)
+		return showNanoflows(ctx, s.InModule)
 	case ast.ShowPages:
-		return e.showPages(s.InModule)
+		return showPages(ctx, s.InModule)
 	case ast.ShowSnippets:
-		return e.showSnippets(s.InModule)
+		return showSnippets(ctx, s.InModule)
 	case ast.ShowLayouts:
-		return e.showLayouts(s.InModule)
+		return showLayouts(ctx, s.InModule)
 	case ast.ShowJavaActions:
-		return e.showJavaActions(s.InModule)
+		return showJavaActions(ctx, s.InModule)
 	case ast.ShowJavaScriptActions:
-		return e.showJavaScriptActions(s.InModule)
+		return showJavaScriptActions(ctx, s.InModule)
 	case ast.ShowVersion:
-		return e.showVersion()
+		return showVersion(ctx)
 	case ast.ShowCatalogTables:
-		return e.execShowCatalogTables()
+		return execShowCatalogTables(ctx)
 	case ast.ShowCatalogStatus:
-		return e.execShowCatalogStatus()
+		return execShowCatalogStatus(ctx)
 	case ast.ShowCallers:
-		return e.execShowCallers(s)
+		return execShowCallers(ctx, s)
 	case ast.ShowCallees:
-		return e.execShowCallees(s)
+		return execShowCallees(ctx, s)
 	case ast.ShowReferences:
-		return e.execShowReferences(s)
+		return execShowReferences(ctx, s)
 	case ast.ShowImpact:
-		return e.execShowImpact(s)
+		return execShowImpact(ctx, s)
 	case ast.ShowContext:
-		return e.execShowContext(s)
+		return execShowContext(ctx, s)
 	case ast.ShowProjectSecurity:
-		return e.showProjectSecurity()
+		return showProjectSecurity(ctx)
 	case ast.ShowModuleRoles:
-		return e.showModuleRoles(s.InModule)
+		return showModuleRoles(ctx, s.InModule)
 	case ast.ShowUserRoles:
-		return e.showUserRoles()
+		return showUserRoles(ctx)
 	case ast.ShowDemoUsers:
-		return e.showDemoUsers()
+		return showDemoUsers(ctx)
 	case ast.ShowAccessOn:
-		return e.showAccessOnEntity(s.Name)
+		return showAccessOnEntity(ctx, s.Name)
 	case ast.ShowAccessOnMicroflow:
-		return e.showAccessOnMicroflow(s.Name)
+		return showAccessOnMicroflow(ctx, s.Name)
 	case ast.ShowAccessOnPage:
-		return e.showAccessOnPage(s.Name)
+		return showAccessOnPage(ctx, s.Name)
 	case ast.ShowAccessOnWorkflow:
-		return e.showAccessOnWorkflow(s.Name)
+		return showAccessOnWorkflow(ctx, s.Name)
 	case ast.ShowSecurityMatrix:
-		return e.showSecurityMatrix(s.InModule)
+		return showSecurityMatrix(ctx, s.InModule)
 	case ast.ShowODataClients:
-		return e.showODataClients(s.InModule)
+		return showODataClients(ctx, s.InModule)
 	case ast.ShowODataServices:
-		return e.showODataServices(s.InModule)
+		return showODataServices(ctx, s.InModule)
 	case ast.ShowExternalEntities:
-		return e.showExternalEntities(s.InModule)
+		return showExternalEntities(ctx, s.InModule)
 	case ast.ShowExternalActions:
-		return e.showExternalActions(s.InModule)
+		return showExternalActions(ctx, s.InModule)
 	case ast.ShowNavigation:
-		return e.showNavigation()
+		return showNavigation(ctx)
 	case ast.ShowNavigationMenu:
-		return e.showNavigationMenu(s.Name)
+		return showNavigationMenu(ctx, s.Name)
 	case ast.ShowNavigationHomes:
-		return e.showNavigationHomes()
+		return showNavigationHomes(ctx)
 	case ast.ShowStructure:
-		return e.execShowStructure(s)
+		return execShowStructure(ctx, s)
 	case ast.ShowWorkflows:
-		return e.showWorkflows(s.InModule)
+		return showWorkflows(ctx, s.InModule)
 	case ast.ShowBusinessEventServices:
-		return e.showBusinessEventServices(s.InModule)
+		return showBusinessEventServices(ctx, s.InModule)
 	case ast.ShowBusinessEventClients:
-		return e.showBusinessEventClients(s.InModule)
+		return showBusinessEventClients(ctx, s.InModule)
 	case ast.ShowBusinessEvents:
-		return e.showBusinessEvents(s.InModule)
+		return showBusinessEvents(ctx, s.InModule)
 	case ast.ShowSettings:
-		return e.showSettings()
+		return showSettings(ctx)
 	case ast.ShowFragments:
-		return e.showFragments()
+		return showFragments(ctx)
 	case ast.ShowDatabaseConnections:
-		return e.showDatabaseConnections(s.InModule)
+		return showDatabaseConnections(ctx, s.InModule)
 	case ast.ShowImageCollections:
-		return e.showImageCollections(s.InModule)
+		return showImageCollections(ctx, s.InModule)
 	case ast.ShowModels:
-		return e.showAgentEditorModels(s.InModule)
+		return showAgentEditorModels(ctx, s.InModule)
 	case ast.ShowAgents:
-		return e.showAgentEditorAgents(s.InModule)
+		return showAgentEditorAgents(ctx, s.InModule)
 	case ast.ShowKnowledgeBases:
-		return e.showAgentEditorKnowledgeBases(s.InModule)
+		return showAgentEditorKnowledgeBases(ctx, s.InModule)
 	case ast.ShowConsumedMCPServices:
-		return e.showAgentEditorConsumedMCPServices(s.InModule)
+		return showAgentEditorConsumedMCPServices(ctx, s.InModule)
 	case ast.ShowRestClients:
-		return e.showRestClients(s.InModule)
+		return showRestClients(ctx, s.InModule)
 	case ast.ShowPublishedRestServices:
-		return e.showPublishedRestServices(s.InModule)
+		return showPublishedRestServices(ctx, s.InModule)
 	case ast.ShowDataTransformers:
-		return e.listDataTransformers(s.InModule)
+		return listDataTransformers(ctx, s.InModule)
 	case ast.ShowContractEntities:
-		return e.showContractEntities(s.Name)
+		return showContractEntities(ctx, s.Name)
 	case ast.ShowContractActions:
-		return e.showContractActions(s.Name)
+		return showContractActions(ctx, s.Name)
 	case ast.ShowContractChannels:
-		return e.showContractChannels(s.Name)
+		return showContractChannels(ctx, s.Name)
 	case ast.ShowContractMessages:
-		return e.showContractMessages(s.Name)
+		return showContractMessages(ctx, s.Name)
 	case ast.ShowJsonStructures:
-		return e.showJsonStructures(s.InModule)
+		return showJsonStructures(ctx, s.InModule)
 	case ast.ShowImportMappings:
-		return e.showImportMappings(s.InModule)
+		return showImportMappings(ctx, s.InModule)
 	case ast.ShowExportMappings:
-		return e.showExportMappings(s.InModule)
+		return showExportMappings(ctx, s.InModule)
 	default:
 		return mdlerrors.NewUnsupported("unknown show object type")
 	}
 }
 
-func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
+func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
+	e := ctx.executor
 	if e.reader == nil && s.ObjectType != ast.DescribeFragment {
 		return mdlerrors.NewNotConnected()
 	}
@@ -151,84 +153,84 @@ func (e *Executor) execDescribe(s *ast.DescribeStmt) error {
 	objectType := describeObjectTypeLabel(s.ObjectType)
 	name := s.Name.String()
 
-	return e.writeDescribeJSON(name, objectType, func() error {
+	return writeDescribeJSON(ctx, name, objectType, func() error {
 		switch s.ObjectType {
 		case ast.DescribeEnumeration:
-			return e.describeEnumeration(s.Name)
+			return describeEnumeration(ctx, s.Name)
 		case ast.DescribeEntity:
-			return e.describeEntity(s.Name)
+			return describeEntity(ctx, s.Name)
 		case ast.DescribeAssociation:
-			return e.describeAssociation(s.Name)
+			return describeAssociation(ctx, s.Name)
 		case ast.DescribeMicroflow:
-			return e.describeMicroflow(s.Name)
+			return describeMicroflow(ctx, s.Name)
 		case ast.DescribeNanoflow:
-			return e.describeNanoflow(s.Name)
+			return describeNanoflow(ctx, s.Name)
 		case ast.DescribeModule:
-			return e.describeModule(s.Name.Module, s.WithAll)
+			return describeModule(ctx, s.Name.Module, s.WithAll)
 		case ast.DescribePage:
-			return e.describePage(s.Name)
+			return describePage(ctx, s.Name)
 		case ast.DescribeSnippet:
-			return e.describeSnippet(s.Name)
+			return describeSnippet(ctx, s.Name)
 		case ast.DescribeLayout:
-			return e.describeLayout(s.Name)
+			return describeLayout(ctx, s.Name)
 		case ast.DescribeConstant:
-			return e.describeConstant(s.Name)
+			return describeConstant(ctx, s.Name)
 		case ast.DescribeJavaAction:
-			return e.describeJavaAction(s.Name)
+			return describeJavaAction(ctx, s.Name)
 		case ast.DescribeJavaScriptAction:
-			return e.describeJavaScriptAction(s.Name)
+			return describeJavaScriptAction(ctx, s.Name)
 		case ast.DescribeModuleRole:
-			return e.describeModuleRole(s.Name)
+			return describeModuleRole(ctx, s.Name)
 		case ast.DescribeUserRole:
-			return e.describeUserRole(s.Name)
+			return describeUserRole(ctx, s.Name)
 		case ast.DescribeDemoUser:
-			return e.describeDemoUser(s.Name.Name)
+			return describeDemoUser(ctx, s.Name.Name)
 		case ast.DescribeODataClient:
-			return e.describeODataClient(s.Name)
+			return describeODataClient(ctx, s.Name)
 		case ast.DescribeODataService:
-			return e.describeODataService(s.Name)
+			return describeODataService(ctx, s.Name)
 		case ast.DescribeExternalEntity:
-			return e.describeExternalEntity(s.Name)
+			return describeExternalEntity(ctx, s.Name)
 		case ast.DescribeNavigation:
-			return e.describeNavigation(s.Name)
+			return describeNavigation(ctx, s.Name)
 		case ast.DescribeWorkflow:
-			return e.describeWorkflow(s.Name)
+			return describeWorkflow(ctx, s.Name)
 		case ast.DescribeBusinessEventService:
-			return e.describeBusinessEventService(s.Name)
+			return describeBusinessEventService(ctx, s.Name)
 		case ast.DescribeDatabaseConnection:
-			return e.describeDatabaseConnection(s.Name)
+			return describeDatabaseConnection(ctx, s.Name)
 		case ast.DescribeSettings:
-			return e.describeSettings()
+			return describeSettings(ctx)
 		case ast.DescribeFragment:
-			return e.describeFragment(s.Name)
+			return describeFragment(ctx, s.Name)
 		case ast.DescribeImageCollection:
-			return e.describeImageCollection(s.Name)
+			return describeImageCollection(ctx, s.Name)
 		case ast.DescribeModel:
-			return e.describeAgentEditorModel(s.Name)
+			return describeAgentEditorModel(ctx, s.Name)
 		case ast.DescribeAgent:
-			return e.describeAgentEditorAgent(s.Name)
+			return describeAgentEditorAgent(ctx, s.Name)
 		case ast.DescribeKnowledgeBase:
-			return e.describeAgentEditorKnowledgeBase(s.Name)
+			return describeAgentEditorKnowledgeBase(ctx, s.Name)
 		case ast.DescribeConsumedMCPService:
-			return e.describeAgentEditorConsumedMCPService(s.Name)
+			return describeAgentEditorConsumedMCPService(ctx, s.Name)
 		case ast.DescribeRestClient:
-			return e.describeRestClient(s.Name)
+			return describeRestClient(ctx, s.Name)
 		case ast.DescribePublishedRestService:
-			return e.describePublishedRestService(s.Name)
+			return describePublishedRestService(ctx, s.Name)
 		case ast.DescribeDataTransformer:
-			return e.describeDataTransformer(s.Name)
+			return describeDataTransformer(ctx, s.Name)
 		case ast.DescribeContractEntity:
-			return e.describeContractEntity(s.Name, s.Format)
+			return describeContractEntity(ctx, s.Name, s.Format)
 		case ast.DescribeContractAction:
-			return e.describeContractAction(s.Name, s.Format)
+			return describeContractAction(ctx, s.Name, s.Format)
 		case ast.DescribeContractMessage:
-			return e.describeContractMessage(s.Name)
+			return describeContractMessage(ctx, s.Name)
 		case ast.DescribeJsonStructure:
-			return e.describeJsonStructure(s.Name)
+			return describeJsonStructure(ctx, s.Name)
 		case ast.DescribeImportMapping:
-			return e.describeImportMapping(s.Name)
+			return describeImportMapping(ctx, s.Name)
 		case ast.DescribeExportMapping:
-			return e.describeExportMapping(s.Name)
+			return describeExportMapping(ctx, s.Name)
 		default:
 			return mdlerrors.NewUnsupported("unknown describe object type")
 		}

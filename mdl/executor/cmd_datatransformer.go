@@ -12,13 +12,15 @@ import (
 )
 
 // listDataTransformers handles LIST DATA TRANSFORMERS [IN module].
-func (e *Executor) listDataTransformers(moduleName string) error {
+func listDataTransformers(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
+
 	transformers, err := e.reader.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -42,7 +44,7 @@ func (e *Executor) listDataTransformers(moduleName string) error {
 	}
 
 	if len(rows) == 0 {
-		fmt.Fprintln(e.output, "No data transformers found.")
+		fmt.Fprintln(ctx.Output, "No data transformers found.")
 		return nil
 	}
 
@@ -51,17 +53,19 @@ func (e *Executor) listDataTransformers(moduleName string) error {
 		Rows:    rows,
 		Summary: fmt.Sprintf("(%d data transformers)", len(rows)),
 	}
-	return e.writeResult(result)
+	return writeResult(ctx, result)
 }
 
 // describeDataTransformer handles DESCRIBE DATA TRANSFORMER Module.Name.
-func (e *Executor) describeDataTransformer(name ast.QualifiedName) error {
+func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
+
 	transformers, err := e.reader.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -73,7 +77,7 @@ func (e *Executor) describeDataTransformer(name ast.QualifiedName) error {
 			continue
 		}
 
-		w := e.output
+		w := ctx.Output
 
 		// Emit re-executable MDL
 		fmt.Fprintf(w, "CREATE DATA TRANSFORMER %s.%s\n", modName, dt.Name)
@@ -103,18 +107,20 @@ func (e *Executor) describeDataTransformer(name ast.QualifiedName) error {
 }
 
 // execCreateDataTransformer creates a new data transformer.
-func (e *Executor) execCreateDataTransformer(s *ast.CreateDataTransformerStmt) error {
+func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStmt) error {
+	e := ctx.executor
+
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	if err := e.checkFeature("integration", "data_transformer",
+	if err := checkFeature(ctx, "integration", "data_transformer",
 		"CREATE DATA TRANSFORMER",
 		"upgrade your project to 11.9+"); err != nil {
 		return err
 	}
 
-	module, err := e.findModule(s.Name.Module)
+	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", s.Name.Module)
 	}
@@ -138,14 +144,16 @@ func (e *Executor) execCreateDataTransformer(s *ast.CreateDataTransformerStmt) e
 	}
 
 	if !e.quiet {
-		fmt.Fprintf(e.output, "Created data transformer: %s.%s (%d steps)\n",
+		fmt.Fprintf(ctx.Output, "Created data transformer: %s.%s (%d steps)\n",
 			s.Name.Module, s.Name.Name, len(dt.Steps))
 	}
 	return nil
 }
 
 // execDropDataTransformer deletes a data transformer.
-func (e *Executor) execDropDataTransformer(s *ast.DropDataTransformerStmt) error {
+func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) error {
+	e := ctx.executor
+
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -155,7 +163,7 @@ func (e *Executor) execDropDataTransformer(s *ast.DropDataTransformerStmt) error
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return err
 	}
@@ -168,7 +176,7 @@ func (e *Executor) execDropDataTransformer(s *ast.DropDataTransformerStmt) error
 				return mdlerrors.NewBackend("drop data transformer", err)
 			}
 			if !e.quiet {
-				fmt.Fprintf(e.output, "Dropped data transformer: %s.%s\n", s.Name.Module, s.Name.Name)
+				fmt.Fprintf(ctx.Output, "Dropped data transformer: %s.%s\n", s.Name.Module, s.Name.Name)
 			}
 			return nil
 		}
@@ -176,3 +184,5 @@ func (e *Executor) execDropDataTransformer(s *ast.DropDataTransformerStmt) error
 
 	return mdlerrors.NewNotFound("data transformer", s.Name.Module+"."+s.Name.Name)
 }
+
+// Executor wrappers for unmigrated callers.

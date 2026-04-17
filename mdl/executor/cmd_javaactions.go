@@ -18,9 +18,10 @@ import (
 )
 
 // showJavaActions handles SHOW JAVA ACTIONS command.
-func (e *Executor) showJavaActions(moduleName string) error {
+func showJavaActions(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	// Get hierarchy for module/folder resolution
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -62,11 +63,12 @@ func (e *Executor) showJavaActions(moduleName string) error {
 	for _, r := range rows {
 		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath})
 	}
-	return e.writeResult(result)
+	return writeResult(ctx, result)
 }
 
 // describeJavaAction handles DESCRIBE JAVA ACTION command - outputs MDL-style representation.
-func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
+func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	qualifiedName := name.Module + "." + name.Name
 	ja, err := e.reader.ReadJavaActionByName(qualifiedName)
 	if err != nil {
@@ -160,7 +162,7 @@ func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
 	}
 
 	// Try to read and include Java source code
-	javaCode := e.readJavaActionUserCode(name.Module, name.Name)
+	javaCode := readJavaActionUserCode(e.mprPath, name.Module, name.Name)
 	if javaCode != "" {
 		sb.WriteString("\nAS $$\n")
 		sb.WriteString(javaCode)
@@ -170,27 +172,27 @@ func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
 	sb.WriteString(";")
 
 	// Output the complete statement
-	fmt.Fprintln(e.output, sb.String())
+	fmt.Fprintln(ctx.Output, sb.String())
 
 	// Additional info as comments
 	if ja.ExportLevel != "" && ja.ExportLevel != "Hidden" {
-		fmt.Fprintf(e.output, "-- EXPORT LEVEL: %s\n", ja.ExportLevel)
+		fmt.Fprintf(ctx.Output, "-- EXPORT LEVEL: %s\n", ja.ExportLevel)
 	}
 	if ja.Excluded {
-		fmt.Fprintln(e.output, "-- EXCLUDED: true")
+		fmt.Fprintln(ctx.Output, "-- EXCLUDED: true")
 	}
 
 	return nil
 }
 
 // readJavaActionUserCode reads the Java source file and extracts the user code section.
-func (e *Executor) readJavaActionUserCode(moduleName, actionName string) string {
-	if e.mprPath == "" {
+func readJavaActionUserCode(mprPath, moduleName, actionName string) string {
+	if mprPath == "" {
 		return ""
 	}
 
 	// Build path to Java source file
-	projectRoot := filepath.Dir(e.mprPath)
+	projectRoot := filepath.Dir(mprPath)
 	moduleNameLower := strings.ToLower(moduleName)
 	javaPath := filepath.Join(projectRoot, "javasource", moduleNameLower, "actions", actionName+".java")
 
@@ -246,13 +248,14 @@ func formatJavaActionReturnType(t javaactions.CodeActionReturnType) string {
 }
 
 // execDropJavaAction handles DROP JAVA ACTION statements.
-func (e *Executor) execDropJavaAction(s *ast.DropJavaActionStmt) error {
+func execDropJavaAction(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Get hierarchy for module/folder resolution
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -270,7 +273,7 @@ func (e *Executor) execDropJavaAction(s *ast.DropJavaActionStmt) error {
 			if err := e.writer.DeleteJavaAction(ja.ID); err != nil {
 				return mdlerrors.NewBackend("delete java action", err)
 			}
-			fmt.Fprintf(e.output, "Dropped java action: %s.%s\n", s.Name.Module, s.Name.Name)
+			fmt.Fprintf(ctx.Output, "Dropped java action: %s.%s\n", s.Name.Module, s.Name.Name)
 			return nil
 		}
 	}
@@ -279,13 +282,14 @@ func (e *Executor) execDropJavaAction(s *ast.DropJavaActionStmt) error {
 }
 
 // execCreateJavaAction handles CREATE JAVA ACTION statements.
-func (e *Executor) execCreateJavaAction(s *ast.CreateJavaActionStmt) error {
+func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
 	// Get hierarchy for module/folder resolution
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -424,7 +428,7 @@ func (e *Executor) execCreateJavaAction(s *ast.CreateJavaActionStmt) error {
 	// Clear cache
 	e.cache = nil
 
-	fmt.Fprintf(e.output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
+	fmt.Fprintf(ctx.Output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
 }
 
