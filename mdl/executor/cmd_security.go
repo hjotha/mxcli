@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -14,40 +15,42 @@ import (
 )
 
 // showProjectSecurity handles SHOW PROJECT SECURITY.
-func (e *Executor) showProjectSecurity() error {
+func showProjectSecurity(ctx *ExecContext) error {
+	e := ctx.executor
 	ps, err := e.reader.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
 
-	fmt.Fprintf(e.output, "Security Level: %s\n", security.SecurityLevelDisplay(ps.SecurityLevel))
-	fmt.Fprintf(e.output, "Check Security: %v\n", ps.CheckSecurity)
-	fmt.Fprintf(e.output, "Strict Mode: %v\n", ps.StrictMode)
-	fmt.Fprintf(e.output, "Demo Users Enabled: %v\n", ps.EnableDemoUsers)
-	fmt.Fprintf(e.output, "Guest Access: %v\n", ps.EnableGuestAccess)
+	fmt.Fprintf(ctx.Output, "Security Level: %s\n", security.SecurityLevelDisplay(ps.SecurityLevel))
+	fmt.Fprintf(ctx.Output, "Check Security: %v\n", ps.CheckSecurity)
+	fmt.Fprintf(ctx.Output, "Strict Mode: %v\n", ps.StrictMode)
+	fmt.Fprintf(ctx.Output, "Demo Users Enabled: %v\n", ps.EnableDemoUsers)
+	fmt.Fprintf(ctx.Output, "Guest Access: %v\n", ps.EnableGuestAccess)
 	if ps.AdminUserName != "" {
-		fmt.Fprintf(e.output, "Admin User: %s\n", ps.AdminUserName)
+		fmt.Fprintf(ctx.Output, "Admin User: %s\n", ps.AdminUserName)
 	}
 	if ps.GuestUserRole != "" {
-		fmt.Fprintf(e.output, "Guest User Role: %s\n", ps.GuestUserRole)
+		fmt.Fprintf(ctx.Output, "Guest User Role: %s\n", ps.GuestUserRole)
 	}
-	fmt.Fprintf(e.output, "User Roles: %d\n", len(ps.UserRoles))
-	fmt.Fprintf(e.output, "Demo Users: %d\n", len(ps.DemoUsers))
+	fmt.Fprintf(ctx.Output, "User Roles: %d\n", len(ps.UserRoles))
+	fmt.Fprintf(ctx.Output, "Demo Users: %d\n", len(ps.DemoUsers))
 
 	if ps.PasswordPolicy != nil {
 		pp := ps.PasswordPolicy
-		fmt.Fprintf(e.output, "\nPassword Policy:\n")
-		fmt.Fprintf(e.output, "  Minimum Length: %d\n", pp.MinimumLength)
-		fmt.Fprintf(e.output, "  Require Digit: %v\n", pp.RequireDigit)
-		fmt.Fprintf(e.output, "  Require Mixed Case: %v\n", pp.RequireMixedCase)
-		fmt.Fprintf(e.output, "  Require Symbol: %v\n", pp.RequireSymbol)
+		fmt.Fprintf(ctx.Output, "\nPassword Policy:\n")
+		fmt.Fprintf(ctx.Output, "  Minimum Length: %d\n", pp.MinimumLength)
+		fmt.Fprintf(ctx.Output, "  Require Digit: %v\n", pp.RequireDigit)
+		fmt.Fprintf(ctx.Output, "  Require Mixed Case: %v\n", pp.RequireMixedCase)
+		fmt.Fprintf(ctx.Output, "  Require Symbol: %v\n", pp.RequireSymbol)
 	}
 
 	return nil
 }
 
 // showModuleRoles handles SHOW MODULE ROLES [IN module].
-func (e *Executor) showModuleRoles(moduleName string) error {
+func showModuleRoles(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	h, err := e.getHierarchy()
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -81,7 +84,8 @@ func (e *Executor) showModuleRoles(moduleName string) error {
 }
 
 // showUserRoles handles SHOW USER ROLES.
-func (e *Executor) showUserRoles() error {
+func showUserRoles(ctx *ExecContext) error {
+	e := ctx.executor
 	ps, err := e.reader.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -108,15 +112,16 @@ func (e *Executor) showUserRoles() error {
 }
 
 // showDemoUsers handles SHOW DEMO USERS.
-func (e *Executor) showDemoUsers() error {
+func showDemoUsers(ctx *ExecContext) error {
+	e := ctx.executor
 	ps, err := e.reader.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
 
 	if !ps.EnableDemoUsers {
-		fmt.Fprintln(e.output, "Demo users are disabled.")
-		fmt.Fprintln(e.output, "Enable with: ALTER PROJECT SECURITY DEMO USERS ON;")
+		fmt.Fprintln(ctx.Output, "Demo users are disabled.")
+		fmt.Fprintln(ctx.Output, "Enable with: ALTER PROJECT SECURITY DEMO USERS ON;")
 		return nil
 	}
 
@@ -134,7 +139,8 @@ func (e *Executor) showDemoUsers() error {
 }
 
 // showAccessOnEntity handles SHOW ACCESS ON Module.Entity.
-func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
+func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
+	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}
@@ -161,7 +167,7 @@ func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
 	}
 
 	if len(entity.AccessRules) == 0 {
-		fmt.Fprintf(e.output, "No access rules on %s\n", name)
+		fmt.Fprintf(ctx.Output, "No access rules on %s\n", name)
 		return nil
 	}
 
@@ -171,7 +177,7 @@ func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
 		attrNames[string(attr.ID)] = attr.Name
 	}
 
-	fmt.Fprintf(e.output, "Access rules for %s.%s:\n\n", name.Module, name.Name)
+	fmt.Fprintf(ctx.Output, "Access rules for %s.%s:\n\n", name.Module, name.Name)
 
 	for i, rule := range entity.AccessRules {
 		// Show roles
@@ -184,7 +190,7 @@ func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
 				roleStrs = append(roleStrs, string(rid))
 			}
 		}
-		fmt.Fprintf(e.output, "Rule %d: %s\n", i+1, strings.Join(roleStrs, ", "))
+		fmt.Fprintf(ctx.Output, "Rule %d: %s\n", i+1, strings.Join(roleStrs, ", "))
 
 		// Show CRUD rights (READ/WRITE inferred from DefaultMemberAccessRights + MemberAccesses)
 		var rights []string
@@ -211,11 +217,11 @@ func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
 		if rule.AllowDelete {
 			rights = append(rights, "DELETE")
 		}
-		fmt.Fprintf(e.output, "  Rights: %s\n", strings.Join(rights, ", "))
+		fmt.Fprintf(ctx.Output, "  Rights: %s\n", strings.Join(rights, ", "))
 
 		// Show default member access
 		if rule.DefaultMemberAccessRights != "" {
-			fmt.Fprintf(e.output, "  Default member access: %s\n", rule.DefaultMemberAccessRights)
+			fmt.Fprintf(ctx.Output, "  Default member access: %s\n", rule.DefaultMemberAccessRights)
 		}
 
 		// Show member-level access
@@ -231,21 +237,22 @@ func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
 					memberName = string(ma.AttributeID)
 				}
 			}
-			fmt.Fprintf(e.output, "  %s: %s\n", memberName, ma.AccessRights)
+			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberName, ma.AccessRights)
 		}
 
 		// Show XPath constraint
 		if rule.XPathConstraint != "" {
-			fmt.Fprintf(e.output, "  WHERE '%s'\n", rule.XPathConstraint)
+			fmt.Fprintf(ctx.Output, "  WHERE '%s'\n", rule.XPathConstraint)
 		}
-		fmt.Fprintln(e.output)
+		fmt.Fprintln(ctx.Output)
 	}
 
 	return nil
 }
 
 // showAccessOnMicroflow handles SHOW ACCESS ON MICROFLOW Module.MF.
-func (e *Executor) showAccessOnMicroflow(name *ast.QualifiedName) error {
+func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
+	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("microflow name required")
 	}
@@ -264,12 +271,12 @@ func (e *Executor) showAccessOnMicroflow(name *ast.QualifiedName) error {
 		modName := h.GetModuleName(h.FindModuleID(mf.ContainerID))
 		if modName == name.Module && mf.Name == name.Name {
 			if len(mf.AllowedModuleRoles) == 0 {
-				fmt.Fprintf(e.output, "No module roles granted execute access on %s.%s\n", modName, mf.Name)
+				fmt.Fprintf(ctx.Output, "No module roles granted execute access on %s.%s\n", modName, mf.Name)
 				return nil
 			}
-			fmt.Fprintf(e.output, "Allowed module roles for %s.%s:\n", modName, mf.Name)
+			fmt.Fprintf(ctx.Output, "Allowed module roles for %s.%s:\n", modName, mf.Name)
 			for _, role := range mf.AllowedModuleRoles {
-				fmt.Fprintf(e.output, "  %s\n", string(role))
+				fmt.Fprintf(ctx.Output, "  %s\n", string(role))
 			}
 			return nil
 		}
@@ -279,7 +286,8 @@ func (e *Executor) showAccessOnMicroflow(name *ast.QualifiedName) error {
 }
 
 // showAccessOnPage handles SHOW ACCESS ON PAGE Module.Page.
-func (e *Executor) showAccessOnPage(name *ast.QualifiedName) error {
+func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
+	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("page name required")
 	}
@@ -298,12 +306,12 @@ func (e *Executor) showAccessOnPage(name *ast.QualifiedName) error {
 		modName := h.GetModuleName(h.FindModuleID(pg.ContainerID))
 		if modName == name.Module && pg.Name == name.Name {
 			if len(pg.AllowedRoles) == 0 {
-				fmt.Fprintf(e.output, "No module roles granted view access on %s.%s\n", modName, pg.Name)
+				fmt.Fprintf(ctx.Output, "No module roles granted view access on %s.%s\n", modName, pg.Name)
 				return nil
 			}
-			fmt.Fprintf(e.output, "Allowed module roles for %s.%s:\n", modName, pg.Name)
+			fmt.Fprintf(ctx.Output, "Allowed module roles for %s.%s:\n", modName, pg.Name)
 			for _, role := range pg.AllowedRoles {
-				fmt.Fprintf(e.output, "  %s\n", string(role))
+				fmt.Fprintf(ctx.Output, "  %s\n", string(role))
 			}
 			return nil
 		}
@@ -313,14 +321,15 @@ func (e *Executor) showAccessOnPage(name *ast.QualifiedName) error {
 }
 
 // showAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW Module.WF.
-func (e *Executor) showAccessOnWorkflow(name *ast.QualifiedName) error {
+func showAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewUnsupported("SHOW ACCESS ON WORKFLOW is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
 // showSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
-func (e *Executor) showSecurityMatrix(moduleName string) error {
+func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	if e.format == FormatJSON {
-		return e.showSecurityMatrixJSON(moduleName)
+		return showSecurityMatrixJSON(ctx, moduleName)
 	}
 
 	h, err := e.getHierarchy()
@@ -355,9 +364,9 @@ func (e *Executor) showSecurityMatrix(moduleName string) error {
 
 	if len(roles) == 0 {
 		if moduleName != "" {
-			fmt.Fprintf(e.output, "No module roles found in %s\n", moduleName)
+			fmt.Fprintf(ctx.Output, "No module roles found in %s\n", moduleName)
 		} else {
-			fmt.Fprintln(e.output, "No module roles found")
+			fmt.Fprintln(ctx.Output, "No module roles found")
 		}
 		return nil
 	}
@@ -374,16 +383,16 @@ func (e *Executor) showSecurityMatrix(moduleName string) error {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
 
-	fmt.Fprintf(e.output, "Security Matrix")
+	fmt.Fprintf(ctx.Output, "Security Matrix")
 	if moduleName != "" {
-		fmt.Fprintf(e.output, " for %s", moduleName)
+		fmt.Fprintf(ctx.Output, " for %s", moduleName)
 	}
-	fmt.Fprintln(e.output, ":")
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output, ":")
+	fmt.Fprintln(ctx.Output)
 
 	// Entities section
-	fmt.Fprintln(e.output, "## Entity Access")
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output, "## Entity Access")
+	fmt.Fprintln(ctx.Output)
 
 	entityFound := false
 	for _, dm := range dms {
@@ -398,7 +407,7 @@ func (e *Executor) showSecurityMatrix(moduleName string) error {
 				continue
 			}
 			entityFound = true
-			fmt.Fprintf(e.output, "### %s.%s\n", modName, entity.Name)
+			fmt.Fprintf(ctx.Output, "### %s.%s\n", modName, entity.Name)
 
 			for _, rule := range entity.AccessRules {
 				var roleStrs []string
@@ -436,19 +445,19 @@ func (e *Executor) showSecurityMatrix(moduleName string) error {
 					rights = append(rights, "D")
 				}
 
-				fmt.Fprintf(e.output, "  %s: %s\n", strings.Join(roleStrs, ", "), strings.Join(rights, ""))
+				fmt.Fprintf(ctx.Output, "  %s: %s\n", strings.Join(roleStrs, ", "), strings.Join(rights, ""))
 			}
-			fmt.Fprintln(e.output)
+			fmt.Fprintln(ctx.Output)
 		}
 	}
 	if !entityFound {
-		fmt.Fprintln(e.output, "(no entity access rules configured)")
-		fmt.Fprintln(e.output)
+		fmt.Fprintln(ctx.Output, "(no entity access rules configured)")
+		fmt.Fprintln(ctx.Output)
 	}
 
 	// Microflow section
-	fmt.Fprintln(e.output, "## Microflow Access")
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output, "## Microflow Access")
+	fmt.Fprintln(ctx.Output)
 
 	mfs, err := e.reader.ListMicroflows()
 	if err != nil {
@@ -470,16 +479,16 @@ func (e *Executor) showSecurityMatrix(moduleName string) error {
 		for _, r := range mf.AllowedModuleRoles {
 			roleStrs = append(roleStrs, string(r))
 		}
-		fmt.Fprintf(e.output, "  %s.%s: %s\n", modName, mf.Name, strings.Join(roleStrs, ", "))
+		fmt.Fprintf(ctx.Output, "  %s.%s: %s\n", modName, mf.Name, strings.Join(roleStrs, ", "))
 	}
 	if !mfFound {
-		fmt.Fprintln(e.output, "(no microflow access rules configured)")
+		fmt.Fprintln(ctx.Output, "(no microflow access rules configured)")
 	}
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output)
 
 	// Page section
-	fmt.Fprintln(e.output, "## Page Access")
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output, "## Page Access")
+	fmt.Fprintln(ctx.Output)
 
 	pages, err := e.reader.ListPages()
 	if err != nil {
@@ -501,25 +510,26 @@ func (e *Executor) showSecurityMatrix(moduleName string) error {
 		for _, r := range pg.AllowedRoles {
 			roleStrs = append(roleStrs, string(r))
 		}
-		fmt.Fprintf(e.output, "  %s.%s: %s\n", modName, pg.Name, strings.Join(roleStrs, ", "))
+		fmt.Fprintf(ctx.Output, "  %s.%s: %s\n", modName, pg.Name, strings.Join(roleStrs, ", "))
 	}
 	if !pgFound {
-		fmt.Fprintln(e.output, "(no page access rules configured)")
+		fmt.Fprintln(ctx.Output, "(no page access rules configured)")
 	}
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output)
 
 	// Workflow section — workflows don't have document-level AllowedModuleRoles
-	fmt.Fprintln(e.output, "## Workflow Access")
-	fmt.Fprintln(e.output)
-	fmt.Fprintln(e.output, "(workflow access is controlled through triggering microflows and UserTask targeting, not document-level roles)")
-	fmt.Fprintln(e.output)
+	fmt.Fprintln(ctx.Output, "## Workflow Access")
+	fmt.Fprintln(ctx.Output)
+	fmt.Fprintln(ctx.Output, "(workflow access is controlled through triggering microflows and UserTask targeting, not document-level roles)")
+	fmt.Fprintln(ctx.Output)
 
 	return nil
 }
 
 // showSecurityMatrixJSON emits the security matrix as a JSON table
 // with one row per access rule across entities, microflows, pages, and workflows.
-func (e *Executor) showSecurityMatrixJSON(moduleName string) error {
+func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	h, err := e.getHierarchy()
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -634,7 +644,8 @@ func (e *Executor) showSecurityMatrixJSON(moduleName string) error {
 }
 
 // describeModuleRole handles DESCRIBE MODULE ROLE Module.RoleName.
-func (e *Executor) describeModuleRole(name ast.QualifiedName) error {
+func describeModuleRole(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	h, err := e.getHierarchy()
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -652,12 +663,12 @@ func (e *Executor) describeModuleRole(name ast.QualifiedName) error {
 		}
 		for _, mr := range ms.ModuleRoles {
 			if mr.Name == name.Name {
-				fmt.Fprintf(e.output, "CREATE MODULE ROLE %s.%s", modName, mr.Name)
+				fmt.Fprintf(ctx.Output, "CREATE MODULE ROLE %s.%s", modName, mr.Name)
 				if mr.Description != "" {
-					fmt.Fprintf(e.output, " DESCRIPTION '%s'", mr.Description)
+					fmt.Fprintf(ctx.Output, " DESCRIPTION '%s'", mr.Description)
 				}
-				fmt.Fprintln(e.output, ";")
-				fmt.Fprintln(e.output, "/")
+				fmt.Fprintln(ctx.Output, ";")
+				fmt.Fprintln(ctx.Output, "/")
 
 				// Show which user roles include this module role
 				qualifiedRole := modName + "." + mr.Name
@@ -672,7 +683,7 @@ func (e *Executor) describeModuleRole(name ast.QualifiedName) error {
 						}
 					}
 					if len(includedBy) > 0 {
-						fmt.Fprintf(e.output, "\n-- Included in user roles: %s\n", strings.Join(includedBy, ", "))
+						fmt.Fprintf(ctx.Output, "\n-- Included in user roles: %s\n", strings.Join(includedBy, ", "))
 					}
 				}
 
@@ -685,7 +696,8 @@ func (e *Executor) describeModuleRole(name ast.QualifiedName) error {
 }
 
 // describeDemoUser handles DESCRIBE DEMO USER 'name'.
-func (e *Executor) describeDemoUser(userName string) error {
+func describeDemoUser(ctx *ExecContext, userName string) error {
+	e := ctx.executor
 	ps, err := e.reader.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -693,15 +705,15 @@ func (e *Executor) describeDemoUser(userName string) error {
 
 	for _, du := range ps.DemoUsers {
 		if du.UserName == userName {
-			fmt.Fprintf(e.output, "CREATE DEMO USER '%s' PASSWORD '***'", du.UserName)
+			fmt.Fprintf(ctx.Output, "CREATE DEMO USER '%s' PASSWORD '***'", du.UserName)
 			if du.Entity != "" {
-				fmt.Fprintf(e.output, " ENTITY %s", du.Entity)
+				fmt.Fprintf(ctx.Output, " ENTITY %s", du.Entity)
 			}
 			if len(du.UserRoles) > 0 {
-				fmt.Fprintf(e.output, " (%s)", strings.Join(du.UserRoles, ", "))
+				fmt.Fprintf(ctx.Output, " (%s)", strings.Join(du.UserRoles, ", "))
 			}
-			fmt.Fprintln(e.output, ";")
-			fmt.Fprintln(e.output, "/")
+			fmt.Fprintln(ctx.Output, ";")
+			fmt.Fprintln(ctx.Output, "/")
 			return nil
 		}
 	}
@@ -710,7 +722,8 @@ func (e *Executor) describeDemoUser(userName string) error {
 }
 
 // describeUserRole handles DESCRIBE USER ROLE Name.
-func (e *Executor) describeUserRole(name ast.QualifiedName) error {
+func describeUserRole(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	ps, err := e.reader.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -718,28 +731,28 @@ func (e *Executor) describeUserRole(name ast.QualifiedName) error {
 
 	for _, ur := range ps.UserRoles {
 		if ur.Name == name.Name {
-			fmt.Fprintf(e.output, "CREATE USER ROLE %s", ur.Name)
+			fmt.Fprintf(ctx.Output, "CREATE USER ROLE %s", ur.Name)
 
 			// Module roles
 			if len(ur.ModuleRoles) > 0 {
-				fmt.Fprintf(e.output, " (%s)", strings.Join(ur.ModuleRoles, ", "))
+				fmt.Fprintf(ctx.Output, " (%s)", strings.Join(ur.ModuleRoles, ", "))
 			}
 
 			if ur.ManageAllRoles {
-				fmt.Fprint(e.output, " MANAGE ALL ROLES")
+				fmt.Fprint(ctx.Output, " MANAGE ALL ROLES")
 			}
 
-			fmt.Fprintln(e.output, ";")
-			fmt.Fprintln(e.output, "/")
+			fmt.Fprintln(ctx.Output, ";")
+			fmt.Fprintln(ctx.Output, "/")
 
 			// Show description if present
 			if ur.Description != "" {
-				fmt.Fprintf(e.output, "\n-- Description: %s\n", ur.Description)
+				fmt.Fprintf(ctx.Output, "\n-- Description: %s\n", ur.Description)
 			}
 
 			// Show check security flag
 			if ur.CheckSecurity {
-				fmt.Fprintln(e.output, "-- Check security: enabled")
+				fmt.Fprintln(ctx.Output, "-- Check security: enabled")
 			}
 
 			return nil
@@ -747,4 +760,55 @@ func (e *Executor) describeUserRole(name ast.QualifiedName) error {
 	}
 
 	return mdlerrors.NewNotFound("user role", name.Name)
+}
+
+// Executor method wrappers — delegate to free functions for callers that
+// still use the Executor receiver (e.g. executor_query.go).
+
+func (e *Executor) showProjectSecurity() error {
+	return showProjectSecurity(e.newExecContext(context.Background()))
+}
+
+func (e *Executor) showModuleRoles(moduleName string) error {
+	return showModuleRoles(e.newExecContext(context.Background()), moduleName)
+}
+
+func (e *Executor) showUserRoles() error {
+	return showUserRoles(e.newExecContext(context.Background()))
+}
+
+func (e *Executor) showDemoUsers() error {
+	return showDemoUsers(e.newExecContext(context.Background()))
+}
+
+func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
+	return showAccessOnEntity(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) showAccessOnMicroflow(name *ast.QualifiedName) error {
+	return showAccessOnMicroflow(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) showAccessOnPage(name *ast.QualifiedName) error {
+	return showAccessOnPage(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) showAccessOnWorkflow(name *ast.QualifiedName) error {
+	return showAccessOnWorkflow(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) showSecurityMatrix(moduleName string) error {
+	return showSecurityMatrix(e.newExecContext(context.Background()), moduleName)
+}
+
+func (e *Executor) describeModuleRole(name ast.QualifiedName) error {
+	return describeModuleRole(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) describeDemoUser(userName string) error {
+	return describeDemoUser(e.newExecContext(context.Background()), userName)
+}
+
+func (e *Executor) describeUserRole(name ast.QualifiedName) error {
+	return describeUserRole(e.newExecContext(context.Background()), name)
 }

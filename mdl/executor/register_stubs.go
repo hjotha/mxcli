@@ -128,55 +128,55 @@ func registerPageHandlers(r *Registry) {
 
 func registerSecurityHandlers(r *Registry) {
 	r.Register(&ast.CreateModuleRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateModuleRole(stmt.(*ast.CreateModuleRoleStmt))
+		return execCreateModuleRole(ctx, stmt.(*ast.CreateModuleRoleStmt))
 	})
 	r.Register(&ast.DropModuleRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropModuleRole(stmt.(*ast.DropModuleRoleStmt))
+		return execDropModuleRole(ctx, stmt.(*ast.DropModuleRoleStmt))
 	})
 	r.Register(&ast.CreateUserRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateUserRole(stmt.(*ast.CreateUserRoleStmt))
+		return execCreateUserRole(ctx, stmt.(*ast.CreateUserRoleStmt))
 	})
 	r.Register(&ast.AlterUserRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execAlterUserRole(stmt.(*ast.AlterUserRoleStmt))
+		return execAlterUserRole(ctx, stmt.(*ast.AlterUserRoleStmt))
 	})
 	r.Register(&ast.DropUserRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropUserRole(stmt.(*ast.DropUserRoleStmt))
+		return execDropUserRole(ctx, stmt.(*ast.DropUserRoleStmt))
 	})
 	r.Register(&ast.GrantEntityAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execGrantEntityAccess(stmt.(*ast.GrantEntityAccessStmt))
+		return execGrantEntityAccess(ctx, stmt.(*ast.GrantEntityAccessStmt))
 	})
 	r.Register(&ast.RevokeEntityAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execRevokeEntityAccess(stmt.(*ast.RevokeEntityAccessStmt))
+		return execRevokeEntityAccess(ctx, stmt.(*ast.RevokeEntityAccessStmt))
 	})
 	r.Register(&ast.GrantMicroflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execGrantMicroflowAccess(stmt.(*ast.GrantMicroflowAccessStmt))
+		return execGrantMicroflowAccess(ctx, stmt.(*ast.GrantMicroflowAccessStmt))
 	})
 	r.Register(&ast.RevokeMicroflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execRevokeMicroflowAccess(stmt.(*ast.RevokeMicroflowAccessStmt))
+		return execRevokeMicroflowAccess(ctx, stmt.(*ast.RevokeMicroflowAccessStmt))
 	})
 	r.Register(&ast.GrantPageAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execGrantPageAccess(stmt.(*ast.GrantPageAccessStmt))
+		return execGrantPageAccess(ctx, stmt.(*ast.GrantPageAccessStmt))
 	})
 	r.Register(&ast.RevokePageAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execRevokePageAccess(stmt.(*ast.RevokePageAccessStmt))
+		return execRevokePageAccess(ctx, stmt.(*ast.RevokePageAccessStmt))
 	})
 	r.Register(&ast.GrantWorkflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execGrantWorkflowAccess(stmt.(*ast.GrantWorkflowAccessStmt))
+		return execGrantWorkflowAccess(ctx, stmt.(*ast.GrantWorkflowAccessStmt))
 	})
 	r.Register(&ast.RevokeWorkflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execRevokeWorkflowAccess(stmt.(*ast.RevokeWorkflowAccessStmt))
+		return execRevokeWorkflowAccess(ctx, stmt.(*ast.RevokeWorkflowAccessStmt))
 	})
 	r.Register(&ast.AlterProjectSecurityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execAlterProjectSecurity(stmt.(*ast.AlterProjectSecurityStmt))
+		return execAlterProjectSecurity(ctx, stmt.(*ast.AlterProjectSecurityStmt))
 	})
 	r.Register(&ast.CreateDemoUserStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateDemoUser(stmt.(*ast.CreateDemoUserStmt))
+		return execCreateDemoUser(ctx, stmt.(*ast.CreateDemoUserStmt))
 	})
 	r.Register(&ast.DropDemoUserStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropDemoUser(stmt.(*ast.DropDemoUserStmt))
+		return execDropDemoUser(ctx, stmt.(*ast.DropDemoUserStmt))
 	})
 	r.Register(&ast.UpdateSecurityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execUpdateSecurity(stmt.(*ast.UpdateSecurityStmt))
+		return execUpdateSecurity(ctx, stmt.(*ast.UpdateSecurityStmt))
 	})
 }
 
@@ -296,16 +296,16 @@ func registerRESTHandlers(r *Registry) {
 		return ctx.executor.createExternalEntities(stmt.(*ast.CreateExternalEntitiesStmt))
 	})
 	r.Register(&ast.GrantODataServiceAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execGrantODataServiceAccess(stmt.(*ast.GrantODataServiceAccessStmt))
+		return execGrantODataServiceAccess(ctx, stmt.(*ast.GrantODataServiceAccessStmt))
 	})
 	r.Register(&ast.RevokeODataServiceAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execRevokeODataServiceAccess(stmt.(*ast.RevokeODataServiceAccessStmt))
+		return execRevokeODataServiceAccess(ctx, stmt.(*ast.RevokeODataServiceAccessStmt))
 	})
 	r.Register(&ast.GrantPublishedRestServiceAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execGrantPublishedRestServiceAccess(stmt.(*ast.GrantPublishedRestServiceAccessStmt))
+		return execGrantPublishedRestServiceAccess(ctx, stmt.(*ast.GrantPublishedRestServiceAccessStmt))
 	})
 	r.Register(&ast.RevokePublishedRestServiceAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execRevokePublishedRestServiceAccess(stmt.(*ast.RevokePublishedRestServiceAccessStmt))
+		return execRevokePublishedRestServiceAccess(ctx, stmt.(*ast.RevokePublishedRestServiceAccessStmt))
 	})
 }
 
