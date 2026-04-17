@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,7 +16,9 @@ import (
 )
 
 // execCreateEnumeration handles CREATE ENUMERATION statements.
-func (e *Executor) execCreateEnumeration(s *ast.CreateEnumerationStmt) error {
+func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error {
+	e := ctx.executor
+
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -37,7 +40,7 @@ func (e *Executor) execCreateEnumeration(s *ast.CreateEnumerationStmt) error {
 	}
 
 	// Check if enumeration already exists
-	existingEnum := e.findEnumeration(s.Name.Module, s.Name.Name)
+	existingEnum := findEnumeration(ctx, s.Name.Module, s.Name.Name)
 	if existingEnum != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExistsMsg("enumeration", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("enumeration already exists: %s.%s (use CREATE OR MODIFY to update)", s.Name.Module, s.Name.Name))
 	}
@@ -75,12 +78,14 @@ func (e *Executor) execCreateEnumeration(s *ast.CreateEnumerationStmt) error {
 	// Invalidate hierarchy cache so the new enumeration's container is visible
 	e.invalidateHierarchy()
 
-	fmt.Fprintf(e.output, "Created enumeration: %s\n", s.Name)
+	fmt.Fprintf(ctx.Output, "Created enumeration: %s\n", s.Name)
 	return nil
 }
 
 // findEnumeration finds an enumeration by module and name.
-func (e *Executor) findEnumeration(moduleName, enumName string) *model.Enumeration {
+func findEnumeration(ctx *ExecContext, moduleName, enumName string) *model.Enumeration {
+	e := ctx.executor
+
 	enums, err := e.reader.ListEnumerations()
 	if err != nil {
 		return nil
@@ -101,14 +106,21 @@ func (e *Executor) findEnumeration(moduleName, enumName string) *model.Enumerati
 	return nil
 }
 
+// findEnumeration is an Executor method wrapper for callers not yet migrated.
+func (e *Executor) findEnumeration(moduleName, enumName string) *model.Enumeration {
+	return findEnumeration(e.newExecContext(context.Background()), moduleName, enumName)
+}
+
 // execAlterEnumeration handles ALTER ENUMERATION statements.
-func (e *Executor) execAlterEnumeration(s *ast.AlterEnumerationStmt) error {
+func execAlterEnumeration(ctx *ExecContext, s *ast.AlterEnumerationStmt) error {
 	// TODO: Implement ALTER ENUMERATION
 	return mdlerrors.NewUnsupported("ALTER ENUMERATION not yet implemented")
 }
 
 // execDropEnumeration handles DROP ENUMERATION statements.
-func (e *Executor) execDropEnumeration(s *ast.DropEnumerationStmt) error {
+func execDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
+	e := ctx.executor
+
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -127,7 +139,7 @@ func (e *Executor) execDropEnumeration(s *ast.DropEnumerationStmt) error {
 				if err := e.writer.DeleteEnumeration(enum.ID); err != nil {
 					return mdlerrors.NewBackend("delete enumeration", err)
 				}
-				fmt.Fprintf(e.output, "Dropped enumeration: %s\n", s.Name)
+				fmt.Fprintf(ctx.Output, "Dropped enumeration: %s\n", s.Name)
 				return nil
 			}
 		}
@@ -137,7 +149,9 @@ func (e *Executor) execDropEnumeration(s *ast.DropEnumerationStmt) error {
 }
 
 // showEnumerations handles SHOW ENUMERATIONS command.
-func (e *Executor) showEnumerations(moduleName string) error {
+func showEnumerations(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
+
 	enums, err := e.reader.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
@@ -186,8 +200,15 @@ func (e *Executor) showEnumerations(moduleName string) error {
 	return e.writeResult(result)
 }
 
+// showEnumerations is an Executor method wrapper for callers not yet migrated.
+func (e *Executor) showEnumerations(moduleName string) error {
+	return showEnumerations(e.newExecContext(context.Background()), moduleName)
+}
+
 // describeEnumeration handles DESCRIBE ENUMERATION command.
-func (e *Executor) describeEnumeration(name ast.QualifiedName) error {
+func describeEnumeration(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
+
 	enums, err := e.reader.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
@@ -204,10 +225,10 @@ func (e *Executor) describeEnumeration(name ast.QualifiedName) error {
 		if enum.Name == name.Name && (name.Module == "" || modName == name.Module) {
 			// Output JavaDoc documentation if present
 			if enum.Documentation != "" {
-				fmt.Fprintf(e.output, "/**\n * %s\n */\n", enum.Documentation)
+				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", enum.Documentation)
 			}
 
-			fmt.Fprintf(e.output, "CREATE OR MODIFY ENUMERATION %s.%s (\n", modName, enum.Name)
+			fmt.Fprintf(ctx.Output, "CREATE OR MODIFY ENUMERATION %s.%s (\n", modName, enum.Name)
 			for i, v := range enum.Values {
 				comma := ","
 				if i == len(enum.Values)-1 {
@@ -217,15 +238,20 @@ func (e *Executor) describeEnumeration(name ast.QualifiedName) error {
 				if v.Caption != nil {
 					caption = v.Caption.GetTranslation("en_US")
 				}
-				fmt.Fprintf(e.output, "  %s '%s'%s\n", v.Name, caption, comma)
+				fmt.Fprintf(ctx.Output, "  %s '%s'%s\n", v.Name, caption, comma)
 			}
-			fmt.Fprintln(e.output, ");")
-			fmt.Fprintln(e.output, "/")
+			fmt.Fprintln(ctx.Output, ");")
+			fmt.Fprintln(ctx.Output, "/")
 			return nil
 		}
 	}
 
 	return mdlerrors.NewNotFound("enumeration", name.String())
+}
+
+// describeEnumeration is an Executor method wrapper for callers not yet migrated.
+func (e *Executor) describeEnumeration(name ast.QualifiedName) error {
+	return describeEnumeration(e.newExecContext(context.Background()), name)
 }
 
 // mendixReservedWords contains words that cannot be used as enumeration value names.

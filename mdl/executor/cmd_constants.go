@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,7 +14,9 @@ import (
 )
 
 // showConstants handles SHOW CONSTANTS command.
-func (e *Executor) showConstants(moduleName string) error {
+func showConstants(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
+
 	constants, err := e.reader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
@@ -60,7 +63,7 @@ func (e *Executor) showConstants(moduleName string) error {
 	}
 
 	if len(rows) == 0 {
-		fmt.Fprintln(e.output, "No constants found.")
+		fmt.Fprintln(ctx.Output, "No constants found.")
 		return nil
 	}
 
@@ -79,8 +82,15 @@ func (e *Executor) showConstants(moduleName string) error {
 	return e.writeResult(result)
 }
 
+// showConstants is an Executor method wrapper for callers not yet migrated.
+func (e *Executor) showConstants(moduleName string) error {
+	return showConstants(e.newExecContext(context.Background()), moduleName)
+}
+
 // describeConstant handles DESCRIBE CONSTANT command.
-func (e *Executor) describeConstant(name ast.QualifiedName) error {
+func describeConstant(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
+
 	constants, err := e.reader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
@@ -97,43 +107,55 @@ func (e *Executor) describeConstant(name ast.QualifiedName) error {
 		modID := h.FindModuleID(c.ContainerID)
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, name.Module) && strings.EqualFold(c.Name, name.Name) {
-			return e.outputConstantMDL(c, modName)
+			return outputConstantMDL(ctx, c, modName)
 		}
 	}
 
 	return mdlerrors.NewNotFound("constant", name.String())
 }
 
+// describeConstant is an Executor method wrapper for callers not yet migrated.
+func (e *Executor) describeConstant(name ast.QualifiedName) error {
+	return describeConstant(e.newExecContext(context.Background()), name)
+}
+
 // outputConstantMDL outputs a constant definition in MDL format.
-func (e *Executor) outputConstantMDL(c *model.Constant, moduleName string) error {
+func outputConstantMDL(ctx *ExecContext, c *model.Constant, moduleName string) error {
+	e := ctx.executor
+
 	// Format default value based on type
 	defaultValueStr := formatDefaultValue(c.Type, c.DefaultValue)
 
-	fmt.Fprintf(e.output, "CREATE OR MODIFY CONSTANT %s.%s\n", moduleName, c.Name)
-	fmt.Fprintf(e.output, "  TYPE %s\n", formatConstantTypeForMDL(c.Type))
-	fmt.Fprintf(e.output, "  DEFAULT %s", defaultValueStr)
+	fmt.Fprintf(ctx.Output, "CREATE OR MODIFY CONSTANT %s.%s\n", moduleName, c.Name)
+	fmt.Fprintf(ctx.Output, "  TYPE %s\n", formatConstantTypeForMDL(c.Type))
+	fmt.Fprintf(ctx.Output, "  DEFAULT %s", defaultValueStr)
 
 	// Add folder if present
 	h, _ := e.getHierarchy()
 	if h != nil {
 		if folderPath := h.BuildFolderPath(c.ContainerID); folderPath != "" {
-			fmt.Fprintf(e.output, "\n  FOLDER '%s'", folderPath)
+			fmt.Fprintf(ctx.Output, "\n  FOLDER '%s'", folderPath)
 		}
 	}
 
 	// Add options if present
 	if c.Documentation != "" {
 		escaped := strings.ReplaceAll(c.Documentation, "'", "''")
-		fmt.Fprintf(e.output, "\n  COMMENT '%s'", escaped)
+		fmt.Fprintf(ctx.Output, "\n  COMMENT '%s'", escaped)
 	}
 	if c.ExposedToClient {
-		fmt.Fprintf(e.output, "\n  EXPOSED TO CLIENT")
+		fmt.Fprintf(ctx.Output, "\n  EXPOSED TO CLIENT")
 	}
 
-	fmt.Fprintln(e.output, ";")
-	fmt.Fprintln(e.output, "/")
+	fmt.Fprintln(ctx.Output, ";")
+	fmt.Fprintln(ctx.Output, "/")
 
 	return nil
+}
+
+// outputConstantMDL is an Executor method wrapper for callers not yet migrated.
+func (e *Executor) outputConstantMDL(c *model.Constant, moduleName string) error {
+	return outputConstantMDL(e.newExecContext(context.Background()), c, moduleName)
 }
 
 // formatConstantType returns a human-readable type string.
@@ -247,7 +269,9 @@ func formatDefaultValue(dt model.ConstantDataType, value string) string {
 }
 
 // createConstant handles CREATE CONSTANT command.
-func (e *Executor) createConstant(stmt *ast.CreateConstantStmt) error {
+func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
+	e := ctx.executor
+
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -294,7 +318,7 @@ func (e *Executor) createConstant(stmt *ast.CreateConstantStmt) error {
 						return mdlerrors.NewBackend("update constant", err)
 					}
 					e.invalidateHierarchy()
-					fmt.Fprintf(e.output, "Modified constant: %s.%s\n", modName, c.Name)
+					fmt.Fprintf(ctx.Output, "Modified constant: %s.%s\n", modName, c.Name)
 					return nil
 				}
 				return mdlerrors.NewAlreadyExistsMsg("constant", modName+"."+c.Name, fmt.Sprintf("constant already exists: %s.%s (use CREATE OR MODIFY to update)", modName, c.Name))
@@ -330,13 +354,15 @@ func (e *Executor) createConstant(stmt *ast.CreateConstantStmt) error {
 		return mdlerrors.NewBackend("create constant", err)
 	}
 	e.invalidateHierarchy()
-	fmt.Fprintf(e.output, "Created constant: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
+	fmt.Fprintf(ctx.Output, "Created constant: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
 	return nil
 }
 
 // showConstantValues handles SHOW CONSTANT VALUES command.
 // Displays one row per constant per configuration for easy comparison.
-func (e *Executor) showConstantValues(moduleName string) error {
+func showConstantValues(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
+
 	constants, err := e.reader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
@@ -373,7 +399,7 @@ func (e *Executor) showConstantValues(moduleName string) error {
 	}
 
 	if len(consts) == 0 {
-		fmt.Fprintln(e.output, "No constants found.")
+		fmt.Fprintln(ctx.Output, "No constants found.")
 		return nil
 	}
 
@@ -429,8 +455,15 @@ func (e *Executor) showConstantValues(moduleName string) error {
 	return e.writeResult(result)
 }
 
+// showConstantValues is an Executor method wrapper for callers not yet migrated.
+func (e *Executor) showConstantValues(moduleName string) error {
+	return showConstantValues(e.newExecContext(context.Background()), moduleName)
+}
+
 // dropConstant handles DROP CONSTANT command.
-func (e *Executor) dropConstant(stmt *ast.DropConstantStmt) error {
+func dropConstant(ctx *ExecContext, stmt *ast.DropConstantStmt) error {
+	e := ctx.executor
+
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -455,7 +488,7 @@ func (e *Executor) dropConstant(stmt *ast.DropConstantStmt) error {
 				return mdlerrors.NewBackend("drop constant", err)
 			}
 			e.invalidateHierarchy()
-			fmt.Fprintf(e.output, "Dropped constant: %s.%s\n", modName, c.Name)
+			fmt.Fprintf(ctx.Output, "Dropped constant: %s.%s\n", modName, c.Name)
 			return nil
 		}
 	}

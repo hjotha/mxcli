@@ -32,22 +32,22 @@ func registerModuleHandlers(r *Registry) {
 
 func registerEnumerationHandlers(r *Registry) {
 	r.Register(&ast.CreateEnumerationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateEnumeration(stmt.(*ast.CreateEnumerationStmt))
+		return execCreateEnumeration(ctx, stmt.(*ast.CreateEnumerationStmt))
 	})
 	r.Register(&ast.AlterEnumerationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execAlterEnumeration(stmt.(*ast.AlterEnumerationStmt))
+		return execAlterEnumeration(ctx, stmt.(*ast.AlterEnumerationStmt))
 	})
 	r.Register(&ast.DropEnumerationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropEnumeration(stmt.(*ast.DropEnumerationStmt))
+		return execDropEnumeration(ctx, stmt.(*ast.DropEnumerationStmt))
 	})
 }
 
 func registerConstantHandlers(r *Registry) {
 	r.Register(&ast.CreateConstantStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.createConstant(stmt.(*ast.CreateConstantStmt))
+		return createConstant(ctx, stmt.(*ast.CreateConstantStmt))
 	})
 	r.Register(&ast.DropConstantStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.dropConstant(stmt.(*ast.DropConstantStmt))
+		return dropConstant(ctx, stmt.(*ast.DropConstantStmt))
 	})
 }
 
