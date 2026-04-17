@@ -3,7 +3,9 @@
 package executor
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
@@ -14,7 +16,8 @@ import (
 )
 
 // showImportMappings prints a table of all import mapping documents.
-func (e *Executor) showImportMappings(inModule string) error {
+func showImportMappings(ctx *ExecContext, inModule string) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -57,9 +60,9 @@ func (e *Executor) showImportMappings(inModule string) error {
 
 	if len(rows) == 0 {
 		if inModule != "" {
-			fmt.Fprintf(e.output, "No import mappings found in module %s\n", inModule)
+			fmt.Fprintf(ctx.Output, "No import mappings found in module %s\n", inModule)
 		} else {
-			fmt.Fprintln(e.output, "No import mappings found")
+			fmt.Fprintln(ctx.Output, "No import mappings found")
 		}
 		return nil
 	}
@@ -76,8 +79,14 @@ func (e *Executor) showImportMappings(inModule string) error {
 	return e.writeResult(result)
 }
 
+// showImportMappings is a wrapper for callers that still use an Executor receiver.
+func (e *Executor) showImportMappings(inModule string) error {
+	return showImportMappings(e.newExecContext(context.Background()), inModule)
+}
+
 // describeImportMapping prints the MDL representation of an import mapping.
-func (e *Executor) describeImportMapping(name ast.QualifiedName) error {
+func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -91,7 +100,7 @@ func (e *Executor) describeImportMapping(name ast.QualifiedName) error {
 	}
 
 	if im.Documentation != "" {
-		fmt.Fprintf(e.output, "/**\n * %s\n */\n", strings.ReplaceAll(im.Documentation, "\n", "\n * "))
+		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", strings.ReplaceAll(im.Documentation, "\n", "\n * "))
 	}
 
 	h, err := e.getHierarchy()
@@ -101,23 +110,28 @@ func (e *Executor) describeImportMapping(name ast.QualifiedName) error {
 	modID := h.FindModuleID(im.ContainerID)
 	moduleName := h.GetModuleName(modID)
 
-	fmt.Fprintf(e.output, "CREATE IMPORT MAPPING %s.%s\n", moduleName, im.Name)
+	fmt.Fprintf(ctx.Output, "CREATE IMPORT MAPPING %s.%s\n", moduleName, im.Name)
 
 	if im.JsonStructure != "" {
-		fmt.Fprintf(e.output, "  WITH JSON STRUCTURE %s\n", im.JsonStructure)
+		fmt.Fprintf(ctx.Output, "  WITH JSON STRUCTURE %s\n", im.JsonStructure)
 	} else if im.XmlSchema != "" {
-		fmt.Fprintf(e.output, "  WITH XML SCHEMA %s\n", im.XmlSchema)
+		fmt.Fprintf(ctx.Output, "  WITH XML SCHEMA %s\n", im.XmlSchema)
 	}
 
 	if len(im.Elements) > 0 {
-		fmt.Fprintln(e.output, "{")
+		fmt.Fprintln(ctx.Output, "{")
 		for _, elem := range im.Elements {
-			printImportMappingElement(e, elem, 1, true)
-			fmt.Fprintln(e.output)
+			printImportMappingElement(ctx.Output, elem, 1, true)
+			fmt.Fprintln(ctx.Output)
 		}
-		fmt.Fprintln(e.output, "};")
+		fmt.Fprintln(ctx.Output, "};")
 	}
 	return nil
+}
+
+// describeImportMapping is a wrapper for callers that still use an Executor receiver.
+func (e *Executor) describeImportMapping(name ast.QualifiedName) error {
+	return describeImportMapping(e.newExecContext(context.Background()), name)
 }
 
 // handlingKeyword returns the MDL keyword for a Mendix ObjectHandling value.
@@ -132,7 +146,7 @@ func handlingKeyword(handling string) string {
 	}
 }
 
-func printImportMappingElement(e *Executor, elem *model.ImportMappingElement, depth int, isRoot bool) {
+func printImportMappingElement(w io.Writer, elem *model.ImportMappingElement, depth int, isRoot bool) {
 	indent := strings.Repeat("  ", depth)
 	if elem.Kind == "Object" {
 		handling := handlingKeyword(elem.ObjectHandling)
@@ -142,7 +156,7 @@ func printImportMappingElement(e *Executor, elem *model.ImportMappingElement, de
 			if entity == "" {
 				entity = "."
 			}
-			fmt.Fprintf(e.output, "%s%s %s {\n", indent, handling, entity)
+			fmt.Fprintf(w, "%s%s %s {\n", indent, handling, entity)
 		} else {
 			// Nested object element:
 			//   CREATE Assoc/Entity = jsonKey   — normal association path
@@ -151,26 +165,26 @@ func printImportMappingElement(e *Executor, elem *model.ImportMappingElement, de
 			assoc := elem.Association
 			entity := elem.Entity
 			if assoc == "" && entity == "" {
-				fmt.Fprintf(e.output, "%s%s . = %s", indent, handling, elem.ExposedName)
+				fmt.Fprintf(w, "%s%s . = %s", indent, handling, elem.ExposedName)
 			} else if assoc == "" {
-				fmt.Fprintf(e.output, "%s%s ./%s = %s", indent, handling, entity, elem.ExposedName)
+				fmt.Fprintf(w, "%s%s ./%s = %s", indent, handling, entity, elem.ExposedName)
 			} else {
-				fmt.Fprintf(e.output, "%s%s %s/%s = %s", indent, handling, assoc, entity, elem.ExposedName)
+				fmt.Fprintf(w, "%s%s %s/%s = %s", indent, handling, assoc, entity, elem.ExposedName)
 			}
 			if len(elem.Children) > 0 {
-				fmt.Fprintln(e.output, " {")
+				fmt.Fprintln(w, " {")
 			}
 		}
 		if len(elem.Children) > 0 {
 			for i, child := range elem.Children {
-				printImportMappingElement(e, child, depth+1, false)
+				printImportMappingElement(w, child, depth+1, false)
 				if i < len(elem.Children)-1 {
-					fmt.Fprintln(e.output, ",")
+					fmt.Fprintln(w, ",")
 				} else {
-					fmt.Fprintln(e.output)
+					fmt.Fprintln(w)
 				}
 			}
-			fmt.Fprintf(e.output, "%s}", indent)
+			fmt.Fprintf(w, "%s}", indent)
 		}
 	} else {
 		// Value mapping: Attr = jsonField KEY
@@ -183,12 +197,13 @@ func printImportMappingElement(e *Executor, elem *model.ImportMappingElement, de
 		if elem.IsKey {
 			keyStr = " KEY"
 		}
-		fmt.Fprintf(e.output, "%s%s = %s%s", indent, attrName, elem.ExposedName, keyStr)
+		fmt.Fprintf(w, "%s%s = %s%s", indent, attrName, elem.ExposedName, keyStr)
 	}
 }
 
 // execCreateImportMapping creates a new import mapping.
-func (e *Executor) execCreateImportMapping(s *ast.CreateImportMappingStmt) error {
+func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -231,8 +246,8 @@ func (e *Executor) execCreateImportMapping(s *ast.CreateImportMappingStmt) error
 		return mdlerrors.NewBackend("create import mapping", err)
 	}
 
-	if !e.quiet {
-		fmt.Fprintf(e.output, "Created import mapping %s.%s\n", s.Name.Module, s.Name.Name)
+	if !ctx.Quiet {
+		fmt.Fprintf(ctx.Output, "Created import mapping %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
 }
@@ -373,7 +388,8 @@ func resolveAttributeType(entityQN, attrName string, reader *mpr.Reader) string 
 }
 
 // execDropImportMapping deletes an import mapping.
-func (e *Executor) execDropImportMapping(s *ast.DropImportMappingStmt) error {
+func execDropImportMapping(ctx *ExecContext, s *ast.DropImportMappingStmt) error {
+	e := ctx.executor
 	if e.writer == nil {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -390,8 +406,8 @@ func (e *Executor) execDropImportMapping(s *ast.DropImportMappingStmt) error {
 		return mdlerrors.NewBackend("drop import mapping", err)
 	}
 
-	if !e.quiet {
-		fmt.Fprintf(e.output, "Dropped import mapping %s.%s\n", s.Name.Module, s.Name.Name)
+	if !ctx.Quiet {
+		fmt.Fprintf(ctx.Output, "Dropped import mapping %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
 }

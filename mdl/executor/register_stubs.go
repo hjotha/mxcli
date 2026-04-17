@@ -107,10 +107,10 @@ func registerPageHandlers(r *Registry) {
 		return execDropSnippet(ctx, stmt.(*ast.DropSnippetStmt))
 	})
 	r.Register(&ast.DropJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropJavaAction(stmt.(*ast.DropJavaActionStmt))
+		return execDropJavaAction(ctx, stmt.(*ast.DropJavaActionStmt))
 	})
 	r.Register(&ast.CreateJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateJavaAction(stmt.(*ast.CreateJavaActionStmt))
+		return execCreateJavaAction(ctx, stmt.(*ast.CreateJavaActionStmt))
 	})
 	r.Register(&ast.DropFolderStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return ctx.executor.execDropFolder(stmt.(*ast.DropFolderStmt))
@@ -251,25 +251,25 @@ func registerODataHandlers(r *Registry) {
 
 func registerJSONStructureHandlers(r *Registry) {
 	r.Register(&ast.CreateJsonStructureStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateJsonStructure(stmt.(*ast.CreateJsonStructureStmt))
+		return execCreateJsonStructure(ctx, stmt.(*ast.CreateJsonStructureStmt))
 	})
 	r.Register(&ast.DropJsonStructureStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropJsonStructure(stmt.(*ast.DropJsonStructureStmt))
+		return execDropJsonStructure(ctx, stmt.(*ast.DropJsonStructureStmt))
 	})
 }
 
 func registerMappingHandlers(r *Registry) {
 	r.Register(&ast.CreateImportMappingStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateImportMapping(stmt.(*ast.CreateImportMappingStmt))
+		return execCreateImportMapping(ctx, stmt.(*ast.CreateImportMappingStmt))
 	})
 	r.Register(&ast.DropImportMappingStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropImportMapping(stmt.(*ast.DropImportMappingStmt))
+		return execDropImportMapping(ctx, stmt.(*ast.DropImportMappingStmt))
 	})
 	r.Register(&ast.CreateExportMappingStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateExportMapping(stmt.(*ast.CreateExportMappingStmt))
+		return execCreateExportMapping(ctx, stmt.(*ast.CreateExportMappingStmt))
 	})
 	r.Register(&ast.DropExportMappingStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropExportMapping(stmt.(*ast.DropExportMappingStmt))
+		return execDropExportMapping(ctx, stmt.(*ast.DropExportMappingStmt))
 	})
 }
 
