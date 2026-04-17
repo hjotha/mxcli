@@ -192,7 +192,7 @@ func entityFocusELK(ctx *ExecContext, qualifiedName string) error {
 
 	// If this is a view entity with an OQL query, render query plan instead
 	if classifyEntity(focusEntity) == "view" && focusEntity.OqlQuery != "" {
-		return e.OqlQueryPlanELK(qualifiedName, focusEntity)
+		return OqlQueryPlanELK(ctx, qualifiedName, focusEntity)
 	}
 
 	allEntityNames, _ := buildAllEntityNames(ctx)
@@ -517,7 +517,3 @@ func (e *Executor) DomainModelELK(name string) error {
 	return domainModelELK(e.newExecContext(context.Background()), name)
 }
 
-// EntityFocusELK is the exported Executor method.
-func (e *Executor) EntityFocusELK(qualifiedName string) error {
-	return entityFocusELK(e.newExecContext(context.Background()), qualifiedName)
-}

@@ -764,11 +764,6 @@ func preWarmCache(ctx *ExecContext) {
 	}
 }
 
-// PreWarmCache ensures all caches are populated before parallel operations.
-func (e *Executor) PreWarmCache() {
-	preWarmCache(e.newExecContext(context.Background()))
-}
-
 // execSearch handles SEARCH 'query' command.
 func execSearch(ctx *ExecContext, stmt *ast.SearchStmt) error {
 	e := ctx.executor

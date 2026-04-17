@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -301,7 +300,7 @@ func execCreateViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) error {
 	}
 
 	// Version pre-check
-	if err := e.checkFeature("domain_model", "view_entities",
+	if err := checkFeature(ctx, "domain_model", "view_entities",
 		"CREATE VIEW ENTITY",
 		"upgrade your project to 10.18+ or use a regular entity with a microflow data source"); err != nil {
 		return err
@@ -986,18 +985,3 @@ func warnEntityReferences(ctx *ExecContext, entityName string) {
 
 // --- Executor method wrappers for callers not yet migrated ---
 
-func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
-	return execCreateEntity(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execCreateViewEntity(s *ast.CreateViewEntityStmt) error {
-	return execCreateViewEntity(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
-	return execAlterEntity(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execDropEntity(s *ast.DropEntityStmt) error {
-	return execDropEntity(e.newExecContext(context.Background()), s)
-}

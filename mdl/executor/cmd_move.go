@@ -304,7 +304,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 // For cross-module moves, updates all EnumerationAttributeType references across all domain models.
 func moveEnumeration(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID, targetModuleName string) error {
 	e := ctx.executor
-	enum := e.findEnumeration(name.Module, name.Name)
+	enum := findEnumeration(ctx, name.Module, name.Name)
 	if enum == nil {
 		return mdlerrors.NewNotFound("enumeration", name.String())
 	}

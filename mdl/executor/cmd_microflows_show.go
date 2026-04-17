@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -814,26 +813,3 @@ func collectReachableNodes(
 
 // --- Executor method wrappers for callers in unmigrated code ---
 
-func (e *Executor) showMicroflows(moduleName string) error {
-	return showMicroflows(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) showNanoflows(moduleName string) error {
-	return showNanoflows(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeMicroflow(name ast.QualifiedName) error {
-	return describeMicroflow(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeNanoflow(name ast.QualifiedName) error {
-	return describeNanoflow(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeMicroflowToString(name ast.QualifiedName) (string, map[string]elkSourceRange, error) {
-	return describeMicroflowToString(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) renderMicroflowMDL(mf *microflows.Microflow, name ast.QualifiedName, entityNames map[model.ID]string, microflowNames map[model.ID]string, sourceMap map[string]elkSourceRange) string {
-	return renderMicroflowMDL(e.newExecContext(context.Background()), mf, name, entityNames, microflowNames, sourceMap)
-}

@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -218,18 +217,3 @@ func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, rol
 
 // --- Executor method wrappers for callers not yet migrated ---
 
-func (e *Executor) outputEntityAccessGrants(entity *domainmodel.Entity, moduleName, entityName string) {
-	outputEntityAccessGrants(e.newExecContext(context.Background()), entity, moduleName, entityName)
-}
-
-func (e *Executor) formatAccessRuleRights(rule *domainmodel.AccessRule, attrNames map[string]string) string {
-	return formatAccessRuleRights(e.newExecContext(context.Background()), rule, attrNames)
-}
-
-func (e *Executor) resolveEntityMemberAccess(rule *domainmodel.AccessRule, attrNames map[string]string) ([]string, []string) {
-	return resolveEntityMemberAccess(e.newExecContext(context.Background()), rule, attrNames)
-}
-
-func (e *Executor) formatAccessRuleResult(moduleName, entityName string, roleNames []string) string {
-	return formatAccessRuleResult(e.newExecContext(context.Background()), moduleName, entityName, roleNames)
-}

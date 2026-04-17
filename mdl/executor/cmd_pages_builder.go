@@ -388,10 +388,6 @@ func execDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
 	return mdlerrors.NewNotFound("snippet", s.Name.String())
 }
 
-func (e *Executor) getModuleID(containerID model.ID) model.ID {
-	return getModuleID(e.newExecContext(context.Background()), containerID)
-}
-
 func (e *Executor) getModuleName(moduleID model.ID) string {
 	return getModuleName(e.newExecContext(context.Background()), moduleID)
 }

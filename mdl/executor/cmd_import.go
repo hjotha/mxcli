@@ -97,11 +97,6 @@ func execImport(ctx *ExecContext, s *ast.ImportStmt) error {
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execImport(s *ast.ImportStmt) error {
-	return execImport(e.newExecContext(context.Background()), s)
-}
-
 // resolveImportLinks resolves LINK mappings from the AST into AssocInfo structs
 // by looking up association metadata from the MPR and the Mendix system tables.
 func resolveImportLinks(ctx *ExecContext, goCtx context.Context, mendixConn *sqllib.Connection, s *ast.ImportStmt) ([]*sqllib.AssocInfo, error) {

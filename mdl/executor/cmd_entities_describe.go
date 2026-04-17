@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -531,26 +530,3 @@ func lookupMicroflowName(ctx *ExecContext, mfID model.ID) string {
 
 // --- Executor method wrappers for callers not yet migrated ---
 
-func (e *Executor) showEntities(moduleName string) error {
-	return showEntities(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) showEntity(name *ast.QualifiedName) error {
-	return showEntity(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeEntity(name ast.QualifiedName) error {
-	return describeEntity(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeEntityToString(name ast.QualifiedName) (string, error) {
-	return describeEntityToString(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) resolveMicroflowByName(qualifiedName string) (model.ID, error) {
-	return resolveMicroflowByName(e.newExecContext(context.Background()), qualifiedName)
-}
-
-func (e *Executor) lookupMicroflowName(mfID model.ID) string {
-	return lookupMicroflowName(e.newExecContext(context.Background()), mfID)
-}

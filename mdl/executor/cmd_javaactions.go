@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -65,11 +64,6 @@ func showJavaActions(ctx *ExecContext, moduleName string) error {
 		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath})
 	}
 	return writeResult(ctx, result)
-}
-
-// showJavaActions is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) showJavaActions(moduleName string) error {
-	return showJavaActions(e.newExecContext(context.Background()), moduleName)
 }
 
 // describeJavaAction handles DESCRIBE JAVA ACTION command - outputs MDL-style representation.
@@ -189,11 +183,6 @@ func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	return nil
-}
-
-// describeJavaAction is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) describeJavaAction(name ast.QualifiedName) error {
-	return describeJavaAction(e.newExecContext(context.Background()), name)
 }
 
 // readJavaActionUserCode reads the Java source file and extracts the user code section.

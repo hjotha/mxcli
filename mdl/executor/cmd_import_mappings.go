@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -79,11 +78,6 @@ func showImportMappings(ctx *ExecContext, inModule string) error {
 	return writeResult(ctx, result)
 }
 
-// showImportMappings is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) showImportMappings(inModule string) error {
-	return showImportMappings(e.newExecContext(context.Background()), inModule)
-}
-
 // describeImportMapping prints the MDL representation of an import mapping.
 func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 	e := ctx.executor
@@ -127,11 +121,6 @@ func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintln(ctx.Output, "};")
 	}
 	return nil
-}
-
-// describeImportMapping is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) describeImportMapping(name ast.QualifiedName) error {
-	return describeImportMapping(e.newExecContext(context.Background()), name)
 }
 
 // handlingKeyword returns the MDL keyword for a Mendix ObjectHandling value.

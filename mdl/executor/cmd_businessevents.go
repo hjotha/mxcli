@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -424,18 +423,3 @@ func generateChannelName() string {
 
 // Executor wrappers for unmigrated callers.
 
-func (e *Executor) showBusinessEventServices(inModule string) error {
-	return showBusinessEventServices(e.newExecContext(context.Background()), inModule)
-}
-
-func (e *Executor) showBusinessEventClients(inModule string) error {
-	return showBusinessEventClients(e.newExecContext(context.Background()), inModule)
-}
-
-func (e *Executor) showBusinessEvents(inModule string) error {
-	return showBusinessEvents(e.newExecContext(context.Background()), inModule)
-}
-
-func (e *Executor) describeBusinessEventService(name ast.QualifiedName) error {
-	return describeBusinessEventService(e.newExecContext(context.Background()), name)
-}

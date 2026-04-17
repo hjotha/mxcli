@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -1126,7 +1125,7 @@ func execGrantPublishedRestServiceAccess(ctx *ExecContext, s *ast.GrantPublished
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	if err := e.checkFeature("integration", "published_rest_grant_revoke",
+	if err := checkFeature(ctx, "integration", "published_rest_grant_revoke",
 		"GRANT ACCESS ON PUBLISHED REST SERVICE",
 		"upgrade your project to 10.0+"); err != nil {
 		return err
@@ -1286,86 +1285,3 @@ func execUpdateSecurity(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
 // Executor method wrappers — delegate to free functions for callers that
 // still use the Executor receiver (e.g. executor_query.go).
 
-func (e *Executor) execCreateModuleRole(s *ast.CreateModuleRoleStmt) error {
-	return execCreateModuleRole(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execDropModuleRole(s *ast.DropModuleRoleStmt) error {
-	return execDropModuleRole(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execCreateUserRole(s *ast.CreateUserRoleStmt) error {
-	return execCreateUserRole(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execAlterUserRole(s *ast.AlterUserRoleStmt) error {
-	return execAlterUserRole(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execDropUserRole(s *ast.DropUserRoleStmt) error {
-	return execDropUserRole(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execGrantEntityAccess(s *ast.GrantEntityAccessStmt) error {
-	return execGrantEntityAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execRevokeEntityAccess(s *ast.RevokeEntityAccessStmt) error {
-	return execRevokeEntityAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execGrantMicroflowAccess(s *ast.GrantMicroflowAccessStmt) error {
-	return execGrantMicroflowAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execRevokeMicroflowAccess(s *ast.RevokeMicroflowAccessStmt) error {
-	return execRevokeMicroflowAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execGrantPageAccess(s *ast.GrantPageAccessStmt) error {
-	return execGrantPageAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execRevokePageAccess(s *ast.RevokePageAccessStmt) error {
-	return execRevokePageAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execGrantWorkflowAccess(s *ast.GrantWorkflowAccessStmt) error {
-	return execGrantWorkflowAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execRevokeWorkflowAccess(s *ast.RevokeWorkflowAccessStmt) error {
-	return execRevokeWorkflowAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execAlterProjectSecurity(s *ast.AlterProjectSecurityStmt) error {
-	return execAlterProjectSecurity(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execCreateDemoUser(s *ast.CreateDemoUserStmt) error {
-	return execCreateDemoUser(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execDropDemoUser(s *ast.DropDemoUserStmt) error {
-	return execDropDemoUser(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execGrantODataServiceAccess(s *ast.GrantODataServiceAccessStmt) error {
-	return execGrantODataServiceAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execRevokeODataServiceAccess(s *ast.RevokeODataServiceAccessStmt) error {
-	return execRevokeODataServiceAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execGrantPublishedRestServiceAccess(s *ast.GrantPublishedRestServiceAccessStmt) error {
-	return execGrantPublishedRestServiceAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execRevokePublishedRestServiceAccess(s *ast.RevokePublishedRestServiceAccessStmt) error {
-	return execRevokePublishedRestServiceAccess(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execUpdateSecurity(s *ast.UpdateSecurityStmt) error {
-	return execUpdateSecurity(e.newExecContext(context.Background()), s)
-}

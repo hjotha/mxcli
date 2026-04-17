@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -1465,38 +1464,3 @@ func fetchODataMetadata(metadataUrl string) (metadata string, hash string, err e
 
 // Executor wrappers for unmigrated callers.
 
-func (e *Executor) showODataClients(moduleName string) error {
-	return showODataClients(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeODataClient(name ast.QualifiedName) error {
-	return describeODataClient(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) outputConsumedODataServiceMDL(svc *model.ConsumedODataService, moduleName string, folderPath string) error {
-	return outputConsumedODataServiceMDL(e.newExecContext(context.Background()), svc, moduleName, folderPath)
-}
-
-func (e *Executor) showODataServices(moduleName string) error {
-	return showODataServices(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeODataService(name ast.QualifiedName) error {
-	return describeODataService(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) outputPublishedODataServiceMDL(svc *model.PublishedODataService, moduleName string, folderPath string) error {
-	return outputPublishedODataServiceMDL(e.newExecContext(context.Background()), svc, moduleName, folderPath)
-}
-
-func (e *Executor) showExternalEntities(moduleName string) error {
-	return showExternalEntities(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) showExternalActions(moduleName string) error {
-	return showExternalActions(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeExternalEntity(name ast.QualifiedName) error {
-	return describeExternalEntity(e.newExecContext(context.Background()), name)
-}

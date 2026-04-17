@@ -82,11 +82,6 @@ func showConstants(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showConstants is an Executor method wrapper for callers not yet migrated.
-func (e *Executor) showConstants(moduleName string) error {
-	return showConstants(e.newExecContext(context.Background()), moduleName)
-}
-
 // describeConstant handles DESCRIBE CONSTANT command.
 func describeConstant(ctx *ExecContext, name ast.QualifiedName) error {
 	e := ctx.executor
@@ -112,11 +107,6 @@ func describeConstant(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	return mdlerrors.NewNotFound("constant", name.String())
-}
-
-// describeConstant is an Executor method wrapper for callers not yet migrated.
-func (e *Executor) describeConstant(name ast.QualifiedName) error {
-	return describeConstant(e.newExecContext(context.Background()), name)
 }
 
 // outputConstantMDL outputs a constant definition in MDL format.
@@ -451,11 +441,6 @@ func showConstantValues(ctx *ExecContext, moduleName string) error {
 		result.Rows = append(result.Rows, []any{r.constant, r.configuration, val})
 	}
 	return writeResult(ctx, result)
-}
-
-// showConstantValues is an Executor method wrapper for callers not yet migrated.
-func (e *Executor) showConstantValues(moduleName string) error {
-	return showConstantValues(e.newExecContext(context.Background()), moduleName)
 }
 
 // dropConstant handles DROP CONSTANT command.

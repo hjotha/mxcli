@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -106,11 +105,6 @@ func findEnumeration(ctx *ExecContext, moduleName, enumName string) *model.Enume
 	return nil
 }
 
-// findEnumeration is an Executor method wrapper for callers not yet migrated.
-func (e *Executor) findEnumeration(moduleName, enumName string) *model.Enumeration {
-	return findEnumeration(e.newExecContext(context.Background()), moduleName, enumName)
-}
-
 // execAlterEnumeration handles ALTER ENUMERATION statements.
 func execAlterEnumeration(ctx *ExecContext, s *ast.AlterEnumerationStmt) error {
 	// TODO: Implement ALTER ENUMERATION
@@ -200,11 +194,6 @@ func showEnumerations(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showEnumerations is an Executor method wrapper for callers not yet migrated.
-func (e *Executor) showEnumerations(moduleName string) error {
-	return showEnumerations(e.newExecContext(context.Background()), moduleName)
-}
-
 // describeEnumeration handles DESCRIBE ENUMERATION command.
 func describeEnumeration(ctx *ExecContext, name ast.QualifiedName) error {
 	e := ctx.executor
@@ -249,11 +238,6 @@ func describeEnumeration(ctx *ExecContext, name ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("enumeration", name.String())
 }
 
-// describeEnumeration is an Executor method wrapper for callers not yet migrated.
-func (e *Executor) describeEnumeration(name ast.QualifiedName) error {
-	return describeEnumeration(e.newExecContext(context.Background()), name)
-}
-
 // mendixReservedWords contains words that cannot be used as enumeration value names.
 // These are Java reserved words plus Mendix-specific reserved identifiers.
 // Using any of these triggers CE7247: "The name 'X' is a reserved word."
@@ -274,7 +258,6 @@ var mendixReservedWords = map[string]bool{
 	"true": true, "try": true, "void": true, "volatile": true,
 	"while": true,
 	// Mendix-specific reserved identifiers
-	"changedby": true, "changeddate": true, "con": true, "context": true,
 	"createddate": true, "currentuser": true, "guid": true,
 	"id": true, "mendixobject": true, "submetaobjectname": true,
 }

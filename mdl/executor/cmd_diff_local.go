@@ -497,12 +497,11 @@ func attributeBsonToMDL(_ *ExecContext, raw map[string]any) string {
 // renderer as DESCRIBE MICROFLOW, so diffs include activity bodies.
 // Falls back to a header-only stub if parsing fails.
 func microflowBsonToMDL(ctx *ExecContext, raw map[string]any, qualifiedName string) string {
-	e := ctx.executor
 	qn := splitQualifiedName(qualifiedName)
 	mf := mpr.ParseMicroflowFromRaw(raw, model.ID(qn.Name), "")
 
 	entityNames, microflowNames := buildNameLookups(ctx)
-	return e.renderMicroflowMDL(mf, qn, entityNames, microflowNames, nil)
+	return renderMicroflowMDL(ctx, mf, qn, entityNames, microflowNames, nil)
 }
 
 // splitQualifiedName parses "Module.Name" into an ast.QualifiedName.

@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -63,6 +62,3 @@ func showSnippets(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-func (e *Executor) showSnippets(moduleName string) error {
-	return showSnippets(e.newExecContext(context.Background()), moduleName)
-}

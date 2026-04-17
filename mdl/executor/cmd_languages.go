@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -52,6 +51,3 @@ func showLanguages(ctx *ExecContext) error {
 
 // --- Executor method wrapper for backward compatibility ---
 
-func (e *Executor) showLanguages() error {
-	return showLanguages(e.newExecContext(context.Background()))
-}

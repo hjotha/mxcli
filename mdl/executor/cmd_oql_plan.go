@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -478,6 +477,3 @@ func buildScalarSubqueryTable(sel ast.OQLSelectItem, selectIndex, tableOffset in
 
 // --- Executor method wrapper for backward compatibility ---
 
-func (e *Executor) OqlQueryPlanELK(qualifiedName string, entity *domainmodel.Entity) error {
-	return OqlQueryPlanELK(e.newExecContext(context.Background()), qualifiedName, entity)
-}

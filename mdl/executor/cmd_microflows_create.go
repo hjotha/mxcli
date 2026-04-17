@@ -63,7 +63,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		return mdlerrors.NewBackend("check existing microflows", err)
 	}
 	for _, existing := range existingMicroflows {
-		if existing.Name == s.Name.Name && e.getModuleID(existing.ContainerID) == module.ID {
+		if existing.Name == s.Name.Name && getModuleID(ctx, existing.ContainerID) == module.ID {
 			if !s.CreateOrModify {
 				return mdlerrors.NewAlreadyExistsMsg("microflow", s.Name.Module+"."+s.Name.Name, "microflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use CREATE OR REPLACE to overwrite)")
 			}
@@ -137,7 +137,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		}
 		// Validate enumeration references for Enumeration types
 		if p.Type.Kind == ast.TypeEnumeration && p.Type.EnumRef != nil {
-			if found := e.findEnumeration(p.Type.EnumRef.Module, p.Type.EnumRef.Name); found == nil {
+			if found := findEnumeration(ctx, p.Type.EnumRef.Module, p.Type.EnumRef.Name); found == nil {
 				return mdlerrors.NewNotFoundMsg("enumeration", p.Type.EnumRef.Module+"."+p.Type.EnumRef.Name,
 					fmt.Sprintf("enumeration '%s.%s' not found for parameter '%s'", p.Type.EnumRef.Module, p.Type.EnumRef.Name, p.Name))
 			}
@@ -167,7 +167,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		}
 		// Validate enumeration references for return type
 		if s.ReturnType.Type.Kind == ast.TypeEnumeration && s.ReturnType.Type.EnumRef != nil {
-			if found := e.findEnumeration(s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name); found == nil {
+			if found := findEnumeration(ctx, s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name); found == nil {
 				return mdlerrors.NewNotFoundMsg("enumeration", s.ReturnType.Type.EnumRef.Module+"."+s.ReturnType.Type.EnumRef.Name,
 					fmt.Sprintf("enumeration '%s.%s' not found for return type", s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name))
 			}

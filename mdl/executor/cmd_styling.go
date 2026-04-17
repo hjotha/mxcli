@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -70,11 +69,6 @@ func execShowDesignProperties(ctx *ExecContext, s *ast.ShowDesignPropertiesStmt)
 	}
 
 	return nil
-}
-
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) execShowDesignProperties(s *ast.ShowDesignPropertiesStmt) error {
-	return execShowDesignProperties(e.newExecContext(context.Background()), s)
 }
 
 // printDesignProperties prints properties for a widget type, showing inherited "Widget" props separately.
@@ -151,7 +145,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 		if foundPage == nil {
 			return mdlerrors.NewNotFound("page", s.ContainerName.String())
 		}
-		rawWidgets = e.getPageWidgetsFromRaw(foundPage.ID)
+		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
 	} else if s.ContainerType == "SNIPPET" {
 		// Find snippet
 		allSnippets, err := e.reader.ListSnippets()
@@ -171,7 +165,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 		if foundSnippet == nil {
 			return mdlerrors.NewNotFound("snippet", s.ContainerName.String())
 		}
-		rawWidgets = e.getSnippetWidgetsFromRaw(foundSnippet.ID)
+		rawWidgets = getSnippetWidgetsFromRaw(ctx, foundSnippet.ID)
 	}
 
 	if len(rawWidgets) == 0 {
@@ -220,11 +214,6 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 	}
 
 	return nil
-}
-
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) execDescribeStyling(s *ast.DescribeStylingStmt) error {
-	return execDescribeStyling(e.newExecContext(context.Background()), s)
 }
 
 // collectStyledWidgets walks rawWidget tree and collects widgets that have styling.
@@ -289,11 +278,6 @@ func execAlterStyling(ctx *ExecContext, s *ast.AlterStylingStmt) error {
 	}
 
 	return mdlerrors.NewUnsupported("unsupported container type: " + s.ContainerType)
-}
-
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) execAlterStyling(s *ast.AlterStylingStmt) error {
-	return execAlterStyling(e.newExecContext(context.Background()), s)
 }
 
 func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
@@ -552,11 +536,6 @@ func findPageByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierar
 	return nil, mdlerrors.NewNotFound("page", name.String())
 }
 
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) findPageByName(name ast.QualifiedName, h *ContainerHierarchy) (*pages.Page, error) {
-	return findPageByName(e.newExecContext(context.Background()), name, h)
-}
-
 // findSnippetByName looks up a snippet by qualified name.
 func findSnippetByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (*pages.Snippet, model.ID, error) {
 	e := ctx.executor
@@ -575,7 +554,3 @@ func findSnippetByName(ctx *ExecContext, name ast.QualifiedName, h *ContainerHie
 	return nil, "", mdlerrors.NewNotFound("snippet", name.String())
 }
 
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) findSnippetByName(name ast.QualifiedName, h *ContainerHierarchy) (*pages.Snippet, model.ID, error) {
-	return findSnippetByName(e.newExecContext(context.Background()), name, h)
-}

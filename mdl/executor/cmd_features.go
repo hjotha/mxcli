@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -48,11 +47,6 @@ func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 	return mdlerrors.NewUnsupported(msg)
 }
 
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) checkFeature(area, name, statement, hint string) error {
-	return checkFeature(e.newExecContext(context.Background()), area, name, statement, hint)
-}
-
 // execShowFeatures handles SHOW FEATURES, SHOW FEATURES FOR VERSION, and
 // SHOW FEATURES ADDED SINCE commands.
 func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
@@ -95,11 +89,6 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 		return showFeaturesInArea(ctx, reg, pv, s.InArea)
 	}
 	return showFeaturesAll(ctx, reg, pv)
-}
-
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) execShowFeatures(s *ast.ShowFeaturesStmt) error {
-	return execShowFeatures(e.newExecContext(context.Background()), s)
 }
 
 func showFeaturesAll(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer) error {

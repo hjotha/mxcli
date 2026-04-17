@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -82,11 +81,6 @@ func showSettings(ctx *ExecContext) error {
 	}
 
 	return writeResult(ctx, tr)
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) showSettings() error {
-	return showSettings(e.newExecContext(context.Background()))
 }
 
 // describeSettings outputs the full MDL description of all settings.
@@ -173,11 +167,6 @@ func describeSettings(ctx *ExecContext) error {
 	}
 
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) describeSettings() error {
-	return describeSettings(e.newExecContext(context.Background()))
 }
 
 // alterSettings modifies project settings based on ALTER SETTINGS statement.
@@ -279,11 +268,6 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 
 	fmt.Fprintf(ctx.Output, "Updated %s settings\n", section)
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) alterSettings(stmt *ast.AlterSettingsStmt) error {
-	return alterSettings(e.newExecContext(context.Background()), stmt)
 }
 
 func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
@@ -481,11 +465,6 @@ func createConfiguration(ctx *ExecContext, stmt *ast.CreateConfigurationStmt) er
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) createConfiguration(stmt *ast.CreateConfigurationStmt) error {
-	return createConfiguration(e.newExecContext(context.Background()), stmt)
-}
-
 // dropConfiguration handles DROP CONFIGURATION 'name'.
 func dropConfiguration(ctx *ExecContext, stmt *ast.DropConfigurationStmt) error {
 	e := ctx.executor
@@ -517,11 +496,6 @@ func dropConfiguration(ctx *ExecContext, stmt *ast.DropConfigurationStmt) error 
 	}
 
 	return mdlerrors.NewNotFound("configuration", stmt.Name)
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) dropConfiguration(stmt *ast.DropConfigurationStmt) error {
-	return dropConfiguration(e.newExecContext(context.Background()), stmt)
 }
 
 // settingsValueToString converts an AST settings value to string.

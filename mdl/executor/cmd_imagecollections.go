@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,7 +28,7 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 	}
 
 	// Check if image collection already exists
-	existing := e.findImageCollection(s.Name.Module, s.Name.Name)
+	existing := findImageCollection(ctx, s.Name.Module, s.Name.Name)
 	if existing != nil {
 		return mdlerrors.NewAlreadyExists("image collection", s.Name.Module+"."+s.Name.Name)
 	}
@@ -75,11 +74,6 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execCreateImageCollection(s *ast.CreateImageCollectionStmt) error {
-	return execCreateImageCollection(e.newExecContext(context.Background()), s)
-}
-
 // execDropImageCollection handles DROP IMAGE COLLECTION statements.
 func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) error {
 	e := ctx.executor
@@ -87,7 +81,7 @@ func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) e
 		return mdlerrors.NewNotConnected()
 	}
 
-	ic := e.findImageCollection(s.Name.Module, s.Name.Name)
+	ic := findImageCollection(ctx, s.Name.Module, s.Name.Name)
 	if ic == nil {
 		return mdlerrors.NewNotFound("image collection", s.Name.String())
 	}
@@ -100,15 +94,9 @@ func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) e
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execDropImageCollection(s *ast.DropImageCollectionStmt) error {
-	return execDropImageCollection(e.newExecContext(context.Background()), s)
-}
-
 // describeImageCollection handles DESCRIBE IMAGE COLLECTION Module.Name.
 func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
-	ic := e.findImageCollection(name.Module, name.Name)
+	ic := findImageCollection(ctx, name.Module, name.Name)
 	if ic == nil {
 		return mdlerrors.NewNotFound("image collection", name.String())
 	}
@@ -172,11 +160,6 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 	fmt.Fprintln(ctx.Output, ");")
 	fmt.Fprintln(ctx.Output, "/")
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) describeImageCollection(name ast.QualifiedName) error {
-	return describeImageCollection(e.newExecContext(context.Background()), name)
 }
 
 // imageFormatToExt converts a Mendix ImageFormat value to a file extension.
@@ -251,19 +234,15 @@ func showImageCollections(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) showImageCollections(moduleName string) error {
-	return showImageCollections(e.newExecContext(context.Background()), moduleName)
-}
-
 // findImageCollection finds an image collection by module and name.
-func findImageCollection(e *Executor, moduleName, collectionName string) *mpr.ImageCollection {
+func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *mpr.ImageCollection {
+	e := ctx.executor
 	collections, err := e.reader.ListImageCollections()
 	if err != nil {
 		return nil
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return nil
 	}
@@ -278,7 +257,3 @@ func findImageCollection(e *Executor, moduleName, collectionName string) *mpr.Im
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) findImageCollection(moduleName, collectionName string) *mpr.ImageCollection {
-	return findImageCollection(e, moduleName, collectionName)
-}

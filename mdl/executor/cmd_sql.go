@@ -272,38 +272,3 @@ func execSQLDescribeTable(ctx *ExecContext, s *ast.SQLDescribeTableStmt) error {
 
 // Executor wrappers for unmigrated callers.
 
-func (e *Executor) execSQLConnect(s *ast.SQLConnectStmt) error {
-	return execSQLConnect(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execSQLDisconnect(s *ast.SQLDisconnectStmt) error {
-	return execSQLDisconnect(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execSQLConnections() error {
-	return execSQLConnections(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) execSQLQuery(s *ast.SQLQueryStmt) error {
-	return execSQLQuery(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execSQLShowTables(s *ast.SQLShowTablesStmt) error {
-	return execSQLShowTables(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execSQLShowViews(s *ast.SQLShowViewsStmt) error {
-	return execSQLShowViews(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execSQLShowFunctions(s *ast.SQLShowFunctionsStmt) error {
-	return execSQLShowFunctions(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execSQLGenerateConnector(s *ast.SQLGenerateConnectorStmt) error {
-	return execSQLGenerateConnector(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execSQLDescribeTable(s *ast.SQLDescribeTableStmt) error {
-	return execSQLDescribeTable(e.newExecContext(context.Background()), s)
-}

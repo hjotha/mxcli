@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -70,11 +69,6 @@ func showJsonStructures(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, tr)
 }
 
-// showJsonStructures is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) showJsonStructures(moduleName string) error {
-	return showJsonStructures(e.newExecContext(context.Background()), moduleName)
-}
-
 // describeJsonStructure handles DESCRIBE JSON STRUCTURE Module.Name.
 // Output is re-executable CREATE OR REPLACE MDL followed by the element tree as comments.
 func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
@@ -138,11 +132,6 @@ func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 
 	fmt.Fprintln(ctx.Output, ";")
 	return nil
-}
-
-// describeJsonStructure is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) describeJsonStructure(name ast.QualifiedName) error {
-	return describeJsonStructure(e.newExecContext(context.Background()), name)
 }
 
 // collectCustomNameMappings walks the element tree and returns JSON key → ExposedName

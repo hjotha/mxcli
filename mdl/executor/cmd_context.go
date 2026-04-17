@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -610,50 +609,3 @@ func assembleODataServiceContext(ctx *ExecContext, out *strings.Builder, name st
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) execShowContext(s *ast.ShowStmt) error {
-	return execShowContext(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) detectElementType(name string) (string, error) {
-	return detectElementType(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) assembleMicroflowContext(out *strings.Builder, name string, depth int) {
-	assembleMicroflowContext(e.newExecContext(context.Background()), out, name, depth)
-}
-
-func (e *Executor) addCallees(out *strings.Builder, name string, maxDepth, currentDepth int) {
-	addCallees(e.newExecContext(context.Background()), out, name, maxDepth, currentDepth)
-}
-
-func (e *Executor) assembleEntityContext(out *strings.Builder, name string, depth int) {
-	assembleEntityContext(e.newExecContext(context.Background()), out, name, depth)
-}
-
-func (e *Executor) assemblePageContext(out *strings.Builder, name string, depth int) {
-	assemblePageContext(e.newExecContext(context.Background()), out, name, depth)
-}
-
-func (e *Executor) assembleEnumerationContext(out *strings.Builder, name string) {
-	assembleEnumerationContext(e.newExecContext(context.Background()), out, name)
-}
-
-func (e *Executor) assembleSnippetContext(out *strings.Builder, name string, depth int) {
-	assembleSnippetContext(e.newExecContext(context.Background()), out, name, depth)
-}
-
-func (e *Executor) assembleJavaActionContext(out *strings.Builder, name string) {
-	assembleJavaActionContext(e.newExecContext(context.Background()), out, name)
-}
-
-func (e *Executor) assembleODataClientContext(out *strings.Builder, name string) {
-	assembleODataClientContext(e.newExecContext(context.Background()), out, name)
-}
-
-func (e *Executor) assembleWorkflowContext(out *strings.Builder, name string, depth int) {
-	assembleWorkflowContext(e.newExecContext(context.Background()), out, name, depth)
-}
-
-func (e *Executor) assembleODataServiceContext(out *strings.Builder, name string) {
-	assembleODataServiceContext(e.newExecContext(context.Background()), out, name)
-}

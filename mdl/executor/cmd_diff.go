@@ -232,7 +232,6 @@ func diffViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) (*DiffResult,
 
 // diffEnumeration compares a CREATE ENUMERATION statement against the project
 func diffEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) (*DiffResult, error) {
-	e := ctx.executor
 	result := &DiffResult{
 		ObjectType: "Enumeration",
 		ObjectName: s.Name,
@@ -240,7 +239,7 @@ func diffEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) (*DiffResul
 	}
 
 	// Try to find existing enumeration
-	existingEnum := e.findEnumeration(s.Name.Module, s.Name.Name)
+	existingEnum := findEnumeration(ctx, s.Name.Module, s.Name.Name)
 	if existingEnum == nil {
 		result.IsNew = true
 		return result, nil
@@ -316,7 +315,7 @@ func diffMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult, e
 			var buf bytes.Buffer
 			oldOutput := e.output
 			e.output = &buf
-			e.describeMicroflow(s.Name)
+			describeMicroflow(ctx, s.Name)
 			e.output = oldOutput
 			result.Current = strings.TrimSuffix(buf.String(), "\n")
 			result.Changes = compareMicroflows(ctx, result.Current, result.Proposed)

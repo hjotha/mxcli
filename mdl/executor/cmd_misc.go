@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -33,19 +32,9 @@ func execUpdate(ctx *ExecContext) error {
 	return execConnect(ctx, &ast.ConnectStmt{Path: path})
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execUpdate() error {
-	return execUpdate(e.newExecContext(context.Background()))
-}
-
 // execRefresh handles REFRESH statements (alias for UPDATE).
 func execRefresh(ctx *ExecContext) error {
 	return execUpdate(ctx)
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execRefresh() error {
-	return execRefresh(e.newExecContext(context.Background()))
 }
 
 // execSet handles SET statements.
@@ -54,11 +43,6 @@ func execSet(ctx *ExecContext, s *ast.SetStmt) error {
 	e.settings[s.Key] = s.Value
 	fmt.Fprintf(ctx.Output, "Set %s = %v\n", s.Key, s.Value)
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execSet(s *ast.SetStmt) error {
-	return execSet(e.newExecContext(context.Background()), s)
 }
 
 // execHelp handles HELP statements.
@@ -339,11 +323,6 @@ Statement Terminator:
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execHelp() error {
-	return execHelp(e.newExecContext(context.Background()))
-}
-
 // showVersion displays Mendix project version information.
 func showVersion(ctx *ExecContext) error {
 	e := ctx.executor
@@ -361,11 +340,6 @@ func showVersion(ctx *ExecContext) error {
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) showVersion() error {
-	return showVersion(e.newExecContext(context.Background()))
-}
-
 // execExit handles EXIT statements.
 // Note: This just signals exit intent via ErrExit. The actual cleanup
 // is done by the caller (CLI/REPL) when they handle ErrExit at the top level.
@@ -373,11 +347,6 @@ func (e *Executor) showVersion() error {
 // closing the database connection.
 func execExit(ctx *ExecContext) error {
 	return ErrExit
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execExit() error {
-	return execExit(e.newExecContext(context.Background()))
 }
 
 // execExecuteScript handles EXECUTE SCRIPT statements.
@@ -427,11 +396,6 @@ func execExecuteScript(ctx *ExecContext, s *ast.ExecuteScriptStmt) error {
 	fmt.Fprintf(ctx.Output, "Script completed: %s\n", s.Path)
 
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execExecuteScript(s *ast.ExecuteScriptStmt) error {
-	return execExecuteScript(e.newExecContext(context.Background()), s)
 }
 
 // stripSlashSeparators removes lines that contain only "/" from the script content.

@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,11 +63,6 @@ func showJavaScriptActions(ctx *ExecContext, moduleName string) error {
 		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.platform, r.folderPath})
 	}
 	return writeResult(ctx, result)
-}
-
-// showJavaScriptActions is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) showJavaScriptActions(moduleName string) error {
-	return showJavaScriptActions(e.newExecContext(context.Background()), moduleName)
 }
 
 // describeJavaScriptAction handles DESCRIBE JAVASCRIPT ACTION command.
@@ -217,11 +211,6 @@ func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	return nil
-}
-
-// describeJavaScriptAction is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) describeJavaScriptAction(name ast.QualifiedName) error {
-	return describeJavaScriptAction(e.newExecContext(context.Background()), name)
 }
 
 // readJavaScriptActionSource reads the JavaScript source file and extracts user code and extra code.

@@ -395,7 +395,7 @@ func pageToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Use raw widget data (same approach as describePage)
-	rawWidgets := e.getPageWidgetsFromRaw(foundPage.ID)
+	rawWidgets := getPageWidgetsFromRaw(ctx, foundPage.ID)
 
 	var sb strings.Builder
 	sb.WriteString("block-beta\n")

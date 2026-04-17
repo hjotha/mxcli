@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"unicode"
@@ -129,11 +128,6 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execCreateWorkflow(s *ast.CreateWorkflowStmt) error {
-	return execCreateWorkflow(e.newExecContext(context.Background()), s)
-}
-
 // execDropWorkflow handles DROP WORKFLOW statements.
 func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 	e := ctx.executor
@@ -165,11 +159,6 @@ func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 	}
 
 	return mdlerrors.NewNotFound("workflow", s.Name.Module+"."+s.Name.Name)
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execDropWorkflow(s *ast.DropWorkflowStmt) error {
-	return execDropWorkflow(e.newExecContext(context.Background()), s)
 }
 
 // generateWorkflowUUID generates a UUID for workflow elements.

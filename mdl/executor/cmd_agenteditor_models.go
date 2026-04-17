@@ -9,7 +9,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -156,14 +155,3 @@ func findAgentEditorModel(ctx *ExecContext, moduleName, modelName string) *agent
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) showAgentEditorModels(moduleName string) error {
-	return showAgentEditorModels(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeAgentEditorModel(name ast.QualifiedName) error {
-	return describeAgentEditorModel(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) findAgentEditorModel(moduleName, modelName string) *agenteditor.Model {
-	return findAgentEditorModel(e.newExecContext(context.Background()), moduleName, modelName)
-}

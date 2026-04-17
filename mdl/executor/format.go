@@ -153,14 +153,6 @@ func (e *Executor) writeResult(r *TableResult) error {
 	return writeResult(e.newExecContext(context.Background()), r)
 }
 
-func (e *Executor) writeResultTable(r *TableResult) {
-	writeResultTable(e.newExecContext(context.Background()), r)
-}
-
-func (e *Executor) writeResultJSON(r *TableResult) error {
-	return writeResultJSON(e.newExecContext(context.Background()), r)
-}
-
 func (e *Executor) writeDescribeJSON(name, objectType string, fn func() error) error {
 	return writeDescribeJSON(e.newExecContext(context.Background()), name, objectType, fn)
 }

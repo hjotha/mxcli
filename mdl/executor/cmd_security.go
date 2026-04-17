@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -765,50 +764,3 @@ func describeUserRole(ctx *ExecContext, name ast.QualifiedName) error {
 // Executor method wrappers — delegate to free functions for callers that
 // still use the Executor receiver (e.g. executor_query.go).
 
-func (e *Executor) showProjectSecurity() error {
-	return showProjectSecurity(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) showModuleRoles(moduleName string) error {
-	return showModuleRoles(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) showUserRoles() error {
-	return showUserRoles(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) showDemoUsers() error {
-	return showDemoUsers(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) showAccessOnEntity(name *ast.QualifiedName) error {
-	return showAccessOnEntity(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) showAccessOnMicroflow(name *ast.QualifiedName) error {
-	return showAccessOnMicroflow(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) showAccessOnPage(name *ast.QualifiedName) error {
-	return showAccessOnPage(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) showAccessOnWorkflow(name *ast.QualifiedName) error {
-	return showAccessOnWorkflow(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) showSecurityMatrix(moduleName string) error {
-	return showSecurityMatrix(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeModuleRole(name ast.QualifiedName) error {
-	return describeModuleRole(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeDemoUser(userName string) error {
-	return describeDemoUser(e.newExecContext(context.Background()), userName)
-}
-
-func (e *Executor) describeUserRole(name ast.QualifiedName) error {
-	return describeUserRole(e.newExecContext(context.Background()), name)
-}

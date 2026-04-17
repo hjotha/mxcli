@@ -5,7 +5,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -78,7 +77,7 @@ func findOrCreateModule(ctx *ExecContext, name string) (*model.Module, error) {
 		return nil, err
 	}
 	// Auto-create the module
-	if createErr := e.execCreateModule(&ast.CreateModuleStmt{Name: name}); createErr != nil {
+	if createErr := execCreateModule(ctx, &ast.CreateModuleStmt{Name: name}); createErr != nil {
 		return nil, mdlerrors.NewBackend("auto-create module "+name, createErr)
 	}
 	return findModule(ctx, name)
@@ -490,66 +489,6 @@ func buildJavaActionQualifiedNames(ctx *ExecContext) map[string]bool {
 // ----------------------------------------------------------------------------
 // Executor method wrappers (for callers in unmigrated files)
 // ----------------------------------------------------------------------------
-
-func (e *Executor) getModulesFromCache() ([]*model.Module, error) {
-	return getModulesFromCache(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) invalidateModuleCache() {
-	invalidateModuleCache(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) findModule(name string) (*model.Module, error) {
-	return findModule(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) findOrCreateModule(name string) (*model.Module, error) {
-	return findOrCreateModule(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) findModuleByID(id model.ID) (*model.Module, error) {
-	return findModuleByID(e.newExecContext(context.Background()), id)
-}
-
-func (e *Executor) resolveFolder(moduleID model.ID, folderPath string) (model.ID, error) {
-	return resolveFolder(e.newExecContext(context.Background()), moduleID, folderPath)
-}
-
-func (e *Executor) createFolder(name string, containerID model.ID) (model.ID, error) {
-	return createFolder(e.newExecContext(context.Background()), name, containerID)
-}
-
-func (e *Executor) enumerationExists(qualifiedName string) bool {
-	return enumerationExists(e.newExecContext(context.Background()), qualifiedName)
-}
-
-func (e *Executor) validateWidgetReferences(widgets []*ast.WidgetV3, sc *scriptContext) []string {
-	return validateWidgetReferences(e.newExecContext(context.Background()), widgets, sc)
-}
-
-func (e *Executor) buildMicroflowQualifiedNames() map[string]bool {
-	return buildMicroflowQualifiedNames(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) buildNanoflowQualifiedNames() map[string]bool {
-	return buildNanoflowQualifiedNames(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) buildPageQualifiedNames() map[string]bool {
-	return buildPageQualifiedNames(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) buildSnippetQualifiedNames() map[string]bool {
-	return buildSnippetQualifiedNames(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) buildEntityQualifiedNames() map[string]bool {
-	return buildEntityQualifiedNames(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) buildJavaActionQualifiedNames() map[string]bool {
-	return buildJavaActionQualifiedNames(e.newExecContext(context.Background()))
-}
 
 // ----------------------------------------------------------------------------
 // Data Type Conversion

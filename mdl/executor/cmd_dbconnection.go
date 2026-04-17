@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -340,14 +339,3 @@ func dbTypeToMDLType(bsonType string) string {
 
 // Executor wrappers for unmigrated callers.
 
-func (e *Executor) showDatabaseConnections(moduleName string) error {
-	return showDatabaseConnections(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeDatabaseConnection(name ast.QualifiedName) error {
-	return describeDatabaseConnection(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) outputDatabaseConnectionMDL(conn *model.DatabaseConnection, moduleName string) error {
-	return outputDatabaseConnectionMDL(e.newExecContext(context.Background()), conn, moduleName)
-}

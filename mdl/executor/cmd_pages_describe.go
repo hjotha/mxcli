@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -762,22 +761,3 @@ func pageParamTypeMDL(p *pages.PageParameter) string {
 	return string(p.EntityID)
 }
 
-func (e *Executor) describeLayout(name ast.QualifiedName) error {
-	return describeLayout(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describePage(name ast.QualifiedName) error {
-	return describePage(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeSnippet(name ast.QualifiedName) error {
-	return describeSnippet(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) getPageWidgetsFromRaw(pageID model.ID) []rawWidget {
-	return getPageWidgetsFromRaw(e.newExecContext(context.Background()), pageID)
-}
-
-func (e *Executor) getSnippetWidgetsFromRaw(snippetID model.ID) []rawWidget {
-	return getSnippetWidgetsFromRaw(e.newExecContext(context.Background()), snippetID)
-}

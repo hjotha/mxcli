@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -231,18 +230,3 @@ func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) execShowCallers(s *ast.ShowStmt) error {
-	return execShowCallers(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execShowCallees(s *ast.ShowStmt) error {
-	return execShowCallees(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execShowReferences(s *ast.ShowStmt) error {
-	return execShowReferences(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execShowImpact(s *ast.ShowStmt) error {
-	return execShowImpact(e.newExecContext(context.Background()), s)
-}

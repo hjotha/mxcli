@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -1432,54 +1431,3 @@ func asyncTypeString(p *mpr.AsyncAPIProperty) string {
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) showContractEntities(name *ast.QualifiedName) error {
-	return showContractEntities(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) showContractActions(name *ast.QualifiedName) error {
-	return showContractActions(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeContractEntity(name ast.QualifiedName, format string) error {
-	return describeContractEntity(e.newExecContext(context.Background()), name, format)
-}
-
-func (e *Executor) describeContractAction(name ast.QualifiedName, format string) error {
-	return describeContractAction(e.newExecContext(context.Background()), name, format)
-}
-
-func (e *Executor) outputContractEntityMDL(et *mpr.EdmEntityType, svcQN string, doc *mpr.EdmxDocument) error {
-	return outputContractEntityMDL(e.newExecContext(context.Background()), et, svcQN, doc)
-}
-
-func (e *Executor) parseServiceContract(name ast.QualifiedName) (*mpr.EdmxDocument, string, error) {
-	return parseServiceContract(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) createExternalEntities(s *ast.CreateExternalEntitiesStmt) error {
-	return createExternalEntities(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) createPrimitiveCollectionNPEs(dm *domainmodel.DomainModel, doc *mpr.EdmxDocument, typeByQualified map[string]*mpr.EdmEntityType, esMap map[string]string, serviceRef string) int {
-	return createPrimitiveCollectionNPEs(e.newExecContext(context.Background()), dm, doc, typeByQualified, esMap, serviceRef)
-}
-
-func (e *Executor) createNavigationAssociations(dm *domainmodel.DomainModel, doc *mpr.EdmxDocument, typeByQualified map[string]*mpr.EdmEntityType, esMap map[string]string, serviceRef string) int {
-	return createNavigationAssociations(e.newExecContext(context.Background()), dm, doc, typeByQualified, esMap, serviceRef)
-}
-
-func (e *Executor) showContractChannels(name *ast.QualifiedName) error {
-	return showContractChannels(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) showContractMessages(name *ast.QualifiedName) error {
-	return showContractMessages(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeContractMessage(name ast.QualifiedName) error {
-	return describeContractMessage(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) parseAsyncAPIContract(name ast.QualifiedName) (*mpr.AsyncAPIDocument, string, error) {
-	return parseAsyncAPIContract(e.newExecContext(context.Background()), name)
-}

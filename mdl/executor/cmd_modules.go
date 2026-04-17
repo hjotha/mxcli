@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -45,7 +44,7 @@ func execCreateModule(ctx *ExecContext, s *ast.CreateModuleStmt) error {
 	}
 
 	// Invalidate cache so new module is visible
-	e.invalidateModuleCache()
+	invalidateModuleCache(ctx)
 
 	fmt.Fprintf(ctx.Output, "Created module: %s\n", s.Name)
 	return nil
@@ -338,10 +337,6 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 }
 
 // Executor method wrapper — kept during migration for callers not yet
-// converted to free functions (helpers.go). Remove once all callers are migrated.
-func (e *Executor) execCreateModule(s *ast.CreateModuleStmt) error {
-	return execCreateModule(e.newExecContext(context.Background()), s)
-}
 
 // getModuleContainers returns a set of all container IDs that belong to a module
 // (including nested folders).
@@ -381,11 +376,6 @@ func getModuleContainers(ctx *ExecContext, moduleID model.ID) map[model.ID]bool 
 	}
 
 	return containers
-}
-
-// Executor method wrapper for getModuleContainers — kept during migration.
-func (e *Executor) getModuleContainers(moduleID model.ID) map[model.ID]bool {
-	return getModuleContainers(e.newExecContext(context.Background()), moduleID)
 }
 
 // showModules handles SHOW MODULES command.
@@ -916,10 +906,3 @@ func sortEntitiesByGeneralization(entities []*domainmodel.Entity, moduleName str
 
 // Executor method wrappers for callers in unmigrated files.
 
-func (e *Executor) showModules() error {
-	return showModules(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) describeModule(moduleName string, withAll bool) error {
-	return describeModule(e.newExecContext(context.Background()), moduleName, withAll)
-}

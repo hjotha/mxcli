@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -289,7 +288,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 	}
 
 	// Version pre-check: REST clients require 10.1+
-	if err := e.checkFeature("integration", "rest_client_basic",
+	if err := checkFeature(ctx, "integration", "rest_client_basic",
 		"CREATE REST CLIENT",
 		"upgrade your project to 10.1+"); err != nil {
 		return err
@@ -504,10 +503,3 @@ func formatRestAuthValue(value string) string {
 
 // Executor wrappers for unmigrated callers.
 
-func (e *Executor) showRestClients(moduleName string) error {
-	return showRestClients(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeRestClient(name ast.QualifiedName) error {
-	return describeRestClient(e.newExecContext(context.Background()), name)
-}

@@ -9,7 +9,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -150,14 +149,3 @@ func findAgentEditorKnowledgeBase(ctx *ExecContext, moduleName, kbName string) *
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) showAgentEditorKnowledgeBases(moduleName string) error {
-	return showAgentEditorKnowledgeBases(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeAgentEditorKnowledgeBase(name ast.QualifiedName) error {
-	return describeAgentEditorKnowledgeBase(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) findAgentEditorKnowledgeBase(moduleName, kbName string) *agenteditor.KnowledgeBase {
-	return findAgentEditorKnowledgeBase(e.newExecContext(context.Background()), moduleName, kbName)
-}

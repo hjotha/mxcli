@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -190,7 +189,7 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	if err := e.checkFeature("integration", "published_rest_service",
+	if err := checkFeature(ctx, "integration", "published_rest_service",
 		"CREATE PUBLISHED REST SERVICE",
 		"upgrade your project to 10.0+"); err != nil {
 		return err
@@ -318,7 +317,7 @@ func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestSe
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	if err := e.checkFeature("integration", "published_rest_alter",
+	if err := checkFeature(ctx, "integration", "published_rest_alter",
 		"ALTER PUBLISHED REST SERVICE",
 		"upgrade your project to 10.0+"); err != nil {
 		return err
@@ -384,10 +383,3 @@ func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestSe
 
 // Executor wrappers for unmigrated callers.
 
-func (e *Executor) showPublishedRestServices(moduleName string) error {
-	return showPublishedRestServices(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describePublishedRestService(name ast.QualifiedName) error {
-	return describePublishedRestService(e.newExecContext(context.Background()), name)
-}

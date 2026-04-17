@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -64,6 +63,3 @@ func showLayouts(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-func (e *Executor) showLayouts(moduleName string) error {
-	return showLayouts(e.newExecContext(context.Background()), moduleName)
-}

@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -31,7 +30,7 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	}
 
 	// Version pre-check: workflows require Mendix 9.12+
-	if err := e.checkFeature("workflows", "basic",
+	if err := checkFeature(ctx, "workflows", "basic",
 		"ALTER WORKFLOW",
 		"upgrade your project to Mendix 9.12+ to use workflows"); err != nil {
 		return err
@@ -145,11 +144,6 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	invalidateHierarchy(ctx)
 	fmt.Fprintf(ctx.Output, "Altered workflow %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execAlterWorkflow(s *ast.AlterWorkflowStmt) error {
-	return execAlterWorkflow(e.newExecContext(context.Background()), s)
 }
 
 // applySetWorkflowProperty sets a workflow-level property in raw BSON.

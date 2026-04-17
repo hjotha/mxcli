@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -480,26 +479,3 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 
 // --- Executor method wrappers for callers not yet migrated ---
 
-func (e *Executor) execCreateAssociation(s *ast.CreateAssociationStmt) error {
-	return execCreateAssociation(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execAlterAssociation(s *ast.AlterAssociationStmt) error {
-	return execAlterAssociation(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) execDropAssociation(s *ast.DropAssociationStmt) error {
-	return execDropAssociation(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) showAssociations(moduleName string) error {
-	return showAssociations(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) showAssociation(name *ast.QualifiedName) error {
-	return showAssociation(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) describeAssociation(name ast.QualifiedName) error {
-	return describeAssociation(e.newExecContext(context.Background()), name)
-}

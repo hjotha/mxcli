@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -61,11 +60,6 @@ func execShowStructure(ctx *ExecContext, s *ast.ShowStmt) error {
 	default:
 		return structureDepth2(ctx, modules)
 	}
-}
-
-// Executor method wrapper for unmigrated callers.
-func (e *Executor) execShowStructure(s *ast.ShowStmt) error {
-	return execShowStructure(e.newExecContext(context.Background()), s)
 }
 
 // structureDepth1JSON emits structure as a JSON table with one row per module

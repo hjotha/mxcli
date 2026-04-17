@@ -9,7 +9,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -134,14 +133,3 @@ func findAgentEditorConsumedMCPService(ctx *ExecContext, moduleName, svcName str
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) showAgentEditorConsumedMCPServices(moduleName string) error {
-	return showAgentEditorConsumedMCPServices(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeAgentEditorConsumedMCPService(name ast.QualifiedName) error {
-	return describeAgentEditorConsumedMCPService(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) findAgentEditorConsumedMCPService(moduleName, svcName string) *agenteditor.ConsumedMCPService {
-	return findAgentEditorConsumedMCPService(e.newExecContext(context.Background()), moduleName, svcName)
-}

@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -80,11 +79,6 @@ func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
 	return nil
 }
 
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) execShowWidgets(s *ast.ShowWidgetsStmt) error {
-	return execShowWidgets(e.newExecContext(context.Background()), s)
-}
-
 // execUpdateWidgets handles the UPDATE WIDGETS statement.
 func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 	e := ctx.executor
@@ -143,11 +137,6 @@ func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 	}
 
 	return nil
-}
-
-// Wrapper for callers that haven't been migrated yet.
-func (e *Executor) execUpdateWidgets(s *ast.UpdateWidgetsStmt) error {
-	return execUpdateWidgets(e.newExecContext(context.Background()), s)
 }
 
 // widgetRef holds information about a widget to be updated.

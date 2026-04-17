@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -72,11 +71,6 @@ func execAlterNavigation(ctx *ExecContext, s *ast.AlterNavigationStmt) error {
 
 	fmt.Fprintf(ctx.Output, "Navigation profile '%s' updated.\n", s.ProfileName)
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execAlterNavigation(s *ast.AlterNavigationStmt) error {
-	return execAlterNavigation(e.newExecContext(context.Background()), s)
 }
 
 // convertMenuItemDef converts an AST NavMenuItemDef to a writer NavMenuItemSpec.
@@ -164,11 +158,6 @@ func showNavigation(ctx *ExecContext) error {
 	return writeResult(ctx, result)
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) showNavigation() error {
-	return showNavigation(e.newExecContext(context.Background()))
-}
-
 // showNavigationMenu handles SHOW NAVIGATION MENU [profile] command.
 // Displays the menu tree for a specific profile, or all profiles if none specified.
 func showNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error {
@@ -193,11 +182,6 @@ func showNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error 
 	}
 
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) showNavigationMenu(profileName *ast.QualifiedName) error {
-	return showNavigationMenu(e.newExecContext(context.Background()), profileName)
 }
 
 // showNavigationHomes handles SHOW NAVIGATION HOMES command.
@@ -243,11 +227,6 @@ func showNavigationHomes(ctx *ExecContext) error {
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) showNavigationHomes() error {
-	return showNavigationHomes(e.newExecContext(context.Background()))
-}
-
 // describeNavigation handles DESCRIBE NAVIGATION [profile] command.
 // Outputs a complete MDL-style description of a navigation profile.
 func describeNavigation(ctx *ExecContext, name ast.QualifiedName) error {
@@ -274,11 +253,6 @@ func describeNavigation(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	return mdlerrors.NewNotFound("navigation profile", name.Name)
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) describeNavigation(name ast.QualifiedName) error {
-	return describeNavigation(e.newExecContext(context.Background()), name)
 }
 
 // outputNavigationProfile outputs a single profile in round-trippable CREATE OR REPLACE NAVIGATION format.

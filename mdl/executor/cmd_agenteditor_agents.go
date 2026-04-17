@@ -8,7 +8,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -254,14 +253,3 @@ func findAgentEditorAgent(ctx *ExecContext, moduleName, agentName string) *agent
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) showAgentEditorAgents(moduleName string) error {
-	return showAgentEditorAgents(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeAgentEditorAgent(name ast.QualifiedName) error {
-	return describeAgentEditorAgent(e.newExecContext(context.Background()), name)
-}
-
-func (e *Executor) findAgentEditorAgent(moduleName, agentName string) *agenteditor.Agent {
-	return findAgentEditorAgent(e.newExecContext(context.Background()), moduleName, agentName)
-}

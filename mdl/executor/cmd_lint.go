@@ -157,10 +157,3 @@ func showLintRules(ctx *ExecContext) error {
 
 // --- Executor method wrappers for backward compatibility ---
 
-func (e *Executor) execLint(s *ast.LintStmt) error {
-	return execLint(e.newExecContext(context.Background()), s)
-}
-
-func (e *Executor) showLintRules() error {
-	return showLintRules(e.newExecContext(context.Background()))
-}

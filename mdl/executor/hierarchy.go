@@ -156,10 +156,3 @@ func (e *Executor) getHierarchy() (*ContainerHierarchy, error) {
 	return getHierarchy(e.newExecContext(context.Background()))
 }
 
-func (e *Executor) invalidateHierarchy() {
-	invalidateHierarchy(e.newExecContext(context.Background()))
-}
-
-func (e *Executor) invalidateDomainModelsCache() {
-	invalidateDomainModelsCache(e.newExecContext(context.Background()))
-}

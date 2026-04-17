@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -77,6 +76,3 @@ func showPages(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-func (e *Executor) showPages(moduleName string) error {
-	return showPages(e.newExecContext(context.Background()), moduleName)
-}

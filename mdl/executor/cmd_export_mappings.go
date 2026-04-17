@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -79,11 +78,6 @@ func showExportMappings(ctx *ExecContext, inModule string) error {
 	return writeResult(ctx, result)
 }
 
-// showExportMappings is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) showExportMappings(inModule string) error {
-	return showExportMappings(e.newExecContext(context.Background()), inModule)
-}
-
 // describeExportMapping prints the MDL representation of an export mapping.
 func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 	e := ctx.executor
@@ -131,11 +125,6 @@ func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintln(ctx.Output, "};")
 	}
 	return nil
-}
-
-// describeExportMapping is a wrapper for callers that still use an Executor receiver.
-func (e *Executor) describeExportMapping(name ast.QualifiedName) error {
-	return describeExportMapping(e.newExecContext(context.Background()), name)
 }
 
 func printExportMappingElement(w io.Writer, elem *model.ExportMappingElement, depth int, isRoot bool) {

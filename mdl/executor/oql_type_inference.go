@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -71,11 +70,6 @@ func inferOQLTypes(ctx *ExecContext, oqlQuery string, declaredAttrs []ast.ViewAt
 	}
 
 	return columns, warnings
-}
-
-// InferOQLTypes analyzes an OQL query and returns the expected types for each column.
-func (e *Executor) InferOQLTypes(oqlQuery string, declaredAttrs []ast.ViewAttribute) ([]OQLColumnInfo, []string) {
-	return inferOQLTypes(e.newExecContext(context.Background()), oqlQuery, declaredAttrs)
 }
 
 // extractAliasMap parses the FROM clause to build a map of alias -> qualified entity name.
@@ -330,11 +324,6 @@ func validateViewEntityTypes(ctx *ExecContext, stmt *ast.CreateViewEntityStmt) [
 	}
 
 	return errors
-}
-
-// ValidateViewEntityTypes validates that declared attribute types match inferred OQL types.
-func (e *Executor) ValidateViewEntityTypes(stmt *ast.CreateViewEntityStmt) []string {
-	return validateViewEntityTypes(e.newExecContext(context.Background()), stmt)
 }
 
 // extractSelectClause extracts the SELECT clause from an OQL query.

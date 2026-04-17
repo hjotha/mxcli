@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -29,11 +28,6 @@ func execDefineFragment(ctx *ExecContext, s *ast.DefineFragmentStmt) error {
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) execDefineFragment(s *ast.DefineFragmentStmt) error {
-	return execDefineFragment(e.newExecContext(context.Background()), s)
-}
-
 // showFragments lists all defined fragments in the current session.
 func showFragments(ctx *ExecContext) error {
 	if len(ctx.Fragments) == 0 {
@@ -57,11 +51,6 @@ func showFragments(ctx *ExecContext) error {
 	return nil
 }
 
-// Executor wrapper for unmigrated callers.
-func (e *Executor) showFragments() error {
-	return showFragments(e.newExecContext(context.Background()))
-}
-
 // describeFragment outputs a fragment's definition as MDL.
 func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
 	if ctx.Fragments == nil {
@@ -78,11 +67,6 @@ func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 	fmt.Fprintln(ctx.Output, "};")
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) describeFragment(name ast.QualifiedName) error {
-	return describeFragment(e.newExecContext(context.Background()), name)
 }
 
 // describeFragmentFrom handles DESCRIBE FRAGMENT FROM PAGE/SNIPPET ... WIDGET ... command.
@@ -118,7 +102,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 		if foundPage == nil {
 			return mdlerrors.NewNotFound("page", s.ContainerName.String())
 		}
-		rawWidgets = e.getPageWidgetsFromRaw(foundPage.ID)
+		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
 
 	case "SNIPPET":
 		allSnippets, err := e.reader.ListSnippets()
@@ -137,7 +121,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 		if foundSnippet == nil {
 			return mdlerrors.NewNotFound("snippet", s.ContainerName.String())
 		}
-		rawWidgets = e.getSnippetWidgetsFromRaw(foundSnippet.ID)
+		rawWidgets = getSnippetWidgetsFromRaw(ctx, foundSnippet.ID)
 	}
 
 	// Find the widget by name
@@ -149,11 +133,6 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 	// Output as MDL
 	e.outputWidgetMDLV3(*target, 0)
 	return nil
-}
-
-// Executor wrapper for unmigrated callers.
-func (e *Executor) describeFragmentFrom(s *ast.DescribeFragmentFromStmt) error {
-	return describeFragmentFrom(e.newExecContext(context.Background()), s)
 }
 
 // findRawWidgetByName recursively searches the widget tree for a widget with the given name.

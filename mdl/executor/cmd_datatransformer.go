@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -115,7 +114,7 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	if err := e.checkFeature("integration", "data_transformer",
+	if err := checkFeature(ctx, "integration", "data_transformer",
 		"CREATE DATA TRANSFORMER",
 		"upgrade your project to 11.9+"); err != nil {
 		return err
@@ -188,10 +187,3 @@ func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) e
 
 // Executor wrappers for unmigrated callers.
 
-func (e *Executor) listDataTransformers(moduleName string) error {
-	return listDataTransformers(e.newExecContext(context.Background()), moduleName)
-}
-
-func (e *Executor) describeDataTransformer(name ast.QualifiedName) error {
-	return describeDataTransformer(e.newExecContext(context.Background()), name)
-}

@@ -38,14 +38,14 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 	}
 
 	if containerType == "SNIPPET" {
-		snippet, modID, err := e.findSnippetByName(s.PageName, h)
+		snippet, modID, err := findSnippetByName(ctx, s.PageName, h)
 		if err != nil {
 			return err
 		}
 		unitID = snippet.ID
 		containerID = modID
 	} else {
-		page, err := e.findPageByName(s.PageName, h)
+		page, err := findPageByName(ctx, s.PageName, h)
 		if err != nil {
 			return err
 		}
