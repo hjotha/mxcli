@@ -133,6 +133,7 @@ type Executor struct {
 	fragments     map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
 	sqlMgr        *sqllib.Manager                    // external SQL connection manager (lazy init)
 	themeRegistry *ThemeRegistry                     // cached theme design property definitions (lazy init)
+	registry      *Registry                          // statement dispatch registry
 }
 
 // New creates a new executor with the given output writer.
@@ -142,6 +143,7 @@ func New(output io.Writer) *Executor {
 		output:   guard,
 		guard:    guard,
 		settings: make(map[string]any),
+		registry: NewRegistry(),
 	}
 }
 
