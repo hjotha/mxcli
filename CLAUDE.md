@@ -262,6 +262,7 @@ New MDL commands or language features must be wired through the full pipeline:
 - [ ] New packages have test files
 - [ ] New executor commands have MDL examples in `mdl-examples/doctype-tests/`
 - [ ] **MDL syntax changes** — any PR that adds or modifies MDL syntax must include working examples in `mdl-examples/doctype-tests/`
+- [ ] **Bug fixes** — every bug fix should include an MDL test script in `mdl-examples/bug-tests/` that reproduces the issue, so the fix can be verified in Studio Pro if applicable
 - [ ] Integration paths (not just helpers) are tested
 - [ ] Tests don't rely on `time.Sleep` for synchronization — use channels or polling with timeout
 
