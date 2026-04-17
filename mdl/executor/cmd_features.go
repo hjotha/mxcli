@@ -61,7 +61,7 @@ func (e *Executor) execShowFeatures(s *ast.ShowFeaturesStmt) error {
 		// SHOW FEATURES ADDED SINCE x.y
 		sinceV, err := versions.ParseSemVer(s.AddedSince)
 		if err != nil {
-			return mdlerrors.NewBackend("parse version "+s.AddedSince, err)
+			return mdlerrors.NewValidationf("invalid version %q: %v", s.AddedSince, err)
 		}
 		return e.showFeaturesAddedSince(reg, sinceV)
 
@@ -69,7 +69,7 @@ func (e *Executor) execShowFeatures(s *ast.ShowFeaturesStmt) error {
 		// SHOW FEATURES FOR VERSION x.y — no project connection needed
 		pv, err = versions.ParseSemVer(s.ForVersion)
 		if err != nil {
-			return mdlerrors.NewBackend("parse version "+s.ForVersion, err)
+			return mdlerrors.NewValidationf("invalid version %q: %v", s.ForVersion, err)
 		}
 
 	default:

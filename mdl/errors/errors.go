@@ -2,7 +2,9 @@
 
 // Package mdlerrors provides structured error types for the MDL executor.
 //
-// All error types support errors.Is and errors.As for programmatic classification.
+// Typed errors support errors.As for programmatic classification.
+// Sentinel or wrapped errors may also support errors.Is where applicable
+// (for example, ErrExit and BackendError via Unwrap).
 // Every error preserves the original message via Error() for backward-compatible
 // string output — callers that only use %v or .Error() see no change.
 //

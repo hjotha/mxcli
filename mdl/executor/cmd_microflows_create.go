@@ -129,13 +129,15 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		if p.Type.EntityRef != nil && !isBuiltinModuleEntity(p.Type.EntityRef.Module) {
 			entityID := entityResolver(*p.Type.EntityRef)
 			if entityID == "" {
-				return mdlerrors.NewNotFound("entity", p.Type.EntityRef.Module+"."+p.Type.EntityRef.Name)
+				return mdlerrors.NewNotFoundMsg("entity", p.Type.EntityRef.Module+"."+p.Type.EntityRef.Name,
+					fmt.Sprintf("entity '%s.%s' not found for parameter '%s'", p.Type.EntityRef.Module, p.Type.EntityRef.Name, p.Name))
 			}
 		}
 		// Validate enumeration references for Enumeration types
 		if p.Type.Kind == ast.TypeEnumeration && p.Type.EnumRef != nil {
 			if found := e.findEnumeration(p.Type.EnumRef.Module, p.Type.EnumRef.Name); found == nil {
-				return mdlerrors.NewNotFound("enumeration", p.Type.EnumRef.Module+"."+p.Type.EnumRef.Name)
+				return mdlerrors.NewNotFoundMsg("enumeration", p.Type.EnumRef.Module+"."+p.Type.EnumRef.Name,
+					fmt.Sprintf("enumeration '%s.%s' not found for parameter '%s'", p.Type.EnumRef.Module, p.Type.EnumRef.Name, p.Name))
 			}
 		}
 		param := &microflows.MicroflowParameter{
@@ -157,13 +159,15 @@ func (e *Executor) execCreateMicroflow(s *ast.CreateMicroflowStmt) error {
 		if s.ReturnType.Type.EntityRef != nil && !isBuiltinModuleEntity(s.ReturnType.Type.EntityRef.Module) {
 			entityID := entityResolver(*s.ReturnType.Type.EntityRef)
 			if entityID == "" {
-				return mdlerrors.NewNotFound("entity", s.ReturnType.Type.EntityRef.Module+"."+s.ReturnType.Type.EntityRef.Name)
+				return mdlerrors.NewNotFoundMsg("entity", s.ReturnType.Type.EntityRef.Module+"."+s.ReturnType.Type.EntityRef.Name,
+					fmt.Sprintf("entity '%s.%s' not found for return type", s.ReturnType.Type.EntityRef.Module, s.ReturnType.Type.EntityRef.Name))
 			}
 		}
 		// Validate enumeration references for return type
 		if s.ReturnType.Type.Kind == ast.TypeEnumeration && s.ReturnType.Type.EnumRef != nil {
 			if found := e.findEnumeration(s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name); found == nil {
-				return mdlerrors.NewNotFound("enumeration", s.ReturnType.Type.EnumRef.Module+"."+s.ReturnType.Type.EnumRef.Name)
+				return mdlerrors.NewNotFoundMsg("enumeration", s.ReturnType.Type.EnumRef.Module+"."+s.ReturnType.Type.EnumRef.Name,
+					fmt.Sprintf("enumeration '%s.%s' not found for return type", s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name))
 			}
 		}
 		mf.ReturnType = convertASTToMicroflowDataType(s.ReturnType.Type, entityResolver)

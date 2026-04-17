@@ -33,7 +33,8 @@ func (e *Executor) execAlterNavigation(s *ast.AlterNavigationStmt) error {
 		}
 	}
 	if !profileFound {
-		return mdlerrors.NewNotFoundMsg("navigation profile", s.ProfileName, fmt.Sprintf("available: %s", profileNames(nav)))
+		return mdlerrors.NewNotFoundMsg("navigation profile", s.ProfileName,
+			fmt.Sprintf("navigation profile not found: %s (available: %s)", s.ProfileName, profileNames(nav)))
 	}
 
 	// Convert AST types to writer spec

@@ -212,7 +212,7 @@ func (e *Executor) updateWidgetsInContainer(containerID string, widgetRefs []wid
 		return e.updateWidgetsInSnippet(containerID, containerName, widgetRefs, assignments, dryRun)
 	}
 
-	return 0, mdlerrors.NewUnsupported(fmt.Sprintf("container type: %s", containerType))
+	return 0, mdlerrors.NewUnsupported(fmt.Sprintf("unsupported container type: %s", containerType))
 }
 
 // updateWidgetsInPage updates widgets in a page using raw BSON.
