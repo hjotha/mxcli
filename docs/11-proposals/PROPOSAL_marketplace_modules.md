@@ -96,11 +96,36 @@ may be rejected at the gateway with 400.
 }
 ```
 
+### Download URL — blocked
+
+The `.mpk` download URL follows the pattern:
+
+```
+https://files.appstore.mendix.com/<company-id>/<component-id>/<version>/<filename>.mpk
+```
+
+None of the path components are returned by the marketplace API:
+
+| Path segment | Example | In API response? |
+|---|---|---|
+| `company-id` | `5` (Mendix), `50537` (third party) | No |
+| `component-id` | `170`, `219862` — differs from the API's `contentId` | No |
+| `version` | `11.5.0` | Yes (`versionNumber`) — but useless without the other segments |
+| `filename` | Varies per module (`CommunityCommons_11.5.0.mpk`, `ExternalDatabaseConnector-v6.2.4.mpk`, `JamAuditLog.mpk`) | No |
+
+The CDN itself is **public** (no auth needed for GET), but the URL cannot be
+constructed from API data. The marketplace website at `marketplace.mendix.com`
+contains the download links but requires AAD SSO — PATs do not work against
+the web app.
+
+**Unblocking paths:**
+1. Mendix adds a `downloadUrl` field to the content or versions API response
+2. `mxcli` gains AAD device-code auth (see `PROPOSAL_platform_auth.md` Phase 6)
+   to access the web app and scrape the download link
+3. Mendix publishes a CLI-accessible download endpoint (e.g., `POST /v1/content/{id}/versions/{versionId}/download` returning a signed URL)
+
 ### Open Endpoint Questions
 
-- **Download URL**: The `.mpk` download path is not yet identified. Candidates to probe next:
-  `/v1/content/{id}/versions/{versionId}/download`, a `downloadUrl` field inside the version
-  object, or a separate binary host referenced by the version response.
 - **Search semantics**: `?search=database` accepted without error but truncated output made
   it unclear whether the result set was actually filtered vs. returned unchanged.
 
