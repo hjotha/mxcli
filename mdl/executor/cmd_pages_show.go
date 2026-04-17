@@ -12,7 +12,6 @@ import (
 
 // showPages handles SHOW PAGES command.
 func showPages(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -20,7 +19,7 @@ func showPages(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all pages
-	pages, err := e.reader.ListPages()
+	pages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}

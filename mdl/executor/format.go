@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -120,17 +121,27 @@ func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() erro
 	}
 
 	// Capture the text output from fn.
+	// TODO: Once all handlers write to ctx.Output exclusively, the e.output/e.guard
+	// swap can be removed. Currently needed because some closures still write to e.output.
 	var buf bytes.Buffer
 	origOutput := ctx.Output
-	origEOutput := e.output
-	origGuard := e.guard
 	ctx.Output = &buf
-	e.output = &buf
-	e.guard = nil // disable line guard for capture
+
+	// Swap executor output/guard only when a backing Executor exists.
+	var origEOutput io.Writer
+	var origGuard *outputGuard
+	if e != nil {
+		origEOutput = e.output
+		origGuard = e.guard
+		e.output = &buf // sync executor output for closures that write to e.output
+		e.guard = nil   // disable line guard for capture
+	}
 	err := fn()
 	ctx.Output = origOutput
-	e.output = origEOutput
-	e.guard = origGuard
+	if e != nil {
+		e.output = origEOutput
+		e.guard = origGuard
+	}
 	if err != nil {
 		return err
 	}

@@ -17,11 +17,10 @@ import (
 
 // execAlterPage handles ALTER PAGE/SNIPPET Module.Name { operations }.
 func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -55,7 +54,7 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 
 	// Load raw BSON as ordered document (bson.D preserves field ordering,
 	// which is required by Mendix Studio Pro).
-	rawBytes, err := e.reader.GetRawUnitBytes(unitID)
+	rawBytes, err := ctx.Backend.GetRawUnitBytes(unitID)
 	if err != nil {
 		return mdlerrors.NewBackend("load raw "+strings.ToLower(containerType)+" data", err)
 	}
@@ -118,7 +117,7 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 	}
 
 	// Save
-	if err := e.writer.UpdateRawUnit(string(unitID), outBytes); err != nil {
+	if err := ctx.Backend.UpdateRawUnit(string(unitID), outBytes); err != nil {
 		return mdlerrors.NewBackend("save modified "+strings.ToLower(containerType), err)
 	}
 
@@ -1547,9 +1546,9 @@ func buildWidgetsBson(ctx *ExecContext, widgets []*ast.WidgetV3, moduleName stri
 		widgetScope:      widgetScope,
 		paramScope:       paramScope,
 		paramEntityNames: paramEntityNames,
-		execCache:        e.cache,
-		fragments:        e.fragments,
-		themeRegistry:    e.getThemeRegistry(),
+		execCache:        ctx.Cache,
+		fragments:        ctx.Fragments,
+		themeRegistry:    ctx.GetThemeRegistry(),
 	}
 
 	var result []any

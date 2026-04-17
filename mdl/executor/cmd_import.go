@@ -16,8 +16,7 @@ import (
 
 // execImport handles IMPORT FROM <alias> QUERY '<sql>' INTO Module.Entity MAP (...) [LINK (...)] [BATCH n] [LIMIT n]
 func execImport(ctx *ExecContext, s *ast.ImportStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -100,7 +99,6 @@ func execImport(ctx *ExecContext, s *ast.ImportStmt) error {
 // resolveImportLinks resolves LINK mappings from the AST into AssocInfo structs
 // by looking up association metadata from the MPR and the Mendix system tables.
 func resolveImportLinks(ctx *ExecContext, goCtx context.Context, mendixConn *sqllib.Connection, s *ast.ImportStmt) ([]*sqllib.AssocInfo, error) {
-	e := ctx.executor
 	if len(s.Links) == 0 {
 		return nil, nil
 	}
@@ -115,7 +113,7 @@ func resolveImportLinks(ctx *ExecContext, goCtx context.Context, mendixConn *sql
 	targetModule := targetParts[0]
 
 	// Load domain models to find associations
-	dms, err := e.reader.ListDomainModels()
+	dms, err := ctx.Backend.ListDomainModels()
 	if err != nil {
 		return nil, mdlerrors.NewBackend("list domain models", err)
 	}
@@ -318,7 +316,6 @@ func getParentEntityName(a *domainmodel.Association, ca *domainmodel.CrossModule
 
 // ensureMendixDBConnection reads the project settings and auto-connects to the Mendix app DB.
 func ensureMendixDBConnection(ctx *ExecContext) (*sqllib.Connection, error) {
-	e := ctx.executor
 	mgr := ensureSQLManager(ctx)
 
 	// Check if already connected
@@ -327,7 +324,7 @@ func ensureMendixDBConnection(ctx *ExecContext) (*sqllib.Connection, error) {
 	}
 
 	// Read project settings to get DB configuration
-	ps, err := e.reader.GetProjectSettings()
+	ps, err := ctx.Backend.GetProjectSettings()
 	if err != nil {
 		return nil, mdlerrors.NewBackend("read project settings", err)
 	}

@@ -10,11 +10,64 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
+
+// CatalogReader defines the read-only backend surface used by the catalog builder.
+// Both *mpr.Reader and backend.FullBackend satisfy this interface.
+type CatalogReader interface {
+	// Infrastructure
+	GetRawUnit(id model.ID) (map[string]any, error)
+	ListRawUnitsByType(typePrefix string) ([]*mpr.RawUnit, error)
+	ListUnits() ([]*mpr.UnitInfo, error)
+	ListFolders() ([]*mpr.FolderInfo, error)
+
+	// Modules
+	ListModules() ([]*model.Module, error)
+
+	// Settings & security
+	GetProjectSettings() (*model.ProjectSettings, error)
+	GetProjectSecurity() (*security.ProjectSecurity, error)
+	GetNavigation() (*mpr.NavigationDocument, error)
+
+	// Domain models & enumerations
+	ListDomainModels() ([]*domainmodel.DomainModel, error)
+	ListEnumerations() ([]*model.Enumeration, error)
+	ListConstants() ([]*model.Constant, error)
+
+	// Microflows & nanoflows
+	ListMicroflows() ([]*microflows.Microflow, error)
+	ListNanoflows() ([]*microflows.Nanoflow, error)
+
+	// Pages, layouts & snippets
+	ListPages() ([]*pages.Page, error)
+	ListLayouts() ([]*pages.Layout, error)
+	ListSnippets() ([]*pages.Snippet, error)
+
+	// Workflows
+	ListWorkflows() ([]*workflows.Workflow, error)
+
+	// Java actions
+	ListJavaActionsFull() ([]*javaactions.JavaAction, error)
+
+	// Services
+	ListConsumedODataServices() ([]*model.ConsumedODataService, error)
+	ListPublishedODataServices() ([]*model.PublishedODataService, error)
+	ListConsumedRestServices() ([]*model.ConsumedRestService, error)
+	ListPublishedRestServices() ([]*model.PublishedRestService, error)
+	ListBusinessEventServices() ([]*model.BusinessEventService, error)
+	ListDatabaseConnections() ([]*model.DatabaseConnection, error)
+
+	// Mappings & JSON structures
+	ListImportMappings() ([]*model.ImportMapping, error)
+	ListExportMappings() ([]*model.ExportMapping, error)
+	ListJsonStructures() ([]*mpr.JsonStructure, error)
+}
 
 // DescribeFunc generates MDL source for a given object type and qualified name.
 type DescribeFunc func(objectType string, qualifiedName string) (string, error)
@@ -22,7 +75,7 @@ type DescribeFunc func(objectType string, qualifiedName string) (string, error)
 // Builder populates catalog tables from MPR data.
 type Builder struct {
 	catalog      *Catalog
-	reader       *mpr.Reader
+	reader       CatalogReader
 	snapshot     *Snapshot
 	progress     ProgressFunc
 	hierarchy    *hierarchy
@@ -148,7 +201,7 @@ func (h *hierarchy) buildFolderPath(containerID model.ID) string {
 }
 
 // NewBuilder creates a new catalog builder.
-func NewBuilder(catalog *Catalog, reader *mpr.Reader) *Builder {
+func NewBuilder(catalog *Catalog, reader CatalogReader) *Builder {
 	return &Builder{
 		catalog: catalog,
 		reader:  reader,

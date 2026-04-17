@@ -968,11 +968,10 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 
 // getPageQualifiedName resolves a page ID to its qualified name.
 func getPageQualifiedName(ctx *ExecContext, pageID model.ID) string {
-	e := ctx.executor
 	if pageID == "" {
 		return ""
 	}
-	allPages, err := e.reader.ListPages()
+	allPages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return ""
 	}

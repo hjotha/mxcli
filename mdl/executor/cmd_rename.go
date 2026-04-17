@@ -14,8 +14,7 @@ import (
 
 // execRename handles RENAME statements for all document types.
 func execRename(ctx *ExecContext, s *ast.RenameStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -43,14 +42,13 @@ func execRename(ctx *ExecContext, s *ast.RenameStmt) error {
 
 // execRenameEntity renames an entity and updates all BY_NAME references.
 func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
-	e := ctx.executor
 	// Find the entity
 	module, err := findModule(ctx, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -70,7 +68,7 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
 	// Scan for references
-	hits, err := e.writer.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -87,7 +85,7 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 			break
 		}
 	}
-	if err := e.writer.UpdateDomainModel(dm); err != nil {
+	if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
 		return mdlerrors.NewBackend("update entity name", err)
 	}
 
@@ -103,7 +101,6 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 
 // execRenameModule renames a module and updates all BY_NAME references with the module prefix.
 func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
-	e := ctx.executor
 	oldModuleName := s.Name.Module
 	newModuleName := s.NewName
 
@@ -114,13 +111,13 @@ func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
 
 	// Scan for all references with the old module prefix
 	// Module rename replaces "OldModule." with "NewModule." in all qualified names
-	hits, err := e.writer.RenameReferences(oldModuleName+".", newModuleName+".", s.DryRun)
+	hits, err := ctx.Backend.RenameReferences(oldModuleName+".", newModuleName+".", s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
 	// Also scan for exact module name matches (e.g., in navigation, security role refs)
-	exactHits, err := e.writer.RenameReferences(oldModuleName, newModuleName, s.DryRun)
+	exactHits, err := ctx.Backend.RenameReferences(oldModuleName, newModuleName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan exact module references", err)
 	}
@@ -135,7 +132,7 @@ func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
 
 	// Update the module name
 	module.Name = newModuleName
-	if err := e.writer.UpdateModule(module); err != nil {
+	if err := ctx.Backend.UpdateModule(module); err != nil {
 		return mdlerrors.NewBackend("update module name", err)
 	}
 
@@ -154,7 +151,6 @@ func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
 // The reference scanner handles updating all BY_NAME references, and then we update
 // the document's own Name field via a raw BSON rewrite.
 func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) error {
-	e := ctx.executor
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
@@ -167,7 +163,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	found := false
 	switch docType {
 	case "microflow":
-		mfs, _ := e.reader.ListMicroflows()
+		mfs, _ := ctx.Backend.ListMicroflows()
 		for _, mf := range mfs {
 			modID := h.FindModuleID(mf.ContainerID)
 			if h.GetModuleName(modID) == s.Name.Module && mf.Name == s.Name.Name {
@@ -176,7 +172,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "nanoflow":
-		nfs, _ := e.reader.ListNanoflows()
+		nfs, _ := ctx.Backend.ListNanoflows()
 		for _, nf := range nfs {
 			modID := h.FindModuleID(nf.ContainerID)
 			if h.GetModuleName(modID) == s.Name.Module && nf.Name == s.Name.Name {
@@ -185,7 +181,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "page":
-		pgs, _ := e.reader.ListPages()
+		pgs, _ := ctx.Backend.ListPages()
 		for _, pg := range pgs {
 			modID := h.FindModuleID(pg.ContainerID)
 			if h.GetModuleName(modID) == s.Name.Module && pg.Name == s.Name.Name {
@@ -194,7 +190,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "constant":
-		cs, _ := e.reader.ListConstants()
+		cs, _ := ctx.Backend.ListConstants()
 		for _, c := range cs {
 			modID := h.FindModuleID(c.ContainerID)
 			if h.GetModuleName(modID) == s.Name.Module && c.Name == s.Name.Name {
@@ -213,7 +209,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	// simple name (e.g., "OldName"), not the qualified name. So we need to
 	// handle it separately — the scanner updates cross-references, and we
 	// update the Name field directly.
-	hits, err := e.writer.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -224,7 +220,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	}
 
 	// Update the document's own Name field via the raw BSON name updater
-	if err := e.writer.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := ctx.Backend.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("rename %s", docType), err)
 	}
 
@@ -239,12 +235,11 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 
 // execRenameEnumeration renames an enumeration and updates all references.
 func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
-	e := ctx.executor
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
 	// Verify it exists
-	enums, err := e.reader.ListEnumerations()
+	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
@@ -264,7 +259,7 @@ func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewNotFound("enumeration", oldQualifiedName)
 	}
 
-	hits, err := e.writer.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -275,12 +270,14 @@ func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
 	}
 
 	// Update enumeration name via raw BSON
-	if err := e.writer.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := ctx.Backend.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend("rename enumeration", err)
 	}
 
 	// Also update enumeration refs in domain models (attribute types store qualified enum names)
-	e.writer.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName)
+	if err := ctx.Backend.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
+		fmt.Fprintf(ctx.Output, "Warning: failed to update enumeration references in domain models: %v\n", err)
+	}
 
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
@@ -294,7 +291,6 @@ func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
 
 // execRenameAssociation renames an association and updates all references.
 func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
-	e := ctx.executor
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
@@ -303,7 +299,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -319,7 +315,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewNotFound("association", oldQualifiedName)
 	}
 
-	hits, err := e.writer.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -336,7 +332,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 			break
 		}
 	}
-	if err := e.writer.UpdateDomainModel(dm); err != nil {
+	if err := ctx.Backend.UpdateDomainModel(dm); err != nil {
 		return mdlerrors.NewBackend("update association name", err)
 	}
 

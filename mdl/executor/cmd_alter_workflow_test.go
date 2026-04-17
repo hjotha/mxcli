@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"io"
 	"strings"
 	"testing"
 
@@ -319,7 +320,7 @@ func TestDropBoundaryEvent_Single(t *testing.T) {
 	doc := makeWorkflowDoc(act)
 
 	op := &ast.DropBoundaryEventOp{ActivityRef: "Review"}
-	if err := applyDropBoundaryEvent(doc, op); err != nil {
+	if err := applyDropBoundaryEvent(io.Discard, doc, op); err != nil {
 		t.Fatalf("DROP BOUNDARY EVENT failed: %v", err)
 	}
 
@@ -337,7 +338,7 @@ func TestDropBoundaryEvent_Multiple_DropsFirst(t *testing.T) {
 	doc := makeWorkflowDoc(act)
 
 	op := &ast.DropBoundaryEventOp{ActivityRef: "Review"}
-	if err := applyDropBoundaryEvent(doc, op); err != nil {
+	if err := applyDropBoundaryEvent(io.Discard, doc, op); err != nil {
 		t.Fatalf("DROP BOUNDARY EVENT failed: %v", err)
 	}
 
@@ -358,7 +359,7 @@ func TestDropBoundaryEvent_NoEvents(t *testing.T) {
 	doc := makeWorkflowDoc(act)
 
 	op := &ast.DropBoundaryEventOp{ActivityRef: "Review"}
-	err := applyDropBoundaryEvent(doc, op)
+	err := applyDropBoundaryEvent(io.Discard, doc, op)
 	if err == nil {
 		t.Fatal("Expected error when dropping from activity with no boundary events")
 	}

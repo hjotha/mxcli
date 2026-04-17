@@ -203,6 +203,7 @@ type MockBackend struct {
 
 	// JavaBackend
 	ListJavaActionsFunc            func() ([]*mpr.JavaAction, error)
+	ListJavaActionsFullFunc        func() ([]*javaactions.JavaAction, error)
 	ListJavaScriptActionsFunc      func() ([]*mpr.JavaScriptAction, error)
 	ReadJavaActionByNameFunc       func(qualifiedName string) (*javaactions.JavaAction, error)
 	ReadJavaScriptActionByNameFunc func(qualifiedName string) (*mpr.JavaScriptAction, error)

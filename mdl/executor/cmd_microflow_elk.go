@@ -62,8 +62,7 @@ type microflowELKEdge struct {
 
 // microflowELK generates a JSON graph of a microflow for rendering with ELK.js.
 func microflowELK(ctx *ExecContext, name string) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -81,7 +80,7 @@ func microflowELK(ctx *ExecContext, name string) error {
 
 	// Build entity name lookup
 	entityNames := make(map[model.ID]string)
-	domainModels, _ := e.reader.ListDomainModels()
+	domainModels, _ := ctx.Backend.ListDomainModels()
 	for _, dm := range domainModels {
 		modName := h.GetModuleName(dm.ContainerID)
 		for _, entity := range dm.Entities {
@@ -90,7 +89,7 @@ func microflowELK(ctx *ExecContext, name string) error {
 	}
 
 	// Find the microflow
-	allMicroflows, err := e.reader.ListMicroflows()
+	allMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}

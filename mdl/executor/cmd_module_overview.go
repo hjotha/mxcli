@@ -48,8 +48,7 @@ var systemModuleNames = map[string]bool{
 // ModuleOverview generates a JSON graph of all project modules and their
 // cross-module dependencies, suitable for rendering with ELK.js.
 func ModuleOverview(ctx *ExecContext) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 

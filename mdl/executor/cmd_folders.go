@@ -51,8 +51,7 @@ func findFolderByPath(ctx *ExecContext, moduleID model.ID, folderPath string, fo
 // execDropFolder handles DROP FOLDER 'path' IN Module statements.
 // The folder must be empty (no child documents or sub-folders).
 func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
-	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -61,7 +60,7 @@ func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
 		return mdlerrors.NewNotFound("module", s.Module)
 	}
 
-	folders, err := e.reader.ListFolders()
+	folders, err := ctx.Backend.ListFolders()
 	if err != nil {
 		return mdlerrors.NewBackend("list folders", err)
 	}
@@ -71,7 +70,7 @@ func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
 		return fmt.Errorf("%w in %s", err, s.Module)
 	}
 
-	if err := e.writer.DeleteFolder(folderID); err != nil {
+	if err := ctx.Backend.DeleteFolder(folderID); err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("delete folder '%s'", s.FolderPath), err)
 	}
 
@@ -82,8 +81,7 @@ func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
 
 // execMoveFolder handles MOVE FOLDER Module.FolderName TO ... statements.
 func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
-	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -94,7 +92,7 @@ func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
 	}
 
 	// Find the source folder
-	folders, err := e.reader.ListFolders()
+	folders, err := ctx.Backend.ListFolders()
 	if err != nil {
 		return mdlerrors.NewBackend("list folders", err)
 	}
@@ -127,7 +125,7 @@ func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
 	}
 
 	// Move the folder
-	if err := e.writer.MoveFolder(folderID, targetContainerID); err != nil {
+	if err := ctx.Backend.MoveFolder(folderID, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move folder", err)
 	}
 

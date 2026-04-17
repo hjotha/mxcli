@@ -18,8 +18,7 @@ import (
 // describeMermaid generates a Mermaid diagram for the given object type and name.
 // Supported types: entity (renders full domain model), microflow, page.
 func describeMermaid(ctx *ExecContext, objectType, name string) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -50,13 +49,12 @@ func (e *Executor) DescribeMermaid(objectType, name string) error {
 
 // domainModelToMermaid generates a Mermaid erDiagram for a module's domain model.
 func domainModelToMermaid(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	module, err := findModule(ctx, moduleName)
 	if err != nil {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -71,7 +69,7 @@ func domainModelToMermaid(ctx *ExecContext, moduleName string) error {
 	allEntityNames := make(map[model.ID]string)
 	h, err := getHierarchy(ctx)
 	if err == nil {
-		domainModels, _ := e.reader.ListDomainModels()
+		domainModels, _ := ctx.Backend.ListDomainModels()
 		for _, otherDM := range domainModels {
 			modName := h.GetModuleName(otherDM.ContainerID)
 			for _, entity := range otherDM.Entities {
@@ -190,7 +188,6 @@ func domainModelToMermaid(ctx *ExecContext, moduleName string) error {
 
 // microflowToMermaid generates a Mermaid flowchart for a microflow.
 func microflowToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -198,7 +195,7 @@ func microflowToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Build entity name lookup
 	entityNames := make(map[model.ID]string)
-	domainModels, _ := e.reader.ListDomainModels()
+	domainModels, _ := ctx.Backend.ListDomainModels()
 	for _, dm := range domainModels {
 		modName := h.GetModuleName(dm.ContainerID)
 		for _, entity := range dm.Entities {
@@ -207,7 +204,7 @@ func microflowToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Find the microflow
-	allMicroflows, err := e.reader.ListMicroflows()
+	allMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -369,13 +366,12 @@ func renderMicroflowMermaid(ctx *ExecContext, mf *microflows.Microflow, entityNa
 
 // pageToMermaid generates a Mermaid block diagram for a page's widget structure.
 func pageToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	allPages, err := e.reader.ListPages()
+	allPages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}

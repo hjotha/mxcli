@@ -21,13 +21,12 @@ var ErrExit = mdlerrors.ErrExit
 
 // execUpdate handles UPDATE statements (refresh from disk).
 func execUpdate(ctx *ExecContext) error {
-	e := ctx.executor
-	if e.mprPath == "" {
+	if ctx.MprPath == "" {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// Reconnect to refresh
-	path := e.mprPath
+	path := ctx.MprPath
 	execDisconnect(ctx)
 	return execConnect(ctx, &ast.ConnectStmt{Path: path})
 }
@@ -39,8 +38,14 @@ func execRefresh(ctx *ExecContext) error {
 
 // execSet handles SET statements.
 func execSet(ctx *ExecContext, s *ast.SetStmt) error {
-	e := ctx.executor
-	e.settings[s.Key] = s.Value
+	if ctx.Settings == nil {
+		ctx.Settings = make(map[string]any)
+		// Persist back to Executor so subsequent statements see the map.
+		if ctx.executor != nil {
+			ctx.executor.settings = ctx.Settings
+		}
+	}
+	ctx.Settings[s.Key] = s.Value
 	fmt.Fprintf(ctx.Output, "Set %s = %v\n", s.Key, s.Value)
 	return nil
 }
@@ -325,12 +330,11 @@ Statement Terminator:
 
 // showVersion displays Mendix project version information.
 func showVersion(ctx *ExecContext) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	pv := e.reader.ProjectVersion()
+	pv := ctx.Backend.ProjectVersion()
 	fmt.Fprintf(ctx.Output, "Mendix Version: %s\n", pv.ProductVersion)
 	fmt.Fprintf(ctx.Output, "Build Version:  %s\n", pv.BuildVersion)
 	fmt.Fprintf(ctx.Output, "MPR Format:     v%d\n", pv.FormatVersion)

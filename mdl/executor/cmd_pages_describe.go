@@ -21,7 +21,6 @@ import (
 
 // describePage handles DESCRIBE PAGE command - outputs MDL V3 syntax.
 func describePage(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -29,7 +28,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Find the page
-	allPages, err := e.reader.ListPages()
+	allPages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -76,7 +75,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Get layout from raw data
 	layoutName := ""
-	rawData, _ := e.reader.GetRawUnit(foundPage.ID)
+	rawData, _ := ctx.Backend.GetRawUnit(foundPage.ID)
 	if rawData != nil {
 		if formCall, ok := rawData["FormCall"].(map[string]any); ok {
 			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {
@@ -177,7 +176,6 @@ func formatParametersV3(params []string) []string {
 
 // describeSnippet handles DESCRIBE SNIPPET command - outputs MDL V3 syntax.
 func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -185,7 +183,7 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Find the snippet
-	allSnippets, err := e.reader.ListSnippets()
+	allSnippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}
@@ -219,7 +217,7 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Get raw data to check for parameters
-	rawData, _ := e.reader.GetRawUnit(foundSnippet.ID)
+	rawData, _ := ctx.Backend.GetRawUnit(foundSnippet.ID)
 	var params []map[string]any
 	if rawData != nil {
 		params = getBsonArrayMaps(rawData["Parameters"])
@@ -261,7 +259,6 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 
 // describeLayout handles DESCRIBE LAYOUT command - outputs MDL-style representation.
 func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -269,7 +266,7 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Find the layout
-	allLayouts, err := e.reader.ListLayouts()
+	allLayouts, err := ctx.Backend.ListLayouts()
 	if err != nil {
 		return mdlerrors.NewBackend("list layouts", err)
 	}
@@ -330,9 +327,8 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 
 // getLayoutWidgetsFromRaw extracts widgets from raw layout BSON.
 func getLayoutWidgetsFromRaw(ctx *ExecContext, layoutID model.ID) []rawWidget {
-	e := ctx.executor
 	// Get raw layout data
-	rawData, err := e.reader.GetRawUnit(layoutID)
+	rawData, err := ctx.Backend.GetRawUnit(layoutID)
 	if err != nil {
 		return nil
 	}
@@ -359,9 +355,8 @@ func outputWidgetMDLV3Comment(ctx *ExecContext, w rawWidget, indent int) {
 
 // getSnippetWidgetsFromRaw extracts widgets from raw snippet BSON.
 func getSnippetWidgetsFromRaw(ctx *ExecContext, snippetID model.ID) []rawWidget {
-	e := ctx.executor
 	// Get raw snippet data
-	rawData, err := e.reader.GetRawUnit(snippetID)
+	rawData, err := ctx.Backend.GetRawUnit(snippetID)
 	if err != nil {
 		return nil
 	}
@@ -438,8 +433,7 @@ func getBsonArrayMaps(v any) []map[string]any {
 
 // resolveLayoutName resolves a layout ID to its qualified name.
 func resolveLayoutName(ctx *ExecContext, layoutID model.ID) string {
-	e := ctx.executor
-	layouts, err := e.reader.ListLayouts()
+	layouts, err := ctx.Backend.ListLayouts()
 	if err != nil {
 		return string(layoutID)
 	}
@@ -617,9 +611,8 @@ func getBsonArrayElements(v any) []any {
 
 // getPageWidgetsFromRaw extracts widgets from raw page BSON.
 func getPageWidgetsFromRaw(ctx *ExecContext, pageID model.ID) []rawWidget {
-	e := ctx.executor
 	// Get raw page data
-	rawData, err := e.reader.GetRawUnit(pageID)
+	rawData, err := ctx.Backend.GetRawUnit(pageID)
 	if err != nil {
 		return nil
 	}

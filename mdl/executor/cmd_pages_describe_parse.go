@@ -666,7 +666,6 @@ func extractListViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSourc
 
 // extractSnippetRef extracts the snippet reference from a SnippetCallWidget.
 func extractSnippetRef(ctx *ExecContext, w map[string]any) string {
-	e := ctx.executor
 	// First try the FormCall.Form path (used for BY_NAME_REFERENCE)
 	if formCall, ok := w["FormCall"].(map[string]any); ok {
 		if form, ok := formCall["Form"].(string); ok && form != "" {
@@ -675,12 +674,12 @@ func extractSnippetRef(ctx *ExecContext, w map[string]any) string {
 		// Try binary ID and resolve to name
 		if formID := extractBinaryID(formCall["Form"]); formID != "" {
 			// Try to resolve the snippet name from ID
-			snippets, err := e.reader.ListSnippets()
+			snippets, err := ctx.Backend.ListSnippets()
 			if err == nil {
 				for _, s := range snippets {
 					if string(s.ID) == formID {
 						moduleName := ""
-						if modules, err := e.reader.ListModules(); err == nil {
+						if modules, err := ctx.Backend.ListModules(); err == nil {
 							for _, m := range modules {
 								if m.ID == s.ContainerID {
 									moduleName = m.Name

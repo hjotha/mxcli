@@ -6,6 +6,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
@@ -46,6 +47,38 @@ func NewContainerHierarchy(reader *mpr.Reader) (*ContainerHierarchy, error) {
 
 	// Load folders
 	folders, _ := reader.ListFolders()
+	for _, f := range folders {
+		h.folderNames[f.ID] = f.Name
+		h.containerParent[f.ID] = f.ContainerID
+	}
+
+	return h, nil
+}
+
+// NewContainerHierarchyFromBackend creates a new hierarchy from a Backend interface.
+func NewContainerHierarchyFromBackend(b backend.FullBackend) (*ContainerHierarchy, error) {
+	h := &ContainerHierarchy{
+		moduleIDs:       make(map[model.ID]bool),
+		moduleNames:     make(map[model.ID]string),
+		containerParent: make(map[model.ID]model.ID),
+		folderNames:     make(map[model.ID]string),
+	}
+
+	modules, err := b.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range modules {
+		h.moduleIDs[m.ID] = true
+		h.moduleNames[m.ID] = m.Name
+	}
+
+	units, _ := b.ListUnits()
+	for _, u := range units {
+		h.containerParent[u.ID] = u.ContainerID
+	}
+
+	folders, _ := b.ListFolders()
 	for _, f := range folders {
 		h.folderNames[f.ID] = f.Name
 		h.containerParent[f.ID] = f.ContainerID
@@ -112,19 +145,19 @@ func (h *ContainerHierarchy) GetQualifiedName(containerID model.ID, name string)
 
 // getHierarchy returns a cached ContainerHierarchy or creates a new one.
 func getHierarchy(ctx *ExecContext) (*ContainerHierarchy, error) {
-	e := ctx.executor
-	// Ensure cache exists
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return nil, nil
 	}
 	if ctx.Cache == nil {
 		ctx.Cache = &executorCache{}
-		e.cache = ctx.Cache
+		if ctx.executor != nil {
+			ctx.executor.cache = ctx.Cache
+		}
 	}
 	if ctx.Cache.hierarchy != nil {
 		return ctx.Cache.hierarchy, nil
 	}
-	h, err := NewContainerHierarchy(e.reader)
+	h, err := NewContainerHierarchyFromBackend(ctx.Backend)
 	if err != nil {
 		return nil, err
 	}

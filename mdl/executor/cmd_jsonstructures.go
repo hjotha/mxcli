@@ -16,8 +16,7 @@ import (
 
 // showJsonStructures handles SHOW JSON STRUCTURES [IN module].
 func showJsonStructures(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
-	structures, err := e.reader.ListJsonStructures()
+	structures, err := ctx.Backend.ListJsonStructures()
 	if err != nil {
 		return mdlerrors.NewBackend("list JSON structures", err)
 	}
@@ -174,8 +173,7 @@ func capitalizeFirstRune(s string) string {
 
 // execCreateJsonStructure handles CREATE [OR REPLACE] JSON STRUCTURE statements.
 func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -200,7 +198,7 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 	if existing != nil {
 		if s.CreateOrReplace {
 			// Delete existing before recreating
-			if err := e.writer.DeleteJsonStructure(string(existing.ID)); err != nil {
+			if err := ctx.Backend.DeleteJsonStructure(string(existing.ID)); err != nil {
 				return mdlerrors.NewBackend("delete existing JSON structure", err)
 			}
 		} else {
@@ -227,7 +225,7 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 		Elements:      elements,
 	}
 
-	if err := e.writer.CreateJsonStructure(js); err != nil {
+	if err := ctx.Backend.CreateJsonStructure(js); err != nil {
 		return mdlerrors.NewBackend("create JSON structure", err)
 	}
 
@@ -244,8 +242,7 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 
 // execDropJsonStructure handles DROP JSON STRUCTURE statements.
 func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -254,7 +251,7 @@ func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error
 		return mdlerrors.NewNotFound("JSON structure", s.Name.String())
 	}
 
-	if err := e.writer.DeleteJsonStructure(string(js.ID)); err != nil {
+	if err := ctx.Backend.DeleteJsonStructure(string(js.ID)); err != nil {
 		return mdlerrors.NewBackend("delete JSON structure", err)
 	}
 
@@ -264,8 +261,7 @@ func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error
 
 // findJsonStructure finds a JSON structure by module and name.
 func findJsonStructure(ctx *ExecContext, moduleName, structName string) *mpr.JsonStructure {
-	e := ctx.executor
-	structures, err := e.reader.ListJsonStructures()
+	structures, err := ctx.Backend.ListJsonStructures()
 	if err != nil {
 		return nil
 	}

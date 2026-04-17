@@ -16,9 +16,8 @@ import (
 
 // execCreateEnumeration handles CREATE ENUMERATION statements.
 func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error {
-	e := ctx.executor
 
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -57,7 +56,7 @@ func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error
 
 	// If enumeration exists and CREATE OR MODIFY, delete it first
 	if existingEnum != nil && s.CreateOrModify {
-		if err := e.writer.DeleteEnumeration(existingEnum.ID); err != nil {
+		if err := ctx.Backend.DeleteEnumeration(existingEnum.ID); err != nil {
 			return mdlerrors.NewBackend("delete existing enumeration", err)
 		}
 	}
@@ -70,7 +69,7 @@ func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error
 		Values:        values,
 	}
 
-	if err := e.writer.CreateEnumeration(enum); err != nil {
+	if err := ctx.Backend.CreateEnumeration(enum); err != nil {
 		return mdlerrors.NewBackend("create enumeration", err)
 	}
 
@@ -83,9 +82,8 @@ func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error
 
 // findEnumeration finds an enumeration by module and name.
 func findEnumeration(ctx *ExecContext, moduleName, enumName string) *model.Enumeration {
-	e := ctx.executor
 
-	enums, err := e.reader.ListEnumerations()
+	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {
 		return nil
 	}
@@ -113,14 +111,13 @@ func execAlterEnumeration(ctx *ExecContext, s *ast.AlterEnumerationStmt) error {
 
 // execDropEnumeration handles DROP ENUMERATION statements.
 func execDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
-	e := ctx.executor
 
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
 	// Find enumeration
-	enums, err := e.reader.ListEnumerations()
+	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
@@ -130,7 +127,7 @@ func execDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
 			// Check module matches
 			module, err := findModuleByID(ctx, enum.ContainerID)
 			if err == nil && (s.Name.Module == "" || module.Name == s.Name.Module) {
-				if err := e.writer.DeleteEnumeration(enum.ID); err != nil {
+				if err := ctx.Backend.DeleteEnumeration(enum.ID); err != nil {
 					return mdlerrors.NewBackend("delete enumeration", err)
 				}
 				fmt.Fprintf(ctx.Output, "Dropped enumeration: %s\n", s.Name)
@@ -144,9 +141,8 @@ func execDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
 
 // showEnumerations handles SHOW ENUMERATIONS command.
 func showEnumerations(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 
-	enums, err := e.reader.ListEnumerations()
+	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
@@ -196,9 +192,8 @@ func showEnumerations(ctx *ExecContext, moduleName string) error {
 
 // describeEnumeration handles DESCRIBE ENUMERATION command.
 func describeEnumeration(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 
-	enums, err := e.reader.ListEnumerations()
+	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}

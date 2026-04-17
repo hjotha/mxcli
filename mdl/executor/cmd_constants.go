@@ -15,9 +15,7 @@ import (
 
 // showConstants handles SHOW CONSTANTS command.
 func showConstants(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
-
-	constants, err := e.reader.ListConstants()
+	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -84,9 +82,7 @@ func showConstants(ctx *ExecContext, moduleName string) error {
 
 // describeConstant handles DESCRIBE CONSTANT command.
 func describeConstant(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
-
-	constants, err := e.reader.ListConstants()
+	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -258,9 +254,7 @@ func formatDefaultValue(dt model.ConstantDataType, value string) string {
 
 // createConstant handles CREATE CONSTANT command.
 func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
-	e := ctx.executor
-
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -285,7 +279,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 	}
 
 	// Check if constant already exists in this module
-	existingConstants, err := e.reader.ListConstants()
+	existingConstants, err := ctx.Backend.ListConstants()
 	if err == nil {
 		h, _ := getHierarchy(ctx)
 		for _, c := range existingConstants {
@@ -302,7 +296,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 					c.Type = constType
 					c.DefaultValue = defaultValue
 					c.ExposedToClient = stmt.ExposedToClient
-					if err := e.writer.UpdateConstant(c); err != nil {
+					if err := ctx.Backend.UpdateConstant(c); err != nil {
 						return mdlerrors.NewBackend("update constant", err)
 					}
 					invalidateHierarchy(ctx)
@@ -338,7 +332,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 		ExposedToClient: stmt.ExposedToClient,
 	}
 
-	if err := e.writer.CreateConstant(constant); err != nil {
+	if err := ctx.Backend.CreateConstant(constant); err != nil {
 		return mdlerrors.NewBackend("create constant", err)
 	}
 	invalidateHierarchy(ctx)
@@ -349,14 +343,12 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 // showConstantValues handles SHOW CONSTANT VALUES command.
 // Displays one row per constant per configuration for easy comparison.
 func showConstantValues(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
-
-	constants, err := e.reader.ListConstants()
+	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
 
-	ps, err := e.reader.GetProjectSettings()
+	ps, err := ctx.Backend.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -445,13 +437,11 @@ func showConstantValues(ctx *ExecContext, moduleName string) error {
 
 // dropConstant handles DROP CONSTANT command.
 func dropConstant(ctx *ExecContext, stmt *ast.DropConstantStmt) error {
-	e := ctx.executor
-
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	constants, err := e.reader.ListConstants()
+	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -467,7 +457,7 @@ func dropConstant(ctx *ExecContext, stmt *ast.DropConstantStmt) error {
 		modID := h.FindModuleID(c.ContainerID)
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(c.Name, stmt.Name.Name) {
-			if err := e.writer.DeleteConstant(c.ID); err != nil {
+			if err := ctx.Backend.DeleteConstant(c.ID); err != nil {
 				return mdlerrors.NewBackend("drop constant", err)
 			}
 			invalidateHierarchy(ctx)

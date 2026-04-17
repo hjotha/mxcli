@@ -15,18 +15,21 @@ func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
 }
 
 // newExecContext builds an ExecContext from the current Executor state.
-// During the migration period, Backend may be nil; handlers access the
-// Executor via ctx.executor for operations not yet routed through Backend.
 func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 	return &ExecContext{
-		Context:   ctx,
-		Output:    e.output,
-		Format:    e.format,
-		Quiet:     e.quiet,
-		Logger:    e.logger,
-		Fragments: e.fragments,
-		Catalog:   e.catalog,
-		Cache:     e.cache,
-		executor:  e,
+		Context:       ctx,
+		Backend:       e.backend,
+		Output:        e.output,
+		Format:        e.format,
+		Quiet:         e.quiet,
+		Logger:        e.logger,
+		Fragments:     e.fragments,
+		Catalog:       e.catalog,
+		Cache:         e.cache,
+		MprPath:       e.mprPath,
+		SqlMgr:        e.sqlMgr,
+		ThemeRegistry: e.themeRegistry,
+		Settings:      e.settings,
+		executor:      e,
 	}
 }

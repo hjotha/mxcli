@@ -13,7 +13,6 @@ import (
 
 // showLayouts handles SHOW LAYOUTS command.
 func showLayouts(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -21,7 +20,7 @@ func showLayouts(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all layouts
-	layouts, err := e.reader.ListLayouts()
+	layouts, err := ctx.Backend.ListLayouts()
 	if err != nil {
 		return mdlerrors.NewBackend("list layouts", err)
 	}

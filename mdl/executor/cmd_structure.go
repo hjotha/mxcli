@@ -18,8 +18,7 @@ import (
 
 // execShowStructure handles SHOW STRUCTURE [DEPTH n] [IN module] [ALL].
 func execShowStructure(ctx *ExecContext, s *ast.ShowStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -275,7 +274,6 @@ func queryCountByModule(ctx *ExecContext, tableAndWhere string) map[string]int {
 
 // countByModuleFromReader counts elements per module using the reader (for types without catalog tables).
 func countByModuleFromReader(ctx *ExecContext, kind string) map[string]int {
-	e := ctx.executor
 	counts := make(map[string]int)
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -284,7 +282,7 @@ func countByModuleFromReader(ctx *ExecContext, kind string) map[string]int {
 
 	switch kind {
 	case "constants":
-		if constants, err := e.reader.ListConstants(); err == nil {
+		if constants, err := ctx.Backend.ListConstants(); err == nil {
 			for _, c := range constants {
 				modID := h.FindModuleID(c.ContainerID)
 				modName := h.GetModuleName(modID)
@@ -292,7 +290,7 @@ func countByModuleFromReader(ctx *ExecContext, kind string) map[string]int {
 			}
 		}
 	case "scheduled_events":
-		if events, err := e.reader.ListScheduledEvents(); err == nil {
+		if events, err := ctx.Backend.ListScheduledEvents(); err == nil {
 			for _, ev := range events {
 				modID := h.FindModuleID(ev.ContainerID)
 				modName := h.GetModuleName(modID)
@@ -316,7 +314,6 @@ func pluralize(count int, singular, plural string) string {
 // ============================================================================
 
 func structureDepth2(ctx *ExecContext, modules []structureModule) error {
-	e := ctx.executor
 	// Pre-load data that needs the reader
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -324,7 +321,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load domain models for associations
-	domainModels, _ := e.reader.ListDomainModels()
+	domainModels, _ := ctx.Backend.ListDomainModels()
 	dmByModule := make(map[string]*domainmodel.DomainModel)
 	for _, dm := range domainModels {
 		modID := h.FindModuleID(dm.ContainerID)
@@ -333,7 +330,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load enumerations for values
-	allEnums, _ := e.reader.ListEnumerations()
+	allEnums, _ := ctx.Backend.ListEnumerations()
 	enumsByModule := make(map[string][]*model.Enumeration)
 	for _, enum := range allEnums {
 		modID := h.FindModuleID(enum.ContainerID)
@@ -342,7 +339,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load microflows for parameter types
-	allMicroflows, _ := e.reader.ListMicroflows()
+	allMicroflows, _ := ctx.Backend.ListMicroflows()
 	mfByModule := make(map[string][]*microflows.Microflow)
 	for _, mf := range allMicroflows {
 		modID := h.FindModuleID(mf.ContainerID)
@@ -351,7 +348,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load nanoflows
-	allNanoflows, _ := e.reader.ListNanoflows()
+	allNanoflows, _ := ctx.Backend.ListNanoflows()
 	nfByModule := make(map[string][]*microflows.Nanoflow)
 	for _, nf := range allNanoflows {
 		modID := h.FindModuleID(nf.ContainerID)
@@ -360,7 +357,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load constants
-	allConstants, _ := e.reader.ListConstants()
+	allConstants, _ := ctx.Backend.ListConstants()
 	constByModule := make(map[string][]*model.Constant)
 	for _, c := range allConstants {
 		modID := h.FindModuleID(c.ContainerID)
@@ -369,7 +366,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load scheduled events
-	allEvents, _ := e.reader.ListScheduledEvents()
+	allEvents, _ := ctx.Backend.ListScheduledEvents()
 	eventsByModule := make(map[string][]*model.ScheduledEvent)
 	for _, ev := range allEvents {
 		modID := h.FindModuleID(ev.ContainerID)
@@ -378,7 +375,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load java actions for parameter types
-	allJavaActions, _ := e.reader.ListJavaActionsFull()
+	allJavaActions, _ := ctx.Backend.ListJavaActionsFull()
 	jaByModule := make(map[string][]*javaactions.JavaAction)
 	for _, ja := range allJavaActions {
 		modID := h.FindModuleID(ja.ContainerID)
@@ -387,7 +384,7 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load workflows
-	allWorkflows, _ := e.reader.ListWorkflows()
+	allWorkflows, _ := ctx.Backend.ListWorkflows()
 	wfByModule := make(map[string][]*workflows.Workflow)
 	for _, wf := range allWorkflows {
 		modID := h.FindModuleID(wf.ContainerID)
@@ -478,14 +475,13 @@ func structureDepth2(ctx *ExecContext, modules []structureModule) error {
 // ============================================================================
 
 func structureDepth3(ctx *ExecContext, modules []structureModule) error {
-	e := ctx.executor
 	// Same data loading as depth 2
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	domainModels, _ := e.reader.ListDomainModels()
+	domainModels, _ := ctx.Backend.ListDomainModels()
 	dmByModule := make(map[string]*domainmodel.DomainModel)
 	for _, dm := range domainModels {
 		modID := h.FindModuleID(dm.ContainerID)
@@ -493,7 +489,7 @@ func structureDepth3(ctx *ExecContext, modules []structureModule) error {
 		dmByModule[modName] = dm
 	}
 
-	allEnums, _ := e.reader.ListEnumerations()
+	allEnums, _ := ctx.Backend.ListEnumerations()
 	enumsByModule := make(map[string][]*model.Enumeration)
 	for _, enum := range allEnums {
 		modID := h.FindModuleID(enum.ContainerID)
@@ -501,7 +497,7 @@ func structureDepth3(ctx *ExecContext, modules []structureModule) error {
 		enumsByModule[modName] = append(enumsByModule[modName], enum)
 	}
 
-	allMicroflows, _ := e.reader.ListMicroflows()
+	allMicroflows, _ := ctx.Backend.ListMicroflows()
 	mfByModule := make(map[string][]*microflows.Microflow)
 	for _, mf := range allMicroflows {
 		modID := h.FindModuleID(mf.ContainerID)
@@ -509,7 +505,7 @@ func structureDepth3(ctx *ExecContext, modules []structureModule) error {
 		mfByModule[modName] = append(mfByModule[modName], mf)
 	}
 
-	allNanoflows, _ := e.reader.ListNanoflows()
+	allNanoflows, _ := ctx.Backend.ListNanoflows()
 	nfByModule := make(map[string][]*microflows.Nanoflow)
 	for _, nf := range allNanoflows {
 		modID := h.FindModuleID(nf.ContainerID)
@@ -517,7 +513,7 @@ func structureDepth3(ctx *ExecContext, modules []structureModule) error {
 		nfByModule[modName] = append(nfByModule[modName], nf)
 	}
 
-	allConstants, _ := e.reader.ListConstants()
+	allConstants, _ := ctx.Backend.ListConstants()
 	constByModule := make(map[string][]*model.Constant)
 	for _, c := range allConstants {
 		modID := h.FindModuleID(c.ContainerID)
@@ -525,7 +521,7 @@ func structureDepth3(ctx *ExecContext, modules []structureModule) error {
 		constByModule[modName] = append(constByModule[modName], c)
 	}
 
-	allEvents, _ := e.reader.ListScheduledEvents()
+	allEvents, _ := ctx.Backend.ListScheduledEvents()
 	eventsByModule := make(map[string][]*model.ScheduledEvent)
 	for _, ev := range allEvents {
 		modID := h.FindModuleID(ev.ContainerID)
@@ -533,7 +529,7 @@ func structureDepth3(ctx *ExecContext, modules []structureModule) error {
 		eventsByModule[modName] = append(eventsByModule[modName], ev)
 	}
 
-	allJavaActions, _ := e.reader.ListJavaActionsFull()
+	allJavaActions, _ := ctx.Backend.ListJavaActionsFull()
 	jaByModule := make(map[string][]*javaactions.JavaAction)
 	for _, ja := range allJavaActions {
 		modID := h.FindModuleID(ja.ContainerID)
@@ -542,7 +538,7 @@ func structureDepth3(ctx *ExecContext, modules []structureModule) error {
 	}
 
 	// Load workflows
-	allWorkflows, _ := e.reader.ListWorkflows()
+	allWorkflows, _ := ctx.Backend.ListWorkflows()
 	wfByModule := make(map[string][]*workflows.Workflow)
 	for _, wf := range allWorkflows {
 		modID := h.FindModuleID(wf.ContainerID)

@@ -16,12 +16,11 @@ import (
 
 // showExportMappings prints a table of all export mapping documents.
 func showExportMappings(ctx *ExecContext, inModule string) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	all, err := e.reader.ListExportMappings()
+	all, err := ctx.Backend.ListExportMappings()
 	if err != nil {
 		return mdlerrors.NewBackend("list export mappings", err)
 	}
@@ -80,12 +79,11 @@ func showExportMappings(ctx *ExecContext, inModule string) error {
 
 // describeExportMapping prints the MDL representation of an export mapping.
 func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	em, err := e.reader.GetExportMappingByQualifiedName(name.Module, name.Name)
+	em, err := ctx.Backend.GetExportMappingByQualifiedName(name.Module, name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("export mapping", name.String())
@@ -180,7 +178,7 @@ func printExportMappingElement(w io.Writer, elem *model.ExportMappingElement, de
 // execCreateExportMapping creates a new export mapping.
 func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) error {
 	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -211,7 +209,7 @@ func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) e
 	// Build a path→element info map from the JSON structure for schema alignment.
 	jsElems := map[string]*mpr.JsonElement{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
-		if js, err2 := e.reader.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
+		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
 			buildJsonElementPathMap(js.Elements, jsElems)
 		}
 	}
@@ -222,7 +220,7 @@ func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) e
 		em.Elements = append(em.Elements, root)
 	}
 
-	if err := e.writer.CreateExportMapping(em); err != nil {
+	if err := ctx.Backend.CreateExportMapping(em); err != nil {
 		return mdlerrors.NewBackend("create export mapping", err)
 	}
 
@@ -364,12 +362,11 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 
 // execDropExportMapping deletes an export mapping.
 func execDropExportMapping(ctx *ExecContext, s *ast.DropExportMappingStmt) error {
-	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	em, err := e.reader.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	em, err := ctx.Backend.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("export mapping", s.Name.String())
@@ -377,7 +374,7 @@ func execDropExportMapping(ctx *ExecContext, s *ast.DropExportMappingStmt) error
 		return mdlerrors.NewBackend("get export mapping", err)
 	}
 
-	if err := e.writer.DeleteExportMapping(em.ID); err != nil {
+	if err := ctx.Backend.DeleteExportMapping(em.ID); err != nil {
 		return mdlerrors.NewBackend("drop export mapping", err)
 	}
 

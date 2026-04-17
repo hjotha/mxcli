@@ -6,13 +6,14 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	e := ctx.executor
-	if e.writer != nil {
+	if ctx.ConnectedForWrite() {
 		e.writer.Close()
 	}
 
@@ -25,6 +26,22 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	e.reader = writer.Reader()
 	e.mprPath = s.Path
 	e.cache = &executorCache{} // Initialize fresh cache
+
+	// Wrap the writer in an MprBackend for ctx.Backend propagation.
+	e.backend = mprbackend.Wrap(writer, s.Path)
+
+	// Propagate connection state back to ctx so subsequent code in this
+	// dispatch cycle sees the updated values.
+	ctx.Backend = e.backend
+	ctx.Cache = e.cache
+	ctx.MprPath = e.mprPath
+
+	// Reset project-scoped caches — previous project's catalog and theme
+	// registry are invalid for the new connection.
+	e.catalog = nil
+	e.themeRegistry = nil
+	ctx.Catalog = nil
+	ctx.ThemeRegistry = nil
 
 	// Display connection info with version
 	pv := e.reader.ProjectVersion()
@@ -46,7 +63,7 @@ func reconnect(ctx *ExecContext) error {
 	}
 
 	// Close existing connection
-	if e.writer != nil {
+	if ctx.ConnectedForWrite() {
 		e.writer.Close()
 	}
 
@@ -59,12 +76,24 @@ func reconnect(ctx *ExecContext) error {
 	e.writer = writer
 	e.reader = writer.Reader()
 	e.cache = &executorCache{} // Reset cache
+	e.backend = mprbackend.Wrap(writer, e.mprPath)
+
+	// Propagate reconnection state back to ctx.
+	ctx.Backend = e.backend
+	ctx.Cache = e.cache
+
+	// Reset project-scoped caches — file may have changed externally.
+	e.catalog = nil
+	e.themeRegistry = nil
+	ctx.Catalog = nil
+	ctx.ThemeRegistry = nil
+
 	return nil
 }
 
 func execDisconnect(ctx *ExecContext) error {
 	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		fmt.Fprintln(ctx.Output, "Not connected")
 		return nil
 	}
@@ -80,6 +109,14 @@ func execDisconnect(ctx *ExecContext) error {
 	e.reader = nil
 	e.mprPath = ""
 	e.cache = nil
+	e.backend = nil
+
+	// Propagate disconnection state back to ctx so subsequent code in this
+	// dispatch cycle sees the cleared values.
+	ctx.Backend = nil
+	ctx.MprPath = ""
+	ctx.Cache = nil
+
 	return nil
 }
 
@@ -88,7 +125,7 @@ func execDisconnect(ctx *ExecContext) error {
 
 func execStatus(ctx *ExecContext) error {
 	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		fmt.Fprintln(ctx.Output, "Status: Not connected")
 		return nil
 	}

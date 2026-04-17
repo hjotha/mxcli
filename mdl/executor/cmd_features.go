@@ -15,16 +15,15 @@ import (
 // version. Returns nil if available, or an actionable error with the version
 // requirement and a hint. Safe to call when e.reader is nil (returns nil).
 func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
-	e := ctx.executor
 
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return nil // No project connected; skip check
 	}
 	reg, err := versions.Load()
 	if err != nil {
 		return nil // Registry unavailable; don't block execution
 	}
-	rpv := e.reader.ProjectVersion()
+	rpv := ctx.Backend.ProjectVersion()
 	pv := versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
 	if reg.IsAvailable(area, name, pv) {
 		return nil
@@ -50,7 +49,6 @@ func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 // execShowFeatures handles SHOW FEATURES, SHOW FEATURES FOR VERSION, and
 // SHOW FEATURES ADDED SINCE commands.
 func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
-	e := ctx.executor
 
 	reg, err := versions.Load()
 	if err != nil {
@@ -78,10 +76,10 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 
 	default:
 		// SHOW FEATURES [IN area] — requires project connection
-		if e.reader == nil {
+		if !ctx.Connected() {
 			return mdlerrors.NewNotConnectedMsg("not connected to a project\n  hint: use SHOW FEATURES FOR VERSION x.y without a project connection")
 		}
-		rpv := e.reader.ProjectVersion()
+		rpv := ctx.Backend.ProjectVersion()
 		pv = versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
 	}
 

@@ -15,6 +15,13 @@ func (m *MockBackend) ListJavaActions() ([]*mpr.JavaAction, error) {
 	return nil, nil
 }
 
+func (m *MockBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
+	if m.ListJavaActionsFullFunc != nil {
+		return m.ListJavaActionsFullFunc()
+	}
+	return nil, nil
+}
+
 func (m *MockBackend) ListJavaScriptActions() ([]*mpr.JavaScriptAction, error) {
 	if m.ListJavaScriptActionsFunc != nil {
 		return m.ListJavaScriptActionsFunc()

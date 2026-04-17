@@ -8,8 +8,7 @@ import (
 )
 
 func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
-	e := ctx.executor
-	if e.reader == nil && s.ObjectType != ast.ShowModules && s.ObjectType != ast.ShowFragments {
+	if !ctx.Connected() && s.ObjectType != ast.ShowModules && s.ObjectType != ast.ShowFragments {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -144,8 +143,7 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 }
 
 func execDescribe(ctx *ExecContext, s *ast.DescribeStmt) error {
-	e := ctx.executor
-	if e.reader == nil && s.ObjectType != ast.DescribeFragment {
+	if !ctx.Connected() && s.ObjectType != ast.DescribeFragment {
 		return mdlerrors.NewNotConnected()
 	}
 

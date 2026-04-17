@@ -13,7 +13,6 @@ import (
 
 // showSnippets handles SHOW SNIPPETS command.
 func showSnippets(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -21,7 +20,7 @@ func showSnippets(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all snippets
-	snippets, err := e.reader.ListSnippets()
+	snippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}

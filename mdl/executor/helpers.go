@@ -21,11 +21,10 @@ import (
 
 // getModulesFromCache returns cached modules or loads them.
 func getModulesFromCache(ctx *ExecContext) ([]*model.Module, error) {
-	e := ctx.executor
 	if ctx.Cache != nil && ctx.Cache.modules != nil {
 		return ctx.Cache.modules, nil
 	}
-	modules, err := e.reader.ListModules()
+	modules, err := ctx.Backend.ListModules()
 	if err != nil {
 		return nil, err
 	}
@@ -68,12 +67,11 @@ func findModule(ctx *ExecContext, name string) (*model.Module, error) {
 // and the executor has write access. Used by CREATE operations to avoid requiring
 // manual module creation.
 func findOrCreateModule(ctx *ExecContext, name string) (*model.Module, error) {
-	e := ctx.executor
 	m, err := findModule(ctx, name)
 	if err == nil {
 		return m, nil
 	}
-	if e.writer == nil || name == "" {
+	if !ctx.ConnectedForWrite() || name == "" {
 		return nil, err
 	}
 	// Auto-create the module
@@ -101,12 +99,11 @@ func findModuleByID(ctx *ExecContext, id model.ID) (*model.Module, error) {
 // resolveFolder resolves a folder path (e.g., "Resources/Images") to a folder ID.
 // The path is relative to the given module. If the folder doesn't exist, it creates it.
 func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (model.ID, error) {
-	e := ctx.executor
 	if folderPath == "" {
 		return moduleID, nil
 	}
 
-	folders, err := e.reader.ListFolders()
+	folders, err := ctx.Backend.ListFolders()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list folders", err)
 	}
@@ -154,7 +151,6 @@ func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (mode
 
 // createFolder creates a new folder in the project.
 func createFolder(ctx *ExecContext, name string, containerID model.ID) (model.ID, error) {
-	e := ctx.executor
 	folder := &model.Folder{
 		BaseElement: model.BaseElement{
 			ID:       model.ID(mpr.GenerateID()),
@@ -164,7 +160,7 @@ func createFolder(ctx *ExecContext, name string, containerID model.ID) (model.ID
 		Name:        name,
 	}
 
-	if err := e.writer.CreateFolder(folder); err != nil {
+	if err := ctx.Backend.CreateFolder(folder); err != nil {
 		return "", err
 	}
 
@@ -177,8 +173,7 @@ func createFolder(ctx *ExecContext, name string, containerID model.ID) (model.ID
 
 // enumerationExists checks if an enumeration exists in the project.
 func enumerationExists(ctx *ExecContext, qualifiedName string) bool {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return false
 	}
 
@@ -196,7 +191,7 @@ func enumerationExists(ctx *ExecContext, qualifiedName string) bool {
 	}
 
 	// Get all enumerations and check if one matches
-	enums, err := e.reader.ListEnumerations()
+	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {
 		return false
 	}
@@ -217,8 +212,7 @@ func enumerationExists(ctx *ExecContext, qualifiedName string) bool {
 // It checks DataSource (microflow/nanoflow/entity), Action (page/microflow/nanoflow),
 // and Snippet references.
 func validateWidgetReferences(ctx *ExecContext, widgets []*ast.WidgetV3, sc *scriptContext) []string {
-	e := ctx.executor
-	if e.reader == nil || len(widgets) == 0 {
+	if !ctx.Connected() || len(widgets) == 0 {
 		return nil
 	}
 
@@ -365,13 +359,12 @@ func (c *widgetRefCollector) collectFromAction(action *ast.ActionV3) {
 
 // buildMicroflowQualifiedNames returns a set of all microflow qualified names in the project.
 func buildMicroflowQualifiedNames(ctx *ExecContext) map[string]bool {
-	e := ctx.executor
 	result := make(map[string]bool)
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return result
 	}
-	mfs, err := e.reader.ListMicroflows()
+	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return result
 	}
@@ -384,13 +377,12 @@ func buildMicroflowQualifiedNames(ctx *ExecContext) map[string]bool {
 
 // buildNanoflowQualifiedNames returns a set of all nanoflow qualified names in the project.
 func buildNanoflowQualifiedNames(ctx *ExecContext) map[string]bool {
-	e := ctx.executor
 	result := make(map[string]bool)
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return result
 	}
-	nfs, err := e.reader.ListNanoflows()
+	nfs, err := ctx.Backend.ListNanoflows()
 	if err != nil {
 		return result
 	}
@@ -403,13 +395,12 @@ func buildNanoflowQualifiedNames(ctx *ExecContext) map[string]bool {
 
 // buildPageQualifiedNames returns a set of all page qualified names in the project.
 func buildPageQualifiedNames(ctx *ExecContext) map[string]bool {
-	e := ctx.executor
 	result := make(map[string]bool)
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return result
 	}
-	pgs, err := e.reader.ListPages()
+	pgs, err := ctx.Backend.ListPages()
 	if err != nil {
 		return result
 	}
@@ -422,13 +413,12 @@ func buildPageQualifiedNames(ctx *ExecContext) map[string]bool {
 
 // buildSnippetQualifiedNames returns a set of all snippet qualified names in the project.
 func buildSnippetQualifiedNames(ctx *ExecContext) map[string]bool {
-	e := ctx.executor
 	result := make(map[string]bool)
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return result
 	}
-	snippets, err := e.reader.ListSnippets()
+	snippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return result
 	}
@@ -446,12 +436,11 @@ func buildEntityQualifiedNames(ctx *ExecContext) map[string]bool {
 	if err != nil {
 		return result
 	}
-	e := ctx.executor
 	moduleNames := make(map[model.ID]string)
 	for _, m := range modules {
 		moduleNames[m.ID] = m.Name
 	}
-	dms, err := e.reader.ListDomainModels()
+	dms, err := ctx.Backend.ListDomainModels()
 	if err != nil {
 		return result
 	}
@@ -469,13 +458,12 @@ func buildEntityQualifiedNames(ctx *ExecContext) map[string]bool {
 
 // buildJavaActionQualifiedNames returns a set of all java action qualified names in the project.
 func buildJavaActionQualifiedNames(ctx *ExecContext) map[string]bool {
-	e := ctx.executor
 	result := make(map[string]bool)
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return result
 	}
-	jas, err := e.reader.ListJavaActions()
+	jas, err := ctx.Backend.ListJavaActions()
 	if err != nil {
 		return result
 	}

@@ -90,8 +90,7 @@ func (c *wireframeCounter) next() string {
 
 // PageWireframeJSON generates wireframe JSON for a page.
 func PageWireframeJSON(ctx *ExecContext, name string) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -108,7 +107,7 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 	}
 
 	// Find the page
-	allPages, err := e.reader.ListPages()
+	allPages, err := ctx.Backend.ListPages()
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -144,7 +143,7 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 	}
 
 	layoutName := ""
-	rawData, _ := e.reader.GetRawUnit(foundPage.ID)
+	rawData, _ := ctx.Backend.GetRawUnit(foundPage.ID)
 	if rawData != nil {
 		if formCall, ok := rawData["FormCall"].(map[string]any); ok {
 			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {
@@ -204,8 +203,7 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 
 // SnippetWireframeJSON generates wireframe JSON for a snippet.
 func SnippetWireframeJSON(ctx *ExecContext, name string) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -220,7 +218,7 @@ func SnippetWireframeJSON(ctx *ExecContext, name string) error {
 	}
 	qn := ast.QualifiedName{Module: parts[0], Name: parts[1]}
 
-	allSnippets, err := e.reader.ListSnippets()
+	allSnippets, err := ctx.Backend.ListSnippets()
 	if err != nil {
 		return mdlerrors.NewBackend("list snippets", err)
 	}

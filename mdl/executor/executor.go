@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -69,43 +69,70 @@ type createdSnippetInfo struct {
 }
 
 // getEntityNames returns the entity name lookup map, using the pre-warmed cache if available.
-func (e *Executor) getEntityNames(h *ContainerHierarchy) map[model.ID]string {
-	if e.cache != nil && len(e.cache.entityNames) > 0 {
-		return e.cache.entityNames
+func getEntityNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string {
+	if ctx.Cache != nil && len(ctx.Cache.entityNames) > 0 {
+		return ctx.Cache.entityNames
 	}
 	entityNames := make(map[model.ID]string)
-	dms, _ := e.reader.ListDomainModels()
+	dms, err := ctx.Backend.ListDomainModels()
+	if err != nil {
+		if ctx.Logger != nil {
+			ctx.Logger.Warn("getEntityNames: ListDomainModels failed", "error", err)
+		}
+		return entityNames
+	}
 	for _, dm := range dms {
 		modName := h.GetModuleName(dm.ContainerID)
 		for _, ent := range dm.Entities {
 			entityNames[ent.ID] = modName + "." + ent.Name
 		}
 	}
+	if ctx.Cache != nil {
+		ctx.Cache.entityNames = entityNames
+	}
 	return entityNames
 }
 
 // getMicroflowNames returns the microflow name lookup map, using the pre-warmed cache if available.
-func (e *Executor) getMicroflowNames(h *ContainerHierarchy) map[model.ID]string {
-	if e.cache != nil && len(e.cache.microflowNames) > 0 {
-		return e.cache.microflowNames
+func getMicroflowNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string {
+	if ctx.Cache != nil && len(ctx.Cache.microflowNames) > 0 {
+		return ctx.Cache.microflowNames
 	}
 	microflowNames := make(map[model.ID]string)
-	mfs, _ := e.reader.ListMicroflows()
+	mfs, err := ctx.Backend.ListMicroflows()
+	if err != nil {
+		if ctx.Logger != nil {
+			ctx.Logger.Warn("getMicroflowNames: ListMicroflows failed", "error", err)
+		}
+		return microflowNames
+	}
 	for _, mf := range mfs {
 		microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
+	}
+	if ctx.Cache != nil {
+		ctx.Cache.microflowNames = microflowNames
 	}
 	return microflowNames
 }
 
 // getPageNames returns the page name lookup map, using the pre-warmed cache if available.
-func (e *Executor) getPageNames(h *ContainerHierarchy) map[model.ID]string {
-	if e.cache != nil && len(e.cache.pageNames) > 0 {
-		return e.cache.pageNames
+func getPageNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string {
+	if ctx.Cache != nil && len(ctx.Cache.pageNames) > 0 {
+		return ctx.Cache.pageNames
 	}
 	pageNames := make(map[model.ID]string)
-	pgs, _ := e.reader.ListPages()
+	pgs, err := ctx.Backend.ListPages()
+	if err != nil {
+		if ctx.Logger != nil {
+			ctx.Logger.Warn("getPageNames: ListPages failed", "error", err)
+		}
+		return pageNames
+	}
 	for _, pg := range pgs {
 		pageNames[pg.ID] = h.GetQualifiedName(pg.ContainerID, pg.Name)
+	}
+	if ctx.Cache != nil {
+		ctx.Cache.pageNames = pageNames
 	}
 	return pageNames
 }
@@ -122,6 +149,7 @@ const (
 type Executor struct {
 	writer        *mpr.Writer
 	reader        *mpr.Reader
+	backend       backend.FullBackend // domain backend (populated on Connect)
 	output        io.Writer
 	guard         *outputGuard // line-limit wrapper around output
 	mprPath       string
@@ -146,22 +174,6 @@ func New(output io.Writer) *Executor {
 		settings: make(map[string]any),
 		registry: NewRegistry(),
 	}
-}
-
-// getThemeRegistry returns the cached theme registry, loading it lazily from the project's theme sources.
-func (e *Executor) getThemeRegistry() *ThemeRegistry {
-	if e.themeRegistry != nil {
-		return e.themeRegistry
-	}
-	if e.mprPath == "" {
-		return nil
-	}
-	projectDir := filepath.Dir(e.mprPath)
-	registry, err := loadThemeRegistry(projectDir)
-	if err == nil {
-		e.themeRegistry = registry
-	}
-	return e.themeRegistry
 }
 
 // SetQuiet enables or disables quiet mode (suppresses connection/status messages).
@@ -297,6 +309,7 @@ func (e *Executor) Close() error {
 		e.writer.Close()
 		e.writer = nil
 		e.reader = nil
+		e.backend = nil
 	}
 	if e.sqlMgr != nil {
 		e.sqlMgr.CloseAll()

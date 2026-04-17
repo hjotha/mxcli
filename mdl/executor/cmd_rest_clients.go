@@ -23,9 +23,8 @@ func safeIdent(name string) string {
 
 // showRestClients handles SHOW REST CLIENTS [IN module] command.
 func showRestClients(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 
-	services, err := e.reader.ListConsumedRestServices()
+	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed REST services", err)
 	}
@@ -86,9 +85,8 @@ func showRestClients(ctx *ExecContext, moduleName string) error {
 
 // describeRestClient handles DESCRIBE REST CLIENT command.
 func describeRestClient(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 
-	services, err := e.reader.ListConsumedRestServices()
+	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed REST services", err)
 	}
@@ -281,9 +279,8 @@ func writeExportMappings(w io.Writer, mappings []*model.RestResponseMapping, ind
 
 // createRestClient handles CREATE REST CLIENT statement.
 func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
-	e := ctx.executor
 
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -301,7 +298,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 	}
 
 	// Check for existing service with same name
-	existingServices, _ := e.reader.ListConsumedRestServices()
+	existingServices, _ := ctx.Backend.ListConsumedRestServices()
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -313,7 +310,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 		if strings.EqualFold(existModName, moduleName) && strings.EqualFold(existing.Name, stmt.Name.Name) {
 			if stmt.CreateOrModify {
 				// Delete existing and recreate
-				if err := e.writer.DeleteConsumedRestService(existing.ID); err != nil {
+				if err := ctx.Backend.DeleteConsumedRestService(existing.ID); err != nil {
 					return mdlerrors.NewBackend("delete existing REST client", err)
 				}
 			} else {
@@ -356,7 +353,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 	}
 
 	// Write to project
-	if err := e.writer.CreateConsumedRestService(svc); err != nil {
+	if err := ctx.Backend.CreateConsumedRestService(svc); err != nil {
 		return mdlerrors.NewBackend("create REST client", err)
 	}
 
@@ -462,13 +459,12 @@ func convertMappingEntries(entries []ast.RestMappingEntry, importDirection bool)
 
 // dropRestClient handles DROP REST CLIENT statement.
 func dropRestClient(ctx *ExecContext, stmt *ast.DropRestClientStmt) error {
-	e := ctx.executor
 
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := e.reader.ListConsumedRestServices()
+	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed REST services", err)
 	}
@@ -482,7 +478,7 @@ func dropRestClient(ctx *ExecContext, stmt *ast.DropRestClientStmt) error {
 		modID := h.FindModuleID(svc.ContainerID)
 		moduleName := h.GetModuleName(modID)
 		if strings.EqualFold(moduleName, stmt.Name.Module) && strings.EqualFold(svc.Name, stmt.Name.Name) {
-			if err := e.writer.DeleteConsumedRestService(svc.ID); err != nil {
+			if err := ctx.Backend.DeleteConsumedRestService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("delete REST client", err)
 			}
 			fmt.Fprintf(ctx.Output, "Dropped REST client: %s.%s\n", moduleName, svc.Name)

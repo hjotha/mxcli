@@ -16,9 +16,8 @@ import (
 
 // showEntities handles SHOW ENTITIES command.
 func showEntities(ctx *ExecContext, moduleName string) error {
-	e := ctx.executor
 	// Build module ID -> name map (single query)
-	modules, err := e.reader.ListModules()
+	modules, err := ctx.Backend.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -28,7 +27,7 @@ func showEntities(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Get all domain models in a single query (avoids O(n²) behavior)
-	domainModels, err := e.reader.ListDomainModels()
+	domainModels, err := ctx.Backend.ListDomainModels()
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
@@ -159,7 +158,6 @@ func showEntities(ctx *ExecContext, moduleName string) error {
 
 // showEntity handles SHOW ENTITY command.
 func showEntity(ctx *ExecContext, name *ast.QualifiedName) error {
-	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}
@@ -169,7 +167,7 @@ func showEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -217,13 +215,12 @@ func showEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 
 // describeEntity handles DESCRIBE ENTITY command.
 func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
 	module, err := findModule(ctx, name.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := e.reader.GetDomainModel(module.ID)
+	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -465,7 +462,6 @@ func extractAttrNameFromQualified(qualifiedName string) string {
 // resolveMicroflowByName resolves a qualified microflow name to its ID.
 // It checks both microflows created during this session and existing microflows in the project.
 func resolveMicroflowByName(ctx *ExecContext, qualifiedName string) (model.ID, error) {
-	e := ctx.executor
 	parts := strings.Split(qualifiedName, ".")
 	if len(parts) < 2 {
 		return "", mdlerrors.NewValidationf("invalid microflow name: %s (expected Module.Name)", qualifiedName)
@@ -474,14 +470,14 @@ func resolveMicroflowByName(ctx *ExecContext, qualifiedName string) (model.ID, e
 	mfName := strings.Join(parts[1:], ".")
 
 	// Check microflows created during this session
-	if e.cache != nil && e.cache.createdMicroflows != nil {
-		if info, ok := e.cache.createdMicroflows[qualifiedName]; ok {
+	if ctx.Cache != nil && ctx.Cache.createdMicroflows != nil {
+		if info, ok := ctx.Cache.createdMicroflows[qualifiedName]; ok {
 			return info.ID, nil
 		}
 	}
 
 	// Search existing microflows
-	allMicroflows, err := e.reader.ListMicroflows()
+	allMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list microflows", err)
 	}
@@ -504,8 +500,7 @@ func resolveMicroflowByName(ctx *ExecContext, qualifiedName string) (model.ID, e
 
 // lookupMicroflowName reverse-looks up a microflow ID to its qualified name.
 func lookupMicroflowName(ctx *ExecContext, mfID model.ID) string {
-	e := ctx.executor
-	allMicroflows, err := e.reader.ListMicroflows()
+	allMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return ""
 	}

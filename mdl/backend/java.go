@@ -11,6 +11,7 @@ import (
 // JavaBackend provides Java and JavaScript action operations.
 type JavaBackend interface {
 	ListJavaActions() ([]*mpr.JavaAction, error)
+	ListJavaActionsFull() ([]*javaactions.JavaAction, error)
 	ListJavaScriptActions() ([]*mpr.JavaScriptAction, error)
 	ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error)
 	ReadJavaScriptActionByName(qualifiedName string) (*mpr.JavaScriptAction, error)

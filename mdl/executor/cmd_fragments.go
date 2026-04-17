@@ -72,8 +72,7 @@ func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
 // describeFragmentFrom handles DESCRIBE FRAGMENT FROM PAGE/SNIPPET ... WIDGET ... command.
 // It finds a named widget in a page or snippet and outputs it as MDL.
 func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -86,7 +85,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 
 	switch s.ContainerType {
 	case "PAGE":
-		allPages, err := e.reader.ListPages()
+		allPages, err := ctx.Backend.ListPages()
 		if err != nil {
 			return mdlerrors.NewBackend("list pages", err)
 		}
@@ -105,7 +104,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
 
 	case "SNIPPET":
-		allSnippets, err := e.reader.ListSnippets()
+		allSnippets, err := ctx.Backend.ListSnippets()
 		if err != nil {
 			return mdlerrors.NewBackend("list snippets", err)
 		}
@@ -131,7 +130,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 	}
 
 	// Output as MDL
-	e.outputWidgetMDLV3(*target, 0)
+	outputWidgetMDLV3(ctx, *target, 0)
 	return nil
 }
 

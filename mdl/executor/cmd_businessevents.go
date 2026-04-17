@@ -14,13 +14,11 @@ import (
 
 // showBusinessEventServices displays a table of all business event service documents.
 func showBusinessEventServices(ctx *ExecContext, inModule string) error {
-	e := ctx.executor
-
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	services, err := e.reader.ListBusinessEventServices()
+	services, err := ctx.Backend.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}
@@ -96,13 +94,11 @@ func showBusinessEventClients(ctx *ExecContext, inModule string) error {
 
 // showBusinessEvents displays a table of individual messages across all business event services.
 func showBusinessEvents(ctx *ExecContext, inModule string) error {
-	e := ctx.executor
-
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	services, err := e.reader.ListBusinessEventServices()
+	services, err := ctx.Backend.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}
@@ -175,13 +171,11 @@ func showBusinessEvents(ctx *ExecContext, inModule string) error {
 
 // describeBusinessEventService outputs the full MDL description of a business event service.
 func describeBusinessEventService(ctx *ExecContext, name ast.QualifiedName) error {
-	e := ctx.executor
-
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	services, err := e.reader.ListBusinessEventServices()
+	services, err := ctx.Backend.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}
@@ -267,9 +261,7 @@ func describeBusinessEventService(ctx *ExecContext, name ast.QualifiedName) erro
 
 // createBusinessEventService creates a new business event service from an AST statement.
 func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventServiceStmt) error {
-	e := ctx.executor
-
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -280,7 +272,7 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 	}
 
 	// Check for existing service with same name (if not CREATE OR REPLACE)
-	existingServices, _ := e.reader.ListBusinessEventServices()
+	existingServices, _ := ctx.Backend.ListBusinessEventServices()
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -292,7 +284,7 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 		if strings.EqualFold(existModName, moduleName) && strings.EqualFold(existing.Name, stmt.Name.Name) {
 			if stmt.CreateOrReplace {
 				// Delete existing
-				if err := e.writer.DeleteBusinessEventService(existing.ID); err != nil {
+				if err := ctx.Backend.DeleteBusinessEventService(existing.ID); err != nil {
 					return mdlerrors.NewBackend("delete existing service", err)
 				}
 			} else {
@@ -373,7 +365,7 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 	svc.Definition = def
 
 	// Write to project
-	if err := e.writer.CreateBusinessEventService(svc); err != nil {
+	if err := ctx.Backend.CreateBusinessEventService(svc); err != nil {
 		return mdlerrors.NewBackend("create business event service", err)
 	}
 
@@ -383,13 +375,11 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 
 // dropBusinessEventService deletes a business event service.
 func dropBusinessEventService(ctx *ExecContext, stmt *ast.DropBusinessEventServiceStmt) error {
-	e := ctx.executor
-
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := e.reader.ListBusinessEventServices()
+	services, err := ctx.Backend.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}
@@ -403,7 +393,7 @@ func dropBusinessEventService(ctx *ExecContext, stmt *ast.DropBusinessEventServi
 		modID := h.FindModuleID(svc.ContainerID)
 		moduleName := h.GetModuleName(modID)
 		if strings.EqualFold(moduleName, stmt.Name.Module) && strings.EqualFold(svc.Name, stmt.Name.Name) {
-			if err := e.writer.DeleteBusinessEventService(svc.ID); err != nil {
+			if err := ctx.Backend.DeleteBusinessEventService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("delete business event service", err)
 			}
 			fmt.Fprintf(ctx.Output, "Dropped business event service: %s.%s\n", moduleName, svc.Name)

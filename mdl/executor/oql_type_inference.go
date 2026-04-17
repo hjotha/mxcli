@@ -658,9 +658,8 @@ func inferAttributeType(ctx *ExecContext, attrPath string, col *OQLColumnInfo) a
 
 // findEntity looks up an entity by module and name.
 func findEntity(ctx *ExecContext, moduleName, entityName string) (*domainmodel.Entity, error) {
-	e := ctx.executor
 	// Get all entities
-	dms, err := e.reader.ListDomainModels()
+	dms, err := ctx.Backend.ListDomainModels()
 	if err != nil {
 		return nil, err
 	}

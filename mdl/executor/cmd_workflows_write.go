@@ -17,8 +17,7 @@ import (
 
 // execCreateWorkflow handles CREATE WORKFLOW statements.
 func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
-	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -33,7 +32,7 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	existingWorkflows, err := e.reader.ListWorkflows()
+	existingWorkflows, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -99,7 +98,7 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	userActivities := buildWorkflowActivities(s.Activities)
 
 	// Auto-bind microflow/workflow parameters and sanitize names
-	autoBindWorkflowParameters(e, userActivities)
+	autoBindWorkflowParameters(ctx, userActivities)
 
 	// Deduplicate activity names to avoid CE0495
 	deduplicateActivityNames(userActivities)
@@ -114,12 +113,12 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 
 	if existingID != "" {
 		// Delete existing and recreate
-		if err := e.writer.DeleteWorkflow(existingID); err != nil {
+		if err := ctx.Backend.DeleteWorkflow(existingID); err != nil {
 			return mdlerrors.NewBackend("delete existing workflow", err)
 		}
 	}
 
-	if err := e.writer.CreateWorkflow(wf); err != nil {
+	if err := ctx.Backend.CreateWorkflow(wf); err != nil {
 		return mdlerrors.NewBackend("create workflow", err)
 	}
 
@@ -130,8 +129,7 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 
 // execDropWorkflow handles DROP WORKFLOW statements.
 func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
-	e := ctx.executor
-	if e.writer == nil {
+	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -140,7 +138,7 @@ func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	wfs, err := e.reader.ListWorkflows()
+	wfs, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -149,7 +147,7 @@ func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		modID := h.FindModuleID(wf.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && wf.Name == s.Name.Name {
-			if err := e.writer.DeleteWorkflow(wf.ID); err != nil {
+			if err := ctx.Backend.DeleteWorkflow(wf.ID); err != nil {
 				return mdlerrors.NewBackend("delete workflow", err)
 			}
 			invalidateHierarchy(ctx)
@@ -604,36 +602,36 @@ func sanitizeActivityName(name string) string {
 
 // autoBindWorkflowParameters resolves microflow/workflow parameters and generates
 // ParameterMappings, default outcomes, and sanitized names for workflow activities.
-func autoBindWorkflowParameters(e *Executor, activities []workflows.WorkflowActivity) {
-	autoBindActivitiesInFlow(e, activities)
+func autoBindWorkflowParameters(ctx *ExecContext, activities []workflows.WorkflowActivity) {
+	autoBindActivitiesInFlow(ctx, activities)
 }
 
-func autoBindActivitiesInFlow(e *Executor, activities []workflows.WorkflowActivity) {
+func autoBindActivitiesInFlow(ctx *ExecContext, activities []workflows.WorkflowActivity) {
 	for _, act := range activities {
 		switch a := act.(type) {
 		case *workflows.CallMicroflowTask:
-			autoBindCallMicroflow(e, a)
+			autoBindCallMicroflow(ctx, a)
 			// Recurse into outcomes
 			for _, outcome := range a.Outcomes {
 				switch o := outcome.(type) {
 				case *workflows.BooleanConditionOutcome:
 					if o.Flow != nil {
-						autoBindActivitiesInFlow(e, o.Flow.Activities)
+						autoBindActivitiesInFlow(ctx, o.Flow.Activities)
 					}
 				case *workflows.VoidConditionOutcome:
 					if o.Flow != nil {
-						autoBindActivitiesInFlow(e, o.Flow.Activities)
+						autoBindActivitiesInFlow(ctx, o.Flow.Activities)
 					}
 				}
 			}
 		case *workflows.CallWorkflowActivity:
-			autoBindCallWorkflow(e, a)
+			autoBindCallWorkflow(ctx, a)
 		case *workflows.UserTask:
 			// Sanitize name
 			a.Name = sanitizeActivityName(a.Name)
 			for _, outcome := range a.Outcomes {
 				if outcome.Flow != nil {
-					autoBindActivitiesInFlow(e, outcome.Flow.Activities)
+					autoBindActivitiesInFlow(ctx, outcome.Flow.Activities)
 				}
 			}
 		case *workflows.ParallelSplitActivity:
@@ -641,7 +639,7 @@ func autoBindActivitiesInFlow(e *Executor, activities []workflows.WorkflowActivi
 			a.Name = sanitizeActivityName(a.Name)
 			for _, outcome := range a.Outcomes {
 				if outcome.Flow != nil {
-					autoBindActivitiesInFlow(e, outcome.Flow.Activities)
+					autoBindActivitiesInFlow(ctx, outcome.Flow.Activities)
 				}
 			}
 		case *workflows.ExclusiveSplitActivity:
@@ -650,11 +648,11 @@ func autoBindActivitiesInFlow(e *Executor, activities []workflows.WorkflowActivi
 				switch o := outcome.(type) {
 				case *workflows.BooleanConditionOutcome:
 					if o.Flow != nil {
-						autoBindActivitiesInFlow(e, o.Flow.Activities)
+						autoBindActivitiesInFlow(ctx, o.Flow.Activities)
 					}
 				case *workflows.VoidConditionOutcome:
 					if o.Flow != nil {
-						autoBindActivitiesInFlow(e, o.Flow.Activities)
+						autoBindActivitiesInFlow(ctx, o.Flow.Activities)
 					}
 				}
 			}
@@ -669,7 +667,7 @@ func autoBindActivitiesInFlow(e *Executor, activities []workflows.WorkflowActivi
 }
 
 // autoBindCallMicroflow resolves microflow parameters and auto-generates ParameterMappings.
-func autoBindCallMicroflow(e *Executor, task *workflows.CallMicroflowTask) {
+func autoBindCallMicroflow(ctx *ExecContext, task *workflows.CallMicroflowTask) {
 	// Sanitize name
 	task.Name = sanitizeActivityName(task.Name)
 
@@ -679,12 +677,12 @@ func autoBindCallMicroflow(e *Executor, task *workflows.CallMicroflowTask) {
 	}
 
 	// Look up the microflow to get its parameters
-	mfs, err := e.reader.ListMicroflows()
+	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return
 	}
@@ -722,7 +720,7 @@ func autoBindCallMicroflow(e *Executor, task *workflows.CallMicroflowTask) {
 }
 
 // autoBindCallWorkflow resolves workflow parameters and generates ParameterMappings.
-func autoBindCallWorkflow(e *Executor, act *workflows.CallWorkflowActivity) {
+func autoBindCallWorkflow(ctx *ExecContext, act *workflows.CallWorkflowActivity) {
 	// Sanitize name
 	act.Name = sanitizeActivityName(act.Name)
 
@@ -732,12 +730,12 @@ func autoBindCallWorkflow(e *Executor, act *workflows.CallWorkflowActivity) {
 	}
 
 	// Look up the target workflow to check its parameter
-	wfs, err := e.reader.ListWorkflows()
+	wfs, err := ctx.Backend.ListWorkflows()
 	if err != nil {
 		return
 	}
 
-	h, err := e.getHierarchy()
+	h, err := getHierarchy(ctx)
 	if err != nil {
 		return
 	}

@@ -34,6 +34,18 @@ type MprBackend struct {
 	path   string
 }
 
+// Wrap creates an MprBackend that wraps an existing Writer (and its Reader).
+// This is used during migration when the Executor already owns the Writer
+// and we want to expose it through the Backend interface without opening
+// a second connection.
+func Wrap(writer *mpr.Writer, path string) *MprBackend {
+	return &MprBackend{
+		reader: writer.Reader(),
+		writer: writer,
+		path:   path,
+	}
+}
+
 // ---------------------------------------------------------------------------
 // ConnectionBackend
 // ---------------------------------------------------------------------------
@@ -525,6 +537,9 @@ func (b *MprBackend) DeleteJsonStructure(id string) error {
 
 func (b *MprBackend) ListJavaActions() ([]*mpr.JavaAction, error) {
 	return b.reader.ListJavaActions()
+}
+func (b *MprBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
+	return b.reader.ListJavaActionsFull()
 }
 func (b *MprBackend) ListJavaScriptActions() ([]*mpr.JavaScriptAction, error) {
 	return b.reader.ListJavaScriptActions()

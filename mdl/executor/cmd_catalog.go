@@ -20,7 +20,6 @@ import (
 
 // execShowCatalogTables handles SHOW CATALOG TABLES.
 func execShowCatalogTables(ctx *ExecContext) error {
-	e := ctx.executor
 	// Build catalog if not already built (fast mode by default)
 	if ctx.Catalog == nil || !ctx.Catalog.IsBuilt() {
 		if err := ensureCatalog(ctx, false); err != nil {
@@ -57,7 +56,6 @@ func execShowCatalogTables(ctx *ExecContext) error {
 	for _, info := range infos {
 		tr.Rows = append(tr.Rows, []any{info.name, info.count})
 	}
-	_ = e // suppress unused
 	return writeResult(ctx, tr)
 }
 
@@ -199,7 +197,6 @@ func execDescribeCatalogTable(ctx *ExecContext, stmt *ast.DescribeCatalogTableSt
 
 // ensureCatalog ensures a catalog is available, using cache if possible.
 func ensureCatalog(ctx *ExecContext, full bool) error {
-	e := ctx.executor
 	requiredMode := "fast"
 	if full {
 		requiredMode = "full"
@@ -214,29 +211,31 @@ func ensureCatalog(ctx *ExecContext, full bool) error {
 		}
 	}
 
+	// Guard against building without a connection.
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+
 	// Build fresh catalog
-	_ = e // suppress unused
 	return buildCatalog(ctx, full)
 }
 
 // getCachePath returns the path to the catalog cache file for the current project.
 func getCachePath(ctx *ExecContext) string {
-	e := ctx.executor
-	if e.mprPath == "" {
+	if ctx.MprPath == "" {
 		return ""
 	}
-	dir := filepath.Dir(e.mprPath)
+	dir := filepath.Dir(ctx.MprPath)
 	cacheDir := filepath.Join(dir, ".mxcli")
 	return filepath.Join(cacheDir, "catalog.db")
 }
 
 // getMprModTime returns the modification time of the current MPR file.
 func getMprModTime(ctx *ExecContext) time.Time {
-	e := ctx.executor
-	if e.mprPath == "" {
+	if ctx.MprPath == "" {
 		return time.Time{}
 	}
-	info, err := os.Stat(e.mprPath)
+	info, err := os.Stat(ctx.MprPath)
 	if err != nil {
 		return time.Time{}
 	}
@@ -245,7 +244,6 @@ func getMprModTime(ctx *ExecContext) time.Time {
 
 // isCacheValid checks if the cached catalog is still valid.
 func isCacheValid(ctx *ExecContext, cachePath string, requiredMode string) (bool, string) {
-	e := ctx.executor
 	// Check if cache file exists
 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
 		return false, "cache file does not exist"
@@ -264,7 +262,7 @@ func isCacheValid(ctx *ExecContext, cachePath string, requiredMode string) (bool
 	}
 
 	// Check MPR path matches
-	if info.MprPath != e.mprPath {
+	if info.MprPath != ctx.MprPath {
 		return false, "MPR path changed"
 	}
 
@@ -350,11 +348,11 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 	}
 
 	// Set project metadata
-	version, _ := e.reader.GetMendixVersion()
+	version, _ := ctx.Backend.GetMendixVersion()
 	cat.SetProject("default", "Current Project", version)
 
 	// Build catalog
-	builder := catalog.NewBuilder(cat, e.reader)
+	builder := catalog.NewBuilder(cat, ctx.Backend)
 	builder.SetFullMode(full)
 	if isSource {
 		builder.SetSourceMode(true)
@@ -380,7 +378,7 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 	} else if full {
 		buildMode = "full"
 	}
-	cat.SetCacheInfo(e.mprPath, getMprModTime(ctx), version, buildMode, elapsed)
+	cat.SetCacheInfo(ctx.MprPath, getMprModTime(ctx), version, buildMode, elapsed)
 
 	cat.SetBuilt(true)
 	ctx.Catalog = cat
@@ -411,7 +409,7 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 // execRefreshCatalogStmt handles REFRESH CATALOG [FULL] [SOURCE] [FORCE] [BACKGROUND] command.
 func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) error {
 	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -691,18 +689,27 @@ func captureDescribeParallel(ctx *ExecContext, objectType string, qualifiedName 
 	}
 	qn := ast.QualifiedName{Module: parts[0], Name: parts[1]}
 
-	// Create a goroutine-local executor: shared reader + cache, own output buffer.
-	// TODO: Replace with ExecContext.Fork() when MR 3 makes ExecContext self-contained.
+	// Create a goroutine-local context: shared backend + cache, own output buffer.
 	var buf bytes.Buffer
-	local := &Executor{
-		reader: ctx.executor.reader,
-		output: &buf,
-		cache:  ctx.Cache,
-	}
 	localCtx := &ExecContext{
-		Output:   &buf,
-		Cache:    ctx.Cache,
-		executor: local,
+		Context: ctx.Context,
+		Output:  &buf,
+		Format:  ctx.Format,
+		Quiet:   ctx.Quiet,
+		Logger:  ctx.Logger,
+		Backend: ctx.Backend,
+		Cache:   ctx.Cache,
+		MprPath: ctx.MprPath,
+	}
+	// If a backing Executor exists, create a local one for handlers that still
+	// need e.reader/e.output (e.g., describeMicroflow via writeDescribeJSON).
+	if ctx.executor != nil {
+		local := &Executor{
+			reader: ctx.executor.reader,
+			output: &buf,
+			cache:  ctx.Cache,
+		}
+		localCtx.executor = local
 	}
 
 	var err error
@@ -734,7 +741,6 @@ func captureDescribeParallel(ctx *ExecContext, objectType string, qualifiedName 
 // This avoids O(n²) re-parsing in describe functions by building name lookup
 // maps once and sharing them across all goroutines.
 func preWarmCache(ctx *ExecContext) {
-	e := ctx.executor
 	h, _ := getHierarchy(ctx)
 	if h == nil || ctx.Cache == nil {
 		return
@@ -742,7 +748,7 @@ func preWarmCache(ctx *ExecContext) {
 
 	// Build entity name lookup
 	ctx.Cache.entityNames = make(map[model.ID]string)
-	dms, _ := e.reader.ListDomainModels()
+	dms, _ := ctx.Backend.ListDomainModels()
 	for _, dm := range dms {
 		modName := h.GetModuleName(dm.ContainerID)
 		for _, ent := range dm.Entities {
@@ -752,14 +758,14 @@ func preWarmCache(ctx *ExecContext) {
 
 	// Build microflow name lookup
 	ctx.Cache.microflowNames = make(map[model.ID]string)
-	mfs, _ := e.reader.ListMicroflows()
+	mfs, _ := ctx.Backend.ListMicroflows()
 	for _, mf := range mfs {
 		ctx.Cache.microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
 	}
 
 	// Build page name lookup
 	ctx.Cache.pageNames = make(map[model.ID]string)
-	pgs, _ := e.reader.ListPages()
+	pgs, _ := ctx.Backend.ListPages()
 	for _, pg := range pgs {
 		ctx.Cache.pageNames[pg.ID] = h.GetQualifiedName(pg.ContainerID, pg.Name)
 	}
@@ -767,8 +773,7 @@ func preWarmCache(ctx *ExecContext) {
 
 // execSearch handles SEARCH 'query' command.
 func execSearch(ctx *ExecContext, stmt *ast.SearchStmt) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -830,8 +835,7 @@ func escapeFTSQuery(q string) string {
 // search performs a full-text search with the specified output format.
 // Format can be: "table" (default), "names" (just qualified names), "json"
 func search(ctx *ExecContext, query, format string) error {
-	e := ctx.executor
-	if e.reader == nil {
+	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
