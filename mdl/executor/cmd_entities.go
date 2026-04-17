@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -18,14 +19,14 @@ import (
 // buildEventHandlers converts a list of AST EventHandlerDef to domain model EventHandler.
 // Resolves the microflow qualified name to a microflow ID, but stores the qualified name
 // for BY_NAME serialization.
-func (e *Executor) buildEventHandlers(defs []ast.EventHandlerDef) ([]*domainmodel.EventHandler, error) {
+func buildEventHandlers(ctx *ExecContext, defs []ast.EventHandlerDef) ([]*domainmodel.EventHandler, error) {
 	if len(defs) == 0 {
 		return nil, nil
 	}
 	var handlers []*domainmodel.EventHandler
 	for _, d := range defs {
 		mfQN := d.Microflow.String()
-		mfID, err := e.resolveMicroflowByName(mfQN)
+		mfID, err := resolveMicroflowByName(ctx, mfQN)
 		if err != nil {
 			return nil, mdlerrors.NewNotFound("microflow", mfQN)
 		}
@@ -45,7 +46,8 @@ func (e *Executor) buildEventHandlers(defs []ast.EventHandlerDef) ([]*domainmode
 	return handlers, nil
 }
 
-func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
+func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -149,7 +151,7 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 				Type: "CalculatedValue",
 			}
 			if a.CalculatedMicroflow != nil {
-				mfID, err := e.resolveMicroflowByName(a.CalculatedMicroflow.String())
+				mfID, err := resolveMicroflowByName(ctx, a.CalculatedMicroflow.String())
 				if err != nil {
 					return fmt.Errorf("attribute '%s': %w", a.Name, err)
 				}
@@ -241,7 +243,7 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 
 	// Create entity
 	// Build event handlers
-	eventHandlers, err := e.buildEventHandlers(s.EventHandlers)
+	eventHandlers, err := buildEventHandlers(ctx, s.EventHandlers)
 	if err != nil {
 		return err
 	}
@@ -275,7 +277,7 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 		// Invalidate caches so updated entity is visible
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Modified entity: %s\n", s.Name)
+		fmt.Fprintf(ctx.Output, "Modified entity: %s\n", s.Name)
 	} else {
 		// Create new entity
 		if err := e.writer.CreateEntity(dm.ID, entity); err != nil {
@@ -284,7 +286,7 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 		// Invalidate caches so new entity is visible
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Created entity: %s\n", s.Name)
+		fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)
 	}
 
 	e.trackModifiedDomainModel(module.ID, module.Name)
@@ -292,7 +294,8 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 }
 
 // execCreateViewEntity handles CREATE VIEW ENTITY statements.
-func (e *Executor) execCreateViewEntity(s *ast.CreateViewEntityStmt) error {
+func execCreateViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -445,7 +448,7 @@ func (e *Executor) execCreateViewEntity(s *ast.CreateViewEntityStmt) error {
 		// Invalidate caches so updated entity is visible
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Modified view entity: %s\n", s.Name)
+		fmt.Fprintf(ctx.Output, "Modified view entity: %s\n", s.Name)
 	} else {
 		// Create new entity
 		if err := e.writer.CreateEntity(dm.ID, entity); err != nil {
@@ -454,14 +457,15 @@ func (e *Executor) execCreateViewEntity(s *ast.CreateViewEntityStmt) error {
 		// Invalidate caches so new entity is visible
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Created view entity: %s\n", s.Name)
+		fmt.Fprintf(ctx.Output, "Created view entity: %s\n", s.Name)
 	}
 
 	return nil
 }
 
 // execAlterEntity handles ALTER ENTITY statements.
-func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
+func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -539,7 +543,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 				Type: "CalculatedValue",
 			}
 			if a.CalculatedMicroflow != nil {
-				mfID, err := e.resolveMicroflowByName(a.CalculatedMicroflow.String())
+				mfID, err := resolveMicroflowByName(ctx, a.CalculatedMicroflow.String())
 				if err != nil {
 					return fmt.Errorf("attribute '%s': %w", a.Name, err)
 				}
@@ -596,7 +600,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		}
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
+		fmt.Fprintf(ctx.Output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
 
 	case ast.AlterEntityRenameAttribute:
 		found := false
@@ -615,7 +619,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		}
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Renamed attribute '%s' to '%s' on entity %s\n", s.AttributeName, s.NewName, s.Name)
+		fmt.Fprintf(ctx.Output, "Renamed attribute '%s' to '%s' on entity %s\n", s.AttributeName, s.NewName, s.Name)
 
 	case ast.AlterEntityModifyAttribute:
 		// CALCULATED attributes are only supported on persistent entities
@@ -631,7 +635,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 						Type: "CalculatedValue",
 					}
 					if s.CalculatedMicroflow != nil {
-						mfID, err := e.resolveMicroflowByName(s.CalculatedMicroflow.String())
+						mfID, err := resolveMicroflowByName(ctx, s.CalculatedMicroflow.String())
 						if err != nil {
 							return fmt.Errorf("attribute '%s': %w", s.AttributeName, err)
 						}
@@ -652,7 +656,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		}
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Modified attribute '%s' on entity %s\n", s.AttributeName, s.Name)
+		fmt.Fprintf(ctx.Output, "Modified attribute '%s' on entity %s\n", s.AttributeName, s.Name)
 
 	case ast.AlterEntityDropAttribute:
 		// System attribute pseudo-names: drop by clearing entity flags
@@ -751,23 +755,23 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 		}
 		e.invalidateHierarchy()
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
+		fmt.Fprintf(ctx.Output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
 
 		// Report what was cleaned up on the entity itself
 		if n := origValidationCount - len(keepRules); n > 0 {
-			fmt.Fprintf(e.output, "  Removed %d validation rule(s)\n", n)
+			fmt.Fprintf(ctx.Output, "  Removed %d validation rule(s)\n", n)
 		}
 		if removedMemberAccess > 0 {
-			fmt.Fprintf(e.output, "  Removed %d access rule member reference(s)\n", removedMemberAccess)
+			fmt.Fprintf(ctx.Output, "  Removed %d access rule member reference(s)\n", removedMemberAccess)
 		}
 		if n := origIndexCount - len(keepIndexes); n > 0 {
-			fmt.Fprintf(e.output, "  Removed %d index(es)\n", n)
+			fmt.Fprintf(ctx.Output, "  Removed %d index(es)\n", n)
 		}
 
 		// Warn about references in other documents that are NOT auto-cleaned
 		entityQName := s.Name.String()
-		fmt.Fprintf(e.output, "  Warning: pages, microflows, and other documents may still reference '%s'. Update them manually.\n", s.AttributeName)
-		fmt.Fprintf(e.output, "  Use SHOW REFERENCES TO %s to find usages (requires REFRESH CATALOG FULL).\n", entityQName)
+		fmt.Fprintf(ctx.Output, "  Warning: pages, microflows, and other documents may still reference '%s'. Update them manually.\n", s.AttributeName)
+		fmt.Fprintf(ctx.Output, "  Use SHOW REFERENCES TO %s to find usages (requires REFRESH CATALOG FULL).\n", entityQName)
 
 	case ast.AlterEntitySetDocumentation:
 		entity.Documentation = s.Documentation
@@ -775,7 +779,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("set documentation", err)
 		}
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Set documentation on entity %s\n", s.Name)
+		fmt.Fprintf(ctx.Output, "Set documentation on entity %s\n", s.Name)
 
 	case ast.AlterEntitySetComment:
 		// Comments are stored as documentation in the Mendix model
@@ -784,7 +788,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("set comment", err)
 		}
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Set comment on entity %s\n", s.Name)
+		fmt.Fprintf(ctx.Output, "Set comment on entity %s\n", s.Name)
 
 	case ast.AlterEntitySetPosition:
 		if s.Position == nil {
@@ -795,7 +799,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("set position", err)
 		}
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Set position of entity %s to (%d, %d)\n", s.Name, s.Position.X, s.Position.Y)
+		fmt.Fprintf(ctx.Output, "Set position of entity %s to (%d, %d)\n", s.Name, s.Position.X, s.Position.Y)
 
 	case ast.AlterEntityAddIndex:
 		if s.Index == nil {
@@ -829,7 +833,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("add index", err)
 		}
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Added index to entity %s\n", s.Name)
+		fmt.Fprintf(ctx.Output, "Added index to entity %s\n", s.Name)
 
 	case ast.AlterEntityDropIndex:
 		// Find and remove the index by position (Mendix indexes don't have user-visible names)
@@ -853,13 +857,13 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("drop index", err)
 		}
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Dropped index '%s' from entity %s\n", s.IndexName, s.Name)
+		fmt.Fprintf(ctx.Output, "Dropped index '%s' from entity %s\n", s.IndexName, s.Name)
 
 	case ast.AlterEntityAddEventHandler:
 		if s.EventHandler == nil {
 			return mdlerrors.NewValidation("missing event handler definition")
 		}
-		ehs, err := e.buildEventHandlers([]ast.EventHandlerDef{*s.EventHandler})
+		ehs, err := buildEventHandlers(ctx, []ast.EventHandlerDef{*s.EventHandler})
 		if err != nil {
 			return err
 		}
@@ -876,7 +880,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("add event handler", err)
 		}
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Added event handler %s %s on %s\n",
+		fmt.Fprintf(ctx.Output, "Added event handler %s %s on %s\n",
 			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
 
 	case ast.AlterEntityDropEventHandler:
@@ -902,7 +906,7 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewBackend("drop event handler", err)
 		}
 		e.invalidateDomainModelsCache()
-		fmt.Fprintf(e.output, "Dropped event handler %s %s from %s\n",
+		fmt.Fprintf(ctx.Output, "Dropped event handler %s %s from %s\n",
 			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
 
 	default:
@@ -914,7 +918,8 @@ func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
 }
 
 // execDropEntity handles DROP ENTITY statements.
-func (e *Executor) execDropEntity(s *ast.DropEntityStmt) error {
+func execDropEntity(ctx *ExecContext, s *ast.DropEntityStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -933,7 +938,7 @@ func (e *Executor) execDropEntity(s *ast.DropEntityStmt) error {
 	for _, entity := range dm.Entities {
 		if entity.Name == s.Name.Name {
 			// Warn about references before deleting (best-effort)
-			e.warnEntityReferences(s.Name.String())
+			warnEntityReferences(ctx, s.Name.String())
 
 			// If this is a view entity, also delete the associated ViewEntitySourceDocument
 			if entity.Source == "DomainModels$OqlViewEntitySource" {
@@ -945,7 +950,7 @@ func (e *Executor) execDropEntity(s *ast.DropEntityStmt) error {
 				return mdlerrors.NewBackend("delete entity", err)
 			}
 			e.invalidateDomainModelsCache()
-			fmt.Fprintf(e.output, "Dropped entity: %s\n", s.Name)
+			fmt.Fprintf(ctx.Output, "Dropped entity: %s\n", s.Name)
 			return nil
 		}
 	}
@@ -955,7 +960,8 @@ func (e *Executor) execDropEntity(s *ast.DropEntityStmt) error {
 
 // warnEntityReferences prints a warning if the entity is referenced by other elements.
 // Uses the catalog if available; silently skips if catalog is not built.
-func (e *Executor) warnEntityReferences(entityName string) {
+func warnEntityReferences(ctx *ExecContext, entityName string) {
+	e := ctx.executor
 	if e.catalog == nil || !e.catalog.IsBuilt() {
 		return
 	}
@@ -969,11 +975,29 @@ func (e *Executor) warnEntityReferences(entityName string) {
 		return
 	}
 
-	fmt.Fprintf(e.output, "WARNING: %s is referenced by %d element(s):\n", entityName, result.Count)
+	fmt.Fprintf(ctx.Output, "WARNING: %s is referenced by %d element(s):\n", entityName, result.Count)
 	for _, row := range result.Rows {
 		sourceType, _ := row[0].(string)
 		sourceName, _ := row[1].(string)
 		refKind, _ := row[2].(string)
-		fmt.Fprintf(e.output, "  - %s %s (%s)\n", sourceType, sourceName, refKind)
+		fmt.Fprintf(ctx.Output, "  - %s %s (%s)\n", sourceType, sourceName, refKind)
 	}
+}
+
+// --- Executor method wrappers for callers not yet migrated ---
+
+func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
+	return execCreateEntity(e.newExecContext(context.Background()), s)
+}
+
+func (e *Executor) execCreateViewEntity(s *ast.CreateViewEntityStmt) error {
+	return execCreateViewEntity(e.newExecContext(context.Background()), s)
+}
+
+func (e *Executor) execAlterEntity(s *ast.AlterEntityStmt) error {
+	return execAlterEntity(e.newExecContext(context.Background()), s)
+}
+
+func (e *Executor) execDropEntity(s *ast.DropEntityStmt) error {
+	return execDropEntity(e.newExecContext(context.Background()), s)
 }

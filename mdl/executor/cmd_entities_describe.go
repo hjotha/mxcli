@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,7 +16,8 @@ import (
 )
 
 // showEntities handles SHOW ENTITIES command.
-func (e *Executor) showEntities(moduleName string) error {
+func showEntities(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	// Build module ID -> name map (single query)
 	modules, err := e.reader.ListModules()
 	if err != nil {
@@ -157,7 +159,8 @@ func (e *Executor) showEntities(moduleName string) error {
 }
 
 // showEntity handles SHOW ENTITY command.
-func (e *Executor) showEntity(name *ast.QualifiedName) error {
+func showEntity(ctx *ExecContext, name *ast.QualifiedName) error {
+	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}
@@ -174,12 +177,12 @@ func (e *Executor) showEntity(name *ast.QualifiedName) error {
 
 	for _, entity := range dm.Entities {
 		if entity.Name == name.Name {
-			fmt.Fprintf(e.output, "**Entity: %s.%s**\n\n", module.Name, entity.Name)
-			fmt.Fprintf(e.output, "- Persistable: %v\n", entity.Persistable)
+			fmt.Fprintf(ctx.Output, "**Entity: %s.%s**\n\n", module.Name, entity.Name)
+			fmt.Fprintf(ctx.Output, "- Persistable: %v\n", entity.Persistable)
 			if entity.GeneralizationRef != "" {
-				fmt.Fprintf(e.output, "- Extends: %s\n", entity.GeneralizationRef)
+				fmt.Fprintf(ctx.Output, "- Extends: %s\n", entity.GeneralizationRef)
 			}
-			fmt.Fprintf(e.output, "- Location: (%d, %d)\n\n", entity.Location.X, entity.Location.Y)
+			fmt.Fprintf(ctx.Output, "- Location: (%d, %d)\n\n", entity.Location.X, entity.Location.Y)
 
 			if len(entity.Attributes) > 0 {
 				// Calculate column widths
@@ -199,12 +202,12 @@ func (e *Executor) showEntity(name *ast.QualifiedName) error {
 					}
 				}
 
-				fmt.Fprintf(e.output, "| %-*s | %-*s |\n", nameWidth, "Attribute", typeWidth, "Type")
-				fmt.Fprintf(e.output, "|-%s-|-%s-|\n", strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth))
+				fmt.Fprintf(ctx.Output, "| %-*s | %-*s |\n", nameWidth, "Attribute", typeWidth, "Type")
+				fmt.Fprintf(ctx.Output, "|-%s-|-%s-|\n", strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth))
 				for _, r := range rows {
-					fmt.Fprintf(e.output, "| %-*s | %-*s |\n", nameWidth, r.name, typeWidth, r.typeName)
+					fmt.Fprintf(ctx.Output, "| %-*s | %-*s |\n", nameWidth, r.name, typeWidth, r.typeName)
 				}
-				fmt.Fprintf(e.output, "\n(%d attributes)\n", len(entity.Attributes))
+				fmt.Fprintf(ctx.Output, "\n(%d attributes)\n", len(entity.Attributes))
 			}
 			return nil
 		}
@@ -214,7 +217,8 @@ func (e *Executor) showEntity(name *ast.QualifiedName) error {
 }
 
 // describeEntity handles DESCRIBE ENTITY command.
-func (e *Executor) describeEntity(name ast.QualifiedName) error {
+func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	module, err := e.findModule(name.Module)
 	if err != nil {
 		return err
@@ -229,11 +233,11 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 		if entity.Name == name.Name {
 			// Output JavaDoc documentation if present
 			if entity.Documentation != "" {
-				fmt.Fprintf(e.output, "/**\n * %s\n */\n", entity.Documentation)
+				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", entity.Documentation)
 			}
 
 			// Output position annotation
-			fmt.Fprintf(e.output, "@Position(%d, %d)\n", entity.Location.X, entity.Location.Y)
+			fmt.Fprintf(ctx.Output, "@Position(%d, %d)\n", entity.Location.X, entity.Location.Y)
 
 			// Determine entity type based on Source field and Persistable flag
 			entityType := "PERSISTENT"
@@ -246,9 +250,9 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 			}
 
 			if entity.GeneralizationRef != "" {
-				fmt.Fprintf(e.output, "CREATE OR MODIFY %s ENTITY %s.%s EXTENDS %s (\n", entityType, module.Name, entity.Name, entity.GeneralizationRef)
+				fmt.Fprintf(ctx.Output, "CREATE OR MODIFY %s ENTITY %s.%s EXTENDS %s (\n", entityType, module.Name, entity.Name, entity.GeneralizationRef)
 			} else {
-				fmt.Fprintf(e.output, "CREATE OR MODIFY %s ENTITY %s.%s (\n", entityType, module.Name, entity.Name)
+				fmt.Fprintf(ctx.Output, "CREATE OR MODIFY %s ENTITY %s.%s (\n", entityType, module.Name, entity.Name)
 			}
 
 			// Build validation rules map by attribute ID and name
@@ -314,7 +318,7 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 					if attr.Value.MicroflowName != "" {
 						constraints.WriteString(" BY " + attr.Value.MicroflowName)
 					} else if attr.Value.MicroflowID != "" {
-						if mfName := e.lookupMicroflowName(attr.Value.MicroflowID); mfName != "" {
+						if mfName := lookupMicroflowName(ctx, attr.Value.MicroflowID); mfName != "" {
 							constraints.WriteString(" BY " + mfName)
 						}
 					}
@@ -357,19 +361,19 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 				if i == len(attrLines)-1 {
 					comma = ""
 				}
-				fmt.Fprintf(e.output, "%s%s\n", al.text, comma)
+				fmt.Fprintf(ctx.Output, "%s%s\n", al.text, comma)
 			}
-			fmt.Fprint(e.output, ")")
+			fmt.Fprint(ctx.Output, ")")
 
 			// For VIEW entities, output the OQL query
 			if entityType == "VIEW" && entity.OqlQuery != "" {
-				fmt.Fprint(e.output, " AS (\n")
+				fmt.Fprint(ctx.Output, " AS (\n")
 				// Indent OQL query lines
 				oqlLines := strings.SplitSeq(entity.OqlQuery, "\n")
 				for line := range oqlLines {
-					fmt.Fprintf(e.output, "  %s\n", line)
+					fmt.Fprintf(ctx.Output, "  %s\n", line)
 				}
-				fmt.Fprint(e.output, ")")
+				fmt.Fprint(ctx.Output, ")")
 			}
 
 			// Build attribute name map
@@ -389,7 +393,7 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 					cols = append(cols, colName)
 				}
 				if len(cols) > 0 {
-					fmt.Fprintf(e.output, "\nINDEX (%s)", strings.Join(cols, ", "))
+					fmt.Fprintf(ctx.Output, "\nINDEX (%s)", strings.Join(cols, ", "))
 				}
 			}
 
@@ -397,7 +401,7 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 			for _, eh := range entity.EventHandlers {
 				mfName := eh.MicroflowName
 				if mfName == "" && eh.MicroflowID != "" {
-					mfName = e.lookupMicroflowName(eh.MicroflowID)
+					mfName = lookupMicroflowName(ctx, eh.MicroflowID)
 				}
 				if mfName == "" {
 					continue
@@ -418,16 +422,16 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 				if eh.RaiseErrorOnFalse && strings.EqualFold(string(eh.Moment), "Before") {
 					options = " RAISE ERROR"
 				}
-				fmt.Fprintf(e.output, "\nON %s %s CALL %s%s%s",
+				fmt.Fprintf(ctx.Output, "\nON %s %s CALL %s%s%s",
 					strings.ToUpper(string(eh.Moment)), eventName, mfName, paramStr, options)
 			}
 
-			fmt.Fprintln(e.output, ";")
+			fmt.Fprintln(ctx.Output, ";")
 
 			// Output access rule GRANT statements
-			e.outputEntityAccessGrants(entity, name.Module, name.Name)
+			outputEntityAccessGrants(ctx, entity, name.Module, name.Name)
 
-			fmt.Fprintln(e.output, "/")
+			fmt.Fprintln(ctx.Output, "/")
 			return nil
 		}
 	}
@@ -436,12 +440,12 @@ func (e *Executor) describeEntity(name ast.QualifiedName) error {
 }
 
 // describeEntityToString generates MDL source for an entity and returns it as a string.
-func (e *Executor) describeEntityToString(name ast.QualifiedName) (string, error) {
+func describeEntityToString(ctx *ExecContext, name ast.QualifiedName) (string, error) {
 	var buf strings.Builder
-	origOutput := e.output
-	e.output = &buf
-	err := e.describeEntity(name)
-	e.output = origOutput
+	origOutput := ctx.Output
+	ctx.Output = &buf
+	err := describeEntity(ctx, name)
+	ctx.Output = origOutput
 	if err != nil {
 		return "", err
 	}
@@ -461,7 +465,8 @@ func extractAttrNameFromQualified(qualifiedName string) string {
 
 // resolveMicroflowByName resolves a qualified microflow name to its ID.
 // It checks both microflows created during this session and existing microflows in the project.
-func (e *Executor) resolveMicroflowByName(qualifiedName string) (model.ID, error) {
+func resolveMicroflowByName(ctx *ExecContext, qualifiedName string) (model.ID, error) {
+	e := ctx.executor
 	parts := strings.Split(qualifiedName, ".")
 	if len(parts) < 2 {
 		return "", mdlerrors.NewValidationf("invalid microflow name: %s (expected Module.Name)", qualifiedName)
@@ -499,7 +504,8 @@ func (e *Executor) resolveMicroflowByName(qualifiedName string) (model.ID, error
 }
 
 // lookupMicroflowName reverse-looks up a microflow ID to its qualified name.
-func (e *Executor) lookupMicroflowName(mfID model.ID) string {
+func lookupMicroflowName(ctx *ExecContext, mfID model.ID) string {
+	e := ctx.executor
 	allMicroflows, err := e.reader.ListMicroflows()
 	if err != nil {
 		return ""
@@ -521,4 +527,30 @@ func (e *Executor) lookupMicroflowName(mfID model.ID) string {
 		}
 	}
 	return ""
+}
+
+// --- Executor method wrappers for callers not yet migrated ---
+
+func (e *Executor) showEntities(moduleName string) error {
+	return showEntities(e.newExecContext(context.Background()), moduleName)
+}
+
+func (e *Executor) showEntity(name *ast.QualifiedName) error {
+	return showEntity(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) describeEntity(name ast.QualifiedName) error {
+	return describeEntity(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) describeEntityToString(name ast.QualifiedName) (string, error) {
+	return describeEntityToString(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) resolveMicroflowByName(qualifiedName string) (model.ID, error) {
+	return resolveMicroflowByName(e.newExecContext(context.Background()), qualifiedName)
+}
+
+func (e *Executor) lookupMicroflowName(mfID model.ID) string {
+	return lookupMicroflowName(e.newExecContext(context.Background()), mfID)
 }

@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,7 +16,8 @@ import (
 )
 
 // execCreateAssociation handles CREATE ASSOCIATION statements.
-func (e *Executor) execCreateAssociation(s *ast.CreateAssociationStmt) error {
+func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -133,17 +135,18 @@ func (e *Executor) execCreateAssociation(s *ast.CreateAssociationStmt) error {
 	// in this DM need MemberAccess entries for the new association (CE0066).
 	if freshDM, err := e.reader.GetDomainModel(module.ID); err == nil {
 		if count, err := e.writer.ReconcileMemberAccesses(freshDM.ID, module.Name); err == nil && count > 0 {
-			fmt.Fprintf(e.output, "Reconciled %d access rule(s) for new association\n", count)
+			fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) for new association\n", count)
 		}
 	}
 
 	e.trackModifiedDomainModel(module.ID, module.Name)
-	fmt.Fprintf(e.output, "Created association: %s\n", s.Name)
+	fmt.Fprintf(ctx.Output, "Created association: %s\n", s.Name)
 	return nil
 }
 
 // execAlterAssociation handles ALTER ASSOCIATION statements.
-func (e *Executor) execAlterAssociation(s *ast.AlterAssociationStmt) error {
+func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -176,7 +179,7 @@ func (e *Executor) execAlterAssociation(s *ast.AlterAssociationStmt) error {
 			if err := e.writer.UpdateDomainModel(dm); err != nil {
 				return mdlerrors.NewBackend("update association", err)
 			}
-			fmt.Fprintf(e.output, "Altered association: %s\n", s.Name)
+			fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
 			return nil
 		}
 	}
@@ -199,7 +202,7 @@ func (e *Executor) execAlterAssociation(s *ast.AlterAssociationStmt) error {
 			if err := e.writer.UpdateDomainModel(dm); err != nil {
 				return mdlerrors.NewBackend("update cross-module association", err)
 			}
-			fmt.Fprintf(e.output, "Altered association: %s\n", s.Name)
+			fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
 			return nil
 		}
 	}
@@ -208,7 +211,8 @@ func (e *Executor) execAlterAssociation(s *ast.AlterAssociationStmt) error {
 }
 
 // execDropAssociation handles DROP ASSOCIATION statements.
-func (e *Executor) execDropAssociation(s *ast.DropAssociationStmt) error {
+func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
+	e := ctx.executor
 	if e.reader == nil {
 		return mdlerrors.NewNotConnected()
 	}
@@ -229,7 +233,7 @@ func (e *Executor) execDropAssociation(s *ast.DropAssociationStmt) error {
 			if err := e.writer.DeleteAssociation(dm.ID, assoc.ID); err != nil {
 				return mdlerrors.NewBackend("delete association", err)
 			}
-			fmt.Fprintf(e.output, "Dropped association: %s\n", s.Name)
+			fmt.Fprintf(ctx.Output, "Dropped association: %s\n", s.Name)
 			return nil
 		}
 	}
@@ -238,7 +242,7 @@ func (e *Executor) execDropAssociation(s *ast.DropAssociationStmt) error {
 			if err := e.writer.DeleteCrossAssociation(dm.ID, ca.ID); err != nil {
 				return mdlerrors.NewBackend("delete cross-module association", err)
 			}
-			fmt.Fprintf(e.output, "Dropped cross-module association: %s\n", s.Name)
+			fmt.Fprintf(ctx.Output, "Dropped cross-module association: %s\n", s.Name)
 			return nil
 		}
 	}
@@ -247,7 +251,8 @@ func (e *Executor) execDropAssociation(s *ast.DropAssociationStmt) error {
 }
 
 // showAssociations handles SHOW ASSOCIATIONS command.
-func (e *Executor) showAssociations(moduleName string) error {
+func showAssociations(ctx *ExecContext, moduleName string) error {
+	e := ctx.executor
 	// Build module ID -> name map (single query)
 	modules, err := e.reader.ListModules()
 	if err != nil {
@@ -333,7 +338,8 @@ func (e *Executor) showAssociations(moduleName string) error {
 }
 
 // showAssociation handles SHOW ASSOCIATION command.
-func (e *Executor) showAssociation(name *ast.QualifiedName) error {
+func showAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
+	e := ctx.executor
 	if name == nil {
 		return mdlerrors.NewValidation("association name required")
 	}
@@ -350,20 +356,20 @@ func (e *Executor) showAssociation(name *ast.QualifiedName) error {
 
 	for _, assoc := range dm.Associations {
 		if assoc.Name == name.Name {
-			fmt.Fprintf(e.output, "Association: %s.%s\n", module.Name, assoc.Name)
-			fmt.Fprintf(e.output, "  Type: %s\n", assoc.Type)
-			fmt.Fprintf(e.output, "  Owner: %s\n", assoc.Owner)
-			fmt.Fprintf(e.output, "  Storage: %s\n", assoc.StorageFormat)
+			fmt.Fprintf(ctx.Output, "Association: %s.%s\n", module.Name, assoc.Name)
+			fmt.Fprintf(ctx.Output, "  Type: %s\n", assoc.Type)
+			fmt.Fprintf(ctx.Output, "  Owner: %s\n", assoc.Owner)
+			fmt.Fprintf(ctx.Output, "  Storage: %s\n", assoc.StorageFormat)
 			return nil
 		}
 	}
 	for _, ca := range dm.CrossAssociations {
 		if ca.Name == name.Name {
-			fmt.Fprintf(e.output, "Association: %s.%s (cross-module)\n", module.Name, ca.Name)
-			fmt.Fprintf(e.output, "  Type: %s\n", ca.Type)
-			fmt.Fprintf(e.output, "  Owner: %s\n", ca.Owner)
-			fmt.Fprintf(e.output, "  Storage: %s\n", ca.StorageFormat)
-			fmt.Fprintf(e.output, "  Child: %s\n", ca.ChildRef)
+			fmt.Fprintf(ctx.Output, "Association: %s.%s (cross-module)\n", module.Name, ca.Name)
+			fmt.Fprintf(ctx.Output, "  Type: %s\n", ca.Type)
+			fmt.Fprintf(ctx.Output, "  Owner: %s\n", ca.Owner)
+			fmt.Fprintf(ctx.Output, "  Storage: %s\n", ca.StorageFormat)
+			fmt.Fprintf(ctx.Output, "  Child: %s\n", ca.ChildRef)
 			return nil
 		}
 	}
@@ -372,7 +378,8 @@ func (e *Executor) showAssociation(name *ast.QualifiedName) error {
 }
 
 // describeAssociation handles DESCRIBE ASSOCIATION command.
-func (e *Executor) describeAssociation(name ast.QualifiedName) error {
+func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
+	e := ctx.executor
 	module, err := e.findModule(name.Module)
 	if err != nil {
 		return err
@@ -406,17 +413,17 @@ func (e *Executor) describeAssociation(name ast.QualifiedName) error {
 		if assocType == domainmodel.AssociationTypeReferenceSet {
 			typeName = "ReferenceSet"
 		}
-		fmt.Fprintf(e.output, "TYPE %s\n", typeName)
+		fmt.Fprintf(ctx.Output, "TYPE %s\n", typeName)
 
 		owner := "Default"
 		if assocOwner == domainmodel.AssociationOwnerBoth {
 			owner = "Both"
 		}
-		fmt.Fprintf(e.output, "OWNER %s\n", owner)
+		fmt.Fprintf(ctx.Output, "OWNER %s\n", owner)
 
 		// Only output STORAGE when it's not the default (Table)
 		if storageFormat == domainmodel.StorageFormatColumn {
-			fmt.Fprintf(e.output, "STORAGE COLUMN\n")
+			fmt.Fprintf(ctx.Output, "STORAGE COLUMN\n")
 		}
 
 		deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
@@ -430,7 +437,7 @@ func (e *Executor) describeAssociation(name ast.QualifiedName) error {
 				deleteBehavior = "DELETE_BUT_KEEP_REFERENCES"
 			}
 		}
-		fmt.Fprintf(e.output, "DELETE_BEHAVIOR %s;\n", deleteBehavior)
+		fmt.Fprintf(ctx.Output, "DELETE_BEHAVIOR %s;\n", deleteBehavior)
 	}
 
 	for _, assoc := range dm.Associations {
@@ -439,13 +446,13 @@ func (e *Executor) describeAssociation(name ast.QualifiedName) error {
 			toEntity := entityNames[assoc.ChildID]
 
 			if assoc.Documentation != "" {
-				fmt.Fprintf(e.output, "/**\n * %s\n */\n", assoc.Documentation)
+				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", assoc.Documentation)
 			}
 
-			fmt.Fprintf(e.output, "CREATE ASSOCIATION %s.%s\n", module.Name, assoc.Name)
-			fmt.Fprintf(e.output, "FROM %s TO %s\n", fromEntity, toEntity)
+			fmt.Fprintf(ctx.Output, "CREATE ASSOCIATION %s.%s\n", module.Name, assoc.Name)
+			fmt.Fprintf(ctx.Output, "FROM %s TO %s\n", fromEntity, toEntity)
 			formatAssocDetails(assoc.Type, assoc.Owner, assoc.StorageFormat, assoc.ChildDeleteBehavior)
-			fmt.Fprintln(e.output, "/")
+			fmt.Fprintln(ctx.Output, "/")
 			return nil
 		}
 	}
@@ -457,16 +464,42 @@ func (e *Executor) describeAssociation(name ast.QualifiedName) error {
 			}
 
 			if ca.Documentation != "" {
-				fmt.Fprintf(e.output, "/**\n * %s\n */\n", ca.Documentation)
+				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", ca.Documentation)
 			}
 
-			fmt.Fprintf(e.output, "CREATE ASSOCIATION %s.%s\n", module.Name, ca.Name)
-			fmt.Fprintf(e.output, "FROM %s TO %s\n", fromEntity, ca.ChildRef)
+			fmt.Fprintf(ctx.Output, "CREATE ASSOCIATION %s.%s\n", module.Name, ca.Name)
+			fmt.Fprintf(ctx.Output, "FROM %s TO %s\n", fromEntity, ca.ChildRef)
 			formatAssocDetails(ca.Type, ca.Owner, ca.StorageFormat, ca.ChildDeleteBehavior)
-			fmt.Fprintln(e.output, "/")
+			fmt.Fprintln(ctx.Output, "/")
 			return nil
 		}
 	}
 
 	return mdlerrors.NewNotFound("association", name.String())
+}
+
+// --- Executor method wrappers for callers not yet migrated ---
+
+func (e *Executor) execCreateAssociation(s *ast.CreateAssociationStmt) error {
+	return execCreateAssociation(e.newExecContext(context.Background()), s)
+}
+
+func (e *Executor) execAlterAssociation(s *ast.AlterAssociationStmt) error {
+	return execAlterAssociation(e.newExecContext(context.Background()), s)
+}
+
+func (e *Executor) execDropAssociation(s *ast.DropAssociationStmt) error {
+	return execDropAssociation(e.newExecContext(context.Background()), s)
+}
+
+func (e *Executor) showAssociations(moduleName string) error {
+	return showAssociations(e.newExecContext(context.Background()), moduleName)
+}
+
+func (e *Executor) showAssociation(name *ast.QualifiedName) error {
+	return showAssociation(e.newExecContext(context.Background()), name)
+}
+
+func (e *Executor) describeAssociation(name ast.QualifiedName) error {
+	return describeAssociation(e.newExecContext(context.Background()), name)
 }

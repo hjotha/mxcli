@@ -59,28 +59,28 @@ func registerDatabaseConnectionHandlers(r *Registry) {
 
 func registerEntityHandlers(r *Registry) {
 	r.Register(&ast.CreateEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateEntity(stmt.(*ast.CreateEntityStmt))
+		return execCreateEntity(ctx, stmt.(*ast.CreateEntityStmt))
 	})
 	r.Register(&ast.CreateViewEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateViewEntity(stmt.(*ast.CreateViewEntityStmt))
+		return execCreateViewEntity(ctx, stmt.(*ast.CreateViewEntityStmt))
 	})
 	r.Register(&ast.AlterEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execAlterEntity(stmt.(*ast.AlterEntityStmt))
+		return execAlterEntity(ctx, stmt.(*ast.AlterEntityStmt))
 	})
 	r.Register(&ast.DropEntityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropEntity(stmt.(*ast.DropEntityStmt))
+		return execDropEntity(ctx, stmt.(*ast.DropEntityStmt))
 	})
 }
 
 func registerAssociationHandlers(r *Registry) {
 	r.Register(&ast.CreateAssociationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execCreateAssociation(stmt.(*ast.CreateAssociationStmt))
+		return execCreateAssociation(ctx, stmt.(*ast.CreateAssociationStmt))
 	})
 	r.Register(&ast.AlterAssociationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execAlterAssociation(stmt.(*ast.AlterAssociationStmt))
+		return execAlterAssociation(ctx, stmt.(*ast.AlterAssociationStmt))
 	})
 	r.Register(&ast.DropAssociationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return ctx.executor.execDropAssociation(stmt.(*ast.DropAssociationStmt))
+		return execDropAssociation(ctx, stmt.(*ast.DropAssociationStmt))
 	})
 }
 
