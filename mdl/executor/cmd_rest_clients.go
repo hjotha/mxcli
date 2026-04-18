@@ -120,8 +120,8 @@ func outputConsumedRestServiceMDL(ctx *ExecContext, svc *model.ConsumedRestServi
 	if svc.Authentication == nil {
 		fmt.Fprintln(w, "  Authentication: NONE")
 	} else {
-		username := formatRestAuthValue(svc.Authentication.Username)
-		password := formatRestAuthValue(svc.Authentication.Password)
+		username := resolveAndFormatRestAuthValue(ctx, svc.Authentication.Username)
+		password := resolveAndFormatRestAuthValue(ctx, svc.Authentication.Password)
 		fmt.Fprintf(w, "  Authentication: BASIC (Username: %s, Password: %s)\n",
 			username, password)
 	}
@@ -553,6 +553,33 @@ func formatRestAuthValue(value string) string {
 		return "@" + strings.TrimPrefix(value, "$")
 	}
 	return "'" + value + "'"
+}
+
+// resolveAndFormatRestAuthValue resolves a constant reference to its literal DefaultValue
+// for DESCRIBE output. Falls back to @Module.Constant notation when resolution fails.
+func resolveAndFormatRestAuthValue(ctx *ExecContext, value string) string {
+	if !strings.HasPrefix(value, "$") {
+		return "'" + value + "'"
+	}
+	qualifiedName := strings.TrimPrefix(value, "$")
+	if ctx != nil && ctx.Backend != nil {
+		parts := strings.SplitN(qualifiedName, ".", 2)
+		if len(parts) == 2 {
+			moduleName, constName := parts[0], parts[1]
+			if constants, err := ctx.Backend.ListConstants(); err == nil {
+				for _, c := range constants {
+					if !strings.EqualFold(c.Name, constName) {
+						continue
+					}
+					if mod, err := ctx.Backend.GetModule(c.ContainerID); err == nil &&
+						strings.EqualFold(mod.Name, moduleName) {
+						return "'" + c.DefaultValue + "'"
+					}
+				}
+			}
+		}
+	}
+	return "@" + qualifiedName
 }
 
 // Executor wrappers for unmigrated callers.
