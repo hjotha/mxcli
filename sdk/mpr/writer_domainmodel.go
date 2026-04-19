@@ -67,6 +67,8 @@ func (w *Writer) UpdateEntity(domainModelID model.ID, entity *domainmodel.Entity
 
 // DeleteEntity deletes an entity from a domain model.
 // domainModelID is the ID of the domain model itself (not the module ID).
+// Cascade: any association in any module whose ParentID or ChildID matches
+// entityID is also removed, preventing dangling unit-pointer errors.
 func (w *Writer) DeleteEntity(domainModelID model.ID, entityID model.ID) error {
 	dm, err := w.reader.GetDomainModelByID(domainModelID)
 	if err != nil {
@@ -74,14 +76,58 @@ func (w *Writer) DeleteEntity(domainModelID model.ID, entityID model.ID) error {
 	}
 
 	// Find and remove the entity
+	found := false
 	for i, e := range dm.Entities {
 		if e.ID == entityID {
 			dm.Entities = append(dm.Entities[:i], dm.Entities[i+1:]...)
-			return w.updateDomainModel(dm)
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("entity not found: %s", entityID)
+	}
+
+	// Remove associations referencing this entity from the same DM
+	var keptAssocs []*domainmodel.Association
+	for _, a := range dm.Associations {
+		if a.ParentID != entityID && a.ChildID != entityID {
+			keptAssocs = append(keptAssocs, a)
+		}
+	}
+	dm.Associations = keptAssocs
+
+	if err := w.updateDomainModel(dm); err != nil {
+		return err
+	}
+
+	// Cascade: remove associations referencing this entity from all other DMs
+	allDMs, err := w.reader.ListDomainModels()
+	if err != nil {
+		return fmt.Errorf("cascade cleanup: list domain models: %w", err)
+	}
+	for _, other := range allDMs {
+		if other.ID == domainModelID {
+			continue
+		}
+		changed := false
+		var kept []*domainmodel.Association
+		for _, a := range other.Associations {
+			if a.ParentID == entityID || a.ChildID == entityID {
+				changed = true
+			} else {
+				kept = append(kept, a)
+			}
+		}
+		if changed {
+			other.Associations = kept
+			if err := w.updateDomainModel(other); err != nil {
+				return fmt.Errorf("cascade cleanup: update domain model %s: %w", other.ID, err)
+			}
 		}
 	}
 
-	return fmt.Errorf("entity not found: %s", entityID)
+	return nil
 }
 
 // MoveEntity moves an entity from one domain model to another.

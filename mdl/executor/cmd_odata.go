@@ -1153,6 +1153,29 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 		modID := h.FindModuleID(svc.ContainerID)
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(svc.Name, stmt.Name.Name) {
+			// Cascade: delete external entities belonging to this service so that
+			// DeleteEntity can clean up any associations referencing them.
+			serviceRef := modName + "." + svc.Name
+			module, findErr := findModule(ctx, stmt.Name.Module)
+			if findErr != nil {
+				return findErr
+			}
+			dm, dmErr := ctx.Backend.GetDomainModel(module.ID)
+			if dmErr != nil {
+				return mdlerrors.NewBackend("get domain model for cascade", dmErr)
+			}
+			var externalEntityIDs []model.ID
+			for _, entity := range dm.Entities {
+				if strings.EqualFold(entity.RemoteServiceName, serviceRef) {
+					externalEntityIDs = append(externalEntityIDs, entity.ID)
+				}
+			}
+			for _, entityID := range externalEntityIDs {
+				if err := ctx.Backend.DeleteEntity(dm.ID, entityID); err != nil {
+					return mdlerrors.NewBackend("cascade delete external entity", err)
+				}
+			}
+
 			if err := ctx.Backend.DeleteConsumedODataService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("drop OData client", err)
 			}
