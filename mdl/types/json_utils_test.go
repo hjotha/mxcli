@@ -70,6 +70,13 @@ func TestNormalizeDateTimeValue_NoTimezone(t *testing.T) {
 	}
 }
 
+func TestNormalizeDateTimeValue_NoFractionalNoTimezone(t *testing.T) {
+	got := normalizeDateTimeValue("2015-05-22T14:56:29")
+	if got != "2015-05-22T14:56:29.0000000" {
+		t.Errorf("expected .0000000 appended, got %q", got)
+	}
+}
+
 func TestBuildJsonElementsFromSnippet_SimpleObject(t *testing.T) {
 	snippet := `{"name": "John", "age": 30, "active": true}`
 	elems, err := BuildJsonElementsFromSnippet(snippet, nil)

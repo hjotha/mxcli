@@ -36,13 +36,14 @@ func normalizeDateTimeValue(s string) string {
 	if dotIdx == -1 {
 		// No fractional part — insert .0000000 before timezone suffix.
 		// Search from index 19+ to avoid matching the '-' in the date portion (YYYY-MM-DD).
-		if len(s) > 19 {
+		if len(s) >= 19 {
 			if idx := strings.IndexAny(s[19:], "Z+-"); idx >= 0 {
 				pos := 19 + idx
 				return s[:pos] + ".0000000" + s[pos:]
 			}
 		}
-		return s
+		// No timezone suffix — append fractional part at end
+		return s + ".0000000"
 	}
 	// Find where fractional digits end (at Z, +, - or end of string)
 	fracEnd := len(s)
@@ -113,7 +114,7 @@ var reservedExposedNames = map[string]bool{
 }
 
 // resolveExposedName returns the custom name if mapped, otherwise capitalizes the JSON key.
-// Reserved names (Id, Type, Name) are prefixed with underscore to match Studio Pro behavior.
+// Reserved names (Id, Type) are prefixed with underscore to match Studio Pro behavior.
 func (b *snippetBuilder) resolveExposedName(jsonKey string) string {
 	if b.customNameMap != nil {
 		if custom, ok := b.customNameMap[jsonKey]; ok {
@@ -230,7 +231,7 @@ func (b *snippetBuilder) buildElementFromRawValue(exposedName, path, jsonKey str
 		return buildValueElement(exposedName, path, primitiveType, fmt.Sprintf("%q", v))
 	case float64:
 		// Check the raw JSON text for a decimal point — Go's %v drops ".0" from 41850.0
-		if v == math.Trunc(v) && !strings.Contains(trimmed, ".") {
+		if v == math.Trunc(v) && !strings.Contains(trimmed, ".") && v >= -(1<<53) && v <= (1<<53) {
 			return buildValueElement(exposedName, path, "Integer", fmt.Sprintf("%v", int64(v)))
 		}
 		return buildValueElement(exposedName, path, "Decimal", fmt.Sprintf("%v", v))
@@ -348,8 +349,9 @@ func (b *snippetBuilder) buildElementFromRawArray(exposedName, path, jsonKey, ra
 	return arrayElem
 }
 
-// singularize returns a simple singular form by stripping trailing "s".
-// Handles common cases: Tags→Tag, Items→Item, Addresses→Addresse.
+// singularize returns a naive singular form by stripping trailing "s".
+// Handles common cases: Tags→Tag, Items→Item. Known-incorrect for some words
+// (e.g. Addresses→Addresse) — this matches Studio Pro's behavior.
 func singularize(s string) string {
 	if len(s) > 1 && strings.HasSuffix(s, "s") {
 		return s[:len(s)-1]
