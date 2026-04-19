@@ -34,9 +34,13 @@ func normalizeDateTimeValue(s string) string {
 	// Find the decimal point after seconds
 	dotIdx := strings.Index(s, ".")
 	if dotIdx == -1 {
-		// No fractional part — insert .0000000 before timezone suffix
-		if idx := strings.IndexAny(s, "Z+-"); idx > 0 {
-			return s[:idx] + ".0000000" + s[idx:]
+		// No fractional part — insert .0000000 before timezone suffix.
+		// Search from index 19+ to avoid matching the '-' in the date portion (YYYY-MM-DD).
+		if len(s) > 19 {
+			if idx := strings.IndexAny(s[19:], "Z+-"); idx >= 0 {
+				pos := 19 + idx
+				return s[:pos] + ".0000000" + s[pos:]
+			}
 		}
 		return s
 	}
