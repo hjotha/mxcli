@@ -14,6 +14,26 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// Type aliases for backward compatibility — these types are now defined in mdl/types.
+type (
+	JavaAction         = types.JavaAction
+	JavaScriptAction   = types.JavaScriptAction
+	NavigationDocument = types.NavigationDocument
+	NavigationProfile  = types.NavigationProfile
+	NavHomePage        = types.NavHomePage
+	NavRoleBasedHome   = types.NavRoleBasedHome
+	NavMenuItem        = types.NavMenuItem
+	NavOfflineEntity   = types.NavOfflineEntity
+	JsonStructure      = types.JsonStructure
+	JsonElement        = types.JsonElement
+	ImageCollection    = types.ImageCollection
+	Image              = types.Image
+	FolderInfo         = types.FolderInfo
+	UnitInfo           = types.UnitInfo
+	RawUnit            = types.RawUnit
+	ProjectVersion     = types.ProjectVersion
+)
+
 // ListJavaActions returns all Java actions in the project.
 func (r *Reader) ListJavaActions() ([]*types.JavaAction, error) {
 	units, err := r.listUnitsByType("JavaActions$JavaAction")
