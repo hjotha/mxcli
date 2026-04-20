@@ -267,6 +267,11 @@ func odataValueText(val *parser.OdataPropertyValueContext) string {
 		}
 		return "MICROFLOW"
 	}
+	if val.AT() != nil {
+		if qn := val.QualifiedName(); qn != nil {
+			return "@" + getQualifiedNameText(qn)
+		}
+	}
 	if qn := val.QualifiedName(); qn != nil {
 		return getQualifiedNameText(qn)
 	}

@@ -2654,6 +2654,7 @@ odataPropertyValue
     | TRUE
     | FALSE
     | MICROFLOW qualifiedName?
+    | AT qualifiedName              // @Module.ConstantName (Mendix constant reference — required for ServiceUrl)
     | qualifiedName
     ;
 

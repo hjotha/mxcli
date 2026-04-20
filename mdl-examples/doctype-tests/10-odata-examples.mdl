@@ -372,45 +372,72 @@ SHOW EXTERNAL ACTIONS IN OdTest;
 -- ############################################################################
 -- LEVEL 10: CREATE EXTERNAL ENTITIES (bulk from contract)
 -- ############################################################################
+--
+-- These commands require a live OData client with cached $metadata
+-- (fetched automatically during CREATE ODATA CLIENT). The service URL
+-- must be reachable at creation time. All examples below are representative
+-- of a real TripPin RW service integration; they are shown as comments
+-- because services.odata.org is not reachable from CI.
+--
+-- Syntax variants:
+--
+--   CREATE EXTERNAL ENTITIES FROM Module.Client;
+--   CREATE EXTERNAL ENTITIES FROM Module.Client INTO OtherModule;
+--   CREATE EXTERNAL ENTITIES FROM Module.Client ENTITIES (TypeA, TypeB);
+--   CREATE OR MODIFY EXTERNAL ENTITIES FROM Module.Client;
+--   CREATE OR MODIFY EXTERNAL ENTITIES FROM Module.Client INTO OtherModule ENTITIES (TypeA);
+--
+-- ############################################################################
 
 /*
- * Level 10.1: Create all external entities from a consumed OData service.
- * Reads the service's cached $metadata and creates one external entity
- * per entity type in the domain model.
- * Prerequisite: The OData client must have cached metadata (fetched during CREATE).
+ * Test bulk import of external entities from TripPin OData service.
+ * Validates the feature added in mendixlabs/mxcli#143.
  *
- * CREATE EXTERNAL ENTITIES FROM OdTest.SalesforceAPI;
- */
-
-/*
- * Level 10.2: Create external entities into a different module.
- * By default entities are created in the same module as the service.
- * Use INTO to redirect them.
+ * CREATE MODULE TripPinClient;
  *
- * CREATE EXTERNAL ENTITIES FROM OdTest.SalesforceAPI INTO Integration;
- */
-
-/*
- * Level 10.3: Create only specific external entities by name.
- * Use the ENTITIES clause to filter which entity types to create.
+ * CREATE MODULE ROLE TripPinClient."User"
+ *   DESCRIPTION 'Role for TripPin API access';
  *
- * CREATE EXTERNAL ENTITIES FROM OdTest.SalesforceAPI ENTITIES (Account, Contact);
- */
-
-/*
- * Level 10.4: Idempotent bulk create — updates existing entities.
+ * CREATE CONSTANT TripPinClient."TripPinServiceUrl"
+ *   TYPE String
+ *   DEFAULT 'https://services.odata.org/TripPinRESTierService/';
  *
- * CREATE OR MODIFY EXTERNAL ENTITIES FROM OdTest.SalesforceAPI;
- */
-
-/*
+ * CREATE ODATA CLIENT TripPinClient."TripPinApiClient" (
+ *   ODataVersion: OData4,
+ *   MetadataUrl: 'https://services.odata.org/TripPinRESTierService/$metadata',
+ *   Timeout: 300,
+ *   ServiceUrl: @TripPinClient.TripPinServiceUrl,
+ *   UseAuthentication: No
+ * );
+ *
+ * Level 10.1: Bulk import all entity types from the TripPin contract.
+ * Creates one Mendix external entity per OData entity type; top-level
+ * entity sets (Airlines, Airports, People) use the set name as the
+ * Mendix entity name. Derived/contained types (Flight, PlanItem,
+ * Trip, etc.) use the type name.
+ *
+ * CREATE EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient";
+ *
+ * Level 10.2: Import only specific entity types by name.
+ *
+ * CREATE EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient"
+ *   ENTITIES (Airline, Airport);
+ *
+ * Level 10.3: Import all entities into a different module.
+ *
+ * CREATE EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient"
+ *   INTO TripPinEntities;
+ *
+ * Level 10.4: Idempotent re-import - updates any existing entities.
+ *
+ * CREATE OR MODIFY EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient";
+ *
  * Level 10.5: Combine INTO, ENTITIES filter, and OR MODIFY.
  *
- * CREATE OR MODIFY EXTERNAL ENTITIES FROM OdTest.SalesforceAPI INTO Integration ENTITIES (Account, Contact);
+ * CREATE OR MODIFY EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient"
+ *   INTO TripPinEntities
+ *   ENTITIES (Airline, Airport, Person);
  */
-
--- NOTE: These commands require a live OData client with cached $metadata,
--- so they are shown as comments above. The syntax is validated by mxcli check.
 
 -- ############################################################################
 -- NOTE: CREATE ODATA CLIENT now auto-fetches and caches $metadata from the
