@@ -254,7 +254,7 @@ func (m *mprPageMutator) DropVariable(name string) error {
 }
 
 func (m *mprPageMutator) SetLayout(newLayout string, paramMappings map[string]string) error {
-	if m.containerType == "snippet" {
+	if m.containerType == backend.ContainerSnippet {
 		return fmt.Errorf("SET Layout is not supported for snippets")
 	}
 
