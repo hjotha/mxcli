@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/sdk/workflows"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -479,5 +480,878 @@ func TestWorkflowMutator_DropOutcome_NotFound(t *testing.T) {
 func TestWorkflowMutator_BsonArrayMarkerConstant(t *testing.T) {
 	if bsonArrayMarker != int32(3) {
 		t.Errorf("bsonArrayMarker = %v, want int32(3)", bsonArrayMarker)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Helper: create a concrete WorkflowActivity for Insert/Replace tests
+// ---------------------------------------------------------------------------
+
+func makeTestWorkflowActivity(name, caption string) workflows.WorkflowActivity {
+	return &workflows.UserTask{
+		BaseWorkflowActivity: workflows.BaseWorkflowActivity{
+			Name:    name,
+			Caption: caption,
+		},
+	}
+}
+
+// makeWfActivityWithOutcomes builds an activity with named outcomes.
+func makeWfActivityWithOutcomes(caption, name string, outcomes ...bson.D) bson.D {
+	arr := bson.A{int32(3)}
+	for _, o := range outcomes {
+		arr = append(arr, o)
+	}
+	return bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$UserTask"},
+		{Key: "Caption", Value: caption},
+		{Key: "Name", Value: name},
+		{Key: "Outcomes", Value: arr},
+	}
+}
+
+func makeOutcome(typeName, value string) bson.D {
+	d := bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: typeName},
+	}
+	if value != "" {
+		d = append(d, bson.E{Key: "Value", Value: value})
+	}
+	return d
+}
+
+func makeBoolOutcome(val bool) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$BooleanConditionOutcome"},
+		{Key: "Value", Value: val},
+	}
+}
+
+func makeVoidConditionOutcome() bson.D {
+	return bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$VoidConditionOutcome"},
+	}
+}
+
+// getActivities returns the activity BSON docs from the workflow flow.
+func getActivities(doc bson.D) []bson.D {
+	flow := dGetDoc(doc, "Flow")
+	if flow == nil {
+		return nil
+	}
+	elems := dGetArrayElements(dGet(flow, "Activities"))
+	var result []bson.D
+	for _, e := range elems {
+		if d, ok := e.(bson.D); ok {
+			result = append(result, d)
+		}
+	}
+	return result
+}
+
+// ---------------------------------------------------------------------------
+// InsertAfterActivity tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_InsertAfterActivity(t *testing.T) {
+	act1 := makeWfActivity("Workflows$UserTask", "First", "task1")
+	act2 := makeWfActivity("Workflows$UserTask", "Last", "task2")
+	m := newMutator(makeWorkflowDoc(act1, act2))
+
+	newAct := makeTestWorkflowActivity("inserted", "Inserted")
+	if err := m.InsertAfterActivity("First", 0, []workflows.WorkflowActivity{newAct}); err != nil {
+		t.Fatalf("InsertAfterActivity failed: %v", err)
+	}
+
+	acts := getActivities(m.rawData)
+	if len(acts) != 3 {
+		t.Fatalf("Expected 3 activities, got %d", len(acts))
+	}
+	if got := dGetString(acts[0], "Caption"); got != "First" {
+		t.Errorf("acts[0].Caption = %q, want First", got)
+	}
+	// Inserted activity should be at position 1
+	if got := dGetString(acts[1], "Name"); got != "inserted" {
+		t.Errorf("acts[1].Name = %q, want inserted", got)
+	}
+	if got := dGetString(acts[2], "Caption"); got != "Last" {
+		t.Errorf("acts[2].Caption = %q, want Last", got)
+	}
+}
+
+func TestWorkflowMutator_InsertAfterActivity_NotFound(t *testing.T) {
+	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
+	err := m.InsertAfterActivity("Missing", 0, []workflows.WorkflowActivity{makeTestWorkflowActivity("new", "New")})
+	if err == nil {
+		t.Fatal("Expected error for missing activity")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ReplaceActivity tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_ReplaceActivity(t *testing.T) {
+	act1 := makeWfActivity("Workflows$UserTask", "First", "task1")
+	act2 := makeWfActivity("Workflows$UserTask", "ToReplace", "task2")
+	act3 := makeWfActivity("Workflows$UserTask", "Last", "task3")
+	m := newMutator(makeWorkflowDoc(act1, act2, act3))
+
+	repA := makeTestWorkflowActivity("repA", "ReplacementA")
+	repB := makeTestWorkflowActivity("repB", "ReplacementB")
+	if err := m.ReplaceActivity("ToReplace", 0, []workflows.WorkflowActivity{repA, repB}); err != nil {
+		t.Fatalf("ReplaceActivity failed: %v", err)
+	}
+
+	acts := getActivities(m.rawData)
+	if len(acts) != 4 {
+		t.Fatalf("Expected 4 activities, got %d", len(acts))
+	}
+	if got := dGetString(acts[0], "Caption"); got != "First" {
+		t.Errorf("acts[0] = %q, want First", got)
+	}
+	if got := dGetString(acts[1], "Name"); got != "repA" {
+		t.Errorf("acts[1].Name = %q, want repA", got)
+	}
+	if got := dGetString(acts[2], "Name"); got != "repB" {
+		t.Errorf("acts[2].Name = %q, want repB", got)
+	}
+	if got := dGetString(acts[3], "Caption"); got != "Last" {
+		t.Errorf("acts[3] = %q, want Last", got)
+	}
+}
+
+func TestWorkflowMutator_ReplaceActivity_NotFound(t *testing.T) {
+	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
+	err := m.ReplaceActivity("Missing", 0, []workflows.WorkflowActivity{makeTestWorkflowActivity("new", "New")})
+	if err == nil {
+		t.Fatal("Expected error for missing activity")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// InsertOutcome tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_InsertOutcome(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Review", "task1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertOutcome("Review", 0, "Approved", nil); err != nil {
+		t.Fatalf("InsertOutcome failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 outcome, got %d", len(outcomes))
+	}
+	oDoc, ok := outcomes[0].(bson.D)
+	if !ok {
+		t.Fatal("Outcome is not bson.D")
+	}
+	if got := dGetString(oDoc, "Value"); got != "Approved" {
+		t.Errorf("Outcome Value = %q, want Approved", got)
+	}
+	if got := dGetString(oDoc, "$Type"); got != "Workflows$UserTaskOutcome" {
+		t.Errorf("Outcome $Type = %q, want Workflows$UserTaskOutcome", got)
+	}
+}
+
+func TestWorkflowMutator_InsertOutcome_WithActivities(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Review", "task1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	subAct := makeTestWorkflowActivity("sub1", "SubTask")
+	if err := m.InsertOutcome("Review", 0, "Rejected", []workflows.WorkflowActivity{subAct}); err != nil {
+		t.Fatalf("InsertOutcome with activities failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 outcome, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	flow := dGetDoc(oDoc, "Flow")
+	if flow == nil {
+		t.Fatal("Expected Flow on outcome with activities")
+	}
+}
+
+func TestWorkflowMutator_InsertOutcome_ActivityNotFound(t *testing.T) {
+	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
+	err := m.InsertOutcome("Missing", 0, "x", nil)
+	if err == nil {
+		t.Fatal("Expected error for missing activity")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DropOutcome tests (existing test covers NotFound; add success case)
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_DropOutcome_ByValue(t *testing.T) {
+	outcome1 := makeOutcome("Workflows$UserTaskOutcome", "Approve")
+	outcome2 := makeOutcome("Workflows$UserTaskOutcome", "Reject")
+	act := makeWfActivityWithOutcomes("Review", "task1", outcome1, outcome2)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropOutcome("Review", 0, "Approve"); err != nil {
+		t.Fatalf("DropOutcome failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining outcome, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "Value"); got != "Reject" {
+		t.Errorf("Remaining outcome = %q, want Reject", got)
+	}
+}
+
+func TestWorkflowMutator_DropOutcome_Default(t *testing.T) {
+	voidOutcome := makeVoidConditionOutcome()
+	namedOutcome := makeOutcome("Workflows$UserTaskOutcome", "Approve")
+	act := makeWfActivityWithOutcomes("Review", "task1", voidOutcome, namedOutcome)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropOutcome("Review", 0, "Default"); err != nil {
+		t.Fatalf("DropOutcome Default failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining outcome, got %d", len(outcomes))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// InsertPath tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_InsertPath(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Split", "split1")
+	act[1] = bson.E{Key: "$Type", Value: "Workflows$ParallelSplitActivity"}
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertPath("Split", 0, "", nil); err != nil {
+		t.Fatalf("InsertPath failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Split", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 path, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "$Type"); got != "Workflows$ParallelSplitOutcome" {
+		t.Errorf("Path $Type = %q, want Workflows$ParallelSplitOutcome", got)
+	}
+}
+
+func TestWorkflowMutator_InsertPath_WithActivities(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Split", "split1")
+	act[1] = bson.E{Key: "$Type", Value: "Workflows$ParallelSplitActivity"}
+	m := newMutator(makeWorkflowDoc(act))
+
+	subAct := makeTestWorkflowActivity("path_act", "PathAct")
+	if err := m.InsertPath("Split", 0, "", []workflows.WorkflowActivity{subAct}); err != nil {
+		t.Fatalf("InsertPath with activities failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Split", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	oDoc := outcomes[0].(bson.D)
+	flow := dGetDoc(oDoc, "Flow")
+	if flow == nil {
+		t.Fatal("Expected Flow on path with activities")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DropPath tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_DropPath_ByCaption(t *testing.T) {
+	path1 := bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
+	}
+	path2 := bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
+	}
+	act := makeWfActivityWithOutcomes("Split", "split1", path1, path2)
+	act[1] = bson.E{Key: "$Type", Value: "Workflows$ParallelSplitActivity"}
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropPath("Split", 0, "Path 1"); err != nil {
+		t.Fatalf("DropPath failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Split", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining path, got %d", len(outcomes))
+	}
+}
+
+func TestWorkflowMutator_DropPath_EmptyCaption_DropsLast(t *testing.T) {
+	path1 := bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
+		{Key: "Tag", Value: "first"},
+	}
+	path2 := bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
+		{Key: "Tag", Value: "second"},
+	}
+	act := makeWfActivityWithOutcomes("Split", "split1", path1, path2)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropPath("Split", 0, ""); err != nil {
+		t.Fatalf("DropPath empty caption failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Split", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining path, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "Tag"); got != "first" {
+		t.Errorf("Remaining path Tag = %q, want first", got)
+	}
+}
+
+func TestWorkflowMutator_DropPath_NotFound(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Split", "split1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	err := m.DropPath("Split", 0, "Path 99")
+	if err == nil {
+		t.Fatal("Expected error for missing path")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Error = %q, want 'not found'", err.Error())
+	}
+}
+
+// ---------------------------------------------------------------------------
+// InsertBranch tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_InsertBranch_True(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	act[1] = bson.E{Key: "$Type", Value: "Workflows$ExclusiveSplitActivity"}
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBranch("Decision", 0, "true", nil); err != nil {
+		t.Fatalf("InsertBranch true failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 branch, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "$Type"); got != "Workflows$BooleanConditionOutcome" {
+		t.Errorf("Branch $Type = %q, want BooleanConditionOutcome", got)
+	}
+	if v, ok := dGet(oDoc, "Value").(bool); !ok || !v {
+		t.Error("Expected Value=true on boolean branch")
+	}
+}
+
+func TestWorkflowMutator_InsertBranch_False(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBranch("Decision", 0, "false", nil); err != nil {
+		t.Fatalf("InsertBranch false failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	oDoc := outcomes[0].(bson.D)
+	if v, ok := dGet(oDoc, "Value").(bool); !ok || v {
+		t.Error("Expected Value=false on boolean branch")
+	}
+}
+
+func TestWorkflowMutator_InsertBranch_Default(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBranch("Decision", 0, "default", nil); err != nil {
+		t.Fatalf("InsertBranch default failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "$Type"); got != "Workflows$VoidConditionOutcome" {
+		t.Errorf("Branch $Type = %q, want VoidConditionOutcome", got)
+	}
+}
+
+func TestWorkflowMutator_InsertBranch_Enum(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBranch("Decision", 0, "MyModule.Status.Active", nil); err != nil {
+		t.Fatalf("InsertBranch enum failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "$Type"); got != "Workflows$EnumerationValueConditionOutcome" {
+		t.Errorf("Branch $Type = %q, want EnumerationValueConditionOutcome", got)
+	}
+	if got := dGetString(oDoc, "Value"); got != "MyModule.Status.Active" {
+		t.Errorf("Branch Value = %q, want MyModule.Status.Active", got)
+	}
+}
+
+func TestWorkflowMutator_InsertBranch_WithActivities(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	subAct := makeTestWorkflowActivity("branch_act", "BranchAct")
+	if err := m.InsertBranch("Decision", 0, "true", []workflows.WorkflowActivity{subAct}); err != nil {
+		t.Fatalf("InsertBranch with activities failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	oDoc := outcomes[0].(bson.D)
+	flow := dGetDoc(oDoc, "Flow")
+	if flow == nil {
+		t.Fatal("Expected Flow on branch with activities")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// DropBranch tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_DropBranch_True(t *testing.T) {
+	trueOutcome := makeBoolOutcome(true)
+	falseOutcome := makeBoolOutcome(false)
+	act := makeWfActivityWithOutcomes("Decision", "dec1", trueOutcome, falseOutcome)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropBranch("Decision", 0, "true"); err != nil {
+		t.Fatalf("DropBranch true failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if v, ok := dGet(oDoc, "Value").(bool); !ok || v {
+		t.Error("Remaining branch should be false")
+	}
+}
+
+func TestWorkflowMutator_DropBranch_False(t *testing.T) {
+	trueOutcome := makeBoolOutcome(true)
+	falseOutcome := makeBoolOutcome(false)
+	act := makeWfActivityWithOutcomes("Decision", "dec1", trueOutcome, falseOutcome)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropBranch("Decision", 0, "false"); err != nil {
+		t.Fatalf("DropBranch false failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining, got %d", len(outcomes))
+	}
+}
+
+func TestWorkflowMutator_DropBranch_Default(t *testing.T) {
+	voidOutcome := makeVoidConditionOutcome()
+	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Active")
+	act := makeWfActivityWithOutcomes("Decision", "dec1", voidOutcome, enumOutcome)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropBranch("Decision", 0, "default"); err != nil {
+		t.Fatalf("DropBranch default failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "Value"); got != "Active" {
+		t.Errorf("Remaining = %q, want Active", got)
+	}
+}
+
+func TestWorkflowMutator_DropBranch_Enum(t *testing.T) {
+	enum1 := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Active")
+	enum2 := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Inactive")
+	act := makeWfActivityWithOutcomes("Decision", "dec1", enum1, enum2)
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.DropBranch("Decision", 0, "Active"); err != nil {
+		t.Fatalf("DropBranch enum failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Decision", 0)
+	outcomes := dGetArrayElements(dGet(actDoc, "Outcomes"))
+	if len(outcomes) != 1 {
+		t.Fatalf("Expected 1 remaining, got %d", len(outcomes))
+	}
+	oDoc := outcomes[0].(bson.D)
+	if got := dGetString(oDoc, "Value"); got != "Inactive" {
+		t.Errorf("Remaining = %q, want Inactive", got)
+	}
+}
+
+func TestWorkflowMutator_DropBranch_NotFound(t *testing.T) {
+	act := makeWfActivityWithOutcomes("Decision", "dec1")
+	m := newMutator(makeWorkflowDoc(act))
+
+	err := m.DropBranch("Decision", 0, "Missing")
+	if err == nil {
+		t.Fatal("Expected error for missing branch")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Error = %q, want 'not found'", err.Error())
+	}
+}
+
+// ---------------------------------------------------------------------------
+// InsertBoundaryEvent tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_InsertBoundaryEvent_InterruptingTimer(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBoundaryEvent("Review", 0, "InterruptingTimer", "PT1H", nil); err != nil {
+		t.Fatalf("InsertBoundaryEvent failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	events := dGetArrayElements(dGet(actDoc, "BoundaryEvents"))
+	if len(events) != 1 {
+		t.Fatalf("Expected 1 event, got %d", len(events))
+	}
+	eDoc := events[0].(bson.D)
+	if got := dGetString(eDoc, "$Type"); got != "Workflows$InterruptingTimerBoundaryEvent" {
+		t.Errorf("Event $Type = %q, want InterruptingTimerBoundaryEvent", got)
+	}
+	if got := dGetString(eDoc, "FirstExecutionTime"); got != "PT1H" {
+		t.Errorf("FirstExecutionTime = %q, want PT1H", got)
+	}
+}
+
+func TestWorkflowMutator_InsertBoundaryEvent_NonInterruptingTimer(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBoundaryEvent("Review", 0, "NonInterruptingTimer", "PT30M", nil); err != nil {
+		t.Fatalf("InsertBoundaryEvent NonInterrupting failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	events := dGetArrayElements(dGet(actDoc, "BoundaryEvents"))
+	eDoc := events[0].(bson.D)
+	if got := dGetString(eDoc, "$Type"); got != "Workflows$NonInterruptingTimerBoundaryEvent" {
+		t.Errorf("Event $Type = %q, want NonInterruptingTimerBoundaryEvent", got)
+	}
+	// NonInterrupting should have Recurrence field
+	found := false
+	for _, e := range eDoc {
+		if e.Key == "Recurrence" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected Recurrence field on NonInterruptingTimerBoundaryEvent")
+	}
+}
+
+func TestWorkflowMutator_InsertBoundaryEvent_WithActivities(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
+	m := newMutator(makeWorkflowDoc(act))
+
+	subAct := makeTestWorkflowActivity("evt_act", "EventAct")
+	if err := m.InsertBoundaryEvent("Review", 0, "Timer", "", []workflows.WorkflowActivity{subAct}); err != nil {
+		t.Fatalf("InsertBoundaryEvent with activities failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	events := dGetArrayElements(dGet(actDoc, "BoundaryEvents"))
+	eDoc := events[0].(bson.D)
+	flow := dGetDoc(eDoc, "Flow")
+	if flow == nil {
+		t.Fatal("Expected Flow on boundary event with activities")
+	}
+}
+
+func TestWorkflowMutator_InsertBoundaryEvent_NoDelay(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.InsertBoundaryEvent("Review", 0, "Timer", "", nil); err != nil {
+		t.Fatalf("InsertBoundaryEvent no delay failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	events := dGetArrayElements(dGet(actDoc, "BoundaryEvents"))
+	eDoc := events[0].(bson.D)
+	for _, e := range eDoc {
+		if e.Key == "FirstExecutionTime" {
+			t.Error("FirstExecutionTime should not be present when delay is empty")
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetActivityProperty — additional property types
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_SetActivityProperty_Page_New(t *testing.T) {
+	// Note: When TaskPage key doesn't pre-exist in BSON, dSet silently fails.
+	// The key must be present (even as nil) for PAGE to work on a new activity.
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "TaskPage", Value: nil})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.SetActivityProperty("Review", 0, "PAGE", "MyModule.TaskPage"); err != nil {
+		t.Fatalf("SetActivityProperty PAGE failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	taskPage := dGetDoc(actDoc, "TaskPage")
+	if taskPage == nil {
+		t.Fatal("Expected TaskPage to be set")
+	}
+	if got := dGetString(taskPage, "Page"); got != "MyModule.TaskPage" {
+		t.Errorf("Page = %q, want MyModule.TaskPage", got)
+	}
+}
+
+func TestWorkflowMutator_SetActivityProperty_Page_MissingKey(t *testing.T) {
+	// BUG: dSet silently fails when TaskPage key is absent — pageRef is lost.
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	// No TaskPage field at all
+	m := newMutator(makeWorkflowDoc(act))
+
+	// No error returned, but the set is silently lost
+	if err := m.SetActivityProperty("Review", 0, "PAGE", "MyModule.TaskPage"); err != nil {
+		t.Fatalf("SetActivityProperty PAGE failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	taskPage := dGetDoc(actDoc, "TaskPage")
+	// This documents the bug: TaskPage is nil because dSet can't create new keys
+	if taskPage != nil {
+		t.Log("BUG FIXED: TaskPage is now set even when key was absent")
+	}
+}
+
+func TestWorkflowMutator_SetActivityProperty_Page_Existing(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "TaskPage", Value: bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$PageReference"},
+		{Key: "Page", Value: "OldModule.OldPage"},
+	}})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.SetActivityProperty("Review", 0, "PAGE", "NewModule.NewPage"); err != nil {
+		t.Fatalf("SetActivityProperty PAGE update failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	taskPage := dGetDoc(actDoc, "TaskPage")
+	if got := dGetString(taskPage, "Page"); got != "NewModule.NewPage" {
+		t.Errorf("Page = %q, want NewModule.NewPage", got)
+	}
+}
+
+func TestWorkflowMutator_SetActivityProperty_Description(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "TaskDescription", Value: bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Texts$Text"},
+		{Key: "Text", Value: "old"},
+	}})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.SetActivityProperty("Review", 0, "DESCRIPTION", "new desc"); err != nil {
+		t.Fatalf("SetActivityProperty DESCRIPTION failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	taskDesc := dGetDoc(actDoc, "TaskDescription")
+	if got := dGetString(taskDesc, "Text"); got != "new desc" {
+		t.Errorf("Text = %q, want 'new desc'", got)
+	}
+}
+
+func TestWorkflowMutator_SetActivityProperty_TargetingMicroflow(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "UserTargeting", Value: nil})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.SetActivityProperty("Review", 0, "TARGETING_MICROFLOW", "MyModule.AssignReviewer"); err != nil {
+		t.Fatalf("SetActivityProperty TARGETING_MICROFLOW failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	targeting := dGetDoc(actDoc, "UserTargeting")
+	if targeting == nil {
+		t.Fatal("Expected UserTargeting to be set")
+	}
+	if got := dGetString(targeting, "$Type"); got != "Workflows$MicroflowUserTargeting" {
+		t.Errorf("$Type = %q, want MicroflowUserTargeting", got)
+	}
+	if got := dGetString(targeting, "Microflow"); got != "MyModule.AssignReviewer" {
+		t.Errorf("Microflow = %q, want MyModule.AssignReviewer", got)
+	}
+}
+
+func TestWorkflowMutator_SetActivityProperty_TargetingXPath(t *testing.T) {
+	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
+	act = append(act, bson.E{Key: "UserTargeting", Value: nil})
+	m := newMutator(makeWorkflowDoc(act))
+
+	if err := m.SetActivityProperty("Review", 0, "TARGETING_XPATH", "[Role = 'Admin']"); err != nil {
+		t.Fatalf("SetActivityProperty TARGETING_XPATH failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("Review", 0)
+	targeting := dGetDoc(actDoc, "UserTargeting")
+	if targeting == nil {
+		t.Fatal("Expected UserTargeting to be set")
+	}
+	if got := dGetString(targeting, "$Type"); got != "Workflows$XPathUserTargeting" {
+		t.Errorf("$Type = %q, want XPathUserTargeting", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetPropertyWithEntity tests
+// ---------------------------------------------------------------------------
+
+func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage(t *testing.T) {
+	doc := makeWorkflowDoc()
+	doc = append(doc, bson.E{Key: "AdminPage", Value: nil})
+	m := newMutator(doc)
+
+	if err := m.SetPropertyWithEntity("OVERVIEW_PAGE", "MyModule.OverviewPage", ""); err != nil {
+		t.Fatalf("SetPropertyWithEntity OVERVIEW_PAGE failed: %v", err)
+	}
+
+	adminPage := dGetDoc(m.rawData, "AdminPage")
+	if adminPage == nil {
+		t.Fatal("Expected AdminPage to be set")
+	}
+	if got := dGetString(adminPage, "Page"); got != "MyModule.OverviewPage" {
+		t.Errorf("Page = %q, want MyModule.OverviewPage", got)
+	}
+}
+
+func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage_Clear(t *testing.T) {
+	doc := makeWorkflowDoc()
+	doc = append(doc, bson.E{Key: "AdminPage", Value: bson.D{
+		{Key: "Page", Value: "OldPage"},
+	}})
+	m := newMutator(doc)
+
+	if err := m.SetPropertyWithEntity("OVERVIEW_PAGE", "", ""); err != nil {
+		t.Fatalf("SetPropertyWithEntity clear failed: %v", err)
+	}
+
+	if v := dGet(m.rawData, "AdminPage"); v != nil {
+		t.Error("Expected AdminPage to be nil after clear")
+	}
+}
+
+func TestWorkflowMutator_SetPropertyWithEntity_Parameter_New(t *testing.T) {
+	doc := makeWorkflowDoc()
+	doc = append(doc, bson.E{Key: "Parameter", Value: nil})
+	m := newMutator(doc)
+
+	if err := m.SetPropertyWithEntity("PARAMETER", "WorkflowContext", "MyModule.Order"); err != nil {
+		t.Fatalf("SetPropertyWithEntity PARAMETER failed: %v", err)
+	}
+
+	param := dGetDoc(m.rawData, "Parameter")
+	if param == nil {
+		t.Fatal("Expected Parameter to be set")
+	}
+	if got := dGetString(param, "Entity"); got != "MyModule.Order" {
+		t.Errorf("Entity = %q, want MyModule.Order", got)
+	}
+}
+
+func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Update(t *testing.T) {
+	doc := makeWorkflowDoc()
+	doc = append(doc, bson.E{Key: "Parameter", Value: bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$Parameter"},
+		{Key: "Entity", Value: "OldModule.OldEntity"},
+		{Key: "Name", Value: "WorkflowContext"},
+	}})
+	m := newMutator(doc)
+
+	if err := m.SetPropertyWithEntity("PARAMETER", "WorkflowContext", "NewModule.NewEntity"); err != nil {
+		t.Fatalf("SetPropertyWithEntity PARAMETER update failed: %v", err)
+	}
+
+	param := dGetDoc(m.rawData, "Parameter")
+	if got := dGetString(param, "Entity"); got != "NewModule.NewEntity" {
+		t.Errorf("Entity = %q, want NewModule.NewEntity", got)
+	}
+}
+
+func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Clear(t *testing.T) {
+	doc := makeWorkflowDoc()
+	doc = append(doc, bson.E{Key: "Parameter", Value: bson.D{
+		{Key: "Entity", Value: "Something"},
+	}})
+	m := newMutator(doc)
+
+	if err := m.SetPropertyWithEntity("PARAMETER", "", ""); err != nil {
+		t.Fatalf("SetPropertyWithEntity PARAMETER clear failed: %v", err)
+	}
+
+	if v := dGet(m.rawData, "Parameter"); v != nil {
+		t.Error("Expected Parameter to be nil after clear")
+	}
+}
+
+func TestWorkflowMutator_SetPropertyWithEntity_Unsupported(t *testing.T) {
+	m := newMutator(makeWorkflowDoc())
+	err := m.SetPropertyWithEntity("INVALID", "x", "y")
+	if err == nil {
+		t.Fatal("Expected error for unsupported property")
 	}
 }

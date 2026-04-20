@@ -131,14 +131,18 @@ func TestWidgetDefinitionJSONOmitsEmptyOptionalFields(t *testing.T) {
 }
 
 func TestKnownOperationsSet(t *testing.T) {
+	reg, err := NewWidgetRegistry()
+	if err != nil {
+		t.Fatalf("NewWidgetRegistry() error: %v", err)
+	}
 	builtinOps := []string{"attribute", "association", "primitive", "selection", "datasource", "widgets", "expression", "texttemplate", "action", "attributeObjects"}
 	for _, name := range builtinOps {
-		if !knownOperations[name] {
+		if !reg.knownOperations[name] {
 			t.Errorf("knownOperations[%q] = false, want true", name)
 		}
 	}
 
-	if knownOperations["nonexistent"] {
+	if reg.knownOperations["nonexistent"] {
 		t.Error("knownOperations[\"nonexistent\"] should be false")
 	}
 }

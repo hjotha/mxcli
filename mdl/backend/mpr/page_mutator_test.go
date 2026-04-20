@@ -3,6 +3,7 @@
 package mprbackend
 
 import (
+	"strings"
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -720,5 +721,141 @@ func TestParamScope(t *testing.T) {
 	// Verify ID is a valid model.ID (non-empty)
 	if ids["Customer"] == model.ID("") {
 		t.Error("Expected non-empty ID")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetLayout tests
+// ---------------------------------------------------------------------------
+
+// makePageWithLayout builds a minimal page BSON doc with a FormCall pointing
+// to the given layout and argument parameters.
+func makePageWithLayout(layoutQN string, params ...string) bson.D {
+	args := bson.A{int32(3)}
+	for _, p := range params {
+		args = append(args, bson.D{
+			{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+			{Key: "$Type", Value: "Pages$FormCallArgument"},
+			{Key: "Parameter", Value: layoutQN + "." + p},
+		})
+	}
+	return bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Pages$FormCall"},
+		{Key: "FormCall", Value: bson.D{
+			{Key: "Form", Value: layoutQN},
+			{Key: "Arguments", Value: args},
+		}},
+	}
+}
+
+func makePageMutator(rawData bson.D) *mprPageMutator {
+	return &mprPageMutator{rawData: rawData, containerType: "page", widgetFinder: findBsonWidget}
+}
+
+func TestSetLayout_Basic(t *testing.T) {
+	page := makePageWithLayout("MyModule.OldLayout", "Content", "Header")
+	m := makePageMutator(page)
+
+	if err := m.SetLayout("MyModule.NewLayout", nil); err != nil {
+		t.Fatalf("SetLayout failed: %v", err)
+	}
+
+	formCall := dGetDoc(m.rawData, "FormCall")
+	if got := dGetString(formCall, "Form"); got != "MyModule.NewLayout" {
+		t.Errorf("Form = %q, want MyModule.NewLayout", got)
+	}
+
+	// Verify parameters were remapped
+	args := dGetArrayElements(dGet(formCall, "Arguments"))
+	for _, a := range args {
+		aDoc := a.(bson.D)
+		param := dGetString(aDoc, "Parameter")
+		if !strings.HasPrefix(param, "MyModule.NewLayout.") {
+			t.Errorf("Parameter %q should start with MyModule.NewLayout.", param)
+		}
+	}
+}
+
+func TestSetLayout_WithParamMappings(t *testing.T) {
+	page := makePageWithLayout("MyModule.OldLayout", "Content", "Header")
+	m := makePageMutator(page)
+
+	mappings := map[string]string{
+		"Content": "MainArea",
+		"Header":  "TopBar",
+	}
+	if err := m.SetLayout("MyModule.NewLayout", mappings); err != nil {
+		t.Fatalf("SetLayout with mappings failed: %v", err)
+	}
+
+	formCall := dGetDoc(m.rawData, "FormCall")
+	args := dGetArrayElements(dGet(formCall, "Arguments"))
+	paramValues := make(map[string]bool)
+	for _, a := range args {
+		aDoc := a.(bson.D)
+		paramValues[dGetString(aDoc, "Parameter")] = true
+	}
+	if !paramValues["MyModule.NewLayout.MainArea"] {
+		t.Error("Expected MyModule.NewLayout.MainArea in remapped params")
+	}
+	if !paramValues["MyModule.NewLayout.TopBar"] {
+		t.Error("Expected MyModule.NewLayout.TopBar in remapped params")
+	}
+}
+
+func TestSetLayout_SameLayout_Noop(t *testing.T) {
+	page := makePageWithLayout("MyModule.SameLayout", "Content")
+	m := makePageMutator(page)
+
+	if err := m.SetLayout("MyModule.SameLayout", nil); err != nil {
+		t.Fatalf("SetLayout same layout failed: %v", err)
+	}
+
+	// Should be a no-op — form unchanged
+	formCall := dGetDoc(m.rawData, "FormCall")
+	if got := dGetString(formCall, "Form"); got != "MyModule.SameLayout" {
+		t.Errorf("Form = %q, want MyModule.SameLayout", got)
+	}
+}
+
+func TestSetLayout_Snippet_Error(t *testing.T) {
+	page := makePageWithLayout("MyModule.Layout", "Content")
+	m := &mprPageMutator{rawData: page, containerType: "snippet", widgetFinder: findBsonWidget}
+
+	err := m.SetLayout("MyModule.NewLayout", nil)
+	if err == nil {
+		t.Fatal("Expected error for snippet")
+	}
+	if !strings.Contains(err.Error(), "snippet") {
+		t.Errorf("Error = %q, want to mention snippet", err.Error())
+	}
+}
+
+func TestSetLayout_NoFormCall_Error(t *testing.T) {
+	page := bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Pages$Page"},
+	}
+	m := makePageMutator(page)
+
+	err := m.SetLayout("MyModule.NewLayout", nil)
+	if err == nil {
+		t.Fatal("Expected error for missing FormCall")
+	}
+}
+
+func TestSetLayout_EmptyForm_Error(t *testing.T) {
+	page := bson.D{
+		{Key: "FormCall", Value: bson.D{
+			{Key: "Form", Value: ""},
+			{Key: "Arguments", Value: bson.A{int32(3)}},
+		}},
+	}
+	m := makePageMutator(page)
+
+	err := m.SetLayout("MyModule.NewLayout", nil)
+	if err == nil {
+		t.Fatal("Expected error when current layout cannot be determined")
 	}
 }
