@@ -5,7 +5,7 @@ package mock
 import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ func (m *MockBackend) UpdateQualifiedNameInAllUnits(oldName, newName string) (in
 	return 0, nil
 }
 
-func (m *MockBackend) RenameReferences(oldName, newName string, dryRun bool) ([]mpr.RenameHit, error) {
+func (m *MockBackend) RenameReferences(oldName, newName string, dryRun bool) ([]types.RenameHit, error) {
 	if m.RenameReferencesFunc != nil {
 		return m.RenameReferencesFunc(oldName, newName, dryRun)
 	}
@@ -51,21 +51,21 @@ func (m *MockBackend) GetRawUnitBytes(id model.ID) ([]byte, error) {
 	return nil, nil
 }
 
-func (m *MockBackend) ListRawUnitsByType(typePrefix string) ([]*mpr.RawUnit, error) {
+func (m *MockBackend) ListRawUnitsByType(typePrefix string) ([]*types.RawUnit, error) {
 	if m.ListRawUnitsByTypeFunc != nil {
 		return m.ListRawUnitsByTypeFunc(typePrefix)
 	}
 	return nil, nil
 }
 
-func (m *MockBackend) ListRawUnits(objectType string) ([]*mpr.RawUnitInfo, error) {
+func (m *MockBackend) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
 	if m.ListRawUnitsFunc != nil {
 		return m.ListRawUnitsFunc(objectType)
 	}
 	return nil, nil
 }
 
-func (m *MockBackend) GetRawUnitByName(objectType, qualifiedName string) (*mpr.RawUnitInfo, error) {
+func (m *MockBackend) GetRawUnitByName(objectType, qualifiedName string) (*types.RawUnitInfo, error) {
 	if m.GetRawUnitByNameFunc != nil {
 		return m.GetRawUnitByNameFunc(objectType, qualifiedName)
 	}
@@ -97,7 +97,7 @@ func (m *MockBackend) ListAllUnitIDs() ([]string, error) {
 	return nil, nil
 }
 
-func (m *MockBackend) ListUnits() ([]*mpr.UnitInfo, error) {
+func (m *MockBackend) ListUnits() ([]*types.UnitInfo, error) {
 	if m.ListUnitsFunc != nil {
 		return m.ListUnitsFunc()
 	}
@@ -142,14 +142,14 @@ func (m *MockBackend) InvalidateCache() {
 // WidgetBackend
 // ---------------------------------------------------------------------------
 
-func (m *MockBackend) FindCustomWidgetType(widgetID string) (*mpr.RawCustomWidgetType, error) {
+func (m *MockBackend) FindCustomWidgetType(widgetID string) (*types.RawCustomWidgetType, error) {
 	if m.FindCustomWidgetTypeFunc != nil {
 		return m.FindCustomWidgetTypeFunc(widgetID)
 	}
 	return nil, nil
 }
 
-func (m *MockBackend) FindAllCustomWidgetTypes(widgetID string) ([]*mpr.RawCustomWidgetType, error) {
+func (m *MockBackend) FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCustomWidgetType, error) {
 	if m.FindAllCustomWidgetTypesFunc != nil {
 		return m.FindAllCustomWidgetTypesFunc(widgetID)
 	}

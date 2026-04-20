@@ -11,7 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -161,7 +161,7 @@ func execDropWorkflow(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 
 // generateWorkflowUUID generates a UUID for workflow elements.
 func generateWorkflowUUID() string {
-	return mpr.GenerateID()
+	return types.GenerateID()
 }
 
 // buildWorkflowActivities converts AST activity nodes to SDK workflow activities.
@@ -334,7 +334,7 @@ func buildCallWorkflowActivity(n *ast.WorkflowCallWorkflowNode) *workflows.CallW
 			Parameter:  wfQN + "." + pm.Parameter,
 			Expression: pm.Expression,
 		}
-		mapping.BaseElement.ID = model.ID(mpr.GenerateID())
+		mapping.BaseElement.ID = model.ID(types.GenerateID())
 		act.ParameterMappings = append(act.ParameterMappings, mapping)
 	}
 
@@ -575,7 +575,7 @@ func uniqueName(name string, nameCount map[string]int) string {
 
 func buildAnnotationActivity(n *ast.WorkflowAnnotationActivityNode) *workflows.WorkflowAnnotationActivity {
 	a := &workflows.WorkflowAnnotationActivity{}
-	a.ID = model.ID(mpr.GenerateID())
+	a.ID = model.ID(types.GenerateID())
 	a.Description = n.Text
 	return a
 }
@@ -702,7 +702,7 @@ func autoBindCallMicroflow(ctx *ExecContext, task *workflows.CallMicroflowTask) 
 				Parameter:  paramQualifiedName,
 				Expression: "$WorkflowContext",
 			}
-			mapping.BaseElement.ID = model.ID(mpr.GenerateID())
+			mapping.BaseElement.ID = model.ID(types.GenerateID())
 			task.ParameterMappings = append(task.ParameterMappings, mapping)
 		}
 
@@ -711,8 +711,8 @@ func autoBindCallMicroflow(ctx *ExecContext, task *workflows.CallMicroflowTask) 
 			outcome := &workflows.VoidConditionOutcome{
 				Flow: &workflows.Flow{},
 			}
-			outcome.BaseElement.ID = model.ID(mpr.GenerateID())
-			outcome.Flow.BaseElement.ID = model.ID(mpr.GenerateID())
+			outcome.BaseElement.ID = model.ID(types.GenerateID())
+			outcome.Flow.BaseElement.ID = model.ID(types.GenerateID())
 			task.Outcomes = append(task.Outcomes, outcome)
 		}
 		break
@@ -757,7 +757,7 @@ func autoBindCallWorkflow(ctx *ExecContext, act *workflows.CallWorkflowActivity)
 				Parameter:  paramName,
 				Expression: "$WorkflowContext",
 			}
-			mapping.BaseElement.ID = model.ID(mpr.GenerateID())
+			mapping.BaseElement.ID = model.ID(types.GenerateID())
 			act.ParameterMappings = append(act.ParameterMappings, mapping)
 		}
 		break

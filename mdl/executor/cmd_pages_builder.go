@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
@@ -44,7 +45,7 @@ type pageBuilder struct {
 	layoutsCache    []*pages.Layout
 	pagesCache      []*pages.Page
 	microflowsCache []*microflows.Microflow
-	foldersCache    []*mpr.FolderInfo
+	foldersCache    []*types.FolderInfo
 
 	// Entity context for resolving short attribute names inside DataViews
 	entityContext string // Qualified entity name (e.g., "Module.Entity")
@@ -253,7 +254,7 @@ func (pb *pageBuilder) getMainPlaceholderRef(layoutName string) string {
 }
 
 // getFolders returns cached folders or loads them.
-func (pb *pageBuilder) getFolders() ([]*mpr.FolderInfo, error) {
+func (pb *pageBuilder) getFolders() ([]*types.FolderInfo, error) {
 	if pb.foldersCache == nil {
 		var err error
 		pb.foldersCache, err = pb.reader.ListFolders()
@@ -286,7 +287,7 @@ func (pb *pageBuilder) resolveFolder(folderPath string) (model.ID, error) {
 		}
 
 		// Find folder with this name under current container
-		var foundFolder *mpr.FolderInfo
+		var foundFolder *types.FolderInfo
 		for _, f := range folders {
 			if f.ContainerID == currentContainerID && f.Name == part {
 				foundFolder = f
@@ -302,12 +303,13 @@ func (pb *pageBuilder) resolveFolder(folderPath string) (model.ID, error) {
 			if err != nil {
 				return "", mdlerrors.NewBackend(fmt.Sprintf("create folder %s", part), err)
 			}
+			parentContainerID := currentContainerID
 			currentContainerID = newFolderID
 
 			// Add to cache
-			pb.foldersCache = append(pb.foldersCache, &mpr.FolderInfo{
+			pb.foldersCache = append(pb.foldersCache, &types.FolderInfo{
 				ID:          newFolderID,
-				ContainerID: currentContainerID,
+				ContainerID: parentContainerID,
 				Name:        part,
 			})
 		}

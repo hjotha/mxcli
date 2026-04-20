@@ -5,7 +5,7 @@ package mock
 import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
@@ -135,7 +135,7 @@ func (m *MockBackend) RemoveEntityAccessRule(unitID model.ID, entityName string,
 	return 0, nil
 }
 
-func (m *MockBackend) RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation mpr.EntityAccessRevocation) (int, error) {
+func (m *MockBackend) RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error) {
 	if m.RevokeEntityMemberAccessFunc != nil {
 		return m.RevokeEntityMemberAccessFunc(unitID, entityName, roleNames, revocation)
 	}

@@ -3,8 +3,8 @@
 package backend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // MappingBackend provides import/export mapping and JSON structure operations.
@@ -23,8 +23,8 @@ type MappingBackend interface {
 	DeleteExportMapping(id model.ID) error
 	MoveExportMapping(em *model.ExportMapping) error
 
-	ListJsonStructures() ([]*mpr.JsonStructure, error)
-	GetJsonStructureByQualifiedName(moduleName, name string) (*mpr.JsonStructure, error)
-	CreateJsonStructure(js *mpr.JsonStructure) error
+	ListJsonStructures() ([]*types.JsonStructure, error)
+	GetJsonStructureByQualifiedName(moduleName, name string) (*types.JsonStructure, error)
+	CreateJsonStructure(js *types.JsonStructure) error
 	DeleteJsonStructure(id string) error
 }

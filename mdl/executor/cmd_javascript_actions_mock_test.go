@@ -7,13 +7,13 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 func TestShowJavaScriptActions_Mock(t *testing.T) {
 	mod := mkModule("WebMod")
-	jsa := &mpr.JavaScriptAction{
+	jsa := &types.JavaScriptAction{
 		BaseElement: model.BaseElement{ID: nextID("jsa")},
 		ContainerID: mod.ID,
 		Name:        "ShowAlert",
@@ -25,7 +25,7 @@ func TestShowJavaScriptActions_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListJavaScriptActionsFunc: func() ([]*mpr.JavaScriptAction, error) { return []*mpr.JavaScriptAction{jsa}, nil },
+		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return []*types.JavaScriptAction{jsa}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -41,8 +41,8 @@ func TestDescribeJavaScriptAction_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ReadJavaScriptActionByNameFunc: func(qn string) (*mpr.JavaScriptAction, error) {
-			return &mpr.JavaScriptAction{
+		ReadJavaScriptActionByNameFunc: func(qn string) (*types.JavaScriptAction, error) {
+			return &types.JavaScriptAction{
 				BaseElement: model.BaseElement{ID: nextID("jsa")},
 				ContainerID: mod.ID,
 				Name:        "ShowAlert",

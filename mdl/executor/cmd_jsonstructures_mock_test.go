@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 func TestShowJsonStructures_Mock(t *testing.T) {
 	mod := mkModule("API")
-	js := &mpr.JsonStructure{
+	js := &types.JsonStructure{
 		BaseElement: model.BaseElement{ID: nextID("js")},
 		ContainerID: mod.ID,
 		Name:        "OrderSchema",
@@ -23,7 +23,7 @@ func TestShowJsonStructures_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:        func() bool { return true },
-		ListJsonStructuresFunc: func() ([]*mpr.JsonStructure, error) { return []*mpr.JsonStructure{js}, nil },
+		ListJsonStructuresFunc: func() ([]*types.JsonStructure, error) { return []*types.JsonStructure{js}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))

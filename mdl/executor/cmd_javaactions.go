@@ -12,9 +12,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // showJavaActions handles SHOW JAVA ACTIONS command.
@@ -325,7 +325,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	// Create the Java action
 	ja := &javaactions.JavaAction{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(mpr.GenerateID()),
+			ID:       model.ID(types.GenerateID()),
 			TypeName: "JavaActions$JavaAction",
 		},
 		ContainerID:   containerID,
@@ -339,7 +339,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	for _, tpName := range s.TypeParameters {
 		tpDef := &javaactions.TypeParameterDef{
 			BaseElement: model.BaseElement{
-				ID: model.ID(mpr.GenerateID()),
+				ID: model.ID(types.GenerateID()),
 			},
 			Name: tpName,
 		}
@@ -360,7 +360,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	for _, param := range s.Parameters {
 		jaParam := &javaactions.JavaActionParameter{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "JavaActions$JavaActionParameter",
 			},
 			Name:       param.Name,
@@ -370,7 +370,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 			// Explicit ENTITY <pEntity> → EntityTypeParameterType (entity type selector)
 			tpName := param.Type.TypeParamName
 			jaParam.ParameterType = &javaactions.EntityTypeParameterType{
-				BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 				TypeParameterID:   typeParamNameToID[tpName],
 				TypeParameterName: tpName,
 			}
@@ -378,7 +378,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 			// Bare name matching a type parameter → TypeParameter (ParameterizedEntityType)
 			tpName := getTypeParamRefName(param.Type)
 			jaParam.ParameterType = &javaactions.TypeParameter{
-				BaseElement:     model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
 				TypeParameterID: typeParamNameToID[tpName],
 				TypeParameter:   tpName,
 			}
@@ -392,7 +392,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	if isTypeParamRef(s.ReturnType, typeParamNames) {
 		tpName := getTypeParamRefName(s.ReturnType)
 		ja.ReturnType = &javaactions.TypeParameter{
-			BaseElement:     model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
 			TypeParameterID: typeParamNameToID[tpName],
 			TypeParameter:   tpName,
 		}
@@ -403,7 +403,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 	// Build MicroflowActionInfo if EXPOSED AS clause is present
 	if s.ExposedCaption != "" {
 		ja.MicroflowActionInfo = &javaactions.MicroflowActionInfo{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Caption:     s.ExposedCaption,
 			Category:    s.ExposedCategory,
 		}
@@ -434,42 +434,42 @@ func astDataTypeToJavaActionParamType(dt ast.DataType) javaactions.CodeActionPar
 	case ast.TypeBoolean:
 		return &javaactions.BooleanType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$BooleanType",
 			},
 		}
 	case ast.TypeInteger:
 		return &javaactions.IntegerType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$IntegerType",
 			},
 		}
 	case ast.TypeLong:
 		return &javaactions.LongType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$LongType",
 			},
 		}
 	case ast.TypeDecimal:
 		return &javaactions.DecimalType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$DecimalType",
 			},
 		}
 	case ast.TypeString:
 		return &javaactions.StringType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$StringType",
 			},
 		}
 	case ast.TypeDateTime, ast.TypeDate:
 		return &javaactions.DateTimeType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$DateTimeType",
 			},
 		}
@@ -485,7 +485,7 @@ func astDataTypeToJavaActionParamType(dt ast.DataType) javaactions.CodeActionPar
 		}
 		return &javaactions.EntityType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$EntityType",
 			},
 			Entity: entityName,
@@ -497,7 +497,7 @@ func astDataTypeToJavaActionParamType(dt ast.DataType) javaactions.CodeActionPar
 		}
 		return &javaactions.ListType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$ListType",
 			},
 			Entity: entityName,
@@ -506,7 +506,7 @@ func astDataTypeToJavaActionParamType(dt ast.DataType) javaactions.CodeActionPar
 		// Default to String type for unknown kinds
 		return &javaactions.StringType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$StringType",
 			},
 		}
@@ -519,49 +519,49 @@ func astDataTypeToJavaActionReturnType(dt ast.DataType) javaactions.CodeActionRe
 	case ast.TypeVoid:
 		return &javaactions.VoidType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$VoidType",
 			},
 		}
 	case ast.TypeBoolean:
 		return &javaactions.BooleanType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$BooleanType",
 			},
 		}
 	case ast.TypeInteger:
 		return &javaactions.IntegerType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$IntegerType",
 			},
 		}
 	case ast.TypeLong:
 		return &javaactions.LongType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$LongType",
 			},
 		}
 	case ast.TypeDecimal:
 		return &javaactions.DecimalType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$DecimalType",
 			},
 		}
 	case ast.TypeString:
 		return &javaactions.StringType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$StringType",
 			},
 		}
 	case ast.TypeDateTime, ast.TypeDate:
 		return &javaactions.DateTimeType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$DateTimeType",
 			},
 		}
@@ -576,7 +576,7 @@ func astDataTypeToJavaActionReturnType(dt ast.DataType) javaactions.CodeActionRe
 		}
 		return &javaactions.EntityType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$EntityType",
 			},
 			Entity: entityName,
@@ -588,7 +588,7 @@ func astDataTypeToJavaActionReturnType(dt ast.DataType) javaactions.CodeActionRe
 		}
 		return &javaactions.ListType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$ListType",
 			},
 			Entity: entityName,
@@ -597,7 +597,7 @@ func astDataTypeToJavaActionReturnType(dt ast.DataType) javaactions.CodeActionRe
 		// Default to Boolean type (most common for Java actions)
 		return &javaactions.BooleanType{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "CodeActions$BooleanType",
 			},
 		}

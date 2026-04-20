@@ -7,7 +7,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // convertErrorHandlingType converts AST error handling type to SDK error handling type.
@@ -33,7 +33,7 @@ func convertErrorHandlingType(eh *ast.ErrorHandlingClause) microflows.ErrorHandl
 // connecting from the bottom of the source activity to the left of the error handler.
 func newErrorHandlerFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	return &microflows.SequenceFlow{
-		BaseElement:                model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
 		OriginID:                   originID,
 		DestinationID:              destinationID,
 		OriginConnectionIndex:      AnchorBottom,
@@ -113,7 +113,7 @@ func (fb *flowBuilder) handleErrorHandlerMerge(lastErrID model.ID, activityID mo
 	// fall back to empty (works for void microflows).
 	endEvent := &microflows.EndEvent{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: fb.posX, Y: errorY},
 			Size:        model.Size{Width: EventSize, Height: EventSize},
 		},
@@ -126,7 +126,7 @@ func (fb *flowBuilder) handleErrorHandlerMerge(lastErrID model.ID, activityID mo
 // newHorizontalFlow creates a SequenceFlow with anchors for horizontal left-to-right connection
 func newHorizontalFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	return &microflows.SequenceFlow{
-		BaseElement:                model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
 		OriginID:                   originID,
 		DestinationID:              destinationID,
 		OriginConnectionIndex:      AnchorRight, // Connect from right side of origin
@@ -138,7 +138,7 @@ func newHorizontalFlow(originID, destinationID model.ID) *microflows.SequenceFlo
 func newHorizontalFlowWithCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
 	flow := newHorizontalFlow(originID, destinationID)
 	flow.CaseValue = microflows.EnumerationCase{
-		BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		Value:       caseValue, // "true" or "false" as string
 	}
 	return flow
@@ -148,13 +148,13 @@ func newHorizontalFlowWithCase(originID, destinationID model.ID, caseValue strin
 // Used when TRUE path goes below the main line
 func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
 	return &microflows.SequenceFlow{
-		BaseElement:                model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
 		OriginID:                   originID,
 		DestinationID:              destinationID,
 		OriginConnectionIndex:      AnchorBottom, // Connect from bottom of origin (going down)
 		DestinationConnectionIndex: AnchorLeft,   // Connect to left side of destination
 		CaseValue: microflows.EnumerationCase{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Value:       caseValue, // "true" or "false" as string
 		},
 	}
@@ -164,7 +164,7 @@ func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string)
 // Used when returning from a lower branch to merge
 func newUpwardFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	return &microflows.SequenceFlow{
-		BaseElement:                model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
 		OriginID:                   originID,
 		DestinationID:              destinationID,
 		OriginConnectionIndex:      AnchorRight,  // Connect from right side of origin

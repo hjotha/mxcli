@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -144,7 +144,7 @@ func createDefaultClientTemplateBSON(text string) bson.D {
 
 // generateBinaryID creates a new random 16-byte UUID in Microsoft GUID binary format.
 func generateBinaryID() []byte {
-	return hexIDToBlob(mpr.GenerateID())
+	return hexIDToBlob(types.GenerateID())
 }
 
 // hexIDToBlob converts a hex UUID string to a 16-byte binary blob in Microsoft GUID format.

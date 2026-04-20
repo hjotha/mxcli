@@ -11,7 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // addLogMessageAction creates a LOG statement as a LogMessageAction.
@@ -62,11 +62,11 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 	}
 
 	action := &microflows.LogMessageAction{
-		BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		LogLevel:    logLevel,
 		LogNodeName: "'" + s.Node + "'", // Store as expression (e.g., 'TEST')
 		MessageTemplate: &model.Text{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Translations: map[string]string{
 				"en_US": templateText,
 			},
@@ -77,7 +77,7 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -101,7 +101,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		// Parameter is the full qualified name: Module.Microflow.ParameterName
 		paramQN := mfQN + "." + arg.Name
 		mapping := &microflows.MicroflowCallParameterMapping{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Parameter:   paramQN,
 			Argument:    fb.exprToString(arg.Value),
 		}
@@ -110,13 +110,13 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 
 	// Create nested MicroflowCall structure
 	mfCall := &microflows.MicroflowCall{
-		BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 		Microflow:         mfQN,
 		ParameterMappings: mappings,
 	}
 
 	action := &microflows.MicroflowCallAction{
-		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		MicroflowCall:      mfCall,
 		ResultVariableName: s.OutputVariable,
@@ -127,7 +127,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -190,20 +190,20 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 				}
 			}
 			value = &microflows.EntityTypeCodeActionParameterValue{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Entity:      entityName,
 			}
 		} else {
 			// Regular parameter: expression-based value
 			valueExpr := fb.exprToString(arg.Value)
 			value = &microflows.BasicCodeActionParameterValue{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Argument:    valueExpr,
 			}
 		}
 
 		mapping := &microflows.JavaActionParameterMapping{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Parameter:   paramQN,
 			Value:       value,
 		}
@@ -211,7 +211,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 	}
 
 	action := &microflows.JavaActionCallAction{
-		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		JavaAction:         actionQN,
 		ParameterMappings:  mappings,
@@ -223,7 +223,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -253,7 +253,7 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 	var mappings []*microflows.ExternalActionParameterMapping
 	for _, arg := range s.Arguments {
 		mapping := &microflows.ExternalActionParameterMapping{
-			BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:   model.BaseElement{ID: model.ID(types.GenerateID())},
 			ParameterName: arg.Name,
 			Argument:      fb.exprToString(arg.Value),
 		}
@@ -261,7 +261,7 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 	}
 
 	action := &microflows.CallExternalAction{
-		BaseElement:          model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:          model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:    convertErrorHandlingType(s.ErrorHandling),
 		ConsumedODataService: serviceQN,
 		Name:                 s.ActionName,
@@ -274,7 +274,7 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -308,7 +308,7 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 		// Parameter qualified name format: Module.Page.ParameterName
 		paramQN := pageQN + "." + arg.ParamName
 		mapping := &microflows.PageParameterMapping{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Parameter:   paramQN,
 			Argument:    fb.exprToString(arg.Value),
 		}
@@ -328,7 +328,7 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 
 	// Create page settings
 	pageSettings := &microflows.PageSettings{
-		BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		Location:    location,
 		ModalForm:   s.ModalForm,
 	}
@@ -337,7 +337,7 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 	// Use PageName (BY_NAME_REFERENCE) instead of PageID (BY_ID_REFERENCE)
 	// The modern Mendix format uses FormSettings.Form as a qualified name string
 	action := &microflows.ShowPageAction{
-		BaseElement:           model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:           model.BaseElement{ID: model.ID(types.GenerateID())},
 		PageName:              pageQN, // BY_NAME_REFERENCE - qualified name string
 		PageSettings:          pageSettings,
 		PageParameterMappings: mappings,
@@ -352,7 +352,7 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 	if s.Title != "" {
 		action.OverridePageTitle = &model.Text{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Texts$Text",
 			},
 			Translations: map[string]string{"en_US": s.Title},
@@ -362,7 +362,7 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -379,13 +379,13 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 // addShowHomePageAction creates a SHOW HOME PAGE statement.
 func (fb *flowBuilder) addShowHomePageAction(s *ast.ShowHomePageStmt) model.ID {
 	action := &microflows.ShowHomePageAction{
-		BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 	}
 
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -420,7 +420,7 @@ func (fb *flowBuilder) addShowMessageAction(s *ast.ShowMessageStmt) model.ID {
 	}
 
 	template := &model.Text{
-		BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
 		Translations: map[string]string{"en_US": templateText},
 	}
 
@@ -430,7 +430,7 @@ func (fb *flowBuilder) addShowMessageAction(s *ast.ShowMessageStmt) model.ID {
 	}
 
 	action := &microflows.ShowMessageAction{
-		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		Template:           template,
 		Type:               msgType,
 		TemplateParameters: templateParams,
@@ -439,7 +439,7 @@ func (fb *flowBuilder) addShowMessageAction(s *ast.ShowMessageStmt) model.ID {
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -461,14 +461,14 @@ func (fb *flowBuilder) addClosePageAction(s *ast.ClosePageStmt) model.ID {
 	}
 
 	action := &microflows.ClosePageAction{
-		BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:   model.BaseElement{ID: model.ID(types.GenerateID())},
 		NumberOfPages: numPages,
 	}
 
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -502,7 +502,7 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 
 	// Create template with translations map (default language "en_US")
 	template := &model.Text{
-		BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
 		Translations: map[string]string{"en_US": templateText},
 	}
 
@@ -547,7 +547,7 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 	}
 
 	action := &microflows.ValidationFeedbackAction{
-		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ObjectVariable:     varName,
 		AttributeName:      attributeName,
 		AssociationName:    associationName,
@@ -558,7 +558,7 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -576,7 +576,7 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	// Build HTTP configuration
 	httpConfig := &microflows.HttpConfiguration{
-		BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 	}
 
 	// Set HTTP method
@@ -610,7 +610,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	// Set custom headers
 	for _, header := range s.Headers {
 		h := &microflows.HttpHeader{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Name:        header.Name,
 			Value:       fb.exprToString(header.Value),
 		}
@@ -642,7 +642,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 				templateParams = append(templateParams, fb.exprToString(param.Value))
 			}
 			requestHandling = &microflows.CustomRequestHandling{
-				BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
 				Template:       template,
 				TemplateParams: templateParams,
 			}
@@ -650,21 +650,21 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			// Export mapping
 			mappingQN := s.Body.MappingName.Module + "." + s.Body.MappingName.Name
 			requestHandling = &microflows.MappingRequestHandling{
-				BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 				MappingID:         model.ID(mappingQN), // Use qualified name as ID for BY_NAME references
 				ParameterVariable: s.Body.SourceVariable,
 			}
 		default:
 			// No body
 			requestHandling = &microflows.CustomRequestHandling{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Template:    "",
 			}
 		}
 	} else {
 		// Default: empty custom request handling
 		requestHandling = &microflows.CustomRequestHandling{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Template:    "",
 		}
 	}
@@ -674,11 +674,11 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	switch s.Result.Type {
 	case ast.RestResultString:
 		resultHandling = &microflows.ResultHandlingString{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
 	case ast.RestResultResponse:
 		resultHandling = &microflows.ResultHandlingString{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
 		// Note: For HttpResponse, we would need a different result type, but using String for now
 	case ast.RestResultMapping:
@@ -702,7 +702,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			}
 		}
 		resultHandling = &microflows.ResultHandlingMapping{
-			BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
 			MappingID:      model.ID(mappingQN),
 			ResultEntityID: model.ID(entityQN),
 			ResultVariable: s.OutputVariable,
@@ -710,11 +710,11 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 		}
 	case ast.RestResultNone:
 		resultHandling = &microflows.ResultHandlingNone{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
 	default:
 		resultHandling = &microflows.ResultHandlingString{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
 	}
 
@@ -727,7 +727,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	}
 
 	action := &microflows.RestCallAction{
-		BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 		HttpConfiguration: httpConfig,
 		RequestHandling:   requestHandling,
 		ResultHandling:    resultHandling,
@@ -741,7 +741,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -783,7 +783,7 @@ func (fb *flowBuilder) addSendRestRequestAction(s *ast.SendRestRequestStmt) mode
 	var outputVar *microflows.RestOutputVar
 	if s.OutputVariable != "" {
 		outputVar = &microflows.RestOutputVar{
-			BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
 			VariableName: s.OutputVariable,
 		}
 	}
@@ -794,7 +794,7 @@ func (fb *flowBuilder) addSendRestRequestAction(s *ast.SendRestRequestStmt) mode
 	var bodyVar *microflows.RestBodyVar
 	if s.BodyVariable != "" && shouldSetBodyVariable(opDef) {
 		bodyVar = &microflows.RestBodyVar{
-			BaseElement:  model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
 			VariableName: s.BodyVariable,
 		}
 	}
@@ -806,7 +806,7 @@ func (fb *flowBuilder) addSendRestRequestAction(s *ast.SendRestRequestStmt) mode
 	// RestOperationCallAction does not support custom error handling (CE6035).
 	// ON ERROR clauses in the MDL are silently ignored for this action type.
 	action := &microflows.RestOperationCallAction{
-		BaseElement:            model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:            model.BaseElement{ID: model.ID(types.GenerateID())},
 		Operation:              operationQN,
 		OutputVariable:         outputVar,
 		BodyVariable:           bodyVar,
@@ -817,7 +817,7 @@ func (fb *flowBuilder) addSendRestRequestAction(s *ast.SendRestRequestStmt) mode
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -919,7 +919,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 	}
 
 	action := &microflows.ExecuteDatabaseQueryAction{
-		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		OutputVariableName: s.OutputVariable,
 		Query:              s.QueryName,
@@ -929,7 +929,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 	// Build parameter mappings from arguments
 	for _, arg := range s.Arguments {
 		pm := &microflows.DatabaseQueryParameterMapping{
-			BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:   model.BaseElement{ID: model.ID(types.GenerateID())},
 			ParameterName: arg.Name,
 			Value:         fb.exprToString(arg.Value),
 		}
@@ -939,7 +939,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 	// Build connection parameter mappings (runtime connection override)
 	for _, arg := range s.ConnectionArguments {
 		cm := &microflows.DatabaseConnectionParameterMapping{
-			BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:   model.BaseElement{ID: model.ID(types.GenerateID())},
 			ParameterName: arg.Name,
 			Value:         fb.exprToString(arg.Value),
 		}
@@ -950,7 +950,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -977,13 +977,13 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	activityX := fb.posX
 
 	action := &microflows.ImportXmlAction{
-		BaseElement:         model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
 		XmlDocumentVariable: s.SourceVariable,
 	}
 
 	resultHandling := &microflows.ResultHandlingMapping{
-		BaseElement:    model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
 		MappingID:      model.ID(s.Mapping.String()),
 		ResultVariable: s.OutputVariable,
 		SingleObject:   true,
@@ -1013,7 +1013,7 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -1039,7 +1039,7 @@ func (fb *flowBuilder) addTransformJsonAction(s *ast.TransformJsonStmt) model.ID
 	activityX := fb.posX
 
 	action := &microflows.TransformJsonAction{
-		BaseElement:        model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		InputVariableName:  s.InputVariable,
 		OutputVariableName: s.OutputVariable,
@@ -1049,7 +1049,7 @@ func (fb *flowBuilder) addTransformJsonAction(s *ast.TransformJsonStmt) model.ID
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
@@ -1074,11 +1074,11 @@ func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) mode
 	activityX := fb.posX
 
 	action := &microflows.ExportXmlAction{
-		BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
 		OutputVariable:    s.OutputVariable,
 		RequestHandling: &microflows.MappingRequestHandling{
-			BaseElement:       model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 			MappingID:         model.ID(s.Mapping.String()),
 			ParameterVariable: s.SourceVariable,
 		},
@@ -1087,7 +1087,7 @@ func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) mode
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},

@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 func TestShowVersion_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ProjectVersionFunc: func() *version.ProjectVersion {
-			return &version.ProjectVersion{
+		ProjectVersionFunc: func() *types.ProjectVersion {
+			return &types.ProjectVersion{
 				ProductVersion: "10.18.0",
 				BuildVersion:   "10.18.0.12345",
 				FormatVersion:  2,

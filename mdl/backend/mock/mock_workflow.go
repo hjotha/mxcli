@@ -4,7 +4,7 @@ package mock
 
 import (
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -62,14 +62,14 @@ func (m *MockBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
 // ImageBackend
 // ---------------------------------------------------------------------------
 
-func (m *MockBackend) ListImageCollections() ([]*mpr.ImageCollection, error) {
+func (m *MockBackend) ListImageCollections() ([]*types.ImageCollection, error) {
 	if m.ListImageCollectionsFunc != nil {
 		return m.ListImageCollectionsFunc()
 	}
 	return nil, nil
 }
 
-func (m *MockBackend) CreateImageCollection(ic *mpr.ImageCollection) error {
+func (m *MockBackend) CreateImageCollection(ic *types.ImageCollection) error {
 	if m.CreateImageCollectionFunc != nil {
 		return m.CreateImageCollectionFunc(ic)
 	}

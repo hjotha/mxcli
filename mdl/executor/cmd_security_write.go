@@ -11,7 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
@@ -332,7 +332,7 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 	// Build MemberAccess entries for all entity attributes and associations.
 	// Mendix requires explicit MemberAccess entries for every member — an empty
 	// MemberAccesses array triggers CE0066 "Entity access is out of date".
-	var memberAccesses []mpr.EntityMemberAccess
+	var memberAccesses []types.EntityMemberAccess
 
 	// Build sets for specific member overrides (when READ (Name, Email) syntax is used)
 	writeMemberSet := make(map[string]bool)
@@ -357,7 +357,7 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 		if isCalculated && (rights == "ReadWrite" || rights == "WriteOnly") {
 			rights = "ReadOnly"
 		}
-		memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
+		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
 			AttributeRef: module.Name + "." + s.Entity.Name + "." + attr.Name,
 			AccessRights: rights,
 		})
@@ -374,7 +374,7 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 			} else if readMemberSet[assoc.Name] {
 				rights = "ReadOnly"
 			}
-			memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
+			memberAccesses = append(memberAccesses, types.EntityMemberAccess{
 				AssociationRef: module.Name + "." + assoc.Name,
 				AccessRights:   rights,
 			})
@@ -388,7 +388,7 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 			} else if readMemberSet[ca.Name] {
 				rights = "ReadOnly"
 			}
-			memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
+			memberAccesses = append(memberAccesses, types.EntityMemberAccess{
 				AssociationRef: module.Name + "." + ca.Name,
 				AccessRights:   rights,
 			})
@@ -399,13 +399,13 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 	// When an entity has HasOwner/HasChangedBy, Mendix implicitly adds
 	// System.owner/System.changedBy associations that require MemberAccess.
 	if entity.HasOwner {
-		memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
+		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
 			AssociationRef: "System.owner",
 			AccessRights:   defaultMemberAccess,
 		})
 	}
 	if entity.HasChangedBy {
-		memberAccesses = append(memberAccesses, mpr.EntityMemberAccess{
+		memberAccesses = append(memberAccesses, types.EntityMemberAccess{
 			AssociationRef: "System.changedBy",
 			AccessRights:   defaultMemberAccess,
 		})
@@ -470,7 +470,7 @@ func execRevokeEntityAccess(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) err
 
 	if len(s.Rights) > 0 {
 		// Partial revoke — downgrade specific rights
-		revocation := mpr.EntityAccessRevocation{}
+		revocation := types.EntityAccessRevocation{}
 		for _, right := range s.Rights {
 			switch right.Type {
 			case ast.EntityAccessCreate:

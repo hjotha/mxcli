@@ -11,8 +11,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/widgets"
 )
@@ -21,7 +21,7 @@ func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (*pages.DataView, error)
 	dv := &pages.DataView{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DataView",
 			},
 			Name: w.Name,
@@ -91,10 +91,10 @@ func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (*pages.DataView, error)
 func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*pages.CustomWidget, error) {
 	// Build DataGrid2 as a CustomWidget (pluggable widget) like V2 does.
 	// The built-in DataGrid (Forms$DataGrid) has serialization issues.
-	widgetID := model.ID(mpr.GenerateID())
+	widgetID := model.ID(types.GenerateID())
 
 	// Load embedded template (required for pluggable widgets to work)
-	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err := widgets.GetTemplateFullBSON(pages.WidgetIDDataGrid2, mpr.GenerateID, pb.reader.Path())
+	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err := widgets.GetTemplateFullBSON(pages.WidgetIDDataGrid2, types.GenerateID, pb.reader.Path())
 	if err != nil {
 		return nil, mdlerrors.NewBackend("load DataGrid2 template", err)
 	}
@@ -198,7 +198,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*pages.CustomWidget, er
 func (pb *pageBuilder) buildDataGridColumnV3(w *ast.WidgetV3) (*pages.DataGridColumn, error) {
 	col := &pages.DataGridColumn{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(mpr.GenerateID()),
+			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$DataGridColumn",
 		},
 		Name:     w.Name,
@@ -214,7 +214,7 @@ func (pb *pageBuilder) buildDataGridColumnV3(w *ast.WidgetV3) (*pages.DataGridCo
 	if caption := w.GetCaption(); caption != "" {
 		col.Caption = &model.Text{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Texts$Text",
 			},
 			Translations: map[string]string{"en_US": caption},
@@ -228,7 +228,7 @@ func (pb *pageBuilder) buildListViewV3(w *ast.WidgetV3) (*pages.ListView, error)
 	lv := &pages.ListView{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ListView",
 			},
 			Name: w.Name,
@@ -276,7 +276,7 @@ func (pb *pageBuilder) buildTextBoxV3(w *ast.WidgetV3) (*pages.TextBox, error) {
 	tb := &pages.TextBox{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$TextBox",
 			},
 			Name: w.Name,
@@ -304,7 +304,7 @@ func (pb *pageBuilder) buildTextAreaV3(w *ast.WidgetV3) (*pages.TextArea, error)
 	ta := &pages.TextArea{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$TextArea",
 			},
 			Name: w.Name,
@@ -332,7 +332,7 @@ func (pb *pageBuilder) buildDatePickerV3(w *ast.WidgetV3) (*pages.DatePicker, er
 	dp := &pages.DatePicker{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DatePicker",
 			},
 			Name: w.Name,
@@ -360,7 +360,7 @@ func (pb *pageBuilder) buildDropdownV3(w *ast.WidgetV3) (*pages.DropDown, error)
 	dd := &pages.DropDown{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DropDown",
 			},
 			Name: w.Name,
@@ -388,7 +388,7 @@ func (pb *pageBuilder) buildCheckBoxV3(w *ast.WidgetV3) (*pages.CheckBox, error)
 	cb := &pages.CheckBox{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$CheckBox",
 			},
 			Name: w.Name,
@@ -417,7 +417,7 @@ func (pb *pageBuilder) buildRadioButtonsV3(w *ast.WidgetV3) (*pages.RadioButtons
 	rb := &pages.RadioButtons{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$RadioButtonGroup",
 			},
 			Name: w.Name,
@@ -441,7 +441,7 @@ func (pb *pageBuilder) buildTextWidgetV3(w *ast.WidgetV3) (*pages.Text, error) {
 	st := &pages.Text{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$Text",
 			},
 			Name: w.Name,
@@ -453,7 +453,7 @@ func (pb *pageBuilder) buildTextWidgetV3(w *ast.WidgetV3) (*pages.Text, error) {
 	if content := w.GetContent(); content != "" {
 		st.Caption = &model.Text{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Texts$Text",
 			},
 			Translations: map[string]string{"en_US": content},
@@ -476,7 +476,7 @@ func (pb *pageBuilder) buildDynamicTextV3(w *ast.WidgetV3) (*pages.DynamicText, 
 	dt := &pages.DynamicText{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DynamicText",
 			},
 			Name: w.Name,
@@ -524,12 +524,12 @@ func (pb *pageBuilder) buildDynamicTextV3(w *ast.WidgetV3) (*pages.DynamicText, 
 
 	dt.Content = &pages.ClientTemplate{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(mpr.GenerateID()),
+			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$ClientTemplate",
 		},
 		Template: &model.Text{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Texts$Text",
 			},
 			Translations: map[string]string{"en_US": content},
@@ -540,7 +540,7 @@ func (pb *pageBuilder) buildDynamicTextV3(w *ast.WidgetV3) (*pages.DynamicText, 
 	for _, attrRef := range autoGeneratedParams {
 		param := &pages.ClientTemplateParameter{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ClientTemplateParameter",
 			},
 		}
@@ -553,7 +553,7 @@ func (pb *pageBuilder) buildDynamicTextV3(w *ast.WidgetV3) (*pages.DynamicText, 
 		for _, p := range explicitParams {
 			param := &pages.ClientTemplateParameter{
 				BaseElement: model.BaseElement{
-					ID:       model.ID(mpr.GenerateID()),
+					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$ClientTemplateParameter",
 				},
 			}
@@ -585,7 +585,7 @@ func (pb *pageBuilder) buildTitleV3(w *ast.WidgetV3) (*pages.Title, error) {
 	title := &pages.Title{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$Title",
 			},
 			Name: w.Name,
@@ -597,7 +597,7 @@ func (pb *pageBuilder) buildTitleV3(w *ast.WidgetV3) (*pages.Title, error) {
 	if content != "" {
 		title.Caption = &model.Text{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Texts$Text",
 			},
 			Translations: map[string]string{"en_US": content},
@@ -615,7 +615,7 @@ func (pb *pageBuilder) buildButtonV3(w *ast.WidgetV3) (*pages.ActionButton, erro
 	btn := &pages.ActionButton{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ActionButton",
 			},
 			Name: w.Name,
@@ -627,12 +627,12 @@ func (pb *pageBuilder) buildButtonV3(w *ast.WidgetV3) (*pages.ActionButton, erro
 	if caption := w.GetCaption(); caption != "" {
 		btn.CaptionTemplate = &pages.ClientTemplate{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ClientTemplate",
 			},
 			Template: &model.Text{
 				BaseElement: model.BaseElement{
-					ID:       model.ID(mpr.GenerateID()),
+					ID:       model.ID(types.GenerateID()),
 					TypeName: "Texts$Text",
 				},
 				Translations: map[string]string{"en_US": caption},
@@ -644,7 +644,7 @@ func (pb *pageBuilder) buildButtonV3(w *ast.WidgetV3) (*pages.ActionButton, erro
 			for _, p := range params {
 				param := &pages.ClientTemplateParameter{
 					BaseElement: model.BaseElement{
-						ID:       model.ID(mpr.GenerateID()),
+						ID:       model.ID(types.GenerateID()),
 						TypeName: "Forms$ClientTemplateParameter",
 					},
 				}
@@ -692,7 +692,7 @@ func (pb *pageBuilder) buildNavigationListV3(w *ast.WidgetV3) (*pages.Navigation
 	navList := &pages.NavigationList{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$NavigationList",
 			},
 			Name: w.Name,
@@ -725,7 +725,7 @@ func (pb *pageBuilder) buildNavigationListItemV3(w *ast.WidgetV3) (*pages.Naviga
 
 	item := &pages.NavigationListItem{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(mpr.GenerateID()),
+			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$NavigationListItem",
 		},
 		Name: w.Name,
@@ -739,7 +739,7 @@ func (pb *pageBuilder) buildNavigationListItemV3(w *ast.WidgetV3) (*pages.Naviga
 	if caption := w.GetCaption(); caption != "" {
 		item.Caption = &model.Text{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Texts$Text",
 			},
 			Translations: map[string]string{"en_US": caption},
@@ -772,7 +772,7 @@ func (pb *pageBuilder) buildSnippetCallV3(w *ast.WidgetV3) (*pages.SnippetCallWi
 	sc := &pages.SnippetCallWidget{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SnippetCallWidget",
 			},
 			Name: w.Name,
@@ -801,7 +801,7 @@ func (pb *pageBuilder) buildTemplateV3(w *ast.WidgetV3) (*pages.Container, error
 	container := &pages.Container{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DivContainer",
 			},
 			Name: w.Name,
@@ -825,7 +825,7 @@ func (pb *pageBuilder) buildFilterV3(w *ast.WidgetV3) (*pages.Container, error) 
 	container := &pages.Container{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DivContainer",
 			},
 			Name: w.Name,
@@ -848,7 +848,7 @@ func (pb *pageBuilder) buildStaticImageV3(w *ast.WidgetV3) (*pages.StaticImage, 
 	img := &pages.StaticImage{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$StaticImageViewer",
 			},
 			Name: w.Name,
@@ -874,7 +874,7 @@ func (pb *pageBuilder) buildDynamicImageV3(w *ast.WidgetV3) (*pages.DynamicImage
 	img := &pages.DynamicImage{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ImageViewer",
 			},
 			Name: w.Name,

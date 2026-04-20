@@ -11,7 +11,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // showJsonStructures handles SHOW JSON STRUCTURES [IN module].
@@ -100,7 +100,7 @@ func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	if js.JsonSnippet != "" {
-		snippet := mpr.PrettyPrintJSON(js.JsonSnippet)
+		snippet := types.PrettyPrintJSON(js.JsonSnippet)
 		if strings.Contains(snippet, "'") || strings.Contains(snippet, "\n") {
 			fmt.Fprintf(ctx.Output, "\n  SNIPPET $$%s$$", snippet)
 		} else {
@@ -135,7 +135,7 @@ func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 
 // collectCustomNameMappings walks the element tree and returns JSON key → ExposedName
 // mappings where the ExposedName differs from the auto-generated default (capitalizeFirst).
-func collectCustomNameMappings(elements []*mpr.JsonElement) map[string]string {
+func collectCustomNameMappings(elements []*types.JsonElement) map[string]string {
 	mappings := make(map[string]string)
 	for _, elem := range elements {
 		collectCustomNames(elem, mappings)
@@ -143,7 +143,7 @@ func collectCustomNameMappings(elements []*mpr.JsonElement) map[string]string {
 	return mappings
 }
 
-func collectCustomNames(elem *mpr.JsonElement, mappings map[string]string) {
+func collectCustomNames(elem *types.JsonElement, mappings map[string]string) {
 	// Extract the JSON key from the last segment of the Path.
 	// Path format: "(Object)|fieldName" or "(Object)|parent|(Object)|child"
 	if parts := strings.Split(elem.Path, "|"); len(parts) > 1 {
@@ -207,7 +207,7 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 	}
 
 	// Build element tree from JSON snippet, applying custom name mappings
-	elements, err := mpr.BuildJsonElementsFromSnippet(s.JsonSnippet, s.CustomNameMap)
+	elements, err := types.BuildJsonElementsFromSnippet(s.JsonSnippet, s.CustomNameMap)
 	if err != nil {
 		return mdlerrors.NewBackend("build element tree", err)
 	}
@@ -217,11 +217,11 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 		containerID = existing.ContainerID
 	}
 
-	js := &mpr.JsonStructure{
+	js := &types.JsonStructure{
 		ContainerID:   containerID,
 		Name:          s.Name.Name,
 		Documentation: s.Documentation,
-		JsonSnippet:   mpr.PrettyPrintJSON(s.JsonSnippet),
+		JsonSnippet:   types.PrettyPrintJSON(s.JsonSnippet),
 		Elements:      elements,
 	}
 
@@ -260,7 +260,7 @@ func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error
 }
 
 // findJsonStructure finds a JSON structure by module and name.
-func findJsonStructure(ctx *ExecContext, moduleName, structName string) *mpr.JsonStructure {
+func findJsonStructure(ctx *ExecContext, moduleName, structName string) *types.JsonStructure {
 	structures, err := ctx.Backend.ListJsonStructures()
 	if err != nil {
 		return nil

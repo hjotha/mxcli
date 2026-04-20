@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 
 	_ "modernc.org/sqlite"
@@ -241,19 +242,9 @@ func (r *Reader) GetMendixVersion() (string, error) {
 	return version, nil
 }
 
-// blobToUUID converts a 16-byte blob to a UUID string using Microsoft GUID format.
-// The first 3 groups are little-endian (byte-swapped), last 2 groups are big-endian.
-// This is the standard format used by Mendix for all UUID representations.
+// blobToUUID delegates to types.BlobToUUID.
 func blobToUUID(blob []byte) string {
-	if len(blob) != 16 {
-		return hex.EncodeToString(blob)
-	}
-	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		blob[3], blob[2], blob[1], blob[0],
-		blob[5], blob[4],
-		blob[7], blob[6],
-		blob[8], blob[9],
-		blob[10], blob[11], blob[12], blob[13], blob[14], blob[15])
+	return types.BlobToUUID(blob)
 }
 
 // blobToUUIDSwapped converts a 16-byte blob to a UUID string using Microsoft GUID format.

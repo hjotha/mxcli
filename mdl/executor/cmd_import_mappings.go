@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -216,7 +217,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 	}
 
 	// Build path→JsonElement map from JSON structure — mapping elements clone from this
-	jsElementsByPath := map[string]*mpr.JsonElement{}
+	jsElementsByPath := map[string]*types.JsonElement{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
 		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil {
 			buildJsonElementPathMap(js.Elements, jsElementsByPath)
@@ -243,7 +244,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 // It clones properties from the matching JSON structure element (ExposedName, JsonPath,
 // MaxOccurs, ElementType, etc.) and adds mapping-specific bindings (Entity, Attribute,
 // Association, ObjectHandling).
-func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity, parentPath string, reader *mpr.Reader, jsElems map[string]*mpr.JsonElement, isRoot bool) *model.ImportMappingElement {
+func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity, parentPath string, reader *mpr.Reader, jsElems map[string]*types.JsonElement, isRoot bool) *model.ImportMappingElement {
 	elem := &model.ImportMappingElement{
 		BaseElement: model.BaseElement{
 			ID: model.ID(mpr.GenerateID()),
@@ -336,7 +337,7 @@ func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingEle
 }
 
 // buildJsonElementPathMap recursively builds a map from JSON path → JsonElement.
-func buildJsonElementPathMap(elems []*mpr.JsonElement, m map[string]*mpr.JsonElement) {
+func buildJsonElementPathMap(elems []*types.JsonElement, m map[string]*types.JsonElement) {
 	for _, e := range elems {
 		if e == nil {
 			continue

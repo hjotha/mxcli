@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
@@ -122,7 +123,7 @@ func (r *PageNavigationSecurityRule) Check(ctx *linter.LintContext) []linter.Vio
 }
 
 // collectMenuPages recursively collects pages from navigation menu items.
-func collectMenuPages(items []*mpr.NavMenuItem, profileName string, navPages map[string][]navUsage) {
+func collectMenuPages(items []*types.NavMenuItem, profileName string, navPages map[string][]navUsage) {
 	for _, item := range items {
 		if item.Page != "" {
 			navPages[item.Page] = append(navPages[item.Page],

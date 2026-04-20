@@ -3,8 +3,8 @@
 package backend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
@@ -52,7 +52,7 @@ type EntityAccessRuleParams struct {
 	AllowDelete         bool
 	DefaultMemberAccess string
 	XPathConstraint     string
-	MemberAccesses      []mpr.EntityMemberAccess
+	MemberAccesses      []types.EntityMemberAccess
 }
 
 // EntityAccessBackend manages entity-level access rules and role assignments.
@@ -62,7 +62,7 @@ type EntityAccessBackend interface {
 	RemoveFromAllowedRoles(unitID model.ID, roleName string) (bool, error)
 	AddEntityAccessRule(params EntityAccessRuleParams) error
 	RemoveEntityAccessRule(unitID model.ID, entityName string, roleNames []string) (int, error)
-	RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation mpr.EntityAccessRevocation) (int, error)
+	RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error)
 	RemoveRoleFromAllEntities(unitID model.ID, roleName string) (int, error)
 	ReconcileMemberAccesses(unitID model.ID, moduleName string) (int, error)
 }

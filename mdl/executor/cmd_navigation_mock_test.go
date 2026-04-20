@@ -7,18 +7,18 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 func TestShowNavigation_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetNavigationFunc: func() (*mpr.NavigationDocument, error) {
-			return &mpr.NavigationDocument{
-				Profiles: []*mpr.NavigationProfile{{
+		GetNavigationFunc: func() (*types.NavigationDocument, error) {
+			return &types.NavigationDocument{
+				Profiles: []*types.NavigationProfile{{
 					Name: "Responsive",
 					Kind: "Responsive",
-					MenuItems: []*mpr.NavMenuItem{
+					MenuItems: []*types.NavMenuItem{
 						{Caption: "Home"},
 						{Caption: "Admin"},
 						{Caption: "Settings"},
@@ -38,12 +38,12 @@ func TestShowNavigation_Mock(t *testing.T) {
 func TestShowNavigationMenu_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetNavigationFunc: func() (*mpr.NavigationDocument, error) {
-			return &mpr.NavigationDocument{
-				Profiles: []*mpr.NavigationProfile{{
+		GetNavigationFunc: func() (*types.NavigationDocument, error) {
+			return &types.NavigationDocument{
+				Profiles: []*types.NavigationProfile{{
 					Name: "Responsive",
 					Kind: "Responsive",
-					MenuItems: []*mpr.NavMenuItem{
+					MenuItems: []*types.NavMenuItem{
 						{Caption: "Dashboard", Page: "MyModule.Dashboard"},
 					},
 				}},
@@ -58,12 +58,12 @@ func TestShowNavigationMenu_Mock(t *testing.T) {
 func TestShowNavigationHomes_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetNavigationFunc: func() (*mpr.NavigationDocument, error) {
-			return &mpr.NavigationDocument{
-				Profiles: []*mpr.NavigationProfile{{
+		GetNavigationFunc: func() (*types.NavigationDocument, error) {
+			return &types.NavigationDocument{
+				Profiles: []*types.NavigationProfile{{
 					Name:     "Responsive",
 					Kind:     "Responsive",
-					HomePage: &mpr.NavHomePage{Page: "MyModule.Home"},
+					HomePage: &types.NavHomePage{Page: "MyModule.Home"},
 				}},
 			}, nil
 		},
@@ -76,12 +76,12 @@ func TestShowNavigationHomes_Mock(t *testing.T) {
 func TestDescribeNavigation_Mock(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		GetNavigationFunc: func() (*mpr.NavigationDocument, error) {
-			return &mpr.NavigationDocument{
-				Profiles: []*mpr.NavigationProfile{{
+		GetNavigationFunc: func() (*types.NavigationDocument, error) {
+			return &types.NavigationDocument{
+				Profiles: []*types.NavigationProfile{{
 					Name:     "Responsive",
 					Kind:     "Responsive",
-					HomePage: &mpr.NavHomePage{Page: "MyModule.Home"},
+					HomePage: &types.NavHomePage{Page: "MyModule.Home"},
 				}},
 			}, nil
 		},

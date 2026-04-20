@@ -7,13 +7,13 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 func TestShowImageCollections_Mock(t *testing.T) {
 	mod := mkModule("Icons")
-	ic := &mpr.ImageCollection{
+	ic := &types.ImageCollection{
 		BaseElement: model.BaseElement{ID: nextID("ic")},
 		ContainerID: mod.ID,
 		Name:        "AppIcons",
@@ -25,7 +25,7 @@ func TestShowImageCollections_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:          func() bool { return true },
-		ListImageCollectionsFunc: func() ([]*mpr.ImageCollection, error) { return []*mpr.ImageCollection{ic}, nil },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -38,7 +38,7 @@ func TestShowImageCollections_Mock(t *testing.T) {
 
 func TestDescribeImageCollection_Mock(t *testing.T) {
 	mod := mkModule("Icons")
-	ic := &mpr.ImageCollection{
+	ic := &types.ImageCollection{
 		BaseElement: model.BaseElement{ID: nextID("ic")},
 		ContainerID: mod.ID,
 		Name:        "AppIcons",
@@ -50,7 +50,7 @@ func TestDescribeImageCollection_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:          func() bool { return true },
-		ListImageCollectionsFunc: func() ([]*mpr.ImageCollection, error) { return []*mpr.ImageCollection{ic}, nil },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))

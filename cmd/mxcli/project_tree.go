@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/spf13/cobra"
@@ -951,7 +952,7 @@ func buildDatabaseConnectionChildren(dbc *model.DatabaseConnection) []*TreeNode 
 }
 
 // buildMenuTreeNodes recursively builds tree nodes from navigation menu items.
-func buildMenuTreeNodes(parent *TreeNode, items []*mpr.NavMenuItem) {
+func buildMenuTreeNodes(parent *TreeNode, items []*types.NavMenuItem) {
 	for _, item := range items {
 		label := item.Caption
 		if label == "" {

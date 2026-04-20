@@ -9,9 +9,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // isBuiltinModuleEntity returns true for modules whose entities are defined
@@ -73,7 +73,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 	}
 
 	// For CREATE OR REPLACE/MODIFY, reuse the existing ID to preserve references
-	microflowID := model.ID(mpr.GenerateID())
+	microflowID := model.ID(types.GenerateID())
 	if existingID != "" {
 		microflowID = existingID
 		// Keep the original folder unless a new folder is explicitly specified
@@ -143,7 +143,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		}
 		param := &microflows.MicroflowParameter{
 			BaseElement: model.BaseElement{
-				ID: model.ID(mpr.GenerateID()),
+				ID: model.ID(types.GenerateID()),
 			},
 			ContainerID: mf.ID,
 			Name:        p.Name,

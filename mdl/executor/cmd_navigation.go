@@ -9,7 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // execAlterNavigation handles CREATE [OR REPLACE] NAVIGATION <profile> command.
@@ -38,12 +38,12 @@ func execAlterNavigation(ctx *ExecContext, s *ast.AlterNavigationStmt) error {
 	}
 
 	// Convert AST types to writer spec
-	spec := mpr.NavigationProfileSpec{
+	spec := types.NavigationProfileSpec{
 		HasMenu: s.HasMenuBlock,
 	}
 
 	for _, hp := range s.HomePages {
-		hpSpec := mpr.NavHomePageSpec{
+		hpSpec := types.NavHomePageSpec{
 			IsPage: hp.IsPage,
 			Target: hp.Target.String(),
 		}
@@ -73,8 +73,8 @@ func execAlterNavigation(ctx *ExecContext, s *ast.AlterNavigationStmt) error {
 }
 
 // convertMenuItemDef converts an AST NavMenuItemDef to a writer NavMenuItemSpec.
-func convertMenuItemDef(def ast.NavMenuItemDef) mpr.NavMenuItemSpec {
-	spec := mpr.NavMenuItemSpec{
+func convertMenuItemDef(def ast.NavMenuItemDef) types.NavMenuItemSpec {
+	spec := types.NavMenuItemSpec{
 		Caption: def.Caption,
 	}
 	if def.Page != nil {
@@ -90,7 +90,7 @@ func convertMenuItemDef(def ast.NavMenuItemDef) mpr.NavMenuItemSpec {
 }
 
 // profileNames returns a comma-separated list of profile names for error messages.
-func profileNames(nav *mpr.NavigationDocument) string {
+func profileNames(nav *types.NavigationDocument) string {
 	names := make([]string, len(nav.Profiles))
 	for i, p := range nav.Profiles {
 		names[i] = p.Name
@@ -251,7 +251,7 @@ func describeNavigation(ctx *ExecContext, name ast.QualifiedName) error {
 }
 
 // outputNavigationProfile outputs a single profile in round-trippable CREATE OR REPLACE NAVIGATION format.
-func outputNavigationProfile(ctx *ExecContext, p *mpr.NavigationProfile) {
+func outputNavigationProfile(ctx *ExecContext, p *types.NavigationProfile) {
 	fmt.Fprintf(ctx.Output, "-- NAVIGATION PROFILE: %s\n", p.Name)
 	fmt.Fprintf(ctx.Output, "--   Kind: %s\n", p.Kind)
 	if p.IsNative {
@@ -312,7 +312,7 @@ func outputNavigationProfile(ctx *ExecContext, p *mpr.NavigationProfile) {
 }
 
 // countMenuItems counts the total number of menu items recursively.
-func countMenuItems(items []*mpr.NavMenuItem) int {
+func countMenuItems(items []*types.NavMenuItem) int {
 	count := len(items)
 	for _, item := range items {
 		count += countMenuItems(item.Items)
@@ -321,7 +321,7 @@ func countMenuItems(items []*mpr.NavMenuItem) int {
 }
 
 // printMenuTree prints a menu tree with indentation to an io.Writer.
-func printMenuTree(w io.Writer, items []*mpr.NavMenuItem, depth int) {
+func printMenuTree(w io.Writer, items []*types.NavMenuItem, depth int) {
 	indent := strings.Repeat("  ", depth+1)
 	for _, item := range items {
 		target := menuItemTarget(item)
@@ -333,7 +333,7 @@ func printMenuTree(w io.Writer, items []*mpr.NavMenuItem, depth int) {
 }
 
 // menuItemTarget returns a display string for a menu item's action target.
-func menuItemTarget(item *mpr.NavMenuItem) string {
+func menuItemTarget(item *types.NavMenuItem) string {
 	if item.Page != "" {
 		return " -> " + item.Page
 	}
@@ -344,7 +344,7 @@ func menuItemTarget(item *mpr.NavMenuItem) string {
 }
 
 // printMenuMDL prints menu items in MDL-style format.
-func printMenuMDL(w io.Writer, items []*mpr.NavMenuItem, depth int) {
+func printMenuMDL(w io.Writer, items []*types.NavMenuItem, depth int) {
 	indent := strings.Repeat("  ", depth)
 	for _, item := range items {
 		if len(item.Items) > 0 {

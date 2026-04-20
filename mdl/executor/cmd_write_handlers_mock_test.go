@@ -7,10 +7,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -257,7 +257,7 @@ func TestExecDropAssociation_Mock(t *testing.T) {
 func TestExecDropJavaAction_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
 	jaID := nextID("ja")
-	ja := &mpr.JavaAction{
+	ja := &types.JavaAction{
 		BaseElement: model.BaseElement{ID: jaID},
 		ContainerID: mod.ID,
 		Name:        "MyAction",
@@ -268,8 +268,8 @@ func TestExecDropJavaAction_Mock(t *testing.T) {
 	called := false
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
-		ListJavaActionsFunc: func() ([]*mpr.JavaAction, error) {
-			return []*mpr.JavaAction{ja}, nil
+		ListJavaActionsFunc: func() ([]*types.JavaAction, error) {
+			return []*types.JavaAction{ja}, nil
 		},
 		DeleteJavaActionFunc: func(id model.ID) error {
 			called = true
@@ -291,7 +291,7 @@ func TestExecDropJavaAction_Mock(t *testing.T) {
 func TestExecDropFolder_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
 	folderID := nextID("folder")
-	folder := &mpr.FolderInfo{
+	folder := &types.FolderInfo{
 		ID:          folderID,
 		ContainerID: mod.ID,
 		Name:        "Resources",
@@ -306,8 +306,8 @@ func TestExecDropFolder_Mock(t *testing.T) {
 		ListModulesFunc: func() ([]*model.Module, error) {
 			return []*model.Module{mod}, nil
 		},
-		ListFoldersFunc: func() ([]*mpr.FolderInfo, error) {
-			return []*mpr.FolderInfo{folder}, nil
+		ListFoldersFunc: func() ([]*types.FolderInfo, error) {
+			return []*types.FolderInfo{folder}, nil
 		},
 		DeleteFolderFunc: func(id model.ID) error {
 			called = true

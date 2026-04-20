@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -238,7 +238,7 @@ func TestShowPublishedRestServices_Mock_JSON(t *testing.T) {
 func TestShowJavaActions_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	ja := &mpr.JavaAction{
+	ja := &types.JavaAction{
 		BaseElement: model.BaseElement{ID: nextID("ja")},
 		ContainerID: mod.ID,
 		Name:        "MyJavaAction",
@@ -247,7 +247,7 @@ func TestShowJavaActions_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:     func() bool { return true },
-		ListJavaActionsFunc: func() ([]*mpr.JavaAction, error) { return []*mpr.JavaAction{ja}, nil },
+		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return []*types.JavaAction{ja}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
@@ -259,7 +259,7 @@ func TestShowJavaActions_Mock_JSON(t *testing.T) {
 func TestShowJavaScriptActions_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	jsa := &mpr.JavaScriptAction{
+	jsa := &types.JavaScriptAction{
 		BaseElement: model.BaseElement{ID: nextID("jsa")},
 		ContainerID: mod.ID,
 		Name:        "MyJSAction",
@@ -268,7 +268,7 @@ func TestShowJavaScriptActions_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListJavaScriptActionsFunc: func() ([]*mpr.JavaScriptAction, error) { return []*mpr.JavaScriptAction{jsa}, nil },
+		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return []*types.JavaScriptAction{jsa}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
@@ -301,7 +301,7 @@ func TestShowDatabaseConnections_Mock_JSON(t *testing.T) {
 func TestShowImageCollections_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	ic := &mpr.ImageCollection{
+	ic := &types.ImageCollection{
 		BaseElement: model.BaseElement{ID: nextID("ic")},
 		ContainerID: mod.ID,
 		Name:        "Icons",
@@ -310,7 +310,7 @@ func TestShowImageCollections_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:          func() bool { return true },
-		ListImageCollectionsFunc: func() ([]*mpr.ImageCollection, error) { return []*mpr.ImageCollection{ic}, nil },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
@@ -322,7 +322,7 @@ func TestShowImageCollections_Mock_JSON(t *testing.T) {
 func TestShowJsonStructures_Mock_JSON(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
-	js := &mpr.JsonStructure{
+	js := &types.JsonStructure{
 		BaseElement: model.BaseElement{ID: nextID("js")},
 		ContainerID: mod.ID,
 		Name:        "OrderSchema",
@@ -331,7 +331,7 @@ func TestShowJsonStructures_Mock_JSON(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:        func() bool { return true },
-		ListJsonStructuresFunc: func() ([]*mpr.JsonStructure, error) { return []*mpr.JsonStructure{js}, nil },
+		ListJsonStructuresFunc: func() ([]*types.JsonStructure, error) { return []*types.JsonStructure{js}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))

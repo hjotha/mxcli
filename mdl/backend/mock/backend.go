@@ -12,8 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -31,8 +30,8 @@ type MockBackend struct {
 	CommitFunc           func() error
 	IsConnectedFunc      func() bool
 	PathFunc             func() string
-	VersionFunc          func() mpr.MPRVersion
-	ProjectVersionFunc   func() *version.ProjectVersion
+	VersionFunc          func() types.MPRVersion
+	ProjectVersionFunc   func() *types.ProjectVersion
 	GetMendixVersionFunc func() (string, error)
 
 	// ModuleBackend
@@ -45,7 +44,7 @@ type MockBackend struct {
 	DeleteModuleWithCleanupFunc func(id model.ID, moduleName string) error
 
 	// FolderBackend
-	ListFoldersFunc  func() ([]*mpr.FolderInfo, error)
+	ListFoldersFunc  func() ([]*types.FolderInfo, error)
 	CreateFolderFunc func(folder *model.Folder) error
 	DeleteFolderFunc func(id model.ID) error
 	MoveFolderFunc   func(id model.ID, newContainerID model.ID) error
@@ -144,14 +143,14 @@ type MockBackend struct {
 	RemoveFromAllowedRolesFunc           func(unitID model.ID, roleName string) (bool, error)
 	AddEntityAccessRuleFunc              func(params backend.EntityAccessRuleParams) error
 	RemoveEntityAccessRuleFunc           func(unitID model.ID, entityName string, roleNames []string) (int, error)
-	RevokeEntityMemberAccessFunc         func(unitID model.ID, entityName string, roleNames []string, revocation mpr.EntityAccessRevocation) (int, error)
+	RevokeEntityMemberAccessFunc         func(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error)
 	RemoveRoleFromAllEntitiesFunc        func(unitID model.ID, roleName string) (int, error)
 	ReconcileMemberAccessesFunc          func(unitID model.ID, moduleName string) (int, error)
 
 	// NavigationBackend
-	ListNavigationDocumentsFunc func() ([]*mpr.NavigationDocument, error)
-	GetNavigationFunc           func() (*mpr.NavigationDocument, error)
-	UpdateNavigationProfileFunc func(navDocID model.ID, profileName string, spec mpr.NavigationProfileSpec) error
+	ListNavigationDocumentsFunc func() ([]*types.NavigationDocument, error)
+	GetNavigationFunc           func() (*types.NavigationDocument, error)
+	UpdateNavigationProfileFunc func(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error
 
 	// ServiceBackend
 	ListConsumedODataServicesFunc   func() ([]*model.ConsumedODataService, error)
@@ -196,17 +195,17 @@ type MockBackend struct {
 	UpdateExportMappingFunc             func(em *model.ExportMapping) error
 	DeleteExportMappingFunc             func(id model.ID) error
 	MoveExportMappingFunc               func(em *model.ExportMapping) error
-	ListJsonStructuresFunc              func() ([]*mpr.JsonStructure, error)
-	GetJsonStructureByQualifiedNameFunc func(moduleName, name string) (*mpr.JsonStructure, error)
-	CreateJsonStructureFunc             func(js *mpr.JsonStructure) error
+	ListJsonStructuresFunc              func() ([]*types.JsonStructure, error)
+	GetJsonStructureByQualifiedNameFunc func(moduleName, name string) (*types.JsonStructure, error)
+	CreateJsonStructureFunc             func(js *types.JsonStructure) error
 	DeleteJsonStructureFunc             func(id string) error
 
 	// JavaBackend
-	ListJavaActionsFunc            func() ([]*mpr.JavaAction, error)
+	ListJavaActionsFunc            func() ([]*types.JavaAction, error)
 	ListJavaActionsFullFunc        func() ([]*javaactions.JavaAction, error)
-	ListJavaScriptActionsFunc      func() ([]*mpr.JavaScriptAction, error)
+	ListJavaScriptActionsFunc      func() ([]*types.JavaScriptAction, error)
 	ReadJavaActionByNameFunc       func(qualifiedName string) (*javaactions.JavaAction, error)
-	ReadJavaScriptActionByNameFunc func(qualifiedName string) (*mpr.JavaScriptAction, error)
+	ReadJavaScriptActionByNameFunc func(qualifiedName string) (*types.JavaScriptAction, error)
 	CreateJavaActionFunc           func(ja *javaactions.JavaAction) error
 	UpdateJavaActionFunc           func(ja *javaactions.JavaAction) error
 	DeleteJavaActionFunc           func(id model.ID) error
@@ -224,8 +223,8 @@ type MockBackend struct {
 	UpdateProjectSettingsFunc func(ps *model.ProjectSettings) error
 
 	// ImageBackend
-	ListImageCollectionsFunc  func() ([]*mpr.ImageCollection, error)
-	CreateImageCollectionFunc func(ic *mpr.ImageCollection) error
+	ListImageCollectionsFunc  func() ([]*types.ImageCollection, error)
+	CreateImageCollectionFunc func(ic *types.ImageCollection) error
 	DeleteImageCollectionFunc func(id string) error
 
 	// ScheduledEventBackend
@@ -234,21 +233,21 @@ type MockBackend struct {
 
 	// RenameBackend
 	UpdateQualifiedNameInAllUnitsFunc func(oldName, newName string) (int, error)
-	RenameReferencesFunc              func(oldName, newName string, dryRun bool) ([]mpr.RenameHit, error)
+	RenameReferencesFunc              func(oldName, newName string, dryRun bool) ([]types.RenameHit, error)
 	RenameDocumentByNameFunc          func(moduleName, oldName, newName string) error
 
 	// RawUnitBackend
 	GetRawUnitFunc            func(id model.ID) (map[string]any, error)
 	GetRawUnitBytesFunc       func(id model.ID) ([]byte, error)
-	ListRawUnitsByTypeFunc    func(typePrefix string) ([]*mpr.RawUnit, error)
-	ListRawUnitsFunc          func(objectType string) ([]*mpr.RawUnitInfo, error)
-	GetRawUnitByNameFunc      func(objectType, qualifiedName string) (*mpr.RawUnitInfo, error)
+	ListRawUnitsByTypeFunc    func(typePrefix string) ([]*types.RawUnit, error)
+	ListRawUnitsFunc          func(objectType string) ([]*types.RawUnitInfo, error)
+	GetRawUnitByNameFunc      func(objectType, qualifiedName string) (*types.RawUnitInfo, error)
 	GetRawMicroflowByNameFunc func(qualifiedName string) ([]byte, error)
 	UpdateRawUnitFunc         func(unitID string, contents []byte) error
 
 	// MetadataBackend
 	ListAllUnitIDsFunc   func() ([]string, error)
-	ListUnitsFunc        func() ([]*mpr.UnitInfo, error)
+	ListUnitsFunc        func() ([]*types.UnitInfo, error)
 	GetUnitTypesFunc     func() (map[string]int, error)
 	GetProjectRootIDFunc func() (string, error)
 	ContentsDirFunc      func() string
@@ -256,8 +255,8 @@ type MockBackend struct {
 	InvalidateCacheFunc  func()
 
 	// WidgetBackend
-	FindCustomWidgetTypeFunc     func(widgetID string) (*mpr.RawCustomWidgetType, error)
-	FindAllCustomWidgetTypesFunc func(widgetID string) ([]*mpr.RawCustomWidgetType, error)
+	FindCustomWidgetTypeFunc     func(widgetID string) (*types.RawCustomWidgetType, error)
+	FindAllCustomWidgetTypesFunc func(widgetID string) ([]*types.RawCustomWidgetType, error)
 
 	// AgentEditorBackend
 	ListAgentEditorModelsFunc               func() ([]*agenteditor.Model, error)

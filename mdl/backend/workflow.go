@@ -3,8 +3,8 @@
 package backend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
@@ -24,8 +24,8 @@ type SettingsBackend interface {
 
 // ImageBackend provides image collection operations.
 type ImageBackend interface {
-	ListImageCollections() ([]*mpr.ImageCollection, error)
-	CreateImageCollection(ic *mpr.ImageCollection) error
+	ListImageCollections() ([]*types.ImageCollection, error)
+	CreateImageCollection(ic *types.ImageCollection) error
 	DeleteImageCollection(id string) error
 }
 

@@ -10,9 +10,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // ----------------------------------------------------------------------------
@@ -118,7 +118,7 @@ func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (mode
 		}
 
 		// Find folder with this name under current container
-		var foundFolder *mpr.FolderInfo
+		var foundFolder *types.FolderInfo
 		for _, f := range folders {
 			if f.ContainerID == currentContainerID && f.Name == part {
 				foundFolder = f
@@ -138,7 +138,7 @@ func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (mode
 			currentContainerID = newFolderID
 
 			// Add to the list so subsequent lookups find it
-			folders = append(folders, &mpr.FolderInfo{
+			folders = append(folders, &types.FolderInfo{
 				ID:          newFolderID,
 				ContainerID: parentID,
 				Name:        part,
@@ -153,7 +153,7 @@ func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (mode
 func createFolder(ctx *ExecContext, name string, containerID model.ID) (model.ID, error) {
 	folder := &model.Folder{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(mpr.GenerateID()),
+			ID:       model.ID(types.GenerateID()),
 			TypeName: "Projects$Folder",
 		},
 		ContainerID: containerID,

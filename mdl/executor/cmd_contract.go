@@ -9,9 +9,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // showContractEntities handles SHOW CONTRACT ENTITIES FROM Module.Service.
@@ -226,7 +226,7 @@ func describeContractAction(ctx *ExecContext, name ast.QualifiedName, format str
 		return err
 	}
 
-	var action *mpr.EdmAction
+	var action *types.EdmAction
 	for _, a := range doc.Actions {
 		if strings.EqualFold(a.Name, actionName) {
 			action = a
@@ -263,7 +263,7 @@ func describeContractAction(ctx *ExecContext, name ast.QualifiedName, format str
 }
 
 // outputContractEntityMDL outputs a CREATE EXTERNAL ENTITY statement from contract metadata.
-func outputContractEntityMDL(ctx *ExecContext, et *mpr.EdmEntityType, svcQN string, doc *mpr.EdmxDocument) error {
+func outputContractEntityMDL(ctx *ExecContext, et *types.EdmEntityType, svcQN string, doc *types.EdmxDocument) error {
 	// Find entity set name
 	entitySetName := et.Name + "s" // fallback
 	for _, es := range doc.EntitySets {
@@ -315,7 +315,7 @@ func outputContractEntityMDL(ctx *ExecContext, et *mpr.EdmEntityType, svcQN stri
 }
 
 // parseServiceContract finds a consumed OData service by name and parses its cached $metadata.
-func parseServiceContract(ctx *ExecContext, name ast.QualifiedName) (*mpr.EdmxDocument, string, error) {
+func parseServiceContract(ctx *ExecContext, name ast.QualifiedName) (*types.EdmxDocument, string, error) {
 	services, err := ctx.Backend.ListConsumedODataServices()
 	if err != nil {
 		return nil, "", mdlerrors.NewBackend("list consumed OData services", err)
@@ -340,7 +340,7 @@ func parseServiceContract(ctx *ExecContext, name ast.QualifiedName) (*mpr.EdmxDo
 			return nil, svcQN, mdlerrors.NewValidationf("no cached contract metadata for %s (MetadataUrl: %s). The service metadata has not been downloaded yet", svcQN, svc.MetadataUrl)
 		}
 
-		doc, err := mpr.ParseEdmx(svc.Metadata)
+		doc, err := types.ParseEdmx(svc.Metadata)
 		if err != nil {
 			return nil, svcQN, mdlerrors.NewBackend(fmt.Sprintf("parse contract metadata for %s", svcQN), err)
 		}
@@ -371,7 +371,7 @@ func splitContractRef(name ast.QualifiedName) (ast.QualifiedName, string, error)
 }
 
 // formatEdmType returns a human-readable type string for a property.
-func formatEdmType(p *mpr.EdmProperty) string {
+func formatEdmType(p *types.EdmProperty) string {
 	t := p.Type
 	if p.MaxLength != "" {
 		t += "(" + p.MaxLength + ")"
@@ -398,7 +398,7 @@ func shortenEdmType(t string) string {
 }
 
 // edmToMendixType maps an Edm type to a Mendix attribute type string for MDL output.
-func edmToMendixType(p *mpr.EdmProperty) string {
+func edmToMendixType(p *types.EdmProperty) string {
 	switch p.Type {
 	case "Edm.String":
 		if p.MaxLength != "" && p.MaxLength != "max" {
@@ -457,7 +457,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 
 	// Build entity set lookup: entity type qualified name → entity set name
 	esMap := make(map[string]string)
-	esByType := make(map[string]*mpr.EdmEntitySet)
+	esByType := make(map[string]*types.EdmEntitySet)
 	for _, es := range doc.EntitySets {
 		esMap[es.EntityType] = es.Name
 		esByType[es.EntityType] = es
@@ -491,7 +491,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 	}
 
 	// Build a global type lookup so we can resolve BaseType references across schemas.
-	typeByQualified := make(map[string]*mpr.EdmEntityType)
+	typeByQualified := make(map[string]*types.EdmEntityType)
 	for _, schema := range doc.Schemas {
 		for _, et := range schema.EntityTypes {
 			typeByQualified[schema.Namespace+"."+et.Name] = et
@@ -533,7 +533,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 			// Build key parts from the resolved key (root entity in the chain)
 			var keyParts []*domainmodel.RemoteKeyPart
 			for _, keyName := range keyProps {
-				var keyProp *mpr.EdmProperty
+				var keyProp *types.EdmProperty
 				for _, p := range mergedProps {
 					if p.Name == keyName {
 						keyProp = p
@@ -621,7 +621,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 					Creatable:  creatable,
 					Updatable:  updatable,
 				}
-				attr.ID = model.ID(mpr.GenerateID())
+				attr.ID = model.ID(types.GenerateID())
 				attrs = append(attrs, attr)
 			}
 
@@ -646,7 +646,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 				Name:     mendixName,
 				Location: location,
 			}
-			newEntity.ID = model.ID(mpr.GenerateID())
+			newEntity.ID = model.ID(types.GenerateID())
 			applyExternalEntityFields(newEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
 			if err := ctx.Backend.CreateEntity(dm.ID, newEntity); err != nil {
 				fmt.Fprintf(ctx.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
@@ -699,8 +699,8 @@ type assocKey struct {
 func createPrimitiveCollectionNPEs(
 	ctx *ExecContext,
 	dm *domainmodel.DomainModel,
-	doc *mpr.EdmxDocument,
-	typeByQualified map[string]*mpr.EdmEntityType,
+	doc *types.EdmxDocument,
+	typeByQualified map[string]*types.EdmEntityType,
 	esMap map[string]string,
 	serviceRef string,
 ) int {
@@ -759,7 +759,7 @@ func createPrimitiveCollectionNPEs(
 
 				// Build the inner attribute type from the element type
 				innerType := p.Type[len("Collection(") : len(p.Type)-1]
-				innerProp := &mpr.EdmProperty{
+				innerProp := &types.EdmProperty{
 					Name:      singular(p.Name),
 					Type:      innerType,
 					MaxLength: p.MaxLength,
@@ -773,7 +773,7 @@ func createPrimitiveCollectionNPEs(
 					RemoteType:            primitiveCollectionRemoteType(innerType, p.Nullable),
 					IsPrimitiveCollection: true,
 				}
-				attr.ID = model.ID(mpr.GenerateID())
+				attr.ID = model.ID(types.GenerateID())
 
 				npe := &domainmodel.Entity{
 					Name:              npeName,
@@ -783,7 +783,7 @@ func createPrimitiveCollectionNPEs(
 					Source:            "Rest$ODataPrimitiveCollectionEntitySource",
 					RemoteServiceName: serviceRef,
 				}
-				npe.ID = model.ID(mpr.GenerateID())
+				npe.ID = model.ID(types.GenerateID())
 
 				if err := ctx.Backend.CreateEntity(dm.ID, npe); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE FAILED: %s — %v\n", npeName, err)
@@ -805,7 +805,7 @@ func createPrimitiveCollectionNPEs(
 					StorageFormat: domainmodel.StorageFormatColumn,
 					Source:        "Rest$ODataPrimitiveCollectionAssociationSource",
 				}
-				assoc.ID = model.ID(mpr.GenerateID())
+				assoc.ID = model.ID(types.GenerateID())
 				if err := ctx.Backend.CreateAssociation(dm.ID, assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE ASSOC FAILED: %s — %v\n", assocName, err)
 				}
@@ -817,7 +817,7 @@ func createPrimitiveCollectionNPEs(
 
 // isInheritedProperty reports whether a property name comes from one of the
 // entity type's base types (rather than being defined on the type itself).
-func isInheritedProperty(et *mpr.EdmEntityType, propName string, byQN map[string]*mpr.EdmEntityType) bool {
+func isInheritedProperty(et *types.EdmEntityType, propName string, byQN map[string]*types.EdmEntityType) bool {
 	for _, p := range et.Properties {
 		if p.Name == propName {
 			return false
@@ -882,8 +882,8 @@ func singular(name string) string {
 func createNavigationAssociations(
 	ctx *ExecContext,
 	dm *domainmodel.DomainModel,
-	doc *mpr.EdmxDocument,
-	typeByQualified map[string]*mpr.EdmEntityType,
+	doc *types.EdmxDocument,
+	typeByQualified map[string]*types.EdmEntityType,
 	esMap map[string]string,
 	serviceRef string,
 ) int {
@@ -895,7 +895,7 @@ func createNavigationAssociations(
 		nonUpdatable  map[string]bool
 	}
 	restrictionsByType := make(map[string]navRestrictions)
-	esByType := make(map[string]*mpr.EdmEntitySet)
+	esByType := make(map[string]*types.EdmEntitySet)
 	for _, es := range doc.EntitySets {
 		r := navRestrictions{
 			nonInsertable: make(map[string]bool),
@@ -1027,7 +1027,7 @@ func createNavigationAssociations(
 					CreatableFromParent:            creatable,
 					UpdatableFromParent:            updatable,
 				}
-				assoc.ID = model.ID(mpr.GenerateID())
+				assoc.ID = model.ID(types.GenerateID())
 
 				if err := ctx.Backend.CreateAssociation(dm.ID, assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  ASSOC FAILED: %s.%s — %v\n", parentEnt.Name, assocName, err)
@@ -1082,10 +1082,10 @@ func uniqueAssocName(base string, dm *domainmodel.DomainModel, existingAssocs ma
 // optimistic defaults.
 func applyExternalEntityFields(
 	ent *domainmodel.Entity,
-	et *mpr.EdmEntityType,
+	et *types.EdmEntityType,
 	isTopLevel bool,
 	serviceRef string,
-	entitySet *mpr.EdmEntitySet,
+	entitySet *types.EdmEntitySet,
 	keyParts []*domainmodel.RemoteKeyPart,
 	attrs []*domainmodel.Attribute,
 ) {
@@ -1133,20 +1133,20 @@ func applyExternalEntityFields(
 // mergedPropertiesWithKey walks the BaseType chain of an entity type and
 // returns the merged property list (base properties first, then derived) along
 // with the key property names from the root of the chain.
-func mergedPropertiesWithKey(et *mpr.EdmEntityType, byQualified map[string]*mpr.EdmEntityType) ([]*mpr.EdmProperty, []string) {
+func mergedPropertiesWithKey(et *types.EdmEntityType, byQualified map[string]*types.EdmEntityType) ([]*types.EdmProperty, []string) {
 	// Walk to the root, collecting types in order from base → derived.
-	chain := []*mpr.EdmEntityType{et}
+	chain := []*types.EdmEntityType{et}
 	current := et
 	for current.BaseType != "" {
 		parent := byQualified[current.BaseType]
 		if parent == nil {
 			break
 		}
-		chain = append([]*mpr.EdmEntityType{parent}, chain...)
+		chain = append([]*types.EdmEntityType{parent}, chain...)
 		current = parent
 	}
 
-	var merged []*mpr.EdmProperty
+	var merged []*types.EdmProperty
 	seen := make(map[string]bool)
 	for _, t := range chain {
 		for _, p := range t.Properties {
@@ -1176,7 +1176,7 @@ func attrNameForOData(propName, entityName string) string {
 // edmToDomainModelAttrType converts an EDM property to a domainmodel attribute type.
 // isKey forces a non-zero length for string keys: Mendix forbids unlimited
 // strings as part of an external entity key (CE6121).
-func edmToDomainModelAttrType(p *mpr.EdmProperty, isKey bool) domainmodel.AttributeType {
+func edmToDomainModelAttrType(p *types.EdmProperty, isKey bool) domainmodel.AttributeType {
 	switch p.Type {
 	case "Edm.String":
 		// Studio Pro stores Length=0 (unlimited) for OData strings without MaxLength.
@@ -1208,7 +1208,7 @@ func edmToDomainModelAttrType(p *mpr.EdmProperty, isKey bool) domainmodel.Attrib
 }
 
 // edmToAstDataType converts an Edm property to an AST data type.
-func edmToAstDataType(p *mpr.EdmProperty) ast.DataType {
+func edmToAstDataType(p *types.EdmProperty) ast.DataType {
 	switch p.Type {
 	case "Edm.String":
 		length := 200
@@ -1380,7 +1380,7 @@ func describeContractMessage(ctx *ExecContext, name ast.QualifiedName) error {
 }
 
 // parseAsyncAPIContract finds a business event service by name and parses its cached AsyncAPI document.
-func parseAsyncAPIContract(ctx *ExecContext, name ast.QualifiedName) (*mpr.AsyncAPIDocument, string, error) {
+func parseAsyncAPIContract(ctx *ExecContext, name ast.QualifiedName) (*types.AsyncAPIDocument, string, error) {
 	services, err := ctx.Backend.ListBusinessEventServices()
 	if err != nil {
 		return nil, "", mdlerrors.NewBackend("list business event services", err)
@@ -1405,7 +1405,7 @@ func parseAsyncAPIContract(ctx *ExecContext, name ast.QualifiedName) (*mpr.Async
 			return nil, svcQN, mdlerrors.NewValidationf("no cached AsyncAPI contract for %s. This service has no Document field (it may be a publisher, not a consumer)", svcQN)
 		}
 
-		doc, err := mpr.ParseAsyncAPI(svc.Document)
+		doc, err := types.ParseAsyncAPI(svc.Document)
 		if err != nil {
 			return nil, svcQN, mdlerrors.NewBackend(fmt.Sprintf("parse AsyncAPI contract for %s", svcQN), err)
 		}
@@ -1417,7 +1417,7 @@ func parseAsyncAPIContract(ctx *ExecContext, name ast.QualifiedName) (*mpr.Async
 }
 
 // asyncTypeString formats an AsyncAPI property type for display.
-func asyncTypeString(p *mpr.AsyncAPIProperty) string {
+func asyncTypeString(p *types.AsyncAPIProperty) string {
 	if p.Format != "" {
 		return p.Type + " (" + p.Format + ")"
 	}

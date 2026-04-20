@@ -7,7 +7,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // buildFlowGraph converts AST statements to a Microflow flow graph.
@@ -42,7 +42,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	// Create StartEvent - Position is the CENTER point (RelativeMiddlePoint in Mendix)
 	startEvent := &microflows.StartEvent{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: fb.posX, Y: fb.posY},
 			Size:        model.Size{Width: EventSize, Height: EventSize},
 		},
@@ -98,7 +98,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		fb.posY = fb.baseY // Ensure end event is on the happy path center line
 		endEvent := &microflows.EndEvent{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: fb.posX, Y: fb.posY},
 				Size:        model.Size{Width: EventSize, Height: EventSize},
 			},
@@ -116,7 +116,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	}
 
 	return &microflows.MicroflowObjectCollection{
-		BaseElement:     model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
 		Objects:         fb.objects,
 		Flows:           fb.flows,
 		AnnotationFlows: fb.annotationFlows,

@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package types
+
+import (
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/javaactions"
+)
+
+// JavaAction is a lightweight Java action descriptor.
+type JavaAction struct {
+	model.BaseElement
+	ContainerID   model.ID `json:"containerId"`
+	Name          string   `json:"name"`
+	Documentation string   `json:"documentation,omitempty"`
+}
+
+// GetName returns the Java action's name.
+func (ja *JavaAction) GetName() string { return ja.Name }
+
+// GetContainerID returns the container ID.
+func (ja *JavaAction) GetContainerID() model.ID { return ja.ContainerID }
+
+// JavaScriptAction is a JavaScript action descriptor.
+type JavaScriptAction struct {
+	model.BaseElement
+	ContainerID             model.ID                           `json:"containerId"`
+	Name                    string                             `json:"name"`
+	Documentation           string                             `json:"documentation,omitempty"`
+	Platform                string                             `json:"platform,omitempty"`
+	Excluded                bool                               `json:"excluded"`
+	ExportLevel             string                             `json:"exportLevel,omitempty"`
+	ActionDefaultReturnName string                             `json:"actionDefaultReturnName,omitempty"`
+	ReturnType              javaactions.CodeActionReturnType   `json:"returnType,omitempty"`
+	Parameters              []*javaactions.JavaActionParameter `json:"parameters,omitempty"`
+	TypeParameters          []*javaactions.TypeParameterDef    `json:"typeParameters,omitempty"`
+	MicroflowActionInfo     *javaactions.MicroflowActionInfo   `json:"microflowActionInfo,omitempty"`
+}
+
+// GetName returns the JavaScript action's name.
+func (jsa *JavaScriptAction) GetName() string { return jsa.Name }
+
+// GetContainerID returns the container ID.
+func (jsa *JavaScriptAction) GetContainerID() model.ID { return jsa.ContainerID }
+
+// FindTypeParameterName looks up a type parameter name by its ID.
+func (jsa *JavaScriptAction) FindTypeParameterName(id model.ID) string {
+	for _, tp := range jsa.TypeParameters {
+		if tp.ID == id {
+			return tp.Name
+		}
+	}
+	return ""
+}

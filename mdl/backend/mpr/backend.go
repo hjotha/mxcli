@@ -7,13 +7,13 @@ package mprbackend
 
 import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -75,9 +75,9 @@ func (b *MprBackend) Disconnect() error {
 func (b *MprBackend) IsConnected() bool { return b.writer != nil }
 func (b *MprBackend) Path() string      { return b.path }
 
-func (b *MprBackend) Version() mpr.MPRVersion                 { return b.reader.Version() }
-func (b *MprBackend) ProjectVersion() *version.ProjectVersion { return b.reader.ProjectVersion() }
-func (b *MprBackend) GetMendixVersion() (string, error)       { return b.reader.GetMendixVersion() }
+func (b *MprBackend) Version() types.MPRVersion                 { return convertMPRVersion(b.reader.Version()) }
+func (b *MprBackend) ProjectVersion() *types.ProjectVersion     { return convertProjectVersion(b.reader.ProjectVersion()) }
+func (b *MprBackend) GetMendixVersion() (string, error)         { return b.reader.GetMendixVersion() }
 
 // Commit is a no-op — the MPR writer auto-commits on each write operation.
 func (b *MprBackend) Commit() error { return nil }
@@ -102,7 +102,7 @@ func (b *MprBackend) DeleteModuleWithCleanup(id model.ID, moduleName string) err
 // FolderBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListFolders() ([]*mpr.FolderInfo, error) { return b.reader.ListFolders() }
+func (b *MprBackend) ListFolders() ([]*types.FolderInfo, error) { return convertFolderInfoSlice(b.reader.ListFolders()) }
 func (b *MprBackend) CreateFolder(folder *model.Folder) error { return b.writer.CreateFolder(folder) }
 func (b *MprBackend) DeleteFolder(id model.ID) error          { return b.writer.DeleteFolder(id) }
 func (b *MprBackend) MoveFolder(id model.ID, newContainerID model.ID) error {
@@ -354,13 +354,13 @@ func (b *MprBackend) RemoveFromAllowedRoles(unitID model.ID, roleName string) (b
 	return b.writer.RemoveFromAllowedRoles(unitID, roleName)
 }
 func (b *MprBackend) AddEntityAccessRule(params backend.EntityAccessRuleParams) error {
-	return b.writer.AddEntityAccessRule(params.UnitID, params.EntityName, params.RoleNames, params.AllowCreate, params.AllowDelete, params.DefaultMemberAccess, params.XPathConstraint, params.MemberAccesses)
+	return b.writer.AddEntityAccessRule(params.UnitID, params.EntityName, params.RoleNames, params.AllowCreate, params.AllowDelete, params.DefaultMemberAccess, params.XPathConstraint, unconvertEntityMemberAccessSlice(params.MemberAccesses))
 }
 func (b *MprBackend) RemoveEntityAccessRule(unitID model.ID, entityName string, roleNames []string) (int, error) {
 	return b.writer.RemoveEntityAccessRule(unitID, entityName, roleNames)
 }
-func (b *MprBackend) RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation mpr.EntityAccessRevocation) (int, error) {
-	return b.writer.RevokeEntityMemberAccess(unitID, entityName, roleNames, revocation)
+func (b *MprBackend) RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error) {
+	return b.writer.RevokeEntityMemberAccess(unitID, entityName, roleNames, unconvertEntityAccessRevocation(revocation))
 }
 func (b *MprBackend) RemoveRoleFromAllEntities(unitID model.ID, roleName string) (int, error) {
 	return b.writer.RemoveRoleFromAllEntities(unitID, roleName)
@@ -373,14 +373,14 @@ func (b *MprBackend) ReconcileMemberAccesses(unitID model.ID, moduleName string)
 // NavigationBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListNavigationDocuments() ([]*mpr.NavigationDocument, error) {
-	return b.reader.ListNavigationDocuments()
+func (b *MprBackend) ListNavigationDocuments() ([]*types.NavigationDocument, error) {
+	return convertNavDocSlice(b.reader.ListNavigationDocuments())
 }
-func (b *MprBackend) GetNavigation() (*mpr.NavigationDocument, error) {
-	return b.reader.GetNavigation()
+func (b *MprBackend) GetNavigation() (*types.NavigationDocument, error) {
+	return convertNavDocPtr(b.reader.GetNavigation())
 }
-func (b *MprBackend) UpdateNavigationProfile(navDocID model.ID, profileName string, spec mpr.NavigationProfileSpec) error {
-	return b.writer.UpdateNavigationProfile(navDocID, profileName, spec)
+func (b *MprBackend) UpdateNavigationProfile(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error {
+	return b.writer.UpdateNavigationProfile(navDocID, profileName, unconvertNavProfileSpec(spec))
 }
 
 // ---------------------------------------------------------------------------
@@ -518,14 +518,14 @@ func (b *MprBackend) MoveExportMapping(em *model.ExportMapping) error {
 	return b.writer.MoveExportMapping(em)
 }
 
-func (b *MprBackend) ListJsonStructures() ([]*mpr.JsonStructure, error) {
-	return b.reader.ListJsonStructures()
+func (b *MprBackend) ListJsonStructures() ([]*types.JsonStructure, error) {
+	return convertJsonStructureSlice(b.reader.ListJsonStructures())
 }
-func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*mpr.JsonStructure, error) {
-	return b.reader.GetJsonStructureByQualifiedName(moduleName, name)
+func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*types.JsonStructure, error) {
+	return convertJsonStructurePtr(b.reader.GetJsonStructureByQualifiedName(moduleName, name))
 }
-func (b *MprBackend) CreateJsonStructure(js *mpr.JsonStructure) error {
-	return b.writer.CreateJsonStructure(js)
+func (b *MprBackend) CreateJsonStructure(js *types.JsonStructure) error {
+	return b.writer.CreateJsonStructure(unconvertJsonStructure(js))
 }
 func (b *MprBackend) DeleteJsonStructure(id string) error {
 	return b.writer.DeleteJsonStructure(id)
@@ -535,20 +535,20 @@ func (b *MprBackend) DeleteJsonStructure(id string) error {
 // JavaBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListJavaActions() ([]*mpr.JavaAction, error) {
-	return b.reader.ListJavaActions()
+func (b *MprBackend) ListJavaActions() ([]*types.JavaAction, error) {
+	return convertJavaActionSlice(b.reader.ListJavaActions())
 }
 func (b *MprBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
 	return b.reader.ListJavaActionsFull()
 }
-func (b *MprBackend) ListJavaScriptActions() ([]*mpr.JavaScriptAction, error) {
-	return b.reader.ListJavaScriptActions()
+func (b *MprBackend) ListJavaScriptActions() ([]*types.JavaScriptAction, error) {
+	return convertJavaScriptActionSlice(b.reader.ListJavaScriptActions())
 }
 func (b *MprBackend) ReadJavaActionByName(qualifiedName string) (*javaactions.JavaAction, error) {
 	return b.reader.ReadJavaActionByName(qualifiedName)
 }
-func (b *MprBackend) ReadJavaScriptActionByName(qualifiedName string) (*mpr.JavaScriptAction, error) {
-	return b.reader.ReadJavaScriptActionByName(qualifiedName)
+func (b *MprBackend) ReadJavaScriptActionByName(qualifiedName string) (*types.JavaScriptAction, error) {
+	return convertJavaScriptActionPtr(b.reader.ReadJavaScriptActionByName(qualifiedName))
 }
 func (b *MprBackend) CreateJavaAction(ja *javaactions.JavaAction) error {
 	return b.writer.CreateJavaAction(ja)
@@ -600,11 +600,11 @@ func (b *MprBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
 // ImageBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListImageCollections() ([]*mpr.ImageCollection, error) {
-	return b.reader.ListImageCollections()
+func (b *MprBackend) ListImageCollections() ([]*types.ImageCollection, error) {
+	return convertImageCollectionSlice(b.reader.ListImageCollections())
 }
-func (b *MprBackend) CreateImageCollection(ic *mpr.ImageCollection) error {
-	return b.writer.CreateImageCollection(ic)
+func (b *MprBackend) CreateImageCollection(ic *types.ImageCollection) error {
+	return b.writer.CreateImageCollection(unconvertImageCollection(ic))
 }
 func (b *MprBackend) DeleteImageCollection(id string) error {
 	return b.writer.DeleteImageCollection(id)
@@ -628,8 +628,8 @@ func (b *MprBackend) GetScheduledEvent(id model.ID) (*model.ScheduledEvent, erro
 func (b *MprBackend) UpdateQualifiedNameInAllUnits(oldName, newName string) (int, error) {
 	return b.writer.UpdateQualifiedNameInAllUnits(oldName, newName)
 }
-func (b *MprBackend) RenameReferences(oldName, newName string, dryRun bool) ([]mpr.RenameHit, error) {
-	return b.writer.RenameReferences(oldName, newName, dryRun)
+func (b *MprBackend) RenameReferences(oldName, newName string, dryRun bool) ([]types.RenameHit, error) {
+	return convertRenameHitSlice(b.writer.RenameReferences(oldName, newName, dryRun))
 }
 func (b *MprBackend) RenameDocumentByName(moduleName, oldName, newName string) error {
 	return b.writer.RenameDocumentByName(moduleName, oldName, newName)
@@ -645,14 +645,14 @@ func (b *MprBackend) GetRawUnit(id model.ID) (map[string]any, error) {
 func (b *MprBackend) GetRawUnitBytes(id model.ID) ([]byte, error) {
 	return b.reader.GetRawUnitBytes(id)
 }
-func (b *MprBackend) ListRawUnitsByType(typePrefix string) ([]*mpr.RawUnit, error) {
-	return b.reader.ListRawUnitsByType(typePrefix)
+func (b *MprBackend) ListRawUnitsByType(typePrefix string) ([]*types.RawUnit, error) {
+	return convertRawUnitSlice(b.reader.ListRawUnitsByType(typePrefix))
 }
-func (b *MprBackend) ListRawUnits(objectType string) ([]*mpr.RawUnitInfo, error) {
-	return b.reader.ListRawUnits(objectType)
+func (b *MprBackend) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
+	return convertRawUnitInfoSlice(b.reader.ListRawUnits(objectType))
 }
-func (b *MprBackend) GetRawUnitByName(objectType, qualifiedName string) (*mpr.RawUnitInfo, error) {
-	return b.reader.GetRawUnitByName(objectType, qualifiedName)
+func (b *MprBackend) GetRawUnitByName(objectType, qualifiedName string) (*types.RawUnitInfo, error) {
+	return convertRawUnitInfoPtr(b.reader.GetRawUnitByName(objectType, qualifiedName))
 }
 func (b *MprBackend) GetRawMicroflowByName(qualifiedName string) ([]byte, error) {
 	return b.reader.GetRawMicroflowByName(qualifiedName)
@@ -666,7 +666,7 @@ func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListAllUnitIDs() ([]string, error)     { return b.reader.ListAllUnitIDs() }
-func (b *MprBackend) ListUnits() ([]*mpr.UnitInfo, error)   { return b.reader.ListUnits() }
+func (b *MprBackend) ListUnits() ([]*types.UnitInfo, error)   { return convertUnitInfoSlice(b.reader.ListUnits()) }
 func (b *MprBackend) GetUnitTypes() (map[string]int, error) { return b.reader.GetUnitTypes() }
 func (b *MprBackend) GetProjectRootID() (string, error)     { return b.reader.GetProjectRootID() }
 func (b *MprBackend) ContentsDir() string                   { return b.reader.ContentsDir() }
@@ -677,11 +677,11 @@ func (b *MprBackend) InvalidateCache()                      { b.reader.Invalidat
 // WidgetBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) FindCustomWidgetType(widgetID string) (*mpr.RawCustomWidgetType, error) {
-	return b.reader.FindCustomWidgetType(widgetID)
+func (b *MprBackend) FindCustomWidgetType(widgetID string) (*types.RawCustomWidgetType, error) {
+	return convertRawCustomWidgetTypePtr(b.reader.FindCustomWidgetType(widgetID))
 }
-func (b *MprBackend) FindAllCustomWidgetTypes(widgetID string) ([]*mpr.RawCustomWidgetType, error) {
-	return b.reader.FindAllCustomWidgetTypes(widgetID)
+func (b *MprBackend) FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCustomWidgetType, error) {
+	return convertRawCustomWidgetTypeSlice(b.reader.FindAllCustomWidgetTypes(widgetID))
 }
 
 // ---------------------------------------------------------------------------

@@ -6,9 +6,9 @@ import (
 	"database/sql"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
@@ -310,7 +310,7 @@ func (b *Builder) buildReferences() error {
 }
 
 // extractMenuItemRefs extracts page and microflow references from menu items recursively.
-func (b *Builder) extractMenuItemRefs(stmt *sql.Stmt, items []*mpr.NavMenuItem, sourceName, projectID, snapshotID string) int {
+func (b *Builder) extractMenuItemRefs(stmt *sql.Stmt, items []*types.NavMenuItem, sourceName, projectID, snapshotID string) int {
 	refCount := 0
 	for _, item := range items {
 		if item.Page != "" {

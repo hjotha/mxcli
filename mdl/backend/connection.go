@@ -3,9 +3,8 @@
 package backend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 )
 
 // ConnectionBackend manages the lifecycle of a backend connection.
@@ -22,9 +21,9 @@ type ConnectionBackend interface {
 	// Path returns the path of the connected project, or "" if not connected.
 	Path() string
 	// Version returns the MPR format version.
-	Version() mpr.MPRVersion
+	Version() types.MPRVersion
 	// ProjectVersion returns the Mendix project version.
-	ProjectVersion() *version.ProjectVersion
+	ProjectVersion() *types.ProjectVersion
 	// GetMendixVersion returns the Mendix version string.
 	GetMendixVersion() (string, error)
 }
@@ -42,7 +41,7 @@ type ModuleBackend interface {
 
 // FolderBackend provides folder operations.
 type FolderBackend interface {
-	ListFolders() ([]*mpr.FolderInfo, error)
+	ListFolders() ([]*types.FolderInfo, error)
 	CreateFolder(folder *model.Folder) error
 	DeleteFolder(id model.ID) error
 	MoveFolder(id model.ID, newContainerID model.ID) error

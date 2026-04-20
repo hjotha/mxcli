@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // buildContractEntities parses cached $metadata from consumed OData services
@@ -55,7 +55,7 @@ func (b *Builder) buildContractEntities() error {
 		moduleName := b.hierarchy.getModuleName(moduleID)
 		svcQN := moduleName + "." + svc.Name
 
-		doc, err := mpr.ParseEdmx(svc.Metadata)
+		doc, err := types.ParseEdmx(svc.Metadata)
 		if err != nil {
 			continue // skip services with unparseable metadata
 		}
@@ -161,7 +161,7 @@ func (b *Builder) buildContractMessages() error {
 		moduleName := b.hierarchy.getModuleName(moduleID)
 		svcQN := moduleName + "." + svc.Name
 
-		doc, err := mpr.ParseAsyncAPI(svc.Document)
+		doc, err := types.ParseAsyncAPI(svc.Document)
 		if err != nil {
 			continue
 		}

@@ -3,15 +3,15 @@
 package backend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // RenameBackend provides cross-cutting rename and reference-update operations.
 type RenameBackend interface {
 	UpdateQualifiedNameInAllUnits(oldName, newName string) (int, error)
-	RenameReferences(oldName, newName string, dryRun bool) ([]mpr.RenameHit, error)
+	RenameReferences(oldName, newName string, dryRun bool) ([]types.RenameHit, error)
 	RenameDocumentByName(moduleName, oldName, newName string) error
 }
 
@@ -20,9 +20,9 @@ type RenameBackend interface {
 type RawUnitBackend interface {
 	GetRawUnit(id model.ID) (map[string]any, error)
 	GetRawUnitBytes(id model.ID) ([]byte, error)
-	ListRawUnitsByType(typePrefix string) ([]*mpr.RawUnit, error)
-	ListRawUnits(objectType string) ([]*mpr.RawUnitInfo, error)
-	GetRawUnitByName(objectType, qualifiedName string) (*mpr.RawUnitInfo, error)
+	ListRawUnitsByType(typePrefix string) ([]*types.RawUnit, error)
+	ListRawUnits(objectType string) ([]*types.RawUnitInfo, error)
+	GetRawUnitByName(objectType, qualifiedName string) (*types.RawUnitInfo, error)
 	GetRawMicroflowByName(qualifiedName string) ([]byte, error)
 	UpdateRawUnit(unitID string, contents []byte) error
 }
@@ -30,7 +30,7 @@ type RawUnitBackend interface {
 // MetadataBackend provides project-level metadata and introspection.
 type MetadataBackend interface {
 	ListAllUnitIDs() ([]string, error)
-	ListUnits() ([]*mpr.UnitInfo, error)
+	ListUnits() ([]*types.UnitInfo, error)
 	GetUnitTypes() (map[string]int, error)
 	GetProjectRootID() (string, error)
 	ContentsDir() string
@@ -40,8 +40,8 @@ type MetadataBackend interface {
 
 // WidgetBackend provides widget introspection operations.
 type WidgetBackend interface {
-	FindCustomWidgetType(widgetID string) (*mpr.RawCustomWidgetType, error)
-	FindAllCustomWidgetTypes(widgetID string) ([]*mpr.RawCustomWidgetType, error)
+	FindCustomWidgetType(widgetID string) (*types.RawCustomWidgetType, error)
+	FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCustomWidgetType, error)
 }
 
 // AgentEditorBackend provides agent editor document operations.

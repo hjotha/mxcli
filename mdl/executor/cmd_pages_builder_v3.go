@@ -11,7 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
@@ -33,7 +33,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 
 	page := &pages.Page{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(mpr.GenerateID()),
+			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$Page",
 		},
 		ContainerID:   containerID,
@@ -48,7 +48,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 	if s.Title != "" {
 		page.Title = &model.Text{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Texts$Text",
 			},
 			Translations: map[string]string{"en_US": s.Title},
@@ -67,7 +67,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 			// Create LayoutCall with arguments for placeholders
 			page.LayoutCall = &pages.LayoutCall{
 				BaseElement: model.BaseElement{
-					ID:       model.ID(mpr.GenerateID()),
+					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$LayoutCall",
 				},
 				LayoutID:   layoutID,
@@ -80,7 +80,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 	for _, param := range s.Parameters {
 		pageParam := &pages.PageParameter{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$PageParameter",
 			},
 			ContainerID: page.ID,
@@ -112,7 +112,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 	for _, v := range s.Variables {
 		localVar := &pages.LocalVariable{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$LocalVariable",
 			},
 			ContainerID:  page.ID,
@@ -129,7 +129,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 
 		arg := &pages.LayoutCallArgument{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$FormCallArgument",
 			},
 			ParameterID: model.ID(mainPlaceholderRef),
@@ -140,7 +140,7 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*pages.Page, error)
 			containerWidget := &pages.Container{
 				BaseWidget: pages.BaseWidget{
 					BaseElement: model.BaseElement{
-						ID:       model.ID(mpr.GenerateID()),
+						ID:       model.ID(types.GenerateID()),
 						TypeName: "Forms$DivContainer",
 					},
 					Name: "conditionalVisibilityWidget1",
@@ -182,7 +182,7 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippe
 
 	snippet := &pages.Snippet{
 		BaseElement: model.BaseElement{
-			ID:       model.ID(mpr.GenerateID()),
+			ID:       model.ID(types.GenerateID()),
 			TypeName: "Forms$Snippet",
 		},
 		ContainerID:   containerID,
@@ -194,7 +194,7 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippe
 	for _, param := range s.Parameters {
 		snippetParam := &pages.SnippetParameter{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SnippetParameter",
 			},
 			ContainerID: snippet.ID,
@@ -221,7 +221,7 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*pages.Snippe
 	for _, v := range s.Variables {
 		localVar := &pages.LocalVariable{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$LocalVariable",
 			},
 			ContainerID:  snippet.ID,
@@ -382,7 +382,7 @@ func applyConditionalSettings(widget pages.Widget, w *ast.WidgetV3) {
 	if visibleIf := w.GetStringProp("VisibleIf"); visibleIf != "" {
 		bw.ConditionalVisibility = &pages.ConditionalVisibilitySettings{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ConditionalVisibilitySettings",
 			},
 			Expression: visibleIf,
@@ -392,7 +392,7 @@ func applyConditionalSettings(widget pages.Widget, w *ast.WidgetV3) {
 	if editableIf := w.GetStringProp("EditableIf"); editableIf != "" {
 		bw.ConditionalEditability = &pages.ConditionalEditabilitySettings{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ConditionalEditabilitySettings",
 			},
 			Expression: editableIf,
@@ -496,7 +496,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 		// Use DataViewSource with IsSnippetParameter flag
 		return &pages.DataViewSource{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DataViewSource",
 			},
 			EntityID:           entityID,
@@ -517,7 +517,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 		dbSource := &pages.DatabaseSource{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DatabaseSource", // Note: actual BSON $Type depends on widget context (grid/listview/dataview)
 			},
 			EntityID:   entityID,
@@ -537,7 +537,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 			}
 			sortItem := &pages.GridSort{
 				BaseElement: model.BaseElement{
-					ID:       model.ID(mpr.GenerateID()),
+					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$GridSort",
 				},
 				AttributePath: pb.resolveAttributePathForEntity(ob.Attribute, ds.Reference),
@@ -560,7 +560,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 		return &pages.MicroflowSource{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$MicroflowSource",
 			},
 			MicroflowID: mfID,
@@ -579,7 +579,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 		return &pages.NanoflowSource{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$NanoflowSource",
 			},
 			NanoflowID: nfID,
@@ -610,7 +610,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 		// widget can resolve short attribute names against it.
 		return &pages.AssociationSource{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$AssociationSource",
 			},
 			EntityPath:      path + "/" + destEntity,
@@ -630,7 +630,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 		return &pages.ListenToWidgetSource{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ListenTargetSource",
 			},
 			WidgetID:   widgetID,
@@ -842,7 +842,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 	case "save":
 		return &pages.SaveChangesClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SaveChangesClientAction",
 			},
 			ClosePage: action.ClosePage,
@@ -851,7 +851,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 	case "cancel":
 		return &pages.CancelChangesClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$CancelChangesClientAction",
 			},
 			ClosePage: action.ClosePage,
@@ -860,7 +860,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 	case "close":
 		return &pages.ClosePageClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$ClosePageClientAction",
 			},
 		}, nil
@@ -868,7 +868,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 	case "delete":
 		return &pages.DeleteClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$DeleteClientAction",
 			},
 		}, nil
@@ -884,7 +884,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 
 		createAct := &pages.CreateObjectClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$CreateObjectClientAction",
 			},
 			EntityID:   entityID,
@@ -911,7 +911,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 
 		pageAction := &pages.PageClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$PageClientAction",
 			},
 			PageName: action.Target,
@@ -921,7 +921,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		for _, arg := range action.Args {
 			mapping := &pages.PageClientParameterMapping{
 				BaseElement: model.BaseElement{
-					ID:       model.ID(mpr.GenerateID()),
+					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$PageParameterMapping",
 				},
 				ParameterName: arg.Name,
@@ -950,7 +950,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 
 		mfAction := &pages.MicroflowClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$MicroflowAction",
 			},
 			MicroflowID:   mfID,
@@ -961,7 +961,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		for _, arg := range action.Args {
 			mapping := &pages.MicroflowParameterMapping{
 				BaseElement: model.BaseElement{
-					ID:       model.ID(mpr.GenerateID()),
+					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$MicroflowParameterMapping",
 				},
 				ParameterName: arg.Name,
@@ -990,7 +990,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 
 		nfAction := &pages.NanoflowClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$NanoflowAction",
 			},
 			NanoflowID:   nfID,
@@ -1001,7 +1001,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 		for _, arg := range action.Args {
 			mapping := &pages.NanoflowParameterMapping{
 				BaseElement: model.BaseElement{
-					ID:       model.ID(mpr.GenerateID()),
+					ID:       model.ID(types.GenerateID()),
 					TypeName: "Forms$NanoflowParameterMapping",
 				},
 				ParameterName: arg.Name,
@@ -1025,7 +1025,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 	case "openLink":
 		return &pages.LinkClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$LinkClientAction",
 			},
 			LinkType: pages.LinkTypeWeb,
@@ -1035,7 +1035,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 	case "signOut":
 		return &pages.SignOutClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SignOutClientAction",
 			},
 		}, nil
@@ -1043,7 +1043,7 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (pages.ClientAc
 	case "completeTask":
 		return &pages.SetTaskOutcomeClientAction{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "Forms$SetTaskOutcomeClientAction",
 			},
 			ClosePage:    true,

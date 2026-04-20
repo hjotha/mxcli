@@ -13,10 +13,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // outputJavadoc writes a javadoc-style comment block.
@@ -789,7 +789,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 			Name: a.Name,
 			Type: convertDataType(a.Type),
 		}
-		attr.ID = model.ID(mpr.GenerateID())
+		attr.ID = model.ID(types.GenerateID())
 		attrs = append(attrs, attr)
 	}
 
@@ -837,7 +837,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 		Deletable:         s.Deletable,
 		Updatable:         s.Updatable,
 	}
-	newEntity.ID = model.ID(mpr.GenerateID())
+	newEntity.ID = model.ID(types.GenerateID())
 
 	if err := ctx.Backend.CreateEntity(dm.ID, newEntity); err != nil {
 		return mdlerrors.NewBackend("create external entity", err)
@@ -1035,7 +1035,7 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 	fmt.Fprintf(ctx.Output, "Created OData client: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
 	if newSvc.Metadata != "" {
 		// Parse to show summary
-		if doc, err := mpr.ParseEdmx(newSvc.Metadata); err == nil {
+		if doc, err := types.ParseEdmx(newSvc.Metadata); err == nil {
 			entityCount := 0
 			actionCount := 0
 			for _, s := range doc.Schemas {

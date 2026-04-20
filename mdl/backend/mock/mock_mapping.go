@@ -4,7 +4,7 @@ package mock
 
 import (
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 func (m *MockBackend) ListImportMappings() ([]*model.ImportMapping, error) {
@@ -91,21 +91,21 @@ func (m *MockBackend) MoveExportMapping(em *model.ExportMapping) error {
 	return nil
 }
 
-func (m *MockBackend) ListJsonStructures() ([]*mpr.JsonStructure, error) {
+func (m *MockBackend) ListJsonStructures() ([]*types.JsonStructure, error) {
 	if m.ListJsonStructuresFunc != nil {
 		return m.ListJsonStructuresFunc()
 	}
 	return nil, nil
 }
 
-func (m *MockBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*mpr.JsonStructure, error) {
+func (m *MockBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*types.JsonStructure, error) {
 	if m.GetJsonStructureByQualifiedNameFunc != nil {
 		return m.GetJsonStructureByQualifiedNameFunc(moduleName, name)
 	}
 	return nil, nil
 }
 
-func (m *MockBackend) CreateJsonStructure(js *mpr.JsonStructure) error {
+func (m *MockBackend) CreateJsonStructure(js *types.JsonStructure) error {
 	if m.CreateJsonStructureFunc != nil {
 		return m.CreateJsonStructureFunc(js)
 	}

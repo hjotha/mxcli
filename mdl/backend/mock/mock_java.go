@@ -5,10 +5,10 @@ package mock
 import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
-func (m *MockBackend) ListJavaActions() ([]*mpr.JavaAction, error) {
+func (m *MockBackend) ListJavaActions() ([]*types.JavaAction, error) {
 	if m.ListJavaActionsFunc != nil {
 		return m.ListJavaActionsFunc()
 	}
@@ -22,7 +22,7 @@ func (m *MockBackend) ListJavaActionsFull() ([]*javaactions.JavaAction, error) {
 	return nil, nil
 }
 
-func (m *MockBackend) ListJavaScriptActions() ([]*mpr.JavaScriptAction, error) {
+func (m *MockBackend) ListJavaScriptActions() ([]*types.JavaScriptAction, error) {
 	if m.ListJavaScriptActionsFunc != nil {
 		return m.ListJavaScriptActionsFunc()
 	}
@@ -36,7 +36,7 @@ func (m *MockBackend) ReadJavaActionByName(qualifiedName string) (*javaactions.J
 	return nil, nil
 }
 
-func (m *MockBackend) ReadJavaScriptActionByName(qualifiedName string) (*mpr.JavaScriptAction, error) {
+func (m *MockBackend) ReadJavaScriptActionByName(qualifiedName string) (*types.JavaScriptAction, error) {
 	if m.ReadJavaScriptActionByNameFunc != nil {
 		return m.ReadJavaScriptActionByNameFunc(qualifiedName)
 	}

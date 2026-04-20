@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
@@ -94,7 +95,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 
 	// 1. Load template
 	embeddedType, embeddedObject, embeddedIDs, embeddedObjectTypeID, err :=
-		widgets.GetTemplateFullBSON(def.WidgetID, mpr.GenerateID, e.pageBuilder.reader.Path())
+		widgets.GetTemplateFullBSON(def.WidgetID, types.GenerateID, e.pageBuilder.reader.Path())
 	if err != nil {
 		return nil, mdlerrors.NewBackend("load "+def.MDLName+" template", err)
 	}
@@ -328,7 +329,7 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 	updatedObject = ensureRequiredObjectLists(updatedObject, propertyTypeIDs)
 
 	// 5. Build CustomWidget
-	widgetID := model.ID(mpr.GenerateID())
+	widgetID := model.ID(types.GenerateID())
 	cw := &pages.CustomWidget{
 		BaseWidget: pages.BaseWidget{
 			BaseElement: model.BaseElement{

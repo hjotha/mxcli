@@ -11,7 +11,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // execCreateImageCollection handles CREATE IMAGE COLLECTION statements.
@@ -33,7 +33,7 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 	}
 
 	// Build ImageCollection
-	ic := &mpr.ImageCollection{
+	ic := &types.ImageCollection{
 		ContainerID:   module.ID,
 		Name:          s.Name.Name,
 		ExportLevel:   s.ExportLevel,
@@ -55,7 +55,7 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 			return mdlerrors.NewBackend(fmt.Sprintf("read image file %q", item.FilePath), err)
 		}
 		format := extToImageFormat(filepath.Ext(filePath))
-		ic.Images = append(ic.Images, mpr.Image{
+		ic.Images = append(ic.Images, types.Image{
 			Name:   item.Name,
 			Data:   data,
 			Format: format,
@@ -232,7 +232,7 @@ func showImageCollections(ctx *ExecContext, moduleName string) error {
 }
 
 // findImageCollection finds an image collection by module and name.
-func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *mpr.ImageCollection {
+func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *types.ImageCollection {
 	collections, err := ctx.Backend.ListImageCollections()
 	if err != nil {
 		return nil

@@ -3,8 +3,7 @@
 package mock
 
 import (
-	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 func (m *MockBackend) Connect(path string) error {
@@ -42,15 +41,15 @@ func (m *MockBackend) Path() string {
 	return ""
 }
 
-func (m *MockBackend) Version() mpr.MPRVersion {
+func (m *MockBackend) Version() types.MPRVersion {
 	if m.VersionFunc != nil {
 		return m.VersionFunc()
 	}
-	var zero mpr.MPRVersion
+	var zero types.MPRVersion
 	return zero
 }
 
-func (m *MockBackend) ProjectVersion() *version.ProjectVersion {
+func (m *MockBackend) ProjectVersion() *types.ProjectVersion {
 	if m.ProjectVersionFunc != nil {
 		return m.ProjectVersionFunc()
 	}

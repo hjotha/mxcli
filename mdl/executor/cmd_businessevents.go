@@ -9,7 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // showBusinessEventServices displays a table of all business event service documents.
@@ -407,7 +407,7 @@ func dropBusinessEventService(ctx *ExecContext, stmt *ast.DropBusinessEventServi
 // generateChannelName generates a hex channel name (similar to Mendix Studio Pro).
 func generateChannelName() string {
 	// Generate a UUID-like hex string
-	uuid := mpr.GenerateID()
+	uuid := types.GenerateID()
 	return strings.ReplaceAll(uuid, "-", "")
 }
 

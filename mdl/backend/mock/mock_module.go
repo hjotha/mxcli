@@ -3,8 +3,8 @@
 package mock
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ func (m *MockBackend) DeleteModuleWithCleanup(id model.ID, moduleName string) er
 // FolderBackend
 // ---------------------------------------------------------------------------
 
-func (m *MockBackend) ListFolders() ([]*mpr.FolderInfo, error) {
+func (m *MockBackend) ListFolders() ([]*types.FolderInfo, error) {
 	if m.ListFoldersFunc != nil {
 		return m.ListFoldersFunc()
 	}

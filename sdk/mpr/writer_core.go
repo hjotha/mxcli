@@ -3,26 +3,23 @@
 package mpr
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // idToBsonBinary converts a UUID string to BSON Binary format.
 // Mendix stores IDs as Binary with Subtype 0.
 func idToBsonBinary(id string) primitive.Binary {
-	blob := uuidToBlob(id)
+	blob := types.UUIDToBlob(id)
 	if blob == nil || len(blob) != 16 {
-		// Generate a new UUID if the provided one is invalid
-		blob = uuidToBlob(generateUUID())
+		blob = types.UUIDToBlob(types.GenerateID())
 	}
 	return primitive.Binary{
 		Subtype: 0x00,
@@ -198,59 +195,12 @@ func (wt *WriteTransaction) cleanupTempFiles() {
 	}
 }
 
-// generateUUID generates a new UUID v4 for model elements.
-// Returns format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// generateUUID delegates to types.GenerateID.
 func generateUUID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // Variant is 10
-
-	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		b[0], b[1], b[2], b[3],
-		b[4], b[5],
-		b[6], b[7],
-		b[8], b[9],
-		b[10], b[11], b[12], b[13], b[14], b[15])
+	return types.GenerateID()
 }
 
-// uuidToBlob converts a UUID string to a 16-byte blob in Microsoft GUID format.
-// UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// Microsoft GUID format byte-swaps the first 3 groups (little-endian):
-// - First 4 bytes: reversed
-// - Next 2 bytes: reversed
-// - Next 2 bytes: reversed
-// - Last 8 bytes: unchanged
+// uuidToBlob delegates to types.UUIDToBlob.
 func uuidToBlob(uuid string) []byte {
-	if uuid == "" {
-		return nil
-	}
-	// Remove dashes
-	var clean strings.Builder
-	for _, c := range uuid {
-		if c != '-' {
-			clean.WriteString(string(c))
-		}
-	}
-	// Decode hex to bytes
-	decoded, err := hex.DecodeString(clean.String())
-	if err != nil || len(decoded) != 16 {
-		return nil
-	}
-	// Swap bytes to Microsoft GUID format
-	blob := make([]byte, 16)
-	// First 4 bytes: reversed
-	blob[0] = decoded[3]
-	blob[1] = decoded[2]
-	blob[2] = decoded[1]
-	blob[3] = decoded[0]
-	// Next 2 bytes: reversed
-	blob[4] = decoded[5]
-	blob[5] = decoded[4]
-	// Next 2 bytes: reversed
-	blob[6] = decoded[7]
-	blob[7] = decoded[6]
-	// Last 8 bytes: unchanged
-	copy(blob[8:], decoded[8:])
-	return blob
+	return types.UUIDToBlob(uuid)
 }

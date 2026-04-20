@@ -12,7 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -23,9 +23,9 @@ import (
 type CatalogReader interface {
 	// Infrastructure
 	GetRawUnit(id model.ID) (map[string]any, error)
-	ListRawUnitsByType(typePrefix string) ([]*mpr.RawUnit, error)
-	ListUnits() ([]*mpr.UnitInfo, error)
-	ListFolders() ([]*mpr.FolderInfo, error)
+	ListRawUnitsByType(typePrefix string) ([]*types.RawUnit, error)
+	ListUnits() ([]*types.UnitInfo, error)
+	ListFolders() ([]*types.FolderInfo, error)
 
 	// Modules
 	ListModules() ([]*model.Module, error)
@@ -33,7 +33,7 @@ type CatalogReader interface {
 	// Settings & security
 	GetProjectSettings() (*model.ProjectSettings, error)
 	GetProjectSecurity() (*security.ProjectSecurity, error)
-	GetNavigation() (*mpr.NavigationDocument, error)
+	GetNavigation() (*types.NavigationDocument, error)
 
 	// Domain models & enumerations
 	ListDomainModels() ([]*domainmodel.DomainModel, error)
@@ -66,7 +66,7 @@ type CatalogReader interface {
 	// Mappings & JSON structures
 	ListImportMappings() ([]*model.ImportMapping, error)
 	ListExportMappings() ([]*model.ExportMapping, error)
-	ListJsonStructures() ([]*mpr.JsonStructure, error)
+	ListJsonStructures() ([]*types.JsonStructure, error)
 }
 
 // DescribeFunc generates MDL source for a given object type and qualified name.

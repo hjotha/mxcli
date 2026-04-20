@@ -9,7 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // addIfStatement creates an IF/THEN/ELSE statement using ExclusiveSplit and ExclusiveMerge.
@@ -45,13 +45,13 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 	// Create ExclusiveSplit with expression condition
 	splitCondition := &microflows.ExpressionSplitCondition{
-		BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		Expression:  fb.exprToString(s.Condition),
 	}
 
 	split := &microflows.ExclusiveSplit{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: splitX, Y: centerY},
 			Size:        model.Size{Width: SplitWidth, Height: SplitHeight},
 		},
@@ -80,7 +80,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	if needMerge {
 		merge := &microflows.ExclusiveMerge{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
-				BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Position:    model.Point{X: mergeX, Y: centerY},
 				Size:        model.Size{Width: MergeSize, Height: MergeSize},
 			},
@@ -312,17 +312,17 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 	// Position is the CENTER point (RelativeMiddlePoint in Mendix)
 	loop := &microflows.LoopedActivity{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: fb.posX + loopWidth/2, Y: fb.posY},
 			Size:        model.Size{Width: loopWidth, Height: loopHeight},
 		},
 		LoopSource: &microflows.IterableList{
-			BaseElement:      model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:      model.BaseElement{ID: model.ID(types.GenerateID())},
 			ListVariableName: s.ListVariable,
 			VariableName:     s.LoopVariable,
 		},
 		ObjectCollection: &microflows.MicroflowObjectCollection{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Objects:     loopBuilder.objects,
 			Flows:       nil, // Internal flows go at top-level, not inside the loop's ObjectCollection
 		},
@@ -384,16 +384,16 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 
 	loop := &microflows.LoopedActivity{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: fb.posX + loopWidth/2, Y: fb.posY},
 			Size:        model.Size{Width: loopWidth, Height: loopHeight},
 		},
 		LoopSource: &microflows.WhileLoopCondition{
-			BaseElement:     model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
 			WhileExpression: whileExpr,
 		},
 		ObjectCollection: &microflows.MicroflowObjectCollection{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Objects:     loopBuilder.objects,
 			Flows:       nil,
 		},

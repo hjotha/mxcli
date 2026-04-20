@@ -9,7 +9,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // execRename handles RENAME statements for all document types.
@@ -347,7 +347,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 }
 
 // printRenameReport outputs a dry-run report of what would change.
-func printRenameReport(ctx *ExecContext, oldName, newName string, hits []mpr.RenameHit) {
+func printRenameReport(ctx *ExecContext, oldName, newName string, hits []types.RenameHit) {
 	fmt.Fprintf(ctx.Output, "Would rename: %s → %s\n", oldName, newName)
 	fmt.Fprintf(ctx.Output, "References found: %d in %d document(s)\n", totalRefCount(hits), len(hits))
 
@@ -364,7 +364,7 @@ func printRenameReport(ctx *ExecContext, oldName, newName string, hits []mpr.Ren
 	}
 }
 
-func totalRefCount(hits []mpr.RenameHit) int {
+func totalRefCount(hits []types.RenameHit) int {
 	total := 0
 	for _, h := range hits {
 		total += h.Count
@@ -372,9 +372,9 @@ func totalRefCount(hits []mpr.RenameHit) int {
 	return total
 }
 
-func mergeHits(a, b []mpr.RenameHit) []mpr.RenameHit {
+func mergeHits(a, b []types.RenameHit) []types.RenameHit {
 	seen := make(map[string]int) // unitID → index in result
-	result := make([]mpr.RenameHit, len(a))
+	result := make([]types.RenameHit, len(a))
 	copy(result, a)
 	for i := range result {
 		seen[result[i].UnitID] = i

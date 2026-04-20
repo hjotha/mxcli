@@ -10,11 +10,11 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // findFolderByPath walks a folder path under a module and returns the folder ID.
-func findFolderByPath(ctx *ExecContext, moduleID model.ID, folderPath string, folders []*mpr.FolderInfo) (model.ID, error) {
+func findFolderByPath(ctx *ExecContext, moduleID model.ID, folderPath string, folders []*types.FolderInfo) (model.ID, error) {
 	parts := strings.Split(folderPath, "/")
 	currentContainerID := moduleID
 

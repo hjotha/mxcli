@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 func (b *Builder) buildNavigation() error {
@@ -129,7 +129,7 @@ func (b *Builder) buildNavigation() error {
 }
 
 // countMenuItems recursively counts all menu items.
-func countMenuItems(items []*mpr.NavMenuItem) int {
+func countMenuItems(items []*types.NavMenuItem) int {
 	count := len(items)
 	for _, item := range items {
 		count += countMenuItems(item.Items)
@@ -138,7 +138,7 @@ func countMenuItems(items []*mpr.NavMenuItem) int {
 }
 
 // insertMenuItems recursively inserts menu items with hierarchical path encoding.
-func insertMenuItems(stmt *sql.Stmt, profileName string, items []*mpr.NavMenuItem, parentPath string, depth int, projectID, snapshotID string) int {
+func insertMenuItems(stmt *sql.Stmt, profileName string, items []*types.NavMenuItem, parentPath string, depth int, projectID, snapshotID string) int {
 	count := 0
 	for i, item := range items {
 		itemPath := fmt.Sprintf("%d", i)

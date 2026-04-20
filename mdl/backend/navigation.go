@@ -3,13 +3,13 @@
 package backend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // NavigationBackend provides navigation document operations.
 type NavigationBackend interface {
-	ListNavigationDocuments() ([]*mpr.NavigationDocument, error)
-	GetNavigation() (*mpr.NavigationDocument, error)
-	UpdateNavigationProfile(navDocID model.ID, profileName string, spec mpr.NavigationProfileSpec) error
+	ListNavigationDocuments() ([]*types.NavigationDocument, error)
+	GetNavigation() (*types.NavigationDocument, error)
+	UpdateNavigationProfile(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error
 }

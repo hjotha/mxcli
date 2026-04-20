@@ -7,7 +7,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 // getStatementAnnotations extracts the annotations field from any microflow statement.
@@ -151,7 +151,7 @@ func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 
 	endEvent := &microflows.EndEvent{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: fb.posX, Y: fb.posY},
 			Size:        model.Size{Width: EventSize, Height: EventSize},
 		},
@@ -169,7 +169,7 @@ func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 func (fb *flowBuilder) addErrorEvent() model.ID {
 	errorEvent := &microflows.ErrorEvent{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: fb.posX, Y: fb.posY},
 			Size:        model.Size{Width: EventSize, Height: EventSize},
 		},
@@ -197,7 +197,7 @@ func (fb *flowBuilder) attachAnnotation(text string, activityID model.ID) {
 
 	annotation := &microflows.Annotation{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: actX, Y: actY - 100},
 			Size:        model.Size{Width: 200, Height: 50},
 		},
@@ -206,7 +206,7 @@ func (fb *flowBuilder) attachAnnotation(text string, activityID model.ID) {
 	fb.objects = append(fb.objects, annotation)
 
 	fb.annotationFlows = append(fb.annotationFlows, &microflows.AnnotationFlow{
-		BaseElement:   model.BaseElement{ID: model.ID(mpr.GenerateID())},
+		BaseElement:   model.BaseElement{ID: model.ID(types.GenerateID())},
 		OriginID:      annotation.ID,
 		DestinationID: activityID,
 	})
@@ -216,7 +216,7 @@ func (fb *flowBuilder) attachAnnotation(text string, activityID model.ID) {
 func (fb *flowBuilder) attachFreeAnnotation(text string) {
 	annotation := &microflows.Annotation{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(mpr.GenerateID())},
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Position:    model.Point{X: fb.posX, Y: fb.posY - 100},
 			Size:        model.Size{Width: 200, Height: 50},
 		},

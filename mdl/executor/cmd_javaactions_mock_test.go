@@ -7,14 +7,14 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 func TestShowJavaActions_Mock(t *testing.T) {
 	mod := mkModule("MyModule")
-	ja := &mpr.JavaAction{
+	ja := &types.JavaAction{
 		BaseElement: model.BaseElement{ID: nextID("ja")},
 		ContainerID: mod.ID,
 		Name:        "DoSomething",
@@ -25,7 +25,7 @@ func TestShowJavaActions_Mock(t *testing.T) {
 
 	mb := &mock.MockBackend{
 		IsConnectedFunc:     func() bool { return true },
-		ListJavaActionsFunc: func() ([]*mpr.JavaAction, error) { return []*mpr.JavaAction{ja}, nil },
+		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return []*types.JavaAction{ja}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))

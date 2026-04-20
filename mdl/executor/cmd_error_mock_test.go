@@ -8,10 +8,10 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 	"github.com/mendixlabs/mxcli/sdk/workflows"
@@ -131,7 +131,7 @@ func TestShowPublishedRestServices_Mock_BackendError(t *testing.T) {
 func TestShowJavaActions_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:     func() bool { return true },
-		ListJavaActionsFunc: func() ([]*mpr.JavaAction, error) { return nil, errBackend },
+		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, showJavaActions(ctx, ""))
@@ -140,7 +140,7 @@ func TestShowJavaActions_Mock_BackendError(t *testing.T) {
 func TestShowJavaScriptActions_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:           func() bool { return true },
-		ListJavaScriptActionsFunc: func() ([]*mpr.JavaScriptAction, error) { return nil, errBackend },
+		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, showJavaScriptActions(ctx, ""))
@@ -158,7 +158,7 @@ func TestShowDatabaseConnections_Mock_BackendError(t *testing.T) {
 func TestShowImageCollections_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:          func() bool { return true },
-		ListImageCollectionsFunc: func() ([]*mpr.ImageCollection, error) { return nil, errBackend },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, showImageCollections(ctx, ""))
@@ -167,7 +167,7 @@ func TestShowImageCollections_Mock_BackendError(t *testing.T) {
 func TestShowJsonStructures_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:        func() bool { return true },
-		ListJsonStructuresFunc: func() ([]*mpr.JsonStructure, error) { return nil, errBackend },
+		ListJsonStructuresFunc: func() ([]*types.JsonStructure, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, showJsonStructures(ctx, ""))
@@ -176,7 +176,7 @@ func TestShowJsonStructures_Mock_BackendError(t *testing.T) {
 func TestShowNavigation_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:   func() bool { return true },
-		GetNavigationFunc: func() (*mpr.NavigationDocument, error) { return nil, errBackend },
+		GetNavigationFunc: func() (*types.NavigationDocument, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, showNavigation(ctx))
@@ -340,7 +340,7 @@ func TestDescribeWorkflow_Mock_BackendError(t *testing.T) {
 func TestDescribeNavigation_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:   func() bool { return true },
-		GetNavigationFunc: func() (*mpr.NavigationDocument, error) { return nil, errBackend },
+		GetNavigationFunc: func() (*types.NavigationDocument, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, describeNavigation(ctx, ast.QualifiedName{Module: "M", Name: "N"}))
@@ -376,7 +376,7 @@ func TestDescribeRestClient_Mock_BackendError(t *testing.T) {
 func TestDescribeImageCollection_Mock_BackendError(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:          func() bool { return true },
-		ListImageCollectionsFunc: func() ([]*mpr.ImageCollection, error) { return nil, errBackend },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, describeImageCollection(ctx, ast.QualifiedName{Module: "M", Name: "I"}))

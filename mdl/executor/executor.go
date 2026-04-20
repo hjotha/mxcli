@@ -14,6 +14,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
@@ -23,8 +24,8 @@ import (
 // executorCache holds cached data for performance across multiple operations.
 type executorCache struct {
 	modules      []*model.Module
-	units        []*mpr.UnitInfo
-	folders      []*mpr.FolderInfo
+	units        []*types.UnitInfo
+	folders      []*types.FolderInfo
 	domainModels []*domainmodel.DomainModel
 	hierarchy    *ContainerHierarchy
 	// pages, layouts, microflows are cached separately as they may change during execution

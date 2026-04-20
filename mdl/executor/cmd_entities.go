@@ -9,9 +9,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // execCreateEntity handles CREATE ENTITY statements.
@@ -31,7 +31,7 @@ func buildEventHandlers(ctx *ExecContext, defs []ast.EventHandlerDef) ([]*domain
 		}
 		handlers = append(handlers, &domainmodel.EventHandler{
 			BaseElement: model.BaseElement{
-				ID:       model.ID(mpr.GenerateID()),
+				ID:       model.ID(types.GenerateID()),
 				TypeName: "DomainModels$EventHandler",
 			},
 			Moment:            domainmodel.EventMoment(d.Moment),
@@ -134,7 +134,7 @@ func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		}
 
 		// Generate ID for the attribute so we can reference it in validation rules/indexes
-		attrID := model.ID(mpr.GenerateID())
+		attrID := model.ID(types.GenerateID())
 		attrNameToID[a.Name] = attrID
 
 		attr := &domainmodel.Attribute{
@@ -188,12 +188,12 @@ func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 				AttributeID: attrID,
 				Type:        "Required",
 			}
-			vr.ID = model.ID(mpr.GenerateID())
+			vr.ID = model.ID(types.GenerateID())
 			if a.NotNullError != "" {
 				vr.ErrorMessage = &model.Text{
 					Translations: map[string]string{"en_US": a.NotNullError},
 				}
-				vr.ErrorMessage.ID = model.ID(mpr.GenerateID())
+				vr.ErrorMessage.ID = model.ID(types.GenerateID())
 			}
 			validationRules = append(validationRules, vr)
 		}
@@ -204,12 +204,12 @@ func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 				AttributeID: attrID,
 				Type:        "Unique",
 			}
-			vr.ID = model.ID(mpr.GenerateID())
+			vr.ID = model.ID(types.GenerateID())
 			if a.UniqueError != "" {
 				vr.ErrorMessage = &model.Text{
 					Translations: map[string]string{"en_US": a.UniqueError},
 				}
-				vr.ErrorMessage.ID = model.ID(mpr.GenerateID())
+				vr.ErrorMessage.ID = model.ID(types.GenerateID())
 			}
 			validationRules = append(validationRules, vr)
 		}
@@ -218,11 +218,11 @@ func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	// Create indexes
 	var indexes []*domainmodel.Index
 	for _, idx := range s.Indexes {
-		idxID := model.ID(mpr.GenerateID())
+		idxID := model.ID(types.GenerateID())
 		var indexAttrs []*domainmodel.IndexAttribute
 		for _, col := range idx.Columns {
 			if attrID, ok := attrNameToID[col.Name]; ok {
-				iaID := model.ID(mpr.GenerateID())
+				iaID := model.ID(types.GenerateID())
 				ia := &domainmodel.IndexAttribute{
 					AttributeID: attrID,
 					Ascending:   !col.Descending,
@@ -529,7 +529,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			}
 		}
 
-		attrID := model.ID(mpr.GenerateID())
+		attrID := model.ID(types.GenerateID())
 		attr := &domainmodel.Attribute{
 			Name:          a.Name,
 			Documentation: a.Documentation,
@@ -569,12 +569,12 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 				AttributeID: attrID,
 				Type:        "Required",
 			}
-			vr.ID = model.ID(mpr.GenerateID())
+			vr.ID = model.ID(types.GenerateID())
 			if a.NotNullError != "" {
 				vr.ErrorMessage = &model.Text{
 					Translations: map[string]string{"en_US": a.NotNullError},
 				}
-				vr.ErrorMessage.ID = model.ID(mpr.GenerateID())
+				vr.ErrorMessage.ID = model.ID(types.GenerateID())
 			}
 			entity.ValidationRules = append(entity.ValidationRules, vr)
 		}
@@ -583,12 +583,12 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 				AttributeID: attrID,
 				Type:        "Unique",
 			}
-			vr.ID = model.ID(mpr.GenerateID())
+			vr.ID = model.ID(types.GenerateID())
 			if a.UniqueError != "" {
 				vr.ErrorMessage = &model.Text{
 					Translations: map[string]string{"en_US": a.UniqueError},
 				}
-				vr.ErrorMessage.ID = model.ID(mpr.GenerateID())
+				vr.ErrorMessage.ID = model.ID(types.GenerateID())
 			}
 			entity.ValidationRules = append(entity.ValidationRules, vr)
 		}
@@ -808,7 +808,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		for _, attr := range entity.Attributes {
 			attrNameToID[attr.Name] = attr.ID
 		}
-		idxID := model.ID(mpr.GenerateID())
+		idxID := model.ID(types.GenerateID())
 		var indexAttrs []*domainmodel.IndexAttribute
 		for _, col := range s.Index.Columns {
 			if attrID, ok := attrNameToID[col.Name]; ok {
@@ -816,7 +816,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 					AttributeID: attrID,
 					Ascending:   !col.Descending,
 				}
-				ia.ID = model.ID(mpr.GenerateID())
+				ia.ID = model.ID(types.GenerateID())
 				indexAttrs = append(indexAttrs, ia)
 			} else {
 				return mdlerrors.NewNotFoundMsg("attribute", col.Name, fmt.Sprintf("attribute '%s' not found for index on entity %s", col.Name, s.Name))
