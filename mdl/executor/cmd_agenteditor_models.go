@@ -159,17 +159,17 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 	}
 
 	m := &agenteditor.Model{
-		ContainerID:  module.ID,
-		Name:         s.Name.Name,
+		ContainerID:   module.ID,
+		Name:          s.Name.Name,
 		Documentation: s.Documentation,
-		Provider:     provider,
-		Key:          keyRef,
-		DisplayName:  s.DisplayName,
-		KeyName:      s.KeyName,
-		KeyID:        s.KeyID,
-		Environment:  s.Environment,
-		ResourceName: s.ResourceName,
-		DeepLinkURL:  s.DeepLinkURL,
+		Provider:      provider,
+		Key:           keyRef,
+		DisplayName:   s.DisplayName,
+		KeyName:       s.KeyName,
+		KeyID:         s.KeyID,
+		Environment:   s.Environment,
+		ResourceName:  s.ResourceName,
+		DeepLinkURL:   s.DeepLinkURL,
 	}
 
 	if err := ctx.Backend.CreateAgentEditorModel(m); err != nil {

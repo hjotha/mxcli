@@ -282,7 +282,6 @@ func (b *Builder) ExitCreateAgentStatement(ctx *parser.CreateAgentStatementConte
 	b.statements = append(b.statements, stmt)
 }
 
-
 // parseQualifiedNameString splits "Module.Name" into a QualifiedName.
 func parseQualifiedNameString(s string) ast.QualifiedName {
 	parts := strings.SplitN(s, ".", 2)

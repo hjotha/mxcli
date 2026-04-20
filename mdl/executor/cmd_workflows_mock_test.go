@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package executor
+
+import (
+	"testing"
+
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/sdk/workflows"
+)
+
+func TestShowWorkflows_Mock(t *testing.T) {
+	mod := mkModule("Sales")
+	wf := mkWorkflow(mod.ID, "ApproveOrder")
+
+	h := mkHierarchy(mod)
+	withContainer(h, wf.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:   func() bool { return true },
+		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, showWorkflows(ctx, ""))
+
+	out := buf.String()
+	assertContainsStr(t, out, "Qualified Name")
+	assertContainsStr(t, out, "Sales.ApproveOrder")
+}
+
+func TestDescribeWorkflow_Mock(t *testing.T) {
+	mod := mkModule("Sales")
+	wf := mkWorkflow(mod.ID, "ApproveOrder")
+	wf.Parameter = &workflows.WorkflowParameter{EntityRef: "Sales.Order"}
+
+	h := mkHierarchy(mod)
+	withContainer(h, wf.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:   func() bool { return true },
+		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, describeWorkflow(ctx, ast.QualifiedName{Module: "Sales", Name: "ApproveOrder"}))
+
+	out := buf.String()
+	assertContainsStr(t, out, "WORKFLOW")
+	assertContainsStr(t, out, "Sales.ApproveOrder")
+}

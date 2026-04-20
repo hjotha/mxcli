@@ -188,13 +188,58 @@ func (m *MockBackend) ListAgentEditorAgents() ([]*agenteditor.Agent, error) {
 	return nil, nil
 }
 
-func (m *MockBackend) CreateAgentEditorModel(_ *agenteditor.Model) error                  { return nil }
-func (m *MockBackend) DeleteAgentEditorModel(_ string) error                              { return nil }
-func (m *MockBackend) CreateAgentEditorKnowledgeBase(_ *agenteditor.KnowledgeBase) error  { return nil }
-func (m *MockBackend) DeleteAgentEditorKnowledgeBase(_ string) error                      { return nil }
-func (m *MockBackend) CreateAgentEditorConsumedMCPService(_ *agenteditor.ConsumedMCPService) error {
+func (m *MockBackend) CreateAgentEditorModel(model *agenteditor.Model) error {
+	if m.CreateAgentEditorModelFunc != nil {
+		return m.CreateAgentEditorModelFunc(model)
+	}
 	return nil
 }
-func (m *MockBackend) DeleteAgentEditorConsumedMCPService(_ string) error { return nil }
-func (m *MockBackend) CreateAgentEditorAgent(_ *agenteditor.Agent) error  { return nil }
-func (m *MockBackend) DeleteAgentEditorAgent(_ string) error              { return nil }
+
+func (m *MockBackend) DeleteAgentEditorModel(id string) error {
+	if m.DeleteAgentEditorModelFunc != nil {
+		return m.DeleteAgentEditorModelFunc(id)
+	}
+	return nil
+}
+
+func (m *MockBackend) CreateAgentEditorKnowledgeBase(kb *agenteditor.KnowledgeBase) error {
+	if m.CreateAgentEditorKnowledgeBaseFunc != nil {
+		return m.CreateAgentEditorKnowledgeBaseFunc(kb)
+	}
+	return nil
+}
+
+func (m *MockBackend) DeleteAgentEditorKnowledgeBase(id string) error {
+	if m.DeleteAgentEditorKnowledgeBaseFunc != nil {
+		return m.DeleteAgentEditorKnowledgeBaseFunc(id)
+	}
+	return nil
+}
+
+func (m *MockBackend) CreateAgentEditorConsumedMCPService(svc *agenteditor.ConsumedMCPService) error {
+	if m.CreateAgentEditorConsumedMCPServiceFunc != nil {
+		return m.CreateAgentEditorConsumedMCPServiceFunc(svc)
+	}
+	return nil
+}
+
+func (m *MockBackend) DeleteAgentEditorConsumedMCPService(id string) error {
+	if m.DeleteAgentEditorConsumedMCPServiceFunc != nil {
+		return m.DeleteAgentEditorConsumedMCPServiceFunc(id)
+	}
+	return nil
+}
+
+func (m *MockBackend) CreateAgentEditorAgent(a *agenteditor.Agent) error {
+	if m.CreateAgentEditorAgentFunc != nil {
+		return m.CreateAgentEditorAgentFunc(a)
+	}
+	return nil
+}
+
+func (m *MockBackend) DeleteAgentEditorAgent(id string) error {
+	if m.DeleteAgentEditorAgentFunc != nil {
+		return m.DeleteAgentEditorAgentFunc(id)
+	}
+	return nil
+}

@@ -144,17 +144,17 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 	}
 
 	a := &agenteditor.Agent{
-		ContainerID:  module.ID,
-		Name:         s.Name.Name,
+		ContainerID:   module.ID,
+		Name:          s.Name.Name,
 		Documentation: s.Documentation,
-		Description:  s.Description,
-		SystemPrompt: s.SystemPrompt,
-		UserPrompt:   s.UserPrompt,
-		UsageType:    s.UsageType,
-		MaxTokens:    s.MaxTokens,
-		ToolChoice:   s.ToolChoice,
-		Temperature:  s.Temperature,
-		TopP:         s.TopP,
+		Description:   s.Description,
+		SystemPrompt:  s.SystemPrompt,
+		UserPrompt:    s.UserPrompt,
+		UsageType:     s.UsageType,
+		MaxTokens:     s.MaxTokens,
+		ToolChoice:    s.ToolChoice,
+		Temperature:   s.Temperature,
+		TopP:          s.TopP,
 	}
 
 	// Resolve Model reference

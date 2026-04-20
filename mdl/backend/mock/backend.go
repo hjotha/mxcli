@@ -260,8 +260,16 @@ type MockBackend struct {
 	FindAllCustomWidgetTypesFunc func(widgetID string) ([]*mpr.RawCustomWidgetType, error)
 
 	// AgentEditorBackend
-	ListAgentEditorModelsFunc              func() ([]*agenteditor.Model, error)
-	ListAgentEditorKnowledgeBasesFunc      func() ([]*agenteditor.KnowledgeBase, error)
-	ListAgentEditorConsumedMCPServicesFunc func() ([]*agenteditor.ConsumedMCPService, error)
-	ListAgentEditorAgentsFunc              func() ([]*agenteditor.Agent, error)
+	ListAgentEditorModelsFunc               func() ([]*agenteditor.Model, error)
+	ListAgentEditorKnowledgeBasesFunc       func() ([]*agenteditor.KnowledgeBase, error)
+	ListAgentEditorConsumedMCPServicesFunc  func() ([]*agenteditor.ConsumedMCPService, error)
+	ListAgentEditorAgentsFunc               func() ([]*agenteditor.Agent, error)
+	CreateAgentEditorModelFunc              func(m *agenteditor.Model) error
+	DeleteAgentEditorModelFunc              func(id string) error
+	CreateAgentEditorKnowledgeBaseFunc      func(kb *agenteditor.KnowledgeBase) error
+	DeleteAgentEditorKnowledgeBaseFunc      func(id string) error
+	CreateAgentEditorConsumedMCPServiceFunc func(svc *agenteditor.ConsumedMCPService) error
+	DeleteAgentEditorConsumedMCPServiceFunc func(id string) error
+	CreateAgentEditorAgentFunc              func(a *agenteditor.Agent) error
+	DeleteAgentEditorAgentFunc              func(id string) error
 }
