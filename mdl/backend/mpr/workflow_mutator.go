@@ -55,7 +55,7 @@ func (b *MprBackend) openWorkflowForMutation(unitID model.ID) (backend.WorkflowM
 // ---------------------------------------------------------------------------
 
 func (m *mprWorkflowMutator) SetProperty(prop string, value string) error {
-	switch prop {
+	switch strings.ToLower(prop) {
 	case "display":
 		wfName := dGetDoc(m.rawData, "WorkflowName")
 		if wfName == nil {
@@ -158,7 +158,7 @@ func (m *mprWorkflowMutator) SetActivityProperty(activityRef string, atPos int, 
 		return err
 	}
 
-	switch prop {
+	switch strings.ToLower(prop) {
 	case "page":
 		taskPage := dGetDoc(actDoc, "TaskPage")
 		if taskPage != nil {

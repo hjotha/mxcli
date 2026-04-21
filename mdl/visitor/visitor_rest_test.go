@@ -45,7 +45,7 @@ func TestCreateRestClient_Basic(t *testing.T) {
 	if op.Name != "GetPets" {
 		t.Errorf("Got Name %q", op.Name)
 	}
-	if op.Method != "GET" {
+	if op.Method != "get" {
 		t.Errorf("Got Method %q", op.Method)
 	}
 }
