@@ -22,18 +22,18 @@ Menu Documents define standalone menu structures that can be assigned to navigat
 ```
 Menus$MenuDocument:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
   ItemCollection: Menus$MenuItemCollection
     Items: []*Menus$MenuItem
-      - Caption: Texts$Text (with translations)
-      - AlternativeText: Texts$Text
-      - Icon: Forms$IconCollectionIcon | Forms$GlyphIcon | null
-      - Action: Forms$* (polymorphic client action)
+      - caption: Texts$text (with translations)
+      - AlternativeText: Texts$text
+      - icon: Forms$IconCollectionIcon | Forms$GlyphIcon | null
+      - action: Forms$* (polymorphic client action)
         - Forms$PageClientAction: PageSettings.Page (qualified name)
         - Forms$MicroflowClientAction: MicroflowSettings.Microflow (qualified name)
-        - Forms$OpenLinkClientAction: Address (URL)
+        - Forms$OpenLinkClientAction: Address (url)
         - Forms$NoAction
       - Items: []*MenuItem (recursive for sub-menus)
 ```
@@ -43,7 +43,7 @@ Menus$MenuDocument:
 ### SHOW MENUS
 
 ```
-SHOW MENUS [IN Module]
+show MENUS [in module]
 ```
 
 | Qualified Name | Module | Name | Items | Depth |
@@ -54,26 +54,26 @@ Where "Items" is the total count and "Depth" is the maximum nesting level.
 ### DESCRIBE MENU
 
 ```
-DESCRIBE MENU Module.Name
+describe menu Module.Name
 ```
 
 Output format:
 
 ```
-MENU MyModule.MainMenu
+menu MyModule.MainMenu
 {
-  'Dashboard' -> PAGE MyModule.Dashboard_Overview;
-  'Customers' -> PAGE MyModule.Customer_Overview
+  'Dashboard' -> page MyModule.Dashboard_Overview;
+  'Customers' -> page MyModule.Customer_Overview
   {
-    'New Customer' -> PAGE MyModule.Customer_NewEdit;
-    'Import' -> MICROFLOW MyModule.Customer_Import;
+    'New Customer' -> page MyModule.Customer_NewEdit;
+    'Import' -> microflow MyModule.Customer_Import;
   };
   'Reports'
   {
-    'Monthly Report' -> MICROFLOW MyModule.GenerateMonthlyReport;
-    'Export Data' -> MICROFLOW MyModule.ExportAllData;
+    'Monthly Report' -> microflow MyModule.GenerateMonthlyReport;
+    'Export Data' -> microflow MyModule.ExportAllData;
   };
-  'Settings' -> PAGE Administration.Account_Overview;
+  'Settings' -> page Administration.Account_Overview;
 };
 /
 ```
@@ -86,23 +86,23 @@ MENU MyModule.MainMenu
 type MenuDocument struct {
     ContainerID model.ID
     Name        string
-    Documentation string
+    documentation string
     Excluded    bool
     ExportLevel string
     Items       []*MenuItem
 }
 
 type MenuItem struct {
-    Caption    string
-    ActionType string // "Page", "Microflow", "Link", "None"
-    ActionTarget string // qualified name or URL
+    caption    string
+    ActionType string // "page", "microflow", "link", "none"
+    ActionTarget string // qualified name or url
     Items      []*MenuItem // sub-items (recursive)
 }
 ```
 
 ### 2. Add Parser (sdk/mpr/parser_misc.go or new file)
 
-Parse `Menus$MenuDocument` BSON. Extract caption text (first translation or default language). Parse `Action` polymorphic type to determine action type and target. Recursively parse sub-items.
+Parse `Menus$MenuDocument` BSON. Extract caption text (first translation or default language). Parse `action` polymorphic type to determine action type and target. Recursively parse sub-items.
 
 Can potentially share code with existing navigation menu parsing (`parseNavMenuItem`).
 
@@ -114,7 +114,7 @@ func (r *Reader) ListMenuDocuments() ([]*model.MenuDocument, error)
 
 ### 4. Add AST, Grammar, Visitor, Executor
 
-Grammar tokens: `MENU`, `MENUS`.
+Grammar tokens: `menu`, `MENUS`.
 
 ### 5. Add Autocomplete
 

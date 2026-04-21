@@ -612,7 +612,7 @@ func TestAlterWorkflow_SetDisplay(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected SetWorkflowPropertyOp, got %T", stmt.Operations[0])
 	}
-	if op.Property != "DISPLAY" {
+	if op.Property != "display" {
 		t.Errorf("Expected Property 'DISPLAY', got %q", op.Property)
 	}
 	if op.Value != "New Display Name" {
@@ -645,10 +645,10 @@ func TestAlterWorkflow_MultipleOperations(t *testing.T) {
 		prop  string
 		value string
 	}{
-		{"DISPLAY", "Updated Approval"},
-		{"DESCRIPTION", "Updated description"},
-		{"EXPORT_LEVEL", "Hidden"},
-		{"DUE_DATE", "PT48H"},
+		{"display", "Updated Approval"},
+		{"description", "Updated description"},
+		{"export_level", "Hidden"},
+		{"due_date", "PT48H"},
 	}
 
 	for i, check := range checks {
@@ -685,7 +685,7 @@ func TestAlterWorkflow_SetActivityPage(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected SetActivityPropertyOp, got %T", stmt.Operations[0])
 	}
-	if op.Property != "PAGE" {
+	if op.Property != "page" {
 		t.Errorf("Expected Property 'PAGE', got %q", op.Property)
 	}
 	if op.ActivityRef != "Review" {
@@ -716,7 +716,7 @@ func TestAlterWorkflow_SetActivityWithAtPosition(t *testing.T) {
 	if op.AtPosition != 2 {
 		t.Errorf("Expected AtPosition 2, got %d", op.AtPosition)
 	}
-	if op.Property != "DESCRIPTION" {
+	if op.Property != "description" {
 		t.Errorf("Expected Property 'DESCRIPTION', got %q", op.Property)
 	}
 	if op.Value != "Updated desc" {
@@ -1002,7 +1002,7 @@ func TestAlterWorkflow_SetParameter(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected SetWorkflowPropertyOp, got %T", stmt.Operations[0])
 	}
-	if op.Property != "PARAMETER" {
+	if op.Property != "parameter" {
 		t.Errorf("Expected Property 'PARAMETER', got %q", op.Property)
 	}
 	if op.Value != "$ctx" {
@@ -1029,7 +1029,7 @@ func TestAlterWorkflow_SetOverviewPage(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected SetWorkflowPropertyOp, got %T", stmt.Operations[0])
 	}
-	if op.Property != "OVERVIEW_PAGE" {
+	if op.Property != "overview_page" {
 		t.Errorf("Expected Property 'OVERVIEW_PAGE', got %q", op.Property)
 	}
 	if op.Entity.Module != "M" || op.Entity.Name != "AdminPage" {
@@ -1056,7 +1056,7 @@ func TestAlterWorkflow_SetActivityTargeting(t *testing.T) {
 	}
 
 	mfOp := stmt.Operations[0].(*ast.SetActivityPropertyOp)
-	if mfOp.Property != "TARGETING_MICROFLOW" {
+	if mfOp.Property != "targeting_microflow" {
 		t.Errorf("Expected Property 'TARGETING_MICROFLOW', got %q", mfOp.Property)
 	}
 	if mfOp.Microflow.Name != "GetReviewers" {
@@ -1064,7 +1064,7 @@ func TestAlterWorkflow_SetActivityTargeting(t *testing.T) {
 	}
 
 	xpOp := stmt.Operations[1].(*ast.SetActivityPropertyOp)
-	if xpOp.Property != "TARGETING_XPATH" {
+	if xpOp.Property != "targeting_xpath" {
 		t.Errorf("Expected Property 'TARGETING_XPATH', got %q", xpOp.Property)
 	}
 	if xpOp.Value != "[Role = 'Manager']" {
@@ -1085,7 +1085,7 @@ func TestAlterWorkflow_SetActivityDueDate(t *testing.T) {
 
 	stmt := prog.Statements[0].(*ast.AlterWorkflowStmt)
 	op := stmt.Operations[0].(*ast.SetActivityPropertyOp)
-	if op.Property != "DUE_DATE" {
+	if op.Property != "due_date" {
 		t.Errorf("Expected Property 'DUE_DATE', got %q", op.Property)
 	}
 	if op.Value != "PT72H" {

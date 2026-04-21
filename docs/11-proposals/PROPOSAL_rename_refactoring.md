@@ -5,7 +5,7 @@
 
 ## Motivation
 
-Renaming entities, microflows, pages, and modules is one of the most common refactoring operations. Currently mxcli has `RENAME ENTITY` and `RENAME MODULE` in the grammar but neither is implemented. Renaming in Mendix is dangerous because cross-references are stored as qualified name strings (BY_NAME_REFERENCE) — renaming without updating references breaks the project.
+Renaming entities, microflows, pages, and modules is one of the most common refactoring operations. Currently mxcli has `rename entity` and `rename module` in the grammar but neither is implemented. Renaming in Mendix is dangerous because cross-references are stored as qualified name strings (BY_NAME_REFERENCE) — renaming without updating references breaks the project.
 
 A safe RENAME command that automatically updates all references would be a significant productivity gain, especially for AI-assisted refactoring workflows (e.g., monolith-to-multi-app decomposition).
 
@@ -15,11 +15,11 @@ A safe RENAME command that automatically updates all references would be a signi
 
 | Operation | Status |
 |-----------|--------|
-| `ALTER ENTITY ... RENAME ATTRIBUTE Old TO New` | Works |
-| `ALTER ENUMERATION ... RENAME VALUE Old TO New` | Works |
-| `RENAME ENTITY Module.Old TO New` | Grammar only, not implemented |
-| `RENAME MODULE Old TO New` | Grammar only, not implemented |
-| `RENAME MICROFLOW/PAGE/NANOFLOW ...` | Not in grammar |
+| `alter entity ... rename attribute Old to New` | Works |
+| `alter enumeration ... rename value Old to New` | Works |
+| `rename entity Module.Old to New` | Grammar only, not implemented |
+| `rename module Old to New` | Grammar only, not implemented |
+| `rename microflow/page/nanoflow ...` | Not in grammar |
 
 ### Existing reference-update code
 
@@ -45,25 +45,25 @@ All cross-document references use BY_NAME_REFERENCE. This is the fundamental cha
 
 ```sql
 -- Rename entity (updates all references)
-RENAME ENTITY Module.OldName TO NewName;
+rename entity Module.OldName to NewName;
 
 -- Rename microflow
-RENAME MICROFLOW Module.OldName TO NewName;
+rename microflow Module.OldName to NewName;
 
 -- Rename nanoflow
-RENAME NANOFLOW Module.OldName TO NewName;
+rename nanoflow Module.OldName to NewName;
 
 -- Rename page
-RENAME PAGE Module.OldName TO NewName;
+rename page Module.OldName to NewName;
 
 -- Rename module (updates ALL qualified names)
-RENAME MODULE OldName TO NewName;
+rename module OldName to NewName;
 
 -- Dry run: show what would change without modifying anything
-RENAME ENTITY Module.OldName TO NewName DRY RUN;
+rename entity Module.OldName to NewName dry run;
 ```
 
-The `TO` target is always just a name (not qualified) — the document stays in the same module. Cross-module moves are handled by the existing `MOVE` command.
+The `to` target is always just a name (not qualified) — the document stays in the same module. Cross-module moves are handled by the existing `move` command.
 
 ### Reference Update Matrix
 
@@ -73,13 +73,13 @@ When renaming `Module.OldEntity` to `Module.NewEntity`, these BY_NAME references
 |----------|----------------|---------|
 | **Microflow actions** | Entity in CREATE/RETRIEVE/DELETE/CHANGE/AGGREGATE/LIST | `"Module.OldEntity"` → `"Module.NewEntity"` |
 | **Microflow parameters** | Entity type reference | `$Param: Module.OldEntity` |
-| **Microflow return types** | Entity type reference | `RETURNS Module.OldEntity` |
+| **Microflow return types** | Entity type reference | `returns Module.OldEntity` |
 | **Associations** | Cross-module child/parent refs | `"Module.OldEntity"` in `Child` field |
-| **Generalization** | Parent entity reference | `EXTENDS Module.OldEntity` |
+| **Generalization** | Parent entity reference | `extends Module.OldEntity` |
 | **Enumeration attributes** | EnumerationRef on attribute types | `"Module.OldEnum"` |
-| **View entity OQL** | Entity names in SELECT/FROM/JOIN | `FROM Module.OldEntity AS e` |
-| **Page datasources** | Entity in DATABASE/XPATH sources | `DataSource: DATABASE Module.OldEntity` |
-| **Page parameter types** | Entity type in page params | `Params: { $p: Module.OldEntity }` |
+| **View entity OQL** | Entity names in SELECT/FROM/JOIN | `from Module.OldEntity as e` |
+| **Page datasources** | Entity in DATABASE/XPATH sources | `datasource: database Module.OldEntity` |
+| **Page parameter types** | Entity type in page params | `params: { $p: Module.OldEntity }` |
 | **Navigation** | Home page, login page refs | `"Module.OldPage"` |
 | **Settings** | After-startup, before-shutdown microflow | `"Module.OldMicroflow"` |
 | **Security** | Allowed module roles on microflows | (BY_NAME refs) |
@@ -144,19 +144,19 @@ The match is: string equals `oldName` OR string starts with `oldName + "."`.
 
 ### Dry Run Mode
 
-`DRY RUN` scans without modifying, outputting what would change:
+`dry run` scans without modifying, outputting what would change:
 
 ```
-RENAME ENTITY MyModule.Customer TO Client DRY RUN;
+rename entity MyModule.Customer to client dry run;
 
 Would rename: MyModule.Customer → MyModule.Client
-References found: 23
-  MyModule.ACT_Customer_Save (Microflow) — 3 references
-  MyModule.ACT_Customer_Delete (Microflow) — 2 references
-  MyModule.Customer_Overview (Page) — 4 references
-  MyModule.Customer_Edit (Page) — 5 references
-  MyModule.Order (Entity) — 1 reference (association)
-  MyModule.IMM_CustomerResponse (Import Mapping) — 2 references
+references found: 23
+  MyModule.ACT_Customer_Save (microflow) — 3 references
+  MyModule.ACT_Customer_Delete (microflow) — 2 references
+  MyModule.Customer_Overview (page) — 4 references
+  MyModule.Customer_Edit (page) — 5 references
+  MyModule.Order (entity) — 1 reference (association)
+  MyModule.IMM_CustomerResponse (import mapping) — 2 references
   ...
 ```
 
@@ -178,11 +178,11 @@ Additionally, module rename must update:
 
 1. Implement `RenameReferences(old, new string) ([]RenameHit, error)` in `sdk/mpr/writer_rename.go`
 2. Implement `replaceStringValues()` BSON tree walker
-3. Add `DRY RUN` support to show affected documents without modifying
-4. Wire `RENAME ENTITY` and `RENAME MODULE` grammar rules to AST + visitor + executor
+3. Add `dry run` support to show affected documents without modifying
+4. Wire `rename entity` and `rename module` grammar rules to AST + visitor + executor
 5. Executor calls dry-run scanner and reports results
 
-**Deliverable**: `RENAME ENTITY Module.Old TO New DRY RUN;` works and lists all references.
+**Deliverable**: `rename entity Module.Old to New dry run;` works and lists all references.
 
 ### Phase 2: Entity and enumeration rename
 
@@ -190,26 +190,26 @@ Additionally, module rename must update:
 7. Handle attribute-qualified names (`Module.Entity.Attribute` patterns)
 8. Handle OQL queries in ViewEntitySourceDocuments (string replacement in OQL text)
 9. Test with roundtrip: rename → `mx check` → 0 errors
-10. Add `RENAME ENUMERATION` support
+10. Add `rename enumeration` support
 
 ### Phase 3: Microflow, nanoflow, page rename
 
-11. Implement `RENAME MICROFLOW/NANOFLOW/PAGE` in grammar + executor
+11. Implement `rename microflow/nanoflow/page` in grammar + executor
 12. Update navigation references (home pages, login pages)
 13. Update settings references (after-startup, before-shutdown)
 14. Update scheduled event microflow references
 
 ### Phase 4: Module rename
 
-15. Implement `RENAME MODULE` — prefix replacement on all qualified names
+15. Implement `rename module` — prefix replacement on all qualified names
 16. Handle filesystem directories (themesource, javasource)
 17. Handle the module security document name
 18. Handle folder container hierarchy updates
 
 ### Phase 5: Association and constant rename
 
-19. `RENAME ASSOCIATION Module.Old TO New`
-20. `RENAME CONSTANT Module.Old TO New`
+19. `rename association Module.Old to New`
+20. `rename constant Module.Old to New`
 
 ## Risks
 
@@ -221,7 +221,7 @@ The brute-force scanner replaces any BSON string matching the qualified name. In
 
 ### OQL query rewriting
 
-OQL queries reference entities as `Module.Entity` in FROM/JOIN clauses. Simple string replacement works for entity renames, but module renames need care — the OQL alias (`AS e`) stays the same, only the qualified name changes.
+OQL queries reference entities as `Module.Entity` in FROM/JOIN clauses. Simple string replacement works for entity renames, but module renames need care — the OQL alias (`as e`) stays the same, only the qualified name changes.
 
 ### Java source files
 

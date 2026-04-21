@@ -17,7 +17,7 @@
  *
  * @since 1.0.0
  */
-CREATE MODULE SalesOrder;
+create module SalesOrder;
 
 -- MARK: ENUMERATIONS
 
@@ -29,7 +29,7 @@ CREATE MODULE SalesOrder;
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION SalesOrder.OrderStatus (
+create enumeration SalesOrder.OrderStatus (
   Draft 'Draft',
   Confirmed 'Confirmed',
   InProduction 'In Production',
@@ -45,7 +45,7 @@ CREATE ENUMERATION SalesOrder.OrderStatus (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION SalesOrder.QuotationStatus (
+create enumeration SalesOrder.QuotationStatus (
   Draft 'Draft',
   Sent 'Sent',
   Accepted 'Accepted',
@@ -61,7 +61,7 @@ CREATE ENUMERATION SalesOrder.QuotationStatus (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION SalesOrder.OrderLineType (
+create enumeration SalesOrder.OrderLineType (
   Standard 'Standard Product',
   Bespoke 'Bespoke Design'
 );
@@ -80,30 +80,30 @@ CREATE ENUMERATION SalesOrder.OrderLineType (
  * @see CRM.Customer
  * @see SalesOrder.QuotationLine
  */
-@Position(50, 50)
-CREATE PERSISTENT ENTITY SalesOrder.Quotation (
+@position(50, 50)
+create persistent entity SalesOrder.Quotation (
   /** Auto-generated quotation number */
-  QuotationNumber: AutoNumber DEFAULT 1,
+  QuotationNumber: autonumber default 1,
   /** Quotation title or reference */
-  QuotationTitle: String(200),
+  QuotationTitle: string(200),
   /** Current status */
-  QuotationStatus: Enumeration(SalesOrder.QuotationStatus) NOT NULL ERROR 'Quotation status is required',
+  QuotationStatus: enumeration(SalesOrder.QuotationStatus) not null error 'Quotation status is required',
   /** Date the quotation was created */
-  QuotationDate: DateTime,
+  QuotationDate: datetime,
   /** Date when this quote expires */
-  ExpiryDate: DateTime,
+  ExpiryDate: datetime,
   /** Subtotal before tax */
-  Subtotal: Decimal DEFAULT 0,
+  Subtotal: decimal default 0,
   /** Tax amount */
-  TaxAmount: Decimal DEFAULT 0,
+  TaxAmount: decimal default 0,
   /** Total including tax */
-  TotalAmount: Decimal DEFAULT 0,
+  TotalAmount: decimal default 0,
   /** Discount percentage */
-  DiscountPercent: Decimal DEFAULT 0,
+  DiscountPercent: decimal default 0,
   /** Additional terms and conditions */
-  TermsAndConditions: String(4000),
+  TermsAndConditions: string(4000),
   /** Internal notes */
-  InternalNotes: String(2000)
+  InternalNotes: string(2000)
 );
 
 /**
@@ -115,20 +115,20 @@ CREATE PERSISTENT ENTITY SalesOrder.Quotation (
  * @since 1.0.0
  * @see SalesOrder.Quotation
  */
-@Position(350, 50)
-CREATE PERSISTENT ENTITY SalesOrder.QuotationLine (
+@position(350, 50)
+create persistent entity SalesOrder.QuotationLine (
   /** Line number for display ordering */
-  LineNumber: Integer NOT NULL ERROR 'Line number is required',
+  LineNumber: integer not null error 'Line number is required',
   /** Item description */
-  ItemDescription: String(500) NOT NULL ERROR 'Item description is required',
+  ItemDescription: string(500) not null error 'Item description is required',
   /** Quantity */
-  Quantity: Integer NOT NULL ERROR 'Quantity is required' DEFAULT 1,
+  Quantity: integer not null error 'Quantity is required' default 1,
   /** Unit price */
-  UnitPrice: Decimal NOT NULL ERROR 'Unit price is required',
+  UnitPrice: decimal not null error 'Unit price is required',
   /** Line total (quantity x unit price) */
-  LineTotal: Decimal DEFAULT 0,
+  LineTotal: decimal default 0,
   /** Whether this is a standard or bespoke item */
-  LineType: Enumeration(SalesOrder.OrderLineType) NOT NULL ERROR 'Line type is required'
+  LineType: enumeration(SalesOrder.OrderLineType) not null error 'Line type is required'
 );
 
 -- MARK: - Order Entities
@@ -143,35 +143,35 @@ CREATE PERSISTENT ENTITY SalesOrder.QuotationLine (
  * @see CRM.Customer
  * @see SalesOrder.OrderLine
  */
-@Position(50, 250)
-CREATE PERSISTENT ENTITY SalesOrder.CustomerOrder (
+@position(50, 250)
+create persistent entity SalesOrder.CustomerOrder (
   /** Auto-generated order number */
-  OrderNumber: AutoNumber DEFAULT 1,
+  OrderNumber: autonumber default 1,
   /** Order reference or PO number from customer */
-  CustomerReference: String(100),
+  CustomerReference: string(100),
   /** Current order status */
-  OrderStatus: Enumeration(SalesOrder.OrderStatus) NOT NULL ERROR 'Order status is required',
+  OrderStatus: enumeration(SalesOrder.OrderStatus) not null error 'Order status is required',
   /** Date the order was placed */
-  OrderDate: DateTime,
+  OrderDate: datetime,
   /** Requested delivery date */
-  RequestedDeliveryDate: DateTime,
+  RequestedDeliveryDate: datetime,
   /** Confirmed delivery date */
-  ConfirmedDeliveryDate: DateTime,
+  ConfirmedDeliveryDate: datetime,
   /** Subtotal before tax */
-  Subtotal: Decimal DEFAULT 0,
+  Subtotal: decimal default 0,
   /** Tax amount */
-  TaxAmount: Decimal DEFAULT 0,
+  TaxAmount: decimal default 0,
   /** Total including tax */
-  TotalAmount: Decimal DEFAULT 0,
+  TotalAmount: decimal default 0,
   /** Discount percentage */
-  DiscountPercent: Decimal DEFAULT 0,
+  DiscountPercent: decimal default 0,
   /** Special instructions from customer */
-  SpecialInstructions: String(2000),
+  SpecialInstructions: string(2000),
   /** Internal notes */
-  InternalNotes: String(2000)
+  InternalNotes: string(2000)
 )
-INDEX (OrderStatus)
-INDEX (OrderDate DESC);
+index (OrderStatus)
+index (OrderDate desc);
 
 /**
  * Order line entity
@@ -184,24 +184,24 @@ INDEX (OrderDate DESC);
  * @see ProductCatalog.CatalogProduct
  * @see BespokeDesign.DesignRequest
  */
-@Position(350, 250)
-CREATE PERSISTENT ENTITY SalesOrder.OrderLine (
+@position(350, 250)
+create persistent entity SalesOrder.OrderLine (
   /** Line number for display ordering */
-  LineNumber: Integer NOT NULL ERROR 'Line number is required',
+  LineNumber: integer not null error 'Line number is required',
   /** Item description */
-  ItemDescription: String(500) NOT NULL ERROR 'Item description is required',
+  ItemDescription: string(500) not null error 'Item description is required',
   /** Quantity ordered */
-  Quantity: Integer NOT NULL ERROR 'Quantity is required' DEFAULT 1,
+  Quantity: integer not null error 'Quantity is required' default 1,
   /** Unit price */
-  UnitPrice: Decimal NOT NULL ERROR 'Unit price is required',
+  UnitPrice: decimal not null error 'Unit price is required',
   /** Line total (quantity x unit price) */
-  LineTotal: Decimal DEFAULT 0,
+  LineTotal: decimal default 0,
   /** Whether this is a standard or bespoke item */
-  LineType: Enumeration(SalesOrder.OrderLineType) NOT NULL ERROR 'Line type is required',
+  LineType: enumeration(SalesOrder.OrderLineType) not null error 'Line type is required',
   /** Quantity already produced */
-  QuantityProduced: Integer DEFAULT 0,
+  QuantityProduced: integer default 0,
   /** Quantity delivered */
-  QuantityDelivered: Integer DEFAULT 0
+  QuantityDelivered: integer default 0
 );
 
 -- MARK: ASSOCIATIONS
@@ -215,11 +215,11 @@ CREATE PERSISTENT ENTITY SalesOrder.OrderLine (
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.Quotation_Customer
-  FROM SalesOrder.Quotation TO CRM.Customer
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association SalesOrder.Quotation_Customer
+  from SalesOrder.Quotation to CRM.Customer
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links quotation line to its quotation
@@ -228,11 +228,11 @@ CREATE ASSOCIATION SalesOrder.Quotation_Customer
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.QuotationLine_Quotation
-  FROM SalesOrder.QuotationLine TO SalesOrder.Quotation
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association SalesOrder.QuotationLine_Quotation
+  from SalesOrder.QuotationLine to SalesOrder.Quotation
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links quotation line to a catalog product (optional)
@@ -242,11 +242,11 @@ CREATE ASSOCIATION SalesOrder.QuotationLine_Quotation
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.QuotationLine_CatalogProduct
-  FROM SalesOrder.QuotationLine TO ProductCatalog.CatalogProduct
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association SalesOrder.QuotationLine_CatalogProduct
+  from SalesOrder.QuotationLine to ProductCatalog.CatalogProduct
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 -- MARK: - Order Associations
 
@@ -257,11 +257,11 @@ CREATE ASSOCIATION SalesOrder.QuotationLine_CatalogProduct
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.CustomerOrder_Customer
-  FROM SalesOrder.CustomerOrder TO CRM.Customer
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association SalesOrder.CustomerOrder_Customer
+  from SalesOrder.CustomerOrder to CRM.Customer
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links order to its originating quotation (optional)
@@ -270,11 +270,11 @@ CREATE ASSOCIATION SalesOrder.CustomerOrder_Customer
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.CustomerOrder_Quotation
-  FROM SalesOrder.CustomerOrder TO SalesOrder.Quotation
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association SalesOrder.CustomerOrder_Quotation
+  from SalesOrder.CustomerOrder to SalesOrder.Quotation
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links order line to its order
@@ -283,11 +283,11 @@ CREATE ASSOCIATION SalesOrder.CustomerOrder_Quotation
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.OrderLine_CustomerOrder
-  FROM SalesOrder.OrderLine TO SalesOrder.CustomerOrder
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association SalesOrder.OrderLine_CustomerOrder
+  from SalesOrder.OrderLine to SalesOrder.CustomerOrder
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links order line to a catalog product (optional)
@@ -297,11 +297,11 @@ CREATE ASSOCIATION SalesOrder.OrderLine_CustomerOrder
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.OrderLine_CatalogProduct
-  FROM SalesOrder.OrderLine TO ProductCatalog.CatalogProduct
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association SalesOrder.OrderLine_CatalogProduct
+  from SalesOrder.OrderLine to ProductCatalog.CatalogProduct
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links order line to a bespoke design request (optional)
@@ -311,11 +311,11 @@ CREATE ASSOCIATION SalesOrder.OrderLine_CatalogProduct
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.OrderLine_DesignRequest
-  FROM SalesOrder.OrderLine TO BespokeDesign.DesignRequest
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association SalesOrder.OrderLine_DesignRequest
+  from SalesOrder.OrderLine to BespokeDesign.DesignRequest
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links order to the delivery address
@@ -324,8 +324,8 @@ CREATE ASSOCIATION SalesOrder.OrderLine_DesignRequest
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION SalesOrder.CustomerOrder_DeliveryAddress
-  FROM SalesOrder.CustomerOrder TO CRM.CustomerAddress
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association SalesOrder.CustomerOrder_DeliveryAddress
+  from SalesOrder.CustomerOrder to CRM.CustomerAddress
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;

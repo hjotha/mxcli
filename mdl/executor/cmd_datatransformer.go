@@ -76,12 +76,12 @@ func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
 		w := ctx.Output
 
 		// Emit re-executable MDL
-		fmt.Fprintf(w, "CREATE DATA TRANSFORMER %s.%s\n", modName, dt.Name)
+		fmt.Fprintf(w, "create data transformer %s.%s\n", modName, dt.Name)
 
 		// Source — collapse newlines into spaces for single-line string
 		sourceContent := strings.ReplaceAll(dt.SourceJSON, "\n", " ")
 		sourceContent = strings.ReplaceAll(sourceContent, "'", "''")
-		fmt.Fprintf(w, "SOURCE %s '%s'\n", dt.SourceType, sourceContent)
+		fmt.Fprintf(w, "source %s '%s'\n", dt.SourceType, sourceContent)
 		fmt.Fprintln(w, "{")
 
 		for _, step := range dt.Steps {
@@ -109,7 +109,7 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 	}
 
 	if err := checkFeature(ctx, "integration", "data_transformer",
-		"CREATE DATA TRANSFORMER",
+		"create data transformer",
 		"upgrade your project to 11.9+"); err != nil {
 		return err
 	}

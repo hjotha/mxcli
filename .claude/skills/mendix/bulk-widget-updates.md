@@ -1,15 +1,15 @@
 # Bulk Widget Property Updates
 
 > **EXPERIMENTAL**: These commands are an untested proof-of-concept.
-> Always use `DRY RUN` first and backup your project before applying changes.
+> Always use `dry run` first and backup your project before applying changes.
 
-Use `SHOW WIDGETS` and `UPDATE WIDGETS` to discover and modify widget properties across pages and snippets in bulk.
+Use `show widgets` and `update widgets` to discover and modify widget properties across pages and snippets in bulk.
 
 ## Prerequisites
 
 Widget commands require a full catalog build:
 ```sql
-REFRESH CATALOG FULL;
+refresh catalog full;
 ```
 
 ## SHOW WIDGETS - Discover Widgets
@@ -18,19 +18,19 @@ REFRESH CATALOG FULL;
 
 ```sql
 -- Show all widgets
-SHOW WIDGETS;
+show widgets;
 
 -- Filter by module
-SHOW WIDGETS IN MyModule;
+show widgets in MyModule;
 
 -- Filter by widget type (case-insensitive LIKE)
-SHOW WIDGETS WHERE WidgetType LIKE '%combobox%';
+show widgets where widgettype like '%combobox%';
 
 -- Filter by name
-SHOW WIDGETS WHERE Name = 'myGrid';
+show widgets where Name = 'myGrid';
 
 -- Combine filters
-SHOW WIDGETS WHERE WidgetType LIKE '%DataGrid%' AND Name LIKE '%Overview%' IN MyModule;
+show widgets where widgettype like '%DataGrid%' and Name like '%Overview%' in MyModule;
 ```
 
 ### Output Columns
@@ -57,11 +57,11 @@ SHOW WIDGETS WHERE WidgetType LIKE '%DataGrid%' AND Name LIKE '%Overview%' IN My
 ### Syntax
 
 ```sql
-UPDATE WIDGETS
-  SET 'propertyName' = value [, 'propertyName' = value ...]
-  WHERE condition [AND condition ...]
-  [IN Module]
-  [DRY RUN];
+update widgets
+  set 'propertyName' = value [, 'propertyName' = value ...]
+  where condition [and condition ...]
+  [in module]
+  [dry run];
 ```
 
 ### Dry Run (Preview Changes)
@@ -70,35 +70,35 @@ Always preview changes first:
 
 ```sql
 -- See what would change without modifying
-UPDATE WIDGETS
-  SET 'showLabel' = false
-  WHERE WidgetType LIKE '%combobox%'
-  DRY RUN;
+update widgets
+  set 'showLabel' = false
+  where widgettype like '%combobox%'
+  dry run;
 ```
 
 Output shows:
 ```
-Found 5 widget(s) in 3 container(s) matching the criteria
+found 5 widget(s) in 3 container(s) matching the criteria
 
-[DRY RUN] The following changes would be made:
-  Would set 'showLabel' = false on combobox1 (ComboBox) in MyModule.OrderForm
-  Would set 'showLabel' = false on combobox2 (ComboBox) in MyModule.CustomerPage
+[dry run] The following changes would be made:
+  Would set 'showLabel' = false on combobox1 (combobox) in MyModule.OrderForm
+  Would set 'showLabel' = false on combobox2 (combobox) in MyModule.CustomerPage
   ...
 
-[DRY RUN] Would update 5 widget(s)
+[dry run] Would update 5 widget(s)
 
-Run without DRY RUN to apply changes.
+run without dry run to apply changes.
 ```
 
 ### Apply Changes
 
-Remove `DRY RUN` to apply:
+Remove `dry run` to apply:
 
 ```sql
-UPDATE WIDGETS
-  SET 'showLabel' = false
-  WHERE WidgetType LIKE '%combobox%'
-  IN MyModule;
+update widgets
+  set 'showLabel' = false
+  where widgettype like '%combobox%'
+  in MyModule;
 ```
 
 ### Property Value Types
@@ -114,20 +114,20 @@ UPDATE WIDGETS
 
 ```sql
 -- Hide labels on all comboboxes
-UPDATE WIDGETS
-  SET 'showLabel' = false
-  WHERE WidgetType LIKE '%combobox%';
+update widgets
+  set 'showLabel' = false
+  where widgettype like '%combobox%';
 
 -- Set multiple properties
-UPDATE WIDGETS
-  SET 'showLabel' = false, 'labelWidth' = 4
-  WHERE WidgetType LIKE '%textbox%'
-  IN MyModule;
+update widgets
+  set 'showLabel' = false, 'labelWidth' = 4
+  where widgettype like '%textbox%'
+  in MyModule;
 
 -- Change filter mode on DataGrid filters
-UPDATE WIDGETS
-  SET 'filterMode' = 'contains'
-  WHERE WidgetType LIKE '%DatagridTextFilter%';
+update widgets
+  set 'filterMode' = 'contains'
+  where widgettype like '%DatagridTextFilter%';
 ```
 
 ## Important Notes
@@ -143,7 +143,7 @@ UPDATE WIDGETS
 
 1. Refresh the catalog to see updated data:
    ```sql
-   REFRESH CATALOG FULL FORCE;
+   refresh catalog full force;
    ```
 
 2. Open the project in Studio Pro to verify changes
@@ -165,27 +165,27 @@ NOT supported:
 
 To find the correct property names:
 1. Create a widget in Studio Pro
-2. Use `DESCRIBE PAGE Module.PageName` to see widget structure
+2. Use `describe page Module.PageName` to see widget structure
 3. Or check the Mendix widget documentation
 
 ## Workflow Example
 
 ```sql
 -- 1. Build catalog
-REFRESH CATALOG FULL;
+refresh catalog full;
 
 -- 2. Discover widgets
-SHOW WIDGETS WHERE WidgetType LIKE '%combobox%';
+show widgets where widgettype like '%combobox%';
 
 -- 3. Preview changes
-UPDATE WIDGETS SET 'showLabel' = false WHERE WidgetType LIKE '%combobox%' DRY RUN;
+update widgets set 'showLabel' = false where widgettype like '%combobox%' dry run;
 
 -- 4. Apply changes
-UPDATE WIDGETS SET 'showLabel' = false WHERE WidgetType LIKE '%combobox%';
+update widgets set 'showLabel' = false where widgettype like '%combobox%';
 
 -- 5. Rebuild catalog
-REFRESH CATALOG FULL FORCE;
+refresh catalog full force;
 
 -- 6. Verify
-SHOW WIDGETS WHERE WidgetType LIKE '%combobox%';
+show widgets where widgettype like '%combobox%';
 ```

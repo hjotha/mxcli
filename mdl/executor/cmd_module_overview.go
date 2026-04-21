@@ -58,7 +58,7 @@ func ModuleOverview(ctx *ExecContext) error {
 	}
 
 	// Get all module names
-	moduleResult, err := ctx.Catalog.Query("SELECT Name FROM modules")
+	moduleResult, err := ctx.Catalog.Query("select Name from modules")
 	if err != nil {
 		return mdlerrors.NewBackend("query modules", err)
 	}
@@ -72,7 +72,7 @@ func ModuleOverview(ctx *ExecContext) error {
 
 	// Get entity counts per module
 	entityCounts := make(map[string]int)
-	result, err := ctx.Catalog.Query("SELECT ModuleName, COUNT(*) FROM entities GROUP BY ModuleName")
+	result, err := ctx.Catalog.Query("select ModuleName, count(*) from entities GROUP by ModuleName")
 	if err == nil {
 		for _, row := range result.Rows {
 			if name, ok := row[0].(string); ok {
@@ -83,7 +83,7 @@ func ModuleOverview(ctx *ExecContext) error {
 
 	// Get microflow counts per module
 	mfCounts := make(map[string]int)
-	result, err = ctx.Catalog.Query("SELECT ModuleName, COUNT(*) FROM microflows GROUP BY ModuleName")
+	result, err = ctx.Catalog.Query("select ModuleName, count(*) from microflows GROUP by ModuleName")
 	if err == nil {
 		for _, row := range result.Rows {
 			if name, ok := row[0].(string); ok {
@@ -94,7 +94,7 @@ func ModuleOverview(ctx *ExecContext) error {
 
 	// Get page counts per module
 	pageCounts := make(map[string]int)
-	result, err = ctx.Catalog.Query("SELECT ModuleName, COUNT(*) FROM pages GROUP BY ModuleName")
+	result, err = ctx.Catalog.Query("select ModuleName, count(*) from pages GROUP by ModuleName")
 	if err == nil {
 		for _, row := range result.Rows {
 			if name, ok := row[0].(string); ok {
@@ -121,15 +121,15 @@ func ModuleOverview(ctx *ExecContext) error {
 
 	// Query cross-module dependency edges from REFS
 	edgeResult, err := ctx.Catalog.Query(`
-		SELECT
+		select
 			SUBSTR(SourceName, 1, INSTR(SourceName, '.') - 1) as SourceModule,
 			SUBSTR(TargetName, 1, INSTR(TargetName, '.') - 1) as TargetModule,
 			RefKind,
-			COUNT(*) as RefCount
-		FROM refs
-		WHERE INSTR(SourceName, '.') > 0 AND INSTR(TargetName, '.') > 0
-		GROUP BY SourceModule, TargetModule, RefKind
-		HAVING SourceModule != TargetModule
+			count(*) as RefCount
+		from refs
+		where INSTR(SourceName, '.') > 0 and INSTR(TargetName, '.') > 0
+		GROUP by SourceModule, TargetModule, RefKind
+		having SourceModule != TargetModule
 	`)
 	if err != nil {
 		return mdlerrors.NewBackend("query refs", err)
@@ -184,7 +184,7 @@ func ModuleOverview(ctx *ExecContext) error {
 
 	out, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return mdlerrors.NewBackend("marshal JSON", err)
+		return mdlerrors.NewBackend("marshal json", err)
 	}
 
 	fmt.Fprint(ctx.Output, string(out))

@@ -72,7 +72,7 @@ func TestWriteResultJSON(t *testing.T) {
 
 	var result []map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("invalid JSON: %v\noutput: %s", err, buf.String())
+		t.Fatalf("invalid json: %v\noutput: %s", err, buf.String())
 	}
 
 	if len(result) != 2 {
@@ -103,7 +103,7 @@ func TestWriteResultJSONEmpty(t *testing.T) {
 
 	var result []map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("invalid JSON: %v", err)
+		t.Fatalf("invalid json: %v", err)
 	}
 	if len(result) != 0 {
 		t.Fatalf("expected empty array, got %d items", len(result))
@@ -115,7 +115,7 @@ func TestWriteDescribeJSON(t *testing.T) {
 	e := &Executor{output: &buf, format: FormatJSON}
 
 	err := e.writeDescribeJSON("Sales.Customer", "entity", func() error {
-		_, err := e.output.Write([]byte("CREATE ENTITY Sales.Customer;\n"))
+		_, err := e.output.Write([]byte("create entity Sales.Customer;\n"))
 		return err
 	})
 	if err != nil {
@@ -124,7 +124,7 @@ func TestWriteDescribeJSON(t *testing.T) {
 
 	var result map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("invalid JSON: %v\noutput: %s", err, buf.String())
+		t.Fatalf("invalid json: %v\noutput: %s", err, buf.String())
 	}
 
 	if result["name"] != "Sales.Customer" {
@@ -133,8 +133,8 @@ func TestWriteDescribeJSON(t *testing.T) {
 	if result["type"] != "entity" {
 		t.Errorf("expected type entity, got %v", result["type"])
 	}
-	if !strings.Contains(result["mdl"].(string), "CREATE ENTITY") {
-		t.Errorf("expected mdl to contain CREATE ENTITY, got %v", result["mdl"])
+	if !strings.Contains(result["mdl"].(string), "create entity") {
+		t.Errorf("expected mdl to contain create entity, got %v", result["mdl"])
 	}
 }
 
@@ -143,7 +143,7 @@ func TestWriteDescribeJSONPassthrough(t *testing.T) {
 	e := &Executor{output: &buf} // format is default (table)
 
 	err := e.writeDescribeJSON("Sales.Customer", "entity", func() error {
-		_, err := e.output.Write([]byte("CREATE ENTITY Sales.Customer;\n"))
+		_, err := e.output.Write([]byte("create entity Sales.Customer;\n"))
 		return err
 	})
 	if err != nil {
@@ -152,7 +152,7 @@ func TestWriteDescribeJSONPassthrough(t *testing.T) {
 
 	// In table mode, should pass through directly
 	out := buf.String()
-	if out != "CREATE ENTITY Sales.Customer;\n" {
+	if out != "create entity Sales.Customer;\n" {
 		t.Errorf("expected passthrough, got: %s", out)
 	}
 }

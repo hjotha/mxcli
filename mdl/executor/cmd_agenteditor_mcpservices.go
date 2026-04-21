@@ -24,7 +24,7 @@ func listAgentEditorConsumedMCPServices(ctx *ExecContext, moduleName string) err
 
 	svcs, err := ctx.Backend.ListAgentEditorConsumedMCPServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list consumed MCP services", err)
+		return mdlerrors.NewBackend("list consumed mcp services", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -52,7 +52,7 @@ func listAgentEditorConsumedMCPServices(ctx *ExecContext, moduleName string) err
 		})
 	}
 
-	result.Summary = fmt.Sprintf("(%d consumed MCP service(s))", len(result.Rows))
+	result.Summary = fmt.Sprintf("(%d consumed mcp service(s))", len(result.Rows))
 	return writeResult(ctx, result)
 }
 
@@ -64,7 +64,7 @@ func describeAgentEditorConsumedMCPService(ctx *ExecContext, name ast.QualifiedN
 
 	c := findAgentEditorConsumedMCPService(ctx, name.Module, name.Name)
 	if c == nil {
-		return mdlerrors.NewNotFound("consumed MCP service", name.String())
+		return mdlerrors.NewNotFound("consumed mcp service", name.String())
 	}
 
 	h, err := getHierarchy(ctx)
@@ -79,7 +79,7 @@ func describeAgentEditorConsumedMCPService(ctx *ExecContext, name ast.QualifiedN
 		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", c.Documentation)
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE CONSUMED MCP SERVICE %s (\n", qualifiedName)
+	fmt.Fprintf(ctx.Output, "create consumed mcp service %s (\n", qualifiedName)
 
 	var lines []string
 	if c.ProtocolVersion != "" {

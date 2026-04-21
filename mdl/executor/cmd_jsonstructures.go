@@ -18,7 +18,7 @@ import (
 func listJsonStructures(ctx *ExecContext, moduleName string) error {
 	structures, err := ctx.Backend.ListJsonStructures()
 	if err != nil {
-		return mdlerrors.NewBackend("list JSON structures", err)
+		return mdlerrors.NewBackend("list json structures", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -49,7 +49,7 @@ func listJsonStructures(ctx *ExecContext, moduleName string) error {
 
 		source := "Manual"
 		if js.JsonSnippet != "" {
-			source = "JSON Snippet"
+			source = "json Snippet"
 		}
 
 		rows = append(rows, row{qualifiedName: qualifiedName, elemCount: elemCount, source: source})
@@ -59,8 +59,8 @@ func listJsonStructures(ctx *ExecContext, moduleName string) error {
 	sort.Slice(rows, func(i, j int) bool { return rows[i].qualifiedName < rows[j].qualifiedName })
 
 	tr := &TableResult{
-		Columns: []string{"JSON Structure", "Elements", "Source"},
-		Summary: fmt.Sprintf("(%d JSON structure(s))", len(rows)),
+		Columns: []string{"json Structure", "Elements", "Source"},
+		Summary: fmt.Sprintf("(%d json structure(s))", len(rows)),
 	}
 	for _, r := range rows {
 		tr.Rows = append(tr.Rows, []any{r.qualifiedName, r.elemCount, r.source})
@@ -73,7 +73,7 @@ func listJsonStructures(ctx *ExecContext, moduleName string) error {
 func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 	js := findJsonStructure(ctx, name.Module, name.Name)
 	if js == nil {
-		return mdlerrors.NewNotFound("JSON structure", name.String())
+		return mdlerrors.NewNotFound("json structure", name.String())
 	}
 
 	h, err := getHierarchy(ctx)
@@ -91,20 +91,20 @@ func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Re-executable CREATE OR REPLACE statement
-	fmt.Fprintf(ctx.Output, "CREATE OR REPLACE JSON STRUCTURE %s", qualifiedName)
+	fmt.Fprintf(ctx.Output, "create or replace json structure %s", qualifiedName)
 	if folderPath := h.BuildFolderPath(js.ContainerID); folderPath != "" {
-		fmt.Fprintf(ctx.Output, "\n  FOLDER '%s'", folderPath)
+		fmt.Fprintf(ctx.Output, "\n  folder '%s'", folderPath)
 	}
 	if js.Documentation != "" {
-		fmt.Fprintf(ctx.Output, "\n  COMMENT '%s'", strings.ReplaceAll(js.Documentation, "'", "''"))
+		fmt.Fprintf(ctx.Output, "\n  comment '%s'", strings.ReplaceAll(js.Documentation, "'", "''"))
 	}
 
 	if js.JsonSnippet != "" {
 		snippet := types.PrettyPrintJSON(js.JsonSnippet)
 		if strings.Contains(snippet, "'") || strings.Contains(snippet, "\n") {
-			fmt.Fprintf(ctx.Output, "\n  SNIPPET $$%s$$", snippet)
+			fmt.Fprintf(ctx.Output, "\n  snippet $$%s$$", snippet)
 		} else {
-			fmt.Fprintf(ctx.Output, "\n  SNIPPET '%s'", snippet)
+			fmt.Fprintf(ctx.Output, "\n  snippet '%s'", snippet)
 		}
 	}
 
@@ -118,13 +118,13 @@ func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 		sort.Strings(keys)
 
-		fmt.Fprintf(ctx.Output, "\n  CUSTOM NAME MAP (\n")
+		fmt.Fprintf(ctx.Output, "\n  CUSTOM NAME map (\n")
 		for i, jsonKey := range keys {
 			sep := ","
 			if i == len(keys)-1 {
 				sep = ""
 			}
-			fmt.Fprintf(ctx.Output, "    '%s' AS '%s'%s\n", jsonKey, customMappings[jsonKey], sep)
+			fmt.Fprintf(ctx.Output, "    '%s' as '%s'%s\n", jsonKey, customMappings[jsonKey], sep)
 		}
 		fmt.Fprintf(ctx.Output, "  )")
 	}
@@ -199,10 +199,10 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 		if s.CreateOrReplace {
 			// Delete existing before recreating
 			if err := ctx.Backend.DeleteJsonStructure(string(existing.ID)); err != nil {
-				return mdlerrors.NewBackend("delete existing JSON structure", err)
+				return mdlerrors.NewBackend("delete existing json structure", err)
 			}
 		} else {
-			return mdlerrors.NewAlreadyExists("JSON structure", s.Name.Module+"."+s.Name.Name)
+			return mdlerrors.NewAlreadyExists("json structure", s.Name.Module+"."+s.Name.Name)
 		}
 	}
 
@@ -226,7 +226,7 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 	}
 
 	if err := ctx.Backend.CreateJsonStructure(js); err != nil {
-		return mdlerrors.NewBackend("create JSON structure", err)
+		return mdlerrors.NewBackend("create json structure", err)
 	}
 
 	// Invalidate hierarchy cache
@@ -236,7 +236,7 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 	if existing != nil {
 		action = "Replaced"
 	}
-	fmt.Fprintf(ctx.Output, "%s JSON structure: %s\n", action, s.Name)
+	fmt.Fprintf(ctx.Output, "%s json structure: %s\n", action, s.Name)
 	return nil
 }
 
@@ -248,14 +248,14 @@ func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error
 
 	js := findJsonStructure(ctx, s.Name.Module, s.Name.Name)
 	if js == nil {
-		return mdlerrors.NewNotFound("JSON structure", s.Name.String())
+		return mdlerrors.NewNotFound("json structure", s.Name.String())
 	}
 
 	if err := ctx.Backend.DeleteJsonStructure(string(js.ID)); err != nil {
-		return mdlerrors.NewBackend("delete JSON structure", err)
+		return mdlerrors.NewBackend("delete json structure", err)
 	}
 
-	fmt.Fprintf(ctx.Output, "Dropped JSON structure: %s\n", s.Name)
+	fmt.Fprintf(ctx.Output, "Dropped json structure: %s\n", s.Name)
 	return nil
 }
 

@@ -103,7 +103,7 @@ The `<file path>` must match `packagePath` + lowercase widget name, with dots re
         xmlns="http://www.mendix.com/widget/1.0/"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
-    <name><Widget Name></name>
+    <name><widget Name></name>
     <description><description></description>
     <icon/>
     <properties>
@@ -122,19 +122,19 @@ Set `needsEntityContext="true"` when the widget needs entity data. Set to `"fals
 
 | XML Type | Mendix Type | Use Case | Example |
 |----------|------------|----------|---------|
-| `string` | Static text | Labels, titles | `<property key="title" type="string"><caption>Title</caption></property>` |
-| `boolean` | Toggle | Show/hide, enable | `<property key="showHeader" type="boolean" defaultValue="true"><caption>Show header</caption></property>` |
-| `integer` | Number | Counts, sizes | `<property key="columns" type="integer" defaultValue="3"><caption>Columns</caption></property>` |
+| `string` | Static text | Labels, titles | `<property key="title" type="string"><caption>title</caption></property>` |
+| `boolean` | Toggle | Show/hide, enable | `<property key="showHeader" type="boolean" defaultValue="true"><caption>show header</caption></property>` |
+| `integer` | Number | Counts, sizes | `<property key="columns" type="integer" defaultValue="3"><caption>columns</caption></property>` |
 | `decimal` | Decimal | Measurements | `<property key="opacity" type="decimal" defaultValue="1.0"><caption>Opacity</caption></property>` |
 | `enumeration` | Enum choice | Mode selection | See below |
-| `expression` | Dynamic value | Computed text | `<property key="label" type="expression" defaultValue=""><caption>Label</caption><returnType type="String"/></property>` |
+| `expression` | Dynamic value | Computed text | `<property key="label" type="expression" defaultValue=""><caption>label</caption><returnType type="string"/></property>` |
 | `textTemplate` | Template text | Formatted text with params | See below |
 | `attribute` | Entity attribute | Data binding | See below |
-| `datasource` | List data source | Lists, grids | `<property key="dataSource" type="datasource" isList="true"><caption>Data source</caption></property>` |
-| `widgets` | Child widgets | Content slots | `<property key="content" type="widgets" required="false"><caption>Content</caption></property>` |
-| `action` | On-click action | Buttons, links | `<property key="onClick" type="action"><caption>On click</caption></property>` |
-| `icon` | Icon | Decorative | `<property key="icon" type="icon" required="false"><caption>Icon</caption></property>` |
-| `image` | Image | Avatar, logo | `<property key="image" type="image" required="false"><caption>Image</caption></property>` |
+| `datasource` | List data source | Lists, grids | `<property key="datasource" type="datasource" isList="true"><caption>data source</caption></property>` |
+| `widgets` | Child widgets | Content slots | `<property key="content" type="widgets" required="false"><caption>content</caption></property>` |
+| `action` | On-click action | Buttons, links | `<property key="onclick" type="action"><caption>on click</caption></property>` |
+| `icon` | Icon | Decorative | `<property key="icon" type="icon" required="false"><caption>icon</caption></property>` |
+| `image` | Image | Avatar, logo | `<property key="image" type="image" required="false"><caption>image</caption></property>` |
 | `object` | Compound | Complex config | See below |
 
 ### Enumeration Example
@@ -144,9 +144,9 @@ Set `needsEntityContext="true"` when the widget needs entity data. Set to `"fals
     <caption>Alignment</caption>
     <description/>
     <enumerationValues>
-        <enumerationValue key="left">Left</enumerationValue>
+        <enumerationValue key="left">left</enumerationValue>
         <enumerationValue key="center">Center</enumerationValue>
-        <enumerationValue key="right">Right</enumerationValue>
+        <enumerationValue key="right">right</enumerationValue>
     </enumerationValues>
 </property>
 ```
@@ -155,12 +155,12 @@ Set `needsEntityContext="true"` when the widget needs entity data. Set to `"fals
 
 ```xml
 <property key="value" type="attribute">
-    <caption>Value</caption>
+    <caption>value</caption>
     <description>The attribute to display</description>
     <attributeTypes>
-        <attributeType name="String"/>
-        <attributeType name="Integer"/>
-        <attributeType name="Decimal"/>
+        <attributeType name="string"/>
+        <attributeType name="integer"/>
+        <attributeType name="decimal"/>
     </attributeTypes>
 </property>
 ```
@@ -169,10 +169,10 @@ Set `needsEntityContext="true"` when the widget needs entity data. Set to `"fals
 
 ```xml
 <property key="displayText" type="textTemplate">
-    <caption>Display text</caption>
+    <caption>display text</caption>
     <description/>
     <translations>
-        <translation lang="en_US">Default text</translation>
+        <translation lang="en_US">default text</translation>
     </translations>
 </property>
 ```
@@ -181,30 +181,30 @@ Set `needsEntityContext="true"` when the widget needs entity data. Set to `"fals
 
 ```xml
 <property key="columns" type="object" isList="true">
-    <caption>Columns</caption>
+    <caption>columns</caption>
     <description/>
     <properties>
-        <propertyGroup caption="Column">
+        <propertyGroup caption="column">
             <property key="header" type="textTemplate">
-                <caption>Header</caption>
-                <translations><translation lang="en_US">Column</translation></translations>
+                <caption>header</caption>
+                <translations><translation lang="en_US">column</translation></translations>
             </property>
-            <property key="attribute" type="attribute" dataSource="dataSource">
-                <caption>Attribute</caption>
+            <property key="attribute" type="attribute" datasource="datasource">
+                <caption>attribute</caption>
                 <attributeTypes>
-                    <attributeType name="String"/>
-                    <attributeType name="Integer"/>
+                    <attributeType name="string"/>
+                    <attributeType name="integer"/>
                 </attributeTypes>
             </property>
             <property key="width" type="integer" defaultValue="100">
-                <caption>Width (px)</caption>
+                <caption>width (px)</caption>
             </property>
         </propertyGroup>
     </properties>
 </property>
 ```
 
-Note: `dataSource="dataSource"` links the attribute picker to the `dataSource` property.
+Note: `datasource="datasource"` links the attribute picker to the `datasource` property.
 
 ### Property Groups
 
@@ -218,7 +218,7 @@ Use nested `<propertyGroup>` for Studio Pro tab organization:
     <propertyGroup caption="Appearance">
         <!-- style properties -->
     </propertyGroup>
-    <propertyGroup caption="Events">
+    <propertyGroup caption="events">
         <!-- action properties -->
     </propertyGroup>
 </properties>
@@ -235,7 +235,7 @@ import { MyComponent } from "./components/MyComponent";
 import "./ui/<WidgetName>.css";
 
 export function <WidgetName>(props: <WidgetName>ContainerProps): ReactElement {
-    // Map Mendix props to React component props
+    // map Mendix props to React component props
     return <MyComponent {...relevantProps} />;
 }
 ```
@@ -245,43 +245,43 @@ The `typings/<WidgetName>Props.d.ts` file is **auto-generated** by the build too
 ### Key Mendix Prop Patterns
 
 ```tsx
-// String property
+// string property
 props.title  // string
 
-// Boolean property
+// boolean property
 props.showHeader  // boolean
 
-// Expression property
+// expression property
 props.label?.value  // string | undefined (use .value to get resolved text)
 
-// Attribute property (read)
+// attribute property (read)
 props.value?.displayValue  // string
 props.value?.value  // actual typed value
 
-// Attribute property (write)
+// attribute property (write)
 props.value?.setValue(newValue)
 
 // TextTemplate property
 props.displayText?.value  // string (resolved template)
 
-// Action property
+// action property
 props.onClick?.canExecute  // boolean
 props.onClick?.execute()   // trigger the action
 
-// Datasource property
+// datasource property
 props.dataSource?.items  // ObjectItem[] | undefined
 props.dataSource?.status  // "available" | "loading"
 
-// Widgets property (content slot)
+// widgets property (content slot)
 props.content  // ReactNode
 
-// Icon property
-import { Icon } from "mendix/components/web/Icon";
-<Icon icon={props.icon} />
+// icon property
+import { icon } from "mendix/components/web/icon";
+<icon icon={props.icon} />
 
-// Object list property (e.g. columns)
+// object list property (e.g. columns)
 props.columns  // Array<{ header, attribute, width }>
-// Access attribute value for a specific item:
+// access attribute value for a specific item:
 props.columns[0].attribute?.get(item)?.displayValue
 ```
 
@@ -320,7 +320,7 @@ Controls how the widget appears in Studio Pro's design mode:
 ```ts
 import { <WidgetName>PreviewProps } from "../typings/<WidgetName>Props";
 
-export type Properties = PropertyGroup[];
+export type properties = PropertyGroup[];
 type PropertyGroup = {
     caption: string;
     propertyGroups?: PropertyGroup[];
@@ -334,8 +334,8 @@ type Property = {
 
 export function getProperties(
     _values: <WidgetName>PreviewProps,
-    defaultProperties: Properties
-): Properties {
+    defaultProperties: properties
+): properties {
     return defaultProperties;
 }
 ```
@@ -374,17 +374,17 @@ Then open/reload the project in Studio Pro.
 
 ### KPI Card
 
-Properties: `title (string)`, `value (expression/String)`, `icon (icon)`, `trend (enumeration: up/down/neutral)`, `onClick (action)`
+Properties: `title (string)`, `value (expression/string)`, `icon (icon)`, `trend (enumeration: up/down/neutral)`, `onclick (action)`
 
 ### Chart Wrapper
 
-Properties: `dataSource (datasource)`, `valueAttr (attribute/Decimal)`, `labelAttr (attribute/String)`, `chartType (enumeration)`, `height (integer)`
+Properties: `datasource (datasource)`, `valueAttr (attribute/decimal)`, `labelAttr (attribute/string)`, `chartType (enumeration)`, `height (integer)`
 
 Wrap a charting library (Chart.js, Recharts) inside the component.
 
 ### Custom Input
 
-Properties: `value (attribute/String, writable)`, `placeholder (string)`, `onChange (action)`, `validation (expression/String)`
+Properties: `value (attribute/string, writable)`, `placeholder (string)`, `onchange (action)`, `validation (expression/string)`
 
 Set `needsEntityContext="true"`. Use `props.value.setValue()` for two-way binding.
 
@@ -405,13 +405,13 @@ Set `needsEntityContext="false"`. Render children via `{props.content}`.
 - [ ] No manual `Props.d.ts` file (auto-generated by build tool)
 - [ ] All `expression` properties have `<returnType>`
 - [ ] All `attribute` properties list valid `<attributeType>` entries
-- [ ] `object` properties with attributes set `dataSource` reference
+- [ ] `object` properties with attributes set `datasource` reference
 
 ## Troubleshooting
 
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `Cannot find module '../typings/...'` | Haven't built yet | Run `npm run build` first, types are generated |
-| `Widget not showing in Studio Pro` | Wrong `id` in XML | Ensure `id="packagePath.WidgetName"` |
+| `widget not showing in Studio Pro` | Wrong `id` in XML | Ensure `id="packagePath.WidgetName"` |
 | `CE0463 widget definition changed` | Property mismatch | Ensure XML and component props match |
 | `pluginWidget must be true` | Missing attribute | Add `pluginWidget="true"` to `<widget>` |

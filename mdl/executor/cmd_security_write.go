@@ -767,14 +767,14 @@ func execRevokePageAccess(ctx *ExecContext, s *ast.RevokePageAccessStmt) error {
 // Mendix workflows do not have a document-level AllowedModuleRoles field (unlike
 // microflows and pages), so this operation is not supported.
 func execGrantWorkflowAccess(ctx *ExecContext, s *ast.GrantWorkflowAccessStmt) error {
-	return mdlerrors.NewUnsupported("GRANT EXECUTE ON WORKFLOW is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
+	return mdlerrors.NewUnsupported("grant execute on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
 // execRevokeWorkflowAccess handles REVOKE EXECUTE ON WORKFLOW Module.WF FROM roles.
 // Mendix workflows do not have a document-level AllowedModuleRoles field (unlike
 // microflows and pages), so this operation is not supported.
 func execRevokeWorkflowAccess(ctx *ExecContext, s *ast.RevokeWorkflowAccessStmt) error {
-	return mdlerrors.NewUnsupported("REVOKE EXECUTE ON WORKFLOW is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
+	return mdlerrors.NewUnsupported("revoke execute on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
 // validateModuleRole checks that a module role exists in the project.
@@ -856,7 +856,7 @@ func execCreateDemoUser(ctx *ExecContext, s *ast.CreateDemoUserStmt) error {
 
 	// Validate password against project password policy
 	if err := ps.PasswordPolicy.ValidatePassword(s.Password); err != nil {
-		return mdlerrors.NewValidationf("password policy violation for demo user '%s': %v\nhint: check your project's password policy with SHOW PROJECT SECURITY", s.UserName, err)
+		return mdlerrors.NewValidationf("password policy violation for demo user '%s': %v\nhint: check your project's password policy with show project security", s.UserName, err)
 	}
 
 	// Check if user already exists
@@ -937,11 +937,11 @@ func detectUserEntity(ctx *ExecContext) (string, error) {
 
 	switch len(candidates) {
 	case 0:
-		return "", mdlerrors.NewValidation("no entity found that generalizes System.User; use ENTITY clause to specify one")
+		return "", mdlerrors.NewValidation("no entity found that generalizes System.User; use entity clause to specify one")
 	case 1:
 		return candidates[0], nil
 	default:
-		return "", mdlerrors.NewValidationf("multiple entities generalize System.User: %s; use ENTITY clause to specify one", joinCandidates(candidates))
+		return "", mdlerrors.NewValidationf("multiple entities generalize System.User: %s; use entity clause to specify one", joinCandidates(candidates))
 	}
 }
 
@@ -1117,7 +1117,7 @@ func execGrantPublishedRestServiceAccess(ctx *ExecContext, s *ast.GrantPublished
 	}
 
 	if err := checkFeature(ctx, "integration", "published_rest_grant_revoke",
-		"GRANT ACCESS ON PUBLISHED REST SERVICE",
+		"grant access on published rest service",
 		"upgrade your project to 10.0+"); err != nil {
 		return err
 	}
@@ -1129,7 +1129,7 @@ func execGrantPublishedRestServiceAccess(ctx *ExecContext, s *ast.GrantPublished
 
 	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list published REST services", err)
+		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
 	for _, svc := range services {
@@ -1163,18 +1163,18 @@ func execGrantPublishedRestServiceAccess(ctx *ExecContext, s *ast.GrantPublished
 		}
 
 		if err := ctx.Backend.UpdatePublishedRestServiceRoles(svc.ID, merged); err != nil {
-			return mdlerrors.NewBackend("update published REST service access", err)
+			return mdlerrors.NewBackend("update published rest service access", err)
 		}
 
 		if len(added) == 0 {
-			fmt.Fprintf(ctx.Output, "All specified roles already have access on published REST service %s.%s\n", modName, svc.Name)
+			fmt.Fprintf(ctx.Output, "All specified roles already have access on published rest service %s.%s\n", modName, svc.Name)
 		} else {
-			fmt.Fprintf(ctx.Output, "Granted access on published REST service %s.%s to %s\n", modName, svc.Name, strings.Join(added, ", "))
+			fmt.Fprintf(ctx.Output, "Granted access on published rest service %s.%s to %s\n", modName, svc.Name, strings.Join(added, ", "))
 		}
 		return nil
 	}
 
-	return mdlerrors.NewNotFound("published REST service", s.Service.Module+"."+s.Service.Name)
+	return mdlerrors.NewNotFound("published rest service", s.Service.Module+"."+s.Service.Name)
 }
 
 // execRevokePublishedRestServiceAccess handles REVOKE ACCESS ON PUBLISHED REST SERVICE Module.Svc FROM roles.
@@ -1190,7 +1190,7 @@ func execRevokePublishedRestServiceAccess(ctx *ExecContext, s *ast.RevokePublish
 
 	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list published REST services", err)
+		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
 	for _, svc := range services {
@@ -1218,18 +1218,18 @@ func execRevokePublishedRestServiceAccess(ctx *ExecContext, s *ast.RevokePublish
 		}
 
 		if err := ctx.Backend.UpdatePublishedRestServiceRoles(svc.ID, remaining); err != nil {
-			return mdlerrors.NewBackend("update published REST service access", err)
+			return mdlerrors.NewBackend("update published rest service access", err)
 		}
 
 		if len(removed) == 0 {
-			fmt.Fprintf(ctx.Output, "None of the specified roles had access on published REST service %s.%s\n", modName, svc.Name)
+			fmt.Fprintf(ctx.Output, "None of the specified roles had access on published rest service %s.%s\n", modName, svc.Name)
 		} else {
-			fmt.Fprintf(ctx.Output, "Revoked access on published REST service %s.%s from %s\n", modName, svc.Name, strings.Join(removed, ", "))
+			fmt.Fprintf(ctx.Output, "Revoked access on published rest service %s.%s from %s\n", modName, svc.Name, strings.Join(removed, ", "))
 		}
 		return nil
 	}
 
-	return mdlerrors.NewNotFound("published REST service", s.Service.Module+"."+s.Service.Name)
+	return mdlerrors.NewNotFound("published rest service", s.Service.Module+"."+s.Service.Name)
 }
 
 // execUpdateSecurity handles UPDATE SECURITY [IN Module].

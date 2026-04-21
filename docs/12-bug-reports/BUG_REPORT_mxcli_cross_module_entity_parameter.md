@@ -19,28 +19,28 @@ When creating a microflow with a parameter whose type is an entity from a differ
 
 2. Try to create a microflow with a cross-module entity parameter:
    ```sql
-   CREATE MICROFLOW MyFirstModule.TestMicroflow (
-     $Feedback: FeedbackModule.Feedback
+   create microflow MyFirstModule.TestMicroflow (
+     $feedback: FeedbackModule.Feedback
    )
-   RETURNS Boolean AS $IsValid
-   BEGIN
-     DECLARE $IsValid Boolean = true;
-     RETURN $IsValid;
-   END;
+   returns boolean as $IsValid
+   begin
+     declare $IsValid boolean = true;
+     return $IsValid;
+   end;
    /
    ```
 
 ## Expected Behavior
 
 The microflow should be created with:
-- Parameter `$Feedback` of type `FeedbackModule.Feedback`
-- Return type `Boolean`
+- Parameter `$feedback` of type `FeedbackModule.Feedback`
+- Return type `boolean`
 
 ## Actual Behavior
 
 The command fails with the error:
 ```
-Error: entity '.FeedbackModule' not found for parameter 'Feedback'
+error: entity '.FeedbackModule' not found for parameter 'Feedback'
 ```
 
 Additionally, parser warnings are shown:
@@ -52,7 +52,7 @@ line 2:27 mismatched input '.' expecting ')'
 
 The error message `entity '.FeedbackModule' not found` suggests the parser is incorrectly splitting the qualified entity name `FeedbackModule.Feedback`:
 - It appears to interpret `FeedbackModule` as `.FeedbackModule` (with a leading dot)
-- The entity name `Feedback` is being parsed separately
+- The entity name `feedback` is being parsed separately
 
 The parser seems to expect the parameter type to end at the module name, treating the `.` as an unexpected token.
 
@@ -60,19 +60,19 @@ The parser seems to expect the parameter type to end at the module name, treatin
 
 ### Attempt 1: Unqualified entity name
 ```sql
-$Feedback: Feedback
+$feedback: feedback
 ```
 **Result**: Microflow is created, but parameter type becomes `Void` instead of `FeedbackModule.Feedback`.
 
 ### Attempt 2: Single-line command
 ```bash
-./mxcli -p MesDemoApp.mpr -c "CREATE MICROFLOW MyFirstModule.TestParam(\$Feedback: FeedbackModule.Feedback) RETURNS Boolean AS \$IsValid BEGIN DECLARE \$IsValid Boolean = true; RETURN \$IsValid; END; /"
+./mxcli -p MesDemoApp.mpr -c "create microflow MyFirstModule.TestParam(\$feedback: FeedbackModule.Feedback) returns boolean as \$IsValid begin declare \$IsValid boolean = true; return \$IsValid; end; /"
 ```
 **Result**: Same error - `entity '.FeedbackModule' not found`
 
 ### Attempt 3: Script file execution
 ```bash
-./mxcli -p MesDemoApp.mpr -c "EXECUTE SCRIPT '/tmp/test.mdl'"
+./mxcli -p MesDemoApp.mpr -c "execute script '/tmp/test.mdl'"
 ```
 **Result**: Same error
 
@@ -90,15 +90,15 @@ But execution still fails, indicating a disconnect between the syntax checker an
 
 Creating a microflow **without** entity parameters works fine:
 ```sql
-CREATE MICROFLOW MyFirstModule.TestMicroflow()
-RETURNS Boolean AS $IsValid
-BEGIN
-  DECLARE $IsValid Boolean = true;
-  RETURN $IsValid;
-END;
+create microflow MyFirstModule.TestMicroflow()
+returns boolean as $IsValid
+begin
+  declare $IsValid boolean = true;
+  return $IsValid;
+end;
 /
 ```
-**Result**: `Created microflow: MyFirstModule.TestMicroflow`
+**Result**: `created microflow: MyFirstModule.TestMicroflow`
 
 ## Impact
 

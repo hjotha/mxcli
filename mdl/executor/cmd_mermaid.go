@@ -30,12 +30,12 @@ func describeMermaid(ctx *ExecContext, objectType, name string) error {
 		qn = ast.QualifiedName{Module: name}
 	}
 
-	switch strings.ToUpper(objectType) {
-	case "ENTITY", "DOMAINMODEL":
+	switch strings.ToLower(objectType) {
+	case "entity", "domainmodel":
 		return domainModelToMermaid(ctx, qn.Module)
-	case "MICROFLOW":
+	case "microflow":
 		return microflowToMermaid(ctx, qn)
-	case "PAGE":
+	case "page":
 		return pageToMermaid(ctx, qn)
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("mermaid format not supported for type: %s", objectType))
@@ -476,32 +476,32 @@ func mermaidActionLabel(a *microflows.ActionActivity, entityNames map[model.ID]s
 		return "Create " + sanitizeMermaidLabel(entityName)
 	case *microflows.ChangeObjectAction:
 		if act.ChangeVariable != "" {
-			return "CHANGE $" + sanitizeMermaidLabel(act.ChangeVariable)
+			return "change $" + sanitizeMermaidLabel(act.ChangeVariable)
 		}
 		return "Change Object"
 	case *microflows.CommitObjectsAction:
 		if act.CommitVariable != "" {
-			return "COMMIT $" + sanitizeMermaidLabel(act.CommitVariable)
+			return "commit $" + sanitizeMermaidLabel(act.CommitVariable)
 		}
 		return "Commit"
 	case *microflows.DeleteObjectAction:
 		if act.DeleteVariable != "" {
-			return "DELETE $" + sanitizeMermaidLabel(act.DeleteVariable)
+			return "delete $" + sanitizeMermaidLabel(act.DeleteVariable)
 		}
 		return "Delete"
 	case *microflows.RollbackObjectAction:
 		if act.RollbackVariable != "" {
-			return "ROLLBACK $" + sanitizeMermaidLabel(act.RollbackVariable)
+			return "rollback $" + sanitizeMermaidLabel(act.RollbackVariable)
 		}
 		return "Rollback"
 	case *microflows.CreateVariableAction:
 		if act.VariableName != "" {
-			return "DECLARE $" + sanitizeMermaidLabel(act.VariableName)
+			return "declare $" + sanitizeMermaidLabel(act.VariableName)
 		}
 		return "Declare Variable"
 	case *microflows.ChangeVariableAction:
 		if act.VariableName != "" {
-			return "SET $" + sanitizeMermaidLabel(act.VariableName)
+			return "set $" + sanitizeMermaidLabel(act.VariableName)
 		}
 		return "Set Variable"
 	case *microflows.RetrieveAction:
@@ -526,7 +526,7 @@ func mermaidActionLabel(a *microflows.ActionActivity, entityNames map[model.ID]s
 		}
 		return "Call Java Action"
 	case *microflows.RestCallAction:
-		return "REST Call"
+		return "rest Call"
 	case *microflows.ExecuteDatabaseQueryAction:
 		if act.Query != "" {
 			return "DB Query " + sanitizeMermaidLabel(mermaidTruncate(act.Query, 30))

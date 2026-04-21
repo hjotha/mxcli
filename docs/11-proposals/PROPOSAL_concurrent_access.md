@@ -19,9 +19,9 @@ When Claude Code spawns multiple subagents, each may execute `mxcli` commands ag
 Claude Code runs three subagents in parallel:
 
 ```
-Agent 1: mxcli -p app.mpr -c "CREATE ENTITY Shop.Product (...); COMMIT;"
-Agent 2: mxcli -p app.mpr -c "CREATE MICROFLOW Shop.ACT_Process (...); COMMIT;"
-Agent 3: mxcli -p app.mpr -c "DESCRIBE ENTITY Shop.Customer"
+agent 1: mxcli -p app.mpr -c "create entity Shop.Product (...); commit;"
+agent 2: mxcli -p app.mpr -c "create microflow Shop.ACT_Process (...); commit;"
+agent 3: mxcli -p app.mpr -c "describe entity Shop.Customer"
 ```
 
 Agent 3 (read-only) is fine. Agents 1 and 2 both open the MPR for writing, create objects, and commit. For MPR v2, they write to separate `.mxunit` files (different document types), so they *might* succeed. But both also update the SQLite `_units` table simultaneously, risking lock contention or inconsistent state. For MPR v1 (single SQLite file), concurrent writes are guaranteed to conflict.
@@ -31,7 +31,7 @@ Agent 3 (read-only) is fine. Agents 1 and 2 both open the MPR for writing, creat
 ### What's Actually Safe Today
 
 **Concurrent reads** are safe:
-- `SHOW`, `DESCRIBE`, `SEARCH`, `SELECT` commands
+- `show`, `describe`, `search`, `select` commands
 - Multiple `mxcli describe` or `mxcli show` processes
 - SQLite handles concurrent readers natively
 
@@ -42,9 +42,9 @@ Agent 3 (read-only) is fine. Agents 1 and 2 both open the MPR for writing, creat
 ### What's Unsafe
 
 **Concurrent writes** to the same project:
-- Two `CREATE`/`DROP`/`COMMIT` commands running simultaneously
-- `REFRESH CATALOG` running while another process also rebuilds
-- Any write during an active `COMMIT` from another process
+- Two `create`/`drop`/`commit` commands running simultaneously
+- `refresh catalog` running while another process also rebuilds
+- Any write during an active `commit` from another process
 
 **Mixed read-write** during active writes:
 - A reader may see partially committed state
@@ -78,10 +78,10 @@ mprcontents/
 
 **Option A: Coarse-grained (recommended for v1)**
 
-Single lock per project, acquired at `CONNECT` time based on read/write mode:
+Single lock per project, acquired at `connect` time based on read/write mode:
 
 ```go
-// In executor.go, when opening project
+// in executor.go, when opening project
 func (e *Executor) execConnect(stmt *ast.ConnectStmt) error {
     // ... existing connect logic ...
 
@@ -91,7 +91,7 @@ func (e *Executor) execConnect(stmt *ast.ConnectStmt) error {
     } else {
         e.lock = acquireShared(lockPath)     // concurrent with other readers
     }
-    // lock released in Close() or DISCONNECT
+    // lock released in close() or disconnect
 }
 ```
 
@@ -103,7 +103,7 @@ Cons: Write commands block all other access (even reads) for the duration of the
 Lock acquired per-statement, only around actual write operations:
 
 ```go
-func (e *Executor) Execute(stmt ast.Statement) error {
+func (e *Executor) execute(stmt ast.Statement) error {
     if isWriteStatement(stmt) {
         e.lock.Upgrade()       // shared -> exclusive
         defer e.lock.Downgrade() // back to shared
@@ -122,18 +122,18 @@ Waiting indefinitely for a lock is a poor UX. Add a configurable timeout:
 ```go
 const defaultLockTimeout = 30 * time.Second
 
-func acquireExclusive(lockPath string, timeout time.Duration) (*Lock, error) {
+func acquireExclusive(lockPath string, timeout time.Duration) (*lock, error) {
     // Try non-blocking first
     if tryFlock(fd, LOCK_EX|LOCK_NB) {
-        return &Lock{fd: fd}, nil
+        return &lock{fd: fd}, nil
     }
-    // Log that we're waiting
+    // log that we're waiting
     log.Info("waiting for project lock", "lock_path", lockPath)
-    // Retry with timeout
+    // retry with timeout
     deadline := time.Now().Add(timeout)
     for time.Now().Before(deadline) {
         if tryFlock(fd, LOCK_EX|LOCK_NB) {
-            return &Lock{fd: fd}, nil
+            return &lock{fd: fd}, nil
         }
         time.Sleep(100 * time.Millisecond)
     }
@@ -150,16 +150,16 @@ func acquireExclusive(lockPath string, timeout time.Duration) (*Lock, error) {
 ```go
 package mpr
 
-type Lock struct {
+type lock struct {
     fd   *os.File
     path string
 }
 
-func AcquireShared(lockPath string, timeout time.Duration) (*Lock, error)
-func AcquireExclusive(lockPath string, timeout time.Duration) (*Lock, error)
-func (l *Lock) Release() error
-func (l *Lock) Upgrade() error    // shared -> exclusive (Option B only)
-func (l *Lock) Downgrade() error  // exclusive -> shared (Option B only)
+func AcquireShared(lockPath string, timeout time.Duration) (*lock, error)
+func AcquireExclusive(lockPath string, timeout time.Duration) (*lock, error)
+func (l *lock) Release() error
+func (l *lock) Upgrade() error    // shared -> exclusive (Option B only)
+func (l *lock) Downgrade() error  // exclusive -> shared (Option B only)
 ```
 
 Uses `syscall.Flock()` on Linux/macOS. On Windows, uses `LockFileEx()`.
@@ -178,8 +178,8 @@ Separate lock file for the catalog database:
 .mxcli/catalog.db.mxcli-lock
 ```
 
-- `REFRESH CATALOG` acquires exclusive
-- `SELECT FROM CATALOG.*` acquires shared
+- `refresh catalog` acquires exclusive
+- `select from CATALOG.*` acquires shared
 - Independent from MPR lock (catalog reads shouldn't block project writes)
 
 ## Alternative Approaches Considered
@@ -189,10 +189,10 @@ Separate lock file for the catalog database:
 Simply document that concurrent write access is unsupported and rely on Claude Code to serialize write operations.
 
 ```markdown
-## Concurrent Access
+## Concurrent access
 mxcli does not support concurrent write access to the same project.
-When using with Claude Code, ensure write commands run sequentially.
-Read commands (SHOW, DESCRIBE, SEARCH) can safely run in parallel.
+when using with Claude Code, ensure write commands run sequentially.
+read commands (show, describe, search) can safely run in parallel.
 ```
 
 Pros: Zero implementation effort.
@@ -213,8 +213,8 @@ Run mxcli as a persistent server (like the LSP) that serializes all requests int
 # Start server
 mxcli serve -p app.mpr --socket /tmp/mxcli.sock
 
-# Clients send commands to server
-mxcli -S /tmp/mxcli.sock -c "SHOW ENTITIES"
+# clients send commands to server
+mxcli -S /tmp/mxcli.sock -c "show entities"
 ```
 
 Pros: Perfect serialization, shared catalog, single connection overhead.
@@ -232,25 +232,25 @@ Cons: Major architectural change, process lifecycle management, more failure mod
 
 ```bash
 # Test 1: Concurrent reads (should both succeed)
-mxcli -p app.mpr -c "SHOW ENTITIES" &
-mxcli -p app.mpr -c "SHOW MICROFLOWS" &
+mxcli -p app.mpr -c "show entities" &
+mxcli -p app.mpr -c "show microflows" &
 wait
 
 # Test 2: Concurrent writes (second should wait for first)
-mxcli -p app.mpr -c "CREATE MODULE Test1; COMMIT;" &
-mxcli -p app.mpr -c "CREATE MODULE Test2; COMMIT;" &
+mxcli -p app.mpr -c "create module Test1; commit;" &
+mxcli -p app.mpr -c "create module Test2; commit;" &
 wait
-# Both should succeed (serialized by lock)
+# both should succeed (serialized by lock)
 
-# Test 3: Lock timeout
+# Test 3: lock timeout
 mxcli -p app.mpr  # start REPL (holds lock)
-# In another terminal:
-mxcli -p app.mpr -c "CREATE MODULE Test3; COMMIT;"
+# in another terminal:
+mxcli -p app.mpr -c "create module Test3; commit;"
 # Should show "waiting for project lock..." then succeed or timeout
 
-# Test 4: Read during write (should succeed)
-mxcli -p app.mpr  # start REPL, run CREATE
-# In another terminal:
-mxcli -p app.mpr -c "SHOW ENTITIES"
+# Test 4: read during write (should succeed)
+mxcli -p app.mpr  # start REPL, run create
+# in another terminal:
+mxcli -p app.mpr -c "show entities"
 # Should succeed (shared read lock)
 ```

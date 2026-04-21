@@ -10,10 +10,10 @@ Several existing commands already provide pieces of what `structure` aims to del
 
 | Command | Scope | Format | Token cost |
 |---------|-------|--------|------------|
-| `SHOW ENTITIES IN Module` | One type, one module | Markdown table | Medium |
-| `DESCRIBE ENTITY Module.X` | One element, full detail | Round-trippable MDL | High |
-| `SHOW CONTEXT OF Module.X` | One element + dependencies | Markdown sections | Medium-high |
-| `SELECT ... FROM CATALOG.*` | Arbitrary SQL queries | Tabular rows | Varies |
+| `show entities in module` | One type, one module | Markdown table | Medium |
+| `describe entity Module.X` | One element, full detail | Round-trippable MDL | High |
+| `show context of Module.X` | One element + dependencies | Markdown sections | Medium-high |
+| `select ... from CATALOG.*` | Arbitrary SQL queries | Tabular rows | Varies |
 
 **The gap**: None of these give you "the whole project at a glance." You'd need ~7 SHOW commands per module to approximate depth 2, and the output is markdown tables or verbose MDL — neither is token-efficient for LLM consumption.
 
@@ -42,10 +42,10 @@ Add a `structure` subcommand that outputs a compact, token-efficient overview of
 ## Command Interface
 
 ```bash
-# Full project structure (default depth 2)
+# full project structure (default depth 2)
 mxcli structure -p app.mpr
 
-# Module-level summary only
+# module-level summary only
 mxcli structure -p app.mpr --depth 1
 
 # Specific module
@@ -60,10 +60,10 @@ mxcli structure -p app.mpr --all
 
 Also available in the REPL when a project is connected:
 ```sql
-SHOW STRUCTURE;
-SHOW STRUCTURE DEPTH 1;
-SHOW STRUCTURE IN CRM;
-SHOW STRUCTURE DEPTH 3;
+show structure;
+show structure depth 1;
+show structure in CRM;
+show structure depth 3;
 ```
 
 ## Output Format
@@ -74,7 +74,7 @@ The output is plain text, indented with 2 spaces per level, designed for minimal
 
 ```
 CRM           5 entities, 4 microflows, 1 nanoflow, 3 pages, 1 enum, 2 java actions
-Auth          1 entity, 2 microflows, 1 nanoflow, 1 page, 1 enum, 1 snippet
+auth          1 entity, 2 microflows, 1 nanoflow, 1 page, 1 enum, 1 snippet
 Reporting     1 entity, 2 microflows, 1 page, 1 odata service
 ```
 
@@ -85,41 +85,41 @@ Rules:
 - Sort modules alphabetically
 - Only show document types that have count > 0
 
-**Data source**: All from catalog — `SELECT ModuleName, COUNT(*) FROM entities/microflows/pages/enumerations/java_actions/snippets/odata_clients/odata_services GROUP BY ModuleName`. Constants and scheduled events require reader calls (no catalog table yet).
+**Data source**: All from catalog — `select ModuleName, count(*) from entities/microflows/pages/enumerations/java_actions/snippets/odata_clients/odata_services GROUP by ModuleName`. Constants and scheduled events require reader calls (no catalog table yet).
 
 ### Depth 2 — Elements with Signatures (Default)
 
 ```
 CRM
-  Entity Customer [name, email, phone, status]
+  entity Customer [name, email, phone, status]
     → Order (*), → Address (1)
-  Entity Order [orderNumber, amount, orderDate, status]
+  entity Order [orderNumber, amount, orderDate, status]
     → Customer (1), → OrderLine (*)
-  Entity OrderLine [quantity, unitPrice, lineTotal]
+  entity OrderLine [quantity, unitPrice, lineTotal]
     → Order (1), → Product (1)
-  Microflow CreateOrder(Customer) → Order
-  Microflow ProcessOrder(Order) → Boolean
-  Microflow ValidateCustomer(Customer) → Boolean
-  Microflow SendOrderConfirmation(Order)
-  Nanoflow GetCurrentCustomer() → Customer
-  Page CustomerOverview [DataGrid<Customer>]
-  Page CustomerEdit [DataView<Customer>]
-  Page OrderDetail [DataView<Order>, DataGrid<OrderLine>]
-  Enumeration OrderStatus [Draft, Pending, Paid, Shipped, Cancelled]
-  JavaAction SendEmail(String, String) → Boolean
-  Snippet CustomerCard
+  microflow CreateOrder(Customer) → Order
+  microflow ProcessOrder(Order) → boolean
+  microflow ValidateCustomer(Customer) → boolean
+  microflow SendOrderConfirmation(Order)
+  nanoflow GetCurrentCustomer() → Customer
+  page CustomerOverview [datagrid<Customer>]
+  page CustomerEdit [dataview<Customer>]
+  page OrderDetail [dataview<Order>, datagrid<OrderLine>]
+  enumeration OrderStatus [Draft, Pending, Paid, Shipped, Cancelled]
+  JavaAction SendEmail(string, string) → boolean
+  snippet CustomerCard
 
-Auth
-  Entity User [username, passwordHash, role, lastLogin]
+auth
+  entity user [username, passwordHash, role, lastLogin]
     → Customer (1)
-  Microflow AuthenticateUser(String, String) → User
+  microflow AuthenticateUser(string, string) → user
   ...
 ```
 
 Rules for each element type:
 
 **Entities:**
-- Format: `Entity Name [attr1, attr2, attr3, ...]`
+- Format: `entity Name [attr1, attr2, attr3, ...]`
 - List attribute names only (no types) in brackets
 - On next line(s), indented: associations as `→ TargetEntity (cardinality)`
 - Cardinality: `(1)` for reference, `(*)` for reference set
@@ -127,26 +127,26 @@ Rules for each element type:
 - **Data source**: `attributes` table for names; associations need reader calls (see prerequisites)
 
 **Microflows:**
-- Format: `Microflow Name(ParamType1, ParamType2) → ReturnType`
-- Use simple type names: `String`, `Integer`, `Boolean`, `DateTime`, entity name for objects
-- For list parameters: `List<Order>`
+- Format: `microflow Name(ParamType1, ParamType2) → ReturnType`
+- Use simple type names: `string`, `integer`, `boolean`, `datetime`, entity name for objects
+- For list parameters: `list<Order>`
 - Omit return type arrow if return type is void/Nothing
 - Don't show parameter names, just types
 - **Data source**: `microflows` table has `ReturnType`; parameter types need reader calls or new catalog table (see prerequisites)
 
 **Nanoflows:**
-- Same format as microflows: `Nanoflow Name(ParamType1) → ReturnType`
+- Same format as microflows: `nanoflow Name(ParamType1) → ReturnType`
 
 **Pages:**
-- Format: `Page Name [TopWidget1<Entity>, TopWidget2<Entity>]`
+- Format: `page Name [TopWidget1<entity>, TopWidget2<entity>]`
 - Show the top-level data widgets only: DataView, DataGrid, ListView, TemplateGrid, Gallery
 - Include the entity they're bound to in angle brackets
-- If the page has no data widgets, just show `Page Name`
+- If the page has no data widgets, just show `page Name`
 - Don't dig into nested widgets
-- **Data source**: `widgets` table (requires full mode catalog). Falls back to `Page Name` if fast-mode only.
+- **Data source**: `widgets` table (requires full mode catalog). Falls back to `page Name` if fast-mode only.
 
 **Enumerations:**
-- Format: `Enumeration Name [Value1, Value2, Value3, ...]`
+- Format: `enumeration Name [Value1, Value2, Value3, ...]`
 - Show all values inline
 - **Data source**: Needs new `enumeration_values` table or reader calls (see prerequisites)
 
@@ -156,7 +156,7 @@ Rules for each element type:
 - **Data source**: `java_actions` table has `ReturnType`; parameter types need reader calls
 
 **Snippets:**
-- Format: `Snippet Name`
+- Format: `snippet Name`
 - Just the name — snippets are reusable page fragments without signatures
 - **Data source**: `snippets` table (always available)
 
@@ -168,15 +168,15 @@ Rules for each element type:
 **OData Services (published):**
 - Format: `ODataService Name /path (n entities)`
 - Show the service path and entity set count
-- **Data source**: `odata_services` table has `Name`, `Path`, `EntitySetCount`
+- **Data source**: `odata_services` table has `Name`, `path`, `EntitySetCount`
 
 **Constants:**
-- Format: `Constant Name: Type = DefaultValue`
+- Format: `constant Name: type = DefaultValue`
 - Show type and default value if available
 - **Data source**: No catalog table — requires reader calls via `ListConstants()`
 
 **Scheduled Events:**
-- Format: `ScheduledEvent Name → Microflow`
+- Format: `ScheduledEvent Name → microflow`
 - Show the target microflow
 - **Data source**: No catalog table — requires reader calls via `ListScheduledEvents()`
 
@@ -196,11 +196,11 @@ Rules for each element type:
 ### Depth 3 — Include Types and Details
 
 Same as depth 2 but:
-- Entity attributes show types: `Entity Customer [name: String(100), email: String(255), status: OrderStatus]`
-- Microflow parameters show names: `Microflow ProcessOrder(order: Order) → Boolean`
-- Associations show delete behavior if non-default: `→ OrderLine (*) CASCADE`
+- Entity attributes show types: `entity Customer [name: string(100), email: string(255), status: OrderStatus]`
+- Microflow parameters show names: `microflow ProcessOrder(order: Order) → boolean`
+- Associations show delete behavior if non-default: `→ OrderLine (*) cascade`
 
-**Data source**: `attributes` table already has `DataType` and `Length` columns. Parameter names need reader calls.
+**Data source**: `attributes` table already has `DataType` and `length` columns. Parameter names need reader calls.
 
 ## Module Filtering
 
@@ -218,18 +218,18 @@ This replaces a hardcoded blocklist with a catalog-driven heuristic. The `module
 Fill the catalog gaps that `structure` depth 2 depends on. Each is a small, independent change following the `java_actions` pattern.
 
 **1a. Add `associations` catalog table**
-- Columns: `Id`, `Name`, `QualifiedName`, `ModuleName`, `ParentEntity`, `ChildEntity`, `Type` (Reference/ReferenceSet), `Owner`, `DeleteBehavior`
+- Columns: `Id`, `Name`, `QualifiedName`, `ModuleName`, `ParentEntity`, `ChildEntity`, `type` (Reference/ReferenceSet), `owner`, `DeleteBehavior`
 - Builder: `buildAssociations()` using `reader.ListDomainModels()` (associations are part of domain models)
-- This also benefits `SHOW REFERENCES TO` and `SHOW IMPACT OF` queries
+- This also benefits `show references to` and `show impact of` queries
 
 **1b. Add `enumeration_values` catalog table**
-- Columns: `Id`, `Name`, `Caption`, `EnumerationId`, `EnumerationQualifiedName`, `ModuleName`, `Sequence`
+- Columns: `Id`, `Name`, `caption`, `EnumerationId`, `EnumerationQualifiedName`, `ModuleName`, `Sequence`
 - Builder: `buildEnumerationValues()` — extend `buildEnumerations()` to also insert values
-- Alternative: store values as comma-separated in a `Values` column on `enumerations` (simpler, sufficient for structure output)
+- Alternative: store values as comma-separated in a `values` column on `enumerations` (simpler, sufficient for structure output)
 
 **1c. Add microflow parameter info to catalog**
-- Option A: New `microflow_parameters` table with `Name`, `Type`, `MicroflowId`, `Sequence`
-- Option B: Add `ParameterTypes` text column to `microflows` table (comma-separated, e.g., `"Customer, String"`)
+- Option A: New `microflow_parameters` table with `Name`, `type`, `MicroflowId`, `Sequence`
+- Option B: Add `ParameterTypes` text column to `microflows` table (comma-separated, e.g., `"Customer, string"`)
 - Option B is simpler and sufficient for depth 2 output; Option A is better for depth 3 (needs parameter names)
 
 ### Phase 2: Structure command (depth 1)
@@ -238,7 +238,7 @@ Implement the basic command with depth 1 output only. This requires no catalog c
 
 - Add `cmd/mxcli/cmd_structure.go` with Cobra command definition
 - Add `mdl/executor/cmd_structure.go` with `execShowStructure()` for REPL support
-- Add grammar rule for `SHOW STRUCTURE [DEPTH n] [IN module]`
+- Add grammar rule for `show structure [depth n] [in module]`
 - Module filtering via `IsSystemModule` / `AppStoreGuid` columns
 
 ### Phase 3: Structure command (depth 2)
@@ -303,14 +303,14 @@ Given a project with:
 Expected depth 2 output:
 ```
 Sales
-  Entity Customer [...]
+  entity Customer [...]
     → Invoice (*)
-  Entity Invoice [number, date, total]
+  entity Invoice [number, date, total]
     → InvoiceLine (*), → Customer (1)
-  Entity InvoiceLine [...]
+  entity InvoiceLine [...]
     → Invoice (1)
-  Microflow CreateInvoice(Customer) → Invoice
-  Page InvoiceOverview [DataGrid<Invoice>]
+  microflow CreateInvoice(Customer) → Invoice
+  page InvoiceOverview [datagrid<Invoice>]
 ```
 
 (Where `[...]` represents whatever attributes those entities have)

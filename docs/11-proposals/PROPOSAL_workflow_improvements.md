@@ -8,9 +8,9 @@
 
 Workflow support in mxcli has full CREATE/DESCRIBE/DROP/SHOW coverage with 13 activity types and BSON round-trip fidelity. Two significant gaps remain:
 
-1. **No ALTER WORKFLOW** — any workflow change requires a full `CREATE OR MODIFY` rebuild. For small edits (change a task page, add an outcome, insert an activity), this is disproportionate effort and error-prone.
+1. **No ALTER WORKFLOW** — any workflow change requires a full `create or modify` rebuild. For small edits (change a task page, add an outcome, insert an activity), this is disproportionate effort and error-prone.
 
-2. **No cross-reference tracking** — the catalog `refs` table does not track workflow references. `SHOW CALLERS OF Module.SomeMicroflow` will not show workflows that call it. Impact analysis is incomplete.
+2. **No cross-reference tracking** — the catalog `refs` table does not track workflow references. `show callers of Module.SomeMicroflow` will not show workflows that call it. Impact analysis is incomplete.
 
 ## Design
 
@@ -22,36 +22,36 @@ Modify workflow-level and activity-level metadata without touching the flow grap
 
 ```sql
 -- Workflow-level properties
-ALTER WORKFLOW Module.MyWorkflow
-  SET DISPLAY 'New Display Name';
+alter workflow Module.MyWorkflow
+  set display 'New Display Name';
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET DESCRIPTION 'Updated description';
+alter workflow Module.MyWorkflow
+  set description 'Updated description';
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET EXPORT LEVEL API;
+alter workflow Module.MyWorkflow
+  set export level api;
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET DUE DATE '[%CurrentDateTime%] + 7 * 24 * 60 * 60 * 1000';
+alter workflow Module.MyWorkflow
+  set due date '[%CurrentDateTime%] + 7 * 24 * 60 * 60 * 1000';
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET OVERVIEW PAGE Module.NewOverviewPage;
+alter workflow Module.MyWorkflow
+  set overview page Module.NewOverviewPage;
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET PARAMETER $WorkflowContext: Module.NewEntity;
+alter workflow Module.MyWorkflow
+  set parameter $WorkflowContext: Module.NewEntity;
 
 -- Activity-level properties
-ALTER WORKFLOW Module.MyWorkflow
-  SET ACTIVITY userTask1 PAGE Module.NewTaskPage;
+alter workflow Module.MyWorkflow
+  set activity userTask1 page Module.NewTaskPage;
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET ACTIVITY userTask1 DESCRIPTION 'Updated task description';
+alter workflow Module.MyWorkflow
+  set activity userTask1 description 'Updated task description';
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET ACTIVITY userTask1 TARGETING MICROFLOW Module.NewTargeting;
+alter workflow Module.MyWorkflow
+  set activity userTask1 targeting microflow Module.NewTargeting;
 
-ALTER WORKFLOW Module.MyWorkflow
-  SET ACTIVITY userTask1 TARGETING XPATH '[Status = "Active"]';
+alter workflow Module.MyWorkflow
+  set activity userTask1 targeting xpath '[Status = "Active"]';
 ```
 
 **Implementation**: Uses `readPatchWrite` pattern from ALTER PAGE. Reads raw BSON as `bson.D`, modifies specific fields, writes back.
@@ -69,18 +69,18 @@ Each graph operation maps to a well-defined transformation on these arrays.
 **Precondition**: Target activity has exactly one outgoing non-error edge.
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  INSERT AFTER activityName
-    CALL MICROFLOW validate Module.Validate;
+alter workflow Module.MyWorkflow
+  insert after activityName
+    call microflow validate Module.Validate;
 ```
 
 **BSON transformation**:
 ```
-Before: A ──edge1──→ B
-Step 1: Create activity C, append to Activities array
-Step 2: Set edge1.Dest = C
-Step 3: Create edge2: {Origin: C, Dest: B}
-After:  A ──edge1──→ C ──edge2──→ B
+before: A ──edge1──→ B
+Step 1: create activity C, append to Activities array
+Step 2: set edge1.Dest = C
+Step 3: create edge2: {Origin: C, Dest: B}
+after:  A ──edge1──→ C ──edge2──→ B
 ```
 
 **Error conditions**:
@@ -90,22 +90,22 @@ After:  A ──edge1──→ C ──edge2──→ B
 
 ##### INSERT OUTCOME ON UserTask
 
-**Structure**: UserTask has an `Outcomes` array. Each outcome maps to outgoing edges via `ConditionValue` matching the outcome `$ID`.
+**Structure**: UserTask has an `outcomes` array. Each outcome maps to outgoing edges via `ConditionValue` matching the outcome `$ID`.
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  INSERT OUTCOME 'NeedMoreInfo' ON userTask1 {
-    CALL MICROFLOW requestInfo Module.RequestInfo
+alter workflow Module.MyWorkflow
+  insert outcome 'NeedMoreInfo' on userTask1 {
+    call microflow requestInfo Module.RequestInfo
   };
 ```
 
 **BSON transformation**:
 ```
-Step 1: Create new Outcome {Name: "NeedMoreInfo", $ID: id3}, append to Outcomes array
-Step 2: Create activities from the block, chained in sequence
-Step 3: Find merge point (see algorithm below)
-Step 4: Add edge {Origin: userTask1, Dest: firstNewActivity, ConditionValue: id3}
-Step 5: Add edge {Origin: lastNewActivity, Dest: mergePoint}
+Step 1: create new outcome {Name: "NeedMoreInfo", $ID: id3}, append to outcomes array
+Step 2: create activities from the block, chained in sequence
+Step 3: find merge point (see algorithm below)
+Step 4: add edge {Origin: userTask1, Dest: firstNewActivity, ConditionValue: id3}
+Step 5: add edge {Origin: lastNewActivity, Dest: mergePoint}
 ```
 
 **Error conditions**:
@@ -118,10 +118,10 @@ Step 5: Add edge {Origin: lastNewActivity, Dest: mergePoint}
 Same as INSERT OUTCOME but without ConditionValue:
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  INSERT PATH ON parallelSplit1 {
-    USER TASK review3 'Third Review'
-      PAGE Module.ReviewPage
+alter workflow Module.MyWorkflow
+  insert path on parallelSplit1 {
+    user task review3 'Third Review'
+      page Module.ReviewPage
   };
 ```
 
@@ -130,9 +130,9 @@ ALTER WORKFLOW Module.MyWorkflow
 ##### INSERT BRANCH ON Decision
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  INSERT BRANCH ON decision1 CONDITION '$ctx/Status = "Special"' {
-    CALL MICROFLOW handleSpecial Module.HandleSpecial
+alter workflow Module.MyWorkflow
+  insert branch on decision1 condition '$ctx/Status = "Special"' {
+    call microflow handleSpecial Module.HandleSpecial
   };
 ```
 
@@ -141,9 +141,9 @@ ALTER WORKFLOW Module.MyWorkflow
 ##### INSERT BOUNDARY EVENT
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  INSERT BOUNDARY EVENT INTERRUPTING TIMER '86400000' ON userTask1 {
-    CALL MICROFLOW escalate Module.Escalate
+alter workflow Module.MyWorkflow
+  insert boundary event interrupting timer '86400000' on userTask1 {
+    call microflow escalate Module.Escalate
   };
 ```
 
@@ -152,17 +152,17 @@ ALTER WORKFLOW Module.MyWorkflow
 **Precondition**: Target has exactly one incoming edge and one outgoing edge.
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  DROP ACTIVITY callMf1;
+alter workflow Module.MyWorkflow
+  drop activity callMf1;
 ```
 
 **BSON transformation**:
 ```
-Before: A ──e1──→ C ──e2──→ B
-Step 1: Set e1.Dest = B
-Step 2: Delete e2 from SequenceFlows array
-Step 3: Delete C from Activities array
-After:  A ──e1──→ B
+before: A ──e1──→ C ──e2──→ B
+Step 1: set e1.Dest = B
+Step 2: delete e2 from SequenceFlows array
+Step 3: delete C from Activities array
+after:  A ──e1──→ B
 ```
 
 **Error conditions**:
@@ -171,22 +171,22 @@ After:  A ──e1──→ B
 ##### DROP OUTCOME / PATH / BRANCH
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  DROP OUTCOME 'NeedMoreInfo' ON userTask1;
+alter workflow Module.MyWorkflow
+  drop outcome 'NeedMoreInfo' on userTask1;
 
-ALTER WORKFLOW Module.MyWorkflow
-  DROP PATH 'Third Review' ON parallelSplit1;  -- by first activity caption
+alter workflow Module.MyWorkflow
+  drop path 'Third Review' on parallelSplit1;  -- by first activity caption
 
-ALTER WORKFLOW Module.MyWorkflow
-  DROP BRANCH 'Special' ON decision1;
+alter workflow Module.MyWorkflow
+  drop branch 'Special' on decision1;
 ```
 
 **BSON transformation**:
 ```
-Step 1: Find the outgoing edge for this outcome/path/branch
+Step 1: find the outgoing edge for this outcome/path/branch
 Step 2: Collect all activities on this path (BFS from edge.Dest to merge point)
-Step 3: Delete collected activities and their edges from arrays
-Step 4: Delete the outcome/branch entry from the split activity
+Step 3: delete collected activities and their edges from arrays
+Step 4: delete the outcome/branch entry from the split activity
 ```
 
 **Path activity collection algorithm**:
@@ -211,7 +211,7 @@ The algorithm must handle **nested splits** — a branch may contain a Decision 
 
 ```
 findMergePoint(splitActivityId, activities, sequenceFlows):
-  // Get all outgoing edges from the split
+  // get all outgoing edges from the split
   outEdges = filter(sequenceFlows, edge.Origin == splitActivityId)
   if len(outEdges) == 0: error("no outgoing edges")
 
@@ -239,12 +239,12 @@ findMergePoint(splitActivityId, activities, sequenceFlows):
           break  // nested merge is also a split (shouldn't happen in structured workflows)
     branchPaths.append(path)
 
-  // Find first common node across all branches (in traversal order)
+  // find first common node across all branches (in traversal order)
   common = set(branchPaths[0])
   for path in branchPaths[1:]:
     common = common.intersect(set(path))
 
-  // Return the closest common node to the split (first in traversal order of any branch)
+  // return the closest common node to the split (first in traversal order of any branch)
   for node in branchPaths[0]:
     if node in common:
       return node
@@ -257,19 +257,19 @@ This recursion terminates because Mendix enforces structured (well-nested) workf
 
 Activities are referenced by their **Caption** (display name). When duplicate captions exist:
 
-- **Error by default**: If the caption matches multiple activities, the command fails with `"ambiguous activity name 'X' — matches N activities. Use positional syntax: ACTIVITY 'X' AT N (1-based)"`.
-- **Positional disambiguation**: `SET ACTIVITY 'doValidation' AT 2 PAGE Module.NewPage` targets the second activity named "doValidation" in flow order.
+- **Error by default**: If the caption matches multiple activities, the command fails with `"ambiguous activity name 'X' — matches N activities. use positional syntax: activity 'X' AT N (1-based)"`.
+- **Positional disambiguation**: `set activity 'doValidation' AT 2 page Module.NewPage` targets the second activity named "doValidation" in flow order.
 
-This is consistent with how `DROP OUTCOME` uses the outcome name (unique per UserTask).
+This is consistent with how `drop outcome` uses the outcome name (unique per UserTask).
 
-**DESCRIBE output for ALTER support**: `DESCRIBE WORKFLOW` will annotate each activity with its caption in a comment, making it easy to copy captions for ALTER commands:
+**DESCRIBE output for ALTER support**: `describe workflow` will annotate each activity with its caption in a comment, making it easy to copy captions for ALTER commands:
 
 ```sql
 -- DESCRIBE WORKFLOW Module.Onboarding output:
-CREATE WORKFLOW Module.Onboarding ...
-  CALL MICROFLOW validate Module.ValidateInput    -- caption: "validate"
-  USER TASK review 'Manager Review'               -- caption: "review"
-    PAGE Module.ReviewPage
+create workflow Module.Onboarding ...
+  call microflow validate Module.ValidateInput    -- caption: "validate"
+  user task review 'Manager Review'               -- caption: "review"
+    page Module.ReviewPage
   ...
 ```
 
@@ -278,15 +278,15 @@ CREATE WORKFLOW Module.Onboarding ...
 Swap an activity in place, preserving incoming/outgoing edges:
 
 ```sql
-ALTER WORKFLOW Module.MyWorkflow
-  REPLACE ACTIVITY callMf1 WITH CALL MICROFLOW newValidate Module.NewValidate;
+alter workflow Module.MyWorkflow
+  replace activity callMf1 with call microflow newValidate Module.NewValidate;
 ```
 
 **BSON transformation**:
 ```
 Step 1: Record all incoming/outgoing edges of old activity
-Step 2: Delete old activity from Activities array
-Step 3: Create new activity, append to Activities array
+Step 2: delete old activity from Activities array
+Step 3: create new activity, append to Activities array
 Step 4: Repoint all recorded edges to new activity ID
 ```
 
@@ -294,7 +294,7 @@ Step 4: Repoint all recorded edges to new activity ID
 
 #### 1.5 Operations NOT Supported
 
-These require `CREATE OR MODIFY` to rebuild the workflow:
+These require `create or modify` to rebuild the workflow:
 - Moving activities between branches
 - Converting a linear activity into a Decision/ParallelSplit
 - Merging or splitting branches
@@ -304,50 +304,50 @@ These require `CREATE OR MODIFY` to rebuild the workflow:
 
 ```antlr
 alterWorkflowStatement
-    : ALTER WORKFLOW qualifiedName alterWorkflowAction+
+    : alter workflow qualifiedName alterWorkflowAction+
     ;
 
 alterWorkflowAction
-    : SET workflowProperty                                          // workflow-level property
-    | SET ACTIVITY activityRef activityProperty                     // activity-level property
-    | INSERT AFTER activityRef workflowActivity                     // linear insert
-    | INSERT OUTCOME STRING_LITERAL ON activityRef workflowBlock    // user task outcome
-    | INSERT PATH ON activityRef workflowBlock                      // parallel path
-    | INSERT BRANCH ON activityRef CONDITION STRING_LITERAL workflowBlock  // decision branch
-    | INSERT BOUNDARY EVENT boundaryEventSpec ON activityRef workflowBlock
-    | DROP ACTIVITY activityRef                                     // linear delete
-    | DROP OUTCOME STRING_LITERAL ON activityRef                    // outcome delete
-    | DROP PATH STRING_LITERAL ON activityRef                       // parallel path delete (by first activity caption)
-    | DROP BRANCH STRING_LITERAL ON activityRef                     // decision branch delete
-    | DROP BOUNDARY EVENT ON activityRef                            // boundary event delete
-    | REPLACE ACTIVITY activityRef WITH workflowActivity            // swap activity in place
+    : set workflowProperty                                          // workflow-level property
+    | set activity activityRef activityProperty                     // activity-level property
+    | insert after activityRef workflowActivity                     // linear insert
+    | insert outcome STRING_LITERAL on activityRef workflowBlock    // user task outcome
+    | insert path on activityRef workflowBlock                      // parallel path
+    | insert branch on activityRef condition STRING_LITERAL workflowBlock  // decision branch
+    | insert boundary event boundaryEventSpec on activityRef workflowBlock
+    | drop activity activityRef                                     // linear delete
+    | drop outcome STRING_LITERAL on activityRef                    // outcome delete
+    | drop path STRING_LITERAL on activityRef                       // parallel path delete (by first activity caption)
+    | drop branch STRING_LITERAL on activityRef                     // decision branch delete
+    | drop boundary event on activityRef                            // boundary event delete
+    | replace activity activityRef with workflowActivity            // swap activity in place
     ;
 
-// Activity reference — caption with optional positional disambiguation
+// activity reference — caption with optional positional disambiguation
 activityRef
     : IDENTIFIER (AT INTEGER_LITERAL)?
     | STRING_LITERAL (AT INTEGER_LITERAL)?
     ;
 
 workflowProperty
-    : DISPLAY STRING_LITERAL
-    | DESCRIPTION STRING_LITERAL
-    | EXPORT LEVEL IDENTIFIER
-    | DUE DATE STRING_LITERAL
-    | OVERVIEW PAGE qualifiedName
-    | PARAMETER VARIABLE COLON qualifiedName
+    : display STRING_LITERAL
+    | description STRING_LITERAL
+    | export level IDENTIFIER
+    | due date STRING_LITERAL
+    | overview page qualifiedName
+    | parameter VARIABLE COLON qualifiedName
     ;
 
 activityProperty
-    : PAGE qualifiedName
-    | DESCRIPTION STRING_LITERAL
-    | TARGETING MICROFLOW qualifiedName
-    | TARGETING XPATH STRING_LITERAL
-    | DUE DATE STRING_LITERAL
+    : page qualifiedName
+    | description STRING_LITERAL
+    | targeting microflow qualifiedName
+    | targeting xpath STRING_LITERAL
+    | due date STRING_LITERAL
     ;
 
-// workflowActivity: reuses the same activity syntax from CREATE WORKFLOW
-// (CALL MICROFLOW, USER TASK, DECISION, PARALLEL SPLIT, etc.)
+// workflowActivity: reuses the same activity syntax from create workflow
+// (call microflow, user task, decision, parallel split, etc.)
 
 workflowBlock
     : LBRACE workflowActivity* RBRACE
@@ -380,12 +380,12 @@ In `catalog/builder_workflows.go`, extend the existing `buildWorkflows()` functi
 func (b *Builder) buildWorkflowRefs(wf *workflows.Workflow, moduleName string) {
     qn := moduleName + "." + wf.Name
 
-    // Parameter entity reference
+    // parameter entity reference
     if wf.Parameter != nil && wf.Parameter.Entity != "" {
         b.insertRef(qn, wf.Parameter.Entity, "uses", "workflow", "entity")
     }
 
-    // Overview page reference
+    // overview page reference
     if wf.OverviewPage != "" {
         b.insertRef(qn, wf.OverviewPage, "uses", "workflow", "page")
     }
@@ -427,16 +427,16 @@ No new commands needed. Existing commands automatically pick up workflow refs:
 
 ```sql
 -- Shows workflows that call this microflow
-SHOW CALLERS OF Module.SomeMicroflow;
+show callers of Module.SomeMicroflow;
 
 -- Shows all microflows/workflows/pages referenced by this workflow
-SHOW CALLEES OF Module.MyWorkflow;
+show callees of Module.MyWorkflow;
 
 -- Shows workflows that reference this entity
-SHOW REFERENCES TO Module.SomeEntity;
+show references to Module.SomeEntity;
 
 -- Includes workflows in impact analysis
-SHOW IMPACT OF Module.SomeEntity;
+show impact of Module.SomeEntity;
 ```
 
 ## Implementation Phases
@@ -454,9 +454,9 @@ SHOW IMPACT OF Module.SomeEntity;
 
 ## Testing Strategy
 
-- **Cross-References**: Add workflow entries to existing `buildRefs` test suite. Verify `SHOW CALLERS/CALLEES` output includes workflows after `REFRESH CATALOG FULL`.
-- **ALTER SET**: Roundtrip test — `DESCRIBE` → `ALTER SET` → `DESCRIBE` → compare.
-- **Graph ops**: Create workflow via `CREATE WORKFLOW`, apply ALTER operations, `mx check` to validate, `DESCRIBE` to verify structure.
+- **Cross-References**: Add workflow entries to existing `buildRefs` test suite. Verify `show callers/callees` output includes workflows after `refresh catalog full`.
+- **ALTER SET**: Roundtrip test — `describe` → `alter set` → `describe` → compare.
+- **Graph ops**: Create workflow via `create workflow`, apply ALTER operations, `mx check` to validate, `describe` to verify structure.
 - **Edge cases**: INSERT on split nodes (must reject), DROP on merge nodes (must reject), duplicate outcome names, empty blocks.
 
 ## Compatibility

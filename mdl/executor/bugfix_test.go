@@ -16,12 +16,12 @@ import (
 // RETRIEVE for the same variable is caught as a duplicate (CE0111).
 // Bug #3: mxcli check passed but mx check reported CE0111.
 func TestValidateDuplicateVariableDeclareRetrieve(t *testing.T) {
-	input := `CREATE MICROFLOW Test.MF_DuplicateVar ()
-BEGIN
-  DECLARE $Count Integer = 0;
-  RETRIEVE $Count FROM Test.TestItem;
-  RETURN $Count;
-END;`
+	input := `create microflow Test.MF_DuplicateVar ()
+begin
+  declare $Count Integer = 0;
+  retrieve $Count from Test.TestItem;
+  return $Count;
+end;`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -40,11 +40,11 @@ END;`
 // TestValidateDuplicateVariableDeclareOnly verifies that two DECLARE statements
 // for the same variable are caught as duplicate.
 func TestValidateDuplicateVariableDeclareOnly(t *testing.T) {
-	input := `CREATE MICROFLOW Test.MF_DoubleDeclare ()
-BEGIN
-  DECLARE $X Integer = 0;
-  DECLARE $X String = 'hello';
-END;`
+	input := `create microflow Test.MF_DoubleDeclare ()
+begin
+  declare $X Integer = 0;
+  declare $X String = 'hello';
+end;`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -63,10 +63,10 @@ END;`
 // TestValidateNoDuplicateWhenRetrieveOnly verifies that a single RETRIEVE
 // (without prior DECLARE) does not trigger a false positive.
 func TestValidateNoDuplicateWhenRetrieveOnly(t *testing.T) {
-	input := `CREATE MICROFLOW Test.MF_RetrieveOnly ()
-BEGIN
-  RETRIEVE $Items FROM Test.SomeEntity;
-END;`
+	input := `create microflow Test.MF_RetrieveOnly ()
+begin
+  retrieve $Items from Test.SomeEntity;
+end;`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -80,11 +80,11 @@ END;`
 // TestValidateDuplicateVariableDeclareCreate verifies that DECLARE followed by
 // CREATE for the same variable is caught as a duplicate (CE0111).
 func TestValidateDuplicateVariableDeclareCreate(t *testing.T) {
-	input := `CREATE MICROFLOW Test.MF_DeclareCreate ()
-BEGIN
-  DECLARE $NewTodo Test.Todo;
-  $NewTodo = CREATE Test.Todo();
-END;`
+	input := `create microflow Test.MF_DeclareCreate ()
+begin
+  declare $NewTodo Test.Todo;
+  $NewTodo = create Test.Todo();
+end;`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -103,7 +103,7 @@ END;`
 // TestValidateEntityReservedAttributeName verifies that persistent entity attributes
 // using reserved system names (CreatedDate, ChangedDate, Owner, ChangedBy) are caught.
 func TestValidateEntityReservedAttributeName(t *testing.T) {
-	input := `CREATE PERSISTENT ENTITY Test.MyEntity (
+	input := `create persistent entity Test.MyEntity (
   Name : String(200),
   CreatedDate : DateTime,
   Status : String(50)
@@ -135,7 +135,7 @@ func TestValidateEntityReservedAttributeName(t *testing.T) {
 // TestValidateEntityNonPersistentAllowed verifies that non-persistent entities
 // can use system attribute names without error.
 func TestValidateEntityNonPersistentAllowed(t *testing.T) {
-	input := `CREATE NON-PERSISTENT ENTITY Test.MyNPE (
+	input := `create non-persistent entity Test.MyNPE (
   CreatedDate : DateTime,
   Owner : String(200)
 );`
@@ -159,7 +159,7 @@ func TestValidateEntityNonPersistentAllowed(t *testing.T) {
 // TestValidateEntityNormalAttributesPass verifies that normal attribute names
 // don't trigger false positives.
 func TestValidateEntityNormalAttributesPass(t *testing.T) {
-	input := `CREATE PERSISTENT ENTITY Test.MyEntity (
+	input := `create persistent entity Test.MyEntity (
   Name : String(200),
   Description : String(2000),
   Amount : Decimal,
@@ -185,12 +185,12 @@ func TestValidateEntityNormalAttributesPass(t *testing.T) {
 // TestReturnsNothingAcceptsBarReturn verifies that RETURNS Nothing treats
 // RETURN; (no value) as valid — "Nothing" means void.
 func TestReturnsNothingAcceptsBarReturn(t *testing.T) {
-	input := `CREATE MICROFLOW Test.MF_ReturnsNothing ()
-RETURNS Nothing
-BEGIN
-  LOG INFO 'hello';
-  RETURN;
-END;`
+	input := `create microflow Test.MF_ReturnsNothing ()
+returns Nothing
+begin
+  log info 'hello';
+  return;
+end;`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {
@@ -201,14 +201,14 @@ END;`
 
 	// The return type should be TypeVoid
 	if stmt.ReturnType != nil && stmt.ReturnType.Type.Kind != ast.TypeVoid {
-		t.Errorf("Expected TypeVoid for RETURNS Nothing, got %v", stmt.ReturnType.Type.Kind)
+		t.Errorf("Expected TypeVoid for returns Nothing, got %v", stmt.ReturnType.Type.Kind)
 	}
 
 	// Validation should NOT produce errors about RETURN requiring a value
 	warnings := ValidateMicroflowBody(stmt)
 	for _, w := range warnings {
-		if strings.Contains(w, "RETURN requires a value") {
-			t.Errorf("RETURNS Nothing should not reject bare RETURN;, got: %s", w)
+		if strings.Contains(w, "return requires a value") {
+			t.Errorf("returns Nothing should not reject bare return;, got: %s", w)
 		}
 	}
 }
@@ -216,8 +216,8 @@ END;`
 // TestEnumDefaultNotDoubleQualified verifies that enum DEFAULT values are stored
 // without the enum prefix (just the value name), preventing double-qualification.
 func TestEnumDefaultNotDoubleQualified(t *testing.T) {
-	input := `CREATE PERSISTENT ENTITY Test.Item (
-  Status : Enumeration(Test.ItemStatus) DEFAULT Test.ItemStatus.Active
+	input := `create persistent entity Test.Item (
+  Status : Enumeration(Test.ItemStatus) default Test.ItemStatus.Active
 );`
 
 	prog, errs := visitor.Build(input)
@@ -427,12 +427,12 @@ func validateMicroflowFromMDL(t *testing.T, input string) []string {
 // AttributePathExpr (not nested BinaryExpr with "/" operator).
 // Issue #120: extra spaces around path separators.
 func TestAssociationNavParsing(t *testing.T) {
-	input := `CREATE MICROFLOW Test.MF_Nav()
-RETURNS String AS $Result
-BEGIN
-  DECLARE $CustName String = $Order/Test.Order_Customer/Name;
-  RETURN $CustName;
-END;`
+	input := `create microflow Test.MF_Nav()
+returns String as $Result
+begin
+  declare $CustName String = $Order/Test.Order_Customer/Name;
+  return $CustName;
+end;`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {

@@ -31,7 +31,7 @@ func formatActivity(
 				!strings.ContainsAny(returnVal, "+'\"()") {
 				returnVal = "$" + returnVal
 			}
-			return fmt.Sprintf("RETURN %s;", returnVal)
+			return fmt.Sprintf("return %s;", returnVal)
 		}
 		return "" // Skip end events without return value
 
@@ -45,15 +45,15 @@ func formatActivity(
 				condition = exprCond.Expression
 			}
 		}
-		return fmt.Sprintf("IF %s THEN", condition)
+		return fmt.Sprintf("if %s then", condition)
 
 	case *microflows.ExclusiveMerge:
-		return "END IF;"
+		return "end if;"
 
 	case *microflows.LoopedActivity:
 		switch ls := activity.LoopSource.(type) {
 		case *microflows.WhileLoopCondition:
-			return fmt.Sprintf("WHILE %s", ls.WhileExpression)
+			return fmt.Sprintf("while %s", ls.WhileExpression)
 		case *microflows.IterableList:
 			iterVar := "Item"
 			listVar := "List"
@@ -63,19 +63,19 @@ func formatActivity(
 			if ls.ListVariableName != "" {
 				listVar = ls.ListVariableName
 			}
-			return fmt.Sprintf("LOOP $%s IN $%s", iterVar, listVar)
+			return fmt.Sprintf("loop $%s in $%s", iterVar, listVar)
 		default:
-			return "LOOP $Item IN $List"
+			return "loop $Item in $List"
 		}
 
 	case *microflows.BreakEvent:
-		return "BREAK;"
+		return "break;"
 
 	case *microflows.ContinueEvent:
-		return "CONTINUE;"
+		return "continue;"
 
 	case *microflows.ErrorEvent:
-		return "RAISE ERROR;"
+		return "raise error;"
 
 	case *microflows.Annotation:
 		return "" // Annotations are emitted separately via @annotation
@@ -106,7 +106,7 @@ func formatAction(
 		if initialValue == "" {
 			initialValue = "empty"
 		}
-		return fmt.Sprintf("DECLARE $%s %s = %s;", a.VariableName, varType, initialValue)
+		return fmt.Sprintf("declare $%s %s = %s;", a.VariableName, varType, initialValue)
 
 	case *microflows.ChangeVariableAction:
 		varName := a.VariableName
@@ -124,13 +124,13 @@ func formatAction(
 			if !strings.HasPrefix(objectName, "$") {
 				objectName = "$" + objectName
 			}
-			return fmt.Sprintf("CHANGE %s (%s = %s);", objectName, attrName, a.Value)
+			return fmt.Sprintf("change %s (%s = %s);", objectName, attrName, a.Value)
 		}
 		// Simple variable change
 		if strings.HasPrefix(varName, "$") {
-			return fmt.Sprintf("SET %s = %s;", varName, a.Value)
+			return fmt.Sprintf("set %s = %s;", varName, a.Value)
 		}
-		return fmt.Sprintf("SET $%s = %s;", varName, a.Value)
+		return fmt.Sprintf("set $%s = %s;", varName, a.Value)
 
 	case *microflows.CreateObjectAction:
 		// Use EntityQualifiedName (BY_NAME_REFERENCE) or fall back to EntityID lookup
@@ -170,9 +170,9 @@ func formatAction(
 				}
 				members = append(members, fmt.Sprintf("%s = %s", memberName, m.Value))
 			}
-			return fmt.Sprintf("$%s = CREATE %s (%s);", outputVar, entityName, strings.Join(members, ", "))
+			return fmt.Sprintf("$%s = create %s (%s);", outputVar, entityName, strings.Join(members, ", "))
 		}
-		return fmt.Sprintf("$%s = CREATE %s;", outputVar, entityName)
+		return fmt.Sprintf("$%s = create %s;", outputVar, entityName)
 
 	case *microflows.ChangeObjectAction:
 		varName := a.ChangeVariable
@@ -200,9 +200,9 @@ func formatAction(
 				}
 				members = append(members, fmt.Sprintf("%s = %s", memberName, m.Value))
 			}
-			return fmt.Sprintf("CHANGE $%s (%s);", varName, strings.Join(members, ", "))
+			return fmt.Sprintf("change $%s (%s);", varName, strings.Join(members, ", "))
 		}
-		return fmt.Sprintf("CHANGE $%s;", varName)
+		return fmt.Sprintf("change $%s;", varName)
 
 	case *microflows.CommitObjectsAction:
 		varName := a.CommitVariable
@@ -211,21 +211,21 @@ func formatAction(
 		}
 		suffix := ""
 		if a.WithEvents {
-			suffix += " WITH EVENTS"
+			suffix += " with events"
 		}
 		if a.RefreshInClient {
-			suffix += " REFRESH"
+			suffix += " refresh"
 		}
-		return fmt.Sprintf("COMMIT $%s%s;", varName, suffix)
+		return fmt.Sprintf("commit $%s%s;", varName, suffix)
 
 	case *microflows.DeleteObjectAction:
-		return fmt.Sprintf("DELETE $%s;", a.DeleteVariable)
+		return fmt.Sprintf("delete $%s;", a.DeleteVariable)
 
 	case *microflows.RollbackObjectAction:
 		if a.RefreshInClient {
-			return fmt.Sprintf("ROLLBACK $%s REFRESH;", a.RollbackVariable)
+			return fmt.Sprintf("rollback $%s refresh;", a.RollbackVariable)
 		}
-		return fmt.Sprintf("ROLLBACK $%s;", a.RollbackVariable)
+		return fmt.Sprintf("rollback $%s;", a.RollbackVariable)
 
 	case *microflows.CreateListAction:
 		// Use EntityQualifiedName (BY_NAME_REFERENCE) or fall back to EntityID lookup
@@ -236,21 +236,21 @@ func formatAction(
 		if entityName == "" {
 			entityName = "Entity"
 		}
-		return fmt.Sprintf("$%s = CREATE LIST of %s;", a.OutputVariable, entityName)
+		return fmt.Sprintf("$%s = create list of %s;", a.OutputVariable, entityName)
 
 	case *microflows.ChangeListAction:
 		varName := a.ChangeVariable
 		switch a.Type {
 		case microflows.ChangeListTypeAdd:
-			return fmt.Sprintf("ADD %s TO $%s;", a.Value, varName)
+			return fmt.Sprintf("add %s to $%s;", a.Value, varName)
 		case microflows.ChangeListTypeRemove:
-			return fmt.Sprintf("REMOVE %s FROM $%s;", a.Value, varName)
+			return fmt.Sprintf("remove %s from $%s;", a.Value, varName)
 		case microflows.ChangeListTypeClear:
-			return fmt.Sprintf("CLEAR $%s;", varName)
+			return fmt.Sprintf("clear $%s;", varName)
 		case microflows.ChangeListTypeSet:
-			return fmt.Sprintf("SET $%s = %s;", varName, a.Value)
+			return fmt.Sprintf("set $%s = %s;", varName, a.Value)
 		default:
-			return fmt.Sprintf("CHANGE LIST $%s (%s);", varName, a.Type)
+			return fmt.Sprintf("change list $%s (%s);", varName, a.Type)
 		}
 
 	case *microflows.ListOperationAction:
@@ -267,7 +267,7 @@ func formatAction(
 		}
 		fn := string(a.Function)
 		if fn == "" {
-			fn = "COUNT"
+			fn = "count"
 		}
 		// Extract attribute name (use last part of qualified name for readability)
 		attrName := a.AttributeQualifiedName
@@ -280,9 +280,9 @@ func formatAction(
 		}
 		// For aggregate functions that require an attribute (Sum, Average, Min, Max), show the attribute
 		if attrName != "" && a.Function != microflows.AggregateFunctionCount {
-			return fmt.Sprintf("$%s = %s($%s.%s);", outputVar, strings.ToUpper(fn), a.InputVariable, attrName)
+			return fmt.Sprintf("$%s = %s($%s.%s);", outputVar, strings.ToLower(fn), a.InputVariable, attrName)
 		}
-		return fmt.Sprintf("$%s = %s($%s);", outputVar, strings.ToUpper(fn), a.InputVariable)
+		return fmt.Sprintf("$%s = %s($%s);", outputVar, strings.ToLower(fn), a.InputVariable)
 
 	case *microflows.RetrieveAction:
 		outputVar := a.OutputVariable
@@ -300,14 +300,14 @@ func formatAction(
 				entityName = "Entity"
 			}
 
-			stmt := fmt.Sprintf("RETRIEVE $%s FROM %s", outputVar, entityName)
+			stmt := fmt.Sprintf("retrieve $%s from %s", outputVar, entityName)
 
 			if dbSource.XPathConstraint != "" {
 				constraint := strings.TrimSpace(dbSource.XPathConstraint)
 				if strings.HasPrefix(constraint, "[") && strings.HasSuffix(constraint, "]") {
 					constraint = constraint[1 : len(constraint)-1]
 				}
-				stmt += fmt.Sprintf("\n    WHERE %s", constraint)
+				stmt += fmt.Sprintf("\n    where %s", constraint)
 			}
 
 			// Output SORT BY clause if present
@@ -315,25 +315,25 @@ func formatAction(
 				var sortParts []string
 				for _, sortItem := range dbSource.Sorting {
 					attrName := sortItem.AttributeQualifiedName
-					order := "ASC"
+					order := "asc"
 					if sortItem.Direction == microflows.SortDirectionDescending {
-						order = "DESC"
+						order = "desc"
 					}
 					sortParts = append(sortParts, attrName+" "+order)
 				}
-				stmt += fmt.Sprintf("\n    SORT BY %s", strings.Join(sortParts, ", "))
+				stmt += fmt.Sprintf("\n    sort by %s", strings.Join(sortParts, ", "))
 			}
 
 			if dbSource.Range != nil {
 				switch dbSource.Range.RangeType {
 				case microflows.RangeTypeFirst:
-					stmt += "\n    LIMIT 1"
+					stmt += "\n    limit 1"
 				case microflows.RangeTypeCustom:
 					if dbSource.Range.Limit != "" {
-						stmt += fmt.Sprintf("\n    LIMIT %s", dbSource.Range.Limit)
+						stmt += fmt.Sprintf("\n    limit %s", dbSource.Range.Limit)
 					}
 					if dbSource.Range.Offset != "" {
-						stmt += fmt.Sprintf("\n    OFFSET %s", dbSource.Range.Offset)
+						stmt += fmt.Sprintf("\n    offset %s", dbSource.Range.Offset)
 					}
 				}
 			}
@@ -351,15 +351,15 @@ func formatAction(
 			if assocName == "" {
 				assocName = "..."
 			}
-			return fmt.Sprintf("RETRIEVE $%s FROM $%s/%s;", outputVar, startVar, assocName)
+			return fmt.Sprintf("retrieve $%s from $%s/%s;", outputVar, startVar, assocName)
 		}
 
-		return fmt.Sprintf("RETRIEVE $%s FROM ...;", outputVar)
+		return fmt.Sprintf("retrieve $%s from ...;", outputVar)
 
 	case *microflows.LogMessageAction:
 		level := string(a.LogLevel)
 		if level == "" {
-			level = "INFO"
+			level = "info"
 		}
 		// Node is an expression in Mendix (e.g., 'TEST' or $variable or 'Prefix' + $var)
 		// Output it as-is since it's already stored as an expression
@@ -388,10 +388,10 @@ func formatAction(
 			for i, expr := range a.TemplateParameters {
 				params = append(params, fmt.Sprintf("{%d} = %s", i+1, expr))
 			}
-			withClause = fmt.Sprintf(" WITH (%s)", strings.Join(params, ", "))
+			withClause = fmt.Sprintf(" with (%s)", strings.Join(params, ", "))
 		}
 
-		return fmt.Sprintf("LOG %s NODE %s %s%s;", strings.ToUpper(level), node, message, withClause)
+		return fmt.Sprintf("log %s node %s %s%s;", strings.ToLower(level), node, message, withClause)
 
 	case *microflows.MicroflowCallAction:
 		mfName := ""
@@ -419,9 +419,9 @@ func formatAction(
 		}
 
 		if a.ResultVariableName != "" {
-			return fmt.Sprintf("$%s = CALL MICROFLOW %s(%s);", a.ResultVariableName, mfName, paramStr)
+			return fmt.Sprintf("$%s = call microflow %s(%s);", a.ResultVariableName, mfName, paramStr)
 		}
-		return fmt.Sprintf("CALL MICROFLOW %s(%s);", mfName, paramStr)
+		return fmt.Sprintf("call microflow %s(%s);", mfName, paramStr)
 
 	case *microflows.JavaActionCallAction:
 		javaActionName := a.JavaAction
@@ -465,9 +465,9 @@ func formatAction(
 		}
 
 		if a.ResultVariableName != "" {
-			return fmt.Sprintf("$%s = CALL JAVA ACTION %s(%s);", a.ResultVariableName, javaActionName, paramStr)
+			return fmt.Sprintf("$%s = call java action %s(%s);", a.ResultVariableName, javaActionName, paramStr)
 		}
-		return fmt.Sprintf("CALL JAVA ACTION %s(%s);", javaActionName, paramStr)
+		return fmt.Sprintf("call java action %s(%s);", javaActionName, paramStr)
 
 	case *microflows.CallExternalAction:
 		serviceName := a.ConsumedODataService
@@ -490,9 +490,9 @@ func formatAction(
 		}
 
 		if a.ResultVariableName != "" {
-			return fmt.Sprintf("$%s = CALL EXTERNAL ACTION %s.%s(%s);", a.ResultVariableName, serviceName, actionName, paramStr)
+			return fmt.Sprintf("$%s = call external action %s.%s(%s);", a.ResultVariableName, serviceName, actionName, paramStr)
 		}
-		return fmt.Sprintf("CALL EXTERNAL ACTION %s.%s(%s);", serviceName, actionName, paramStr)
+		return fmt.Sprintf("call external action %s.%s(%s);", serviceName, actionName, paramStr)
 
 	case *microflows.ShowPageAction:
 		// Get page name from action (PageName is BY_NAME_REFERENCE, PageID is legacy BY_ID_REFERENCE)
@@ -528,16 +528,16 @@ func formatAction(
 		if len(params) > 0 {
 			paramStr = "(" + strings.Join(params, ", ") + ")"
 		}
-		return fmt.Sprintf("SHOW PAGE %s%s;", pageName, paramStr)
+		return fmt.Sprintf("show page %s%s;", pageName, paramStr)
 
 	case *microflows.ClosePageAction:
 		if a.NumberOfPages > 1 {
-			return fmt.Sprintf("CLOSE PAGE %d;", a.NumberOfPages)
+			return fmt.Sprintf("close page %d;", a.NumberOfPages)
 		}
-		return "CLOSE PAGE;"
+		return "close page;"
 
 	case *microflows.ShowHomePageAction:
-		return "SHOW HOME PAGE;"
+		return "show home page;"
 
 	case *microflows.ShowMessageAction:
 		msgType := string(a.Type)
@@ -557,9 +557,9 @@ func formatAction(
 			// Wrap message in quotes for MDL syntax (escape any existing single quotes)
 			message = "'" + strings.ReplaceAll(message, "'", "''") + "'"
 		}
-		result := fmt.Sprintf("SHOW MESSAGE %s TYPE %s", message, msgType)
+		result := fmt.Sprintf("show message %s type %s", message, msgType)
 		if len(a.TemplateParameters) > 0 {
-			result += " OBJECTS [" + strings.Join(a.TemplateParameters, ", ") + "]"
+			result += " objects [" + strings.Join(a.TemplateParameters, ", ") + "]"
 		}
 		return result + ";"
 
@@ -592,7 +592,7 @@ func formatAction(
 				attrPath = varName + "/" + parts[len(parts)-1]
 			}
 		}
-		return fmt.Sprintf("VALIDATION FEEDBACK %s MESSAGE %s;", attrPath, msgText)
+		return fmt.Sprintf("validation feedback %s message %s;", attrPath, msgText)
 
 	case *microflows.RestCallAction:
 		return formatRestCallAction(ctx, a)
@@ -615,63 +615,63 @@ func formatAction(
 	// Workflow microflow actions
 	case *microflows.GetWorkflowDataAction:
 		if a.OutputVariableName != "" {
-			return fmt.Sprintf("$%s = GET WORKFLOW DATA $%s AS %s;", a.OutputVariableName, a.WorkflowVariable, a.Workflow)
+			return fmt.Sprintf("$%s = get workflow data $%s as %s;", a.OutputVariableName, a.WorkflowVariable, a.Workflow)
 		}
-		return fmt.Sprintf("GET WORKFLOW DATA $%s AS %s;", a.WorkflowVariable, a.Workflow)
+		return fmt.Sprintf("get workflow data $%s as %s;", a.WorkflowVariable, a.Workflow)
 
 	case *microflows.WorkflowCallAction:
 		if a.OutputVariableName != "" {
-			return fmt.Sprintf("$%s = CALL WORKFLOW %s ($%s);", a.OutputVariableName, a.Workflow, a.WorkflowContextVariable)
+			return fmt.Sprintf("$%s = call workflow %s ($%s);", a.OutputVariableName, a.Workflow, a.WorkflowContextVariable)
 		}
-		return fmt.Sprintf("CALL WORKFLOW %s ($%s);", a.Workflow, a.WorkflowContextVariable)
+		return fmt.Sprintf("call workflow %s ($%s);", a.Workflow, a.WorkflowContextVariable)
 
 	case *microflows.GetWorkflowsAction:
 		if a.OutputVariableName != "" {
-			return fmt.Sprintf("$%s = GET WORKFLOWS FOR $%s;", a.OutputVariableName, a.WorkflowContextVariableName)
+			return fmt.Sprintf("$%s = get workflows for $%s;", a.OutputVariableName, a.WorkflowContextVariableName)
 		}
-		return fmt.Sprintf("GET WORKFLOWS FOR $%s;", a.WorkflowContextVariableName)
+		return fmt.Sprintf("get workflows for $%s;", a.WorkflowContextVariableName)
 
 	case *microflows.GetWorkflowActivityRecordsAction:
 		if a.OutputVariableName != "" {
-			return fmt.Sprintf("$%s = GET WORKFLOW ACTIVITY RECORDS $%s;", a.OutputVariableName, a.WorkflowVariable)
+			return fmt.Sprintf("$%s = get workflow activity records $%s;", a.OutputVariableName, a.WorkflowVariable)
 		}
-		return fmt.Sprintf("GET WORKFLOW ACTIVITY RECORDS $%s;", a.WorkflowVariable)
+		return fmt.Sprintf("get workflow activity records $%s;", a.WorkflowVariable)
 
 	case *microflows.WorkflowOperationAction:
 		return formatWorkflowOperationAction(ctx, a)
 
 	case *microflows.SetTaskOutcomeAction:
-		return fmt.Sprintf("SET TASK OUTCOME $%s '%s';", a.WorkflowTaskVariable, a.OutcomeValue)
+		return fmt.Sprintf("set task outcome $%s '%s';", a.WorkflowTaskVariable, a.OutcomeValue)
 
 	case *microflows.OpenUserTaskAction:
-		return fmt.Sprintf("OPEN USER TASK $%s;", a.UserTaskVariable)
+		return fmt.Sprintf("open user task $%s;", a.UserTaskVariable)
 
 	case *microflows.NotifyWorkflowAction:
 		if a.OutputVariableName != "" {
-			return fmt.Sprintf("$%s = NOTIFY WORKFLOW $%s;", a.OutputVariableName, a.WorkflowVariable)
+			return fmt.Sprintf("$%s = notify workflow $%s;", a.OutputVariableName, a.WorkflowVariable)
 		}
-		return fmt.Sprintf("NOTIFY WORKFLOW $%s;", a.WorkflowVariable)
+		return fmt.Sprintf("notify workflow $%s;", a.WorkflowVariable)
 
 	case *microflows.OpenWorkflowAction:
-		return fmt.Sprintf("OPEN WORKFLOW $%s;", a.WorkflowVariable)
+		return fmt.Sprintf("open workflow $%s;", a.WorkflowVariable)
 
 	case *microflows.LockWorkflowAction:
 		if a.PauseAllWorkflows {
-			return "LOCK WORKFLOW ALL;"
+			return "lock workflow all;"
 		}
 		if a.Workflow != "" {
-			return fmt.Sprintf("LOCK WORKFLOW %s;", a.Workflow)
+			return fmt.Sprintf("lock workflow %s;", a.Workflow)
 		}
-		return fmt.Sprintf("LOCK WORKFLOW $%s;", a.WorkflowVariable)
+		return fmt.Sprintf("lock workflow $%s;", a.WorkflowVariable)
 
 	case *microflows.UnlockWorkflowAction:
 		if a.ResumeAllPausedWorkflows {
-			return "UNLOCK WORKFLOW ALL;"
+			return "unlock workflow all;"
 		}
 		if a.Workflow != "" {
-			return fmt.Sprintf("UNLOCK WORKFLOW %s;", a.Workflow)
+			return fmt.Sprintf("unlock workflow %s;", a.Workflow)
 		}
-		return fmt.Sprintf("UNLOCK WORKFLOW $%s;", a.WorkflowVariable)
+		return fmt.Sprintf("unlock workflow $%s;", a.WorkflowVariable)
 
 	case *microflows.UnknownAction:
 		return fmt.Sprintf("-- Unsupported action type: %s", a.TypeName)
@@ -684,24 +684,24 @@ func formatAction(
 // formatWorkflowOperationAction formats a workflow operation action as MDL.
 func formatWorkflowOperationAction(ctx *ExecContext, a *microflows.WorkflowOperationAction) string {
 	if a.Operation == nil {
-		return "WORKFLOW OPERATION ...;"
+		return "workflow operation ...;"
 	}
 	switch op := a.Operation.(type) {
 	case *microflows.AbortOperation:
 		if op.Reason != "" {
-			return fmt.Sprintf("WORKFLOW OPERATION ABORT $%s REASON '%s';", op.WorkflowVariable, strings.ReplaceAll(op.Reason, "'", "''"))
+			return fmt.Sprintf("workflow operation abort $%s reason '%s';", op.WorkflowVariable, strings.ReplaceAll(op.Reason, "'", "''"))
 		}
-		return fmt.Sprintf("WORKFLOW OPERATION ABORT $%s;", op.WorkflowVariable)
+		return fmt.Sprintf("workflow operation abort $%s;", op.WorkflowVariable)
 	case *microflows.ContinueOperation:
-		return fmt.Sprintf("WORKFLOW OPERATION CONTINUE $%s;", op.WorkflowVariable)
+		return fmt.Sprintf("workflow operation continue $%s;", op.WorkflowVariable)
 	case *microflows.PauseOperation:
-		return fmt.Sprintf("WORKFLOW OPERATION PAUSE $%s;", op.WorkflowVariable)
+		return fmt.Sprintf("workflow operation pause $%s;", op.WorkflowVariable)
 	case *microflows.RestartOperation:
-		return fmt.Sprintf("WORKFLOW OPERATION RESTART $%s;", op.WorkflowVariable)
+		return fmt.Sprintf("workflow operation restart $%s;", op.WorkflowVariable)
 	case *microflows.RetryOperation:
-		return fmt.Sprintf("WORKFLOW OPERATION RETRY $%s;", op.WorkflowVariable)
+		return fmt.Sprintf("workflow operation retry $%s;", op.WorkflowVariable)
 	case *microflows.UnpauseOperation:
-		return fmt.Sprintf("WORKFLOW OPERATION UNPAUSE $%s;", op.WorkflowVariable)
+		return fmt.Sprintf("workflow operation unpause $%s;", op.WorkflowVariable)
 	default:
 		return fmt.Sprintf("-- Unknown workflow operation: %T", a.Operation)
 	}
@@ -710,25 +710,25 @@ func formatWorkflowOperationAction(ctx *ExecContext, a *microflows.WorkflowOpera
 // formatListOperation formats a list operation as MDL.
 func formatListOperation(ctx *ExecContext, op microflows.ListOperation, outputVar string) string {
 	if op == nil {
-		return fmt.Sprintf("$%s = LIST OPERATION ...;", outputVar)
+		return fmt.Sprintf("$%s = list operation ...;", outputVar)
 	}
 
 	switch o := op.(type) {
 	case *microflows.HeadOperation:
-		return fmt.Sprintf("$%s = HEAD($%s);", outputVar, o.ListVariable)
+		return fmt.Sprintf("$%s = head($%s);", outputVar, o.ListVariable)
 	case *microflows.TailOperation:
-		return fmt.Sprintf("$%s = TAIL($%s);", outputVar, o.ListVariable)
+		return fmt.Sprintf("$%s = tail($%s);", outputVar, o.ListVariable)
 	case *microflows.FindOperation:
-		return fmt.Sprintf("$%s = FIND($%s, %s);", outputVar, o.ListVariable, o.Expression)
+		return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariable, o.Expression)
 	case *microflows.FilterOperation:
-		return fmt.Sprintf("$%s = FILTER($%s, %s);", outputVar, o.ListVariable, o.Expression)
+		return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariable, o.Expression)
 	case *microflows.SortOperation:
 		if len(o.Sorting) > 0 {
 			var sortCols []string
 			for _, s := range o.Sorting {
-				dir := "ASC"
+				dir := "asc"
 				if s.Direction == microflows.SortDirectionDescending {
-					dir = "DESC"
+					dir = "desc"
 				}
 				// Extract attribute name (use last part of qualified name for readability)
 				attrName := s.AttributeQualifiedName
@@ -743,46 +743,46 @@ func formatListOperation(ctx *ExecContext, op microflows.ListOperation, outputVa
 				}
 				sortCols = append(sortCols, fmt.Sprintf("%s %s", attrName, dir))
 			}
-			return fmt.Sprintf("$%s = SORT($%s, %s);", outputVar, o.ListVariable, strings.Join(sortCols, ", "))
+			return fmt.Sprintf("$%s = sort($%s, %s);", outputVar, o.ListVariable, strings.Join(sortCols, ", "))
 		}
-		return fmt.Sprintf("$%s = SORT($%s);", outputVar, o.ListVariable)
+		return fmt.Sprintf("$%s = sort($%s);", outputVar, o.ListVariable)
 	case *microflows.UnionOperation:
-		return fmt.Sprintf("$%s = UNION($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
+		return fmt.Sprintf("$%s = union($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
 	case *microflows.IntersectOperation:
-		return fmt.Sprintf("$%s = INTERSECT($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
+		return fmt.Sprintf("$%s = intersect($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
 	case *microflows.SubtractOperation:
-		return fmt.Sprintf("$%s = SUBTRACT($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
+		return fmt.Sprintf("$%s = subtract($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
 	case *microflows.ContainsOperation:
-		return fmt.Sprintf("$%s = CONTAINS($%s, $%s);", outputVar, o.ListVariable, o.ObjectVariable)
+		return fmt.Sprintf("$%s = contains($%s, $%s);", outputVar, o.ListVariable, o.ObjectVariable)
 	case *microflows.EqualsOperation:
-		return fmt.Sprintf("$%s = EQUALS($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
+		return fmt.Sprintf("$%s = equals($%s, $%s);", outputVar, o.ListVariable1, o.ListVariable2)
 	case *microflows.FindByAttributeOperation:
 		fieldName := extractFieldName(o.Attribute, o.Association)
 		if fieldName != "" && o.Expression != "" {
-			return fmt.Sprintf("$%s = FIND($%s, %s = %s);", outputVar, o.ListVariable, fieldName, o.Expression)
+			return fmt.Sprintf("$%s = find($%s, %s = %s);", outputVar, o.ListVariable, fieldName, o.Expression)
 		} else if o.Expression != "" {
-			return fmt.Sprintf("$%s = FIND($%s, %s);", outputVar, o.ListVariable, o.Expression)
+			return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariable, o.Expression)
 		}
-		return fmt.Sprintf("-- $%s = FIND($%s) — missing attribute/expression", outputVar, o.ListVariable)
+		return fmt.Sprintf("-- $%s = find($%s) — missing attribute/expression", outputVar, o.ListVariable)
 	case *microflows.FilterByAttributeOperation:
 		fieldName := extractFieldName(o.Attribute, o.Association)
 		if fieldName != "" && o.Expression != "" {
-			return fmt.Sprintf("$%s = FILTER($%s, %s = %s);", outputVar, o.ListVariable, fieldName, o.Expression)
+			return fmt.Sprintf("$%s = filter($%s, %s = %s);", outputVar, o.ListVariable, fieldName, o.Expression)
 		} else if o.Expression != "" {
-			return fmt.Sprintf("$%s = FILTER($%s, %s);", outputVar, o.ListVariable, o.Expression)
+			return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariable, o.Expression)
 		}
-		return fmt.Sprintf("-- $%s = FILTER($%s) — missing attribute/expression", outputVar, o.ListVariable)
+		return fmt.Sprintf("-- $%s = filter($%s) — missing attribute/expression", outputVar, o.ListVariable)
 	case *microflows.ListRangeOperation:
 		if o.OffsetExpression != "" && o.LimitExpression != "" {
-			return fmt.Sprintf("$%s = RANGE($%s, %s, %s);", outputVar, o.ListVariable, o.OffsetExpression, o.LimitExpression)
+			return fmt.Sprintf("$%s = range($%s, %s, %s);", outputVar, o.ListVariable, o.OffsetExpression, o.LimitExpression)
 		} else if o.OffsetExpression != "" {
-			return fmt.Sprintf("$%s = RANGE($%s, %s);", outputVar, o.ListVariable, o.OffsetExpression)
+			return fmt.Sprintf("$%s = range($%s, %s);", outputVar, o.ListVariable, o.OffsetExpression)
 		} else if o.LimitExpression != "" {
-			return fmt.Sprintf("$%s = RANGE($%s, 0, %s);", outputVar, o.ListVariable, o.LimitExpression)
+			return fmt.Sprintf("$%s = range($%s, 0, %s);", outputVar, o.ListVariable, o.LimitExpression)
 		}
-		return fmt.Sprintf("$%s = RANGE($%s);", outputVar, o.ListVariable)
+		return fmt.Sprintf("$%s = range($%s);", outputVar, o.ListVariable)
 	default:
-		return fmt.Sprintf("$%s = LIST OPERATION %T;", outputVar, op)
+		return fmt.Sprintf("$%s = list operation %T;", outputVar, op)
 	}
 }
 
@@ -824,22 +824,22 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 		sb.WriteString(" = ")
 	}
 
-	sb.WriteString("REST CALL ")
+	sb.WriteString("rest call ")
 
 	// HTTP method
-	method := "GET"
+	method := "get"
 	if a.HttpConfiguration != nil {
 		switch a.HttpConfiguration.HttpMethod {
 		case microflows.HttpMethodGet:
-			method = "GET"
+			method = "get"
 		case microflows.HttpMethodPost:
-			method = "POST"
+			method = "post"
 		case microflows.HttpMethodPut:
-			method = "PUT"
+			method = "put"
 		case microflows.HttpMethodPatch:
-			method = "PATCH"
+			method = "patch"
 		case microflows.HttpMethodDelete:
-			method = "DELETE"
+			method = "delete"
 		}
 	}
 	sb.WriteString(method)
@@ -854,7 +854,7 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 
 	// URL parameters
 	if a.HttpConfiguration != nil && len(a.HttpConfiguration.LocationParams) > 0 {
-		sb.WriteString(" WITH (")
+		sb.WriteString(" with (")
 		for i, param := range a.HttpConfiguration.LocationParams {
 			if i > 0 {
 				sb.WriteString(", ")
@@ -867,7 +867,7 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 	// Headers
 	if a.HttpConfiguration != nil && len(a.HttpConfiguration.CustomHeaders) > 0 {
 		for _, h := range a.HttpConfiguration.CustomHeaders {
-			sb.WriteString("\n    HEADER '")
+			sb.WriteString("\n    header '")
 			sb.WriteString(strings.ReplaceAll(h.Name, "'", "''"))
 			sb.WriteString("' = ")
 			sb.WriteString(h.Value)
@@ -876,9 +876,9 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 
 	// Authentication
 	if a.HttpConfiguration != nil && a.HttpConfiguration.UseAuthentication {
-		sb.WriteString("\n    AUTH BASIC ")
+		sb.WriteString("\n    auth basic ")
 		sb.WriteString(a.HttpConfiguration.Username)
-		sb.WriteString(" PASSWORD ")
+		sb.WriteString(" password ")
 		sb.WriteString(a.HttpConfiguration.Password)
 	}
 
@@ -887,12 +887,12 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 		switch rh := a.RequestHandling.(type) {
 		case *microflows.CustomRequestHandling:
 			if rh.Template != "" {
-				sb.WriteString("\n    BODY '")
+				sb.WriteString("\n    body '")
 				sb.WriteString(strings.ReplaceAll(rh.Template, "'", "''"))
 				sb.WriteString("'")
 				// Add template parameters if present
 				if len(rh.TemplateParams) > 0 {
-					sb.WriteString(" WITH (")
+					sb.WriteString(" with (")
 					for i, param := range rh.TemplateParams {
 						if i > 0 {
 							sb.WriteString(", ")
@@ -904,10 +904,10 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 			}
 		case *microflows.MappingRequestHandling:
 			if rh.MappingID != "" {
-				sb.WriteString("\n    BODY MAPPING ")
+				sb.WriteString("\n    body mapping ")
 				sb.WriteString(string(rh.MappingID))
 				if rh.ParameterVariable != "" {
-					sb.WriteString(" FROM $")
+					sb.WriteString(" from $")
 					sb.WriteString(rh.ParameterVariable)
 				}
 			}
@@ -916,22 +916,22 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 
 	// Timeout
 	if a.TimeoutExpression != "" {
-		sb.WriteString("\n    TIMEOUT ")
+		sb.WriteString("\n    timeout ")
 		sb.WriteString(a.TimeoutExpression)
 	}
 
 	// Returns
-	sb.WriteString("\n    RETURNS ")
+	sb.WriteString("\n    returns ")
 	if a.ResultHandling != nil {
 		switch rh := a.ResultHandling.(type) {
 		case *microflows.ResultHandlingString:
 			sb.WriteString("String")
 			_ = rh // used for type assertion only
 		case *microflows.ResultHandlingMapping:
-			sb.WriteString("MAPPING ")
+			sb.WriteString("mapping ")
 			sb.WriteString(string(rh.MappingID))
 			if rh.ResultEntityID != "" {
-				sb.WriteString(" AS ")
+				sb.WriteString(" as ")
 				sb.WriteString(string(rh.ResultEntityID))
 			}
 		case *microflows.ResultHandlingNone:
@@ -958,7 +958,7 @@ func formatRestOperationCallAction(ctx *ExecContext, a *microflows.RestOperation
 		sb.WriteString(" = ")
 	}
 
-	sb.WriteString("SEND REST REQUEST ")
+	sb.WriteString("send rest request ")
 	sb.WriteString(a.Operation)
 
 	// WITH clause for parameter mappings
@@ -979,7 +979,7 @@ func formatRestOperationCallAction(ctx *ExecContext, a *microflows.RestOperation
 		allParams = append(allParams, struct{ name, value string }{name, qm.Value})
 	}
 	if len(allParams) > 0 {
-		sb.WriteString("\n    WITH (")
+		sb.WriteString("\n    with (")
 		for i, p := range allParams {
 			if i > 0 {
 				sb.WriteString(", ")
@@ -993,7 +993,7 @@ func formatRestOperationCallAction(ctx *ExecContext, a *microflows.RestOperation
 	}
 
 	if a.BodyVariable != nil && a.BodyVariable.VariableName != "" {
-		sb.WriteString("\n    BODY $")
+		sb.WriteString("\n    body $")
 		sb.WriteString(a.BodyVariable.VariableName)
 	}
 
@@ -1012,12 +1012,12 @@ func formatExecuteDatabaseQueryAction(ctx *ExecContext, a *microflows.ExecuteDat
 		sb.WriteString(fmt.Sprintf("$%s = ", a.OutputVariableName))
 	}
 
-	sb.WriteString("EXECUTE DATABASE QUERY ")
+	sb.WriteString("execute database query ")
 	sb.WriteString(a.Query)
 
 	// Dynamic query override
 	if a.DynamicQuery != "" {
-		sb.WriteString(fmt.Sprintf(" DYNAMIC %s", a.DynamicQuery))
+		sb.WriteString(fmt.Sprintf(" dynamic %s", a.DynamicQuery))
 	}
 
 	// Parameter mappings
@@ -1034,7 +1034,7 @@ func formatExecuteDatabaseQueryAction(ctx *ExecContext, a *microflows.ExecuteDat
 
 	// Connection parameter mappings (runtime connection override)
 	if len(a.ConnectionParameterMappings) > 0 {
-		sb.WriteString("\n    CONNECTION (")
+		sb.WriteString("\n    connection (")
 		for i, cm := range a.ConnectionParameterMappings {
 			if i > 0 {
 				sb.WriteString(", ")
@@ -1084,7 +1084,7 @@ func formatImportXmlAction(ctx *ExecContext, a *microflows.ImportXmlAction, enti
 		sb.WriteString(" = ")
 	}
 
-	sb.WriteString("IMPORT FROM MAPPING ")
+	sb.WriteString("import from mapping ")
 	sb.WriteString(mappingName)
 	sb.WriteString("($")
 	sb.WriteString(a.XmlDocumentVariable)
@@ -1105,7 +1105,7 @@ func formatExportXmlAction(ctx *ExecContext, a *microflows.ExportXmlAction) stri
 		sb.WriteString(" = ")
 	}
 
-	sb.WriteString("EXPORT TO MAPPING ")
+	sb.WriteString("export to mapping ")
 
 	mappingName := ""
 	paramVar := ""
@@ -1134,9 +1134,9 @@ func formatTransformJsonAction(a *microflows.TransformJsonAction) string {
 		sb.WriteString(a.OutputVariableName)
 		sb.WriteString(" = ")
 	}
-	sb.WriteString("TRANSFORM $")
+	sb.WriteString("transform $")
 	sb.WriteString(a.InputVariableName)
-	sb.WriteString(" WITH ")
+	sb.WriteString(" with ")
 	sb.WriteString(a.Transformation)
 	sb.WriteString(";")
 	return sb.String()

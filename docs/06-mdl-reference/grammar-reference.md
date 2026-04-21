@@ -124,7 +124,7 @@ stateDiagram-v2
 ```ebnf
 createStatement
     : docComment? annotation*
-    | CREATE (OR (MODIFY | REPLACE))?
+    | create (or (modify | replace))?
     | ( createEntityStatement
     | | createAssociationStatement
     | | createModuleStatement
@@ -151,9 +151,9 @@ stateDiagram-v2
     state "annotation*" as s2
     s1 --> s2
     s2 --> [*]
-    state "CREATE" as s3
+    state "create" as s3
     [*] --> s3
-    state "(OR (MODIFY | REPLACE))?" as s4
+    state "(or (modify | replace))?" as s4
     s3 --> s4
     s4 --> [*]
     state "( createEntityStatement" as s5
@@ -208,10 +208,10 @@ stateDiagram-v2
 
 ```ebnf
 alterStatement
-    : ALTER ENTITY qualifiedName alterEntityAction+
-    | | ALTER ASSOCIATION qualifiedName alterAssociationAction+
-    | | ALTER ENUMERATION qualifiedName alterEnumerationAction+
-    | | ALTER NOTEBOOK qualifiedName alterNotebookAction+
+    : alter entity qualifiedName alterEntityAction+
+    | | alter association qualifiedName alterAssociationAction+
+    | | alter enumeration qualifiedName alterEnumerationAction+
+    | | alter notebook qualifiedName alterNotebookAction+
 ```
 
 **Railroad Diagram:**
@@ -219,36 +219,36 @@ alterStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ALTER" as s1
+    state "alter" as s1
     [*] --> s1
-    state "ENTITY" as s2
+    state "entity" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
     state "alterEntityAction+" as s4
     s3 --> s4
     s4 --> [*]
-    state "ALTER" as s5
+    state "alter" as s5
     [*] --> s5
-    state "ASSOCIATION" as s6
+    state "association" as s6
     s5 --> s6
     state "qualifiedName" as s7
     s6 --> s7
     state "alterAssociationAction+" as s8
     s7 --> s8
     s8 --> [*]
-    state "ALTER" as s9
+    state "alter" as s9
     [*] --> s9
-    state "ENUMERATION" as s10
+    state "enumeration" as s10
     s9 --> s10
     state "qualifiedName" as s11
     s10 --> s11
     state "alterEnumerationAction+" as s12
     s11 --> s12
     s12 --> [*]
-    state "ALTER" as s13
+    state "alter" as s13
     [*] --> s13
-    state "NOTEBOOK" as s14
+    state "notebook" as s14
     s13 --> s14
     state "qualifiedName" as s15
     s14 --> s15
@@ -265,16 +265,16 @@ stateDiagram-v2
 
 ```ebnf
 dropStatement
-    : DROP ENTITY qualifiedName
-    | | DROP ASSOCIATION qualifiedName
-    | | DROP ENUMERATION qualifiedName
-    | | DROP MICROFLOW qualifiedName
-    | | DROP NANOFLOW qualifiedName
-    | | DROP PAGE qualifiedName
-    | | DROP SNIPPET qualifiedName
-    | | DROP MODULE qualifiedName
-    | | DROP NOTEBOOK qualifiedName
-    | | DROP INDEX qualifiedName ON qualifiedName
+    : drop entity qualifiedName
+    | | drop association qualifiedName
+    | | drop enumeration qualifiedName
+    | | drop microflow qualifiedName
+    | | drop nanoflow qualifiedName
+    | | drop page qualifiedName
+    | | drop snippet qualifiedName
+    | | drop module qualifiedName
+    | | drop notebook qualifiedName
+    | | drop index qualifiedName on qualifiedName
 ```
 
 **Railroad Diagram:**
@@ -282,76 +282,76 @@ dropStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DROP" as s1
+    state "drop" as s1
     [*] --> s1
-    state "ENTITY" as s2
+    state "entity" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
     s3 --> [*]
-    state "DROP" as s4
+    state "drop" as s4
     [*] --> s4
-    state "ASSOCIATION" as s5
+    state "association" as s5
     s4 --> s5
     state "qualifiedName" as s6
     s5 --> s6
     s6 --> [*]
-    state "DROP" as s7
+    state "drop" as s7
     [*] --> s7
-    state "ENUMERATION" as s8
+    state "enumeration" as s8
     s7 --> s8
     state "qualifiedName" as s9
     s8 --> s9
     s9 --> [*]
-    state "DROP" as s10
+    state "drop" as s10
     [*] --> s10
-    state "MICROFLOW" as s11
+    state "microflow" as s11
     s10 --> s11
     state "qualifiedName" as s12
     s11 --> s12
     s12 --> [*]
-    state "DROP" as s13
+    state "drop" as s13
     [*] --> s13
-    state "NANOFLOW" as s14
+    state "nanoflow" as s14
     s13 --> s14
     state "qualifiedName" as s15
     s14 --> s15
     s15 --> [*]
-    state "DROP" as s16
+    state "drop" as s16
     [*] --> s16
-    state "PAGE" as s17
+    state "page" as s17
     s16 --> s17
     state "qualifiedName" as s18
     s17 --> s18
     s18 --> [*]
-    state "DROP" as s19
+    state "drop" as s19
     [*] --> s19
-    state "SNIPPET" as s20
+    state "snippet" as s20
     s19 --> s20
     state "qualifiedName" as s21
     s20 --> s21
     s21 --> [*]
-    state "DROP" as s22
+    state "drop" as s22
     [*] --> s22
-    state "MODULE" as s23
+    state "module" as s23
     s22 --> s23
     state "qualifiedName" as s24
     s23 --> s24
     s24 --> [*]
-    state "DROP" as s25
+    state "drop" as s25
     [*] --> s25
-    state "NOTEBOOK" as s26
+    state "notebook" as s26
     s25 --> s26
     state "qualifiedName" as s27
     s26 --> s27
     s27 --> [*]
-    state "DROP" as s28
+    state "drop" as s28
     [*] --> s28
-    state "INDEX" as s29
+    state "index" as s29
     s28 --> s29
     state "qualifiedName" as s30
     s29 --> s30
-    state "ON" as s31
+    state "on" as s31
     s30 --> s31
     state "qualifiedName" as s32
     s31 --> s32
@@ -366,8 +366,8 @@ stateDiagram-v2
 
 ```ebnf
 renameStatement
-    : RENAME ENTITY qualifiedName TO IDENTIFIER
-    | | RENAME MODULE IDENTIFIER TO IDENTIFIER
+    : rename entity qualifiedName to IDENTIFIER
+    | | rename module IDENTIFIER to IDENTIFIER
 ```
 
 **Railroad Diagram:**
@@ -375,24 +375,24 @@ renameStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "RENAME" as s1
+    state "rename" as s1
     [*] --> s1
-    state "ENTITY" as s2
+    state "entity" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
-    state "TO" as s4
+    state "to" as s4
     s3 --> s4
     state "IDENTIFIER" as s5
     s4 --> s5
     s5 --> [*]
-    state "RENAME" as s6
+    state "rename" as s6
     [*] --> s6
-    state "MODULE" as s7
+    state "module" as s7
     s6 --> s7
     state "IDENTIFIER" as s8
     s7 --> s8
-    state "TO" as s9
+    state "to" as s9
     s8 --> s9
     state "IDENTIFIER" as s10
     s9 --> s10
@@ -409,11 +409,11 @@ Creates a new entity in the domain model.  Entities can be persistent (stored in
 
 ```ebnf
 createEntityStatement
-    : PERSISTENT ENTITY qualifiedName entityBody?
-    | | NON_PERSISTENT ENTITY qualifiedName entityBody?
-    | | VIEW ENTITY qualifiedName entityBody? AS LPAREN? oqlQuery RPAREN?  // Parentheses optional
-    | | EXTERNAL ENTITY qualifiedName entityBody?
-    | | ENTITY qualifiedName entityBody?  // Default to persistent
+    : persistent entity qualifiedName entityBody?
+    | | NON_PERSISTENT entity qualifiedName entityBody?
+    | | view entity qualifiedName entityBody? as LPAREN? oqlQuery RPAREN?  // Parentheses optional
+    | | external entity qualifiedName entityBody?
+    | | entity qualifiedName entityBody?  // default to persistent
 ```
 
 **Railroad Diagram:**
@@ -421,9 +421,9 @@ createEntityStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "PERSISTENT" as s1
+    state "persistent" as s1
     [*] --> s1
-    state "ENTITY" as s2
+    state "entity" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
@@ -432,22 +432,22 @@ stateDiagram-v2
     s4 --> [*]
     state "NON_PERSISTENT" as s5
     [*] --> s5
-    state "ENTITY" as s6
+    state "entity" as s6
     s5 --> s6
     state "qualifiedName" as s7
     s6 --> s7
     state "entityBody?" as s8
     s7 --> s8
     s8 --> [*]
-    state "VIEW" as s9
+    state "view" as s9
     [*] --> s9
-    state "ENTITY" as s10
+    state "entity" as s10
     s9 --> s10
     state "qualifiedName" as s11
     s10 --> s11
     state "entityBody?" as s12
     s11 --> s12
-    state "AS" as s13
+    state "as" as s13
     s12 --> s13
     state "LPAREN?" as s14
     s13 --> s14
@@ -456,16 +456,16 @@ stateDiagram-v2
     state "RPAREN?" as s16
     s15 --> s16
     s16 --> [*]
-    state "EXTERNAL" as s17
+    state "external" as s17
     [*] --> s17
-    state "ENTITY" as s18
+    state "entity" as s18
     s17 --> s18
     state "qualifiedName" as s19
     s18 --> s19
     state "entityBody?" as s20
     s19 --> s20
     s20 --> [*]
-    state "ENTITY" as s21
+    state "entity" as s21
     [*] --> s21
     state "qualifiedName" as s22
     s21 --> s22
@@ -479,44 +479,44 @@ stateDiagram-v2
 *Persistent entity with attributes:*
 
 ```sql
-CREATE PERSISTENT ENTITY MyModule.Customer (
-  Name: String(100) NOT NULL,
-  Email: String(200) UNIQUE,
-  Age: Integer,
-  Active: Boolean DEFAULT true
+create persistent entity MyModule.Customer (
+  Name: string(100) not null,
+  Email: string(200) unique,
+  Age: integer,
+  Active: boolean default true
 );
 ```
 
 *Non-persistent entity for search filters:*
 
 ```sql
-CREATE NON-PERSISTENT ENTITY MyModule.SearchFilter (
-Query: String,
-MaxResults: Integer DEFAULT 100,
-IncludeArchived: Boolean DEFAULT false
+create non-persistent entity MyModule.SearchFilter (
+query: string,
+MaxResults: integer default 100,
+IncludeArchived: boolean default false
 );
 ```
 
 *View entity with OQL query:*
 
 ```sql
-CREATE VIEW ENTITY MyModule.ActiveCustomers (
-CustomerId: Integer,
-CustomerName: String(100)
-) AS
-SELECT c.Id AS CustomerId, c.Name AS CustomerName
-FROM MyModule.Customer AS c
-WHERE c.Active = true;
+create view entity MyModule.ActiveCustomers (
+CustomerId: integer,
+CustomerName: string(100)
+) as
+select c.Id as CustomerId, c.Name as CustomerName
+from MyModule.Customer as c
+where c.Active = true;
 ```
 
 *Entity with index:*
 
 ```sql
-CREATE PERSISTENT ENTITY MyModule.Order (
-OrderNumber: String(50) NOT NULL,
+create persistent entity MyModule.Order (
+OrderNumber: string(50) not null,
 CustomerRef: MyModule.Customer
 )
-INDEX (OrderNumber);
+index (OrderNumber);
 ```
 
 **See also:** [attributeDefinition for attribute syntax](#attributedefinition-for-attribute-syntax), [dataType for supported data types](#datatype-for-supported-data-types), [oqlQuery for view entity queries](#oqlquery-for-view-entity-queries)
@@ -529,9 +529,9 @@ INDEX (OrderNumber);
 
 ```ebnf
 createAssociationStatement
-    : ASSOCIATION qualifiedName
-    | FROM qualifiedName
-    | TO qualifiedName
+    : association qualifiedName
+    | from qualifiedName
+    | to qualifiedName
     | associationOptions?
 ```
 
@@ -540,17 +540,17 @@ createAssociationStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ASSOCIATION" as s1
+    state "association" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
     s2 --> [*]
-    state "FROM" as s3
+    state "from" as s3
     [*] --> s3
     state "qualifiedName" as s4
     s3 --> s4
     s4 --> [*]
-    state "TO" as s5
+    state "to" as s5
     [*] --> s5
     state "qualifiedName" as s6
     s5 --> s6
@@ -568,7 +568,7 @@ stateDiagram-v2
 
 ```ebnf
 createModuleStatement
-    : MODULE IDENTIFIER moduleOptions?
+    : module IDENTIFIER moduleOptions?
 ```
 
 **Railroad Diagram:**
@@ -576,7 +576,7 @@ createModuleStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "MODULE" as s1
+    state "module" as s1
     [*] --> s1
     state "IDENTIFIER" as s2
     s1 --> s2
@@ -593,7 +593,7 @@ stateDiagram-v2
 
 ```ebnf
 createEnumerationStatement
-    : ENUMERATION qualifiedName
+    : enumeration qualifiedName
     | LPAREN enumerationValueList RPAREN
     | enumerationOptions?
 ```
@@ -603,7 +603,7 @@ createEnumerationStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ENUMERATION" as s1
+    state "enumeration" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
@@ -628,8 +628,8 @@ stateDiagram-v2
 
 ```ebnf
 createValidationRuleStatement
-    : VALIDATION RULE qualifiedName
-    | FOR qualifiedName
+    : validation rule qualifiedName
+    | for qualifiedName
 ```
 
 **Railroad Diagram:**
@@ -637,14 +637,14 @@ createValidationRuleStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "VALIDATION" as s1
+    state "validation" as s1
     [*] --> s1
-    state "RULE" as s2
+    state "rule" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
     s3 --> [*]
-    state "FOR" as s4
+    state "for" as s4
     [*] --> s4
     state "qualifiedName" as s5
     s4 --> s5
@@ -661,11 +661,11 @@ Creates a new microflow with parameters, return type, and activity body.  Microf
 
 ```ebnf
 createMicroflowStatement
-    : MICROFLOW qualifiedName
+    : microflow qualifiedName
     | LPAREN microflowParameterList? RPAREN
     | microflowReturnType?
     | microflowOptions?
-    | BEGIN microflowBody END SEMICOLON? SLASH?
+    | begin microflowBody end SEMICOLON? SLASH?
 ```
 
 **Railroad Diagram:**
@@ -673,7 +673,7 @@ createMicroflowStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "MICROFLOW" as s1
+    state "microflow" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
@@ -691,11 +691,11 @@ stateDiagram-v2
     state "microflowOptions?" as s7
     [*] --> s7
     s7 --> [*]
-    state "BEGIN" as s8
+    state "begin" as s8
     [*] --> s8
     state "microflowBody" as s9
     s8 --> s9
-    state "END" as s10
+    state "end" as s10
     s9 --> s10
     state "SEMICOLON?" as s11
     s10 --> s11
@@ -709,46 +709,46 @@ stateDiagram-v2
 *Simple microflow returning a string:*
 
 ```sql
-CREATE MICROFLOW MyModule.GetGreeting ($Name: String) RETURNS String
-BEGIN
-RETURN 'Hello, ' + $Name + '!';
-END;
+create microflow MyModule.GetGreeting ($Name: string) returns string
+begin
+return 'Hello, ' + $Name + '!';
+end;
 ```
 
 *Microflow with entity parameter and database operations:*
 
 ```sql
-CREATE MICROFLOW MyModule.DeactivateCustomer ($Customer: MyModule.Customer) RETURNS Boolean
-BEGIN
+create microflow MyModule.DeactivateCustomer ($Customer: MyModule.Customer) returns boolean
+begin
 $Customer.Active = false;
-COMMIT $Customer;
-RETURN true;
-END;
+commit $Customer;
+return true;
+end;
 ```
 
 *Microflow with RETRIEVE and iteration:*
 
 ```sql
-CREATE MICROFLOW MyModule.CountActiveOrders () RETURNS Integer
-BEGIN
-DECLARE $Orders List of MyModule.Order;
-$Orders = RETRIEVE MyModule.Order WHERE Active = true;
-RETURN length($Orders);
-END;
+create microflow MyModule.CountActiveOrders () returns integer
+begin
+declare $Orders list of MyModule.Order;
+$Orders = retrieve MyModule.Order where Active = true;
+return length($Orders);
+end;
 ```
 
 *Microflow calling another microflow:*
 
 ```sql
-CREATE MICROFLOW MyModule.ProcessOrder ($Order: MyModule.Order) RETURNS Boolean
-BEGIN
-$Result = CALL MICROFLOW MyModule.ValidateOrder (Order = $Order);
-IF $Result THEN
-COMMIT $Order;
-RETURN true;
-END IF;
-RETURN false;
-END;
+create microflow MyModule.ProcessOrder ($Order: MyModule.Order) returns boolean
+begin
+$Result = call microflow MyModule.ValidateOrder (Order = $Order);
+if $Result then
+commit $Order;
+return true;
+end if;
+return false;
+end;
 ```
 
 **See also:** [microflowBody for available activities](#microflowbody-for-available-activities), [microflowParameter for parameter syntax](#microflowparameter-for-parameter-syntax)
@@ -892,7 +892,7 @@ stateDiagram-v2
 
 ```ebnf
 declareStatement
-    : DECLARE VARIABLE dataType (EQUALS expression)?
+    : declare VARIABLE dataType (equals expression)?
 ```
 
 **Railroad Diagram:**
@@ -900,13 +900,13 @@ declareStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DECLARE" as s1
+    state "declare" as s1
     [*] --> s1
     state "VARIABLE" as s2
     s1 --> s2
     state "dataType" as s3
     s2 --> s3
-    state "(EQUALS expression)?" as s4
+    state "(equals expression)?" as s4
     s3 --> s4
     s4 --> [*]
 ```
@@ -919,7 +919,7 @@ stateDiagram-v2
 
 ```ebnf
 setStatement
-    : SET (VARIABLE | attributePath) EQUALS expression
+    : set (VARIABLE | attributePath) equals expression
 ```
 
 **Railroad Diagram:**
@@ -927,11 +927,11 @@ setStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SET" as s1
+    state "set" as s1
     [*] --> s1
     state "(VARIABLE | attributePath)" as s2
     s1 --> s2
-    state "EQUALS" as s3
+    state "equals" as s3
     s2 --> s3
     state "expression" as s4
     s3 --> s4
@@ -946,7 +946,7 @@ stateDiagram-v2
 
 ```ebnf
 createObjectStatement
-    : CREATE VARIABLE AS dataType (SET memberAssignmentList)?
+    : create VARIABLE as dataType (set memberAssignmentList)?
 ```
 
 **Railroad Diagram:**
@@ -954,15 +954,15 @@ createObjectStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CREATE" as s1
+    state "create" as s1
     [*] --> s1
     state "VARIABLE" as s2
     s1 --> s2
-    state "AS" as s3
+    state "as" as s3
     s2 --> s3
     state "dataType" as s4
     s3 --> s4
-    state "(SET memberAssignmentList)?" as s5
+    state "(set memberAssignmentList)?" as s5
     s4 --> s5
     s5 --> [*]
 ```
@@ -975,7 +975,7 @@ stateDiagram-v2
 
 ```ebnf
 changeObjectStatement
-    : CHANGE VARIABLE SET memberAssignmentList
+    : change VARIABLE set memberAssignmentList
 ```
 
 **Railroad Diagram:**
@@ -983,11 +983,11 @@ changeObjectStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CHANGE" as s1
+    state "change" as s1
     [*] --> s1
     state "VARIABLE" as s2
     s1 --> s2
-    state "SET" as s3
+    state "set" as s3
     s2 --> s3
     state "memberAssignmentList" as s4
     s3 --> s4
@@ -1002,7 +1002,7 @@ stateDiagram-v2
 
 ```ebnf
 commitStatement
-    : COMMIT VARIABLE (WITH EVENTS)? REFRESH?
+    : commit VARIABLE (with events)? refresh?
 ```
 
 **Railroad Diagram:**
@@ -1010,11 +1010,11 @@ commitStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COMMIT" as s1
+    state "commit" as s1
     [*] --> s1
     state "VARIABLE" as s2
     s1 --> s2
-    state "(WITH EVENTS)?" as s3
+    state "(with events)?" as s3
     s2 --> s3
     s3 --> [*]
 ```
@@ -1027,7 +1027,7 @@ stateDiagram-v2
 
 ```ebnf
 deleteObjectStatement
-    : DELETE VARIABLE
+    : delete VARIABLE
 ```
 
 **Railroad Diagram:**
@@ -1035,7 +1035,7 @@ deleteObjectStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DELETE" as s1
+    state "delete" as s1
     [*] --> s1
     state "VARIABLE" as s2
     s1 --> s2
@@ -1050,10 +1050,10 @@ stateDiagram-v2
 
 ```ebnf
 retrieveStatement
-    : RETRIEVE VARIABLE FROM retrieveSource
-    | (WHERE expression)?
-    | (OFFSET NUMBER_LITERAL)?
-    | (LIMIT NUMBER_LITERAL)?
+    : retrieve VARIABLE from retrieveSource
+    | (where expression)?
+    | (offset NUMBER_LITERAL)?
+    | (limit NUMBER_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -1061,22 +1061,22 @@ retrieveStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "RETRIEVE" as s1
+    state "retrieve" as s1
     [*] --> s1
     state "VARIABLE" as s2
     s1 --> s2
-    state "FROM" as s3
+    state "from" as s3
     s2 --> s3
     state "retrieveSource" as s4
     s3 --> s4
     s4 --> [*]
-    state "(WHERE expression)?" as s5
+    state "(where expression)?" as s5
     [*] --> s5
     s5 --> [*]
-    state "(OFFSET NUMBER_LITERAL)?" as s6
+    state "(offset NUMBER_LITERAL)?" as s6
     [*] --> s6
     s6 --> [*]
-    state "(LIMIT NUMBER_LITERAL)?" as s7
+    state "(limit NUMBER_LITERAL)?" as s7
     [*] --> s7
     s7 --> [*]
 ```
@@ -1089,10 +1089,10 @@ stateDiagram-v2
 
 ```ebnf
 ifStatement
-    : IF expression THEN microflowBody
-    | (ELSIF expression THEN microflowBody)*
-    | (ELSE microflowBody)?
-    | END IF
+    : if expression then microflowBody
+    | (elsif expression then microflowBody)*
+    | (else microflowBody)?
+    | end if
 ```
 
 **Railroad Diagram:**
@@ -1100,24 +1100,24 @@ ifStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "IF" as s1
+    state "if" as s1
     [*] --> s1
     state "expression" as s2
     s1 --> s2
-    state "THEN" as s3
+    state "then" as s3
     s2 --> s3
     state "microflowBody" as s4
     s3 --> s4
     s4 --> [*]
-    state "(ELSIF expression THEN microflowBody)*" as s5
+    state "(elsif expression then microflowBody)*" as s5
     [*] --> s5
     s5 --> [*]
-    state "(ELSE microflowBody)?" as s6
+    state "(else microflowBody)?" as s6
     [*] --> s6
     s6 --> [*]
-    state "END" as s7
+    state "end" as s7
     [*] --> s7
-    state "IF" as s8
+    state "if" as s8
     s7 --> s8
     s8 --> [*]
 ```
@@ -1130,8 +1130,8 @@ stateDiagram-v2
 
 ```ebnf
 loopStatement
-    : LOOP VARIABLE IN (VARIABLE | attributePath)
-    | BEGIN microflowBody END LOOP
+    : loop VARIABLE in (VARIABLE | attributePath)
+    | begin microflowBody end loop
 ```
 
 **Railroad Diagram:**
@@ -1139,22 +1139,22 @@ loopStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LOOP" as s1
+    state "loop" as s1
     [*] --> s1
     state "VARIABLE" as s2
     s1 --> s2
-    state "IN" as s3
+    state "in" as s3
     s2 --> s3
     state "(VARIABLE | attributePath)" as s4
     s3 --> s4
     s4 --> [*]
-    state "BEGIN" as s5
+    state "begin" as s5
     [*] --> s5
     state "microflowBody" as s6
     s5 --> s6
-    state "END" as s7
+    state "end" as s7
     s6 --> s7
-    state "LOOP" as s8
+    state "loop" as s8
     s7 --> s8
     s8 --> [*]
 ```
@@ -1167,8 +1167,8 @@ stateDiagram-v2
 
 ```ebnf
 whileStatement
-    : WHILE expression
-    | BEGIN? microflowBody END WHILE?
+    : while expression
+    | begin? microflowBody end while?
 ```
 
 **Railroad Diagram:**
@@ -1176,18 +1176,18 @@ whileStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "WHILE" as s1
+    state "while" as s1
     [*] --> s1
     state "expression" as s2
     s1 --> s2
     s2 --> [*]
-    state "BEGIN?" as s3
+    state "begin?" as s3
     [*] --> s3
     state "microflowBody" as s4
     s3 --> s4
-    state "END" as s5
+    state "end" as s5
     s4 --> s5
-    state "WHILE?" as s6
+    state "while?" as s6
     s5 --> s6
     s6 --> [*]
 ```
@@ -1200,7 +1200,7 @@ stateDiagram-v2
 
 ```ebnf
 continueStatement
-    : CONTINUE
+    : continue
 ```
 
 **Railroad Diagram:**
@@ -1208,7 +1208,7 @@ continueStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CONTINUE" as s1
+    state "continue" as s1
     [*] --> s1
     s1 --> [*]
 ```
@@ -1221,7 +1221,7 @@ stateDiagram-v2
 
 ```ebnf
 breakStatement
-    : BREAK
+    : break
 ```
 
 **Railroad Diagram:**
@@ -1229,7 +1229,7 @@ breakStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "BREAK" as s1
+    state "break" as s1
     [*] --> s1
     s1 --> [*]
 ```
@@ -1242,7 +1242,7 @@ stateDiagram-v2
 
 ```ebnf
 returnStatement
-    : RETURN expression?
+    : return expression?
 ```
 
 **Railroad Diagram:**
@@ -1250,7 +1250,7 @@ returnStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "RETURN" as s1
+    state "return" as s1
     [*] --> s1
     state "expression?" as s2
     s1 --> s2
@@ -1265,7 +1265,7 @@ stateDiagram-v2
 
 ```ebnf
 logStatement
-    : LOG logLevel? (NODE STRING_LITERAL)? expression logTemplateParams?
+    : log logLevel? (node STRING_LITERAL)? expression logTemplateParams?
 ```
 
 **Railroad Diagram:**
@@ -1273,11 +1273,11 @@ logStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LOG" as s1
+    state "log" as s1
     [*] --> s1
     state "logLevel?" as s2
     s1 --> s2
-    state "(NODE STRING_LITERAL)?" as s3
+    state "(node STRING_LITERAL)?" as s3
     s2 --> s3
     state "expression" as s4
     s3 --> s4
@@ -1294,7 +1294,7 @@ stateDiagram-v2
 
 ```ebnf
 callMicroflowStatement
-    : (VARIABLE EQUALS)? CALL MICROFLOW qualifiedName LPAREN callArgumentList? RPAREN
+    : (VARIABLE equals)? call microflow qualifiedName LPAREN callArgumentList? RPAREN
 ```
 
 **Railroad Diagram:**
@@ -1302,11 +1302,11 @@ callMicroflowStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "(VARIABLE EQUALS)?" as s1
+    state "(VARIABLE equals)?" as s1
     [*] --> s1
-    state "CALL" as s2
+    state "call" as s2
     s1 --> s2
-    state "MICROFLOW" as s3
+    state "microflow" as s3
     s2 --> s3
     state "qualifiedName" as s4
     s3 --> s4
@@ -1327,7 +1327,7 @@ stateDiagram-v2
 
 ```ebnf
 callJavaActionStatement
-    : (VARIABLE EQUALS)? CALL JAVA ACTION qualifiedName LPAREN callArgumentList? RPAREN
+    : (VARIABLE equals)? call java action qualifiedName LPAREN callArgumentList? RPAREN
 ```
 
 **Railroad Diagram:**
@@ -1335,13 +1335,13 @@ callJavaActionStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "(VARIABLE EQUALS)?" as s1
+    state "(VARIABLE equals)?" as s1
     [*] --> s1
-    state "CALL" as s2
+    state "call" as s2
     s1 --> s2
-    state "JAVA" as s3
+    state "java" as s3
     s2 --> s3
-    state "ACTION" as s4
+    state "action" as s4
     s3 --> s4
     state "qualifiedName" as s5
     s4 --> s5
@@ -1362,7 +1362,7 @@ stateDiagram-v2
 
 ```ebnf
 showPageStatement
-    : SHOW PAGE qualifiedName (LPAREN showPageArgList? RPAREN)? (FOR VARIABLE)? (WITH memberAssignmentList)?
+    : show page qualifiedName (LPAREN showPageArgList? RPAREN)? (for VARIABLE)? (with memberAssignmentList)?
 ```
 
 **Railroad Diagram:**
@@ -1370,17 +1370,17 @@ showPageStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SHOW" as s1
+    state "show" as s1
     [*] --> s1
-    state "PAGE" as s2
+    state "page" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
     state "(LPAREN showPageArgList? RPAREN)?" as s4
     s3 --> s4
-    state "(FOR VARIABLE)?" as s5
+    state "(for VARIABLE)?" as s5
     s4 --> s5
-    state "(WITH memberAssignmentList)?" as s6
+    state "(with memberAssignmentList)?" as s6
     s5 --> s6
     s6 --> [*]
 ```
@@ -1393,7 +1393,7 @@ stateDiagram-v2
 
 ```ebnf
 closePageStatement
-    : CLOSE PAGE
+    : close page
 ```
 
 **Railroad Diagram:**
@@ -1401,9 +1401,9 @@ closePageStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CLOSE" as s1
+    state "close" as s1
     [*] --> s1
-    state "PAGE" as s2
+    state "page" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -1416,7 +1416,7 @@ stateDiagram-v2
 
 ```ebnf
 throwStatement
-    : THROW expression
+    : throw expression
 ```
 
 **Railroad Diagram:**
@@ -1424,7 +1424,7 @@ throwStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "THROW" as s1
+    state "throw" as s1
     [*] --> s1
     state "expression" as s2
     s1 --> s2
@@ -1441,9 +1441,9 @@ Creates a new page with layout, parameters, and widget content.  Pages define th
 
 ```ebnf
 createPageStatement
-    : PAGE qualifiedName
-    | ( LPAREN pageParameterList? RPAREN    // Parenthesized params: PAGE Name($p: Type)
-    | | pageParameterList                   // Inline params: PAGE Name\n$p: Type
+    : page qualifiedName
+    | ( LPAREN pageParameterList? RPAREN    // Parenthesized params: page Name($p: type)
+    | | pageParameterList                   // Inline params: page Name\n$p: type
     | )?
 ```
 
@@ -1452,7 +1452,7 @@ createPageStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "PAGE" as s1
+    state "page" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
@@ -1473,45 +1473,45 @@ stateDiagram-v2
 *Simple page with text:*
 
 ```sql
-CREATE PAGE MyModule.HomePage ()
-TITLE 'Welcome'
-LAYOUT Atlas_Core.Atlas_Default
-BEGIN
-LAYOUTGRID BEGIN
-ROW BEGIN
-COLUMN 12 BEGIN
-DYNAMICTEXT (CONTENT 'Hello, World!', RENDERMODE 'H1')
-END
-END
-END
-END;
+create page MyModule.HomePage ()
+title 'Welcome'
+layout Atlas_Core.Atlas_Default
+begin
+layoutgrid begin
+row begin
+column 12 begin
+dynamictext (content 'Hello, World!', rendermode 'H1')
+end
+end
+end
+end;
 ```
 
 *Page with parameter and data view:*
 
 ```sql
-CREATE PAGE MyModule.CustomerDetails ($Customer: MyModule.Customer)
-TITLE 'Customer Details'
-LAYOUT Atlas_Core.Atlas_Default
-BEGIN
-DATAVIEW dvCustomer DATASOURCE $Customer BEGIN
-TEXTBOX (ATTRIBUTE Name, LABEL 'Name'),
-TEXTBOX (ATTRIBUTE Email, LABEL 'Email')
-END
-END;
+create page MyModule.CustomerDetails ($Customer: MyModule.Customer)
+title 'Customer Details'
+layout Atlas_Core.Atlas_Default
+begin
+dataview dvCustomer datasource $Customer begin
+textbox (attribute Name, label 'Name'),
+textbox (attribute Email, label 'Email')
+end
+end;
 ```
 
 *Page with action button:*
 
 ```sql
-CREATE PAGE MyModule.OrderForm ($Order: MyModule.Order)
-TITLE 'New Order'
-LAYOUT Atlas_Core.Atlas_Default
-BEGIN
-ACTIONBUTTON btnSave 'Save Order'
-ACTION CALL MICROFLOW MyModule.SaveOrder
-STYLE Primary
-END;
+create page MyModule.OrderForm ($Order: MyModule.Order)
+title 'New Order'
+layout Atlas_Core.Atlas_Default
+begin
+actionbutton btnSave 'Save Order'
+action call microflow MyModule.SaveOrder
+style primary
+end;
 ```
 
 **See also:** [pageBody for widget definitions](#pagebody-for-widget-definitions), [widgetDefinition for available widgets](#widgetdefinition-for-available-widgets)
@@ -1524,12 +1524,12 @@ END;
 
 ```ebnf
 createSnippetStatement
-    : SNIPPET qualifiedName
-    | ( LPAREN snippetParameterList? RPAREN    // Parenthesized params: SNIPPET Name($p: Type)
-    | | snippetParameterList                   // Inline params: SNIPPET Name\n$p: Type
+    : snippet qualifiedName
+    | ( LPAREN snippetParameterList? RPAREN    // Parenthesized params: snippet Name($p: type)
+    | | snippetParameterList                   // Inline params: snippet Name\n$p: type
     | )?
     | snippetOptions?
-    | BEGIN (pageWidget SEMICOLON?)* END
+    | begin (pageWidget SEMICOLON?)* end
 ```
 
 **Railroad Diagram:**
@@ -1537,7 +1537,7 @@ createSnippetStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SNIPPET" as s1
+    state "snippet" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
@@ -1554,11 +1554,11 @@ stateDiagram-v2
     state "snippetOptions?" as s6
     [*] --> s6
     s6 --> [*]
-    state "BEGIN" as s7
+    state "begin" as s7
     [*] --> s7
     state "(pageWidget SEMICOLON?)*" as s8
     s7 --> s8
-    state "END" as s9
+    state "end" as s9
     s8 --> s9
     s9 --> [*]
 ```
@@ -1571,9 +1571,9 @@ stateDiagram-v2
 
 ```ebnf
 createNotebookStatement
-    : NOTEBOOK qualifiedName
+    : notebook qualifiedName
     | notebookOptions?
-    | BEGIN notebookPage* END
+    | begin notebookPage* end
 ```
 
 **Railroad Diagram:**
@@ -1581,7 +1581,7 @@ createNotebookStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "NOTEBOOK" as s1
+    state "notebook" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
@@ -1589,11 +1589,11 @@ stateDiagram-v2
     state "notebookOptions?" as s3
     [*] --> s3
     s3 --> [*]
-    state "BEGIN" as s4
+    state "begin" as s4
     [*] --> s4
     state "notebookPage*" as s5
     s4 --> s5
-    state "END" as s6
+    state "end" as s6
     s5 --> s6
     s6 --> [*]
 ```
@@ -1606,7 +1606,7 @@ stateDiagram-v2
 
 ```ebnf
 createDatabaseConnectionStatement
-    : DATABASE CONNECTION IDENTIFIER
+    : database connection IDENTIFIER
 ```
 
 **Railroad Diagram:**
@@ -1614,9 +1614,9 @@ createDatabaseConnectionStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DATABASE" as s1
+    state "database" as s1
     [*] --> s1
-    state "CONNECTION" as s2
+    state "connection" as s2
     s1 --> s2
     state "IDENTIFIER" as s3
     s2 --> s3
@@ -1631,9 +1631,9 @@ stateDiagram-v2
 
 ```ebnf
 createConstantStatement
-    : CONSTANT qualifiedName
-    | TYPE dataType
-    | DEFAULT literal
+    : constant qualifiedName
+    | type dataType
+    | default literal
     | constantOptions?
 ```
 
@@ -1642,17 +1642,17 @@ createConstantStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CONSTANT" as s1
+    state "constant" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
     s2 --> [*]
-    state "TYPE" as s3
+    state "type" as s3
     [*] --> s3
     state "dataType" as s4
     s3 --> s4
     s4 --> [*]
-    state "DEFAULT" as s5
+    state "default" as s5
     [*] --> s5
     state "literal" as s6
     s5 --> s6
@@ -1670,7 +1670,7 @@ stateDiagram-v2
 
 ```ebnf
 createRestClientStatement
-    : REST CLIENT qualifiedName
+    : rest client qualifiedName
 ```
 
 **Railroad Diagram:**
@@ -1678,9 +1678,9 @@ createRestClientStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "REST" as s1
+    state "rest" as s1
     [*] --> s1
-    state "CLIENT" as s2
+    state "client" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
@@ -1695,7 +1695,7 @@ stateDiagram-v2
 
 ```ebnf
 createIndexStatement
-    : INDEX IDENTIFIER ON qualifiedName LPAREN indexAttributeList RPAREN
+    : index IDENTIFIER on qualifiedName LPAREN indexAttributeList RPAREN
 ```
 
 **Railroad Diagram:**
@@ -1703,11 +1703,11 @@ createIndexStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "INDEX" as s1
+    state "index" as s1
     [*] --> s1
     state "IDENTIFIER" as s2
     s1 --> s2
-    state "ON" as s3
+    state "on" as s3
     s2 --> s3
     state "qualifiedName" as s4
     s3 --> s4
@@ -1761,24 +1761,24 @@ stateDiagram-v2
 
 ```ebnf
 showStatement
-    : SHOW MODULES
-    | | SHOW ENTITIES (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW ASSOCIATIONS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW MICROFLOWS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW PAGES (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW SNIPPETS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW ENUMERATIONS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW CONSTANTS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW LAYOUTS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW NOTEBOOKS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW JAVA ACTIONS (IN (qualifiedName | IDENTIFIER))?
-    | | SHOW ENTITY qualifiedName
-    | | SHOW ASSOCIATION qualifiedName
-    | | SHOW PAGE qualifiedName
-    | | SHOW CONNECTIONS
-    | | SHOW STATUS
-    | | SHOW VERSION
-    | | SHOW CATALOG IDENTIFIER  // SHOW CATALOG TABLES, etc.
+    : show modules
+    | | show entities (in (qualifiedName | IDENTIFIER))?
+    | | show associations (in (qualifiedName | IDENTIFIER))?
+    | | show microflows (in (qualifiedName | IDENTIFIER))?
+    | | show pages (in (qualifiedName | IDENTIFIER))?
+    | | show snippets (in (qualifiedName | IDENTIFIER))?
+    | | show enumerations (in (qualifiedName | IDENTIFIER))?
+    | | show constants (in (qualifiedName | IDENTIFIER))?
+    | | show layouts (in (qualifiedName | IDENTIFIER))?
+    | | show notebooks (in (qualifiedName | IDENTIFIER))?
+    | | show java actions (in (qualifiedName | IDENTIFIER))?
+    | | show entity qualifiedName
+    | | show association qualifiedName
+    | | show page qualifiedName
+    | | show connections
+    | | show status
+    | | show version
+    | | show catalog IDENTIFIER  // show catalog tables, etc.
 ```
 
 **Railroad Diagram:**
@@ -1786,122 +1786,122 @@ showStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SHOW" as s1
+    state "show" as s1
     [*] --> s1
-    state "MODULES" as s2
+    state "modules" as s2
     s1 --> s2
     s2 --> [*]
-    state "SHOW" as s3
+    state "show" as s3
     [*] --> s3
-    state "ENTITIES" as s4
+    state "entities" as s4
     s3 --> s4
-    state "(IN (qualifiedName | IDENTIFIER))?" as s5
+    state "(in (qualifiedName | IDENTIFIER))?" as s5
     s4 --> s5
     s5 --> [*]
-    state "SHOW" as s6
+    state "show" as s6
     [*] --> s6
-    state "ASSOCIATIONS" as s7
+    state "associations" as s7
     s6 --> s7
-    state "(IN (qualifiedName | IDENTIFIER))?" as s8
+    state "(in (qualifiedName | IDENTIFIER))?" as s8
     s7 --> s8
     s8 --> [*]
-    state "SHOW" as s9
+    state "show" as s9
     [*] --> s9
-    state "MICROFLOWS" as s10
+    state "microflows" as s10
     s9 --> s10
-    state "(IN (qualifiedName | IDENTIFIER))?" as s11
+    state "(in (qualifiedName | IDENTIFIER))?" as s11
     s10 --> s11
     s11 --> [*]
-    state "SHOW" as s12
+    state "show" as s12
     [*] --> s12
-    state "PAGES" as s13
+    state "pages" as s13
     s12 --> s13
-    state "(IN (qualifiedName | IDENTIFIER))?" as s14
+    state "(in (qualifiedName | IDENTIFIER))?" as s14
     s13 --> s14
     s14 --> [*]
-    state "SHOW" as s15
+    state "show" as s15
     [*] --> s15
-    state "SNIPPETS" as s16
+    state "snippets" as s16
     s15 --> s16
-    state "(IN (qualifiedName | IDENTIFIER))?" as s17
+    state "(in (qualifiedName | IDENTIFIER))?" as s17
     s16 --> s17
     s17 --> [*]
-    state "SHOW" as s18
+    state "show" as s18
     [*] --> s18
-    state "ENUMERATIONS" as s19
+    state "enumerations" as s19
     s18 --> s19
-    state "(IN (qualifiedName | IDENTIFIER))?" as s20
+    state "(in (qualifiedName | IDENTIFIER))?" as s20
     s19 --> s20
     s20 --> [*]
-    state "SHOW" as s21
+    state "show" as s21
     [*] --> s21
-    state "CONSTANTS" as s22
+    state "constants" as s22
     s21 --> s22
-    state "(IN (qualifiedName | IDENTIFIER))?" as s23
+    state "(in (qualifiedName | IDENTIFIER))?" as s23
     s22 --> s23
     s23 --> [*]
-    state "SHOW" as s24
+    state "show" as s24
     [*] --> s24
-    state "LAYOUTS" as s25
+    state "layouts" as s25
     s24 --> s25
-    state "(IN (qualifiedName | IDENTIFIER))?" as s26
+    state "(in (qualifiedName | IDENTIFIER))?" as s26
     s25 --> s26
     s26 --> [*]
-    state "SHOW" as s27
+    state "show" as s27
     [*] --> s27
-    state "NOTEBOOKS" as s28
+    state "notebooks" as s28
     s27 --> s28
-    state "(IN (qualifiedName | IDENTIFIER))?" as s29
+    state "(in (qualifiedName | IDENTIFIER))?" as s29
     s28 --> s29
     s29 --> [*]
-    state "SHOW" as s30
+    state "show" as s30
     [*] --> s30
-    state "JAVA" as s31
+    state "java" as s31
     s30 --> s31
-    state "ACTIONS" as s32
+    state "actions" as s32
     s31 --> s32
-    state "(IN (qualifiedName | IDENTIFIER))?" as s33
+    state "(in (qualifiedName | IDENTIFIER))?" as s33
     s32 --> s33
     s33 --> [*]
-    state "SHOW" as s34
+    state "show" as s34
     [*] --> s34
-    state "ENTITY" as s35
+    state "entity" as s35
     s34 --> s35
     state "qualifiedName" as s36
     s35 --> s36
     s36 --> [*]
-    state "SHOW" as s37
+    state "show" as s37
     [*] --> s37
-    state "ASSOCIATION" as s38
+    state "association" as s38
     s37 --> s38
     state "qualifiedName" as s39
     s38 --> s39
     s39 --> [*]
-    state "SHOW" as s40
+    state "show" as s40
     [*] --> s40
-    state "PAGE" as s41
+    state "page" as s41
     s40 --> s41
     state "qualifiedName" as s42
     s41 --> s42
     s42 --> [*]
-    state "SHOW" as s43
+    state "show" as s43
     [*] --> s43
-    state "CONNECTIONS" as s44
+    state "connections" as s44
     s43 --> s44
     s44 --> [*]
-    state "SHOW" as s45
+    state "show" as s45
     [*] --> s45
-    state "STATUS" as s46
+    state "status" as s46
     s45 --> s46
     s46 --> [*]
-    state "SHOW" as s47
+    state "show" as s47
     [*] --> s47
-    state "VERSION" as s48
+    state "version" as s48
     s47 --> s48
     s48 --> [*]
-    state "SHOW" as s49
+    state "show" as s49
     [*] --> s49
-    state "CATALOG" as s50
+    state "catalog" as s50
     s49 --> s50
     state "IDENTIFIER" as s51
     s50 --> s51
@@ -1916,15 +1916,15 @@ stateDiagram-v2
 
 ```ebnf
 describeStatement
-    : DESCRIBE ENTITY qualifiedName
-    | | DESCRIBE ASSOCIATION qualifiedName
-    | | DESCRIBE MICROFLOW qualifiedName
-    | | DESCRIBE NANOFLOW qualifiedName
-    | | DESCRIBE PAGE qualifiedName
-    | | DESCRIBE SNIPPET qualifiedName
-    | | DESCRIBE ENUMERATION qualifiedName
-    | | DESCRIBE MODULE IDENTIFIER (WITH ALL)?  // DESCRIBE MODULE Name [WITH ALL] - optionally include all objects
-    | | DESCRIBE CATALOG DOT IDENTIFIER  // DESCRIBE CATALOG.ENTITIES
+    : describe entity qualifiedName
+    | | describe association qualifiedName
+    | | describe microflow qualifiedName
+    | | describe nanoflow qualifiedName
+    | | describe page qualifiedName
+    | | describe snippet qualifiedName
+    | | describe enumeration qualifiedName
+    | | describe module IDENTIFIER (with all)?  // describe module Name [with all] - optionally include all objects
+    | | describe catalog DOT IDENTIFIER  // describe CATALOG.ENTITIES
 ```
 
 **Railroad Diagram:**
@@ -1932,67 +1932,67 @@ describeStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DESCRIBE" as s1
+    state "describe" as s1
     [*] --> s1
-    state "ENTITY" as s2
+    state "entity" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
     s3 --> [*]
-    state "DESCRIBE" as s4
+    state "describe" as s4
     [*] --> s4
-    state "ASSOCIATION" as s5
+    state "association" as s5
     s4 --> s5
     state "qualifiedName" as s6
     s5 --> s6
     s6 --> [*]
-    state "DESCRIBE" as s7
+    state "describe" as s7
     [*] --> s7
-    state "MICROFLOW" as s8
+    state "microflow" as s8
     s7 --> s8
     state "qualifiedName" as s9
     s8 --> s9
     s9 --> [*]
-    state "DESCRIBE" as s10
+    state "describe" as s10
     [*] --> s10
-    state "NANOFLOW" as s11
+    state "nanoflow" as s11
     s10 --> s11
     state "qualifiedName" as s12
     s11 --> s12
     s12 --> [*]
-    state "DESCRIBE" as s13
+    state "describe" as s13
     [*] --> s13
-    state "PAGE" as s14
+    state "page" as s14
     s13 --> s14
     state "qualifiedName" as s15
     s14 --> s15
     s15 --> [*]
-    state "DESCRIBE" as s16
+    state "describe" as s16
     [*] --> s16
-    state "SNIPPET" as s17
+    state "snippet" as s17
     s16 --> s17
     state "qualifiedName" as s18
     s17 --> s18
     s18 --> [*]
-    state "DESCRIBE" as s19
+    state "describe" as s19
     [*] --> s19
-    state "ENUMERATION" as s20
+    state "enumeration" as s20
     s19 --> s20
     state "qualifiedName" as s21
     s20 --> s21
     s21 --> [*]
-    state "DESCRIBE" as s22
+    state "describe" as s22
     [*] --> s22
-    state "MODULE" as s23
+    state "module" as s23
     s22 --> s23
     state "IDENTIFIER" as s24
     s23 --> s24
-    state "(WITH ALL)?" as s25
+    state "(with all)?" as s25
     s24 --> s25
     s25 --> [*]
-    state "DESCRIBE" as s26
+    state "describe" as s26
     [*] --> s26
-    state "CATALOG" as s27
+    state "catalog" as s27
     s26 --> s27
     state "DOT" as s28
     s27 --> s28
@@ -2078,9 +2078,9 @@ stateDiagram-v2
 
 ```ebnf
 connectStatement
-    : CONNECT TO PROJECT STRING_LITERAL (BRANCH STRING_LITERAL)? TOKEN STRING_LITERAL
-    | | CONNECT LOCAL STRING_LITERAL
-    | | CONNECT RUNTIME HOST STRING_LITERAL PORT NUMBER_LITERAL (TOKEN STRING_LITERAL)?
+    : connect to project STRING_LITERAL (branch STRING_LITERAL)? token STRING_LITERAL
+    | | connect local STRING_LITERAL
+    | | connect runtime host STRING_LITERAL port NUMBER_LITERAL (token STRING_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -2088,41 +2088,41 @@ connectStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CONNECT" as s1
+    state "connect" as s1
     [*] --> s1
-    state "TO" as s2
+    state "to" as s2
     s1 --> s2
-    state "PROJECT" as s3
+    state "project" as s3
     s2 --> s3
     state "STRING_LITERAL" as s4
     s3 --> s4
-    state "(BRANCH STRING_LITERAL)?" as s5
+    state "(branch STRING_LITERAL)?" as s5
     s4 --> s5
-    state "TOKEN" as s6
+    state "token" as s6
     s5 --> s6
     state "STRING_LITERAL" as s7
     s6 --> s7
     s7 --> [*]
-    state "CONNECT" as s8
+    state "connect" as s8
     [*] --> s8
-    state "LOCAL" as s9
+    state "local" as s9
     s8 --> s9
     state "STRING_LITERAL" as s10
     s9 --> s10
     s10 --> [*]
-    state "CONNECT" as s11
+    state "connect" as s11
     [*] --> s11
-    state "RUNTIME" as s12
+    state "runtime" as s12
     s11 --> s12
-    state "HOST" as s13
+    state "host" as s13
     s12 --> s13
     state "STRING_LITERAL" as s14
     s13 --> s14
-    state "PORT" as s15
+    state "port" as s15
     s14 --> s15
     state "NUMBER_LITERAL" as s16
     s15 --> s16
-    state "(TOKEN STRING_LITERAL)?" as s17
+    state "(token STRING_LITERAL)?" as s17
     s16 --> s17
     s17 --> [*]
 ```
@@ -2135,7 +2135,7 @@ stateDiagram-v2
 
 ```ebnf
 disconnectStatement
-    : DISCONNECT
+    : disconnect
 ```
 
 **Railroad Diagram:**
@@ -2143,7 +2143,7 @@ disconnectStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DISCONNECT" as s1
+    state "disconnect" as s1
     [*] --> s1
     s1 --> [*]
 ```
@@ -2156,7 +2156,7 @@ stateDiagram-v2
 
 ```ebnf
 commitChangesStatement
-    : COMMIT (MESSAGE STRING_LITERAL)?
+    : commit (message STRING_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -2164,9 +2164,9 @@ commitChangesStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COMMIT" as s1
+    state "commit" as s1
     [*] --> s1
-    state "(MESSAGE STRING_LITERAL)?" as s2
+    state "(message STRING_LITERAL)?" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -2179,9 +2179,9 @@ stateDiagram-v2
 
 ```ebnf
 updateStatement
-    : UPDATE
-    | | REFRESH CATALOG FULL?
-    | | REFRESH
+    : update
+    | | refresh catalog full?
+    | | refresh
 ```
 
 **Railroad Diagram:**
@@ -2189,17 +2189,17 @@ updateStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "UPDATE" as s1
+    state "update" as s1
     [*] --> s1
     s1 --> [*]
-    state "REFRESH" as s2
+    state "refresh" as s2
     [*] --> s2
-    state "CATALOG" as s3
+    state "catalog" as s3
     s2 --> s3
-    state "FULL?" as s4
+    state "full?" as s4
     s3 --> s4
     s4 --> [*]
-    state "REFRESH" as s5
+    state "refresh" as s5
     [*] --> s5
     s5 --> [*]
 ```
@@ -2212,7 +2212,7 @@ stateDiagram-v2
 
 ```ebnf
 checkStatement
-    : CHECK
+    : check
 ```
 
 **Railroad Diagram:**
@@ -2220,7 +2220,7 @@ checkStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CHECK" as s1
+    state "check" as s1
     [*] --> s1
     s1 --> [*]
 ```
@@ -2233,7 +2233,7 @@ stateDiagram-v2
 
 ```ebnf
 buildStatement
-    : BUILD
+    : build
 ```
 
 **Railroad Diagram:**
@@ -2241,7 +2241,7 @@ buildStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "BUILD" as s1
+    state "build" as s1
     [*] --> s1
     s1 --> [*]
 ```
@@ -2254,7 +2254,7 @@ stateDiagram-v2
 
 ```ebnf
 executeScriptStatement
-    : EXECUTE SCRIPT STRING_LITERAL
+    : execute script STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -2262,9 +2262,9 @@ executeScriptStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "EXECUTE" as s1
+    state "execute" as s1
     [*] --> s1
-    state "SCRIPT" as s2
+    state "script" as s2
     s1 --> s2
     state "STRING_LITERAL" as s3
     s2 --> s3
@@ -2279,7 +2279,7 @@ stateDiagram-v2
 
 ```ebnf
 executeRuntimeStatement
-    : EXECUTE RUNTIME STRING_LITERAL
+    : execute runtime STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -2287,9 +2287,9 @@ executeRuntimeStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "EXECUTE" as s1
+    state "execute" as s1
     [*] --> s1
-    state "RUNTIME" as s2
+    state "runtime" as s2
     s1 --> s2
     state "STRING_LITERAL" as s3
     s2 --> s3
@@ -2304,7 +2304,7 @@ stateDiagram-v2
 
 ```ebnf
 lintStatement
-    : LINT STRING_LITERAL?
+    : lint STRING_LITERAL?
 ```
 
 **Railroad Diagram:**
@@ -2312,7 +2312,7 @@ lintStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LINT" as s1
+    state "lint" as s1
     [*] --> s1
     state "STRING_LITERAL?" as s2
     s1 --> s2
@@ -2327,8 +2327,8 @@ stateDiagram-v2
 
 ```ebnf
 useSessionStatement
-    : USE sessionIdList
-    | | USE ALL
+    : use sessionIdList
+    | | use all
 ```
 
 **Railroad Diagram:**
@@ -2336,14 +2336,14 @@ useSessionStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "USE" as s1
+    state "use" as s1
     [*] --> s1
     state "sessionIdList" as s2
     s1 --> s2
     s2 --> [*]
-    state "USE" as s3
+    state "use" as s3
     [*] --> s3
-    state "ALL" as s4
+    state "all" as s4
     s3 --> s4
     s4 --> [*]
 ```
@@ -2356,7 +2356,7 @@ stateDiagram-v2
 
 ```ebnf
 introspectApiStatement
-    : INTROSPECT API
+    : introspect api
 ```
 
 **Railroad Diagram:**
@@ -2364,9 +2364,9 @@ introspectApiStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "INTROSPECT" as s1
+    state "introspect" as s1
     [*] --> s1
-    state "API" as s2
+    state "api" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -2379,7 +2379,7 @@ stateDiagram-v2
 
 ```ebnf
 debugStatement
-    : DEBUG STRING_LITERAL
+    : debug STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -2387,7 +2387,7 @@ debugStatement
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DEBUG" as s1
+    state "debug" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
@@ -2479,10 +2479,10 @@ stateDiagram-v2
 
 ```ebnf
 entityOption
-    : EXTENDS qualifiedName
-    | | GENERALIZATION qualifiedName
-    | | COMMENT STRING_LITERAL
-    | | INDEX indexDefinition
+    : extends qualifiedName
+    | | generalization qualifiedName
+    | | comment STRING_LITERAL
+    | | index indexDefinition
 ```
 
 **Railroad Diagram:**
@@ -2490,22 +2490,22 @@ entityOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "EXTENDS" as s1
+    state "extends" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
     s2 --> [*]
-    state "GENERALIZATION" as s3
+    state "generalization" as s3
     [*] --> s3
     state "qualifiedName" as s4
     s3 --> s4
     s4 --> [*]
-    state "COMMENT" as s5
+    state "comment" as s5
     [*] --> s5
     state "STRING_LITERAL" as s6
     s5 --> s6
     s6 --> [*]
-    state "INDEX" as s7
+    state "index" as s7
     [*] --> s7
     state "indexDefinition" as s8
     s7 --> s8
@@ -2545,7 +2545,7 @@ Defines an attribute within an entity.  Attributes have a name, data type, and o
 
 ```ebnf
 attributeDefinition
-    : docComment? annotation* attributeName COLON dataType attributeConstraint*
+    : docComment? annotation* attributename COLON dataType attributeConstraint*
 ```
 
 **Railroad Diagram:**
@@ -2557,7 +2557,7 @@ stateDiagram-v2
     [*] --> s1
     state "annotation*" as s2
     s1 --> s2
-    state "attributeName" as s3
+    state "attributename" as s3
     s2 --> s3
     state "COLON" as s4
     s3 --> s4
@@ -2573,24 +2573,24 @@ stateDiagram-v2
 *Simple attributes:*
 
 ```sql
-Name: String(100),
-Age: Integer,
-Active: Boolean
+Name: string(100),
+Age: integer,
+Active: boolean
 ```
 
 *Attributes with constraints:*
 
 ```sql
-Code: String(50) NOT NULL,
-Email: String(200) UNIQUE,
-Status: Enum MyModule.Status DEFAULT 'Active'
+Code: string(50) not null,
+Email: string(200) unique,
+status: enum MyModule.Status default 'Active'
 ```
 
 *Attribute with custom error messages:*
 
 ```sql
-Name: String(100) NOT NULL ERROR 'Name is required',
-Code: String(50) UNIQUE ERROR 'Code must be unique'
+Name: string(100) not null error 'Name is required',
+Code: string(50) unique error 'Code must be unique'
 ```
 
 *Documented attribute:*
@@ -2606,14 +2606,14 @@ Code: String(50) UNIQUE ERROR 'Code must be unique'
 **Syntax:**
 
 ```ebnf
-attributeName
+attributename
     : IDENTIFIER
-    | | STATUS | TYPE | VALUE | INDEX         // Common keywords used as attribute names
-    | | USERNAME | PASSWORD                   // User-related keywords
-    | | COUNT | SUM | AVG | MIN | MAX         // Aggregate function names as attributes
-    | | ACTION | MESSAGE                      // Common entity attribute names
-    | | OWNER | REFERENCE | CASCADE           // Association keywords that might be attribute names
-    | | SUCCESS | ERROR | WARNING | INFO | DEBUG | CRITICAL  // Log/status keywords
+    | | status | type | value | index         // Common keywords used as attribute names
+    | | username | password                   // user-related keywords
+    | | count | sum | avg | min | max         // Aggregate function names as attributes
+    | | action | message                      // Common entity attribute names
+    | | owner | reference | cascade           // association keywords that might be attribute names
+    | | success | error | warning | info | debug | critical  // log/status keywords
 ```
 
 **Railroad Diagram:**
@@ -2624,86 +2624,86 @@ stateDiagram-v2
     state "IDENTIFIER" as s1
     [*] --> s1
     s1 --> [*]
-    state "STATUS" as s2
+    state "status" as s2
     [*] --> s2
     state "|" as s3
     s2 --> s3
-    state "TYPE" as s4
+    state "type" as s4
     s3 --> s4
     state "|" as s5
     s4 --> s5
-    state "VALUE" as s6
+    state "value" as s6
     s5 --> s6
     state "|" as s7
     s6 --> s7
-    state "INDEX" as s8
+    state "index" as s8
     s7 --> s8
     s8 --> [*]
-    state "USERNAME" as s9
+    state "username" as s9
     [*] --> s9
     state "|" as s10
     s9 --> s10
-    state "PASSWORD" as s11
+    state "password" as s11
     s10 --> s11
     s11 --> [*]
-    state "COUNT" as s12
+    state "count" as s12
     [*] --> s12
     state "|" as s13
     s12 --> s13
-    state "SUM" as s14
+    state "sum" as s14
     s13 --> s14
     state "|" as s15
     s14 --> s15
-    state "AVG" as s16
+    state "avg" as s16
     s15 --> s16
     state "|" as s17
     s16 --> s17
-    state "MIN" as s18
+    state "min" as s18
     s17 --> s18
     state "|" as s19
     s18 --> s19
-    state "MAX" as s20
+    state "max" as s20
     s19 --> s20
     s20 --> [*]
-    state "ACTION" as s21
+    state "action" as s21
     [*] --> s21
     state "|" as s22
     s21 --> s22
-    state "MESSAGE" as s23
+    state "message" as s23
     s22 --> s23
     s23 --> [*]
-    state "OWNER" as s24
+    state "owner" as s24
     [*] --> s24
     state "|" as s25
     s24 --> s25
-    state "REFERENCE" as s26
+    state "reference" as s26
     s25 --> s26
     state "|" as s27
     s26 --> s27
-    state "CASCADE" as s28
+    state "cascade" as s28
     s27 --> s28
     s28 --> [*]
-    state "SUCCESS" as s29
+    state "success" as s29
     [*] --> s29
     state "|" as s30
     s29 --> s30
-    state "ERROR" as s31
+    state "error" as s31
     s30 --> s31
     state "|" as s32
     s31 --> s32
-    state "WARNING" as s33
+    state "warning" as s33
     s32 --> s33
     state "|" as s34
     s33 --> s34
-    state "INFO" as s35
+    state "info" as s35
     s34 --> s35
     state "|" as s36
     s35 --> s36
-    state "DEBUG" as s37
+    state "debug" as s37
     s36 --> s37
     state "|" as s38
     s37 --> s38
-    state "CRITICAL" as s39
+    state "critical" as s39
     s38 --> s39
     s39 --> [*]
 ```
@@ -2716,11 +2716,11 @@ stateDiagram-v2
 
 ```ebnf
 attributeConstraint
-    : NOT_NULL (ERROR STRING_LITERAL)?
-    | | NOT NULL (ERROR STRING_LITERAL)?
-    | | UNIQUE (ERROR STRING_LITERAL)?
-    | | DEFAULT (literal | expression)
-    | | REQUIRED (ERROR STRING_LITERAL)?
+    : NOT_NULL (error STRING_LITERAL)?
+    | | not null (error STRING_LITERAL)?
+    | | unique (error STRING_LITERAL)?
+    | | default (literal | expression)
+    | | required (error STRING_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -2730,29 +2730,29 @@ stateDiagram-v2
     direction LR
     state "NOT_NULL" as s1
     [*] --> s1
-    state "(ERROR STRING_LITERAL)?" as s2
+    state "(error STRING_LITERAL)?" as s2
     s1 --> s2
     s2 --> [*]
-    state "NOT" as s3
+    state "not" as s3
     [*] --> s3
-    state "NULL" as s4
+    state "null" as s4
     s3 --> s4
-    state "(ERROR STRING_LITERAL)?" as s5
+    state "(error STRING_LITERAL)?" as s5
     s4 --> s5
     s5 --> [*]
-    state "UNIQUE" as s6
+    state "unique" as s6
     [*] --> s6
-    state "(ERROR STRING_LITERAL)?" as s7
+    state "(error STRING_LITERAL)?" as s7
     s6 --> s7
     s7 --> [*]
-    state "DEFAULT" as s8
+    state "default" as s8
     [*] --> s8
     state "(literal | expression)" as s9
     s8 --> s9
     s9 --> [*]
-    state "REQUIRED" as s10
+    state "required" as s10
     [*] --> s10
-    state "(ERROR STRING_LITERAL)?" as s11
+    state "(error STRING_LITERAL)?" as s11
     s10 --> s11
     s11 --> [*]
 ```
@@ -2788,7 +2788,7 @@ stateDiagram-v2
 
 ```ebnf
 indexAttribute
-    : indexColumnName (ASC | DESC)?  // Column name with optional sort order
+    : indexColumnName (asc | desc)?  // column name with optional sort order
 ```
 
 **Railroad Diagram:**
@@ -2798,7 +2798,7 @@ stateDiagram-v2
     direction LR
     state "indexColumnName" as s1
     [*] --> s1
-    state "(ASC | DESC)?" as s2
+    state "(asc | desc)?" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -2832,10 +2832,10 @@ stateDiagram-v2
 
 ```ebnf
 associationOption
-    : TYPE (REFERENCE | REFERENCE_SET)
-    | | OWNER (DEFAULT | BOTH)
-    | | DELETE_BEHAVIOR deleteBehavior
-    | | COMMENT STRING_LITERAL
+    : type (reference | reference_set)
+    | | owner (default | both)
+    | | delete_behavior deleteBehavior
+    | | comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -2843,22 +2843,22 @@ associationOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TYPE" as s1
+    state "type" as s1
     [*] --> s1
-    state "(REFERENCE | REFERENCE_SET)" as s2
+    state "(reference | reference_set)" as s2
     s1 --> s2
     s2 --> [*]
-    state "OWNER" as s3
+    state "owner" as s3
     [*] --> s3
-    state "(DEFAULT | BOTH)" as s4
+    state "(default | both)" as s4
     s3 --> s4
     s4 --> [*]
-    state "DELETE_BEHAVIOR" as s5
+    state "delete_behavior" as s5
     [*] --> s5
     state "deleteBehavior" as s6
     s5 --> s6
     s6 --> [*]
-    state "COMMENT" as s7
+    state "comment" as s7
     [*] --> s7
     state "STRING_LITERAL" as s8
     s7 --> s8
@@ -2873,20 +2873,20 @@ stateDiagram-v2
 
 ```ebnf
 alterEntityAction
-    : ADD ATTRIBUTE attributeDefinition
-    | | ADD COLUMN attributeDefinition
-    | | RENAME ATTRIBUTE IDENTIFIER TO IDENTIFIER
-    | | RENAME COLUMN IDENTIFIER TO IDENTIFIER
-    | | MODIFY ATTRIBUTE IDENTIFIER ':'? dataType attributeConstraint*
-    | | MODIFY COLUMN IDENTIFIER ':'? dataType attributeConstraint*
-    | | DROP ATTRIBUTE IDENTIFIER
-    | | DROP COLUMN IDENTIFIER
-    | | SET DOCUMENTATION STRING_LITERAL
-    | | SET COMMENT STRING_LITERAL
-    | | SET STORE OWNER
-    | | SET POSITION LPAREN NUMBER_LITERAL COMMA NUMBER_LITERAL RPAREN
-    | | ADD INDEX indexDefinition
-    | | DROP INDEX IDENTIFIER
+    : add attribute attributeDefinition
+    | | add column attributeDefinition
+    | | rename attribute IDENTIFIER to IDENTIFIER
+    | | rename column IDENTIFIER to IDENTIFIER
+    | | modify attribute IDENTIFIER ':'? dataType attributeConstraint*
+    | | modify column IDENTIFIER ':'? dataType attributeConstraint*
+    | | drop attribute IDENTIFIER
+    | | drop column IDENTIFIER
+    | | set documentation STRING_LITERAL
+    | | set comment STRING_LITERAL
+    | | set store owner
+    | | set position LPAREN NUMBER_LITERAL COMMA NUMBER_LITERAL RPAREN
+    | | add index indexDefinition
+    | | drop index IDENTIFIER
 ```
 
 **Railroad Diagram:**
@@ -2894,45 +2894,45 @@ alterEntityAction
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ADD" as s1
+    state "add" as s1
     [*] --> s1
-    state "ATTRIBUTE" as s2
+    state "attribute" as s2
     s1 --> s2
     state "attributeDefinition" as s3
     s2 --> s3
     s3 --> [*]
-    state "ADD" as s4
+    state "add" as s4
     [*] --> s4
-    state "COLUMN" as s5
+    state "column" as s5
     s4 --> s5
     state "attributeDefinition" as s6
     s5 --> s6
     s6 --> [*]
-    state "RENAME" as s7
+    state "rename" as s7
     [*] --> s7
-    state "ATTRIBUTE" as s8
+    state "attribute" as s8
     s7 --> s8
     state "IDENTIFIER" as s9
     s8 --> s9
-    state "TO" as s10
+    state "to" as s10
     s9 --> s10
     state "IDENTIFIER" as s11
     s10 --> s11
     s11 --> [*]
-    state "RENAME" as s12
+    state "rename" as s12
     [*] --> s12
-    state "COLUMN" as s13
+    state "column" as s13
     s12 --> s13
     state "IDENTIFIER" as s14
     s13 --> s14
-    state "TO" as s15
+    state "to" as s15
     s14 --> s15
     state "IDENTIFIER" as s16
     s15 --> s16
     s16 --> [*]
-    state "MODIFY" as s17
+    state "modify" as s17
     [*] --> s17
-    state "ATTRIBUTE" as s18
+    state "attribute" as s18
     s17 --> s18
     state "IDENTIFIER" as s19
     s18 --> s19
@@ -2941,9 +2941,9 @@ stateDiagram-v2
     state "attributeConstraint*" as s21
     s20 --> s21
     s21 --> [*]
-    state "MODIFY" as s22
+    state "modify" as s22
     [*] --> s22
-    state "COLUMN" as s23
+    state "column" as s23
     s22 --> s23
     state "IDENTIFIER" as s24
     s23 --> s24
@@ -2952,44 +2952,44 @@ stateDiagram-v2
     state "attributeConstraint*" as s26
     s25 --> s26
     s26 --> [*]
-    state "DROP" as s27
+    state "drop" as s27
     [*] --> s27
-    state "ATTRIBUTE" as s28
+    state "attribute" as s28
     s27 --> s28
     state "IDENTIFIER" as s29
     s28 --> s29
     s29 --> [*]
-    state "DROP" as s30
+    state "drop" as s30
     [*] --> s30
-    state "COLUMN" as s31
+    state "column" as s31
     s30 --> s31
     state "IDENTIFIER" as s32
     s31 --> s32
     s32 --> [*]
-    state "SET" as s33
+    state "set" as s33
     [*] --> s33
-    state "DOCUMENTATION" as s34
+    state "documentation" as s34
     s33 --> s34
     state "STRING_LITERAL" as s35
     s34 --> s35
     s35 --> [*]
-    state "SET" as s36
+    state "set" as s36
     [*] --> s36
-    state "COMMENT" as s37
+    state "comment" as s37
     s36 --> s37
     state "STRING_LITERAL" as s38
     s37 --> s38
     s38 --> [*]
-    state "ADD" as s39
+    state "add" as s39
     [*] --> s39
-    state "INDEX" as s40
+    state "index" as s40
     s39 --> s40
     state "indexDefinition" as s41
     s40 --> s41
     s41 --> [*]
-    state "DROP" as s42
+    state "drop" as s42
     [*] --> s42
-    state "INDEX" as s43
+    state "index" as s43
     s42 --> s43
     state "IDENTIFIER" as s44
     s43 --> s44
@@ -3004,9 +3004,9 @@ stateDiagram-v2
 
 ```ebnf
 alterAssociationAction
-    : SET DELETE_BEHAVIOR deleteBehavior
-    | | SET OWNER (DEFAULT | BOTH)
-    | | SET COMMENT STRING_LITERAL
+    : set delete_behavior deleteBehavior
+    | | set owner (default | both)
+    | | set comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -3014,23 +3014,23 @@ alterAssociationAction
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SET" as s1
+    state "set" as s1
     [*] --> s1
-    state "DELETE_BEHAVIOR" as s2
+    state "delete_behavior" as s2
     s1 --> s2
     state "deleteBehavior" as s3
     s2 --> s3
     s3 --> [*]
-    state "SET" as s4
+    state "set" as s4
     [*] --> s4
-    state "OWNER" as s5
+    state "owner" as s5
     s4 --> s5
-    state "(DEFAULT | BOTH)" as s6
+    state "(default | both)" as s6
     s5 --> s6
     s6 --> [*]
-    state "SET" as s7
+    state "set" as s7
     [*] --> s7
-    state "COMMENT" as s8
+    state "comment" as s8
     s7 --> s8
     state "STRING_LITERAL" as s9
     s8 --> s9
@@ -3115,10 +3115,10 @@ stateDiagram-v2
 ```ebnf
 memberAttributeName
     : IDENTIFIER
-    | | STATUS | TYPE | VALUE | INDEX
-    | | USERNAME | PASSWORD
-    | | ACTION | MESSAGE
-    | | OWNER | REFERENCE | CASCADE
+    | | status | type | value | index
+    | | username | password
+    | | action | message
+    | | owner | reference | cascade
 ```
 
 **Railroad Diagram:**
@@ -3129,44 +3129,44 @@ stateDiagram-v2
     state "IDENTIFIER" as s1
     [*] --> s1
     s1 --> [*]
-    state "STATUS" as s2
+    state "status" as s2
     [*] --> s2
     state "|" as s3
     s2 --> s3
-    state "TYPE" as s4
+    state "type" as s4
     s3 --> s4
     state "|" as s5
     s4 --> s5
-    state "VALUE" as s6
+    state "value" as s6
     s5 --> s6
     state "|" as s7
     s6 --> s7
-    state "INDEX" as s8
+    state "index" as s8
     s7 --> s8
     s8 --> [*]
-    state "USERNAME" as s9
+    state "username" as s9
     [*] --> s9
     state "|" as s10
     s9 --> s10
-    state "PASSWORD" as s11
+    state "password" as s11
     s10 --> s11
     s11 --> [*]
-    state "ACTION" as s12
+    state "action" as s12
     [*] --> s12
     state "|" as s13
     s12 --> s13
-    state "MESSAGE" as s14
+    state "message" as s14
     s13 --> s14
     s14 --> [*]
-    state "OWNER" as s15
+    state "owner" as s15
     [*] --> s15
     state "|" as s16
     s15 --> s16
-    state "REFERENCE" as s17
+    state "reference" as s17
     s16 --> s17
     state "|" as s18
     s17 --> s18
-    state "CASCADE" as s19
+    state "cascade" as s19
     s18 --> s19
     s19 --> [*]
 ```
@@ -3179,7 +3179,7 @@ stateDiagram-v2
 
 ```ebnf
 attributeClause
-    : ATTRIBUTE (STRING_LITERAL | qualifiedName)
+    : attribute (STRING_LITERAL | qualifiedName)
 ```
 
 **Railroad Diagram:**
@@ -3187,7 +3187,7 @@ attributeClause
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ATTRIBUTE" as s1
+    state "attribute" as s1
     [*] --> s1
     state "(STRING_LITERAL | qualifiedName)" as s2
     s1 --> s2
@@ -3204,10 +3204,10 @@ stateDiagram-v2
 
 ```ebnf
 alterEnumerationAction
-    : ADD VALUE IDENTIFIER (CAPTION STRING_LITERAL)?
-    | | RENAME VALUE IDENTIFIER TO IDENTIFIER
-    | | DROP VALUE IDENTIFIER
-    | | SET COMMENT STRING_LITERAL
+    : add value IDENTIFIER (caption STRING_LITERAL)?
+    | | rename value IDENTIFIER to IDENTIFIER
+    | | drop value IDENTIFIER
+    | | set comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -3215,36 +3215,36 @@ alterEnumerationAction
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ADD" as s1
+    state "add" as s1
     [*] --> s1
-    state "VALUE" as s2
+    state "value" as s2
     s1 --> s2
     state "IDENTIFIER" as s3
     s2 --> s3
-    state "(CAPTION STRING_LITERAL)?" as s4
+    state "(caption STRING_LITERAL)?" as s4
     s3 --> s4
     s4 --> [*]
-    state "RENAME" as s5
+    state "rename" as s5
     [*] --> s5
-    state "VALUE" as s6
+    state "value" as s6
     s5 --> s6
     state "IDENTIFIER" as s7
     s6 --> s7
-    state "TO" as s8
+    state "to" as s8
     s7 --> s8
     state "IDENTIFIER" as s9
     s8 --> s9
     s9 --> [*]
-    state "DROP" as s10
+    state "drop" as s10
     [*] --> s10
-    state "VALUE" as s11
+    state "value" as s11
     s10 --> s11
     state "IDENTIFIER" as s12
     s11 --> s12
     s12 --> [*]
-    state "SET" as s13
+    state "set" as s13
     [*] --> s13
-    state "COMMENT" as s14
+    state "comment" as s14
     s13 --> s14
     state "STRING_LITERAL" as s15
     s14 --> s15
@@ -3259,9 +3259,9 @@ stateDiagram-v2
 
 ```ebnf
 alterNotebookAction
-    : ADD PAGE qualifiedName (POSITION NUMBER_LITERAL)?
-    | | DROP PAGE qualifiedName
-    | | SET COMMENT STRING_LITERAL
+    : add page qualifiedName (position NUMBER_LITERAL)?
+    | | drop page qualifiedName
+    | | set comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -3269,25 +3269,25 @@ alterNotebookAction
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ADD" as s1
+    state "add" as s1
     [*] --> s1
-    state "PAGE" as s2
+    state "page" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
-    state "(POSITION NUMBER_LITERAL)?" as s4
+    state "(position NUMBER_LITERAL)?" as s4
     s3 --> s4
     s4 --> [*]
-    state "DROP" as s5
+    state "drop" as s5
     [*] --> s5
-    state "PAGE" as s6
+    state "page" as s6
     s5 --> s6
     state "qualifiedName" as s7
     s6 --> s7
     s7 --> [*]
-    state "SET" as s8
+    state "set" as s8
     [*] --> s8
-    state "COMMENT" as s9
+    state "comment" as s9
     s8 --> s9
     state "STRING_LITERAL" as s10
     s9 --> s10
@@ -3350,7 +3350,7 @@ stateDiagram-v2
 
 ```ebnf
 microflowReturnType
-    : RETURNS dataType (AS VARIABLE)?
+    : returns dataType (as VARIABLE)?
 ```
 
 **Railroad Diagram:**
@@ -3358,11 +3358,11 @@ microflowReturnType
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "RETURNS" as s1
+    state "returns" as s1
     [*] --> s1
     state "dataType" as s2
     s1 --> s2
-    state "(AS VARIABLE)?" as s3
+    state "(as VARIABLE)?" as s3
     s2 --> s3
     s3 --> [*]
 ```
@@ -3396,8 +3396,8 @@ stateDiagram-v2
 
 ```ebnf
 microflowOption
-    : FOLDER STRING_LITERAL
-    | | COMMENT STRING_LITERAL
+    : folder STRING_LITERAL
+    | | comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -3405,12 +3405,12 @@ microflowOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "FOLDER" as s1
+    state "folder" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
     s2 --> [*]
-    state "COMMENT" as s3
+    state "comment" as s3
     [*] --> s3
     state "STRING_LITERAL" as s4
     s3 --> s4
@@ -3446,10 +3446,10 @@ stateDiagram-v2
 
 ```ebnf
 actionButtonWidget
-    : ACTIONBUTTON IDENTIFIER? STRING_LITERAL?
+    : actionbutton IDENTIFIER? STRING_LITERAL?
     | templateParams?
     | buttonAction?
-    | (STYLE buttonStyle)?
+    | (style buttonstyle)?
 ```
 
 **Railroad Diagram:**
@@ -3457,7 +3457,7 @@ actionButtonWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ACTIONBUTTON" as s1
+    state "actionbutton" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -3470,7 +3470,7 @@ stateDiagram-v2
     state "buttonAction?" as s5
     [*] --> s5
     s5 --> [*]
-    state "(STYLE buttonStyle)?" as s6
+    state "(style buttonstyle)?" as s6
     [*] --> s6
     s6 --> [*]
 ```
@@ -3483,9 +3483,9 @@ stateDiagram-v2
 
 ```ebnf
 buttonAction
-    : ACTION actionType (STRING_LITERAL | qualifiedName)?
+    : action actionType (STRING_LITERAL | qualifiedName)?
     | secondaryAction?
-    | (PASSING LPAREN passArgList RPAREN)?
+    | (passing LPAREN passArgList RPAREN)?
 ```
 
 **Railroad Diagram:**
@@ -3493,7 +3493,7 @@ buttonAction
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ACTION" as s1
+    state "action" as s1
     [*] --> s1
     state "actionType" as s2
     s1 --> s2
@@ -3503,7 +3503,7 @@ stateDiagram-v2
     state "secondaryAction?" as s4
     [*] --> s4
     s4 --> [*]
-    state "(PASSING LPAREN passArgList RPAREN)?" as s5
+    state "(passing LPAREN passArgList RPAREN)?" as s5
     [*] --> s5
     s5 --> [*]
 ```
@@ -3516,8 +3516,8 @@ stateDiagram-v2
 
 ```ebnf
 secondaryAction
-    : CLOSE_PAGE booleanLiteral?                    // CLOSE_PAGE true
-    | | SHOW_PAGE (STRING_LITERAL | qualifiedName)    // SHOW_PAGE 'Module.Page'
+    : close_page booleanLiteral?                    // close_page true
+    | | show_page (STRING_LITERAL | qualifiedName)    // show_page 'Module.Page'
 ```
 
 **Railroad Diagram:**
@@ -3525,12 +3525,12 @@ secondaryAction
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CLOSE_PAGE" as s1
+    state "close_page" as s1
     [*] --> s1
     state "booleanLiteral?" as s2
     s1 --> s2
     s2 --> [*]
-    state "SHOW_PAGE" as s3
+    state "show_page" as s3
     [*] --> s3
     state "(STRING_LITERAL | qualifiedName)" as s4
     s3 --> s4
@@ -3545,13 +3545,13 @@ stateDiagram-v2
 
 ```ebnf
 actionType
-    : SAVE_CHANGES
-    | | CANCEL_CHANGES
-    | | CLOSE_PAGE
-    | | SHOW_PAGE
-    | | DELETE_ACTION
-    | | CREATE_OBJECT qualifiedName?
-    | | CALL_MICROFLOW
+    : save_changes
+    | | cancel_changes
+    | | close_page
+    | | show_page
+    | | delete_action
+    | | create_object qualifiedName?
+    | | call_microflow
 ```
 
 **Railroad Diagram:**
@@ -3559,27 +3559,27 @@ actionType
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SAVE_CHANGES" as s1
+    state "save_changes" as s1
     [*] --> s1
     s1 --> [*]
-    state "CANCEL_CHANGES" as s2
+    state "cancel_changes" as s2
     [*] --> s2
     s2 --> [*]
-    state "CLOSE_PAGE" as s3
+    state "close_page" as s3
     [*] --> s3
     s3 --> [*]
-    state "SHOW_PAGE" as s4
+    state "show_page" as s4
     [*] --> s4
     s4 --> [*]
-    state "DELETE_ACTION" as s5
+    state "delete_action" as s5
     [*] --> s5
     s5 --> [*]
-    state "CREATE_OBJECT" as s6
+    state "create_object" as s6
     [*] --> s6
     state "qualifiedName?" as s7
     s6 --> s7
     s7 --> [*]
-    state "CALL_MICROFLOW" as s8
+    state "call_microflow" as s8
     [*] --> s8
     s8 --> [*]
 ```
@@ -3617,7 +3617,7 @@ stateDiagram-v2
 
 ```ebnf
 showPageArg
-    : VARIABLE EQUALS (VARIABLE | expression)
+    : VARIABLE equals (VARIABLE | expression)
 ```
 
 **Railroad Diagram:**
@@ -3627,7 +3627,7 @@ stateDiagram-v2
     direction LR
     state "VARIABLE" as s1
     [*] --> s1
-    state "EQUALS" as s2
+    state "equals" as s2
     s1 --> s2
     state "(VARIABLE | expression)" as s3
     s2 --> s3
@@ -3642,7 +3642,7 @@ stateDiagram-v2
 
 ```ebnf
 pageOptions
-    : (BEGIN pageBody END)?
+    : (begin pageBody end)?
 ```
 
 **Railroad Diagram:**
@@ -3650,7 +3650,7 @@ pageOptions
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "(BEGIN pageBody END)?" as s1
+    state "(begin pageBody end)?" as s1
     [*] --> s1
     s1 --> [*]
 ```
@@ -3732,12 +3732,12 @@ stateDiagram-v2
 
 ```ebnf
 pageOption
-    : TITLE STRING_LITERAL
-    | | LAYOUT (qualifiedName | STRING_LITERAL)
-    | | URL STRING_LITERAL
-    | | FOLDER STRING_LITERAL
-    | | CLASS STRING_LITERAL
-    | | COMMENT STRING_LITERAL
+    : title STRING_LITERAL
+    | | layout (qualifiedName | STRING_LITERAL)
+    | | url STRING_LITERAL
+    | | folder STRING_LITERAL
+    | | class STRING_LITERAL
+    | | comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -3745,32 +3745,32 @@ pageOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TITLE" as s1
+    state "title" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
     s2 --> [*]
-    state "LAYOUT" as s3
+    state "layout" as s3
     [*] --> s3
     state "(qualifiedName | STRING_LITERAL)" as s4
     s3 --> s4
     s4 --> [*]
-    state "URL" as s5
+    state "url" as s5
     [*] --> s5
     state "STRING_LITERAL" as s6
     s5 --> s6
     s6 --> [*]
-    state "FOLDER" as s7
+    state "folder" as s7
     [*] --> s7
     state "STRING_LITERAL" as s8
     s7 --> s8
     s8 --> [*]
-    state "CLASS" as s9
+    state "class" as s9
     [*] --> s9
     state "STRING_LITERAL" as s10
     s9 --> s10
     s10 --> [*]
-    state "COMMENT" as s11
+    state "comment" as s11
     [*] --> s11
     state "STRING_LITERAL" as s12
     s11 --> s12
@@ -3907,8 +3907,8 @@ stateDiagram-v2
 
 ```ebnf
 layoutGridWidget
-    : LAYOUTGRID IDENTIFIER? widgetOptions?
-    | ( BEGIN layoutGridRow* END
+    : layoutgrid IDENTIFIER? widgetOptions?
+    | ( begin layoutGridRow* end
     | | layoutGridRow+
     | )?
 ```
@@ -3918,14 +3918,14 @@ layoutGridWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LAYOUTGRID" as s1
+    state "layoutgrid" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
     state "widgetOptions?" as s3
     s2 --> s3
     s3 --> [*]
-    state "( BEGIN layoutGridRow* END" as s4
+    state "( begin layoutGridRow* end" as s4
     [*] --> s4
     s4 --> [*]
     state "layoutGridRow+" as s5
@@ -3944,8 +3944,8 @@ stateDiagram-v2
 
 ```ebnf
 layoutGridRow
-    : ROW widgetOptions?
-    | ( BEGIN layoutGridColumn* END
+    : row widgetOptions?
+    | ( begin layoutGridColumn* end
     | | layoutGridColumn+
     | )
 ```
@@ -3955,12 +3955,12 @@ layoutGridRow
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "ROW" as s1
+    state "row" as s1
     [*] --> s1
     state "widgetOptions?" as s2
     s1 --> s2
     s2 --> [*]
-    state "( BEGIN layoutGridColumn* END" as s3
+    state "( begin layoutGridColumn* end" as s3
     [*] --> s3
     s3 --> [*]
     state "layoutGridColumn+" as s4
@@ -3979,8 +3979,8 @@ stateDiagram-v2
 
 ```ebnf
 layoutGridColumn
-    : COLUMN widgetOptions?
-    | ( BEGIN (pageWidget SEMICOLON?)* END
+    : column widgetOptions?
+    | ( begin (pageWidget SEMICOLON?)* end
     | | (pageWidget SEMICOLON?)*
     | )
 ```
@@ -3990,12 +3990,12 @@ layoutGridColumn
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COLUMN" as s1
+    state "column" as s1
     [*] --> s1
     state "widgetOptions?" as s2
     s1 --> s2
     s2 --> [*]
-    state "( BEGIN (pageWidget SEMICOLON?)* END" as s3
+    state "( begin (pageWidget SEMICOLON?)* end" as s3
     [*] --> s3
     s3 --> [*]
     state "(pageWidget SEMICOLON?)*" as s4
@@ -4014,9 +4014,9 @@ stateDiagram-v2
 
 ```ebnf
 dataGridWidget
-    : DATAGRID qualifiedName? widgetOptions?
+    : datagrid qualifiedName? widgetOptions?
     | dataGridSource?
-    | (BEGIN dataGridContent END)?
+    | (begin dataGridContent end)?
 ```
 
 **Railroad Diagram:**
@@ -4024,7 +4024,7 @@ dataGridWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DATAGRID" as s1
+    state "datagrid" as s1
     [*] --> s1
     state "qualifiedName?" as s2
     s1 --> s2
@@ -4034,7 +4034,7 @@ stateDiagram-v2
     state "dataGridSource?" as s4
     [*] --> s4
     s4 --> [*]
-    state "(BEGIN dataGridContent END)?" as s5
+    state "(begin dataGridContent end)?" as s5
     [*] --> s5
     s5 --> [*]
 ```
@@ -4047,9 +4047,9 @@ stateDiagram-v2
 
 ```ebnf
 dataViewWidget
-    : DATAVIEW qualifiedName? widgetOptions?
+    : dataview qualifiedName? widgetOptions?
     | dataSourceClause?
-    | (BEGIN (pageWidget SEMICOLON?)* dataViewFooter? END)?
+    | (begin (pageWidget SEMICOLON?)* dataViewFooter? end)?
 ```
 
 **Railroad Diagram:**
@@ -4057,7 +4057,7 @@ dataViewWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DATAVIEW" as s1
+    state "dataview" as s1
     [*] --> s1
     state "qualifiedName?" as s2
     s1 --> s2
@@ -4067,7 +4067,7 @@ stateDiagram-v2
     state "dataSourceClause?" as s4
     [*] --> s4
     s4 --> [*]
-    state "(BEGIN (pageWidget SEMICOLON?)* dataViewFooter? END)?" as s5
+    state "(begin (pageWidget SEMICOLON?)* dataViewFooter? end)?" as s5
     [*] --> s5
     s5 --> [*]
 ```
@@ -4080,8 +4080,8 @@ stateDiagram-v2
 
 ```ebnf
 listViewWidget
-    : LISTVIEW qualifiedName? widgetOptions?
-    | (BEGIN pageWidget* END)?
+    : listview qualifiedName? widgetOptions?
+    | (begin pageWidget* end)?
 ```
 
 **Railroad Diagram:**
@@ -4089,14 +4089,14 @@ listViewWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LISTVIEW" as s1
+    state "listview" as s1
     [*] --> s1
     state "qualifiedName?" as s2
     s1 --> s2
     state "widgetOptions?" as s3
     s2 --> s3
     s3 --> [*]
-    state "(BEGIN pageWidget* END)?" as s4
+    state "(begin pageWidget* end)?" as s4
     [*] --> s4
     s4 --> [*]
 ```
@@ -4109,13 +4109,13 @@ stateDiagram-v2
 
 ```ebnf
 galleryWidget
-    : GALLERY qualifiedName? widgetOptions?
+    : gallery qualifiedName? widgetOptions?
     | gallerySource?
-    | (SELECTION (SINGLE | MULTIPLE))?
+    | (selection (single | multiple))?
     | (DESKTOPCOLUMNS NUMBER)?
     | (TABLETCOLUMNS NUMBER)?
     | (PHONECOLUMNS NUMBER)?
-    | (BEGIN galleryContent END)?
+    | (begin galleryContent end)?
 ```
 
 **Responsive column properties:**
@@ -4131,7 +4131,7 @@ galleryWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "GALLERY" as s1
+    state "gallery" as s1
     [*] --> s1
     state "qualifiedName?" as s2
     s1 --> s2
@@ -4141,10 +4141,10 @@ stateDiagram-v2
     state "gallerySource?" as s4
     [*] --> s4
     s4 --> [*]
-    state "(SELECTION (SINGLE | MULTIPLE))?" as s5
+    state "(selection (single | multiple))?" as s5
     [*] --> s5
     s5 --> [*]
-    state "(BEGIN galleryContent END)?" as s6
+    state "(begin galleryContent end)?" as s6
     [*] --> s6
     s6 --> [*]
 ```
@@ -4157,8 +4157,8 @@ stateDiagram-v2
 
 ```ebnf
 containerWidget
-    : CONTAINER widgetOptions?
-    | (BEGIN pageWidget* END)?
+    : container widgetOptions?
+    | (begin pageWidget* end)?
 ```
 
 **Railroad Diagram:**
@@ -4166,12 +4166,12 @@ containerWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CONTAINER" as s1
+    state "container" as s1
     [*] --> s1
     state "widgetOptions?" as s2
     s1 --> s2
     s2 --> [*]
-    state "(BEGIN pageWidget* END)?" as s3
+    state "(begin pageWidget* end)?" as s3
     [*] --> s3
     s3 --> [*]
 ```
@@ -4184,7 +4184,7 @@ stateDiagram-v2
 
 ```ebnf
 linkButtonWidget
-    : LINKBUTTON widgetOptions?
+    : linkbutton widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4192,7 +4192,7 @@ linkButtonWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LINKBUTTON" as s1
+    state "linkbutton" as s1
     [*] --> s1
     state "widgetOptions?" as s2
     s1 --> s2
@@ -4207,8 +4207,8 @@ stateDiagram-v2
 
 ```ebnf
 titleWidget
-    : TITLE STRING_LITERAL
-    | | TITLE IDENTIFIER widgetOptions?
+    : title STRING_LITERAL
+    | | title IDENTIFIER widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4216,12 +4216,12 @@ titleWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TITLE" as s1
+    state "title" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
     s2 --> [*]
-    state "TITLE" as s3
+    state "title" as s3
     [*] --> s3
     state "IDENTIFIER" as s4
     s3 --> s4
@@ -4238,7 +4238,7 @@ stateDiagram-v2
 
 ```ebnf
 dynamicTextWidget
-    : DYNAMICTEXT IDENTIFIER? widgetOptions?
+    : dynamictext IDENTIFIER? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4246,7 +4246,7 @@ dynamicTextWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DYNAMICTEXT" as s1
+    state "dynamictext" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4263,7 +4263,7 @@ stateDiagram-v2
 
 ```ebnf
 staticTextWidget
-    : STATICTEXT STRING_LITERAL widgetOptions?
+    : statictext STRING_LITERAL widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4271,7 +4271,7 @@ staticTextWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "STATICTEXT" as s1
+    state "statictext" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
@@ -4288,8 +4288,8 @@ stateDiagram-v2
 
 ```ebnf
 snippetCallWidget
-    : SNIPPETCALL IDENTIFIER? (qualifiedName | STRING_LITERAL)
-    | (PASSING LPAREN passArgList RPAREN)?
+    : snippetcall IDENTIFIER? (qualifiedName | STRING_LITERAL)
+    | (passing LPAREN passArgList RPAREN)?
 ```
 
 **Railroad Diagram:**
@@ -4297,14 +4297,14 @@ snippetCallWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SNIPPETCALL" as s1
+    state "snippetcall" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
     state "(qualifiedName | STRING_LITERAL)" as s3
     s2 --> s3
     s3 --> [*]
-    state "(PASSING LPAREN passArgList RPAREN)?" as s4
+    state "(passing LPAREN passArgList RPAREN)?" as s4
     [*] --> s4
     s4 --> [*]
 ```
@@ -4317,7 +4317,7 @@ stateDiagram-v2
 
 ```ebnf
 textBoxWidget
-    : TEXTBOX IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : textbox IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4325,7 +4325,7 @@ textBoxWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TEXTBOX" as s1
+    state "textbox" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4346,7 +4346,7 @@ stateDiagram-v2
 
 ```ebnf
 textAreaWidget
-    : TEXTAREA IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : textarea IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4354,7 +4354,7 @@ textAreaWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TEXTAREA" as s1
+    state "textarea" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4375,7 +4375,7 @@ stateDiagram-v2
 
 ```ebnf
 datePickerWidget
-    : DATEPICKER IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : datepicker IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4383,7 +4383,7 @@ datePickerWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DATEPICKER" as s1
+    state "datepicker" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4404,7 +4404,7 @@ stateDiagram-v2
 
 ```ebnf
 radioButtonsWidget
-    : RADIOBUTTONS IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : radiobuttons IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4412,7 +4412,7 @@ radioButtonsWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "RADIOBUTTONS" as s1
+    state "radiobuttons" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4433,7 +4433,7 @@ stateDiagram-v2
 
 ```ebnf
 dropDownWidget
-    : DROPDOWN IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : dropdown IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4441,7 +4441,7 @@ dropDownWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DROPDOWN" as s1
+    state "dropdown" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4462,7 +4462,7 @@ stateDiagram-v2
 
 ```ebnf
 comboBoxWidget
-    : COMBOBOX IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : combobox IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4470,7 +4470,7 @@ comboBoxWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COMBOBOX" as s1
+    state "combobox" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4491,7 +4491,7 @@ stateDiagram-v2
 
 ```ebnf
 checkBoxWidget
-    : CHECKBOX IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : checkbox IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4499,7 +4499,7 @@ checkBoxWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CHECKBOX" as s1
+    state "checkbox" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4520,7 +4520,7 @@ stateDiagram-v2
 
 ```ebnf
 referenceSelectorWidget
-    : REFERENCESELECTOR IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
+    : referenceselector IDENTIFIER? STRING_LITERAL? attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4528,7 +4528,7 @@ referenceSelectorWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "REFERENCESELECTOR" as s1
+    state "referenceselector" as s1
     [*] --> s1
     state "IDENTIFIER?" as s2
     s1 --> s2
@@ -4549,7 +4549,7 @@ stateDiagram-v2
 
 ```ebnf
 customWidgetWidget
-    : CUSTOMWIDGET STRING_LITERAL widgetOptions?
+    : customwidget STRING_LITERAL widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -4557,7 +4557,7 @@ customWidgetWidget
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CUSTOMWIDGET" as s1
+    state "customwidget" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
@@ -4622,26 +4622,26 @@ stateDiagram-v2
 
 ```ebnf
 widgetOption
-    : DATASOURCE COLON? (qualifiedName | expression)
-    | | CONTENT COLON? (STRING_LITERAL | expression) templateParams?
-    | | CAPTION COLON? STRING_LITERAL templateParams?
-    | | LABEL COLON? STRING_LITERAL
-    | | TOOLTIP COLON? STRING_LITERAL
-    | | CLASS COLON? STRING_LITERAL
-    | | STYLE COLON? STRING_LITERAL
-    | | WIDTH COLON? (NUMBER_LITERAL | STRING_LITERAL)
-    | | HEIGHT COLON? (NUMBER_LITERAL | STRING_LITERAL)
-    | | EDITABLE COLON? booleanLiteral
-    | | READONLY COLON? booleanLiteral
-    | | VISIBLE COLON? (booleanLiteral | expression)
-    | | REQUIRED COLON? booleanLiteral
-    | | ONCLICK COLON? (qualifiedName | expression)
-    | | ONCHANGE COLON? (qualifiedName | expression)
-    | | SELECTION COLON? (SINGLE | MULTIPLE | NONE)
-    | | RENDERMODE COLON? (IDENTIFIER | STRING_LITERAL)
-    | | ICON COLON? STRING_LITERAL
-    | | TABINDEX COLON? NUMBER_LITERAL
-    | | PARAMETERS arrayLiteral                              // Deprecated: use WITH clause
+    : datasource COLON? (qualifiedName | expression)
+    | | content COLON? (STRING_LITERAL | expression) templateParams?
+    | | caption COLON? STRING_LITERAL templateParams?
+    | | label COLON? STRING_LITERAL
+    | | tooltip COLON? STRING_LITERAL
+    | | class COLON? STRING_LITERAL
+    | | style COLON? STRING_LITERAL
+    | | width COLON? (NUMBER_LITERAL | STRING_LITERAL)
+    | | height COLON? (NUMBER_LITERAL | STRING_LITERAL)
+    | | editable COLON? booleanLiteral
+    | | readonly COLON? booleanLiteral
+    | | visible COLON? (booleanLiteral | expression)
+    | | required COLON? booleanLiteral
+    | | onclick COLON? (qualifiedName | expression)
+    | | onchange COLON? (qualifiedName | expression)
+    | | selection COLON? (single | multiple | none)
+    | | rendermode COLON? (IDENTIFIER | STRING_LITERAL)
+    | | icon COLON? STRING_LITERAL
+    | | tabindex COLON? NUMBER_LITERAL
+    | | parameters arrayLiteral                              // deprecated: use with clause
     | | IDENTIFIER COLON? NUMBER_LITERAL
     | | IDENTIFIER COLON? STRING_LITERAL
     | | IDENTIFIER COLON? booleanLiteral
@@ -4653,14 +4653,14 @@ widgetOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DATASOURCE" as s1
+    state "datasource" as s1
     [*] --> s1
     state "COLON?" as s2
     s1 --> s2
     state "(qualifiedName | expression)" as s3
     s2 --> s3
     s3 --> [*]
-    state "CONTENT" as s4
+    state "content" as s4
     [*] --> s4
     state "COLON?" as s5
     s4 --> s5
@@ -4669,7 +4669,7 @@ stateDiagram-v2
     state "templateParams?" as s7
     s6 --> s7
     s7 --> [*]
-    state "CAPTION" as s8
+    state "caption" as s8
     [*] --> s8
     state "COLON?" as s9
     s8 --> s9
@@ -4678,119 +4678,119 @@ stateDiagram-v2
     state "templateParams?" as s11
     s10 --> s11
     s11 --> [*]
-    state "LABEL" as s12
+    state "label" as s12
     [*] --> s12
     state "COLON?" as s13
     s12 --> s13
     state "STRING_LITERAL" as s14
     s13 --> s14
     s14 --> [*]
-    state "TOOLTIP" as s15
+    state "tooltip" as s15
     [*] --> s15
     state "COLON?" as s16
     s15 --> s16
     state "STRING_LITERAL" as s17
     s16 --> s17
     s17 --> [*]
-    state "CLASS" as s18
+    state "class" as s18
     [*] --> s18
     state "COLON?" as s19
     s18 --> s19
     state "STRING_LITERAL" as s20
     s19 --> s20
     s20 --> [*]
-    state "STYLE" as s21
+    state "style" as s21
     [*] --> s21
     state "COLON?" as s22
     s21 --> s22
     state "STRING_LITERAL" as s23
     s22 --> s23
     s23 --> [*]
-    state "WIDTH" as s24
+    state "width" as s24
     [*] --> s24
     state "COLON?" as s25
     s24 --> s25
     state "(NUMBER_LITERAL | STRING_LITERAL)" as s26
     s25 --> s26
     s26 --> [*]
-    state "HEIGHT" as s27
+    state "height" as s27
     [*] --> s27
     state "COLON?" as s28
     s27 --> s28
     state "(NUMBER_LITERAL | STRING_LITERAL)" as s29
     s28 --> s29
     s29 --> [*]
-    state "EDITABLE" as s30
+    state "editable" as s30
     [*] --> s30
     state "COLON?" as s31
     s30 --> s31
     state "booleanLiteral" as s32
     s31 --> s32
     s32 --> [*]
-    state "READONLY" as s33
+    state "readonly" as s33
     [*] --> s33
     state "COLON?" as s34
     s33 --> s34
     state "booleanLiteral" as s35
     s34 --> s35
     s35 --> [*]
-    state "VISIBLE" as s36
+    state "visible" as s36
     [*] --> s36
     state "COLON?" as s37
     s36 --> s37
     state "(booleanLiteral | expression)" as s38
     s37 --> s38
     s38 --> [*]
-    state "REQUIRED" as s39
+    state "required" as s39
     [*] --> s39
     state "COLON?" as s40
     s39 --> s40
     state "booleanLiteral" as s41
     s40 --> s41
     s41 --> [*]
-    state "ONCLICK" as s42
+    state "onclick" as s42
     [*] --> s42
     state "COLON?" as s43
     s42 --> s43
     state "(qualifiedName | expression)" as s44
     s43 --> s44
     s44 --> [*]
-    state "ONCHANGE" as s45
+    state "onchange" as s45
     [*] --> s45
     state "COLON?" as s46
     s45 --> s46
     state "(qualifiedName | expression)" as s47
     s46 --> s47
     s47 --> [*]
-    state "SELECTION" as s48
+    state "selection" as s48
     [*] --> s48
     state "COLON?" as s49
     s48 --> s49
-    state "(SINGLE | MULTIPLE | NONE)" as s50
+    state "(single | multiple | none)" as s50
     s49 --> s50
     s50 --> [*]
-    state "RENDERMODE" as s51
+    state "rendermode" as s51
     [*] --> s51
     state "COLON?" as s52
     s51 --> s52
     state "(IDENTIFIER | STRING_LITERAL)" as s53
     s52 --> s53
     s53 --> [*]
-    state "ICON" as s54
+    state "icon" as s54
     [*] --> s54
     state "COLON?" as s55
     s54 --> s55
     state "STRING_LITERAL" as s56
     s55 --> s56
     s56 --> [*]
-    state "TABINDEX" as s57
+    state "tabindex" as s57
     [*] --> s57
     state "COLON?" as s58
     s57 --> s58
     state "NUMBER_LITERAL" as s59
     s58 --> s59
     s59 --> [*]
-    state "PARAMETERS" as s60
+    state "parameters" as s60
     [*] --> s60
     state "arrayLiteral" as s61
     s60 --> s61
@@ -4833,7 +4833,7 @@ stateDiagram-v2
 
 ```ebnf
 notebookPage
-    : PAGE qualifiedName (CAPTION STRING_LITERAL)?
+    : page qualifiedName (caption STRING_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -4841,11 +4841,11 @@ notebookPage
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "PAGE" as s1
+    state "page" as s1
     [*] --> s1
     state "qualifiedName" as s2
     s1 --> s2
-    state "(CAPTION STRING_LITERAL)?" as s3
+    state "(caption STRING_LITERAL)?" as s3
     s2 --> s3
     s3 --> [*]
 ```
@@ -4860,12 +4860,12 @@ stateDiagram-v2
 
 ```ebnf
 catalogSelectQuery
-    : SELECT selectList
-    | FROM CATALOG DOT catalogTableName
-    | (WHERE expression)?
+    : select selectList
+    | from catalog DOT catalogTableName
+    | (where expression)?
     | (ORDER_BY orderByList)?
-    | (LIMIT NUMBER_LITERAL)?
-    | (OFFSET NUMBER_LITERAL)?
+    | (limit NUMBER_LITERAL)?
+    | (offset NUMBER_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -4873,30 +4873,30 @@ catalogSelectQuery
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SELECT" as s1
+    state "select" as s1
     [*] --> s1
     state "selectList" as s2
     s1 --> s2
     s2 --> [*]
-    state "FROM" as s3
+    state "from" as s3
     [*] --> s3
-    state "CATALOG" as s4
+    state "catalog" as s4
     s3 --> s4
     state "DOT" as s5
     s4 --> s5
     state "catalogTableName" as s6
     s5 --> s6
     s6 --> [*]
-    state "(WHERE expression)?" as s7
+    state "(where expression)?" as s7
     [*] --> s7
     s7 --> [*]
     state "(ORDER_BY orderByList)?" as s8
     [*] --> s8
     s8 --> [*]
-    state "(LIMIT NUMBER_LITERAL)?" as s9
+    state "(limit NUMBER_LITERAL)?" as s9
     [*] --> s9
     s9 --> [*]
-    state "(OFFSET NUMBER_LITERAL)?" as s10
+    state "(offset NUMBER_LITERAL)?" as s10
     [*] --> s10
     s10 --> [*]
 ```
@@ -4961,42 +4961,42 @@ stateDiagram-v2
 *Simple SELECT query:*
 
 ```sql
-SELECT Name, Email FROM MyModule.Customer
+select Name, Email from MyModule.Customer
 ```
 
 *Query with WHERE clause:*
 
 ```sql
-SELECT c.Name, c.Email
-FROM MyModule.Customer AS c
-WHERE c.Active = true AND c.Age > 18
+select c.Name, c.Email
+from MyModule.Customer as c
+where c.Active = true and c.Age > 18
 ```
 
 *Query with JOIN via association:*
 
 ```sql
-SELECT o.OrderNumber, c.Name AS CustomerName
-FROM MyModule.Order AS o
-INNER JOIN o/MyModule.Order_Customer/MyModule.Customer AS c
-WHERE o.Status = 'Completed'
+select o.OrderNumber, c.Name as CustomerName
+from MyModule.Order as o
+inner join o/MyModule.Order_Customer/MyModule.Customer as c
+where o.Status = 'Completed'
 ```
 
 *Aggregation query:*
 
 ```sql
-SELECT c.Country, COUNT(*) AS CustomerCount, AVG(c.Age) AS AvgAge
-FROM MyModule.Customer AS c
-GROUP BY c.Country
-HAVING COUNT(*) > 10
-ORDER BY CustomerCount DESC
+select c.Country, count(*) as CustomerCount, avg(c.Age) as AvgAge
+from MyModule.Customer as c
+GROUP by c.Country
+having count(*) > 10
+ORDER by CustomerCount desc
 ```
 
 *Subquery:*
 
 ```sql
-SELECT p.Name, p.Price
-FROM MyModule.Product AS p
-WHERE p.Price > (SELECT AVG(p2.Price) FROM MyModule.Product AS p2)
+select p.Name, p.Price
+from MyModule.Product as p
+where p.Price > (select avg(p2.Price) from MyModule.Product as p2)
 ```
 
 **See also:** [createEntityStatement for using OQL in VIEW entities](#createentitystatement-for-using-oql-in-view-entities), [retrieveStatement for using OQL in microflows](#retrievestatement-for-using-oql-in-microflows)
@@ -5009,7 +5009,7 @@ WHERE p.Price > (SELECT AVG(p2.Price) FROM MyModule.Product AS p2)
 
 ```ebnf
 selectClause
-    : SELECT (DISTINCT | ALL)? selectList
+    : select (distinct | all)? selectList
 ```
 
 **Railroad Diagram:**
@@ -5017,9 +5017,9 @@ selectClause
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SELECT" as s1
+    state "select" as s1
     [*] --> s1
-    state "(DISTINCT | ALL)?" as s2
+    state "(distinct | all)?" as s2
     s1 --> s2
     state "selectList" as s3
     s2 --> s3
@@ -5061,8 +5061,8 @@ stateDiagram-v2
 
 ```ebnf
 selectItem
-    : expression (AS selectAlias)?
-    | | aggregateFunction (AS selectAlias)?
+    : expression (as selectAlias)?
+    | | aggregateFunction (as selectAlias)?
 ```
 
 **Railroad Diagram:**
@@ -5072,12 +5072,12 @@ stateDiagram-v2
     direction LR
     state "expression" as s1
     [*] --> s1
-    state "(AS selectAlias)?" as s2
+    state "(as selectAlias)?" as s2
     s1 --> s2
     s2 --> [*]
     state "aggregateFunction" as s3
     [*] --> s3
-    state "(AS selectAlias)?" as s4
+    state "(as selectAlias)?" as s4
     s3 --> s4
     s4 --> [*]
 ```
@@ -5091,10 +5091,10 @@ stateDiagram-v2
 ```ebnf
 selectAlias
     : IDENTIFIER
-    | | STATUS | TYPE | VALUE | INDEX
-    | | USERNAME | PASSWORD
-    | | ACTION | MESSAGE
-    | | OWNER | REFERENCE | CASCADE
+    | | status | type | value | index
+    | | username | password
+    | | action | message
+    | | owner | reference | cascade
 ```
 
 **Railroad Diagram:**
@@ -5105,44 +5105,44 @@ stateDiagram-v2
     state "IDENTIFIER" as s1
     [*] --> s1
     s1 --> [*]
-    state "STATUS" as s2
+    state "status" as s2
     [*] --> s2
     state "|" as s3
     s2 --> s3
-    state "TYPE" as s4
+    state "type" as s4
     s3 --> s4
     state "|" as s5
     s4 --> s5
-    state "VALUE" as s6
+    state "value" as s6
     s5 --> s6
     state "|" as s7
     s6 --> s7
-    state "INDEX" as s8
+    state "index" as s8
     s7 --> s8
     s8 --> [*]
-    state "USERNAME" as s9
+    state "username" as s9
     [*] --> s9
     state "|" as s10
     s9 --> s10
-    state "PASSWORD" as s11
+    state "password" as s11
     s10 --> s11
     s11 --> [*]
-    state "ACTION" as s12
+    state "action" as s12
     [*] --> s12
     state "|" as s13
     s12 --> s13
-    state "MESSAGE" as s14
+    state "message" as s14
     s13 --> s14
     s14 --> [*]
-    state "OWNER" as s15
+    state "owner" as s15
     [*] --> s15
     state "|" as s16
     s15 --> s16
-    state "REFERENCE" as s17
+    state "reference" as s17
     s16 --> s17
     state "|" as s18
     s17 --> s18
-    state "CASCADE" as s19
+    state "cascade" as s19
     s18 --> s19
     s19 --> [*]
 ```
@@ -5155,7 +5155,7 @@ stateDiagram-v2
 
 ```ebnf
 fromClause
-    : FROM tableReference (joinClause)*
+    : from tableReference (joinClause)*
 ```
 
 **Railroad Diagram:**
@@ -5163,7 +5163,7 @@ fromClause
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "FROM" as s1
+    state "from" as s1
     [*] --> s1
     state "tableReference" as s2
     s1 --> s2
@@ -5180,7 +5180,7 @@ stateDiagram-v2
 
 ```ebnf
 whereClause
-    : WHERE expression
+    : where expression
 ```
 
 **Railroad Diagram:**
@@ -5188,7 +5188,7 @@ whereClause
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "WHERE" as s1
+    state "where" as s1
     [*] --> s1
     state "expression" as s2
     s1 --> s2
@@ -5226,7 +5226,7 @@ stateDiagram-v2
 
 ```ebnf
 orExpression
-    : andExpression (OR andExpression)*
+    : andExpression (or andExpression)*
 ```
 
 **Railroad Diagram:**
@@ -5236,7 +5236,7 @@ stateDiagram-v2
     direction LR
     state "andExpression" as s1
     [*] --> s1
-    state "(OR andExpression)*" as s2
+    state "(or andExpression)*" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -5249,7 +5249,7 @@ stateDiagram-v2
 
 ```ebnf
 andExpression
-    : notExpression (AND notExpression)*
+    : notExpression (and notExpression)*
 ```
 
 **Railroad Diagram:**
@@ -5259,7 +5259,7 @@ stateDiagram-v2
     direction LR
     state "notExpression" as s1
     [*] --> s1
-    state "(AND notExpression)*" as s2
+    state "(and notExpression)*" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -5272,7 +5272,7 @@ stateDiagram-v2
 
 ```ebnf
 notExpression
-    : NOT? comparisonExpression
+    : not? comparisonExpression
 ```
 
 **Railroad Diagram:**
@@ -5280,7 +5280,7 @@ notExpression
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "NOT?" as s1
+    state "not?" as s1
     [*] --> s1
     state "comparisonExpression" as s2
     s1 --> s2
@@ -5299,9 +5299,9 @@ comparisonExpression
     | ( comparisonOperator additiveExpression
     | | IS_NULL
     | | IS_NOT_NULL
-    | | IN LPAREN (oqlQuery | expressionList) RPAREN
-    | | NOT? BETWEEN additiveExpression AND additiveExpression
-    | | NOT? LIKE additiveExpression
+    | | in LPAREN (oqlQuery | expressionList) RPAREN
+    | | not? between additiveExpression and additiveExpression
+    | | not? like additiveExpression
     | )?
 ```
 
@@ -5322,7 +5322,7 @@ stateDiagram-v2
     state "IS_NOT_NULL" as s4
     [*] --> s4
     s4 --> [*]
-    state "IN" as s5
+    state "in" as s5
     [*] --> s5
     state "LPAREN" as s6
     s5 --> s6
@@ -5331,20 +5331,20 @@ stateDiagram-v2
     state "RPAREN" as s8
     s7 --> s8
     s8 --> [*]
-    state "NOT?" as s9
+    state "not?" as s9
     [*] --> s9
-    state "BETWEEN" as s10
+    state "between" as s10
     s9 --> s10
     state "additiveExpression" as s11
     s10 --> s11
-    state "AND" as s12
+    state "and" as s12
     s11 --> s12
     state "additiveExpression" as s13
     s12 --> s13
     s13 --> [*]
-    state "NOT?" as s14
+    state "not?" as s14
     [*] --> s14
-    state "LIKE" as s15
+    state "like" as s15
     s14 --> s15
     state "additiveExpression" as s16
     s15 --> s16
@@ -5362,7 +5362,7 @@ stateDiagram-v2
 
 ```ebnf
 comparisonOperator
-    : EQUALS
+    : equals
     | | NOT_EQUALS
     | | LESS_THAN
     | | LESS_THAN_OR_EQUAL
@@ -5375,7 +5375,7 @@ comparisonOperator
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "EQUALS" as s1
+    state "equals" as s1
     [*] --> s1
     s1 --> [*]
     state "NOT_EQUALS" as s2
@@ -5426,7 +5426,7 @@ stateDiagram-v2
 
 ```ebnf
 multiplicativeExpression
-    : unaryExpression ((STAR | SLASH | COLON | PERCENT | MOD | DIV) unaryExpression)*  // COLON is OQL division
+    : unaryExpression ((STAR | SLASH | COLON | PERCENT | mod | div) unaryExpression)*  // COLON is OQL division
 ```
 
 **Railroad Diagram:**
@@ -5436,7 +5436,7 @@ stateDiagram-v2
     direction LR
     state "unaryExpression" as s1
     [*] --> s1
-    state "((STAR | SLASH | COLON | PERCENT | MOD | DIV) unaryExpression)*" as s2
+    state "((STAR | SLASH | COLON | PERCENT | mod | div) unaryExpression)*" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -5521,9 +5521,9 @@ stateDiagram-v2
 
 ```ebnf
 caseExpression
-    : CASE
-    | (WHEN expression THEN expression)+
-    | (ELSE expression)?
+    : case
+    | (when expression then expression)+
+    | (else expression)?
 ```
 
 **Railroad Diagram:**
@@ -5531,13 +5531,13 @@ caseExpression
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CASE" as s1
+    state "case" as s1
     [*] --> s1
     s1 --> [*]
-    state "(WHEN expression THEN expression)+" as s2
+    state "(when expression then expression)+" as s2
     [*] --> s2
     s2 --> [*]
-    state "(ELSE expression)?" as s3
+    state "(else expression)?" as s3
     [*] --> s3
     s3 --> [*]
 ```
@@ -5551,7 +5551,7 @@ stateDiagram-v2
 ```ebnf
 atomicExpression
     : literal
-    | | VARIABLE (DOT attributeName)*    // $Var or $Widget.Attribute (data source ref)
+    | | VARIABLE (DOT attributename)*    // $Var or $Widget.Attribute (data source ref)
     | | qualifiedName
     | | IDENTIFIER
     | | MENDIX_TOKEN
@@ -5567,7 +5567,7 @@ stateDiagram-v2
     s1 --> [*]
     state "VARIABLE" as s2
     [*] --> s2
-    state "(DOT attributeName)*" as s3
+    state "(DOT attributename)*" as s3
     s2 --> s3
     s3 --> [*]
     state "qualifiedName" as s4
@@ -5617,8 +5617,8 @@ literal
     : STRING_LITERAL
     | | NUMBER_LITERAL
     | | booleanLiteral
-    | | NULL
-    | | EMPTY
+    | | null
+    | | empty
 ```
 
 **Railroad Diagram:**
@@ -5635,10 +5635,10 @@ stateDiagram-v2
     state "booleanLiteral" as s3
     [*] --> s3
     s3 --> [*]
-    state "NULL" as s4
+    state "null" as s4
     [*] --> s4
     s4 --> [*]
-    state "EMPTY" as s5
+    state "empty" as s5
     [*] --> s5
     s5 --> [*]
 ```
@@ -5676,8 +5676,8 @@ stateDiagram-v2
 
 ```ebnf
 booleanLiteral
-    : TRUE
-    | | FALSE
+    : true
+    | | false
 ```
 
 **Railroad Diagram:**
@@ -5685,10 +5685,10 @@ booleanLiteral
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TRUE" as s1
+    state "true" as s1
     [*] --> s1
     s1 --> [*]
-    state "FALSE" as s2
+    state "false" as s2
     [*] --> s2
     s2 --> [*]
 ```
@@ -5718,9 +5718,9 @@ dataType
     | | CURRENCY_TYPE
     | | FLOAT_TYPE
     | | ENUM_TYPE qualifiedName
-    | | ENUMERATION LPAREN qualifiedName RPAREN  // Enumeration(Module.Enum) syntax
+    | | enumeration LPAREN qualifiedName RPAREN  // enumeration(Module.Enum) syntax
     | | LIST_OF qualifiedName
-    | | qualifiedName  // Entity reference type
+    | | qualifiedName  // entity reference type
 ```
 
 **Railroad Diagram:**
@@ -5771,7 +5771,7 @@ stateDiagram-v2
     state "qualifiedName" as s15
     s14 --> s15
     s15 --> [*]
-    state "ENUMERATION" as s16
+    state "enumeration" as s16
     [*] --> s16
     state "LPAREN" as s17
     s16 --> s17
@@ -5795,29 +5795,29 @@ stateDiagram-v2
 *Primitive types:*
 
 ```sql
-Name: String(200),       -- String with max length 200
-Age: Integer,            -- 32-bit integer
-Total: Decimal,          -- Fixed-point decimal
-Active: Boolean,         -- true/false
-Created: DateTime,       -- Date and time
-BirthDate: Date,         -- Date only
-Counter: AutoNumber,     -- Auto-incrementing number
-Data: Binary,            -- Binary data (files)
-Password: HashedString   -- Securely hashed string
+Name: string(200),       -- String with max length 200
+Age: integer,            -- 32-bit integer
+Total: decimal,          -- Fixed-point decimal
+Active: boolean,         -- true/false
+created: datetime,       -- Date and time
+BirthDate: date,         -- Date only
+Counter: autonumber,     -- Auto-incrementing number
+data: binary,            -- Binary data (files)
+password: hashedstring   -- Securely hashed string
 ```
 
 *Enumeration types:*
 
 ```sql
-Status: Enum MyModule.OrderStatus,
-Priority: Enumeration(MyModule.Priority)
+status: enum MyModule.OrderStatus,
+Priority: enumeration(MyModule.Priority)
 ```
 
 *Entity references:*
 
 ```sql
 Customer: MyModule.Customer,       -- Single reference
-Items: List of MyModule.OrderItem  -- List of references
+Items: list of MyModule.OrderItem  -- List of references
 ```
 
 ---
@@ -5856,11 +5856,11 @@ stateDiagram-v2
 ```ebnf
 indexColumnName
     : IDENTIFIER
-    | | STATUS | TYPE | VALUE | INDEX
-    | | USERNAME | PASSWORD
-    | | ACTION | MESSAGE
-    | | OWNER | REFERENCE | CASCADE
-    | | SUCCESS | ERROR | WARNING | INFO | DEBUG | CRITICAL
+    | | status | type | value | index
+    | | username | password
+    | | action | message
+    | | owner | reference | cascade
+    | | success | error | warning | info | debug | critical
 ```
 
 **Railroad Diagram:**
@@ -5871,67 +5871,67 @@ stateDiagram-v2
     state "IDENTIFIER" as s1
     [*] --> s1
     s1 --> [*]
-    state "STATUS" as s2
+    state "status" as s2
     [*] --> s2
     state "|" as s3
     s2 --> s3
-    state "TYPE" as s4
+    state "type" as s4
     s3 --> s4
     state "|" as s5
     s4 --> s5
-    state "VALUE" as s6
+    state "value" as s6
     s5 --> s6
     state "|" as s7
     s6 --> s7
-    state "INDEX" as s8
+    state "index" as s8
     s7 --> s8
     s8 --> [*]
-    state "USERNAME" as s9
+    state "username" as s9
     [*] --> s9
     state "|" as s10
     s9 --> s10
-    state "PASSWORD" as s11
+    state "password" as s11
     s10 --> s11
     s11 --> [*]
-    state "ACTION" as s12
+    state "action" as s12
     [*] --> s12
     state "|" as s13
     s12 --> s13
-    state "MESSAGE" as s14
+    state "message" as s14
     s13 --> s14
     s14 --> [*]
-    state "OWNER" as s15
+    state "owner" as s15
     [*] --> s15
     state "|" as s16
     s15 --> s16
-    state "REFERENCE" as s17
+    state "reference" as s17
     s16 --> s17
     state "|" as s18
     s17 --> s18
-    state "CASCADE" as s19
+    state "cascade" as s19
     s18 --> s19
     s19 --> [*]
-    state "SUCCESS" as s20
+    state "success" as s20
     [*] --> s20
     state "|" as s21
     s20 --> s21
-    state "ERROR" as s22
+    state "error" as s22
     s21 --> s22
     state "|" as s23
     s22 --> s23
-    state "WARNING" as s24
+    state "warning" as s24
     s23 --> s24
     state "|" as s25
     s24 --> s25
-    state "INFO" as s26
+    state "info" as s26
     s25 --> s26
     state "|" as s27
     s26 --> s27
-    state "DEBUG" as s28
+    state "debug" as s28
     s27 --> s28
     state "|" as s29
     s28 --> s29
-    state "CRITICAL" as s30
+    state "critical" as s30
     s29 --> s30
     s30 --> [*]
 ```
@@ -5947,8 +5947,8 @@ deleteBehavior
     : DELETE_AND_REFERENCES
     | | DELETE_BUT_KEEP_REFERENCES
     | | DELETE_IF_NO_REFERENCES
-    | | CASCADE
-    | | PREVENT
+    | | cascade
+    | | prevent
 ```
 
 **Railroad Diagram:**
@@ -5965,10 +5965,10 @@ stateDiagram-v2
     state "DELETE_IF_NO_REFERENCES" as s3
     [*] --> s3
     s3 --> [*]
-    state "CASCADE" as s4
+    state "cascade" as s4
     [*] --> s4
     s4 --> [*]
-    state "PREVENT" as s5
+    state "prevent" as s5
     [*] --> s5
     s5 --> [*]
 ```
@@ -6002,8 +6002,8 @@ stateDiagram-v2
 
 ```ebnf
 moduleOption
-    : COMMENT STRING_LITERAL
-    | | FOLDER STRING_LITERAL
+    : comment STRING_LITERAL
+    | | folder STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -6011,12 +6011,12 @@ moduleOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COMMENT" as s1
+    state "comment" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
     s2 --> [*]
-    state "FOLDER" as s3
+    state "folder" as s3
     [*] --> s3
     state "STRING_LITERAL" as s4
     s3 --> s4
@@ -6054,7 +6054,7 @@ stateDiagram-v2
 
 ```ebnf
 enumerationValue
-    : docComment? enumValueName (CAPTION? STRING_LITERAL)?
+    : docComment? enumValueName (caption? STRING_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -6066,7 +6066,7 @@ stateDiagram-v2
     [*] --> s1
     state "enumValueName" as s2
     s1 --> s2
-    state "(CAPTION? STRING_LITERAL)?" as s3
+    state "(caption? STRING_LITERAL)?" as s3
     s2 --> s3
     s3 --> [*]
 ```
@@ -6080,10 +6080,10 @@ stateDiagram-v2
 ```ebnf
 enumValueName
     : IDENTIFIER
-    | | SERVICE | SERVICES  // Common keywords that might be used as enum values
-    | | STATUS | TYPE | VALUE | INDEX
-    | | CRITICAL | SUCCESS | ERROR | WARNING | INFO | DEBUG  // Log level keywords
-    | | MESSAGE | ACTION | USERNAME | PASSWORD
+    | | service | services  // Common keywords that might be used as enum values
+    | | status | type | value | index
+    | | critical | success | error | warning | info | debug  // log level keywords
+    | | message | action | username | password
 ```
 
 **Railroad Diagram:**
@@ -6094,64 +6094,64 @@ stateDiagram-v2
     state "IDENTIFIER" as s1
     [*] --> s1
     s1 --> [*]
-    state "SERVICE" as s2
+    state "service" as s2
     [*] --> s2
     state "|" as s3
     s2 --> s3
-    state "SERVICES" as s4
+    state "services" as s4
     s3 --> s4
     s4 --> [*]
-    state "STATUS" as s5
+    state "status" as s5
     [*] --> s5
     state "|" as s6
     s5 --> s6
-    state "TYPE" as s7
+    state "type" as s7
     s6 --> s7
     state "|" as s8
     s7 --> s8
-    state "VALUE" as s9
+    state "value" as s9
     s8 --> s9
     state "|" as s10
     s9 --> s10
-    state "INDEX" as s11
+    state "index" as s11
     s10 --> s11
     s11 --> [*]
-    state "CRITICAL" as s12
+    state "critical" as s12
     [*] --> s12
     state "|" as s13
     s12 --> s13
-    state "SUCCESS" as s14
+    state "success" as s14
     s13 --> s14
     state "|" as s15
     s14 --> s15
-    state "ERROR" as s16
+    state "error" as s16
     s15 --> s16
     state "|" as s17
     s16 --> s17
-    state "WARNING" as s18
+    state "warning" as s18
     s17 --> s18
     state "|" as s19
     s18 --> s19
-    state "INFO" as s20
+    state "info" as s20
     s19 --> s20
     state "|" as s21
     s20 --> s21
-    state "DEBUG" as s22
+    state "debug" as s22
     s21 --> s22
     s22 --> [*]
-    state "MESSAGE" as s23
+    state "message" as s23
     [*] --> s23
     state "|" as s24
     s23 --> s24
-    state "ACTION" as s25
+    state "action" as s25
     s24 --> s25
     state "|" as s26
     s25 --> s26
-    state "USERNAME" as s27
+    state "username" as s27
     s26 --> s27
     state "|" as s28
     s27 --> s28
-    state "PASSWORD" as s29
+    state "password" as s29
     s28 --> s29
     s29 --> [*]
 ```
@@ -6185,7 +6185,7 @@ stateDiagram-v2
 
 ```ebnf
 enumerationOption
-    : COMMENT STRING_LITERAL
+    : comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -6193,7 +6193,7 @@ enumerationOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COMMENT" as s1
+    state "comment" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
@@ -6208,11 +6208,11 @@ stateDiagram-v2
 
 ```ebnf
 validationRuleBody
-    : EXPRESSION expression FEEDBACK STRING_LITERAL
-    | | REQUIRED attributeReference FEEDBACK STRING_LITERAL
-    | | UNIQUE attributeReferenceList FEEDBACK STRING_LITERAL
-    | | RANGE attributeReference rangeConstraint FEEDBACK STRING_LITERAL
-    | | REGEX attributeReference STRING_LITERAL FEEDBACK STRING_LITERAL
+    : expression expression feedback STRING_LITERAL
+    | | required attributeReference feedback STRING_LITERAL
+    | | unique attributeReferenceList feedback STRING_LITERAL
+    | | range attributeReference rangeConstraint feedback STRING_LITERAL
+    | | regex attributeReference STRING_LITERAL feedback STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -6220,51 +6220,51 @@ validationRuleBody
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "EXPRESSION" as s1
+    state "expression" as s1
     [*] --> s1
     state "expression" as s2
     s1 --> s2
-    state "FEEDBACK" as s3
+    state "feedback" as s3
     s2 --> s3
     state "STRING_LITERAL" as s4
     s3 --> s4
     s4 --> [*]
-    state "REQUIRED" as s5
+    state "required" as s5
     [*] --> s5
     state "attributeReference" as s6
     s5 --> s6
-    state "FEEDBACK" as s7
+    state "feedback" as s7
     s6 --> s7
     state "STRING_LITERAL" as s8
     s7 --> s8
     s8 --> [*]
-    state "UNIQUE" as s9
+    state "unique" as s9
     [*] --> s9
     state "attributeReferenceList" as s10
     s9 --> s10
-    state "FEEDBACK" as s11
+    state "feedback" as s11
     s10 --> s11
     state "STRING_LITERAL" as s12
     s11 --> s12
     s12 --> [*]
-    state "RANGE" as s13
+    state "range" as s13
     [*] --> s13
     state "attributeReference" as s14
     s13 --> s14
     state "rangeConstraint" as s15
     s14 --> s15
-    state "FEEDBACK" as s16
+    state "feedback" as s16
     s15 --> s16
     state "STRING_LITERAL" as s17
     s16 --> s17
     s17 --> [*]
-    state "REGEX" as s18
+    state "regex" as s18
     [*] --> s18
     state "attributeReference" as s19
     s18 --> s19
     state "STRING_LITERAL" as s20
     s19 --> s20
-    state "FEEDBACK" as s21
+    state "feedback" as s21
     s20 --> s21
     state "STRING_LITERAL" as s22
     s21 --> s22
@@ -6279,7 +6279,7 @@ stateDiagram-v2
 
 ```ebnf
 rangeConstraint
-    : BETWEEN literal AND literal
+    : between literal and literal
     | | LESS_THAN literal
     | | LESS_THAN_OR_EQUAL literal
     | | GREATER_THAN literal
@@ -6291,11 +6291,11 @@ rangeConstraint
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "BETWEEN" as s1
+    state "between" as s1
     [*] --> s1
     state "literal" as s2
     s1 --> s2
-    state "AND" as s3
+    state "and" as s3
     s2 --> s3
     state "literal" as s4
     s3 --> s4
@@ -6332,7 +6332,7 @@ stateDiagram-v2
 retrieveSource
     : qualifiedName
     | | LPAREN oqlQuery RPAREN
-    | | DATABASE STRING_LITERAL
+    | | database STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -6350,7 +6350,7 @@ stateDiagram-v2
     state "RPAREN" as s4
     s3 --> s4
     s4 --> [*]
-    state "DATABASE" as s5
+    state "database" as s5
     [*] --> s5
     state "STRING_LITERAL" as s6
     s5 --> s6
@@ -6365,12 +6365,12 @@ stateDiagram-v2
 
 ```ebnf
 logLevel
-    : INFO
-    | | WARNING
-    | | ERROR
-    | | DEBUG
-    | | TRACE
-    | | CRITICAL
+    : info
+    | | warning
+    | | error
+    | | debug
+    | | trace
+    | | critical
 ```
 
 **Railroad Diagram:**
@@ -6378,22 +6378,22 @@ logLevel
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "INFO" as s1
+    state "info" as s1
     [*] --> s1
     s1 --> [*]
-    state "WARNING" as s2
+    state "warning" as s2
     [*] --> s2
     s2 --> [*]
-    state "ERROR" as s3
+    state "error" as s3
     [*] --> s3
     s3 --> [*]
-    state "DEBUG" as s4
+    state "debug" as s4
     [*] --> s4
     s4 --> [*]
-    state "TRACE" as s5
+    state "trace" as s5
     [*] --> s5
     s5 --> [*]
-    state "CRITICAL" as s6
+    state "critical" as s6
     [*] --> s6
     s6 --> [*]
 ```
@@ -6406,8 +6406,8 @@ stateDiagram-v2
 
 ```ebnf
 templateParams
-    : WITH LPAREN templateParam (COMMA templateParam)* RPAREN    // WITH ({1} = $var)
-    | | PARAMETERS arrayLiteral                                     // PARAMETERS ['val'] (deprecated)
+    : with LPAREN templateParam (COMMA templateParam)* RPAREN    // with ({1} = $var)
+    | | parameters arrayLiteral                                     // parameters ['val'] (deprecated)
 ```
 
 **Railroad Diagram:**
@@ -6415,7 +6415,7 @@ templateParams
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "WITH" as s1
+    state "with" as s1
     [*] --> s1
     state "LPAREN" as s2
     s1 --> s2
@@ -6426,7 +6426,7 @@ stateDiagram-v2
     state "RPAREN" as s5
     s4 --> s5
     s5 --> [*]
-    state "PARAMETERS" as s6
+    state "parameters" as s6
     [*] --> s6
     state "arrayLiteral" as s7
     s6 --> s7
@@ -6441,7 +6441,7 @@ stateDiagram-v2
 
 ```ebnf
 templateParam
-    : LBRACE NUMBER_LITERAL RBRACE EQUALS expression
+    : LBRACE NUMBER_LITERAL RBRACE equals expression
 ```
 
 **Railroad Diagram:**
@@ -6455,7 +6455,7 @@ stateDiagram-v2
     s1 --> s2
     state "RBRACE" as s3
     s2 --> s3
-    state "EQUALS" as s4
+    state "equals" as s4
     s3 --> s4
     state "expression" as s5
     s4 --> s5
@@ -6535,7 +6535,7 @@ stateDiagram-v2
 
 ```ebnf
 callArgument
-    : (VARIABLE | IDENTIFIER) EQUALS expression
+    : (VARIABLE | IDENTIFIER) equals expression
 ```
 
 **Railroad Diagram:**
@@ -6545,7 +6545,7 @@ stateDiagram-v2
     direction LR
     state "(VARIABLE | IDENTIFIER)" as s1
     [*] --> s1
-    state "EQUALS" as s2
+    state "equals" as s2
     s1 --> s2
     state "expression" as s3
     s2 --> s3
@@ -6583,7 +6583,7 @@ stateDiagram-v2
 
 ```ebnf
 memberAssignment
-    : memberAttributeName EQUALS expression
+    : memberAttributeName equals expression
 ```
 
 **Railroad Diagram:**
@@ -6593,7 +6593,7 @@ stateDiagram-v2
     direction LR
     state "memberAttributeName" as s1
     [*] --> s1
-    state "EQUALS" as s2
+    state "equals" as s2
     s1 --> s2
     state "expression" as s3
     s2 --> s3
@@ -6631,7 +6631,7 @@ stateDiagram-v2
 
 ```ebnf
 changeItem
-    : IDENTIFIER EQUALS expression
+    : IDENTIFIER equals expression
 ```
 
 **Railroad Diagram:**
@@ -6641,7 +6641,7 @@ stateDiagram-v2
     direction LR
     state "IDENTIFIER" as s1
     [*] --> s1
-    state "EQUALS" as s2
+    state "equals" as s2
     s1 --> s2
     state "expression" as s3
     s2 --> s3
@@ -6656,7 +6656,7 @@ stateDiagram-v2
 
 ```ebnf
 placeholderBlock
-    : PLACEHOLDER (IDENTIFIER | STRING_LITERAL) BEGIN (pageWidget SEMICOLON?)* END
+    : placeholder (IDENTIFIER | STRING_LITERAL) begin (pageWidget SEMICOLON?)* end
 ```
 
 **Railroad Diagram:**
@@ -6664,15 +6664,15 @@ placeholderBlock
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "PLACEHOLDER" as s1
+    state "placeholder" as s1
     [*] --> s1
     state "(IDENTIFIER | STRING_LITERAL)" as s2
     s1 --> s2
-    state "BEGIN" as s3
+    state "begin" as s3
     s2 --> s3
     state "(pageWidget SEMICOLON?)*" as s4
     s3 --> s4
-    state "END" as s5
+    state "end" as s5
     s4 --> s5
     s5 --> [*]
 ```
@@ -6685,9 +6685,9 @@ stateDiagram-v2
 
 ```ebnf
 dataGridSource
-    : SOURCE_KW DATABASE qualifiedName
-    | (WHERE expression)?
-    | (SORT_BY IDENTIFIER (ASC | DESC)?)?
+    : SOURCE_KW database qualifiedName
+    | (where expression)?
+    | (SORT_BY IDENTIFIER (asc | desc)?)?
 ```
 
 **Railroad Diagram:**
@@ -6697,15 +6697,15 @@ stateDiagram-v2
     direction LR
     state "SOURCE_KW" as s1
     [*] --> s1
-    state "DATABASE" as s2
+    state "database" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
     s3 --> [*]
-    state "(WHERE expression)?" as s4
+    state "(where expression)?" as s4
     [*] --> s4
     s4 --> [*]
-    state "(SORT_BY IDENTIFIER (ASC | DESC)?)?" as s5
+    state "(SORT_BY IDENTIFIER (asc | desc)?)?" as s5
     [*] --> s5
     s5 --> [*]
 ```
@@ -6718,7 +6718,7 @@ stateDiagram-v2
 
 ```ebnf
 dataGridContent
-    : (dataGridHeader | dataGridColumn SEMICOLON? | controlBar | searchBar)*
+    : (dataGridHeader | dataGridColumn SEMICOLON? | controlbar | searchbar)*
 ```
 
 **Railroad Diagram:**
@@ -6726,7 +6726,7 @@ dataGridContent
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "(dataGridHeader | dataGridColumn SEMICOLON? | controlBar | searchBar)*" as s1
+    state "(dataGridHeader | dataGridColumn SEMICOLON? | controlbar | searchbar)*" as s1
     [*] --> s1
     s1 --> [*]
 ```
@@ -6739,7 +6739,7 @@ stateDiagram-v2
 
 ```ebnf
 dataGridHeader
-    : HEADER (pageWidget SEMICOLON?)*
+    : header (pageWidget SEMICOLON?)*
 ```
 
 **Railroad Diagram:**
@@ -6747,7 +6747,7 @@ dataGridHeader
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "HEADER" as s1
+    state "header" as s1
     [*] --> s1
     state "(pageWidget SEMICOLON?)*" as s2
     s1 --> s2
@@ -6762,8 +6762,8 @@ stateDiagram-v2
 
 ```ebnf
 dataGridColumn
-    : COLUMN IDENTIFIER (AS STRING_LITERAL)? widgetOptions?
-    | | COLUMN STRING_LITERAL (BEGIN (pageWidget SEMICOLON?)* END)?
+    : column IDENTIFIER (as STRING_LITERAL)? widgetOptions?
+    | | column STRING_LITERAL (begin (pageWidget SEMICOLON?)* end)?
 ```
 
 **Railroad Diagram:**
@@ -6771,20 +6771,20 @@ dataGridColumn
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COLUMN" as s1
+    state "column" as s1
     [*] --> s1
     state "IDENTIFIER" as s2
     s1 --> s2
-    state "(AS STRING_LITERAL)?" as s3
+    state "(as STRING_LITERAL)?" as s3
     s2 --> s3
     state "widgetOptions?" as s4
     s3 --> s4
     s4 --> [*]
-    state "COLUMN" as s5
+    state "column" as s5
     [*] --> s5
     state "STRING_LITERAL" as s6
     s5 --> s6
-    state "(BEGIN (pageWidget SEMICOLON?)* END)?" as s7
+    state "(begin (pageWidget SEMICOLON?)* end)?" as s7
     s6 --> s7
     s7 --> [*]
 ```
@@ -6796,8 +6796,8 @@ stateDiagram-v2
 **Syntax:**
 
 ```ebnf
-controlBar
-    : CONTROLBAR BEGIN (actionButtonWidget | linkButtonWidget)* END
+controlbar
+    : controlbar begin (actionButtonWidget | linkButtonWidget)* end
 ```
 
 **Railroad Diagram:**
@@ -6805,13 +6805,13 @@ controlBar
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CONTROLBAR" as s1
+    state "controlbar" as s1
     [*] --> s1
-    state "BEGIN" as s2
+    state "begin" as s2
     s1 --> s2
     state "(actionButtonWidget | linkButtonWidget)*" as s3
     s2 --> s3
-    state "END" as s4
+    state "end" as s4
     s3 --> s4
     s4 --> [*]
 ```
@@ -6823,8 +6823,8 @@ stateDiagram-v2
 **Syntax:**
 
 ```ebnf
-searchBar
-    : SEARCHBAR BEGIN searchField* END
+searchbar
+    : searchbar begin searchField* end
 ```
 
 **Railroad Diagram:**
@@ -6832,13 +6832,13 @@ searchBar
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "SEARCHBAR" as s1
+    state "searchbar" as s1
     [*] --> s1
-    state "BEGIN" as s2
+    state "begin" as s2
     s1 --> s2
     state "searchField*" as s3
     s2 --> s3
-    state "END" as s4
+    state "end" as s4
     s3 --> s4
     s4 --> [*]
 ```
@@ -6851,8 +6851,8 @@ stateDiagram-v2
 
 ```ebnf
 searchField
-    : TEXTFILTER IDENTIFIER attributeClause? widgetOptions?
-    | | DROPDOWN IDENTIFIER attributeClause? widgetOptions?
+    : textfilter IDENTIFIER attributeClause? widgetOptions?
+    | | dropdown IDENTIFIER attributeClause? widgetOptions?
 ```
 
 **Railroad Diagram:**
@@ -6860,7 +6860,7 @@ searchField
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TEXTFILTER" as s1
+    state "textfilter" as s1
     [*] --> s1
     state "IDENTIFIER" as s2
     s1 --> s2
@@ -6869,7 +6869,7 @@ stateDiagram-v2
     state "widgetOptions?" as s4
     s3 --> s4
     s4 --> [*]
-    state "DROPDOWN" as s5
+    state "dropdown" as s5
     [*] --> s5
     state "IDENTIFIER" as s6
     s5 --> s6
@@ -6888,7 +6888,7 @@ stateDiagram-v2
 
 ```ebnf
 dataSourceClause
-    : DATASOURCE (VARIABLE | MICROFLOW STRING_LITERAL | SELECTION IDENTIFIER)
+    : datasource (VARIABLE | microflow STRING_LITERAL | selection IDENTIFIER)
 ```
 
 **Railroad Diagram:**
@@ -6896,9 +6896,9 @@ dataSourceClause
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "DATASOURCE" as s1
+    state "datasource" as s1
     [*] --> s1
-    state "(VARIABLE | MICROFLOW STRING_LITERAL | SELECTION IDENTIFIER)" as s2
+    state "(VARIABLE | microflow STRING_LITERAL | selection IDENTIFIER)" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -6911,8 +6911,8 @@ stateDiagram-v2
 
 ```ebnf
 dataViewFooter
-    : FOOTER
-    | ( BEGIN (pageWidget SEMICOLON?)* END
+    : footer
+    | ( begin (pageWidget SEMICOLON?)* end
     | | (pageWidget SEMICOLON?)+
     | )
 ```
@@ -6922,10 +6922,10 @@ dataViewFooter
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "FOOTER" as s1
+    state "footer" as s1
     [*] --> s1
     s1 --> [*]
-    state "( BEGIN (pageWidget SEMICOLON?)* END" as s2
+    state "( begin (pageWidget SEMICOLON?)* end" as s2
     [*] --> s2
     s2 --> [*]
     state "(pageWidget SEMICOLON?)+" as s3
@@ -6944,8 +6944,8 @@ stateDiagram-v2
 
 ```ebnf
 gallerySource
-    : SOURCE_KW DATABASE qualifiedName
-    | (SORT_BY IDENTIFIER (ASC | DESC)?)?
+    : SOURCE_KW database qualifiedName
+    | (SORT_BY IDENTIFIER (asc | desc)?)?
 ```
 
 **Railroad Diagram:**
@@ -6955,12 +6955,12 @@ stateDiagram-v2
     direction LR
     state "SOURCE_KW" as s1
     [*] --> s1
-    state "DATABASE" as s2
+    state "database" as s2
     s1 --> s2
     state "qualifiedName" as s3
     s2 --> s3
     s3 --> [*]
-    state "(SORT_BY IDENTIFIER (ASC | DESC)?)?" as s4
+    state "(SORT_BY IDENTIFIER (asc | desc)?)?" as s4
     [*] --> s4
     s4 --> [*]
 ```
@@ -6974,7 +6974,7 @@ stateDiagram-v2
 ```ebnf
 galleryContent
     : (galleryFilter)?
-    | (TEMPLATE (pageWidget SEMICOLON?)*)?
+    | (template (pageWidget SEMICOLON?)*)?
     | (pageWidget SEMICOLON?)*
 ```
 
@@ -6986,7 +6986,7 @@ stateDiagram-v2
     state "(galleryFilter)?" as s1
     [*] --> s1
     s1 --> [*]
-    state "(TEMPLATE (pageWidget SEMICOLON?)*)?" as s2
+    state "(template (pageWidget SEMICOLON?)*)?" as s2
     [*] --> s2
     s2 --> [*]
     state "(pageWidget SEMICOLON?)*" as s3
@@ -7002,7 +7002,7 @@ stateDiagram-v2
 
 ```ebnf
 galleryFilter
-    : FILTER (searchField SEMICOLON?)*
+    : filter (searchField SEMICOLON?)*
 ```
 
 **Railroad Diagram:**
@@ -7010,7 +7010,7 @@ galleryFilter
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "FILTER" as s1
+    state "filter" as s1
     [*] --> s1
     state "(searchField SEMICOLON?)*" as s2
     s1 --> s2
@@ -7048,7 +7048,7 @@ stateDiagram-v2
 
 ```ebnf
 passArg
-    : VARIABLE EQUALS (VARIABLE | expression)
+    : VARIABLE equals (VARIABLE | expression)
 ```
 
 **Railroad Diagram:**
@@ -7058,7 +7058,7 @@ stateDiagram-v2
     direction LR
     state "VARIABLE" as s1
     [*] --> s1
-    state "EQUALS" as s2
+    state "equals" as s2
     s1 --> s2
     state "(VARIABLE | expression)" as s3
     s2 --> s3
@@ -7072,11 +7072,11 @@ stateDiagram-v2
 **Syntax:**
 
 ```ebnf
-buttonStyle
-    : PRIMARY
-    | | DEFAULT
-    | | SUCCESS
-    | | DANGER
+buttonstyle
+    : primary
+    | | default
+    | | success
+    | | danger
     | | WARNING_STYLE
     | | INFO_STYLE
     | | IDENTIFIER
@@ -7087,16 +7087,16 @@ buttonStyle
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "PRIMARY" as s1
+    state "primary" as s1
     [*] --> s1
     s1 --> [*]
-    state "DEFAULT" as s2
+    state "default" as s2
     [*] --> s2
     s2 --> [*]
-    state "SUCCESS" as s3
+    state "success" as s3
     [*] --> s3
     s3 --> [*]
-    state "DANGER" as s4
+    state "danger" as s4
     [*] --> s4
     s4 --> [*]
     state "WARNING_STYLE" as s5
@@ -7187,8 +7187,8 @@ stateDiagram-v2
 
 ```ebnf
 snippetOption
-    : FOLDER STRING_LITERAL
-    | | COMMENT STRING_LITERAL
+    : folder STRING_LITERAL
+    | | comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -7196,12 +7196,12 @@ snippetOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "FOLDER" as s1
+    state "folder" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
     s2 --> [*]
-    state "COMMENT" as s3
+    state "comment" as s3
     [*] --> s3
     state "STRING_LITERAL" as s4
     s3 --> s4
@@ -7237,7 +7237,7 @@ stateDiagram-v2
 
 ```ebnf
 notebookOption
-    : COMMENT STRING_LITERAL
+    : comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -7245,7 +7245,7 @@ notebookOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COMMENT" as s1
+    state "comment" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
@@ -7281,12 +7281,12 @@ stateDiagram-v2
 
 ```ebnf
 databaseConnectionOption
-    : TYPE IDENTIFIER
-    | | HOST STRING_LITERAL
-    | | PORT NUMBER_LITERAL
-    | | DATABASE STRING_LITERAL
-    | | USERNAME STRING_LITERAL
-    | | PASSWORD STRING_LITERAL
+    : type IDENTIFIER
+    | | host STRING_LITERAL
+    | | port NUMBER_LITERAL
+    | | database STRING_LITERAL
+    | | username STRING_LITERAL
+    | | password STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -7294,32 +7294,32 @@ databaseConnectionOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "TYPE" as s1
+    state "type" as s1
     [*] --> s1
     state "IDENTIFIER" as s2
     s1 --> s2
     s2 --> [*]
-    state "HOST" as s3
+    state "host" as s3
     [*] --> s3
     state "STRING_LITERAL" as s4
     s3 --> s4
     s4 --> [*]
-    state "PORT" as s5
+    state "port" as s5
     [*] --> s5
     state "NUMBER_LITERAL" as s6
     s5 --> s6
     s6 --> [*]
-    state "DATABASE" as s7
+    state "database" as s7
     [*] --> s7
     state "STRING_LITERAL" as s8
     s7 --> s8
     s8 --> [*]
-    state "USERNAME" as s9
+    state "username" as s9
     [*] --> s9
     state "STRING_LITERAL" as s10
     s9 --> s10
     s10 --> [*]
-    state "PASSWORD" as s11
+    state "password" as s11
     [*] --> s11
     state "STRING_LITERAL" as s12
     s11 --> s12
@@ -7355,7 +7355,7 @@ stateDiagram-v2
 
 ```ebnf
 constantOption
-    : COMMENT STRING_LITERAL
+    : comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -7363,7 +7363,7 @@ constantOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "COMMENT" as s1
+    state "comment" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
@@ -7378,7 +7378,7 @@ stateDiagram-v2
 
 ```ebnf
 restClientOptions
-    : BEGIN restOperation* END
+    : begin restOperation* end
 ```
 
 **Railroad Diagram:**
@@ -7386,11 +7386,11 @@ restClientOptions
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "BEGIN" as s1
+    state "begin" as s1
     [*] --> s1
     state "restOperation*" as s2
     s1 --> s2
-    state "END" as s3
+    state "end" as s3
     s2 --> s3
     s3 --> [*]
 ```
@@ -7424,10 +7424,10 @@ stateDiagram-v2
 
 ```ebnf
 restClientOption
-    : BASE URL STRING_LITERAL
-    | | TIMEOUT NUMBER_LITERAL
-    | | AUTHENTICATION restAuthentication
-    | | COMMENT STRING_LITERAL
+    : base url STRING_LITERAL
+    | | timeout NUMBER_LITERAL
+    | | authentication restAuthentication
+    | | comment STRING_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -7435,24 +7435,24 @@ restClientOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "BASE" as s1
+    state "base" as s1
     [*] --> s1
-    state "URL" as s2
+    state "url" as s2
     s1 --> s2
     state "STRING_LITERAL" as s3
     s2 --> s3
     s3 --> [*]
-    state "TIMEOUT" as s4
+    state "timeout" as s4
     [*] --> s4
     state "NUMBER_LITERAL" as s5
     s4 --> s5
     s5 --> [*]
-    state "AUTHENTICATION" as s6
+    state "authentication" as s6
     [*] --> s6
     state "restAuthentication" as s7
     s6 --> s7
     s7 --> [*]
-    state "COMMENT" as s8
+    state "comment" as s8
     [*] --> s8
     state "STRING_LITERAL" as s9
     s8 --> s9
@@ -7467,9 +7467,9 @@ stateDiagram-v2
 
 ```ebnf
 restAuthentication
-    : BASIC USERNAME STRING_LITERAL PASSWORD STRING_LITERAL
-    | | OAUTH STRING_LITERAL
-    | | NONE
+    : basic username STRING_LITERAL password STRING_LITERAL
+    | | oauth STRING_LITERAL
+    | | none
 ```
 
 **Railroad Diagram:**
@@ -7477,23 +7477,23 @@ restAuthentication
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "BASIC" as s1
+    state "basic" as s1
     [*] --> s1
-    state "USERNAME" as s2
+    state "username" as s2
     s1 --> s2
     state "STRING_LITERAL" as s3
     s2 --> s3
-    state "PASSWORD" as s4
+    state "password" as s4
     s3 --> s4
     state "STRING_LITERAL" as s5
     s4 --> s5
     s5 --> [*]
-    state "OAUTH" as s6
+    state "oauth" as s6
     [*] --> s6
     state "STRING_LITERAL" as s7
     s6 --> s7
     s7 --> [*]
-    state "NONE" as s8
+    state "none" as s8
     [*] --> s8
     s8 --> [*]
 ```
@@ -7506,9 +7506,9 @@ stateDiagram-v2
 
 ```ebnf
 restOperation
-    : OPERATION IDENTIFIER
-    | METHOD restMethod
-    | PATH STRING_LITERAL
+    : operation IDENTIFIER
+    | method restMethod
+    | path STRING_LITERAL
     | restOperationOptions?
 ```
 
@@ -7517,17 +7517,17 @@ restOperation
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "OPERATION" as s1
+    state "operation" as s1
     [*] --> s1
     state "IDENTIFIER" as s2
     s1 --> s2
     s2 --> [*]
-    state "METHOD" as s3
+    state "method" as s3
     [*] --> s3
     state "restMethod" as s4
     s3 --> s4
     s4 --> [*]
-    state "PATH" as s5
+    state "path" as s5
     [*] --> s5
     state "STRING_LITERAL" as s6
     s5 --> s6
@@ -7545,7 +7545,7 @@ stateDiagram-v2
 
 ```ebnf
 restMethod
-    : GET | POST | PUT | PATCH | DELETE
+    : get | post | put | patch | delete
 ```
 
 **Railroad Diagram:**
@@ -7553,23 +7553,23 @@ restMethod
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "GET" as s1
+    state "get" as s1
     [*] --> s1
     state "|" as s2
     s1 --> s2
-    state "POST" as s3
+    state "post" as s3
     s2 --> s3
     state "|" as s4
     s3 --> s4
-    state "PUT" as s5
+    state "put" as s5
     s4 --> s5
     state "|" as s6
     s5 --> s6
-    state "PATCH" as s7
+    state "patch" as s7
     s6 --> s7
     state "|" as s8
     s7 --> s8
-    state "DELETE" as s9
+    state "delete" as s9
     s8 --> s9
     s9 --> [*]
 ```
@@ -7603,10 +7603,10 @@ stateDiagram-v2
 
 ```ebnf
 restOperationOption
-    : BODY STRING_LITERAL
-    | | RESPONSE restResponse
-    | | PARAMETER restParameter
-    | | TIMEOUT NUMBER_LITERAL
+    : body STRING_LITERAL
+    | | response restResponse
+    | | parameter restParameter
+    | | timeout NUMBER_LITERAL
 ```
 
 **Railroad Diagram:**
@@ -7614,22 +7614,22 @@ restOperationOption
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "BODY" as s1
+    state "body" as s1
     [*] --> s1
     state "STRING_LITERAL" as s2
     s1 --> s2
     s2 --> [*]
-    state "RESPONSE" as s3
+    state "response" as s3
     [*] --> s3
     state "restResponse" as s4
     s3 --> s4
     s4 --> [*]
-    state "PARAMETER" as s5
+    state "parameter" as s5
     [*] --> s5
     state "restParameter" as s6
     s5 --> s6
     s6 --> [*]
-    state "TIMEOUT" as s7
+    state "timeout" as s7
     [*] --> s7
     state "NUMBER_LITERAL" as s8
     s7 --> s8
@@ -7644,7 +7644,7 @@ stateDiagram-v2
 
 ```ebnf
 restResponse
-    : STATUS NUMBER_LITERAL dataType
+    : status NUMBER_LITERAL dataType
 ```
 
 **Railroad Diagram:**
@@ -7652,7 +7652,7 @@ restResponse
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "STATUS" as s1
+    state "status" as s1
     [*] --> s1
     state "NUMBER_LITERAL" as s2
     s1 --> s2
@@ -7669,7 +7669,7 @@ stateDiagram-v2
 
 ```ebnf
 restParameter
-    : IDENTIFIER COLON dataType (IN (PATH | QUERY | BODY | HEADER))?
+    : IDENTIFIER COLON dataType (in (path | query | body | header))?
 ```
 
 **Railroad Diagram:**
@@ -7683,7 +7683,7 @@ stateDiagram-v2
     s1 --> s2
     state "dataType" as s3
     s2 --> s3
-    state "(IN (PATH | QUERY | BODY | HEADER))?" as s4
+    state "(in (path | query | body | header))?" as s4
     s3 --> s4
     s4 --> [*]
 ```
@@ -7696,14 +7696,14 @@ stateDiagram-v2
 
 ```ebnf
 catalogTableName
-    : MODULES
-    | | ENTITIES
-    | | MICROFLOWS
-    | | PAGES
-    | | SNIPPETS
-    | | ENUMERATIONS
-    | | WIDGETS
-    | | IDENTIFIER  // For tables like nanoflows, activities, xpath_expressions, objects, projects, snapshots
+    : modules
+    | | entities
+    | | microflows
+    | | pages
+    | | snippets
+    | | enumerations
+    | | widgets
+    | | IDENTIFIER  // for tables like nanoflows, activities, xpath_expressions, objects, projects, snapshots
 ```
 
 **Railroad Diagram:**
@@ -7711,25 +7711,25 @@ catalogTableName
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "MODULES" as s1
+    state "modules" as s1
     [*] --> s1
     s1 --> [*]
-    state "ENTITIES" as s2
+    state "entities" as s2
     [*] --> s2
     s2 --> [*]
-    state "MICROFLOWS" as s3
+    state "microflows" as s3
     [*] --> s3
     s3 --> [*]
-    state "PAGES" as s4
+    state "pages" as s4
     [*] --> s4
     s4 --> [*]
-    state "SNIPPETS" as s5
+    state "snippets" as s5
     [*] --> s5
     s5 --> [*]
-    state "ENUMERATIONS" as s6
+    state "enumerations" as s6
     [*] --> s6
     s6 --> [*]
-    state "WIDGETS" as s7
+    state "widgets" as s7
     [*] --> s7
     s7 --> [*]
     state "IDENTIFIER" as s8
@@ -7745,7 +7745,7 @@ stateDiagram-v2
 
 ```ebnf
 tableReference
-    : qualifiedName (AS? IDENTIFIER)?
+    : qualifiedName (as? IDENTIFIER)?
 ```
 
 **Railroad Diagram:**
@@ -7755,7 +7755,7 @@ stateDiagram-v2
     direction LR
     state "qualifiedName" as s1
     [*] --> s1
-    state "(AS? IDENTIFIER)?" as s2
+    state "(as? IDENTIFIER)?" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -7768,8 +7768,8 @@ stateDiagram-v2
 
 ```ebnf
 joinClause
-    : joinType? JOIN tableReference (ON expression)?
-    | | joinType? JOIN IDENTIFIER SLASH qualifiedName SLASH qualifiedName (AS IDENTIFIER)?
+    : joinType? join tableReference (on expression)?
+    | | joinType? join IDENTIFIER SLASH qualifiedName SLASH qualifiedName (as IDENTIFIER)?
 ```
 
 **Railroad Diagram:**
@@ -7779,16 +7779,16 @@ stateDiagram-v2
     direction LR
     state "joinType?" as s1
     [*] --> s1
-    state "JOIN" as s2
+    state "join" as s2
     s1 --> s2
     state "tableReference" as s3
     s2 --> s3
-    state "(ON expression)?" as s4
+    state "(on expression)?" as s4
     s3 --> s4
     s4 --> [*]
     state "joinType?" as s5
     [*] --> s5
-    state "JOIN" as s6
+    state "join" as s6
     s5 --> s6
     state "IDENTIFIER" as s7
     s6 --> s7
@@ -7800,7 +7800,7 @@ stateDiagram-v2
     s9 --> s10
     state "qualifiedName" as s11
     s10 --> s11
-    state "(AS IDENTIFIER)?" as s12
+    state "(as IDENTIFIER)?" as s12
     s11 --> s12
     s12 --> [*]
 ```
@@ -7813,11 +7813,11 @@ stateDiagram-v2
 
 ```ebnf
 joinType
-    : LEFT OUTER?
-    | | RIGHT OUTER?
-    | | INNER
-    | | FULL OUTER?
-    | | CROSS
+    : left outer?
+    | | right outer?
+    | | inner
+    | | full outer?
+    | | cross
 ```
 
 **Railroad Diagram:**
@@ -7825,25 +7825,25 @@ joinType
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LEFT" as s1
+    state "left" as s1
     [*] --> s1
-    state "OUTER?" as s2
+    state "outer?" as s2
     s1 --> s2
     s2 --> [*]
-    state "RIGHT" as s3
+    state "right" as s3
     [*] --> s3
-    state "OUTER?" as s4
+    state "outer?" as s4
     s3 --> s4
     s4 --> [*]
-    state "INNER" as s5
+    state "inner" as s5
     [*] --> s5
     s5 --> [*]
-    state "FULL" as s6
+    state "full" as s6
     [*] --> s6
-    state "OUTER?" as s7
+    state "outer?" as s7
     s6 --> s7
     s7 --> [*]
-    state "CROSS" as s8
+    state "cross" as s8
     [*] --> s8
     s8 --> [*]
 ```
@@ -7879,7 +7879,7 @@ stateDiagram-v2
 
 ```ebnf
 havingClause
-    : HAVING expression
+    : having expression
 ```
 
 **Railroad Diagram:**
@@ -7887,7 +7887,7 @@ havingClause
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "HAVING" as s1
+    state "having" as s1
     [*] --> s1
     state "expression" as s2
     s1 --> s2
@@ -7948,7 +7948,7 @@ stateDiagram-v2
 
 ```ebnf
 orderByItem
-    : expression (ASC | DESC)?
+    : expression (asc | desc)?
 ```
 
 **Railroad Diagram:**
@@ -7958,7 +7958,7 @@ stateDiagram-v2
     direction LR
     state "expression" as s1
     [*] --> s1
-    state "(ASC | DESC)?" as s2
+    state "(asc | desc)?" as s2
     s1 --> s2
     s2 --> [*]
 ```
@@ -7971,8 +7971,8 @@ stateDiagram-v2
 
 ```ebnf
 limitOffsetClause
-    : LIMIT NUMBER_LITERAL (OFFSET NUMBER_LITERAL)?
-    | | OFFSET NUMBER_LITERAL (LIMIT NUMBER_LITERAL)?
+    : limit NUMBER_LITERAL (offset NUMBER_LITERAL)?
+    | | offset NUMBER_LITERAL (limit NUMBER_LITERAL)?
 ```
 
 **Railroad Diagram:**
@@ -7980,18 +7980,18 @@ limitOffsetClause
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "LIMIT" as s1
+    state "limit" as s1
     [*] --> s1
     state "NUMBER_LITERAL" as s2
     s1 --> s2
-    state "(OFFSET NUMBER_LITERAL)?" as s3
+    state "(offset NUMBER_LITERAL)?" as s3
     s2 --> s3
     s3 --> [*]
-    state "OFFSET" as s4
+    state "offset" as s4
     [*] --> s4
     state "NUMBER_LITERAL" as s5
     s4 --> s5
-    state "(LIMIT NUMBER_LITERAL)?" as s6
+    state "(limit NUMBER_LITERAL)?" as s6
     s5 --> s6
     s6 --> [*]
 ```
@@ -8052,7 +8052,7 @@ stateDiagram-v2
 
 ```ebnf
 aggregateFunction
-    : (COUNT | SUM | AVG | MIN | MAX) LPAREN (DISTINCT? expression | STAR) RPAREN
+    : (count | sum | avg | min | max) LPAREN (distinct? expression | STAR) RPAREN
 ```
 
 **Railroad Diagram:**
@@ -8060,11 +8060,11 @@ aggregateFunction
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "(COUNT | SUM | AVG | MIN | MAX)" as s1
+    state "(count | sum | avg | min | max)" as s1
     [*] --> s1
     state "LPAREN" as s2
     s1 --> s2
-    state "(DISTINCT? expression | STAR)" as s3
+    state "(distinct? expression | STAR)" as s3
     s2 --> s3
     state "RPAREN" as s4
     s3 --> s4
@@ -8205,11 +8205,11 @@ stateDiagram-v2
 ```ebnf
 annotationName
     : IDENTIFIER
-    | | POSITION
-    | | COMMENT
-    | | ICON
-    | | FOLDER
-    | | REQUIRED
+    | | position
+    | | comment
+    | | icon
+    | | folder
+    | | required
 ```
 
 **Railroad Diagram:**
@@ -8220,19 +8220,19 @@ stateDiagram-v2
     state "IDENTIFIER" as s1
     [*] --> s1
     s1 --> [*]
-    state "POSITION" as s2
+    state "position" as s2
     [*] --> s2
     s2 --> [*]
-    state "COMMENT" as s3
+    state "comment" as s3
     [*] --> s3
     s3 --> [*]
-    state "ICON" as s4
+    state "icon" as s4
     [*] --> s4
     s4 --> [*]
-    state "FOLDER" as s5
+    state "folder" as s5
     [*] --> s5
     s5 --> [*]
-    state "REQUIRED" as s6
+    state "required" as s6
     [*] --> s6
     s6 --> [*]
 ```
@@ -8328,23 +8328,23 @@ Keywords that can be used as identifiers in certain contexts
 
 ```ebnf
 keyword
-    : CREATE | ALTER | DROP | RENAME | ENTITY | PERSISTENT | VIEW | MODULE
-    | | ASSOCIATION | MICROFLOW | PAGE | SNIPPET | ENUMERATION
+    : create | alter | drop | rename | entity | persistent | view | module
+    | | association | microflow | page | snippet | enumeration
     | | STRING_TYPE | INTEGER_TYPE | LONG_TYPE | DECIMAL_TYPE | BOOLEAN_TYPE
     | | DATETIME_TYPE | DATE_TYPE | AUTONUMBER_TYPE | BINARY_TYPE
-    | | SELECT | FROM | WHERE | JOIN | LEFT | RIGHT | INNER | OUTER
-    | | ORDER_BY | GROUP_BY | HAVING | LIMIT | OFFSET | AS | ON
-    | | AND | OR | NOT | NULL | IN | LIKE | BETWEEN | TRUE | FALSE
-    | | COUNT | SUM | AVG | MIN | MAX | DISTINCT | ALL
-    | | BEGIN | END | IF | ELSE | ELSIF | THEN | WHILE | LOOP
-    | | DECLARE | SET | CHANGE | RETRIEVE | DELETE | COMMIT | RETURN
-    | | CALL | LOG | WITH | FOR | TO | OF | TYPE | VALUE
-    | | SHOW | DESCRIBE | CONNECT | DISCONNECT | USE | STATUS
-    | | TITLE | LAYOUT | CAPTION | LABEL | WIDTH | HEIGHT | STYLE | CLASS
-    | | DATASOURCE | EDITABLE | VISIBLE | REQUIRED | DEFAULT | UNIQUE
-    | | INDEX | OWNER | REFERENCE | CASCADE | BOTH | SINGLE | MULTIPLE | NONE
-    | | CRITICAL | SUCCESS | ERROR | WARNING | INFO | DEBUG
-    | | MESSAGE | ACTION | USERNAME | PASSWORD
+    | | select | from | where | join | left | right | inner | outer
+    | | ORDER_BY | GROUP_BY | having | limit | offset | as | on
+    | | and | or | not | null | in | like | between | true | false
+    | | count | sum | avg | min | max | distinct | all
+    | | begin | end | if | else | elsif | then | while | loop
+    | | declare | set | change | retrieve | delete | commit | return
+    | | call | log | with | for | to | of | type | value
+    | | show | describe | connect | disconnect | use | status
+    | | title | layout | caption | label | width | height | style | class
+    | | datasource | editable | visible | required | default | unique
+    | | index | owner | reference | cascade | both | single | multiple | none
+    | | critical | success | error | warning | info | debug
+    | | message | action | username | password
 ```
 
 **Railroad Diagram:**
@@ -8352,54 +8352,54 @@ keyword
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "CREATE" as s1
+    state "create" as s1
     [*] --> s1
     state "|" as s2
     s1 --> s2
-    state "ALTER" as s3
+    state "alter" as s3
     s2 --> s3
     state "|" as s4
     s3 --> s4
-    state "DROP" as s5
+    state "drop" as s5
     s4 --> s5
     state "|" as s6
     s5 --> s6
-    state "RENAME" as s7
+    state "rename" as s7
     s6 --> s7
     state "|" as s8
     s7 --> s8
-    state "ENTITY" as s9
+    state "entity" as s9
     s8 --> s9
     state "|" as s10
     s9 --> s10
-    state "PERSISTENT" as s11
+    state "persistent" as s11
     s10 --> s11
     state "|" as s12
     s11 --> s12
-    state "VIEW" as s13
+    state "view" as s13
     s12 --> s13
     state "|" as s14
     s13 --> s14
-    state "MODULE" as s15
+    state "module" as s15
     s14 --> s15
     s15 --> [*]
-    state "ASSOCIATION" as s16
+    state "association" as s16
     [*] --> s16
     state "|" as s17
     s16 --> s17
-    state "MICROFLOW" as s18
+    state "microflow" as s18
     s17 --> s18
     state "|" as s19
     s18 --> s19
-    state "PAGE" as s20
+    state "page" as s20
     s19 --> s20
     state "|" as s21
     s20 --> s21
-    state "SNIPPET" as s22
+    state "snippet" as s22
     s21 --> s22
     state "|" as s23
     s22 --> s23
-    state "ENUMERATION" as s24
+    state "enumeration" as s24
     s23 --> s24
     s24 --> [*]
     state "STRING_TYPE" as s25
@@ -8436,35 +8436,35 @@ stateDiagram-v2
     state "BINARY_TYPE" as s40
     s39 --> s40
     s40 --> [*]
-    state "SELECT" as s41
+    state "select" as s41
     [*] --> s41
     state "|" as s42
     s41 --> s42
-    state "FROM" as s43
+    state "from" as s43
     s42 --> s43
     state "|" as s44
     s43 --> s44
-    state "WHERE" as s45
+    state "where" as s45
     s44 --> s45
     state "|" as s46
     s45 --> s46
-    state "JOIN" as s47
+    state "join" as s47
     s46 --> s47
     state "|" as s48
     s47 --> s48
-    state "LEFT" as s49
+    state "left" as s49
     s48 --> s49
     state "|" as s50
     s49 --> s50
-    state "RIGHT" as s51
+    state "right" as s51
     s50 --> s51
     state "|" as s52
     s51 --> s52
-    state "INNER" as s53
+    state "inner" as s53
     s52 --> s53
     state "|" as s54
     s53 --> s54
-    state "OUTER" as s55
+    state "outer" as s55
     s54 --> s55
     s55 --> [*]
     state "ORDER_BY" as s56
@@ -8475,320 +8475,320 @@ stateDiagram-v2
     s57 --> s58
     state "|" as s59
     s58 --> s59
-    state "HAVING" as s60
+    state "having" as s60
     s59 --> s60
     state "|" as s61
     s60 --> s61
-    state "LIMIT" as s62
+    state "limit" as s62
     s61 --> s62
     state "|" as s63
     s62 --> s63
-    state "OFFSET" as s64
+    state "offset" as s64
     s63 --> s64
     state "|" as s65
     s64 --> s65
-    state "AS" as s66
+    state "as" as s66
     s65 --> s66
     state "|" as s67
     s66 --> s67
-    state "ON" as s68
+    state "on" as s68
     s67 --> s68
     s68 --> [*]
-    state "AND" as s69
+    state "and" as s69
     [*] --> s69
     state "|" as s70
     s69 --> s70
-    state "OR" as s71
+    state "or" as s71
     s70 --> s71
     state "|" as s72
     s71 --> s72
-    state "NOT" as s73
+    state "not" as s73
     s72 --> s73
     state "|" as s74
     s73 --> s74
-    state "NULL" as s75
+    state "null" as s75
     s74 --> s75
     state "|" as s76
     s75 --> s76
-    state "IN" as s77
+    state "in" as s77
     s76 --> s77
     state "|" as s78
     s77 --> s78
-    state "LIKE" as s79
+    state "like" as s79
     s78 --> s79
     state "|" as s80
     s79 --> s80
-    state "BETWEEN" as s81
+    state "between" as s81
     s80 --> s81
     state "|" as s82
     s81 --> s82
-    state "TRUE" as s83
+    state "true" as s83
     s82 --> s83
     state "|" as s84
     s83 --> s84
-    state "FALSE" as s85
+    state "false" as s85
     s84 --> s85
     s85 --> [*]
-    state "COUNT" as s86
+    state "count" as s86
     [*] --> s86
     state "|" as s87
     s86 --> s87
-    state "SUM" as s88
+    state "sum" as s88
     s87 --> s88
     state "|" as s89
     s88 --> s89
-    state "AVG" as s90
+    state "avg" as s90
     s89 --> s90
     state "|" as s91
     s90 --> s91
-    state "MIN" as s92
+    state "min" as s92
     s91 --> s92
     state "|" as s93
     s92 --> s93
-    state "MAX" as s94
+    state "max" as s94
     s93 --> s94
     state "|" as s95
     s94 --> s95
-    state "DISTINCT" as s96
+    state "distinct" as s96
     s95 --> s96
     state "|" as s97
     s96 --> s97
-    state "ALL" as s98
+    state "all" as s98
     s97 --> s98
     s98 --> [*]
-    state "BEGIN" as s99
+    state "begin" as s99
     [*] --> s99
     state "|" as s100
     s99 --> s100
-    state "END" as s101
+    state "end" as s101
     s100 --> s101
     state "|" as s102
     s101 --> s102
-    state "IF" as s103
+    state "if" as s103
     s102 --> s103
     state "|" as s104
     s103 --> s104
-    state "ELSE" as s105
+    state "else" as s105
     s104 --> s105
     state "|" as s106
     s105 --> s106
-    state "ELSIF" as s107
+    state "elsif" as s107
     s106 --> s107
     state "|" as s108
     s107 --> s108
-    state "THEN" as s109
+    state "then" as s109
     s108 --> s109
     state "|" as s110
     s109 --> s110
-    state "WHILE" as s111
+    state "while" as s111
     s110 --> s111
     state "|" as s112
     s111 --> s112
-    state "LOOP" as s113
+    state "loop" as s113
     s112 --> s113
     s113 --> [*]
-    state "DECLARE" as s114
+    state "declare" as s114
     [*] --> s114
     state "|" as s115
     s114 --> s115
-    state "SET" as s116
+    state "set" as s116
     s115 --> s116
     state "|" as s117
     s116 --> s117
-    state "CHANGE" as s118
+    state "change" as s118
     s117 --> s118
     state "|" as s119
     s118 --> s119
-    state "RETRIEVE" as s120
+    state "retrieve" as s120
     s119 --> s120
     state "|" as s121
     s120 --> s121
-    state "DELETE" as s122
+    state "delete" as s122
     s121 --> s122
     state "|" as s123
     s122 --> s123
-    state "COMMIT" as s124
+    state "commit" as s124
     s123 --> s124
     state "|" as s125
     s124 --> s125
-    state "RETURN" as s126
+    state "return" as s126
     s125 --> s126
     s126 --> [*]
-    state "CALL" as s127
+    state "call" as s127
     [*] --> s127
     state "|" as s128
     s127 --> s128
-    state "LOG" as s129
+    state "log" as s129
     s128 --> s129
     state "|" as s130
     s129 --> s130
-    state "WITH" as s131
+    state "with" as s131
     s130 --> s131
     state "|" as s132
     s131 --> s132
-    state "FOR" as s133
+    state "for" as s133
     s132 --> s133
     state "|" as s134
     s133 --> s134
-    state "TO" as s135
+    state "to" as s135
     s134 --> s135
     state "|" as s136
     s135 --> s136
-    state "OF" as s137
+    state "of" as s137
     s136 --> s137
     state "|" as s138
     s137 --> s138
-    state "TYPE" as s139
+    state "type" as s139
     s138 --> s139
     state "|" as s140
     s139 --> s140
-    state "VALUE" as s141
+    state "value" as s141
     s140 --> s141
     s141 --> [*]
-    state "SHOW" as s142
+    state "show" as s142
     [*] --> s142
     state "|" as s143
     s142 --> s143
-    state "DESCRIBE" as s144
+    state "describe" as s144
     s143 --> s144
     state "|" as s145
     s144 --> s145
-    state "CONNECT" as s146
+    state "connect" as s146
     s145 --> s146
     state "|" as s147
     s146 --> s147
-    state "DISCONNECT" as s148
+    state "disconnect" as s148
     s147 --> s148
     state "|" as s149
     s148 --> s149
-    state "USE" as s150
+    state "use" as s150
     s149 --> s150
     state "|" as s151
     s150 --> s151
-    state "STATUS" as s152
+    state "status" as s152
     s151 --> s152
     s152 --> [*]
-    state "TITLE" as s153
+    state "title" as s153
     [*] --> s153
     state "|" as s154
     s153 --> s154
-    state "LAYOUT" as s155
+    state "layout" as s155
     s154 --> s155
     state "|" as s156
     s155 --> s156
-    state "CAPTION" as s157
+    state "caption" as s157
     s156 --> s157
     state "|" as s158
     s157 --> s158
-    state "LABEL" as s159
+    state "label" as s159
     s158 --> s159
     state "|" as s160
     s159 --> s160
-    state "WIDTH" as s161
+    state "width" as s161
     s160 --> s161
     state "|" as s162
     s161 --> s162
-    state "HEIGHT" as s163
+    state "height" as s163
     s162 --> s163
     state "|" as s164
     s163 --> s164
-    state "STYLE" as s165
+    state "style" as s165
     s164 --> s165
     state "|" as s166
     s165 --> s166
-    state "CLASS" as s167
+    state "class" as s167
     s166 --> s167
     s167 --> [*]
-    state "DATASOURCE" as s168
+    state "datasource" as s168
     [*] --> s168
     state "|" as s169
     s168 --> s169
-    state "EDITABLE" as s170
+    state "editable" as s170
     s169 --> s170
     state "|" as s171
     s170 --> s171
-    state "VISIBLE" as s172
+    state "visible" as s172
     s171 --> s172
     state "|" as s173
     s172 --> s173
-    state "REQUIRED" as s174
+    state "required" as s174
     s173 --> s174
     state "|" as s175
     s174 --> s175
-    state "DEFAULT" as s176
+    state "default" as s176
     s175 --> s176
     state "|" as s177
     s176 --> s177
-    state "UNIQUE" as s178
+    state "unique" as s178
     s177 --> s178
     s178 --> [*]
-    state "INDEX" as s179
+    state "index" as s179
     [*] --> s179
     state "|" as s180
     s179 --> s180
-    state "OWNER" as s181
+    state "owner" as s181
     s180 --> s181
     state "|" as s182
     s181 --> s182
-    state "REFERENCE" as s183
+    state "reference" as s183
     s182 --> s183
     state "|" as s184
     s183 --> s184
-    state "CASCADE" as s185
+    state "cascade" as s185
     s184 --> s185
     state "|" as s186
     s185 --> s186
-    state "BOTH" as s187
+    state "both" as s187
     s186 --> s187
     state "|" as s188
     s187 --> s188
-    state "SINGLE" as s189
+    state "single" as s189
     s188 --> s189
     state "|" as s190
     s189 --> s190
-    state "MULTIPLE" as s191
+    state "multiple" as s191
     s190 --> s191
     state "|" as s192
     s191 --> s192
-    state "NONE" as s193
+    state "none" as s193
     s192 --> s193
     s193 --> [*]
-    state "CRITICAL" as s194
+    state "critical" as s194
     [*] --> s194
     state "|" as s195
     s194 --> s195
-    state "SUCCESS" as s196
+    state "success" as s196
     s195 --> s196
     state "|" as s197
     s196 --> s197
-    state "ERROR" as s198
+    state "error" as s198
     s197 --> s198
     state "|" as s199
     s198 --> s199
-    state "WARNING" as s200
+    state "warning" as s200
     s199 --> s200
     state "|" as s201
     s200 --> s201
-    state "INFO" as s202
+    state "info" as s202
     s201 --> s202
     state "|" as s203
     s202 --> s203
-    state "DEBUG" as s204
+    state "debug" as s204
     s203 --> s204
     s204 --> [*]
-    state "MESSAGE" as s205
+    state "message" as s205
     [*] --> s205
     state "|" as s206
     s205 --> s206
-    state "ACTION" as s207
+    state "action" as s207
     s206 --> s207
     state "|" as s208
     s207 --> s208
-    state "USERNAME" as s209
+    state "username" as s209
     s208 --> s209
     state "|" as s210
     s209 --> s210
-    state "PASSWORD" as s211
+    state "password" as s211
     s210 --> s211
     s211 --> [*]
 ```

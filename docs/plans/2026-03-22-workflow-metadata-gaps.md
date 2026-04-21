@@ -2,26 +2,26 @@
 
 ## Problem
 
-DESCRIBE WORKFLOW outputs WorkflowName, WorkflowDescription, and ExportLevel as comments (`-- Display Name: X`), which CREATE cannot parse back. This breaks round-trip fidelity. The `bson discover` tool confirms 0% semantic field coverage for Workflows$Workflow.
+DESCRIBE WORKFLOW outputs WorkflowName, WorkflowDescription, and ExportLevel as comments (`-- display Name: X`), which CREATE cannot parse back. This breaks round-trip fidelity. The `bson discover` tool confirms 0% semantic field coverage for Workflows$Workflow.
 
 ## Solution
 
-Add three optional MDL clauses to CREATE/ALTER WORKFLOW: `DISPLAY NAME`, `DESCRIPTION`, `EXPORT LEVEL`.
+Add three optional MDL clauses to CREATE/ALTER WORKFLOW: `display NAME`, `description`, `export level`.
 
 ## Syntax
 
 ```sql
-CREATE WORKFLOW Module.MyWorkflow
-  PARAMETER $WorkflowContext: Module.Entity
-  DISPLAY NAME 'My Workflow'
-  DESCRIPTION 'Handles the approval process'
-  EXPORT LEVEL Hidden
-  DUE DATE 'addDays([%CurrentDateTime%], 7)'
-  OVERVIEW PAGE Module.OverviewPage
+create workflow Module.MyWorkflow
+  parameter $WorkflowContext: Module.Entity
+  display NAME 'My Workflow'
+  description 'Handles the approval process'
+  export level Hidden
+  due date 'addDays([%CurrentDateTime%], 7)'
+  overview page Module.OverviewPage
 
-BEGIN
+begin
   ...
-END WORKFLOW
+end workflow
 ```
 
 All three clauses are optional. Position: workflow header section (between PARAMETER and BEGIN), alongside existing DUE DATE and OVERVIEW PAGE.
@@ -37,22 +37,22 @@ From `WorkflowsExportLevel` enum: `Hidden` (default), `Usable`.
 Add three new rules in the `workflowHeader` section:
 
 ```antlr
-workflowDisplayName: DISPLAY NAME stringLiteral;
-workflowDescription: DESCRIPTION stringLiteral;
-workflowExportLevel: EXPORT LEVEL (HIDDEN | USABLE);
+workflowDisplayName: display NAME stringLiteral;
+workflowDescription: description stringLiteral;
+workflowExportLevel: export level (HIDDEN | USABLE);
 ```
 
-New tokens needed: `DISPLAY`, `DESCRIPTION` (may already exist), `HIDDEN`, `USABLE`.
+New tokens needed: `display`, `description` (may already exist), `HIDDEN`, `USABLE`.
 
-Add these as optional children of the `createWorkflowStatement` rule, after `workflowParameter` and before `BEGIN`.
+Add these as optional children of the `createWorkflowStatement` rule, after `workflowParameter` and before `begin`.
 
 ### 2. AST (ast/ast_workflow.go)
 
 Add fields to `CreateWorkflowStatement`:
 
 ```go
-DisplayName  string // from DISPLAY NAME 'text'
-Description  string // from DESCRIPTION 'text'
+DisplayName  string // from display NAME 'text'
+description  string // from description 'text'
 ExportLevel  string // "Hidden" or "Usable", default ""
 ```
 
@@ -77,12 +77,12 @@ if stmt.ExportLevel != "" {
 Change from comment format to MDL clauses:
 
 ```go
-// Before:
+// before:
 // lines = append(lines, fmt.Sprintf("-- Display Name: %s", targetWf.WorkflowName))
 
-// After:
+// after:
 if targetWf.WorkflowName != "" {
-    lines = append(lines, fmt.Sprintf("  DISPLAY NAME '%s'", escape(targetWf.WorkflowName)))
+    lines = append(lines, fmt.Sprintf("  display NAME '%s'", escape(targetWf.WorkflowName)))
 }
 ```
 

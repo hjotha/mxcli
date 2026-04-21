@@ -32,14 +32,14 @@ Compare the current low-level approach (see `examples/create_page/main.go`):
 page := &pages.Page{
     BaseElement: model.BaseElement{
         ID:       model.ID(mpr.GenerateID()),
-        TypeName: "Pages$Page",
+        TypeName: "pages$page",
     },
     Name:        "Customer_Edit",
     ContainerID: targetModule.ID,
-    Title: &model.Text{
+    title: &model.Text{
         BaseElement: model.BaseElement{
             ID:       model.ID(mpr.GenerateID()),
-            TypeName: "Texts$Text",
+            TypeName: "Texts$text",
         },
         Translations: map[string]string{"en_US": "Edit Customer"},
     },
@@ -57,9 +57,9 @@ page := api.Pages.CreatePage("Customer_Edit").
     InModule(targetModule).
     WithTitle("Edit Customer").
     WithLayout("Atlas_Default").
-    Build()
+    build()
 
-dataView := api.Pages.CreateDataView().
+dataview := api.Pages.CreateDataView().
     WithEntity("Customer").
     FromParameter("Customer").
     AddTo(page, "Main")
@@ -67,7 +67,7 @@ dataView := api.Pages.CreateDataView().
 api.Pages.CreateTextBox("Name").
     WithLabel("Name").
     WithAttribute("Customer.Name").
-    AddTo(dataView)
+    AddTo(dataview)
 ```
 
 ## Design Principles
@@ -85,15 +85,15 @@ api.Pages.CreateTextBox("Name").
 ```go
 package modelsdk
 
-// GetModelAPI returns the high-level API for a writable project
+// GetModelAPI returns the high-level api for a writable project
 func GetModelAPI(writer *mpr.Writer) *ModelAPI
 
 type ModelAPI struct {
-    Pages        *PagesAPI
+    pages        *PagesAPI
     DomainModels *DomainModelsAPI
-    Microflows   *MicroflowsAPI
-    Enumerations *EnumerationsAPI
-    Modules      *ModulesAPI
+    microflows   *MicroflowsAPI
+    enumerations *EnumerationsAPI
+    modules      *ModulesAPI
 }
 ```
 
@@ -106,7 +106,7 @@ type PagesAPI struct {
     writer *mpr.Writer
 }
 
-// Page Builder
+// page Builder
 type PageBuilder struct {
     api  *PagesAPI
     page *pages.Page
@@ -119,12 +119,12 @@ func (b *PageBuilder) WithTitleTranslations(translations map[string]string) *Pag
 func (b *PageBuilder) WithLayout(layoutName string) *PageBuilder
 func (b *PageBuilder) WithURL(url string) *PageBuilder
 func (b *PageBuilder) WithParameter(name string, entityName string) *PageBuilder
-func (b *PageBuilder) Build() (*pages.Page, error)
+func (b *PageBuilder) build() (*pages.Page, error)
 
-// DataView Builder
+// dataview Builder
 type DataViewBuilder struct {
     api      *PagesAPI
-    dataView *pages.DataView
+    dataview *pages.DataView
 }
 
 func (api *PagesAPI) CreateDataView() *DataViewBuilder
@@ -133,9 +133,9 @@ func (b *DataViewBuilder) WithEntity(entityName string) *DataViewBuilder
 func (b *DataViewBuilder) FromParameter(paramName string) *DataViewBuilder
 func (b *DataViewBuilder) FromMicroflow(microflowName string) *DataViewBuilder
 func (b *DataViewBuilder) AddTo(parent interface{}, placeholderName string) *DataViewBuilder
-func (b *DataViewBuilder) Build() *pages.DataView
+func (b *DataViewBuilder) build() *pages.DataView
 
-// Widget Builders
+// widget Builders
 func (api *PagesAPI) CreateTextBox(name string) *TextBoxBuilder
 func (api *PagesAPI) CreateTextArea(name string) *TextAreaBuilder
 func (api *PagesAPI) CreateDatePicker(name string) *DatePickerBuilder
@@ -153,7 +153,7 @@ type WidgetBuilder interface {
     WithLabel(label string) WidgetBuilder
     WithAttribute(attributePath string) WidgetBuilder
     AddTo(parent interface{}) WidgetBuilder
-    Build() pages.Widget
+    build() pages.Widget
 }
 ```
 
@@ -164,7 +164,7 @@ type DomainModelsAPI struct {
     writer *mpr.Writer
 }
 
-// Entity Builder
+// entity Builder
 type EntityBuilder struct {
     api    *DomainModelsAPI
     entity *domainmodel.Entity
@@ -172,7 +172,7 @@ type EntityBuilder struct {
 
 func (api *DomainModelsAPI) CreateEntity(name string) *EntityBuilder
 func (b *EntityBuilder) InModule(module *model.Module) *EntityBuilder
-func (b *EntityBuilder) Persistent() *EntityBuilder
+func (b *EntityBuilder) persistent() *EntityBuilder
 func (b *EntityBuilder) NonPersistent() *EntityBuilder
 func (b *EntityBuilder) WithGeneralization(entityName string) *EntityBuilder
 func (b *EntityBuilder) WithAttribute(name string, dataType string) *EntityBuilder
@@ -182,22 +182,22 @@ func (b *EntityBuilder) WithDecimalAttribute(name string) *EntityBuilder
 func (b *EntityBuilder) WithBooleanAttribute(name string) *EntityBuilder
 func (b *EntityBuilder) WithDateTimeAttribute(name string) *EntityBuilder
 func (b *EntityBuilder) WithEnumerationAttribute(name string, enumName string) *EntityBuilder
-func (b *EntityBuilder) Build() (*domainmodel.Entity, error)
+func (b *EntityBuilder) build() (*domainmodel.Entity, error)
 
-// Association Builder
+// association Builder
 type AssociationBuilder struct {
     api         *DomainModelsAPI
     association *domainmodel.Association
 }
 
 func (api *DomainModelsAPI) CreateAssociation(name string) *AssociationBuilder
-func (b *AssociationBuilder) From(entityName string) *AssociationBuilder
-func (b *AssociationBuilder) To(entityName string) *AssociationBuilder
+func (b *AssociationBuilder) from(entityName string) *AssociationBuilder
+func (b *AssociationBuilder) to(entityName string) *AssociationBuilder
 func (b *AssociationBuilder) OneToMany() *AssociationBuilder
 func (b *AssociationBuilder) ManyToMany() *AssociationBuilder
 func (b *AssociationBuilder) OneToOne() *AssociationBuilder
 func (b *AssociationBuilder) WithDeleteBehavior(parent, child string) *AssociationBuilder
-func (b *AssociationBuilder) Build() (*domainmodel.Association, error)
+func (b *AssociationBuilder) build() (*domainmodel.Association, error)
 ```
 
 ### Microflows API
@@ -207,7 +207,7 @@ type MicroflowsAPI struct {
     writer *mpr.Writer
 }
 
-// Microflow Builder
+// microflow Builder
 type MicroflowBuilder struct {
     api       *MicroflowsAPI
     microflow *microflows.Microflow
@@ -223,7 +223,7 @@ func (b *MicroflowBuilder) ReturnsString() *MicroflowBuilder
 func (b *MicroflowBuilder) ReturnsList(entityName string) *MicroflowBuilder
 func (b *MicroflowBuilder) ReturnsObject(entityName string) *MicroflowBuilder
 
-// Activity builders (chainable)
+// activity builders (chainable)
 func (b *MicroflowBuilder) CreateObject(entityName string) *CreateObjectBuilder
 func (b *MicroflowBuilder) ChangeObject(variableName string) *ChangeObjectBuilder
 func (b *MicroflowBuilder) RetrieveByAssociation(variableName, associationName string) *RetrieveBuilder
@@ -233,13 +233,13 @@ func (b *MicroflowBuilder) CommitObject(variableName string) *MicroflowBuilder
 func (b *MicroflowBuilder) CallMicroflow(microflowName string) *CallMicroflowBuilder
 func (b *MicroflowBuilder) ShowPage(pageName string) *ShowPageBuilder
 func (b *MicroflowBuilder) ShowMessage(message string) *ShowMessageBuilder
-func (b *MicroflowBuilder) Log(message string) *LogBuilder
-func (b *MicroflowBuilder) Decision(expression string) *DecisionBuilder
-func (b *MicroflowBuilder) Loop(variableName string) *LoopBuilder
+func (b *MicroflowBuilder) log(message string) *LogBuilder
+func (b *MicroflowBuilder) decision(expression string) *DecisionBuilder
+func (b *MicroflowBuilder) loop(variableName string) *LoopBuilder
 
-func (b *MicroflowBuilder) End() *MicroflowBuilder
+func (b *MicroflowBuilder) end() *MicroflowBuilder
 func (b *MicroflowBuilder) EndWithReturn(expression string) *MicroflowBuilder
-func (b *MicroflowBuilder) Build() (*microflows.Microflow, error)
+func (b *MicroflowBuilder) build() (*microflows.Microflow, error)
 
 // Example usage:
 // api.Microflows.CreateMicroflow("ACT_Customer_Create").
@@ -248,7 +248,7 @@ func (b *MicroflowBuilder) Build() (*microflows.Microflow, error)
 //     ChangeObject("$NewOrder").Set("Customer", "$Customer").
 //     CommitObject("$NewOrder").
 //     ShowPage("MyModule.Order_Edit").WithObject("$NewOrder").
-//     Build()
+//     build()
 ```
 
 ### Enumerations API
@@ -267,7 +267,7 @@ func (api *EnumerationsAPI) CreateEnumeration(name string) *EnumerationBuilder
 func (b *EnumerationBuilder) InModule(module *model.Module) *EnumerationBuilder
 func (b *EnumerationBuilder) WithValue(name string, caption string) *EnumerationBuilder
 func (b *EnumerationBuilder) WithValues(values map[string]string) *EnumerationBuilder
-func (b *EnumerationBuilder) Build() (*domainmodel.Enumeration, error)
+func (b *EnumerationBuilder) build() (*domainmodel.Enumeration, error)
 ```
 
 ## Modifying Existing Documents
@@ -279,74 +279,74 @@ The API supports not just creation but also retrieval, modification, and removal
 ```go
 api := modelsdk.GetModelAPI(writer)
 
-// Get existing page by qualified name
+// get existing page by qualified name
 page, err := api.Pages.GetPage("MyModule.Customer_Edit")
 
-// Get existing entity
+// get existing entity
 entity, err := api.DomainModels.GetEntity("MyModule.Customer")
 
-// Get existing microflow
+// get existing microflow
 microflow, err := api.Microflows.GetMicroflow("MyModule.ACT_Customer_Save")
 
-// Get existing enumeration
+// get existing enumeration
 enum, err := api.Enumerations.GetEnumeration("MyModule.OrderStatus")
 ```
 
 ### Adding Elements to Existing Documents
 
 ```go
-// Add widget to existing page
+// add widget to existing page
 page, _ := api.Pages.GetPage("MyModule.Customer_Edit")
 
-// Find the DataView by name and add a new widget
-dataView := page.FindWidget("customerDataView")
+// find the dataview by name and add a new widget
+dataview := page.FindWidget("customerDataView")
 
 api.Pages.CreateTextBox("phoneTextBox").
     WithLabel("Phone").
     WithAttribute("MyModule.Customer.Phone").
-    AddTo(dataView)
+    AddTo(dataview)
 
-// Add attribute to existing entity
+// add attribute to existing entity
 entity, _ := api.DomainModels.GetEntity("MyModule.Customer")
 
 api.DomainModels.AddAttribute(entity).
     Name("Phone").
-    String(20).
-    Build()
+    string(20).
+    build()
 
-// Add activity to existing microflow
+// add activity to existing microflow
 microflow, _ := api.Microflows.GetMicroflow("MyModule.ACT_Customer_Save")
 
 api.Microflows.InsertActivity(microflow).
-    After("createObject1").  // Insert after specific activity
-    Log("Customer saved: " + "$Customer/Name").
-    Build()
+    after("createObject1").  // insert after specific activity
+    log("Customer saved: " + "$Customer/Name").
+    build()
 
-// Add value to existing enumeration
+// add value to existing enumeration
 enum, _ := api.Enumerations.GetEnumeration("MyModule.OrderStatus")
 
 api.Enumerations.AddValue(enum).
     Name("Cancelled").
-    Caption("Cancelled").
-    Build()
+    caption("Cancelled").
+    build()
 ```
 
 ### Removing Elements
 
 ```go
-// Remove widget from page
+// remove widget from page
 page, _ := api.Pages.GetPage("MyModule.Customer_Edit")
 err := api.Pages.RemoveWidget(page, "phoneTextBox")
 
-// Remove attribute from entity
+// remove attribute from entity
 entity, _ := api.DomainModels.GetEntity("MyModule.Customer")
 err := api.DomainModels.RemoveAttribute(entity, "Phone")
 
-// Remove activity from microflow
+// remove activity from microflow
 microflow, _ := api.Microflows.GetMicroflow("MyModule.ACT_Customer_Save")
 err := api.Microflows.RemoveActivity(microflow, "logMessage1")
 
-// Remove value from enumeration
+// remove value from enumeration
 enum, _ := api.Enumerations.GetEnumeration("MyModule.OrderStatus")
 err := api.Enumerations.RemoveValue(enum, "Cancelled")
 ```
@@ -354,62 +354,62 @@ err := api.Enumerations.RemoveValue(enum, "Cancelled")
 ### Modifying Existing Elements
 
 ```go
-// Modify widget properties
+// modify widget properties
 page, _ := api.Pages.GetPage("MyModule.Customer_Edit")
-textBox := page.FindWidget("nameTextBox").(*pages.TextBox)
+textbox := page.FindWidget("nameTextBox").(*pages.TextBox)
 
-api.Pages.ModifyWidget(textBox).
-    WithLabel("Full Name").        // Change label
-    WithPlaceholder("Enter name"). // Add placeholder
-    Apply()
+api.Pages.ModifyWidget(textbox).
+    WithLabel("full Name").        // change label
+    WithPlaceholder("Enter name"). // add placeholder
+    apply()
 
-// Modify entity attribute
+// modify entity attribute
 entity, _ := api.DomainModels.GetEntity("MyModule.Customer")
 attr := entity.FindAttribute("Name")
 
 api.DomainModels.ModifyAttribute(attr).
-    WithLength(200).              // Change from 100 to 200
-    Required().                   // Add NOT NULL
-    Apply()
+    WithLength(200).              // change from 100 to 200
+    required().                   // add not null
+    apply()
 
-// Modify microflow activity
+// modify microflow activity
 microflow, _ := api.Microflows.GetMicroflow("MyModule.ACT_Customer_Save")
 activity := microflow.FindActivity("showMessage1")
 
 api.Microflows.ModifyActivity(activity).
     WithMessage("Customer updated successfully").
-    Apply()
+    apply()
 ```
 
 ### Navigation and Search Helpers
 
 ```go
-// Find widgets by type
+// find widgets by type
 page, _ := api.Pages.GetPage("MyModule.Customer_Edit")
 
-allTextBoxes := page.FindWidgetsByType("TextBox")
-allButtons := page.FindWidgetsByType("ActionButton")
+allTextBoxes := page.FindWidgetsByType("textbox")
+allButtons := page.FindWidgetsByType("actionbutton")
 
-// Find by attribute path
+// find by attribute path
 widgetsForEmail := page.FindWidgetsByAttribute("MyModule.Customer.Email")
 
-// Find container hierarchy
-dataView := page.FindWidget("customerDataView")
-parent := dataView.Parent()           // Returns containing widget
-children := dataView.Children()       // Returns child widgets
-footer := dataView.FooterWidgets()    // DataView-specific
+// find container hierarchy
+dataview := page.FindWidget("customerDataView")
+parent := dataView.Parent()           // returns containing widget
+children := dataView.Children()       // returns child widgets
+footer := dataView.FooterWidgets()    // dataview-specific
 
-// Find pages that use a specific entity
+// find pages that use a specific entity
 pagesWithCustomer := api.Pages.FindPagesWithEntity("MyModule.Customer")
 
-// Find microflows that call another microflow
+// find microflows that call another microflow
 callers := api.Microflows.FindCallers("MyModule.SUB_ValidateCustomer")
 ```
 
 ### Bulk Operations
 
 ```go
-// Add multiple attributes at once
+// add multiple attributes at once
 entity, _ := api.DomainModels.GetEntity("MyModule.Customer")
 
 api.DomainModels.BatchModify(entity).
@@ -417,13 +417,13 @@ api.DomainModels.BatchModify(entity).
     AddStringAttribute("Address", 500).
     RemoveAttribute("OldField").
     ModifyAttribute("Email").WithLength(300).
-    Apply()
+    apply()
 
 // Reorder widgets in a container
 page, _ := api.Pages.GetPage("MyModule.Customer_Edit")
-dataView := page.FindWidget("customerDataView")
+dataview := page.FindWidget("customerDataView")
 
-api.Pages.ReorderWidgets(dataView, []string{
+api.Pages.ReorderWidgets(dataview, []string{
     "nameTextBox",
     "emailTextBox",
     "phoneTextBox",    // Moved up
@@ -431,7 +431,7 @@ api.Pages.ReorderWidgets(dataView, []string{
     "activeCheckBox",
 })
 
-// Move widget to different container
+// move widget to different container
 api.Pages.MoveWidget(phoneTextBox, newContainer)
 ```
 
@@ -448,7 +448,7 @@ type PagesAPI struct {
 func (api *PagesAPI) CreatePage(name string) *PageBuilder
 func (api *PagesAPI) CreateDataView() *DataViewBuilder
 func (api *PagesAPI) CreateTextBox(name string) *TextBoxBuilder
-// ... other Create methods ...
+// ... other create methods ...
 
 // Retrieval
 func (api *PagesAPI) GetPage(qualifiedName string) (*pages.Page, error)
@@ -534,43 +534,43 @@ func main() {
 
     api := modelsdk.GetModelAPI(writer)
 
-    // 1. Add a new attribute to an existing entity
+    // 1. add a new attribute to an existing entity
     entity, _ := api.DomainModels.GetEntity("MyModule.Customer")
 
     api.DomainModels.AddAttribute(entity).
         Name("Phone").
-        String(20).
-        Build()
+        string(20).
+        build()
 
-    // 2. Find all pages that display Customer and add the new field
+    // 2. find all pages that display Customer and add the new field
     pages := api.Pages.FindPagesWithEntity("MyModule.Customer")
 
     for _, page := range pages {
-        // Find DataViews bound to Customer
-        dataViews := page.FindWidgetsByType("DataView")
+        // find DataViews bound to Customer
+        dataViews := page.FindWidgetsByType("dataview")
 
         for _, dv := range dataViews {
-            dataView := dv.(*pages.DataView)
+            dataview := dv.(*pages.DataView)
             if dataView.DataSource.EntityName == "MyModule.Customer" {
-                // Add Phone field after Email
+                // add Phone field after Email
                 api.Pages.CreateTextBox("phoneTextBox").
                     WithLabel("Phone").
                     WithAttribute("MyModule.Customer.Phone").
-                    InsertAfter(dataView, "emailTextBox")
+                    InsertAfter(dataview, "emailTextBox")
             }
         }
     }
 
-    // 3. Update a microflow to validate the new field
+    // 3. update a microflow to validate the new field
     microflow, _ := api.Microflows.GetMicroflow("MyModule.ACT_Customer_Save")
 
-    // Insert validation before the commit
+    // insert validation before the commit
     api.Microflows.InsertActivity(microflow).
-        Before("commitObject1").
-        Decision("$Customer/Phone != empty").
+        before("commitObject1").
+        decision("$Customer/Phone != empty").
             OnTrue().Continue().
             OnFalse().ShowValidationMessage("Phone is required").End().
-        Build()
+        build()
 
     fmt.Println("Updated entity, pages, and microflow")
 }
@@ -619,13 +619,13 @@ func main() {
 
 ```
 modelsdk-go/
-├── api/                          # New high-level API package
+├── api/                          # New high-level api package
 │   ├── api.go                    # ModelAPI entry point
 │   ├── pages.go                  # PagesAPI and builders
-│   ├── pages_widgets.go          # Widget builders
+│   ├── pages_widgets.go          # widget builders
 │   ├── domainmodels.go           # DomainModelsAPI and builders
 │   ├── microflows.go             # MicroflowsAPI and builders
-│   ├── microflows_activities.go  # Activity builders
+│   ├── microflows_activities.go  # activity builders
 │   ├── enumerations.go           # EnumerationsAPI
 │   └── helpers.go                # ID generation, name resolution
 │
@@ -654,61 +654,61 @@ func main() {
     modules, _ := writer.Reader().ListModules()
     module := modules[0]
 
-    // Create entity
+    // create entity
     entity, _ := api.DomainModels.CreateEntity("Customer").
         InModule(module).
-        Persistent().
+        persistent().
         WithStringAttribute("Name", 100).
         WithStringAttribute("Email", 200).
         WithDateTimeAttribute("BirthDate").
         WithBooleanAttribute("IsActive").
-        Build()
+        build()
 
-    // Create page
+    // create page
     page, _ := api.Pages.CreatePage("Customer_Edit").
         InModule(module).
         WithTitle("Edit Customer").
         WithLayout("Atlas_Default").
         WithParameter("Customer", module.Name+".Customer").
-        Build()
+        build()
 
-    // Add DataView
-    dataView := api.Pages.CreateDataView().
+    // add dataview
+    dataview := api.Pages.CreateDataView().
         WithEntity(module.Name + ".Customer").
         FromParameter("Customer").
         AddTo(page, "Main").
-        Build()
+        build()
 
-    // Add widgets
+    // add widgets
     api.Pages.CreateTextBox("nameTextBox").
         WithLabel("Name").
         WithAttribute(module.Name + ".Customer.Name").
-        AddTo(dataView)
+        AddTo(dataview)
 
     api.Pages.CreateTextBox("emailTextBox").
         WithLabel("Email").
         WithAttribute(module.Name + ".Customer.Email").
-        AddTo(dataView)
+        AddTo(dataview)
 
     api.Pages.CreateDatePicker("birthDatePicker").
-        WithLabel("Birth Date").
+        WithLabel("Birth date").
         WithAttribute(module.Name + ".Customer.BirthDate").
-        AddTo(dataView)
+        AddTo(dataview)
 
     api.Pages.CreateCheckBox("activeCheckBox").
         WithLabel("Is Active").
         WithAttribute(module.Name + ".Customer.IsActive").
-        AddTo(dataView)
+        AddTo(dataview)
 
-    // Add buttons to footer
+    // add buttons to footer
     api.Pages.CreateButton("Save").
-        WithStyle("Primary").
+        WithStyle("primary").
         WithSaveAction().ClosePage().
-        AddToFooter(dataView)
+        AddToFooter(dataview)
 
-    api.Pages.CreateButton("Cancel").
+    api.Pages.CreateButton("cancel").
         WithCancelAction().ClosePage().
-        AddToFooter(dataView)
+        AddToFooter(dataview)
 }
 ```
 
@@ -721,7 +721,7 @@ func main() {
 | `api.domainModels.createEntity()` | `api.DomainModels.CreateEntity()` |
 | `api.microflows.createMicroflow()` | `api.Microflows.CreateMicroflow()` |
 | `IPageApi` interface | `*PagesAPI` struct |
-| `createElement<T>(type)` | Type-specific `Create*()` methods |
+| `createElement<T>(type)` | Type-specific `create*()` methods |
 | Promise-based async | Synchronous with error returns |
 | TypeScript generics | Go type-specific builders |
 
@@ -737,7 +737,7 @@ func main() {
 ## Open Questions
 
 1. **Error Handling**: Should builders panic on invalid state, or collect errors?
-   - Recommendation: Collect errors and return on `Build()` or `Apply()`
+   - Recommendation: Collect errors and return on `build()` or `apply()`
 
 2. **Immutability**: Should builders be immutable (return new builder) or mutable?
    - Recommendation: Mutable for simplicity, but document non-thread-safety
@@ -754,7 +754,7 @@ func main() {
 
 6. **Automatic Persistence**: Should modifications be persisted immediately or batched?
    - Recommendation: Batch changes, require explicit `api.Save()` or use auto-save on `writer.Close()`
-   - Alternative: Immediate persistence with each `Build()`/`Apply()` call
+   - Alternative: Immediate persistence with each `build()`/`apply()` call
 
 7. **Undo/Redo**: Should the API support undo/redo for modifications?
    - Recommendation: Not in initial version; consider for future enhancement

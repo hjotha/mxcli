@@ -18,9 +18,9 @@ When principles conflict, higher-priority ones win.
 
 MDL targets citizen developers and business analysts, not software engineers. Statements should read as natural English sentences.
 
-- Use keyword words (`FROM`, `WHERE`, `IN`), not symbols (`->`, `|>`, `=>`)
-- Spell out full words (`MICROFLOW`, `ASSOCIATION`), not abbreviations (`MF`, `ASSOC`)
-- Use prepositions to clarify relationships: `GRANT READ ON Entity TO Role`
+- Use keyword words (`from`, `where`, `in`), not symbols (`->`, `|>`, `=>`)
+- Spell out full words (`microflow`, `association`), not abbreviations (`MF`, `ASSOC`)
+- Use prepositions to clarify relationships: `grant read on entity to role`
 
 **Test**: Read it aloud. A business analyst should understand on first hearing.
 
@@ -30,34 +30,34 @@ Reuse existing patterns. Never create a second syntax for the same concept.
 
 | Operation | Pattern | Example |
 |-----------|---------|---------|
-| Create | `CREATE [MODIFIERS] <TYPE> Module.Name (...)` | `CREATE PERSISTENT ENTITY Shop.Product (...)` |
-| Modify | `ALTER <TYPE> Module.Name <OPERATION>` | `ALTER ENTITY Shop.Product ADD (...)` |
-| Remove | `DROP <TYPE> Module.Name` | `DROP ENTITY Shop.Product` |
-| List | `SHOW <TYPE>S [IN Module]` | `SHOW ENTITIES IN Shop` |
-| Inspect | `DESCRIBE <TYPE> Module.Name` | `DESCRIBE ENTITY Shop.Product` |
-| Security | `GRANT/REVOKE <perm> ON <target> TO/FROM <role>` | `GRANT READ ON Shop.Product TO Shop.User` |
+| Create | `create [MODIFIERS] <type> Module.Name (...)` | `create persistent entity Shop.Product (...)` |
+| Modify | `alter <type> Module.Name <operation>` | `alter entity Shop.Product add (...)` |
+| Remove | `drop <type> Module.Name` | `drop entity Shop.Product` |
+| List | `show <type>S [in module]` | `show entities in Shop` |
+| Inspect | `describe <type> Module.Name` | `describe entity Shop.Product` |
+| Security | `grant/revoke <perm> on <target> to/from <role>` | `grant read on Shop.Product to Shop.User` |
 
-Do NOT use alternative verbs: `ADD` instead of `CREATE`, `REMOVE` instead of `DROP`, `LIST` instead of `SHOW`, `VIEW` instead of `DESCRIBE`.
+Do NOT use alternative verbs: `add` instead of `create`, `remove` instead of `drop`, `list` instead of `show`, `view` instead of `describe`.
 
 ### 3. Optimize for LLMs
 
 - Keep patterns regular so one example is sufficient for generation
 - Statements must be self-contained (no implicit state from prior statements)
-- Use consistent keyword order: `<VERB> [MODIFIERS] <TYPE> <NAME> [CLAUSES] [BODY]`
+- Use consistent keyword order: `<VERB> [MODIFIERS] <type> <NAME> [CLAUSES] [body]`
 - Prefer flat statement sequences over deeply nested structures
 
 ### 4. Make Diffs Reviewable
 
 - One property per line in multi-property constructs
 - Allow trailing commas
-- `DESCRIBE` output uses deterministic property order
+- `describe` output uses deterministic property order
 - Default values omitted unless non-obvious
 
 ### 5. Token Efficiency (Without Sacrificing Clarity)
 
-- Omit noise words: `CREATE ENTITY` not `CREATE A NEW ENTITY`
-- Support `OR MODIFY` to avoid check-then-create
-- Allow type inference for obvious cases: `DECLARE $Count = 0`
+- Omit noise words: `create entity` not `create A NEW entity`
+- Support `or modify` to avoid check-then-create
+- Allow type inference for obvious cases: `declare $count = 0`
 - Do NOT use symbols to save tokens at the cost of readability
 
 ## Design Workflow
@@ -72,10 +72,10 @@ Does an existing pattern cover this? If yes, extend it. Don't invent new syntax.
 
 ```
 New feature: "image collections"
-Existing pattern: CREATE/ALTER/DROP/SHOW/DESCRIBE
-Design: CREATE IMAGE COLLECTION Module.Name (...)
-        DESCRIBE IMAGE COLLECTION Module.Name
-        SHOW IMAGE COLLECTIONS [IN Module]
+Existing pattern: create/alter/drop/show/describe
+design: create image collection Module.Name (...)
+        describe image collection Module.Name
+        show image COLLECTIONS [in module]
 ```
 
 ### Step 2: Pick the Statement Shape
@@ -83,9 +83,9 @@ Design: CREATE IMAGE COLLECTION Module.Name (...)
 Every MDL statement fits one of these shapes:
 
 ```
-DDL:   <VERB> [MODIFIERS] <TYPE> <QualifiedName> [CLAUSES] [BODY];
-DML:   <ACTION> <TARGET> [CLAUSES];
-DQL:   <QUERY-VERB> <TYPE>S [FILTERS];
+DDL:   <VERB> [MODIFIERS] <type> <QualifiedName> [CLAUSES] [body];
+DML:   <action> <TARGET> [CLAUSES];
+DQL:   <query-VERB> <type>S [FILTERS];
 ```
 
 If your feature doesn't fit any shape, it may belong as a CLI command (`mxcli <subcommand>`) rather than MDL syntax.
@@ -93,16 +93,16 @@ If your feature doesn't fit any shape, it may belong as a CLI command (`mxcli <s
 ### Step 3: Choose Keywords
 
 1. Reuse existing keywords first (check reserved words in grammar)
-2. Use SQL/DDL verbs: `CREATE`, `ALTER`, `DROP`, `SHOW`, `DESCRIBE`, `GRANT`, `REVOKE`, `SET`
-3. Use Mendix terminology: `ENTITY` not `TABLE`, `MICROFLOW` not `FUNCTION`, `PAGE` not `VIEW`
-4. Prepositions clarify structure: `FROM`, `TO`, `IN`, `ON`, `BY`, `WITH`, `AS`, `WHERE`, `INTO`
+2. Use SQL/DDL verbs: `create`, `alter`, `drop`, `show`, `describe`, `grant`, `revoke`, `set`
+3. Use Mendix terminology: `entity` not `table`, `microflow` not `FUNCTION`, `page` not `view`
+4. Prepositions clarify structure: `from`, `to`, `in`, `on`, `by`, `with`, `as`, `where`, `into`
 
 ### Step 4: Write the Property List
 
 All property-bearing constructs use this format:
 
 ```mdl
-CREATE <TYPE> Module.Name (
+create <type> Module.Name (
     Property1: value,
     Property2: value,
 );
@@ -115,29 +115,29 @@ Rules:
 - Trailing comma allowed
 - One property per line (single line acceptable for 1-2 properties)
 
-#### Colon `:` vs `AS` — When to Use Each
+#### Colon `:` vs `as` — When to Use Each
 
 Use **colon** for property definitions (assigning a value to a named property):
 
 ```mdl
-CREATE ENTITY Shop.Product (
-    Name: String(200),          -- property: type/value
-    Price: Decimal,
+create entity Shop.Product (
+    Name: string(200),          -- property: type/value
+    Price: decimal,
 );
-TEXTBOX txtName (Label: 'Name', Attribute: Title)
+textbox txtName (label: 'Name', attribute: title)
 ```
 
-Use **`AS`** for name-to-name mappings (renaming, aliasing, mapping one name to another):
+Use **`as`** for name-to-name mappings (renaming, aliasing, mapping one name to another):
 
 ```mdl
-CUSTOM NAME MAP (
-    'kvkNummer' AS 'ChamberOfCommerceNumber',   -- old name AS new name
-    'naam' AS 'CompanyName',
+CUSTOM NAME map (
+    'kvkNummer' as 'ChamberOfCommerceNumber',   -- old name AS new name
+    'naam' as 'CompanyName',
 )
-ALTER ENTITY Shop.Product RENAME Code AS ProductCode   -- old attr AS new attr
+alter entity Shop.Product rename Code as ProductCode   -- old attr AS new attr
 ```
 
-**Rule of thumb**: if the left side is a *fixed property key* defined by the syntax, use `:`. If the left side is a *user-provided name* being mapped to another name, use `AS`.
+**Rule of thumb**: if the left side is a *fixed property key* defined by the syntax, use `:`. If the left side is a *user-provided name* being mapped to another name, use `as`.
 
 ### Step 5: Validate
 
@@ -147,7 +147,7 @@ Run these checks before finalizing syntax design:
 2. **LLM generation test** — Give one example to an LLM, ask for a variant. Does it get it right?
 3. **Diff test** — Change one property. Is the diff exactly one line?
 4. **Pattern test** — Does it follow CREATE/ALTER/DROP/SHOW/DESCRIBE? If not, why?
-5. **Roundtrip test** — Can `DESCRIBE` output be fed back as input?
+5. **Roundtrip test** — Can `describe` output be fed back as input?
 
 ## Anti-Patterns (DO NOT)
 
@@ -155,23 +155,23 @@ Run these checks before finalizing syntax design:
 
 ```mdl
 -- WRONG: custom verb
-SCHEDULE EVENT Shop.Cleanup ...
+SCHEDULE event Shop.Cleanup ...
 REGISTER WEBHOOK Shop.OnOrder ...
 
 -- RIGHT: standard CREATE
-CREATE SCHEDULED EVENT Shop.Cleanup (...)
-CREATE WEBHOOK Shop.OnOrder (...)
+create SCHEDULED event Shop.Cleanup (...)
+create WEBHOOK Shop.OnOrder (...)
 ```
 
 ### Implicit Module Context
 
 ```mdl
 -- WRONG: implicit state
-USE MODULE Shop;
-CREATE ENTITY Customer (...);
+use module Shop;
+create entity Customer (...);
 
 -- RIGHT: explicit qualified name
-CREATE ENTITY Shop.Customer (...);
+create entity Shop.Customer (...);
 ```
 
 ### Symbolic Syntax
@@ -181,19 +181,19 @@ CREATE ENTITY Shop.Customer (...);
 $items |> filter($.active) |> map($.name)
 
 -- RIGHT: keyword-based
-FILTER $Items WHERE Active = true
+filter $Items where Active = true
 ```
 
 ### Positional Arguments
 
 ```mdl
 -- WRONG: meaning unclear without docs
-CREATE RULE Shop Process Order ACT_ProcessOrder
+create rule Shop Process Order ACT_ProcessOrder
 
 -- RIGHT: labeled properties
-CREATE RULE Shop.ProcessOrder (
-    Type: Validation,
-    Microflow: Shop.ACT_ProcessOrder,
+create rule Shop.ProcessOrder (
+    type: validation,
+    microflow: Shop.ACT_ProcessOrder,
 );
 ```
 
@@ -208,16 +208,16 @@ CREATE RULE Shop.ProcessOrder (
 
 Before merging any PR that adds new MDL syntax, verify:
 
-- [ ] Follows `CREATE`/`ALTER`/`DROP`/`SHOW`/`DESCRIBE` pattern
+- [ ] Follows `create`/`alter`/`drop`/`show`/`describe` pattern
 - [ ] Uses `Module.Element` qualified names (no bare names)
-- [ ] Property lists use `( Key: value, ... )` format
+- [ ] Property lists use `( key: value, ... )` format
 - [ ] Keywords are full English words (no abbreviations)
 - [ ] Statement reads as English (aloud test passed)
 - [ ] One example sufficient for LLM generation
 - [ ] Small change = one-line diff
 - [ ] No new keyword overloading
 - [ ] No implicit context dependency
-- [ ] `DESCRIBE` roundtrips to valid MDL
+- [ ] `describe` roundtrips to valid MDL
 - [ ] Grammar regenerated (`make grammar`)
 - [ ] Quick reference updated (`docs/01-project/MDL_QUICK_REFERENCE.md`)
 - [ ] Full-stack wired: grammar, AST, visitor, executor, DESCRIBE

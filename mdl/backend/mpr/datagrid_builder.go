@@ -1191,7 +1191,7 @@ func (b *MprBackend) buildFilterWidgetBSON(widgetID, filterName string, projectP
 	rawType, rawObject, _, _, err := widgets.GetTemplateFullBSON(widgetID, types.GenerateID, projectPath)
 	if err != nil || rawType == nil {
 		if err != nil {
-			log.Printf("WARNING: failed to load template for widget %s: %v; using minimal fallback", widgetID, err)
+			log.Printf("warning: failed to load template for widget %s: %v; using minimal fallback", widgetID, err)
 		}
 		return b.buildMinimalFilterWidgetBSON(widgetID, filterName)
 	}

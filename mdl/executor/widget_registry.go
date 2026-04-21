@@ -92,6 +92,10 @@ func NewWidgetRegistryWithOps(extraOps map[string]bool) (*WidgetRegistry, error)
 			return nil, err
 		}
 
+		def.MDLName = strings.ToLower(def.MDLName)
+		for i := range def.ChildSlots {
+			def.ChildSlots[i].MDLContainer = strings.ToLower(def.ChildSlots[i].MDLContainer)
+		}
 		reg.byMDLName[strings.ToUpper(def.MDLName)] = &def
 		reg.byWidgetID[def.WidgetID] = &def
 	}
@@ -187,6 +191,10 @@ func (r *WidgetRegistry) loadDefinitionsFromDir(dir string) error {
 			return err
 		}
 
+		def.MDLName = strings.ToLower(def.MDLName)
+		for i := range def.ChildSlots {
+			def.ChildSlots[i].MDLContainer = strings.ToLower(def.ChildSlots[i].MDLContainer)
+		}
 		upperName := strings.ToUpper(def.MDLName)
 		if existing, ok := r.byMDLName[upperName]; ok {
 			// Skip user skeleton definitions (no mappings/modes) when built-in has mappings

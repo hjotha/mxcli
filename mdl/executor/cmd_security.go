@@ -148,7 +148,7 @@ func listDemoUsers(ctx *ExecContext) error {
 	if !ps.EnableDemoUsers {
 		if ctx.Format != FormatJSON {
 			fmt.Fprintln(ctx.Output, "Demo users are disabled.")
-			fmt.Fprintln(ctx.Output, "Enable with: ALTER PROJECT SECURITY DEMO USERS ON;")
+			fmt.Fprintln(ctx.Output, "Enable with: alter project security demo users on;")
 			return nil
 		}
 		return writeResult(ctx, &TableResult{Columns: []string{"User Name", "User Roles"}})
@@ -216,7 +216,7 @@ func listAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 	ruleRights := func(rule *domainmodel.AccessRule) []string {
 		var rights []string
 		if rule.AllowCreate {
-			rights = append(rights, "CREATE")
+			rights = append(rights, "create")
 		}
 		hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
 			rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadWrite
@@ -230,13 +230,13 @@ func listAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 			}
 		}
 		if hasRead {
-			rights = append(rights, "READ")
+			rights = append(rights, "read")
 		}
 		if hasWrite {
-			rights = append(rights, "WRITE")
+			rights = append(rights, "write")
 		}
 		if rule.AllowDelete {
-			rights = append(rights, "DELETE")
+			rights = append(rights, "delete")
 		}
 		return rights
 	}
@@ -296,7 +296,7 @@ func listAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 		}
 
 		if rule.XPathConstraint != "" {
-			fmt.Fprintf(ctx.Output, "  WHERE '%s'\n", rule.XPathConstraint)
+			fmt.Fprintf(ctx.Output, "  where '%s'\n", rule.XPathConstraint)
 		}
 		fmt.Fprintln(ctx.Output)
 	}
@@ -398,7 +398,7 @@ func listAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 
 // listAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW Module.WF.
 func listAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
-	return mdlerrors.NewUnsupported("SHOW ACCESS ON WORKFLOW is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
+	return mdlerrors.NewUnsupported("show access on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
 // listSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
@@ -736,9 +736,9 @@ func describeModuleRole(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 		for _, mr := range ms.ModuleRoles {
 			if mr.Name == name.Name {
-				fmt.Fprintf(ctx.Output, "CREATE MODULE ROLE %s.%s", modName, mr.Name)
+				fmt.Fprintf(ctx.Output, "create module role %s.%s", modName, mr.Name)
 				if mr.Description != "" {
-					fmt.Fprintf(ctx.Output, " DESCRIPTION '%s'", mr.Description)
+					fmt.Fprintf(ctx.Output, " description '%s'", mr.Description)
 				}
 				fmt.Fprintln(ctx.Output, ";")
 				fmt.Fprintln(ctx.Output, "/")
@@ -777,9 +777,9 @@ func describeDemoUser(ctx *ExecContext, userName string) error {
 
 	for _, du := range ps.DemoUsers {
 		if du.UserName == userName {
-			fmt.Fprintf(ctx.Output, "CREATE DEMO USER '%s' PASSWORD '***'", du.UserName)
+			fmt.Fprintf(ctx.Output, "create demo user '%s' password '***'", du.UserName)
 			if du.Entity != "" {
-				fmt.Fprintf(ctx.Output, " ENTITY %s", du.Entity)
+				fmt.Fprintf(ctx.Output, " entity %s", du.Entity)
 			}
 			if len(du.UserRoles) > 0 {
 				fmt.Fprintf(ctx.Output, " (%s)", strings.Join(du.UserRoles, ", "))
@@ -802,7 +802,7 @@ func describeUserRole(ctx *ExecContext, name ast.QualifiedName) error {
 
 	for _, ur := range ps.UserRoles {
 		if ur.Name == name.Name {
-			fmt.Fprintf(ctx.Output, "CREATE USER ROLE %s", ur.Name)
+			fmt.Fprintf(ctx.Output, "create user role %s", ur.Name)
 
 			// Module roles
 			if len(ur.ModuleRoles) > 0 {
@@ -810,7 +810,7 @@ func describeUserRole(ctx *ExecContext, name ast.QualifiedName) error {
 			}
 
 			if ur.ManageAllRoles {
-				fmt.Fprint(ctx.Output, " MANAGE ALL ROLES")
+				fmt.Fprint(ctx.Output, " manage all roles")
 			}
 
 			fmt.Fprintln(ctx.Output, ";")

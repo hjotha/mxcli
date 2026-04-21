@@ -138,10 +138,10 @@ func TestFormatErrorHandlingSuffix(t *testing.T) {
 		errType microflows.ErrorHandlingType
 		want    string
 	}{
-		{microflows.ErrorHandlingTypeContinue, " ON ERROR CONTINUE"},
-		{microflows.ErrorHandlingTypeRollback, " ON ERROR ROLLBACK"},
-		{microflows.ErrorHandlingTypeCustom, " ON ERROR"},
-		{microflows.ErrorHandlingTypeCustomWithoutRollback, " ON ERROR WITHOUT ROLLBACK"},
+		{microflows.ErrorHandlingTypeContinue, " on error continue"},
+		{microflows.ErrorHandlingTypeRollback, " on error rollback"},
+		{microflows.ErrorHandlingTypeCustom, " on error"},
+		{microflows.ErrorHandlingTypeCustomWithoutRollback, " on error without rollback"},
 		{microflows.ErrorHandlingTypeAbort, ""},
 		{"", ""},
 		{"SomethingElse", ""},
@@ -303,8 +303,8 @@ func TestFormatActivity_EndEvent_WithReturn(t *testing.T) {
 		ReturnValue:         "Result",
 	}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "RETURN $Result;" {
-		t.Errorf("got %q, want %q", got, "RETURN $Result;")
+	if got != "return $Result;" {
+		t.Errorf("got %q, want %q", got, "return $Result;")
 	}
 }
 
@@ -315,8 +315,8 @@ func TestFormatActivity_EndEvent_WithDollarPrefix(t *testing.T) {
 		ReturnValue:         "$Result",
 	}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "RETURN $Result;" {
-		t.Errorf("got %q, want %q (should not double the $)", got, "RETURN $Result;")
+	if got != "return $Result;" {
+		t.Errorf("got %q, want %q (should not double the $)", got, "return $Result;")
 	}
 }
 
@@ -327,8 +327,8 @@ func TestFormatActivity_ExclusiveSplit(t *testing.T) {
 		SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Count > 5"},
 	}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "IF $Count > 5 THEN" {
-		t.Errorf("got %q, want %q", got, "IF $Count > 5 THEN")
+	if got != "if $Count > 5 then" {
+		t.Errorf("got %q, want %q", got, "if $Count > 5 then")
 	}
 }
 
@@ -336,8 +336,8 @@ func TestFormatActivity_ExclusiveSplit_NilCondition(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.ExclusiveSplit{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "IF true THEN" {
-		t.Errorf("got %q, want %q", got, "IF true THEN")
+	if got != "if true then" {
+		t.Errorf("got %q, want %q", got, "if true then")
 	}
 }
 
@@ -345,8 +345,8 @@ func TestFormatActivity_ExclusiveMerge(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "END IF;" {
-		t.Errorf("got %q, want %q", got, "END IF;")
+	if got != "end if;" {
+		t.Errorf("got %q, want %q", got, "end if;")
 	}
 }
 
@@ -360,8 +360,8 @@ func TestFormatActivity_LoopedActivity(t *testing.T) {
 		},
 	}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "LOOP $Order IN $OrderList" {
-		t.Errorf("got %q, want %q", got, "LOOP $Order IN $OrderList")
+	if got != "loop $Order in $OrderList" {
+		t.Errorf("got %q, want %q", got, "loop $Order in $OrderList")
 	}
 }
 
@@ -369,8 +369,8 @@ func TestFormatActivity_LoopedActivity_Defaults(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.LoopedActivity{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "LOOP $Item IN $List" {
-		t.Errorf("got %q, want %q", got, "LOOP $Item IN $List")
+	if got != "loop $Item in $List" {
+		t.Errorf("got %q, want %q", got, "loop $Item in $List")
 	}
 }
 
@@ -378,8 +378,8 @@ func TestFormatActivity_BreakEvent(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.BreakEvent{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "BREAK;" {
-		t.Errorf("got %q, want %q", got, "BREAK;")
+	if got != "break;" {
+		t.Errorf("got %q, want %q", got, "break;")
 	}
 }
 
@@ -387,8 +387,8 @@ func TestFormatActivity_ContinueEvent(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.ContinueEvent{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "CONTINUE;" {
-		t.Errorf("got %q, want %q", got, "CONTINUE;")
+	if got != "continue;" {
+		t.Errorf("got %q, want %q", got, "continue;")
 	}
 }
 
@@ -396,7 +396,7 @@ func TestFormatActivity_ErrorEvent(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.ErrorEvent{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "RAISE ERROR;" {
-		t.Errorf("got %q, want %q", got, "RAISE ERROR;")
+	if got != "raise error;" {
+		t.Errorf("got %q, want %q", got, "raise error;")
 	}
 }

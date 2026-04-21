@@ -24,8 +24,8 @@ func TestLoopEndKeyword_WhileLoop(t *testing.T) {
 		LoopSource: &microflows.WhileLoopCondition{WhileExpression: "$Counter < 10"},
 	}
 	got := loopEndKeyword(loop)
-	if got != "END WHILE" {
-		t.Errorf("loopEndKeyword(WhileLoop) = %q, want %q", got, "END WHILE")
+	if got != "end while" {
+		t.Errorf("loopEndKeyword(WhileLoop) = %q, want %q", got, "end while")
 	}
 }
 
@@ -38,8 +38,8 @@ func TestLoopEndKeyword_ForEachLoop(t *testing.T) {
 		},
 	}
 	got := loopEndKeyword(loop)
-	if got != "END LOOP" {
-		t.Errorf("loopEndKeyword(ForEachLoop) = %q, want %q", got, "END LOOP")
+	if got != "end loop" {
+		t.Errorf("loopEndKeyword(ForEachLoop) = %q, want %q", got, "end loop")
 	}
 }
 
@@ -47,8 +47,8 @@ func TestLoopEndKeyword_ForEachLoop(t *testing.T) {
 func TestLoopEndKeyword_NilSource(t *testing.T) {
 	loop := &microflows.LoopedActivity{}
 	got := loopEndKeyword(loop)
-	if got != "END LOOP" {
-		t.Errorf("loopEndKeyword(nil) = %q, want %q", got, "END LOOP")
+	if got != "end loop" {
+		t.Errorf("loopEndKeyword(nil) = %q, want %q", got, "end loop")
 	}
 }
 
@@ -60,8 +60,8 @@ func TestFormatActivity_WhileLoop(t *testing.T) {
 		LoopSource:          &microflows.WhileLoopCondition{WhileExpression: "$Counter <= $N"},
 	}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "WHILE $Counter <= $N" {
-		t.Errorf("got %q, want %q", got, "WHILE $Counter <= $N")
+	if got != "while $Counter <= $N" {
+		t.Errorf("got %q, want %q", got, "while $Counter <= $N")
 	}
 }
 
@@ -113,8 +113,8 @@ func TestOutputConstantMDL_WithComment(t *testing.T) {
 		t.Fatalf("outputConstantMDL: %v", err)
 	}
 	gotStr := buf.String()
-	if !strings.Contains(gotStr, "COMMENT 'Maximum retry attempts'") {
-		t.Errorf("expected COMMENT clause in output, got:\n%s", gotStr)
+	if !strings.Contains(gotStr, "comment 'Maximum retry attempts'") {
+		t.Errorf("expected comment clause in output, got:\n%s", gotStr)
 	}
 }
 
@@ -131,8 +131,8 @@ func TestOutputConstantMDL_WithoutComment(t *testing.T) {
 		t.Fatalf("outputConstantMDL: %v", err)
 	}
 	gotStr := buf.String()
-	if strings.Contains(gotStr, "COMMENT") {
-		t.Errorf("expected no COMMENT clause, got:\n%s", gotStr)
+	if strings.Contains(gotStr, "comment") {
+		t.Errorf("expected no comment clause, got:\n%s", gotStr)
 	}
 }
 
@@ -150,8 +150,8 @@ func TestOutputConstantMDL_CommentEscapesSingleQuotes(t *testing.T) {
 		t.Fatalf("outputConstantMDL: %v", err)
 	}
 	gotStr := buf.String()
-	if !strings.Contains(gotStr, "COMMENT 'It''s a test'") {
-		t.Errorf("expected escaped quote in COMMENT, got:\n%s", gotStr)
+	if !strings.Contains(gotStr, "comment 'It''s a test'") {
+		t.Errorf("expected escaped quote in comment, got:\n%s", gotStr)
 	}
 }
 
@@ -236,7 +236,7 @@ func TestFormatActivity_EndEvent_EnumReturn(t *testing.T) {
 		ReturnValue:         "Module.Status.Active",
 	}
 	got := e.formatActivity(obj, nil, nil)
-	want := "RETURN Module.Status.Active;"
+	want := "return Module.Status.Active;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -250,7 +250,7 @@ func TestFormatActivity_EndEvent_VariableReturn(t *testing.T) {
 		ReturnValue:         "Result",
 	}
 	got := e.formatActivity(obj, nil, nil)
-	want := "RETURN $Result;"
+	want := "return $Result;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -262,11 +262,11 @@ func TestFormatActivity_EndEvent_VariableReturn(t *testing.T) {
 
 // TestParseInlineIfThenElse verifies the parser handles inline if-then-else in SET.
 func TestParseInlineIfThenElse(t *testing.T) {
-	input := `CREATE MICROFLOW Test.InlineIf ()
-BEGIN
-  DECLARE $X Integer = 0;
-  SET $X = if $X > 10 then 1 else 0;
-END;`
+	input := `create microflow Test.InlineIf ()
+begin
+  declare $X Integer = 0;
+  set $X = if $X > 10 then 1 else 0;
+end;`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {
@@ -291,7 +291,7 @@ END;`
 		}
 	}
 	if !found {
-		t.Error("Expected SET with IfThenElseExpr, not found in parsed body")
+		t.Error("Expected set with IfThenElseExpr, not found in parsed body")
 	}
 }
 

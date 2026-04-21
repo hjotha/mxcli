@@ -13,100 +13,100 @@
 --
 -- ============================================================================
 
-CREATE MODULE KeywordTest;
+create module KeywordTest;
 
 -- MARK: Enum values that are lexer keywords
 
-CREATE ENUMERATION KeywordTest.IssueStatus (
-  Open,
+create enumeration KeywordTest.IssueStatus (
+  open,
   Closed,
-  Data,
-  Filter,
-  Match,
-  Empty,
-  Container,
-  Node
+  data,
+  filter,
+  match,
+  empty,
+  container,
+  node
 );
 
-CREATE ENUMERATION KeywordTest.HttpMethod (
-  Get,
-  Post,
-  Put,
-  Delete,
-  Patch
+create enumeration KeywordTest.HttpMethod (
+  get,
+  post,
+  put,
+  delete,
+  patch
 );
 
-CREATE ENUMERATION KeywordTest.ActivityKind (
-  Activity,
-  Condition,
-  Loop,
+create enumeration KeywordTest.ActivityKind (
+  activity,
+  condition,
+  loop,
   Start,
-  End,
-  Split,
-  Join,
+  end,
+  split,
+  join,
   Merge
 );
 
-CREATE ENUMERATION KeywordTest.LayoutKind (
-  Layout,
-  Header,
-  Footer,
-  Body,
-  Content,
-  Title,
-  Text,
-  Image
+create enumeration KeywordTest.LayoutKind (
+  layout,
+  header,
+  footer,
+  body,
+  content,
+  title,
+  text,
+  image
 );
 
-CREATE ENUMERATION KeywordTest.MiscKeywords (
-  Action,
-  Source,
+create enumeration KeywordTest.MiscKeywords (
+  action,
+  source,
   Target,
   Name,
-  Value,
+  value,
   Result,
-  Index,
+  index,
   Input,
   Output,
-  Sort,
+  sort,
   Order,
-  Commit,
-  Close,
-  Refresh,
-  Rollback
+  commit,
+  close,
+  refresh,
+  rollback
 );
 
 -- MARK: Entity names and attributes that are keywords
 
-CREATE ENTITY KeywordTest.Data (
-  Filter     : String(200),
-  Match      : String(200),
-  Container  : String(200),
-  Source     : String(200),
-  Target     : String(200),
-  Action     : String(200),
-  Value      : String(200),
-  Status     : String(200)
+create entity KeywordTest.data (
+  filter     : string(200),
+  match      : string(200),
+  container  : string(200),
+  source     : string(200),
+  Target     : string(200),
+  action     : string(200),
+  value      : string(200),
+  status     : string(200)
 );
 
-CREATE ENTITY KeywordTest.Activity (
-  Name       : String(200),
-  Result     : String(200)
+create entity KeywordTest.activity (
+  Name       : string(200),
+  Result     : string(200)
 );
 
 -- MARK: Microflow using keyword-named enum values in CREATE
 
-CREATE OR REPLACE MICROFLOW KeywordTest.TestKeywordEnumValues ()
-RETURNS Nothing
-BEGIN
-  $Issue = CREATE KeywordTest.Data (
-    Filter = 'test',
-    Match  = 'test',
-    Status = 'active'
+create or replace microflow KeywordTest.TestKeywordEnumValues ()
+returns nothing
+begin
+  $Issue = create KeywordTest.data (
+    filter = 'test',
+    match  = 'test',
+    status = 'active'
   );
 
-  $Activity = CREATE KeywordTest.Activity (
+  $activity = create KeywordTest.activity (
     Name   = 'test',
     Result = 'ok'
   );
-END;
+end;

@@ -7,15 +7,15 @@ This skill teaches you to check the project's Mendix version before generating M
 Always check the project's Mendix version before writing MDL:
 
 ```sql
-SHOW STATUS;           -- shows connected project version
-SHOW FEATURES;         -- shows all features with availability for this version
-SHOW FEATURES IN integration;  -- filter by area
+show status;           -- shows connected project version
+show features;         -- shows all features with availability for this version
+show features in integration;  -- filter by area
 ```
 
 If you're not connected to a project, query any version directly:
 
 ```sql
-SHOW FEATURES FOR VERSION 10.24;
+show features for version 10.24;
 ```
 
 ## Version-Conditional Patterns
@@ -39,14 +39,14 @@ The executor will reject commands that target unavailable features with an actio
 When migrating to a newer version:
 
 ```sql
-SHOW FEATURES ADDED SINCE 10.24;    -- what's new if upgrading from 10.24
+show features added since 10.24;    -- what's new if upgrading from 10.24
 ```
 
 ## Checklist
 
 Before writing any MDL for a connected project:
 
-1. Run `SHOW STATUS` to confirm the Mendix version
-2. If using view entities, page parameters, REST clients, or database queries — run `SHOW FEATURES` to verify availability
+1. Run `show status` to confirm the Mendix version
+2. If using view entities, page parameters, REST clients, or database queries — run `show features` to verify availability
 3. If a feature is unavailable, use the workaround pattern
 4. Run `mxcli check script.mdl -p app.mpr --references` to validate before execution

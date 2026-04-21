@@ -236,19 +236,19 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 			fmt.Fprintf(ctx.Output, "@Position(%d, %d)\n", entity.Location.X, entity.Location.Y)
 
 			// Determine entity type based on Source field and Persistable flag
-			entityType := "PERSISTENT"
+			entityType := "persistent"
 			if strings.Contains(entity.Source, "OqlView") {
-				entityType = "VIEW"
+				entityType = "view"
 			} else if strings.Contains(entity.Source, "OData") || entity.RemoteSource != "" || entity.RemoteSourceDocument != "" {
-				entityType = "EXTERNAL"
+				entityType = "external"
 			} else if !entity.Persistable {
-				entityType = "NON-PERSISTENT"
+				entityType = "non-persistent"
 			}
 
 			if entity.GeneralizationRef != "" {
-				fmt.Fprintf(ctx.Output, "CREATE OR MODIFY %s ENTITY %s.%s EXTENDS %s (\n", entityType, module.Name, entity.Name, entity.GeneralizationRef)
+				fmt.Fprintf(ctx.Output, "create or modify %s entity %s.%s extends %s (\n", entityType, module.Name, entity.Name, entity.GeneralizationRef)
 			} else {
-				fmt.Fprintf(ctx.Output, "CREATE OR MODIFY %s ENTITY %s.%s (\n", entityType, module.Name, entity.Name)
+				fmt.Fprintf(ctx.Output, "create or modify %s entity %s.%s (\n", entityType, module.Name, entity.Name)
 			}
 
 			// Build validation rules map by attribute ID and name
@@ -289,20 +289,20 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 				}
 				for _, vr := range attrValidations {
 					if vr.Type == "Required" {
-						constraints.WriteString(" NOT NULL")
+						constraints.WriteString(" not null")
 						if vr.ErrorMessage != nil {
 							errMsg := vr.ErrorMessage.GetTranslation("en_US")
 							if errMsg != "" {
-								constraints.WriteString(fmt.Sprintf(" ERROR '%s'", errMsg))
+								constraints.WriteString(fmt.Sprintf(" error '%s'", errMsg))
 							}
 						}
 					}
 					if vr.Type == "Unique" {
-						constraints.WriteString(" UNIQUE")
+						constraints.WriteString(" unique")
 						if vr.ErrorMessage != nil {
 							errMsg := vr.ErrorMessage.GetTranslation("en_US")
 							if errMsg != "" {
-								constraints.WriteString(fmt.Sprintf(" ERROR '%s'", errMsg))
+								constraints.WriteString(fmt.Sprintf(" error '%s'", errMsg))
 							}
 						}
 					}
@@ -310,12 +310,12 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 
 				// Value type: CALCULATED or DEFAULT
 				if attr.Value != nil && attr.Value.Type == "CalculatedValue" {
-					constraints.WriteString(" CALCULATED")
+					constraints.WriteString(" calculated")
 					if attr.Value.MicroflowName != "" {
-						constraints.WriteString(" BY " + attr.Value.MicroflowName)
+						constraints.WriteString(" by " + attr.Value.MicroflowName)
 					} else if attr.Value.MicroflowID != "" {
 						if mfName := lookupMicroflowName(ctx, attr.Value.MicroflowID); mfName != "" {
-							constraints.WriteString(" BY " + mfName)
+							constraints.WriteString(" by " + mfName)
 						}
 					}
 				} else if attr.Value != nil && attr.Value.DefaultValue != "" {
@@ -330,7 +330,7 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 							defaultVal = enumType.EnumerationRef + "." + defaultVal
 						}
 					}
-					constraints.WriteString(fmt.Sprintf(" DEFAULT %s", defaultVal))
+					constraints.WriteString(fmt.Sprintf(" default %s", defaultVal))
 				}
 
 				line.WriteString(fmt.Sprintf("  %s: %s%s", attr.Name, typeStr, constraints.String()))
@@ -362,8 +362,8 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 			fmt.Fprint(ctx.Output, ")")
 
 			// For VIEW entities, output the OQL query
-			if entityType == "VIEW" && entity.OqlQuery != "" {
-				fmt.Fprint(ctx.Output, " AS (\n")
+			if entityType == "view" && entity.OqlQuery != "" {
+				fmt.Fprint(ctx.Output, " as (\n")
 				// Indent OQL query lines
 				oqlLines := strings.SplitSeq(entity.OqlQuery, "\n")
 				for line := range oqlLines {
@@ -384,12 +384,12 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 				for _, ia := range idx.Attributes {
 					colName := attrNames[ia.AttributeID]
 					if !ia.Ascending {
-						colName += " DESC"
+						colName += " desc"
 					}
 					cols = append(cols, colName)
 				}
 				if len(cols) > 0 {
-					fmt.Fprintf(ctx.Output, "\nINDEX (%s)", strings.Join(cols, ", "))
+					fmt.Fprintf(ctx.Output, "\nindex (%s)", strings.Join(cols, ", "))
 				}
 			}
 
@@ -402,12 +402,7 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 				if mfName == "" {
 					continue
 				}
-				eventName := string(eh.Event)
-				if eventName == "RollBack" {
-					eventName = "ROLLBACK"
-				} else {
-					eventName = strings.ToUpper(eventName)
-				}
+				eventName := strings.ToLower(string(eh.Event))
 				// Show parameter: ($currentObject) or ()
 				paramStr := "()"
 				if eh.PassEventObject {
@@ -416,10 +411,10 @@ func describeEntity(ctx *ExecContext, name ast.QualifiedName) error {
 				var options string
 				// RAISE ERROR only applies to Before handlers (they return Boolean)
 				if eh.RaiseErrorOnFalse && strings.EqualFold(string(eh.Moment), "Before") {
-					options = " RAISE ERROR"
+					options = " raise error"
 				}
-				fmt.Fprintf(ctx.Output, "\nON %s %s CALL %s%s%s",
-					strings.ToUpper(string(eh.Moment)), eventName, mfName, paramStr, options)
+				fmt.Fprintf(ctx.Output, "\non %s %s call %s%s%s",
+					strings.ToLower(string(eh.Moment)), eventName, mfName, paramStr, options)
 			}
 
 			fmt.Fprintln(ctx.Output, ";")

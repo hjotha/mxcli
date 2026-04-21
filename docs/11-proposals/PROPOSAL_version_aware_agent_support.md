@@ -7,7 +7,7 @@
 
 Three use cases require mxcli to be version-aware at the MDL level:
 
-1. **Generate**: An AI coding agent creates MDL for a Mendix project but doesn't know which features are available in the project's version. It writes `CREATE VIEW ENTITY` for a 9.x project and gets a cryptic BSON error.
+1. **Generate**: An AI coding agent creates MDL for a Mendix project but doesn't know which features are available in the project's version. It writes `create view entity` for a 9.x project and gets a cryptic BSON error.
 
 2. **Validate**: A user runs an MDL script that uses 11.0+ syntax on a 10.24 project. The script executes, writes corrupt BSON, and the error only surfaces when Studio Pro tries to open the project.
 
@@ -25,7 +25,7 @@ There is no way for an agent or user to **query** what's available, no **pre-fli
 
 1. **Single source of truth** -- One structured data format defines version capabilities. Everything else reads from it.
 2. **Machine-readable first** -- An AI agent should be able to query capabilities, not read prose.
-3. **Queryable at runtime** -- `SHOW FEATURES` returns capabilities for the connected project's version.
+3. **Queryable at runtime** -- `show features` returns capabilities for the connected project's version.
 4. **Fail-fast with actionable messages** -- Error before writing BSON, not after Studio Pro crashes.
 5. **Incremental updates** -- Adding a new version's capabilities should be a data change, not a code change.
 6. **Reuse existing infrastructure** -- Linter rules, skills, executor commands follow established patterns.
@@ -41,16 +41,16 @@ The proposal diverges from the Content API in scope: we use a per-feature YAML r
 ## Architecture
 
 ```
-                    Version Feature Registry
+                    version Feature Registry
                     (sdk/versions/*.yaml)
                            |
             +--------------+--------------+
             |              |              |
-       SHOW FEATURES   Executor       Linter
-       (MDL command)   Pre-checks    Rules (VER0xx)
+       show features   Executor       Linter
+       (MDL command)   Pre-checks    rules (VER0xx)
             |              |              |
             v              v              v
-       Agent queries   Error before   Upgrade
+       agent queries   error before   Upgrade
        capabilities    BSON write     recommendations
 ```
 
@@ -79,38 +79,38 @@ features:
   domain_model:
     entities:
       min_version: "10.0.0"
-      mdl: "CREATE PERSISTENT ENTITY Module.Name (...)"
+      mdl: "create persistent entity Module.Name (...)"
     non_persistent_entities:
       min_version: "10.0.0"
-      mdl: "CREATE NON-PERSISTENT ENTITY Module.Name (...)"
+      mdl: "create non-persistent entity Module.Name (...)"
     view_entities:
       min_version: "10.18.0"
-      mdl: "CREATE VIEW ENTITY Module.Name (...) AS SELECT ..."
+      mdl: "create view entity Module.Name (...) as select ..."
       notes: "OQL stored inline on OqlViewEntitySource in 10.x"
     calculated_attributes:
       min_version: "10.0.0"
-      mdl: "CALCULATED BY Module.Microflow"
+      mdl: "calculated by Module.Microflow"
     entity_generalization:
       min_version: "10.0.0"
-      mdl: "EXTENDS Module.ParentEntity"
+      mdl: "extends Module.ParentEntity"
     alter_entity:
       min_version: "10.0.0"
-      mdl: "ALTER ENTITY Module.Name ADD ATTRIBUTE ..."
+      mdl: "alter entity Module.Name add attribute ..."
 
   # --- OQL Functions (used in VIEW ENTITY queries) ---
   oql_functions:
     basic_select:
       min_version: "10.18.0"
-      mdl: "SELECT, FROM, WHERE, AS, AND, OR, NOT"
+      mdl: "select, from, where, as, and, or, not"
     aggregate_functions:
       min_version: "10.18.0"
-      mdl: "COUNT, SUM, AVG, MIN, MAX, GROUP BY"
+      mdl: "count, sum, avg, min, max, GROUP by"
     subqueries:
       min_version: "10.18.0"
-      mdl: "Inline subqueries in SELECT and WHERE"
+      mdl: "Inline subqueries in select and where"
     join_types:
       min_version: "10.18.0"
-      mdl: "INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN"
+      mdl: "inner join, left join, right join, full join"
     # New OQL functions added per minor release:
     # string_length: { min_version: "10.20.0" }
     # date_diff: { min_version: "10.21.0" }
@@ -120,7 +120,7 @@ features:
   microflows:
     basic:
       min_version: "10.0.0"
-      mdl: "CREATE MICROFLOW Module.Name (...) BEGIN ... END"
+      mdl: "create microflow Module.Name (...) begin ... end"
     show_page_with_params:
       min_version: "11.0.0"
       workaround:
@@ -128,42 +128,42 @@ features:
         max_version: "10.99.99"
     send_rest_request:
       min_version: "10.1.0"
-      mdl: "SEND REST REQUEST ..."
+      mdl: "send rest request ..."
     send_rest_query_params:
       min_version: "11.0.0"
-      notes: "Query parameters in REST requests"
+      notes: "query parameters in rest requests"
     execute_database_query:
       min_version: "10.6.0"
-      mdl: "EXECUTE DATABASE QUERY ..."
+      mdl: "execute database query ..."
     execute_database_query_runtime_connection:
       min_version: "11.0.0"
-      notes: "Runtime connection override for database queries"
+      notes: "runtime connection override for database queries"
     loop_in_branch:
       min_version: "10.0.0"
-      notes: "LOOP inside IF/ELSE branches"
+      notes: "loop inside if/else branches"
 
   # --- Pages ---
   pages:
     basic:
       min_version: "10.0.0"
-      mdl: "CREATE PAGE Module.Name (...) { ... }"
+      mdl: "create page Module.Name (...) { ... }"
     page_parameters:
       min_version: "11.0.0"
       workaround:
-        description: "Use non-persistent entity or microflow parameter"
+        description: "use non-persistent entity or microflow parameter"
         max_version: "10.99.99"
     page_variables:
       min_version: "11.0.0"
     pluggable_widgets:
       min_version: "10.0.0"
-      widgets: [ComboBox, DataGrid2, Gallery, Image, TextFilter, NumberFilter, DateFilter, DropdownFilter]
-      notes: "Widget templates are version-specific; MPK augmentation handles drift"
+      widgets: [combobox, DataGrid2, gallery, image, textfilter, numberfilter, datefilter, dropdownfilter]
+      notes: "widget templates are version-specific; MPK augmentation handles drift"
     design_properties_v3:
       min_version: "11.0.0"
       notes: "Atlas v3 design properties (Card style, Disable row wrap)"
     alter_page:
       min_version: "10.0.0"
-      mdl: "ALTER PAGE Module.Name SET/INSERT/DROP/REPLACE ..."
+      mdl: "alter page Module.Name set/insert/drop/replace ..."
 
   # --- Security ---
   security:
@@ -180,21 +180,21 @@ features:
   integration:
     rest_client_basic:
       min_version: "10.1.0"
-      mdl: "CREATE REST CLIENT Module.Name ..."
+      mdl: "create rest client Module.Name ..."
     rest_client_query_params:
       min_version: "11.0.0"
     rest_client_headers:
       min_version: "10.4.0"
     database_connector_basic:
       min_version: "10.6.0"
-      mdl: "CREATE DATABASE CONNECTION Module.Name ..."
+      mdl: "create database connection Module.Name ..."
     database_connector_execute:
       min_version: "10.6.0"
-      mdl: "EXECUTE DATABASE QUERY in microflows"
-      notes: "Full BSON format requires 11.0+"
+      mdl: "execute database query in microflows"
+      notes: "full BSON format requires 11.0+"
     business_events:
       min_version: "10.0.0"
-      mdl: "CREATE BUSINESS EVENT SERVICE Module.Name ..."
+      mdl: "create business event service Module.Name ..."
     odata_client:
       min_version: "10.0.0"
 
@@ -202,7 +202,7 @@ features:
   workflows:
     basic:
       min_version: "9.0.0"
-      mdl: "CREATE WORKFLOW Module.Name ..."
+      mdl: "create workflow Module.Name ..."
     parallel_split:
       min_version: "9.0.0"
     user_task:
@@ -227,16 +227,16 @@ deprecated:
 upgrade_opportunities:
   from_10_to_11:
     - feature: "page_parameters"
-      description: "Replace non-persistent entity parameter passing with direct page parameters"
+      description: "replace non-persistent entity parameter passing with direct page parameters"
       effort: "low"
     - feature: "design_properties_v3"
       description: "Atlas v3 design properties available for richer styling"
       effort: "low"
     - feature: "rest_client_query_params"
-      description: "REST clients can now define query parameters directly"
+      description: "rest clients can now define query parameters directly"
       effort: "low"
     - feature: "database_connector_runtime_connection"
-      description: "Database queries can override connection at runtime"
+      description: "database queries can override connection at runtime"
       effort: "low"
     - feature: "association_storage"
       description: "New association storage format (automatic on project upgrade)"
@@ -245,85 +245,85 @@ upgrade_opportunities:
 
 ### Layer 2: MDL Commands
 
-#### `SHOW FEATURES`
+#### `show features`
 
 Lists all features available for the connected project's Mendix version, or for a specified version without a project connection:
 
 ```sql
 -- When connected to a project (uses project's Mendix version)
-SHOW FEATURES;
+show features;
 
 -- Without a project connection (query any version)
-SHOW FEATURES FOR VERSION 10.24;
+show features for version 10.24;
 
 -- Filter by area
-SHOW FEATURES IN integration;
+show features in integration;
 
 -- Show only features available in the project's version
-SHOW FEATURES WHERE available = true;
+show features where available = true;
 ```
 
 Output:
 ```
-| Feature                | Available | Since  | Notes                                    |
+| Feature                | Available | since  | Notes                                    |
 |------------------------|-----------|--------|------------------------------------------|
-| Persistent entities    | Yes       | 10.0   |                                          |
-| View entities          | Yes       | 10.18  | OQL stored inline on source object       |
-| Page parameters        | No        | 11.0+  | Use non-persistent entity workaround     |
-| Pluggable widgets      | Yes       | 10.0   | ComboBox, DataGrid2, Gallery, Image      |
-| Design properties v3   | No        | 11.0+  | Atlas v3 required                        |
-| REST client            | Partial   | 10.1   | Query parameters require 11.0+           |
-| Database connector     | Partial   | 10.6   | EXECUTE DATABASE QUERY requires 11.0+    |
-| Business events        | Yes       | 10.0   |                                          |
-| Workflows              | Yes       | 9.0    |                                          |
+| persistent entities    | Yes       | 10.0   |                                          |
+| view entities          | Yes       | 10.18  | OQL stored inline on source object       |
+| page parameters        | No        | 11.0+  | use non-persistent entity workaround     |
+| Pluggable widgets      | Yes       | 10.0   | combobox, DataGrid2, gallery, image      |
+| design properties v3   | No        | 11.0+  | Atlas v3 required                        |
+| rest client            | Partial   | 10.1   | query parameters require 11.0+           |
+| database connector     | Partial   | 10.6   | execute database query requires 11.0+    |
+| business events        | Yes       | 10.0   |                                          |
+| workflows              | Yes       | 9.0    |                                          |
 ```
 
-#### `SHOW FEATURES ADDED SINCE <version>`
+#### `show features added since <version>`
 
 Shows what becomes available when upgrading:
 
 ```sql
-SHOW FEATURES ADDED SINCE 10.24;
+show features added since 10.24;
 ```
 
 Output:
 ```
-| Feature              | Available In | Description                              | Effort |
+| Feature              | Available in | description                              | Effort |
 |----------------------|-------------|------------------------------------------|--------|
-| Page parameters      | 11.0        | Direct page parameter passing            | Low    |
-| Design properties v3 | 11.0        | Atlas v3 Card style, Disable row wrap    | Low    |
-| REST query params    | 11.0        | Query parameter support in REST clients  | Low    |
-| Portable app format  | 11.6        | New deployment format                    | None   |
+| page parameters      | 11.0        | Direct page parameter passing            | Low    |
+| design properties v3 | 11.0        | Atlas v3 Card style, Disable row wrap    | Low    |
+| rest query params    | 11.0        | query parameter support in rest clients  | Low    |
+| Portable app format  | 11.6        | New deployment format                    | none   |
 ```
 
-#### `SHOW UPGRADE OPPORTUNITIES`
+#### `show UPGRADE OPPORTUNITIES`
 
 When connected, analyzes the current project for patterns that could benefit from the project's own version or a target version:
 
 ```sql
 -- What can I improve using my current version's capabilities?
-SHOW UPGRADE OPPORTUNITIES;
+show UPGRADE OPPORTUNITIES;
 
 -- What would upgrading to 11.6 enable?
-SHOW UPGRADE OPPORTUNITIES TO 11.6;
+show UPGRADE OPPORTUNITIES to 11.6;
 ```
 
 Output:
 ```
-| Opportunity                | Target  | Description                                          | Effort |
+| Opportunity                | Target  | description                                          | Effort |
 |----------------------------|---------|------------------------------------------------------|--------|
-| Page parameters            | 11.0    | 12 pages use NP entity workaround for parameter passing | Low  |
-| Design properties v3       | 11.0    | 8 containers could use Card style / row wrap         | Low    |
-| REST query parameters      | 11.0    | 3 REST clients build query strings manually          | Low    |
-| Database runtime connection| 11.0    | 2 microflows hardcode DB connection                  | Low    |
+| page parameters            | 11.0    | 12 pages use NP entity workaround for parameter passing | Low  |
+| design properties v3       | 11.0    | 8 containers could use Card style / row wrap         | Low    |
+| rest query parameters      | 11.0    | 3 rest clients build query strings manually          | Low    |
+| database runtime connection| 11.0    | 2 microflows hardcode DB connection                  | Low    |
 ```
 
-#### `SHOW DEPRECATED`
+#### `show deprecated`
 
 Lists deprecated patterns in the current project:
 
 ```sql
-SHOW DEPRECATED;
+show deprecated;
 ```
 
 ### Layer 3: Executor Pre-Checks
@@ -331,12 +331,12 @@ SHOW DEPRECATED;
 Before writing BSON, the executor checks version compatibility and produces actionable errors:
 
 ```go
-// In cmd_entities.go, before creating a view entity:
+// in cmd_entities.go, before creating a view entity:
 if s.IsViewEntity {
     pv := e.reader.ProjectVersion()
     if !pv.IsAtLeast(10, 18) {
         return fmt.Errorf(
-            "CREATE VIEW ENTITY requires Mendix 10.18+ (project is %s)\n"+
+            "create view entity requires Mendix 10.18+ (project is %s)\n"+
             "  hint: upgrade your project or use a regular entity with a microflow data source",
             pv.ProductVersion,
         )
@@ -362,14 +362,14 @@ New linter rule category `VER` for version-related checks:
 
 **VER001** runs during `mxcli check` and `mxcli lint`:
 ```
-[VER001] CREATE VIEW ENTITY requires Mendix 10.18+ (project is 10.12.0)
+[VER001] create view entity requires Mendix 10.18+ (project is 10.12.0)
   at line 42 in script.mdl
   hint: upgrade to 10.18+ or use a microflow data source
 ```
 
 **VER003** runs during `mxcli lint --upgrade-hints`:
 ```
-[VER003] Page MyModule.EditCustomer uses non-persistent entity for parameter passing
+[VER003] page MyModule.EditCustomer uses non-persistent entity for parameter passing
   This pattern can be replaced with page parameters in Mendix 11.0+
   effort: low
 ```
@@ -379,28 +379,28 @@ New linter rule category `VER` for version-related checks:
 One skill file: `.claude/skills/version-awareness.md`
 
 ```markdown
-# Version Awareness
+# version Awareness
 
-## Before Generating MDL
+## before Generating MDL
 
 Always check the project's Mendix version before writing MDL:
 
-    SHOW STATUS;           -- shows connected project version
-    SHOW FEATURES;         -- shows available features
+    show status;           -- shows connected project version
+    show features;         -- shows available features
 
-## Version-Conditional Patterns
+## version-Conditional Patterns
 
-If a feature is not available, use the documented workaround:
+if a feature is not available, use the documented workaround:
 
-    SHOW FEATURES WHERE name = 'page_parameters';
+    show features where name = 'page_parameters';
     -- If not available, use non-persistent entity pattern instead
 
-## Upgrade Workflow
+## Upgrade workflow
 
-When migrating to a newer version:
+when migrating to a newer version:
 
-    SHOW FEATURES ADDED SINCE 10.24;    -- what's new
-    SHOW DEPRECATED;                     -- what to update
+    show features added since 10.24;    -- what's new
+    show deprecated;                     -- what to update
     mxcli lint --upgrade-hints -p app.mpr  -- automated suggestions
 ```
 
@@ -424,11 +424,11 @@ The version registry needs updates when Mendix releases new versions. Proposed p
 
 1. Create `sdk/versions/` package with YAML loader and `go:embed`
 2. Create YAML files for Mendix 9, 10, 11 (initial feature set from existing knowledge)
-3. Implement `SHOW FEATURES` command in executor
-4. Implement `SHOW FEATURES ADDED SINCE <version>` variant
-5. Wire into AST/grammar: add `FEATURES` keyword to MDLParser.g4
+3. Implement `show features` command in executor
+4. Implement `show features added since <version>` variant
+5. Wire into AST/grammar: add `features` keyword to MDLParser.g4
 
-**Deliverable**: Agent can query `SHOW FEATURES` and get machine-readable output.
+**Deliverable**: Agent can query `show features` and get machine-readable output.
 
 ### Phase 2: Executor Pre-Checks (fail-fast)
 
@@ -451,8 +451,8 @@ The version registry needs updates when Mendix releases new versions. Proposed p
 ### Phase 4: Upgrade Advisor
 
 1. Implement VER003 (UpgradeOpportunity) linter rule
-2. Implement `SHOW DEPRECATED` command
-3. Implement `SHOW FEATURES ADDED SINCE` with effort estimates
+2. Implement `show deprecated` command
+3. Implement `show features added since` with effort estimates
 4. Implement `mxcli lint --upgrade-hints --target-version 11.6`
 
 **Deliverable**: Migration planning from any version to any newer version.
@@ -485,11 +485,11 @@ This proposal complements `BSON_SCHEMA_REGISTRY_PROPOSAL.md`:
 The version feature registry (YAML) is simpler and more immediately useful than the full schema registry. It can be built first and later integrated with the schema registry as that matures.
 
 ```
-User/Agent Layer     This Proposal        "What can I do?"
+user/agent Layer     This Proposal        "What can I do?"
                           |
 MDL Layer            Executor pre-checks  "Will this work?"
                           |
-BSON Layer           Schema Registry      "How do I serialize this?"
+BSON Layer           schema Registry      "How do I serialize this?"
 ```
 
 ## Design Decisions
@@ -513,7 +513,7 @@ BSON Layer           Schema Registry      "How do I serialize this?"
 
     This mirrors how the Marketplace handles it — a module has one compatibility range, but release notes call out property-level changes.
 
-4. **SHOW FEATURES works without a project.** `SHOW FEATURES FOR VERSION 10.24` queries the registry directly without an MPR connection. When connected, it defaults to the project's version. Useful for upgrade planning: `SHOW FEATURES ADDED SINCE 10.24` shows what upgrading to the latest would gain; `SHOW FEATURES FOR VERSION 11.6` shows the full capability set of a target version. When connected, also supports: `SHOW UPGRADE OPPORTUNITIES` to identify patterns in the current project that could benefit from the project's own version capabilities (e.g., detecting workarounds that are no longer needed).
+4. **SHOW FEATURES works without a project.** `show features for version 10.24` queries the registry directly without an MPR connection. When connected, it defaults to the project's version. Useful for upgrade planning: `show features added since 10.24` shows what upgrading to the latest would gain; `show features for version 11.6` shows the full capability set of a target version. When connected, also supports: `show UPGRADE OPPORTUNITIES` to identify patterns in the current project that could benefit from the project's own version capabilities (e.g., detecting workarounds that are no longer needed).
 
 5. **Minor version granularity by default.** Metamodel changes happen at the minor release level. Patch-level overrides supported where needed but expected to be rare. All `min_version` values use three-part semver (`major.minor.patch`) for consistency, with `.0` patch for minor-release features.
 

@@ -30,16 +30,16 @@ Modern AI coding workflows spawn multiple agents in parallel, each working in an
 
 ```
 main branch (base.mpr)
-  ├── worktree-A: Agent creates Shop.Product entity
-  ├── worktree-B: Agent creates Shop.ACT_ProcessOrder microflow
-  └── worktree-C: Agent adds security rules to Shop module
+  ├── worktree-A: agent creates Shop.Product entity
+  ├── worktree-B: agent creates Shop.ACT_ProcessOrder microflow
+  └── worktree-C: agent adds security rules to Shop module
 ```
 
 Each agent modifies `app.mpr` independently. When merging back:
 
 ```
 $ git merge worktree-A    # ✓ fast-forward, works
-$ git merge worktree-B    # ✗ conflict: Binary files differ
+$ git merge worktree-B    # ✗ conflict: binary files differ
 ```
 
 The second merge always fails, even when the changes are logically independent (different documents, different modules). All agent work after the first merge is lost unless manually re-applied.
@@ -153,9 +153,9 @@ Each agent produces an MDL change script rather than a modified MPR. Scripts are
 repo/
   app.mpr                    # base project (committed)
   changes/
-    001-add-product.mdl       # Agent A's changes
-    002-add-microflow.mdl     # Agent B's changes
-    003-add-security.mdl      # Agent C's changes
+    001-add-product.mdl       # agent A's changes
+    002-add-microflow.mdl     # agent B's changes
+    003-add-security.mdl      # agent C's changes
 ```
 
 ```bash
@@ -240,8 +240,8 @@ What git stores (internal):     What developer sees (worktree):
 Use SQLite's [session extension](https://www.sqlite.org/sessionintro.html) to record row-level changesets, then merge at the SQL level.
 
 ```
-base.mpr → Agent A works → changeset-a.sqlite-patch
-         → Agent B works → changeset-b.sqlite-patch
+base.mpr → agent A works → changeset-a.sqlite-patch
+         → agent B works → changeset-b.sqlite-patch
 
 Merge: apply changeset-a then changeset-b to base.mpr
 ```
@@ -263,9 +263,9 @@ Merge: apply changeset-a then changeset-b to base.mpr
 Don't merge — instead, assign non-overlapping ownership. Each agent works on a different module.
 
 ```
-Agent A: owns Shop module        → modifies Shop/* documents
-Agent B: owns Inventory module   → modifies Inventory/* documents
-Agent C: reads only, no writes
+agent A: owns Shop module        → modifies Shop/* documents
+agent B: owns Inventory module   → modifies Inventory/* documents
+agent C: reads only, no writes
 ```
 
 **Pros:**
@@ -346,16 +346,16 @@ mxcli merge-mxunit %O %A %B %P
   2. Convert each to MDL (or structured AST)
   3. Three-way merge on the structured representation
   4. Serialize merged result back to BSON
-  5. Write to %A, exit 0 (clean) or 1 (conflict)
+  5. write to %A, exit 0 (clean) or 1 (conflict)
 ```
 
 The `app.mpr` metadata merge driver:
 
 ```
 mxcli merge-mpr-metadata %O %A %B %P
-  1. Open all three SQLite files
+  1. open all three SQLite files
   2. Diff _units tables (rows added/removed/modified)
-  3. Apply non-conflicting row changes
+  3. apply non-conflicting row changes
   4. Report conflicts on same-row modifications
 ```
 
@@ -375,10 +375,10 @@ Independent of Phase 2, establish a convention where Claude Code agents produce 
 ```
 # .claude/skills/multi-agent-workflow.md
 
-When working in a worktree:
-1. Write your changes as an MDL script (e.g., changes.mdl)
+when working in a worktree:
+1. write your changes as an MDL script (e.g., changes.mdl)
 2. Validate with: mxcli check changes.mdl -p app.mpr --references
-3. Commit only the .mdl script, not the modified app.mpr
+3. commit only the .mdl script, not the modified app.mpr
 4. The coordinator agent applies all scripts sequentially
 ```
 
@@ -422,13 +422,13 @@ This is the end-state where Mendix projects merge exactly like source code. It d
 // cmd/mxcli/cmd_merge.go
 
 var mergeDriverCmd = &cobra.Command{
-    Use:   "merge-driver <base> <ours> <theirs> [path]",
+    use:   "merge-driver <base> <ours> <theirs> [path]",
     Short: "Git merge driver for MPR/mxunit files",
     Args:  cobra.RangeArgs(3, 4),
     RunE: func(cmd *cobra.Command, args []string) error {
         base, ours, theirs := args[0], args[1], args[2]
 
-        // 1. Export all three to MDL
+        // 1. export all three to MDL
         baseMDL, err := export(base)
         oursMDL, err := export(ours)
         theirsMDL, err := export(theirs)
@@ -436,7 +436,7 @@ var mergeDriverCmd = &cobra.Command{
         // 2. Three-way text merge
         merged, conflicts, err := threewayMerge(baseMDL, oursMDL, theirsMDL)
 
-        // 3. Apply merged MDL to base MPR
+        // 3. apply merged MDL to base MPR
         if err := applyMDL(merged, base, ours); err != nil {
             return err // writes conflict markers to ours
         }
@@ -455,7 +455,7 @@ Extend the existing `mxcli init` command to set up git integration:
 
 ```go
 func setupGitConfig(projectDir string) error {
-    // Write .gitattributes entries
+    // write .gitattributes entries
     appendGitattributes(projectDir, []string{
         "*.mpr diff=mpr merge=mpr-merge",
         "*.mxunit diff=mxunit merge=mxunit-merge",
@@ -485,10 +485,10 @@ func setupGitConfig(projectDir string) error {
 
 ```bash
 # Test 1: textconv shows readable diff
-git diff HEAD~1 -- app.mpr
-# Expected: MDL output, not "Binary files differ"
+git diff head~1 -- app.mpr
+# Expected: MDL output, not "binary files differ"
 
-# Test 2: Non-conflicting merge (different documents)
+# Test 2: non-conflicting merge (different documents)
 git checkout -b agent-a && # add entity → commit
 git checkout -b agent-b main && # add microflow → commit
 git checkout main && git merge agent-a && git merge agent-b
@@ -500,8 +500,8 @@ git checkout -b agent-d main && # add Age attribute to Customer → commit
 git checkout main && git merge agent-c && git merge agent-d
 # Expected: merge driver produces merged entity with both attributes
 
-# Test 4: True conflict
-git checkout -b agent-e && # rename Customer to Client → commit
+# Test 4: true conflict
+git checkout -b agent-e && # rename Customer to client → commit
 git checkout -b agent-f main && # rename Customer to Buyer → commit
 git checkout main && git merge agent-e && git merge agent-f
 # Expected: conflict reported with readable MDL conflict markers

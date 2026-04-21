@@ -56,5 +56,5 @@ func TestDescribeDatabaseConnection_Mock(t *testing.T) {
 	assertNoError(t, describeDatabaseConnection(ctx, ast.QualifiedName{Module: "DataMod", Name: "MyDB"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE DATABASE CONNECTION")
+	assertContainsStr(t, out, "create database connection")
 }

@@ -17,67 +17,67 @@ create module CoTest;
  * Level 1.1: Create a string constant
  * String constants are useful for configuration values like URLs and API keys.
  */
-CREATE CONSTANT CoTest.ServiceEndpoint
-TYPE String
-DEFAULT 'https://api.example.com/v1';
+create constant CoTest.ServiceEndpoint
+type string
+default 'https://api.example.com/v1';
 /
 
 /**
  * Level 1.2: Create a string constant with a comment
  * Comments help explain the purpose and expected values.
  */
-CREATE CONSTANT CoTest.ApiKey
-TYPE String
-DEFAULT ''
-COMMENT 'API key for external service. Configure per environment.';
+create constant CoTest.ApiKey
+type string
+default ''
+comment 'API key for external service. Configure per environment.';
 /
 
 /**
  * Level 1.3: Create an integer constant
  * Integer constants are useful for configuration like timeouts and limits.
  */
-CREATE CONSTANT CoTest.MaxRetries
-TYPE Integer
-DEFAULT 3;
+create constant CoTest.MaxRetries
+type integer
+default 3;
 /
 
 /**
  * Level 1.4: Create a long constant
  * Long constants support larger numeric values.
  */
-CREATE CONSTANT CoTest.MaxFileSize
-TYPE Long
-DEFAULT 10485760
-COMMENT 'Maximum file upload size in bytes (default 10MB)';
+create constant CoTest.MaxFileSize
+type long
+default 10485760
+comment 'Maximum file upload size in bytes (default 10MB)';
 /
 
 /**
  * Level 1.5: Create a decimal constant
  * Decimal constants are useful for precise numeric values like rates.
  */
-CREATE CONSTANT CoTest.TaxRate
-TYPE Decimal
-DEFAULT 0.21
-COMMENT 'Default tax rate (21%)';
+create constant CoTest.TaxRate
+type decimal
+default 0.21
+comment 'Default tax rate (21%)';
 /
 
 /**
  * Level 1.6: Create a boolean constant
  * Boolean constants are useful for feature flags.
  */
-CREATE CONSTANT CoTest.EnableDebugLogging
-TYPE Boolean
-DEFAULT false
-COMMENT 'Enable verbose debug logging';
+create constant CoTest.EnableDebugLogging
+type boolean
+default false
+comment 'Enable verbose debug logging';
 /
 
 /**
  * Level 1.7: Create a DateTime constant
  * DateTime constants for default timestamps.
  */
-CREATE CONSTANT CoTest.LaunchDate
-TYPE DateTime
-DEFAULT '[%BeginOfCurrentDay%]';
+create constant CoTest.LaunchDate
+type datetime
+default '[%BeginOfCurrentDay%]';
 /
 
 -- MARK: - Show Constants
@@ -86,27 +86,27 @@ DEFAULT '[%BeginOfCurrentDay%]';
  * Level 2.1: Show all constants in the project
  * Lists all constants across all modules with their types and default values.
  */
-SHOW CONSTANTS;
+show constants;
 /
 
 /**
  * Level 2.2: Show constants in a specific module
  * Lists only constants defined in the specified module.
  */
-SHOW CONSTANTS IN CoTest;
+show constants in CoTest;
 /
 
 /**
  * Level 2.3: Show constant values across all configurations
  * Displays one row per constant per configuration for easy comparison.
  */
-SHOW CONSTANT VALUES;
+show constant values;
 /
 
 /**
  * Level 2.4: Show constant values for a specific module
  */
-SHOW CONSTANT VALUES IN CoTest;
+show constant values in CoTest;
 /
 
 -- MARK: - Describe Constant
@@ -115,7 +115,7 @@ SHOW CONSTANT VALUES IN CoTest;
  * Level 3.1: Describe a constant
  * Shows the full definition of a constant including its type and default value.
  */
-DESCRIBE CONSTANT CoTest.ServiceEndpoint;
+describe constant CoTest.ServiceEndpoint;
 /
 
 -- MARK: - Create Or Modify Constants
@@ -126,19 +126,19 @@ DESCRIBE CONSTANT CoTest.ServiceEndpoint;
  * Use this when you want to ensure a constant has a specific value
  * regardless of whether it was previously created.
  */
-CREATE OR MODIFY CONSTANT CoTest.ServiceEndpoint
-TYPE String
-DEFAULT 'https://api.staging.example.com/v2'
-COMMENT 'Updated endpoint for staging environment';
+create or modify constant CoTest.ServiceEndpoint
+type string
+default 'https://api.staging.example.com/v2'
+comment 'Updated endpoint for staging environment';
 /
 
 /**
  * Level 3.3: Create or modify a boolean constant
  * Useful for toggling feature flags idempotently in scripts.
  */
-CREATE OR MODIFY CONSTANT CoTest.EnableDebugLogging
-TYPE Boolean
-DEFAULT true;
+create or modify constant CoTest.EnableDebugLogging
+type boolean
+default true;
 /
 
 -- MARK: - Drop Constants
@@ -147,7 +147,7 @@ DEFAULT true;
  * Level 4.1: Drop a constant
  * Removes a constant from the module.
  */
-DROP CONSTANT CoTest.LaunchDate;
+drop constant CoTest.LaunchDate;
 /
 
 -- MARK: - Constants in Microflow Expressions (regression: issue #178)
@@ -157,25 +157,25 @@ DROP CONSTANT CoTest.LaunchDate;
  * Tests that `@Module.Const` syntax parses and round-trips correctly.
  * Regression test for: DESCRIBE → re-parse roundtrip with @-style constant refs.
  */
-CREATE OR REPLACE MICROFLOW CoTest.UseConstantRef ()
-RETURNS Nothing
-BEGIN
-  DECLARE $Endpoint String = @CoTest.ServiceEndpoint;
-  DECLARE $Retries Integer = @CoTest.MaxRetries;
-  DECLARE $IsTaxable Boolean = @CoTest.EnableDebugLogging;
-END;
+create or replace microflow CoTest.UseConstantRef ()
+returns nothing
+begin
+  declare $Endpoint string = @CoTest.ServiceEndpoint;
+  declare $Retries integer = @CoTest.MaxRetries;
+  declare $IsTaxable boolean = @CoTest.EnableDebugLogging;
+end;
 /
 
 /**
  * Level 5.2: Mix @Module.Const with other expressions
  * Confirms constant references work in compound expressions alongside literals.
  */
-CREATE OR REPLACE MICROFLOW CoTest.MixedConstantExpressions ()
-RETURNS Nothing
-BEGIN
-  DECLARE $Limit Decimal = @CoTest.TaxRate + 0.05;
-  DECLARE $Msg String = 'Endpoint: ' + @CoTest.ServiceEndpoint;
-END;
+create or replace microflow CoTest.MixedConstantExpressions ()
+returns nothing
+begin
+  declare $limit decimal = @CoTest.TaxRate + 0.05;
+  declare $Msg string = 'Endpoint: ' + @CoTest.ServiceEndpoint;
+end;
 /
 
 -- ############################################################################

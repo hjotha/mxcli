@@ -25,8 +25,8 @@ Execute MDL commands against the test project:
 # Interactive REPL
 ./bin/mxcli
 
-# Or direct execution
-./bin/mxcli -p mx-test-projects/test1-go-app/test1-go.mpr -c "SHOW ENTITIES IN DmTest"
+# or direct execution
+./bin/mxcli -p mx-test-projects/test1-go-app/test1-go.mpr -c "show entities in DmTest"
 ```
 
 ### 3. Execute Script File
@@ -40,10 +40,10 @@ Execute MDL commands against the test project:
 Use `mx check` to validate projects without Studio Pro. This catches consistency errors (CE0066, CE1613, etc.) that would otherwise only show up when opening in Studio Pro.
 
 ```bash
-# Find the mx binary
+# find the mx binary
 MX=~/.mxcli/mxbuild/*/modeler/mx
 
-# Check the project
+# check the project
 $MX check /path/to/app.mpr
 ```
 
@@ -58,15 +58,15 @@ The app contains: 0 errors.
 For testing changes in isolation without modifying existing test projects, create a fresh blank project:
 
 ```bash
-# Create a fresh Mendix project in a temp directory
+# create a fresh Mendix project in a temp directory
 cd /tmp/test-workspace
 $MX create-project
 
 # This creates a full Mendix project structure:
 #   App.mpr, mprcontents/, javascriptsource/, javasource/, etc.
-# IMPORTANT: Run from the target directory — it creates files in the CWD.
+# IMPORTANT: run from the target directory — it creates files in the CWD.
 
-# Apply MDL changes
+# apply MDL changes
 mxcli exec script.mdl -p /tmp/test-workspace/App.mpr
 
 # Validate
@@ -85,15 +85,15 @@ This pattern is ideal for:
 # Fresh project
 cd /tmp/ce0066-test && $MX create-project
 
-# Apply changes and validate
+# apply changes and validate
 cat > /tmp/test.mdl << 'EOF'
-CREATE MODULE ROLE MyFirstModule.Admin;
-CREATE OR MODIFY PERSISTENT ENTITY MyFirstModule.Order (
-    Code: String(50),
-    Total: Decimal
+create module role MyFirstModule.Admin;
+create or modify persistent entity MyFirstModule.Order (
+    Code: string(50),
+    Total: decimal
 );
-GRANT MyFirstModule.Admin ON MyFirstModule.Order (CREATE, DELETE, READ *, WRITE *);
-ALTER ENTITY MyFirstModule.Order ADD ATTRIBUTE Status String(50);
+grant MyFirstModule.Admin on MyFirstModule.Order (create, delete, read *, write *);
+alter entity MyFirstModule.Order add attribute status string(50);
 EOF
 
 mxcli exec /tmp/test.mdl -p /tmp/ce0066-test/App.mpr
@@ -113,17 +113,17 @@ After executing MDL:
 ### TypeCacheUnknownTypeException
 
 ```
-The type cache does not contain a type with qualified name DomainModels$Index
+The type cache does not contain a type with qualified name DomainModels$index
 ```
 
-**Cause**: Using `qualifiedName` instead of `storageName` for `$Type` field.
+**Cause**: Using `qualifiedName` instead of `storageName` for `$type` field.
 
 **Fix**: Check `reference/mendixmodellib/reflection-data/<version>-structures.json` for the correct `storageName`.
 
 ### System.ArgumentNullException
 
 ```
-System.ArgumentNullException: Value cannot be null. (Parameter 'AttributeId')
+System.ArgumentNullException: value cannot be null. (parameter 'AttributeId')
 ```
 
 **Cause**: Wrong reference format. Using UUID for BY_NAME_REFERENCE or vice versa.
@@ -136,7 +136,7 @@ System.ArgumentNullException: Value cannot be null. (Parameter 'AttributeId')
 
 Enumeration attribute shows as just "Enumeration" without the reference.
 
-**Fix**: Add `Enumeration` field with qualified name to the attribute type in BSON.
+**Fix**: Add `enumeration` field with qualified name to the attribute type in BSON.
 
 ## Debug Tools
 
@@ -158,10 +158,10 @@ go run ./examples/debug_bson/main.go mx-test-projects/test1-go-app/test1-go.mpr 
 ### Check Metamodel
 
 ```bash
-# Find type definition
+# find type definition
 grep -A 30 '"DomainModels\$Index"' reference/mendixmodellib/reflection-data/11.6.0-structures.json
 
-# Find property reference kind
+# find property reference kind
 grep -B 5 -A 10 '"storageName" : "Attribute"' reference/mendixmodellib/reflection-data/11.6.0-structures.json
 ```
 
@@ -180,17 +180,17 @@ cp -r mx-test-projects/test1-go-app mx-test-projects/test1-go-app.bak
 ## Example Test Session
 
 ```bash
-# Build
+# build
 go build -o bin/mxcli ./cmd/mxcli
 
-# Connect and show current state
-./bin/mxcli -p mx-test-projects/test1-go-app/test1-go.mpr -c "SHOW ENTITIES IN DmTest"
+# connect and show current state
+./bin/mxcli -p mx-test-projects/test1-go-app/test1-go.mpr -c "show entities in DmTest"
 
-# Execute test script
+# execute test script
 ./bin/mxcli -p mx-test-projects/test1-go-app/test1-go.mpr exec reference/mendix-repl/examples/doctype-tests/domain-model-examples.mdl
 
 # Verify created entity
-./bin/mxcli -p mx-test-projects/test1-go-app/test1-go.mpr -c "DESCRIBE ENTITY DmTest.SalesOrder"
+./bin/mxcli -p mx-test-projects/test1-go-app/test1-go.mpr -c "describe entity DmTest.SalesOrder"
 ```
 
 ## Checklist Before Marking Complete

@@ -10,8 +10,8 @@ MDL (Mendix Definition Language) is a custom DSL that does not exist in LLM trai
 - Error messages - learning what went wrong (reactive, not proactive)
 
 This results in common mistakes like:
-- Using `SET` on undeclared variables
-- Wrong syntax for entity type declarations (`Type = empty` vs `AS Type`)
+- Using `set` on undeclared variables
+- Wrong syntax for entity type declarations (`type = empty` vs `as type`)
 - Missing qualifications on association paths
 - Incorrect enumeration comparisons (string literals vs qualified values)
 
@@ -31,7 +31,7 @@ This results in common mistakes like:
 Current error messages tell what's wrong but not how to fix it:
 
 ```
-variable 'IsValid' is not declared. Use DECLARE IsValid: <Type> before using SET
+variable 'IsValid' is not declared. use declare IsValid: <type> before using set
 ```
 
 Proposed format with inline example:
@@ -39,17 +39,17 @@ Proposed format with inline example:
 ```
 variable 'IsValid' is not declared.
 
-Fix: Add a DECLARE statement before using SET:
+Fix: add a declare statement before using set:
 
-  DECLARE $IsValid Boolean = true;
+  declare $IsValid boolean = true;
   ...
-  SET $IsValid = false;
+  set $IsValid = false;
 ```
 
 **Implementation:**
 
 ```go
-// In cmd_microflows_builder.go
+// in cmd_microflows_builder.go
 func (fb *flowBuilder) addErrorWithExample(message, example string) {
     fb.errors = append(fb.errors, fmt.Sprintf("%s\n\nExample:\n%s", message, example))
 }
@@ -57,7 +57,7 @@ func (fb *flowBuilder) addErrorWithExample(message, example string) {
 // Usage
 fb.addErrorWithExample(
     fmt.Sprintf("variable '%s' is not declared", s.Target),
-    fmt.Sprintf("  DECLARE %s Boolean = true;\n  SET %s = false;", s.Target, s.Target),
+    fmt.Sprintf("  declare %s boolean = true;\n  set %s = false;", s.Target, s.Target),
 )
 ```
 
@@ -66,8 +66,8 @@ fb.addErrorWithExample(
 | Error | Current Message | Proposed Addition |
 |-------|-----------------|-------------------|
 | Undeclared variable | "variable X not declared" | Show DECLARE + SET pattern |
-| Entity type syntax | "selected type not allowed" | Show `DECLARE $var AS Module.Entity` |
-| Association path | "error in expression" | Show `$var/Module.Association/Attr` |
+| Entity type syntax | "selected type not allowed" | Show `declare $var as Module.Entity` |
+| Association path | "error in expression" | Show `$var/Module.Association/attr` |
 | Enum comparison | "type mismatch" | Show `Module.Enum.Value` syntax |
 
 ### 2. Focused Skills by Document Type / Use Case
@@ -80,23 +80,23 @@ Instead of one large reference, create smaller focused skills that can be loaded
 
 ```
 .claude/skills/mendix/
-├── README.md                      # Index of all skills
+├── README.md                      # index of all skills
 │
-├── # By Document Type (syntax reference)
-├── mdl-entities.md                # Entity, attributes, associations
-├── mdl-enumerations.md            # Enumeration syntax
-├── mdl-microflows.md              # Microflow syntax (exists: write-microflows.md)
-├── mdl-pages.md                   # Page and widget syntax
+├── # by Document type (syntax reference)
+├── mdl-entities.md                # entity, attributes, associations
+├── mdl-enumerations.md            # enumeration syntax
+├── mdl-microflows.md              # microflow syntax (exists: write-microflows.md)
+├── mdl-pages.md                   # page and widget syntax
 │
-├── # By Use Case (patterns)
-├── patterns-validation.md         # Validation patterns (exists: validation-microflows.md)
-├── patterns-crud.md               # Create/Read/Update/Delete patterns
+├── # by use case (patterns)
+├── patterns-validation.md         # validation patterns (exists: validation-microflows.md)
+├── patterns-crud.md               # create/read/update/delete patterns
 ├── patterns-data-processing.md    # Loops, aggregates, batch processing
-├── patterns-integration.md        # REST, Java actions, external calls
+├── patterns-integration.md        # rest, java actions, external calls
 │
-├── # Quick References (cheat sheets)
+├── # Quick references (cheat sheets)
 ├── cheatsheet-variables.md        # Variable declaration quick ref
-├── cheatsheet-expressions.md      # Operators, functions, XPath
+├── cheatsheet-expressions.md      # Operators, functions, xpath
 ├── cheatsheet-errors.md           # Common errors and fixes
 │
 └── # Existing skills
@@ -125,40 +125,40 @@ Instead of one large reference, create smaller focused skills that can be loaded
 
 ## Declaration Syntax
 
-| Type | Syntax | Example |
+| type | Syntax | Example |
 |------|--------|---------|
-| String | `DECLARE $name String = 'value';` | `DECLARE $msg String = '';` |
-| Integer | `DECLARE $name Integer = 0;` | `DECLARE $count Integer = 0;` |
-| Boolean | `DECLARE $name Boolean = true;` | `DECLARE $valid Boolean = true;` |
-| Decimal | `DECLARE $name Decimal = 0.0;` | `DECLARE $amount Decimal = 0;` |
-| DateTime | `DECLARE $name DateTime = [%CurrentDateTime%];` | |
-| Entity | `DECLARE $name AS Module.Entity;` | `DECLARE $cust AS Sales.Customer;` |
-| List | `DECLARE $name List of Module.Entity = empty;` | |
+| string | `declare $name string = 'value';` | `declare $msg string = '';` |
+| integer | `declare $name integer = 0;` | `declare $count integer = 0;` |
+| boolean | `declare $name boolean = true;` | `declare $valid boolean = true;` |
+| decimal | `declare $name decimal = 0.0;` | `declare $amount decimal = 0;` |
+| datetime | `declare $name datetime = [%CurrentDateTime%];` | |
+| entity | `declare $name as Module.Entity;` | `declare $cust as Sales.Customer;` |
+| list | `declare $name list of Module.Entity = empty;` | |
 
-## Key Rules
+## key rules
 
-1. **Primitives**: `DECLARE $var Type = value;` (with initialization)
-2. **Entities**: `DECLARE $var AS Module.Entity;` (no initialization, use AS)
-3. **SET requires DECLARE**: Always declare before using SET
-4. **Parameters are pre-declared**: No need to declare microflow parameters
+1. **Primitives**: `declare $var type = value;` (with initialization)
+2. **entities**: `declare $var as Module.Entity;` (no initialization, use as)
+3. **set requires declare**: Always declare before using set
+4. **parameters are pre-declared**: No need to declare microflow parameters
 
 ## Common Mistakes
 
-❌ `DECLARE $product Module.Product = empty;` → Missing AS
-✅ `DECLARE $product AS Module.Product;`
+❌ `declare $product Module.Product = empty;` → Missing as
+✅ `declare $product as Module.Product;`
 
-❌ `SET $isValid = true;` (without prior DECLARE)
-✅ `DECLARE $isValid Boolean = true;` then `SET $isValid = false;`
+❌ `set $isValid = true;` (without prior declare)
+✅ `declare $isValid boolean = true;` then `set $isValid = false;`
 ```
 
 **Example: patterns-crud.md (focused, ~150 lines)**
 
 ```markdown
-# CRUD Action Patterns
+# CRUD action Patterns
 
-Patterns for Create, Read, Update, Delete operations on entities.
+Patterns for create, read, update, delete operations on entities.
 
-## ACT_Entity_Save (Create or Update)
+## ACT_Entity_Save (create or update)
 
 ```mdl
 /**
@@ -201,11 +201,11 @@ END;
 /
 ```
 
-## When to Use
+## when to use
 
 - **ACT_Entity_Save**: Save button on NewEdit pages
-- **ACT_Entity_Delete**: Delete button with confirmation dialog
-- **ACT_Entity_Cancel**: Cancel button (just close page, no commit)
+- **ACT_Entity_Delete**: delete button with confirmation dialog
+- **ACT_Entity_Cancel**: cancel button (just close page, no commit)
 ```
 
 ### 4. Check Command with Suggestions
@@ -220,14 +220,14 @@ $ mxcli check script.mdl -p app.mpr --references --suggest
 Checking: script.mdl
 ✓ Syntax OK (3 statements)
 
-Reference errors:
+reference errors:
   statement 2: microflow 'Module.Test' has validation errors:
     - variable 'IsValid' is not declared
 
     Suggested fix (line 7):
-    + DECLARE $IsValid Boolean = true;
-      IF $Entity/Name = empty THEN
-        SET $IsValid = false;  -- line 9
+    + declare $IsValid boolean = true;
+      if $entity/Name = empty then
+        set $IsValid = false;  -- line 9
 
 ✗ 1 error(s) found
 ```
@@ -245,24 +245,24 @@ Reference errors:
 Add comments to DESCRIBE output explaining syntax:
 
 ```bash
-$ mxcli -p app.mpr -c "DESCRIBE MICROFLOW Module.Example --annotated"
+$ mxcli -p app.mpr -c "describe microflow Module.Example --annotated"
 
 -- Microflow signature: Name, parameters, return type
-CREATE MICROFLOW Module.Example (
-  $Input: String           -- Parameter: $name: Type
+create microflow Module.Example (
+  $Input: string           -- Parameter: $name: Type
 )
-RETURNS Boolean AS $Result -- RETURNS Type AS $variableName
-BEGIN
+returns boolean as $Result -- RETURNS Type AS $variableName
+begin
   -- Variable declaration: DECLARE $name Type = value
-  DECLARE $Result Boolean = true;
+  declare $Result boolean = true;
 
   -- Conditional: IF condition THEN ... END IF
-  IF $Input = empty THEN
-    SET $Result = false;   -- Assignment: SET $var = expression
-  END IF;
+  if $Input = empty then
+    set $Result = false;   -- Assignment: SET $var = expression
+  end if;
 
-  RETURN $Result;          -- Must end with RETURN
-END;
+  return $Result;          -- Must end with RETURN
+end;
 /
 ```
 
@@ -273,18 +273,18 @@ END;
 Enhance lint rule output with educational content:
 
 ```python
-# In lint rules
+# in lint rules
 def check_undeclared_variable(node, context):
     if is_set_statement(node) and not is_declared(node.variable, context):
         return {
             "rule": "MDL020",
             "severity": "error",
-            "message": f"Variable '{node.variable}' used in SET but not declared",
+            "message": f"Variable '{node.variable}' used in set but not declared",
             "learn_more": "https://docs.example.com/mdl/variables",
             "quick_fix": {
-                "description": "Add DECLARE statement",
+                "description": "add declare statement",
                 "insert_before": node.line,
-                "text": f"DECLARE {node.variable} Boolean = true; -- TODO: set correct type"
+                "text": f"declare {node.variable} boolean = true; -- TODO: set correct type"
             }
         }
 ```
@@ -298,20 +298,20 @@ Add `EXAMPLE` command to REPL:
 ```
 mdl> EXAMPLE validation
 -- Validation Microflow Pattern
-CREATE MICROFLOW Module.VAL_Entity_Action (
-  $Entity: Module.Entity
+create microflow Module.VAL_Entity_Action (
+  $entity: Module.Entity
 )
-RETURNS Boolean AS $IsValid
-BEGIN
-  DECLARE $IsValid Boolean = true;
+returns boolean as $IsValid
+begin
+  declare $IsValid boolean = true;
 
-  IF $Entity/RequiredField = empty THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Entity/RequiredField MESSAGE 'Required';
-  END IF;
+  if $entity/RequiredField = empty then
+    set $IsValid = false;
+    validation feedback $entity/RequiredField message 'Required';
+  end if;
 
-  RETURN $IsValid;
-END;
+  return $IsValid;
+end;
 /
 
 mdl> EXAMPLE loop
@@ -357,7 +357,7 @@ Based on observed patterns:
 | Mistake | Frequency | Root Cause |
 |---------|-----------|------------|
 | SET without DECLARE | High | No equivalent in most languages |
-| Entity decl syntax | High | Unusual `AS` keyword requirement |
+| Entity decl syntax | High | Unusual `as` keyword requirement |
 | String enum comparison | Medium | Most languages use strings |
 | Missing association qualification | Medium | XPath-style paths unfamiliar |
 | Wrong DECLARE syntax (colon) | Medium | Confusion with TypeScript/Python |

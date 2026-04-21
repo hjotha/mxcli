@@ -25,15 +25,15 @@ Both humans and LLMs read the TUI output (via tmux capture-pane). The redesign m
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ Chrome (Header)                                  │  ← Fixed
-│   TabBar | ViewMode Badge | Context Summary      │
+│ Chrome (header)                                  │  ← Fixed
+│   TabBar | ViewMode Badge | context Summary      │
 ├─────────────────────────────────────────────────┤
 │                                                  │
-│                  Active View                     │  ← Replaceable
+│                  Active view                     │  ← Replaceable
 │  (BrowserView / CompareView / DiffView / etc.)   │
 │                                                  │
 ├─────────────────────────────────────────────────┤
-│ Chrome (Footer)                                  │  ← Fixed
+│ Chrome (footer)                                  │  ← Fixed
 │   HintBar (context-sensitive from active view)   │
 │   StatusBar (breadcrumb + position + mode)       │
 └─────────────────────────────────────────────────┘
@@ -42,9 +42,9 @@ Both humans and LLMs read the TUI output (via tmux capture-pane). The redesign m
 #### Unified View Interface
 
 ```go
-// View is the interface all TUI views must implement.
-type View interface {
-    Update(tea.Msg) (View, tea.Cmd)
+// view is the interface all TUI views must implement.
+type view interface {
+    update(tea.Msg) (view, tea.Cmd)
     Render(width, height int) string
     Hints() []Hint
     StatusInfo() StatusInfo
@@ -62,7 +62,7 @@ const (
 
 type StatusInfo struct {
     Breadcrumb []string
-    Position   string  // e.g. "3/47"
+    position   string  // e.g. "3/47"
     Mode       string  // e.g. "MDL", "NDSL"
     Extra      string  // view-specific info
 }
@@ -74,14 +74,14 @@ Replaces the current `a.diffView != nil` / `a.overlay.IsVisible()` / `a.compare.
 
 ```go
 type ViewStack struct {
-    base  View     // always BrowserView
-    stack []View   // overlay/compare/diff pushed on top
+    base  view     // always BrowserView
+    stack []view   // overlay/compare/diff pushed on top
 }
 
-func (vs *ViewStack) Active() View
-func (vs *ViewStack) Push(v View)
-func (vs *ViewStack) Pop() View
-func (vs *ViewStack) Depth() int
+func (vs *ViewStack) Active() view
+func (vs *ViewStack) Push(v view)
+func (vs *ViewStack) Pop() view
+func (vs *ViewStack) depth() int
 ```
 
 #### Simplified App
@@ -89,7 +89,7 @@ func (vs *ViewStack) Depth() int
 `app.go` reduces to ~200 lines:
 
 ```go
-func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (a App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
     // 1. Handle global keys (ctrl+c, tab switching, Space for jump)
     // 2. Delegate to active view
     active := a.views.Active()
@@ -98,7 +98,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     return a, cmd
 }
 
-func (a App) View() string {
+func (a App) view() string {
     active := a.views.Active()
     header := a.renderHeader(active)
     content := active.Render(a.width, a.contentHeight())
@@ -134,8 +134,8 @@ var (
 ### Header Enhancement
 
 ```
-Before:  1:App.mpr  2:Other.mpr
-After:   ❶ App.mpr  ❷ Other.mpr          Browse │ 3 modules, 47 entities
+before:  1:App.mpr  2:Other.mpr
+after:   ❶ App.mpr  ❷ Other.mpr          Browse │ 3 modules, 47 entities
 ```
 
 - Left: tabs with FocusColor underline on active tab
@@ -145,11 +145,11 @@ After:   ❶ App.mpr  ❷ Other.mpr          Browse │ 3 modules, 47 entities
 ### Footer Enhancement
 
 ```
-Before:  h:back  l:open  /:filter  Tab:mdl/ndsl  ...
-         MyModule > Entities > Customer                    3/47  MDL
+before:  h:back  l:open  /:filter  Tab:mdl/ndsl  ...
+         MyModule > entities > Customer                    3/47  MDL
 
-After:   h back  l open  / filter  ⇥ mdl/ndsl  c compare  ? help
-         MyModule › Entities › Customer                   3/47 ⎸ MDL
+after:   h back  l open  / filter  ⇥ mdl/ndsl  c compare  ? help
+         MyModule › entities › Customer                   3/47 ⎸ MDL
 ```
 
 - HintBar: remove `:` separator, use space instead (more compact)
@@ -165,8 +165,8 @@ Press `Space` or `Ctrl+P` → opens a fuzzy finder overlay:
 ```
 ┌──────────────────────────────────────┐
 │ > cust_                              │
-│   🏢 MyModule.Customer       Entity  │
-│   📄 MyModule.Customer_Overview Page │
+│   🏢 MyModule.Customer       entity  │
+│   📄 MyModule.Customer_Overview page │
 │   ⚡ MyModule.ACT_Customer_Create MF │
 └──────────────────────────────────────┘
 ```
@@ -216,8 +216,8 @@ Each segment in the status bar breadcrumb registers as a mouse zone. Clicking a 
 Each view's first rendered line includes a machine-parseable prefix:
 
 ```
-[mxcli:browse] MyModule > Entities > Customer  3/47  MDL
-[mxcli:compare] Left: Entity.Customer  Right: Entity.Order  NDSL|NDSL
+[mxcli:browse] MyModule > entities > Customer  3/47  MDL
+[mxcli:compare] left: Entity.Customer  right: Entity.Order  NDSL|NDSL
 [mxcli:diff] unified  +12 -8  3 hunks
 ```
 
@@ -237,12 +237,12 @@ Environment variable `MXCLI_TUI_MACHINE=1` strips all ANSI codes. Stretch goal, 
 
 **Files**: New `view.go`, `viewstack.go`; rewrite `app.go`
 
-1. Define `View` interface, `ViewMode` enum, `StatusInfo` struct
+1. Define `view` interface, `ViewMode` enum, `StatusInfo` struct
 2. Implement `ViewStack` with Push/Pop/Active
-3. Wrap existing `MillerView` as `BrowserView` implementing `View`
-4. Wrap existing `Overlay` as `OverlayView` implementing `View`
-5. Wrap existing `CompareView` implementing `View`
-6. Wrap existing `DiffView` implementing `View`
+3. Wrap existing `MillerView` as `BrowserView` implementing `view`
+4. Wrap existing `Overlay` as `OverlayView` implementing `view`
+5. Wrap existing `CompareView` implementing `view`
+6. Wrap existing `DiffView` implementing `view`
 7. Rewrite `app.go` to use ViewStack — eliminate all `syncXxx()` calls
 8. Verify all existing functionality works unchanged
 

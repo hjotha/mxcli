@@ -171,7 +171,7 @@ func parseRawWidget(ctx *ExecContext, w map[string]any, parentEntityContext ...s
 		// For ComboBox, extract datasource and association attribute for association mode.
 		// In association mode the Attribute binding is stored as EntityRef (not AttributeRef),
 		// so we must use extractCustomWidgetPropertyAssociation instead of the generic scan.
-		if widget.RenderMode == "COMBOBOX" {
+		if widget.RenderMode == "combobox" {
 			widget.DataSource = extractComboBoxDataSource(ctx, w)
 			if widget.DataSource != nil {
 				widget.Content = extractCustomWidgetPropertyAssociation(ctx, w, "attributeAssociation")
@@ -179,7 +179,7 @@ func parseRawWidget(ctx *ExecContext, w map[string]any, parentEntityContext ...s
 			}
 		}
 		// For DataGrid2, also extract datasource, columns, CONTROLBAR widgets, paging, and selection
-		if widget.RenderMode == "DATAGRID2" {
+		if widget.RenderMode == "datagrid2" {
 			widget.DataSource = extractDataGrid2DataSource(ctx, w)
 			widget.PageSize = extractCustomWidgetPropertyString(ctx, w, "pageSize")
 			widget.Pagination = extractCustomWidgetPropertyString(ctx, w, "pagination")
@@ -196,7 +196,7 @@ func parseRawWidget(ctx *ExecContext, w map[string]any, parentEntityContext ...s
 			widget.ControlBar = extractDataGrid2ControlBar(ctx, w)
 		}
 		// For Gallery, extract datasource, content widgets, filter widgets, and selection mode
-		if widget.RenderMode == "GALLERY" {
+		if widget.RenderMode == "gallery" {
 			widget.DataSource = extractGalleryDataSource(ctx, w)
 			widget.Selection = extractGallerySelection(ctx, w)
 			widget.DesktopColumns = extractCustomWidgetPropertyString(ctx, w, "desktopItems")
@@ -211,12 +211,12 @@ func parseRawWidget(ctx *ExecContext, w map[string]any, parentEntityContext ...s
 			widget.FilterWidgets = extractGalleryFilters(ctx, w)
 		}
 		// For filter widgets, extract filter attributes and expression
-		if widget.RenderMode == "TEXTFILTER" || widget.RenderMode == "NUMBERFILTER" || widget.RenderMode == "DROPDOWNFILTER" || widget.RenderMode == "DATEFILTER" {
+		if widget.RenderMode == "textfilter" || widget.RenderMode == "numberfilter" || widget.RenderMode == "dropdownfilter" || widget.RenderMode == "datefilter" {
 			widget.FilterAttributes = extractFilterAttributes(ctx, w)
 			widget.FilterExpression = extractFilterExpression(ctx, w)
 		}
 		// For pluggable Image widget, extract image-specific properties
-		if widget.RenderMode == "IMAGE" {
+		if widget.RenderMode == "image" {
 			extractImageProperties(ctx, w, &widget)
 		}
 		// For generic pluggable widgets (not handled by dedicated extractors above),
@@ -375,23 +375,23 @@ func extractNavigationListItemAction(ctx *ExecContext, w map[string]any) string 
 		// Extract page reference from FormSettings (Studio Pro format)
 		if formSettings, ok := action["FormSettings"].(map[string]any); ok {
 			if formName, ok := formSettings["Form"].(string); ok && formName != "" {
-				return "SHOW_PAGE '" + formName + "'"
+				return "show_page '" + formName + "'"
 			}
 		}
 		// Fall back to PageSettings.Form (string name)
 		if pageSettings, ok := action["PageSettings"].(map[string]any); ok {
 			if pageName, ok := pageSettings["Form"].(string); ok && pageName != "" {
-				return "SHOW_PAGE '" + pageName + "'"
+				return "show_page '" + pageName + "'"
 			}
 		}
 		// Fall back to Page field (binary ID from mxcli serialization)
 		if pageID := extractBinaryID(action["Page"]); pageID != "" {
 			pageName := getPageQualifiedName(ctx, model.ID(pageID))
 			if pageName != "" {
-				return "SHOW_PAGE '" + pageName + "'"
+				return "show_page '" + pageName + "'"
 			}
 		}
-		return "SHOW_PAGE"
+		return "show_page"
 	default:
 		// Delegate to the standard action extractor
 		return extractButtonAction(ctx, w)
@@ -628,13 +628,13 @@ func extractListViewDataSource(ctx *ExecContext, w map[string]any) *rawDataSourc
 				if !ok {
 					continue
 				}
-				col := rawSortColumn{Order: "ASC"}
+				col := rawSortColumn{Order: "asc"}
 				if attrRef, ok := sortItem["AttributeRef"].(map[string]any); ok {
 					col.Attribute = shortAttributeName(extractString(attrRef["Attribute"]))
 				}
 				sortOrder := extractString(sortItem["SortOrder"])
 				if sortOrder == "Descending" {
-					col.Order = "DESC"
+					col.Order = "desc"
 				}
 				if col.Attribute != "" {
 					result.SortColumns = append(result.SortColumns, col)

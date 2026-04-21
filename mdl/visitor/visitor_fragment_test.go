@@ -42,14 +42,14 @@ func TestDefineFragment(t *testing.T) {
 	}
 
 	footer := stmt.Widgets[0]
-	if footer.Type != "FOOTER" {
-		t.Errorf("Expected FOOTER widget, got %s", footer.Type)
+	if footer.Type != "footer" {
+		t.Errorf("Expected footer widget, got %s", footer.Type)
 	}
 	if footer.Name != "f1" {
 		t.Errorf("Expected name 'f1', got %q", footer.Name)
 	}
 	if len(footer.Children) != 2 {
-		t.Errorf("Expected 2 children in FOOTER, got %d", len(footer.Children))
+		t.Errorf("Expected 2 children in footer, got %d", len(footer.Children))
 	}
 }
 
@@ -164,8 +164,8 @@ func TestUseFragmentInPageBody(t *testing.T) {
 	}
 
 	// First widget: normal TEXTBOX
-	if stmt.Widgets[0].Type != "TEXTBOX" {
-		t.Errorf("Widget 0: expected TEXTBOX, got %s", stmt.Widgets[0].Type)
+	if stmt.Widgets[0].Type != "textbox" {
+		t.Errorf("Widget 0: expected textbox, got %s", stmt.Widgets[0].Type)
 	}
 
 	// Second widget: USE_FRAGMENT sentinel
@@ -177,8 +177,8 @@ func TestUseFragmentInPageBody(t *testing.T) {
 	}
 
 	// Third widget: normal TEXTBOX
-	if stmt.Widgets[2].Type != "TEXTBOX" {
-		t.Errorf("Widget 2: expected TEXTBOX, got %s", stmt.Widgets[2].Type)
+	if stmt.Widgets[2].Type != "textbox" {
+		t.Errorf("Widget 2: expected textbox, got %s", stmt.Widgets[2].Type)
 	}
 }
 
@@ -239,8 +239,8 @@ func TestUseFragmentInNestedBody(t *testing.T) {
 	}
 
 	dv := stmt.Widgets[0]
-	if dv.Type != "DATAVIEW" {
-		t.Errorf("Expected DATAVIEW, got %s", dv.Type)
+	if dv.Type != "dataview" {
+		t.Errorf("Expected dataview, got %s", dv.Type)
 	}
 	if len(dv.Children) != 2 {
 		t.Fatalf("Expected 2 children in DATAVIEW, got %d", len(dv.Children))

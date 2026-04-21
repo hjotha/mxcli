@@ -130,7 +130,7 @@ func outputConsumedODataServiceMDL(ctx *ExecContext, svc *model.ConsumedODataSer
 		outputJavadoc(ctx.Output, svc.Description)
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE ODATA CLIENT %s.%s (\n", moduleName, svc.Name)
+	fmt.Fprintf(ctx.Output, "create odata client %s.%s (\n", moduleName, svc.Name)
 
 	var props []string
 	if folderPath != "" {
@@ -173,10 +173,10 @@ func outputConsumedODataServiceMDL(ctx *ExecContext, svc *model.ConsumedODataSer
 
 	// Microflow references
 	if svc.ConfigurationMicroflow != "" {
-		props = append(props, fmt.Sprintf("  ConfigurationMicroflow: MICROFLOW %s", svc.ConfigurationMicroflow))
+		props = append(props, fmt.Sprintf("  ConfigurationMicroflow: microflow %s", svc.ConfigurationMicroflow))
 	}
 	if svc.ErrorHandlingMicroflow != "" {
-		props = append(props, fmt.Sprintf("  ErrorHandlingMicroflow: MICROFLOW %s", svc.ErrorHandlingMicroflow))
+		props = append(props, fmt.Sprintf("  ErrorHandlingMicroflow: microflow %s", svc.ErrorHandlingMicroflow))
 	}
 
 	// Proxy constant references
@@ -198,7 +198,7 @@ func outputConsumedODataServiceMDL(ctx *ExecContext, svc *model.ConsumedODataSer
 	// Custom HTTP headers (between property block close and semicolon)
 	if cfg := svc.HttpConfiguration; cfg != nil && len(cfg.HeaderEntries) > 0 {
 		fmt.Fprintln(ctx.Output, ")")
-		fmt.Fprintln(ctx.Output, "HEADERS (")
+		fmt.Fprintln(ctx.Output, "headers (")
 		for i, h := range cfg.HeaderEntries {
 			comma := ","
 			if i == len(cfg.HeaderEntries)-1 {
@@ -309,7 +309,7 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 		outputJavadoc(ctx.Output, svc.Description)
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE ODATA SERVICE %s.%s (\n", moduleName, svc.Name)
+	fmt.Fprintf(ctx.Output, "create odata service %s.%s (\n", moduleName, svc.Name)
 
 	var props []string
 	if folderPath != "" {
@@ -342,7 +342,7 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 
 	// Authentication types
 	if len(svc.AuthenticationTypes) > 0 {
-		fmt.Fprintf(ctx.Output, "AUTHENTICATION %s\n", strings.Join(svc.AuthenticationTypes, ", "))
+		fmt.Fprintf(ctx.Output, "authentication %s\n", strings.Join(svc.AuthenticationTypes, ", "))
 	}
 	if svc.AuthMicroflow != "" {
 		fmt.Fprintf(ctx.Output, "-- Auth Microflow: %s\n", svc.AuthMicroflow)
@@ -385,7 +385,7 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 			}
 
 			// PUBLISH ENTITY line with modes
-			fmt.Fprintf(ctx.Output, "  PUBLISH ENTITY %s AS '%s'", et.Entity, et.ExposedName)
+			fmt.Fprintf(ctx.Output, "  publish entity %s as '%s'", et.Entity, et.ExposedName)
 			if es != nil {
 				var modeProps []string
 				if es.ReadMode != "" {
@@ -412,7 +412,7 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 
 			// EXPOSE members
 			if len(et.Members) > 0 {
-				fmt.Fprintln(ctx.Output, "  EXPOSE (")
+				fmt.Fprintln(ctx.Output, "  expose (")
 				for i, m := range et.Members {
 					var modifiers []string
 					if m.Filterable {
@@ -425,7 +425,7 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 						modifiers = append(modifiers, "Key")
 					}
 
-					line := fmt.Sprintf("    %s AS '%s'", m.Name, m.ExposedName)
+					line := fmt.Sprintf("    %s as '%s'", m.Name, m.ExposedName)
 					if len(modifiers) > 0 {
 						line += fmt.Sprintf(" (%s)", strings.Join(modifiers, ", "))
 					}
@@ -445,7 +445,7 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 	// Output GRANT statements for allowed module roles
 	if len(svc.AllowedModuleRoles) > 0 {
 		fmt.Fprintln(ctx.Output)
-		fmt.Fprintf(ctx.Output, "GRANT ACCESS ON ODATA SERVICE %s.%s TO %s;\n",
+		fmt.Fprintf(ctx.Output, "grant access on odata service %s.%s to %s;\n",
 			moduleName, svc.Name, strings.Join(svc.AllowedModuleRoles, ", "))
 	}
 
@@ -695,8 +695,8 @@ func outputExternalEntityMDL(ctx *ExecContext, entity *domainmodel.Entity, modul
 		outputJavadoc(ctx.Output, entity.Documentation)
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE EXTERNAL ENTITY %s.%s\n", moduleName, entity.Name)
-	fmt.Fprintf(ctx.Output, "FROM ODATA CLIENT %s\n", entity.RemoteServiceName)
+	fmt.Fprintf(ctx.Output, "create external entity %s.%s\n", moduleName, entity.Name)
+	fmt.Fprintf(ctx.Output, "from odata client %s\n", entity.RemoteServiceName)
 	fmt.Fprintln(ctx.Output, "(")
 
 	var props []string
@@ -754,7 +754,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 	}
 
 	if s.Name.Module == "" {
-		return mdlerrors.NewValidation("module name required: use CREATE EXTERNAL ENTITY Module.Name FROM ODATA CLIENT ...")
+		return mdlerrors.NewValidation("module name required: use create external entity Module.Name from odata client ...")
 	}
 
 	// Find module
@@ -779,7 +779,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 	}
 
 	if existingEntity != nil && !s.CreateOrModify {
-		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use CREATE OR MODIFY to update)", s.Name.Module, s.Name.Name))
+		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use create or modify to update)", s.Name.Module, s.Name.Name))
 	}
 
 	// Build attributes
@@ -858,7 +858,7 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 	}
 
 	if stmt.Name.Module == "" {
-		return mdlerrors.NewValidation("module name required: use CREATE ODATA CLIENT Module.Name (...)")
+		return mdlerrors.NewValidation("module name required: use create odata client Module.Name (...)")
 	}
 
 	module, err := findModule(ctx, stmt.Name.Module)
@@ -952,7 +952,7 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 					fmt.Fprintf(ctx.Output, "Modified OData client: %s.%s\n", modName, svc.Name)
 					return nil
 				}
-				return mdlerrors.NewAlreadyExistsMsg("OData client", modName+"."+svc.Name, fmt.Sprintf("OData client already exists: %s.%s (use CREATE OR MODIFY to update)", modName, svc.Name))
+				return mdlerrors.NewAlreadyExistsMsg("OData client", modName+"."+svc.Name, fmt.Sprintf("OData client already exists: %s.%s (use create or modify to update)", modName, svc.Name))
 			}
 		}
 	}
@@ -1205,7 +1205,7 @@ func createODataService(ctx *ExecContext, stmt *ast.CreateODataServiceStmt) erro
 	}
 
 	if stmt.Name.Module == "" {
-		return mdlerrors.NewValidation("module name required: use CREATE ODATA SERVICE Module.Name (...)")
+		return mdlerrors.NewValidation("module name required: use create odata service Module.Name (...)")
 	}
 
 	module, err := findModule(ctx, stmt.Name.Module)
@@ -1255,7 +1255,7 @@ func createODataService(ctx *ExecContext, stmt *ast.CreateODataServiceStmt) erro
 					fmt.Fprintf(ctx.Output, "Modified OData service: %s.%s\n", modName, svc.Name)
 					return nil
 				}
-				return mdlerrors.NewAlreadyExistsMsg("OData service", modName+"."+svc.Name, fmt.Sprintf("OData service already exists: %s.%s (use CREATE OR MODIFY to update)", modName, svc.Name))
+				return mdlerrors.NewAlreadyExistsMsg("OData service", modName+"."+svc.Name, fmt.Sprintf("OData service already exists: %s.%s (use create or modify to update)", modName, svc.Name))
 			}
 		}
 	}
@@ -1393,7 +1393,7 @@ func dropODataService(ctx *ExecContext, stmt *ast.DropODataServiceStmt) error {
 // CE6825: Studio Pro requires the Service URL to be a constant, not a string literal.
 func validateServiceURL(url string) error {
 	if !strings.HasPrefix(url, "@") {
-		return mdlerrors.NewValidation("ServiceUrl must be a constant reference (e.g., @Module.ServiceUrlConstant) — Studio Pro CE6825: 'Service URL' must be a constant")
+		return mdlerrors.NewValidation("ServiceUrl must be a constant reference (e.g., @Module.ServiceUrlConstant) — Studio Pro CE6825: 'Service url' must be a constant")
 	}
 	return nil
 }
@@ -1412,7 +1412,7 @@ func formatExprValue(val string) string {
 // extractMicroflowRef strips "MICROFLOW " prefix from a microflow reference string.
 // Both "MICROFLOW Module.Name" and "Module.Name" formats are accepted.
 func extractMicroflowRef(ref string) string {
-	return strings.TrimPrefix(ref, "MICROFLOW ")
+	return strings.TrimPrefix(ref, "microflow ")
 }
 
 // astEntityDefToModel converts an AST PublishedEntityDef to model PublishedEntityType

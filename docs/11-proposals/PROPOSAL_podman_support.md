@@ -19,7 +19,7 @@ All container invocations go through 6 call sites in Go, all using `exec.Command
 |-----------|------|-------|
 | `runCompose()` | `cmd/mxcli/docker/runtime.go:281` | All compose operations (up, down, logs, shell) |
 | `runComposeOutput()` | `cmd/mxcli/docker/runtime.go:264` | Compose with captured output |
-| `Status()` | `cmd/mxcli/docker/runtime.go:208` | `docker compose ps --format json` |
+| `status()` | `cmd/mxcli/docker/runtime.go:208` | `docker compose ps --format json` |
 | `CallM2EE()` | `cmd/mxcli/docker/m2ee.go:166` | `docker compose exec` for admin API |
 | `testrunner` (2 sites) | `cmd/mxcli/testrunner/runner.go:313,445` | Compose for test execution |
 
@@ -40,8 +40,8 @@ Introduce a `containerCLI()` function that returns the container runtime binary 
 // containerCLI returns the container runtime binary ("docker" or "podman").
 // Resolution order:
 //   1. MXCLI_CONTAINER_CLI env var (explicit override)
-//   2. "docker" if available on PATH
-//   3. "podman" if available on PATH
+//   2. "docker" if available on path
+//   3. "podman" if available on path
 //   4. "docker" as fallback (will fail with a clear error at exec time)
 func containerCLI() string {
     if cli := os.Getenv("MXCLI_CONTAINER_CLI"); cli != "" {
@@ -66,10 +66,10 @@ Docker remains the default for backwards compatibility. Users with only Podman i
 **File: `cmd/mxcli/docker/runtime.go`** — new `containerCLI()` function, update 3 call sites:
 
 ```go
-// Before
+// before
 cmd := exec.Command("docker", append([]string{"compose"}, args...)...)
 
-// After
+// after
 cmd := exec.Command(containerCLI(), append([]string{"compose"}, args...)...)
 ```
 
@@ -83,7 +83,7 @@ Total: ~6 one-line changes after adding the `containerCLI()` function.
 
 Podman Compose supports Docker Compose v2 format, which is what `cmd/mxcli/docker/templates/docker-compose.yml` already uses. No changes needed to the compose template.
 
-One consideration: `docker compose ps --format json` output differs slightly between Docker and Podman. The `Status()` function in `runtime.go` parses this JSON. We need to verify and potentially handle both output formats.
+One consideration: `docker compose ps --format json` output differs slightly between Docker and Podman. The `status()` function in `runtime.go` parses this JSON. We need to verify and potentially handle both output formats.
 
 #### 3. Devcontainer — Podman-in-Podman
 
@@ -129,7 +129,7 @@ Update `cmd/mxcli/init.go` and `cmd/mxcli/tool_templates.go` to accept a `--cont
 | Area | Docker | Podman | Impact |
 |------|--------|--------|--------|
 | Compose subcommand | `docker compose` (built-in v2) | `podman compose` (v4.7+) | Require Podman 4.7+; older `podman-compose` (Python) has Compose v2 gaps |
-| `ps --format json` | Array of objects | May differ in field names | Test and normalize in `Status()` |
+| `ps --format json` | Array of objects | May differ in field names | Test and normalize in `status()` |
 | Rootless networking | N/A | Rootless containers can't bind to ports <1024 | Default ports (8080, 8090, 5432) are all >1024 — no issue |
 | Named volumes | `docker volume` | `podman volume` | Compose handles this transparently |
 | Health checks | `HEALTHCHECK` in Dockerfile | Supported since Podman 3.0 | No issue |

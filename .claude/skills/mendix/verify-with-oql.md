@@ -25,10 +25,10 @@ mxcli docker build -p app.mpr --skip-check
 mxcli docker reload -p app.mpr   # or: mxcli docker up -p app.mpr --fresh --wait
 
 # 2. Trigger (example: call a microflow that creates test data)
-# This could be via Playwright, a REST call, or manual interaction
+# This could be via Playwright, a rest call, or manual interaction
 
 # 3. Verify
-mxcli oql -p app.mpr "SELECT Name, Email FROM MyModule.Customer WHERE Name = 'Jane Doe'"
+mxcli oql -p app.mpr "select Name, Email from MyModule.Customer where Name = 'Jane Doe'"
 ```
 
 ## OQL Verification Examples
@@ -37,24 +37,24 @@ mxcli oql -p app.mpr "SELECT Name, Email FROM MyModule.Customer WHERE Name = 'Ja
 
 ```bash
 # Verify a customer was created
-mxcli oql -p app.mpr "SELECT Name, Email FROM Sales.Customer WHERE Name = 'Test Customer'"
+mxcli oql -p app.mpr "select Name, Email from Sales.Customer where Name = 'Test Customer'"
 
-# Count records
-mxcli oql -p app.mpr "SELECT count(*) AS Total FROM Sales.Order"
+# count records
+mxcli oql -p app.mpr "select count(*) as Total from Sales.Order"
 ```
 
 ### Check data was updated
 
 ```bash
 # Verify status was changed
-mxcli oql -p app.mpr "SELECT OrderNumber, Status FROM Sales.Order WHERE OrderNumber = 'ORD-001'"
+mxcli oql -p app.mpr "select OrderNumber, status from Sales.Order where OrderNumber = 'ORD-001'"
 ```
 
 ### Check data was deleted
 
 ```bash
 # Verify record no longer exists (should return empty)
-mxcli oql -p app.mpr "SELECT count(*) AS Total FROM Sales.Customer WHERE Name = 'Deleted Customer'"
+mxcli oql -p app.mpr "select count(*) as Total from Sales.Customer where Name = 'Deleted Customer'"
 ```
 
 ### Check associations
@@ -62,7 +62,7 @@ mxcli oql -p app.mpr "SELECT count(*) AS Total FROM Sales.Customer WHERE Name = 
 ```bash
 # Verify an association was set (join query)
 mxcli oql -p app.mpr \
-  "SELECT o.OrderNumber, c.Name FROM Sales.Order o JOIN o/Sales.Order_Customer/Sales.Customer c WHERE o.OrderNumber = 'ORD-001'"
+  "select o.OrderNumber, c.Name from Sales.Order o join o/Sales.Order_Customer/Sales.Customer c where o.OrderNumber = 'ORD-001'"
 ```
 
 ### JSON output for assertions
@@ -70,13 +70,13 @@ mxcli oql -p app.mpr \
 Use `--json` for structured output that's easy to parse in scripts:
 
 ```bash
-# JSON output for piping to jq
+# json output for piping to jq
 mxcli oql -p app.mpr --json "SELECT Name FROM Sales.Customer" | jq '.[].Name'
 
-# Count check in a script
-COUNT=$(mxcli oql -p app.mpr --json "SELECT count(*) AS Total FROM Sales.Order" | jq -r '.[0].Total')
-if [ "$COUNT" -gt 0 ]; then
-  echo "Orders exist: $COUNT"
+# count check in a script
+count=$(mxcli oql -p app.mpr --json "SELECT count(*) AS Total FROM Sales.Order" | jq -r '.[0].Total')
+if [ "$count" -gt 0 ]; then
+  echo "Orders exist: $count"
 fi
 ```
 
@@ -109,11 +109,11 @@ test('creating a customer via UI persists correctly', async ({ page }) => {
   await page.locator('.mx-name-txtEmail input').fill('oql@test.com');
   await page.locator('.mx-name-btnSave').click();
 
-  // Wait for save to complete
+  // wait for save to complete
   await page.waitForTimeout(2000);
 
   // Verify via OQL
-  const rows = oql("SELECT Name, Email FROM Sales.Customer WHERE Name = 'OQL Test Customer'");
+  const rows = oql("select Name, Email from Sales.Customer where Name = 'OQL Test Customer'");
   expect(rows).toHaveLength(1);
   expect(rows[0].Email).toBe('oql@test.com');
 });
@@ -131,11 +131,11 @@ test('approving an order updates status and creates audit log', async ({ page })
   await page.waitForTimeout(2000);
 
   // Verify order status changed
-  const orders = oql("SELECT Status FROM Sales.Order WHERE OrderNumber = 'ORD-001'");
+  const orders = oql("select status from Sales.Order where OrderNumber = 'ORD-001'");
   expect(orders[0].Status).toBe('Approved');
 
   // Verify audit log was created
-  const logs = oql("SELECT Action FROM Sales.AuditLog WHERE Action = 'Order Approved'");
+  const logs = oql("select action from Sales.AuditLog where action = 'Order Approved'");
   expect(logs.length).toBeGreaterThan(0);
 });
 ```
@@ -157,7 +157,7 @@ mxcli docker reload -p app.mpr
 # 4. Trigger the microflow (via UI or test)
 
 # 5. Verify the result
-mxcli oql -p app.mpr "SELECT Status FROM Sales.Order WHERE OrderNumber = 'ORD-001'"
+mxcli oql -p app.mpr "select status from Sales.Order where OrderNumber = 'ORD-001'"
 
 # Repeat from step 1 until correct
 ```
@@ -171,9 +171,9 @@ This loop avoids container restarts and database resets, making each iteration t
 - **Check before and after** — query the state before triggering an action to establish a baseline
 - **Common OQL patterns for testing:**
   - `count(*)` to verify record counts
-  - `WHERE` clauses to find specific records
-  - `JOIN` to verify associations were set
-  - `ORDER BY ... LIMIT 1` to check the most recent record
+  - `where` clauses to find specific records
+  - `join` to verify associations were set
+  - `ORDER by ... limit 1` to check the most recent record
 - **`--direct` mode** is faster when the admin port is reachable (after `admin.addresses` build patch)
 
 ## Related Skills

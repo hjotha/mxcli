@@ -139,7 +139,7 @@ func annotateForwardRef(err error, _ ast.Statement, created, allDefined *scriptC
 			continue // already created before this statement
 		}
 		if strings.Contains(msg, name) {
-			return fmt.Errorf("%w\n  hint: %s is defined later in this script — move its CREATE statement before this one", err, name)
+			return fmt.Errorf("%w\n  hint: %s is defined later in this script — move its create statement before this one", err, name)
 		}
 	}
 	return err
@@ -214,10 +214,10 @@ func validateWithContext(ctx *ExecContext, stmt ast.Statement, sc *scriptContext
 			for _, col := range idx.Columns {
 				dt, exists := attrTypes[col.Name]
 				if !exists {
-					return mdlerrors.NewValidationf("INDEX on unknown attribute '%s'", col.Name)
+					return mdlerrors.NewValidationf("index on unknown attribute '%s'", col.Name)
 				}
 				if dt.Kind == ast.TypeString && dt.Length == 0 {
-					return mdlerrors.NewValidationf("INDEX on attribute '%s' is not allowed — String(unlimited) maps to TEXT/CLOB which cannot be indexed. Use a fixed length, e.g. String(200)", col.Name)
+					return mdlerrors.NewValidationf("index on attribute '%s' is not allowed — String(unlimited) maps to text/CLOB which cannot be indexed. Use a fixed length, e.g. String(200)", col.Name)
 				}
 			}
 		}
@@ -411,7 +411,7 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 		known := buildPageQualifiedNames(ctx)
 		for _, ref := range refs.pages {
 			if !known[ref] && !sc.pages[ref] {
-				errors = append(errors, fmt.Sprintf("page not found: %s (referenced by SHOW PAGE)", ref))
+				errors = append(errors, fmt.Sprintf("page not found: %s (referenced by show page)", ref))
 			}
 		}
 	}
@@ -420,7 +420,7 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 		known := buildMicroflowQualifiedNames(ctx)
 		for _, ref := range refs.microflows {
 			if !known[ref] && !sc.microflows[ref] {
-				errors = append(errors, fmt.Sprintf("microflow not found: %s (referenced by CALL MICROFLOW)", ref))
+				errors = append(errors, fmt.Sprintf("microflow not found: %s (referenced by call microflow)", ref))
 			}
 		}
 	}
@@ -429,7 +429,7 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 		known := buildJavaActionQualifiedNames(ctx)
 		for _, ref := range refs.javaActions {
 			if !known[ref] {
-				errors = append(errors, fmt.Sprintf("java action not found: %s (referenced by CALL JAVA ACTION)", ref))
+				errors = append(errors, fmt.Sprintf("java action not found: %s (referenced by call java action)", ref))
 			}
 		}
 	}
@@ -482,17 +482,17 @@ func (c *microflowRefCollector) collectFromStatements(stmts []ast.MicroflowState
 			}
 		case *ast.CreateObjectStmt:
 			if s.EntityType.Module != "" {
-				c.entities = append(c.entities, entityRef{name: s.EntityType.String(), source: "CREATE"})
+				c.entities = append(c.entities, entityRef{name: s.EntityType.String(), source: "create"})
 			}
 		case *ast.RetrieveStmt:
 			if s.StartVariable != "" {
 				// Association retrieve — Source is an association name, not an entity; skip entity validation
 			} else if s.Source.Module != "" {
-				c.entities = append(c.entities, entityRef{name: s.Source.String(), source: "RETRIEVE"})
+				c.entities = append(c.entities, entityRef{name: s.Source.String(), source: "retrieve"})
 			}
 		case *ast.CreateListStmt:
 			if s.EntityType.Module != "" {
-				c.entities = append(c.entities, entityRef{name: s.EntityType.String(), source: "CREATE LIST OF"})
+				c.entities = append(c.entities, entityRef{name: s.EntityType.String(), source: "create list of"})
 			}
 		case *ast.IfStmt:
 			c.collectFromStatements(s.ThenBody)

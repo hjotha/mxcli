@@ -17,7 +17,7 @@ This proposal extends mxcli with code search capabilities to help Claude Code un
 **Catalog System** (`mdl/catalog/`):
 - In-memory SQLite database with 13 tables
 - Fast mode (metadata only) and full mode (activities/widgets)
-- SQL query interface via `SELECT ... FROM CATALOG.xxx`
+- SQL query interface via `select ... from CATALOG.xxx`
 - Snapshot system for point-in-time comparisons
 
 **Current Reference Tracking**:
@@ -59,65 +59,65 @@ This proposal extends mxcli with code search capabilities to help Claude Code un
 Add to `mdl/catalog/tables.go`:
 
 ```sql
-CREATE TABLE IF NOT EXISTS references (
-    Id TEXT PRIMARY KEY,
-    SourceType TEXT NOT NULL,       -- 'microflow', 'page', 'entity', 'widget', etc.
-    SourceId TEXT NOT NULL,         -- UUID of the source element
-    SourceName TEXT NOT NULL,       -- Qualified name (e.g., 'Module.Microflow')
-    SourceLocation TEXT,            -- Optional: activity/widget ID within document
-    TargetType TEXT NOT NULL,       -- 'microflow', 'entity', 'page', 'attribute', etc.
-    TargetId TEXT,                  -- UUID of target (if available)
-    TargetName TEXT NOT NULL,       -- Qualified name of referenced thing
-    RefKind TEXT NOT NULL,          -- 'call', 'retrieve', 'change', 'create', etc.
+create table if not exists references (
+    Id text primary key,
+    SourceType text not null,       -- 'microflow', 'page', 'entity', 'widget', etc.
+    SourceId text not null,         -- UUID of the source element
+    SourceName text not null,       -- Qualified name (e.g., 'Module.Microflow')
+    SourceLocation text,            -- Optional: activity/widget ID within document
+    TargetType text not null,       -- 'microflow', 'entity', 'page', 'attribute', etc.
+    TargetId text,                  -- UUID of target (if available)
+    TargetName text not null,       -- Qualified name of referenced thing
+    RefKind text not null,          -- 'call', 'retrieve', 'change', 'create', etc.
     -- Snapshot metadata (same as other tables)
-    ProjectId TEXT,
-    ProjectName TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT,
-    SourceId TEXT,
-    SourceBranch TEXT,
-    SourceRevision TEXT
+    ProjectId text,
+    ProjectName text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text,
+    SourceId text,
+    SourceBranch text,
+    SourceRevision text
 );
 
-CREATE INDEX IF NOT EXISTS idx_refs_target ON references(TargetType, TargetName);
-CREATE INDEX IF NOT EXISTS idx_refs_source ON references(SourceType, SourceName);
-CREATE INDEX IF NOT EXISTS idx_refs_kind ON references(RefKind);
-CREATE INDEX IF NOT EXISTS idx_refs_source_id ON references(SourceId);
-CREATE INDEX IF NOT EXISTS idx_refs_target_id ON references(TargetId);
+create index if not exists idx_refs_target on references(TargetType, TargetName);
+create index if not exists idx_refs_source on references(SourceType, SourceName);
+create index if not exists idx_refs_kind on references(RefKind);
+create index if not exists idx_refs_source_id on references(SourceId);
+create index if not exists idx_refs_target_id on references(TargetId);
 ```
 
 #### Convenience Views
 
 ```sql
 -- Microflow call graph
-CREATE VIEW IF NOT EXISTS call_graph AS
-SELECT
+create view if not exists call_graph as
+select
     SourceName as Caller,
     TargetName as Callee
-FROM references
-WHERE SourceType = 'microflow'
-  AND TargetType = 'microflow'
-  AND RefKind = 'call';
+from references
+where SourceType = 'microflow'
+  and TargetType = 'microflow'
+  and RefKind = 'call';
 
 -- Entity usage view
-CREATE VIEW IF NOT EXISTS entity_usage AS
-SELECT
-    TargetName as Entity,
+create view if not exists entity_usage as
+select
+    TargetName as entity,
     SourceType,
     SourceName,
     RefKind
-FROM references
-WHERE TargetType = 'entity';
+from references
+where TargetType = 'entity';
 
 -- Page references view
-CREATE VIEW IF NOT EXISTS page_refs AS
-SELECT
-    SourceName as Source,
-    TargetName as Page,
+create view if not exists page_refs as
+select
+    SourceName as source,
+    TargetName as page,
     RefKind
-FROM references
-WHERE TargetType = 'page';
+from references
+where TargetType = 'page';
 ```
 
 ### 2. Reference Extraction
@@ -185,7 +185,7 @@ func (b *Builder) extractMicroflowReferences(stmt *sql.Stmt,
 
     sourceID := string(mf.ID)
 
-    // Parameter types
+    // parameter types
     for _, param := range mf.Parameters {
         if entityName := getEntityFromDataType(param.ParameterType); entityName != "" {
             b.addReference(stmt, "microflow", sourceID, qualifiedName, "",
@@ -193,13 +193,13 @@ func (b *Builder) extractMicroflowReferences(stmt *sql.Stmt,
         }
     }
 
-    // Return type
+    // return type
     if entityName := getEntityFromDataType(mf.ReturnType); entityName != "" {
         b.addReference(stmt, "microflow", sourceID, qualifiedName, "",
             "entity", "", entityName, "return_type")
     }
 
-    // Actions
+    // actions
     if mf.ObjectCollection != nil {
         for _, obj := range mf.ObjectCollection.Objects {
             b.extractActionReferences(stmt, obj, sourceID, qualifiedName)
@@ -218,7 +218,7 @@ func (b *Builder) extractActionReferences(stmt *sql.Stmt,
     if act, ok := obj.(*microflows.ActionActivity); ok && act.Action != nil {
         switch a := act.Action.(type) {
         case *microflows.MicroflowCallAction:
-            // Microflow call reference
+            // microflow call reference
             if a.MicroflowQualifiedName != "" {
                 b.addReference(stmt, "microflow", sourceID, sourceName, activityID,
                     "microflow", string(a.MicroflowID), a.MicroflowQualifiedName, "call")
@@ -250,7 +250,7 @@ func (b *Builder) extractActionReferences(stmt *sql.Stmt,
                     "page", string(a.PageID), a.PageQualifiedName, "show_page")
             }
 
-        // Add more action types as needed...
+        // add more action types as needed...
         }
     }
 }
@@ -289,11 +289,11 @@ func getEntityFromDataType(dt microflows.DataType) string {
 
 ```antlr
 searchStatement
-    : SEARCH (searchType)? searchPattern (searchOptions)*
+    : search (searchType)? searchPattern (searchOptions)*
     ;
 
 searchType
-    : ENTITY | MICROFLOW | PAGE | REFERENCES | CALLERS | CALLEES
+    : entity | microflow | page | references | callers | callees
     ;
 
 searchPattern
@@ -302,18 +302,18 @@ searchPattern
     ;
 
 searchOptions
-    : IN qualifiedName
-    | WHERE expression
-    | TRANSITIVE
-    | LIMIT INTEGER_LITERAL
+    : in qualifiedName
+    | where expression
+    | transitive
+    | limit INTEGER_LITERAL
     ;
 
 // Keywords
-SEARCH: S E A R C H;
-CALLERS: C A L L E R S;
-CALLEES: C A L L E E S;
-REFERENCES: R E F E R E N C E S;
-TRANSITIVE: T R A N S I T I V E;
+search: S E A R C H;
+callers: C A L L E R S;
+callees: C A L L E E S;
+references: R E F E R E N C E S;
+transitive: T R A N S I T I V E;
 ```
 
 **AST types** (`mdl/ast/ast_search.go`):
@@ -335,11 +335,11 @@ const (
 
 type SearchStmt struct {
     SearchType   SearchType
-    Pattern      string
+    pattern      string
     InModule     string
     WhereClause  string
-    Transitive   bool
-    Limit        int
+    transitive   bool
+    limit        int
 }
 
 func (s *SearchStmt) isStatement() {}
@@ -373,31 +373,31 @@ func (e *Executor) searchCallers(target string, transitive bool, limit int) erro
     if transitive {
         // Recursive CTE for transitive callers
         query := `
-            WITH RECURSIVE callers_cte AS (
-                SELECT Caller, 1 as Depth
-                FROM call_graph
-                WHERE Callee = ?
-                UNION ALL
-                SELECT cg.Caller, c.Depth + 1
-                FROM call_graph cg
-                JOIN callers_cte c ON cg.Callee = c.Caller
-                WHERE c.Depth < 10
+            with RECURSIVE callers_cte as (
+                select Caller, 1 as depth
+                from call_graph
+                where Callee = ?
+                union all
+                select cg.Caller, c.Depth + 1
+                from call_graph cg
+                join callers_cte c on cg.Callee = c.Caller
+                where c.Depth < 10
             )
-            SELECT DISTINCT Caller, MIN(Depth) as Depth
-            FROM callers_cte
-            GROUP BY Caller
-            ORDER BY Depth, Caller
+            select distinct Caller, min(depth) as depth
+            from callers_cte
+            GROUP by Caller
+            ORDER by depth, Caller
         `
         if limit > 0 {
-            query += fmt.Sprintf(" LIMIT %d", limit)
+            query += fmt.Sprintf(" limit %d", limit)
         }
         return e.execCatalogQuery(query, target)
     }
 
     // Direct callers only
-    query := `SELECT Caller FROM call_graph WHERE Callee = ?`
+    query := `select Caller from call_graph where Callee = ?`
     if limit > 0 {
-        query += fmt.Sprintf(" LIMIT %d", limit)
+        query += fmt.Sprintf(" limit %d", limit)
     }
     return e.execCatalogQuery(query, target)
 }
@@ -409,20 +409,20 @@ func (e *Executor) searchCallees(source string, transitive bool, limit int) erro
 
 func (e *Executor) searchReferences(target, module string, limit int) error {
     query := `
-        SELECT SourceType, SourceName, RefKind
-        FROM references
-        WHERE TargetName = ? OR TargetName LIKE ?
+        select SourceType, SourceName, RefKind
+        from references
+        where TargetName = ? or TargetName like ?
     `
     args := []interface{}{target, "%" + target}
 
     if module != "" {
-        query += " AND SourceName LIKE ?"
+        query += " and SourceName like ?"
         args = append(args, module+".%")
     }
 
-    query += " ORDER BY RefKind, SourceType, SourceName"
+    query += " ORDER by RefKind, SourceType, SourceName"
     if limit > 0 {
-        query += fmt.Sprintf(" LIMIT %d", limit)
+        query += fmt.Sprintf(" limit %d", limit)
     }
 
     return e.execCatalogQueryWithArgs(query, args...)
@@ -434,19 +434,19 @@ func (e *Executor) searchReferences(target, module string, limit int) error {
 For REPL usage, add function-style queries:
 
 ```ruby
-# Find callers
-SHOW CALLERS OF Module.MicroflowName
-SHOW CALLERS OF Module.MicroflowName TRANSITIVE
+# find callers
+show callers of Module.MicroflowName
+show callers of Module.MicroflowName transitive
 
-# Find callees
-SHOW CALLEES OF Module.MicroflowName
+# find callees
+show callees of Module.MicroflowName
 
-# Find references
-SHOW REFERENCES TO Module.EntityName
-SHOW REFERENCES TO Module.EntityName.AttributeName
+# find references
+show references to Module.EntityName
+show references to Module.EntityName.AttributeName
 
-# Impact analysis
-SHOW IMPACT OF Module.EntityName
+# impact analysis
+show impact of Module.EntityName
 ```
 
 ### 4. CLI Commands
@@ -455,9 +455,9 @@ SHOW IMPACT OF Module.EntityName
 
 ```go
 var searchCmd = &cobra.Command{
-    Use:   "search <pattern>",
-    Short: "Search for elements in the project",
-    Long: `Search for modules, entities, microflows, pages, etc.
+    use:   "search <pattern>",
+    Short: "search for elements in the project",
+    long: `search for modules, entities, microflows, pages, etc.
 
 Examples:
   mxcli search -p app.mpr Customer
@@ -467,18 +467,18 @@ Examples:
   mxcli search -p app.mpr --refs Module.Customer
 `,
     Args: cobra.MinimumNArgs(1),
-    Run: func(cmd *cobra.Command, args []string) {
+    run: func(cmd *cobra.Command, args []string) {
         // Implementation
     },
 }
 
 func init() {
     searchCmd.Flags().StringP("type", "t", "", "Element type: entity, microflow, page")
-    searchCmd.Flags().Bool("callers", false, "Find callers of a microflow")
-    searchCmd.Flags().Bool("callees", false, "Find callees of a microflow")
-    searchCmd.Flags().Bool("refs", false, "Find references to an element")
+    searchCmd.Flags().Bool("callers", false, "find callers of a microflow")
+    searchCmd.Flags().Bool("callees", false, "find callees of a microflow")
+    searchCmd.Flags().Bool("refs", false, "find references to an element")
     searchCmd.Flags().Bool("transitive", false, "Include transitive references")
-    searchCmd.Flags().IntP("limit", "l", 50, "Maximum results")
+    searchCmd.Flags().IntP("limit", "l", 50, "maximum results")
 
     rootCmd.AddCommand(searchCmd)
 }
@@ -543,11 +543,11 @@ func (ca *ContextAssembler) assemble(target string) (string, error) {
         return "", err
     }
 
-    // 2. Get the target element definition
+    // 2. get the target element definition
     ca.addSection("Target: " + target)
     ca.addDefinition(target, targetType)
 
-    // 3. Get related elements based on type
+    // 3. get related elements based on type
     switch targetType {
     case "microflow":
         ca.assembleMicroflowContext(target)
@@ -561,53 +561,53 @@ func (ca *ContextAssembler) assemble(target string) (string, error) {
 }
 
 func (ca *ContextAssembler) assembleMicroflowContext(name string) {
-    // Add entities used (create, change, retrieve)
-    ca.addSection("Entities Used")
+    // add entities used (create, change, retrieve)
+    ca.addSection("entities Used")
     ca.addQueryResults(`
-        SELECT DISTINCT TargetName, RefKind
-        FROM references
-        WHERE SourceName = ? AND TargetType = 'entity'
+        select distinct TargetName, RefKind
+        from references
+        where SourceName = ? and TargetType = 'entity'
     `, name)
 
-    // Add called microflows (up to depth)
-    ca.addSection("Called Microflows")
+    // add called microflows (up to depth)
+    ca.addSection("Called microflows")
     ca.addCallees(name, ca.depth)
 
-    // Add direct callers (limited)
-    ca.addSection("Direct Callers (sample)")
+    // add direct callers (limited)
+    ca.addSection("Direct callers (sample)")
     ca.addQueryResults(`
-        SELECT SourceName FROM references
-        WHERE TargetName = ? AND RefKind = 'call'
-        LIMIT 5
+        select SourceName from references
+        where TargetName = ? and RefKind = 'call'
+        limit 5
     `, name)
 
-    // Add parameter/return types
+    // add parameter/return types
     ca.addSection("Signature")
     ca.addMicroflowSignature(name)
 }
 
 func (ca *ContextAssembler) assembleEntityContext(name string) {
-    // Add entity definition with attributes
-    ca.addSection("Entity Definition")
+    // add entity definition with attributes
+    ca.addSection("entity Definition")
     ca.addEntityDefinition(name)
 
-    // Add microflows that use this entity
-    ca.addSection("Microflows Using This Entity")
+    // add microflows that use this entity
+    ca.addSection("microflows Using This entity")
     ca.addQueryResults(`
-        SELECT DISTINCT SourceName, RefKind
-        FROM references
-        WHERE TargetName = ? AND SourceType = 'microflow'
-        ORDER BY RefKind, SourceName
-        LIMIT 20
+        select distinct SourceName, RefKind
+        from references
+        where TargetName = ? and SourceType = 'microflow'
+        ORDER by RefKind, SourceName
+        limit 20
     `, name)
 
-    // Add pages that display this entity
-    ca.addSection("Pages Displaying This Entity")
+    // add pages that display this entity
+    ca.addSection("pages Displaying This entity")
     ca.addQueryResults(`
-        SELECT DISTINCT SourceName
-        FROM references
-        WHERE TargetName = ? AND SourceType = 'page'
-        LIMIT 10
+        select distinct SourceName
+        from references
+        where TargetName = ? and SourceType = 'page'
+        limit 10
     `, name)
 }
 ```
@@ -622,21 +622,21 @@ mxcli context -p app.mpr Module.ProcessOrder --depth 2 --max-tokens 4000
 # ## Target: Module.ProcessOrder
 #
 # ### Definition
-# MICROFLOW Module.ProcessOrder(Order: MyModule.Order) RETURNS Boolean
+# microflow Module.ProcessOrder(Order: MyModule.Order) returns boolean
 #   ...microflow definition...
 #
-# ### Entities Used
-# | Entity | Usage |
+# ### entities Used
+# | entity | Usage |
 # |--------|-------|
 # | MyModule.Order | retrieve, change |
 # | MyModule.OrderLine | create |
 #
-# ### Called Microflows
+# ### Called microflows
 # - Module.ValidateOrder (depth 1)
 # - Module.CalculateTotal (depth 1)
 # - Module.SendNotification (depth 2)
 #
-# ### Direct Callers
+# ### Direct callers
 # - Module.ACT_SubmitOrder
 # - Module.ACT_ReprocessOrder
 ```
@@ -702,7 +702,7 @@ This is deferred to Phase 2 as it requires additional complexity and VS Code ext
 
 5. **Basic query commands**
    - File: `mdl/executor/cmd_search.go` (new)
-   - Add: `SHOW CALLERS`, `SHOW CALLEES`, `SHOW REFERENCES`
+   - Add: `show callers`, `show callees`, `show references`
 
 ### Phase 2: Search Commands & CLI (Estimated: Low-Medium Complexity)
 
@@ -777,7 +777,7 @@ This is deferred to Phase 2 as it requires additional complexity and VS Code ext
 3. **What's the priority for LSP support?**
    - Could be deferred if CLI/REPL is sufficient for Claude Code
 
-4. **Should we add a `SHOW IMPACT` command?**
+4. **Should we add a `show impact` command?**
    - Would show everything affected by changing an element
    - Could be expensive for highly-connected elements
 
@@ -787,15 +787,15 @@ This is deferred to Phase 2 as it requires additional complexity and VS Code ext
 
 ```sql
 -- Existing tables (from mdl/catalog/tables.go)
-modules (Id, Name, QualifiedName, ModuleName, Folder, Description, ...)
-entities (Id, Name, QualifiedName, ModuleName, Folder, EntityType, Generalization, ...)
-microflows (Id, Name, QualifiedName, ModuleName, Folder, MicroflowType, ReturnType, ...)
+modules (Id, Name, QualifiedName, ModuleName, folder, description, ...)
+entities (Id, Name, QualifiedName, ModuleName, folder, EntityType, generalization, ...)
+microflows (Id, Name, QualifiedName, ModuleName, folder, MicroflowType, ReturnType, ...)
 nanoflows -- View: filtered microflows
-pages (Id, Name, QualifiedName, ModuleName, Folder, Title, URL, LayoutRef, ...)
-snippets (Id, Name, QualifiedName, ModuleName, Folder, ...)
-enumerations (Id, Name, QualifiedName, ModuleName, Folder, ValueCount, ...)
-activities (Id, Name, Caption, ActivityType, MicroflowId, EntityRef, ActionType, ...)
-widgets (Id, Name, WidgetType, ContainerId, EntityRef, AttributeRef, ...)
+pages (Id, Name, QualifiedName, ModuleName, folder, title, url, LayoutRef, ...)
+snippets (Id, Name, QualifiedName, ModuleName, folder, ...)
+enumerations (Id, Name, QualifiedName, ModuleName, folder, ValueCount, ...)
+activities (Id, Name, caption, ActivityType, MicroflowId, EntityRef, ActionType, ...)
+widgets (Id, Name, widgettype, ContainerId, EntityRef, AttributeRef, ...)
 xpath_expressions (...)  -- Schema exists but not populated
 projects (...)
 snapshots (...)
@@ -807,6 +807,6 @@ references (Id, SourceType, SourceId, SourceName, SourceLocation,
 
 -- Proposed new views
 call_graph (Caller, Callee)
-entity_usage (Entity, SourceType, SourceName, RefKind)
-page_refs (Source, Page, RefKind)
+entity_usage (entity, SourceType, SourceName, RefKind)
+page_refs (source, page, RefKind)
 ```

@@ -15,7 +15,7 @@
  *
  * @since 1.0.0
  */
-CREATE MODULE Materials;
+create module Materials;
 
 -- MARK: ENUMERATIONS
 
@@ -27,7 +27,7 @@ CREATE MODULE Materials;
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION Materials.MaterialUnit (
+create enumeration Materials.MaterialUnit (
   Piece 'Piece',
   Meter 'Meter',
   SquareMeter 'Square Meter',
@@ -45,7 +45,7 @@ CREATE ENUMERATION Materials.MaterialUnit (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION Materials.MovementType (
+create enumeration Materials.MovementType (
   Incoming 'Incoming',
   Outgoing 'Outgoing',
   Adjustment 'Adjustment',
@@ -60,7 +60,7 @@ CREATE ENUMERATION Materials.MovementType (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION Materials.PurchaseOrderStatus (
+create enumeration Materials.PurchaseOrderStatus (
   Draft 'Draft',
   Ordered 'Ordered',
   PartiallyReceived 'Partially Received',
@@ -78,14 +78,14 @@ CREATE ENUMERATION Materials.PurchaseOrderStatus (
  *
  * @since 1.0.0
  */
-@Position(50, 50)
-CREATE PERSISTENT ENTITY Materials.MaterialCategory (
+@position(50, 50)
+create persistent entity Materials.MaterialCategory (
   /** Category name */
-  CategoryName: String(200) NOT NULL ERROR 'Category name is required',
+  CategoryName: string(200) not null error 'Category name is required',
   /** Category description */
-  CategoryDescription: String(1000),
+  CategoryDescription: string(1000),
   /** Whether this category is active */
-  IsActive: Boolean DEFAULT true
+  IsActive: boolean default true
 );
 
 /**
@@ -98,33 +98,33 @@ CREATE PERSISTENT ENTITY Materials.MaterialCategory (
  * @see Materials.MaterialCategory
  * @see Materials.Supplier
  */
-@Position(350, 50)
-CREATE PERSISTENT ENTITY Materials.Material (
+@position(350, 50)
+create persistent entity Materials.Material (
   /** Unique material code */
-  MaterialCode: String(50) NOT NULL ERROR 'Material code is required' UNIQUE ERROR 'Material code must be unique',
+  MaterialCode: string(50) not null error 'Material code is required' unique error 'Material code must be unique',
   /** Material display name */
-  MaterialName: String(200) NOT NULL ERROR 'Material name is required',
+  MaterialName: string(200) not null error 'Material name is required',
   /** Detailed description */
-  MaterialDescription: String(2000),
+  MaterialDescription: string(2000),
   /** Unit of measure */
-  UnitOfMeasure: Enumeration(Materials.MaterialUnit) NOT NULL ERROR 'Unit of measure is required',
+  UnitOfMeasure: enumeration(Materials.MaterialUnit) not null error 'Unit of measure is required',
   /** Unit cost (last purchase price) */
-  UnitCost: Decimal DEFAULT 0,
+  UnitCost: decimal default 0,
   /** Current quantity in stock */
-  QuantityInStock: Decimal DEFAULT 0,
+  QuantityInStock: decimal default 0,
   /** Minimum stock level (triggers reorder alert) */
-  MinimumStockLevel: Decimal DEFAULT 0,
+  MinimumStockLevel: decimal default 0,
   /** Standard reorder quantity */
-  ReorderQuantity: Decimal DEFAULT 0,
+  ReorderQuantity: decimal default 0,
   /** Whether this material is active */
-  IsActive: Boolean DEFAULT true,
+  IsActive: boolean default true,
   /** Storage location code */
-  StorageLocation: String(50),
+  StorageLocation: string(50),
   /** Additional specifications */
-  Specifications: String(2000)
+  Specifications: string(2000)
 )
-INDEX (MaterialCode)
-INDEX (IsActive);
+index (MaterialCode)
+index (IsActive);
 
 /**
  * Supplier entity
@@ -134,36 +134,36 @@ INDEX (IsActive);
  * @since 1.0.0
  * @see Materials.Material
  */
-@Position(50, 250)
-CREATE PERSISTENT ENTITY Materials.Supplier (
+@position(50, 250)
+create persistent entity Materials.Supplier (
   /** Unique supplier code */
-  SupplierCode: String(50) NOT NULL ERROR 'Supplier code is required' UNIQUE ERROR 'Supplier code must be unique',
+  SupplierCode: string(50) not null error 'Supplier code is required' unique error 'Supplier code must be unique',
   /** Company name */
-  SupplierName: String(200) NOT NULL ERROR 'Supplier name is required',
+  SupplierName: string(200) not null error 'Supplier name is required',
   /** Primary contact person */
-  ContactPerson: String(200),
+  ContactPerson: string(200),
   /** Email address */
-  Email: String(200),
+  Email: string(200),
   /** Phone number */
-  Phone: String(50),
+  Phone: string(50),
   /** Street address */
-  Street: String(200),
+  Street: string(200),
   /** City */
-  City: String(100),
+  City: string(100),
   /** Postal code */
-  PostalCode: String(20),
+  PostalCode: string(20),
   /** Country */
-  Country: String(100),
+  Country: string(100),
   /** Website URL */
-  Website: String(500),
+  Website: string(500),
   /** Payment terms (e.g. 'Net 30') */
-  PaymentTerms: String(100),
+  PaymentTerms: string(100),
   /** Whether this supplier is active */
-  IsActive: Boolean DEFAULT true,
+  IsActive: boolean default true,
   /** General notes */
-  Notes: String(2000)
+  Notes: string(2000)
 )
-INDEX (SupplierCode);
+index (SupplierCode);
 
 /**
  * Stock movement entity
@@ -174,23 +174,23 @@ INDEX (SupplierCode);
  * @since 1.0.0
  * @see Materials.Material
  */
-@Position(650, 50)
-CREATE PERSISTENT ENTITY Materials.StockMovement (
+@position(650, 50)
+create persistent entity Materials.StockMovement (
   /** Type of movement */
-  MovementType: Enumeration(Materials.MovementType) NOT NULL ERROR 'Movement type is required',
+  MovementType: enumeration(Materials.MovementType) not null error 'Movement type is required',
   /** Quantity moved (positive for in, negative for out) */
-  Quantity: Decimal NOT NULL ERROR 'Quantity is required',
+  Quantity: decimal not null error 'Quantity is required',
   /** Date and time of the movement */
-  MovementDate: DateTime NOT NULL ERROR 'Movement date is required',
+  MovementDate: datetime not null error 'Movement date is required',
   /** Reference number (PO number, work order number, etc.) */
-  ReferenceNumber: String(100),
+  ReferenceNumber: string(100),
   /** Reason or notes for this movement */
-  MovementReason: String(500),
+  MovementReason: string(500),
   /** Stock level after this movement */
-  BalanceAfter: Decimal
+  BalanceAfter: decimal
 )
-INDEX (MovementDate DESC)
-INDEX (MovementType);
+index (MovementDate desc)
+index (MovementType);
 
 /**
  * Purchase order entity
@@ -201,26 +201,26 @@ INDEX (MovementType);
  * @see Materials.Supplier
  * @see Materials.PurchaseOrderLine
  */
-@Position(350, 250)
-CREATE PERSISTENT ENTITY Materials.PurchaseOrder (
+@position(350, 250)
+create persistent entity Materials.PurchaseOrder (
   /** Auto-generated PO number */
-  PONumber: AutoNumber DEFAULT 1,
+  PONumber: autonumber default 1,
   /** Current order status */
-  POStatus: Enumeration(Materials.PurchaseOrderStatus) NOT NULL ERROR 'PO status is required',
+  POStatus: enumeration(Materials.PurchaseOrderStatus) not null error 'PO status is required',
   /** Date the order was placed */
-  OrderDate: DateTime,
+  OrderDate: datetime,
   /** Expected delivery date */
-  ExpectedDeliveryDate: DateTime,
+  ExpectedDeliveryDate: datetime,
   /** Actual delivery date */
-  ActualDeliveryDate: DateTime,
+  ActualDeliveryDate: datetime,
   /** Total order amount */
-  TotalAmount: Decimal DEFAULT 0,
+  TotalAmount: decimal default 0,
   /** Supplier's reference or confirmation number */
-  SupplierReference: String(100),
+  SupplierReference: string(100),
   /** Notes about this order */
-  Notes: String(2000)
+  Notes: string(2000)
 )
-INDEX (POStatus);
+index (POStatus);
 
 /**
  * Purchase order line entity
@@ -231,18 +231,18 @@ INDEX (POStatus);
  * @see Materials.PurchaseOrder
  * @see Materials.Material
  */
-@Position(650, 250)
-CREATE PERSISTENT ENTITY Materials.PurchaseOrderLine (
+@position(650, 250)
+create persistent entity Materials.PurchaseOrderLine (
   /** Line number */
-  LineNumber: Integer NOT NULL ERROR 'Line number is required',
+  LineNumber: integer not null error 'Line number is required',
   /** Quantity ordered */
-  QuantityOrdered: Decimal NOT NULL ERROR 'Quantity ordered is required',
+  QuantityOrdered: decimal not null error 'Quantity ordered is required',
   /** Quantity received so far */
-  QuantityReceived: Decimal DEFAULT 0,
+  QuantityReceived: decimal default 0,
   /** Unit price */
-  UnitPrice: Decimal NOT NULL ERROR 'Unit price is required',
+  UnitPrice: decimal not null error 'Unit price is required',
   /** Line total */
-  LineTotal: Decimal DEFAULT 0
+  LineTotal: decimal default 0
 );
 
 -- MARK: ASSOCIATIONS
@@ -254,11 +254,11 @@ CREATE PERSISTENT ENTITY Materials.PurchaseOrderLine (
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Materials.Material_MaterialCategory
-  FROM Materials.Material TO Materials.MaterialCategory
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Materials.Material_MaterialCategory
+  from Materials.Material to Materials.MaterialCategory
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links material to its preferred supplier
@@ -267,11 +267,11 @@ CREATE ASSOCIATION Materials.Material_MaterialCategory
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Materials.Material_Supplier
-  FROM Materials.Material TO Materials.Supplier
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Materials.Material_Supplier
+  from Materials.Material to Materials.Supplier
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links stock movement to its material
@@ -280,11 +280,11 @@ CREATE ASSOCIATION Materials.Material_Supplier
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Materials.StockMovement_Material
-  FROM Materials.StockMovement TO Materials.Material
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Materials.StockMovement_Material
+  from Materials.StockMovement to Materials.Material
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links purchase order to its supplier
@@ -293,11 +293,11 @@ CREATE ASSOCIATION Materials.StockMovement_Material
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Materials.PurchaseOrder_Supplier
-  FROM Materials.PurchaseOrder TO Materials.Supplier
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Materials.PurchaseOrder_Supplier
+  from Materials.PurchaseOrder to Materials.Supplier
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links PO line to its purchase order
@@ -306,11 +306,11 @@ CREATE ASSOCIATION Materials.PurchaseOrder_Supplier
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Materials.PurchaseOrderLine_PurchaseOrder
-  FROM Materials.PurchaseOrderLine TO Materials.PurchaseOrder
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association Materials.PurchaseOrderLine_PurchaseOrder
+  from Materials.PurchaseOrderLine to Materials.PurchaseOrder
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links PO line to the material being ordered
@@ -319,8 +319,8 @@ CREATE ASSOCIATION Materials.PurchaseOrderLine_PurchaseOrder
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Materials.PurchaseOrderLine_Material
-  FROM Materials.PurchaseOrderLine TO Materials.Material
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Materials.PurchaseOrderLine_Material
+  from Materials.PurchaseOrderLine to Materials.Material
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;

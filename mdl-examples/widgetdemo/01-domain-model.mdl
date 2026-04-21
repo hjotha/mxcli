@@ -1,56 +1,56 @@
 -- WidgetDemo: self-contained domain model (no external dependencies)
 -- Provides entities and enumerations for the widget showcase page.
 
-CREATE MODULE WidgetDemo;
-CREATE MODULE ROLE WidgetDemo.User;
+create module WidgetDemo;
+create module role WidgetDemo.user;
 
-CREATE ENUMERATION WidgetDemo.ENUM_Priority (
+create enumeration WidgetDemo.ENUM_Priority (
   LOW 'Low',
   MEDIUM 'Medium',
   HIGH 'High',
-  CRITICAL 'Critical'
+  critical 'Critical'
 );
 
-CREATE ENUMERATION WidgetDemo.ENUM_Status (
+create enumeration WidgetDemo.ENUM_Status (
   DRAFT 'Draft',
   ACTIVE 'Active',
   COMPLETED 'Completed',
   ARCHIVED 'Archived'
 );
 
-CREATE ENUMERATION WidgetDemo.ENUM_Category (
+create enumeration WidgetDemo.ENUM_Category (
   GENERAL 'General',
   INPUT 'Input',
-  DISPLAY 'Display',
-  STRUCTURE 'Structure',
+  display 'Display',
+  structure 'Structure',
   DATA_DISPLAY 'Data Display'
 );
 
-CREATE PERSISTENT ENTITY WidgetDemo.DemoItem (
-  Title: String(unlimited) NOT NULL,
-  Description: String(unlimited),
-  Code: String(unlimited),
-  Category: Enumeration(WidgetDemo.ENUM_Category) DEFAULT WidgetDemo.ENUM_Category.GENERAL,
-  Priority: Enumeration(WidgetDemo.ENUM_Priority) DEFAULT WidgetDemo.ENUM_Priority.MEDIUM,
-  ItemStatus: Enumeration(WidgetDemo.ENUM_Status) DEFAULT WidgetDemo.ENUM_Status.DRAFT,
-  IsActive: Boolean DEFAULT true,
-  Score: Integer DEFAULT 0,
-  Amount: Decimal DEFAULT 0,
-  DateCreated: DateTime,
-  DueDate: DateTime,
-  Progress: Decimal DEFAULT 0,
-  Rating: Integer DEFAULT 3,
-  Notes: String(unlimited),
-  ImageUrl: String(unlimited)
+create persistent entity WidgetDemo.DemoItem (
+  title: string(unlimited) not null,
+  description: string(unlimited),
+  Code: string(unlimited),
+  Category: enumeration(WidgetDemo.ENUM_Category) default WidgetDemo.ENUM_Category.GENERAL,
+  Priority: enumeration(WidgetDemo.ENUM_Priority) default WidgetDemo.ENUM_Priority.MEDIUM,
+  ItemStatus: enumeration(WidgetDemo.ENUM_Status) default WidgetDemo.ENUM_Status.DRAFT,
+  IsActive: boolean default true,
+  Score: integer default 0,
+  Amount: decimal default 0,
+  DateCreated: datetime,
+  DueDate: datetime,
+  Progress: decimal default 0,
+  Rating: integer default 3,
+  Notes: string(unlimited),
+  ImageUrl: string(unlimited)
 );
 
-CREATE NON-PERSISTENT ENTITY WidgetDemo.Helper (
-  Attribute: Enumeration(WidgetDemo.ENUM_Category) DEFAULT WidgetDemo.ENUM_Category.GENERAL
+create non-persistent entity WidgetDemo.Helper (
+  attribute: enumeration(WidgetDemo.ENUM_Category) default WidgetDemo.ENUM_Category.GENERAL
 );
 
-CREATE ASSOCIATION WidgetDemo.Helper_DemoItem (
-  FROM WidgetDemo.Helper TO WidgetDemo.DemoItem,
-  Type: ReferenceSet
+create association WidgetDemo.Helper_DemoItem (
+  from WidgetDemo.Helper to WidgetDemo.DemoItem,
+  type: ReferenceSet
 );
 
-GRANT WidgetDemo.User ON WidgetDemo.DemoItem (CREATE, DELETE, READ *, WRITE *);
+grant WidgetDemo.user on WidgetDemo.DemoItem (create, delete, read *, write *);

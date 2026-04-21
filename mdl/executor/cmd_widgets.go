@@ -26,25 +26,25 @@ func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
 
 	// Build SQL query from filters
 	var query strings.Builder
-	query.WriteString("SELECT Name, WidgetType, ContainerQualifiedName, ModuleName FROM widgets WHERE 1=1")
+	query.WriteString("select Name, WidgetType, ContainerQualifiedName, ModuleName from widgets where 1=1")
 	args := []any{}
 
 	for _, f := range s.Filters {
 		col := mapWidgetFilterField(f.Field)
-		if f.Operator == "LIKE" {
-			query.WriteString(fmt.Sprintf(" AND %s LIKE ?", col))
+		if f.Operator == "like" {
+			query.WriteString(fmt.Sprintf(" and %s like ?", col))
 		} else {
-			query.WriteString(fmt.Sprintf(" AND %s = ?", col))
+			query.WriteString(fmt.Sprintf(" and %s = ?", col))
 		}
 		args = append(args, f.Value)
 	}
 
 	if s.InModule != "" {
-		query.WriteString(" AND ModuleName = ?")
+		query.WriteString(" and ModuleName = ?")
 		args = append(args, s.InModule)
 	}
 
-	query.WriteString(" ORDER BY ModuleName, ContainerQualifiedName, Name")
+	query.WriteString(" ORDER by ModuleName, ContainerQualifiedName, Name")
 
 	// Execute query using SQLite parameterization
 	result, err := executeCatalogQueryWithArgs(ctx, query.String(), args...)
@@ -60,7 +60,7 @@ func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
 
 	// Print header
 	fmt.Fprintf(ctx.Output, "\n%-30s %-40s %-40s %-20s\n",
-		"NAME", "WIDGET TYPE", "CONTAINER", "MODULE")
+		"NAME", "widget type", "container", "module")
 	fmt.Fprintln(ctx.Output, strings.Repeat("-", 130))
 
 	// Print rows
@@ -109,7 +109,7 @@ func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 		len(widgets), len(containers))
 
 	if s.DryRun {
-		fmt.Fprintln(ctx.Output, "\n[DRY RUN] The following changes would be made:")
+		fmt.Fprintln(ctx.Output, "\n[dry run] The following changes would be made:")
 	}
 
 	// Process each container
@@ -124,11 +124,11 @@ func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 	}
 
 	if s.DryRun {
-		fmt.Fprintf(ctx.Output, "\n[DRY RUN] Would update %d widget(s)\n", totalUpdated)
-		fmt.Fprintln(ctx.Output, "\nRun without DRY RUN to apply changes.")
+		fmt.Fprintf(ctx.Output, "\n[dry run] Would update %d widget(s)\n", totalUpdated)
+		fmt.Fprintln(ctx.Output, "\nRun without dry run to apply changes.")
 	} else {
 		fmt.Fprintf(ctx.Output, "\nUpdated %d widget(s)\n", totalUpdated)
-		fmt.Fprintln(ctx.Output, "\nNote: Run 'REFRESH CATALOG FULL FORCE' to update the catalog with changes.")
+		fmt.Fprintln(ctx.Output, "\nNote: Run 'refresh catalog full force' to update the catalog with changes.")
 	}
 
 	return nil
@@ -147,22 +147,22 @@ type widgetRef struct {
 // findMatchingWidgets queries the catalog for widgets matching the filters.
 func findMatchingWidgets(ctx *ExecContext, filters []ast.WidgetFilter, module string) ([]widgetRef, error) {
 	var query strings.Builder
-	query.WriteString(`SELECT Id, Name, WidgetType, ContainerId, ContainerQualifiedName, ContainerType
-	          FROM widgets WHERE 1=1`)
+	query.WriteString(`select Id, Name, WidgetType, ContainerId, ContainerQualifiedName, ContainerType
+	          from widgets where 1=1`)
 	args := []any{}
 
 	for _, f := range filters {
 		col := mapWidgetFilterField(f.Field)
-		if f.Operator == "LIKE" {
-			query.WriteString(fmt.Sprintf(" AND %s LIKE ?", col))
+		if f.Operator == "like" {
+			query.WriteString(fmt.Sprintf(" and %s like ?", col))
 		} else {
-			query.WriteString(fmt.Sprintf(" AND %s = ?", col))
+			query.WriteString(fmt.Sprintf(" and %s = ?", col))
 		}
 		args = append(args, f.Value)
 	}
 
 	if module != "" {
-		query.WriteString(" AND ModuleName = ?")
+		query.WriteString(" and ModuleName = ?")
 		args = append(args, module)
 	}
 

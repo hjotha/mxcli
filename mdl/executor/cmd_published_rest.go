@@ -18,7 +18,7 @@ func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list published REST services", err)
+		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -58,7 +58,7 @@ func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 	}
 
 	if len(rows) == 0 && ctx.Format != FormatJSON {
-		fmt.Fprintln(ctx.Output, "No published REST services found.")
+		fmt.Fprintln(ctx.Output, "No published rest services found.")
 		return nil
 	}
 
@@ -68,7 +68,7 @@ func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 
 	result := &TableResult{
 		Columns: []string{"Module", "QualifiedName", "Path", "Version", "Resources", "Operations"},
-		Summary: fmt.Sprintf("(%d published REST services)", len(rows)),
+		Summary: fmt.Sprintf("(%d published rest services)", len(rows)),
 	}
 	for _, r := range rows {
 		result.Rows = append(result.Rows, []any{r.module, r.qualifiedName, r.path, r.version, r.resources, r.operations})
@@ -81,7 +81,7 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 
 	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list published REST services", err)
+		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -99,7 +99,7 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 		}
 
 		// Output as re-executable MDL
-		fmt.Fprintf(ctx.Output, "CREATE PUBLISHED REST SERVICE %s (\n", qualifiedName)
+		fmt.Fprintf(ctx.Output, "create published rest service %s (\n", qualifiedName)
 		fmt.Fprintf(ctx.Output, "  Path: '%s'", svc.Path)
 		if svc.Version != "" {
 			fmt.Fprintf(ctx.Output, ",\n  Version: '%s'", svc.Version)
@@ -116,15 +116,15 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 		if len(svc.Resources) > 0 {
 			fmt.Fprintln(ctx.Output, "{")
 			for _, res := range svc.Resources {
-				fmt.Fprintf(ctx.Output, "  RESOURCE '%s' {\n", res.Name)
+				fmt.Fprintf(ctx.Output, "  resource '%s' {\n", res.Name)
 				for _, op := range res.Operations {
 					deprecated := ""
 					if op.Deprecated {
-						deprecated = " DEPRECATED"
+						deprecated = " deprecated"
 					}
 					mf := ""
 					if op.Microflow != "" {
-						mf = fmt.Sprintf(" MICROFLOW %s", op.Microflow)
+						mf = fmt.Sprintf(" microflow %s", op.Microflow)
 					}
 					summary := ""
 					if op.Summary != "" {
@@ -147,14 +147,14 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 
 		// Emit GRANT statements for any module roles with access.
 		if len(svc.AllowedRoles) > 0 {
-			fmt.Fprintf(ctx.Output, "\nGRANT ACCESS ON PUBLISHED REST SERVICE %s.%s TO %s;\n",
+			fmt.Fprintf(ctx.Output, "\ngrant access on published rest service %s.%s to %s;\n",
 				modName, svc.Name, strings.Join(svc.AllowedRoles, ", "))
 		}
 
 		return nil
 	}
 
-	return mdlerrors.NewNotFound("published REST service", name.String())
+	return mdlerrors.NewNotFound("published rest service", name.String())
 }
 
 // findPublishedRestService looks up a published REST service by module and name.
@@ -175,7 +175,7 @@ func findPublishedRestService(ctx *ExecContext, moduleName, name string) (*model
 			return svc, nil
 		}
 	}
-	return nil, mdlerrors.NewNotFound("published REST service", moduleName+"."+name)
+	return nil, mdlerrors.NewNotFound("published rest service", moduleName+"."+name)
 }
 
 // execCreatePublishedRestService creates a new published REST service.
@@ -185,7 +185,7 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 	}
 
 	if err := checkFeature(ctx, "integration", "published_rest_service",
-		"CREATE PUBLISHED REST SERVICE",
+		"create published rest service",
 		"upgrade your project to 10.0+"); err != nil {
 		return err
 	}
@@ -244,11 +244,11 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 	}
 
 	if err := ctx.Backend.CreatePublishedRestService(svc); err != nil {
-		return mdlerrors.NewBackend("create published REST service", err)
+		return mdlerrors.NewBackend("create published rest service", err)
 	}
 
 	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Created published REST service %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(ctx.Output, "Created published rest service %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
 }
@@ -261,7 +261,7 @@ func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServ
 
 	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list published REST services", err)
+		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -274,16 +274,16 @@ func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServ
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && svc.Name == s.Name.Name {
 			if err := ctx.Backend.DeletePublishedRestService(svc.ID); err != nil {
-				return mdlerrors.NewBackend("drop published REST service", err)
+				return mdlerrors.NewBackend("drop published rest service", err)
 			}
 			if !ctx.Quiet {
-				fmt.Fprintf(ctx.Output, "Dropped published REST service %s.%s\n", s.Name.Module, s.Name.Name)
+				fmt.Fprintf(ctx.Output, "Dropped published rest service %s.%s\n", s.Name.Module, s.Name.Name)
 			}
 			return nil
 		}
 	}
 
-	return mdlerrors.NewNotFound("published REST service", s.Name.Module+"."+s.Name.Name)
+	return mdlerrors.NewNotFound("published rest service", s.Name.Module+"."+s.Name.Name)
 }
 
 // astResourceDefToModel converts an AST PublishedRestResourceDef to the
@@ -309,7 +309,7 @@ func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestSe
 	}
 
 	if err := checkFeature(ctx, "integration", "published_rest_alter",
-		"ALTER PUBLISHED REST SERVICE",
+		"alter published rest service",
 		"upgrade your project to 10.0+"); err != nil {
 		return err
 	}
@@ -331,7 +331,7 @@ func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestSe
 				case "servicename":
 					svc.ServiceName = val
 				default:
-					return mdlerrors.NewUnsupported(fmt.Sprintf("unknown published REST service property: %s (allowed: Path, Version, ServiceName)", key))
+					return mdlerrors.NewUnsupported(fmt.Sprintf("unknown published rest service property: %s (allowed: Path, Version, ServiceName)", key))
 				}
 			}
 
@@ -363,11 +363,11 @@ func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestSe
 	}
 
 	if err := ctx.Backend.UpdatePublishedRestService(svc); err != nil {
-		return mdlerrors.NewBackend("alter published REST service", err)
+		return mdlerrors.NewBackend("alter published rest service", err)
 	}
 
 	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Altered published REST service %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(ctx.Output, "Altered published rest service %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
 }

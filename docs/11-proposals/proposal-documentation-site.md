@@ -28,7 +28,7 @@ Key insight: **never mix tutorial prose with reference syntax**. The conceptual 
 ## Proposed Structure
 
 ```
-mxcli Documentation
+mxcli documentation
 │
 ├── Preface
 │   ├── What is mxcli?
@@ -39,252 +39,252 @@ mxcli Documentation
 ├── Part I: Tutorial
 │   ├── 1. Setting Up
 │   │   ├── Installation (binary, go install, dev container)
-│   │   ├── Opening Your First Project
+│   │   ├── Opening Your First project
 │   │   └── The REPL
-│   ├── 2. Exploring a Project
-│   │   ├── SHOW MODULES, SHOW ENTITIES
-│   │   ├── DESCRIBE, SEARCH
-│   │   └── SHOW STRUCTURE
+│   ├── 2. Exploring a project
+│   │   ├── show modules, show entities
+│   │   ├── describe, search
+│   │   └── show structure
 │   ├── 3. Your First Changes
-│   │   ├── Creating an Entity
-│   │   ├── Creating a Microflow
-│   │   ├── Creating a Page
+│   │   ├── Creating an entity
+│   │   ├── Creating a microflow
+│   │   ├── Creating a page
 │   │   └── Validating with mxcli check
 │   └── 4. Working with AI Assistants
 │       ├── Claude Code Integration
 │       ├── Cursor / Continue.dev / Windsurf
 │       ├── Skills and CLAUDE.md
-│       └── The MDL + AI Workflow
+│       └── The MDL + AI workflow
 │
 ├── Part II: The MDL Language
 │   ├── 5. MDL Basics
-│   │   ├── Lexical Structure (keywords, identifiers, literals)
+│   │   ├── Lexical structure (keywords, identifiers, literals)
 │   │   ├── Qualified Names (Module.Name)
-│   │   ├── Comments and Documentation (/** */)
-│   │   └── Script Files (.mdl)
-│   ├── 6. Data Types
-│   │   ├── Primitive Types (String, Integer, Long, Decimal, Boolean, DateTime, ...)
-│   │   ├── Constraints (NOT NULL, DEFAULT, UNIQUE)
-│   │   ├── Enumerations
-│   │   └── Type Mapping (MDL → Mendix → Database)
-│   ├── 7. Domain Model
-│   │   ├── Entities (persistent, non-persistent, external, view)
-│   │   ├── Attributes and Validation Rules
-│   │   ├── Associations (Reference, ReferenceSet, ownership, delete behavior)
-│   │   ├── Generalization (EXTENDS)
+│   │   ├── Comments and documentation (/** */)
+│   │   └── script Files (.mdl)
+│   ├── 6. data Types
+│   │   ├── Primitive Types (string, integer, long, decimal, boolean, datetime, ...)
+│   │   ├── Constraints (not null, default, unique)
+│   │   ├── enumerations
+│   │   └── type mapping (MDL → Mendix → database)
+│   ├── 7. Domain model
+│   │   ├── entities (persistent, non-persistent, external, view)
+│   │   ├── attributes and validation rules
+│   │   ├── associations (reference, ReferenceSet, ownership, delete behavior)
+│   │   ├── generalization (extends)
 │   │   ├── Indexes
-│   │   └── ALTER ENTITY
-│   ├── 8. Microflows and Nanoflows
-│   │   ├── Structure (parameters, variables, activities, return)
-│   │   ├── Activity Types (retrieve, create, change, commit, delete, ...)
-│   │   ├── Control Flow (IF/ELSE, LOOP, error handling)
+│   │   └── alter entity
+│   ├── 8. microflows and nanoflows
+│   │   ├── structure (parameters, variables, activities, return)
+│   │   ├── activity Types (retrieve, create, change, commit, delete, ...)
+│   │   ├── Control Flow (if/else, loop, error handling)
 │   │   ├── Expressions
-│   │   ├── Nanoflows vs Microflows
+│   │   ├── nanoflows vs microflows
 │   │   └── Common Patterns (CRUD, validation, batch processing)
-│   ├── 9. Pages
-│   │   ├── Page Structure (layout, content, data source)
-│   │   ├── Widget Types (DataView, DataGrid, Container, TextBox, Button, ...)
-│   │   ├── Data Binding (-> operator)
-│   │   ├── Snippets
-│   │   ├── ALTER PAGE / ALTER SNIPPET
+│   ├── 9. pages
+│   │   ├── page structure (layout, content, data source)
+│   │   ├── widget Types (dataview, datagrid, container, textbox, button, ...)
+│   │   ├── data Binding (-> operator)
+│   │   ├── snippets
+│   │   ├── alter page / alter snippet
 │   │   └── Common Patterns (list page, edit page, master-detail)
-│   ├── 10. Security
-│   │   ├── Module Roles and User Roles
-│   │   ├── Entity Access (CREATE, READ, WRITE, DELETE)
-│   │   ├── Microflow, Page, and Nanoflow Access
-│   │   ├── GRANT / REVOKE
-│   │   └── Demo Users
-│   ├── 11. Navigation and Settings
-│   │   ├── Navigation Profiles
-│   │   ├── Home Pages and Menus
-│   │   └── Project Settings
-│   ├── 12. Workflows
-│   │   ├── Workflow Structure
-│   │   ├── Activity Types (user tasks, decisions, parallel splits, ...)
-│   │   └── Workflow vs Microflow
-│   └── 13. Business Events
-│       ├── Event Services
-│       └── Publishing and Consuming Events
+│   ├── 10. security
+│   │   ├── module roles and user roles
+│   │   ├── entity access (create, read, write, delete)
+│   │   ├── microflow, page, and nanoflow access
+│   │   ├── grant / revoke
+│   │   └── demo users
+│   ├── 11. navigation and settings
+│   │   ├── navigation Profiles
+│   │   ├── home pages and Menus
+│   │   └── project settings
+│   ├── 12. workflows
+│   │   ├── workflow structure
+│   │   ├── activity Types (user tasks, decisions, parallel splits, ...)
+│   │   └── workflow vs microflow
+│   └── 13. business events
+│       ├── event services
+│       └── Publishing and Consuming events
 │
-├── Part III: Project Tools
-│   ├── 14. Code Navigation
-│   │   ├── SHOW CALLERS / CALLEES
-│   │   ├── SHOW REFERENCES / IMPACT
-│   │   ├── SHOW CONTEXT
-│   │   └── Full-Text Search (SEARCH)
-│   ├── 15. Catalog Queries
-│   │   ├── REFRESH CATALOG
-│   │   ├── Available Tables (modules, entities, microflows, pages, ...)
-│   │   ├── SQL Queries (SELECT FROM CATALOG.*)
-│   │   └── Use Cases (impact analysis, unused elements, complexity metrics)
+├── Part III: project Tools
+│   ├── 14. Code navigation
+│   │   ├── show callers / callees
+│   │   ├── show references / impact
+│   │   ├── show context
+│   │   └── full-text search (search)
+│   ├── 15. catalog Queries
+│   │   ├── refresh catalog
+│   │   ├── Available tables (modules, entities, microflows, pages, ...)
+│   │   ├── sql Queries (select from CATALOG.*)
+│   │   └── use Cases (impact analysis, unused elements, complexity metrics)
 │   ├── 16. Linting and Reports
-│   │   ├── Built-in Rules (14 Go rules)
-│   │   ├── Starlark Rules (27 extensible rules)
-│   │   ├── Writing Custom Rules
-│   │   ├── mxcli lint (JSON, SARIF output)
+│   │   ├── Built-in rules (14 Go rules)
+│   │   ├── Starlark rules (27 extensible rules)
+│   │   ├── Writing Custom rules
+│   │   ├── mxcli lint (json, sarif output)
 │   │   └── mxcli report (scored best practices)
 │   ├── 17. Testing
 │   │   ├── .test.mdl and .test.md Formats
 │   │   ├── Test Annotations (@test, @expect)
 │   │   ├── Running Tests (mxcli test, Docker requirement)
 │   │   └── Diff (mxcli diff, mxcli diff-local)
-│   ├── 18. External SQL
-│   │   ├── SQL CONNECT (PostgreSQL, Oracle, SQL Server)
-│   │   ├── Querying External Databases
-│   │   ├── IMPORT FROM ... INTO ... MAP
+│   ├── 18. external sql
+│   │   ├── sql connect (PostgreSQL, Oracle, sql Server)
+│   │   ├── Querying external Databases
+│   │   ├── import from ... into ... map
 │   │   ├── Credential Management
-│   │   └── Database Connector Generation
+│   │   └── database connector Generation
 │   └── 19. Docker Integration
 │       ├── mxcli docker build (PAD)
 │       ├── mxcli docker run
 │       ├── OQL Queries (mxcli oql)
-│       └── Dev Container Setup
+│       └── Dev container Setup
 │
 ├── Part IV: IDE Integration
 │   ├── 20. VS Code Extension
 │   │   ├── Installation
 │   │   ├── Syntax Highlighting and Diagnostics
 │   │   ├── Completion, Hover, Go-to-Definition
-│   │   ├── Project Tree
-│   │   └── Context Menu Commands
+│   │   ├── project Tree
+│   │   └── context menu Commands
 │   ├── 21. LSP Server
 │   │   ├── Protocol (stdio)
 │   │   ├── Capabilities
 │   │   └── Integration with Other Editors
 │   └── 22. mxcli init
-│       ├── What Gets Created (.claude/, .devcontainer/, skills)
+│       ├── What Gets created (.claude/, .devcontainer/, skills)
 │       ├── Customizing Skills
 │       └── Syncing with Updates
 │
 ├── Part V: Go Library
 │   ├── 23. Quick Start
 │   │   ├── Installation (go get)
-│   │   ├── Reading a Project
-│   │   └── Modifying a Project
-│   ├── 24. Public API (modelsdk.go)
-│   │   ├── Open / OpenForWriting
+│   │   ├── Reading a project
+│   │   └── Modifying a project
+│   ├── 24. Public api (modelsdk.go)
+│   │   ├── open / OpenForWriting
 │   │   ├── Reader Methods
 │   │   └── Writer Methods
-│   └── 25. Fluent API (api/)
+│   └── 25. Fluent api (api/)
 │       ├── ModelAPI Entry Point
 │       ├── EntityBuilder, MicroflowBuilder, PageBuilder
 │       └── Examples
 │
-├── Part VI: MDL Statement Reference
+├── Part VI: MDL Statement reference
 │   │
 │   │   (One page per statement, PostgreSQL-style:
-│   │    Synopsis → Description → Parameters → Notes → Examples → See Also)
+│   │    Synopsis → description → parameters → Notes → Examples → See Also)
 │   │
-│   ├── Connection Statements
-│   │   ├── OPEN PROJECT
-│   │   └── CLOSE PROJECT
-│   ├── Query Statements
-│   │   ├── SHOW MODULES
-│   │   ├── SHOW ENTITIES
-│   │   ├── SHOW MICROFLOWS / NANOFLOWS
-│   │   ├── SHOW PAGES / SNIPPETS
-│   │   ├── SHOW ENUMERATIONS
-│   │   ├── SHOW ASSOCIATIONS
-│   │   ├── SHOW CONSTANTS
-│   │   ├── SHOW WORKFLOWS
-│   │   ├── SHOW BUSINESS EVENTS
-│   │   ├── SHOW STRUCTURE
-│   │   ├── SHOW WIDGETS
-│   │   ├── DESCRIBE ENTITY
-│   │   ├── DESCRIBE MICROFLOW / NANOFLOW
-│   │   ├── DESCRIBE PAGE / SNIPPET
-│   │   ├── DESCRIBE ENUMERATION
-│   │   ├── DESCRIBE ASSOCIATION
-│   │   └── SEARCH
-│   ├── Domain Model Statements
-│   │   ├── CREATE ENTITY
-│   │   ├── ALTER ENTITY
-│   │   ├── DROP ENTITY
-│   │   ├── CREATE ENUMERATION
-│   │   ├── DROP ENUMERATION
-│   │   ├── CREATE ASSOCIATION
-│   │   ├── DROP ASSOCIATION
-│   │   └── CREATE CONSTANT
-│   ├── Microflow Statements
-│   │   ├── CREATE MICROFLOW
-│   │   ├── CREATE NANOFLOW
-│   │   ├── DROP MICROFLOW / NANOFLOW
-│   │   └── CREATE JAVA ACTION
-│   ├── Page Statements
-│   │   ├── CREATE PAGE
-│   │   ├── CREATE SNIPPET
-│   │   ├── ALTER PAGE / ALTER SNIPPET
-│   │   ├── DROP PAGE / SNIPPET
-│   │   └── CREATE LAYOUT
-│   ├── Security Statements
-│   │   ├── CREATE MODULE ROLE
-│   │   ├── CREATE USER ROLE
-│   │   ├── GRANT
-│   │   ├── REVOKE
-│   │   └── CREATE DEMO USER
-│   ├── Navigation Statements
-│   │   ├── ALTER NAVIGATION
-│   │   └── SHOW NAVIGATION
-│   ├── Workflow Statements
-│   │   ├── CREATE WORKFLOW
-│   │   └── DROP WORKFLOW
-│   ├── Business Event Statements
-│   │   ├── CREATE BUSINESS EVENT SERVICE
-│   │   └── DROP BUSINESS EVENT SERVICE
-│   ├── Catalog Statements
-│   │   ├── REFRESH CATALOG
-│   │   ├── SELECT FROM CATALOG
-│   │   ├── SHOW CALLERS / CALLEES
-│   │   ├── SHOW REFERENCES / IMPACT / CONTEXT
-│   │   └── SHOW CATALOG TABLES
-│   ├── External SQL Statements
-│   │   ├── SQL CONNECT
-│   │   ├── SQL DISCONNECT
-│   │   ├── SQL (query)
-│   │   ├── SQL GENERATE CONNECTOR
-│   │   └── IMPORT FROM
-│   ├── Settings Statements
-│   │   ├── SHOW SETTINGS
-│   │   └── ALTER SETTINGS
+│   ├── connection Statements
+│   │   ├── open project
+│   │   └── close project
+│   ├── query Statements
+│   │   ├── show modules
+│   │   ├── show entities
+│   │   ├── show microflows / nanoflows
+│   │   ├── show pages / snippets
+│   │   ├── show enumerations
+│   │   ├── show associations
+│   │   ├── show constants
+│   │   ├── show workflows
+│   │   ├── show business events
+│   │   ├── show structure
+│   │   ├── show widgets
+│   │   ├── describe entity
+│   │   ├── describe microflow / nanoflow
+│   │   ├── describe page / snippet
+│   │   ├── describe enumeration
+│   │   ├── describe association
+│   │   └── search
+│   ├── Domain model Statements
+│   │   ├── create entity
+│   │   ├── alter entity
+│   │   ├── drop entity
+│   │   ├── create enumeration
+│   │   ├── drop enumeration
+│   │   ├── create association
+│   │   ├── drop association
+│   │   └── create constant
+│   ├── microflow Statements
+│   │   ├── create microflow
+│   │   ├── create nanoflow
+│   │   ├── drop microflow / nanoflow
+│   │   └── create java action
+│   ├── page Statements
+│   │   ├── create page
+│   │   ├── create snippet
+│   │   ├── alter page / alter snippet
+│   │   ├── drop page / snippet
+│   │   └── create layout
+│   ├── security Statements
+│   │   ├── create module role
+│   │   ├── create user role
+│   │   ├── grant
+│   │   ├── revoke
+│   │   └── create demo user
+│   ├── navigation Statements
+│   │   ├── alter navigation
+│   │   └── show navigation
+│   ├── workflow Statements
+│   │   ├── create workflow
+│   │   └── drop workflow
+│   ├── business event Statements
+│   │   ├── create business event service
+│   │   └── drop business event service
+│   ├── catalog Statements
+│   │   ├── refresh catalog
+│   │   ├── select from catalog
+│   │   ├── show callers / callees
+│   │   ├── show references / impact / context
+│   │   └── show catalog tables
+│   ├── external sql Statements
+│   │   ├── sql connect
+│   │   ├── sql disconnect
+│   │   ├── sql (query)
+│   │   ├── sql generate connector
+│   │   └── import from
+│   ├── settings Statements
+│   │   ├── show settings
+│   │   └── alter settings
 │   ├── Organization Statements
-│   │   ├── CREATE MODULE
-│   │   ├── CREATE FOLDER
-│   │   └── MOVE
-│   └── Session Statements
-│       ├── SET
-│       └── SHOW STATUS
+│   │   ├── create module
+│   │   ├── create folder
+│   │   └── move
+│   └── session Statements
+│       ├── set
+│       └── show status
 │
 ├── Part VII: Architecture & Internals
 │   ├── 26. System Architecture
 │   │   ├── Layer Diagram (ASCII + Mermaid)
-│   │   ├── Package Structure
-│   │   └── Design Decisions
-│   ├── 27. MPR File Format
+│   │   ├── Package structure
+│   │   └── design Decisions
+│   ├── 27. MPR file format
 │   │   ├── v1 (SQLite) vs v2 (mprcontents/)
-│   │   ├── BSON Document Structure
-│   │   ├── Storage Names vs Qualified Names
-│   │   └── Widget Template System
+│   │   ├── BSON Document structure
+│   │   ├── storage Names vs Qualified Names
+│   │   └── widget template System
 │   ├── 28. MDL Parser
-│   │   ├── ANTLR4 Grammar Design
+│   │   ├── ANTLR4 Grammar design
 │   │   ├── Lexer → Parser → AST → Executor Pipeline
 │   │   └── Adding New Statements
-│   └── 29. Catalog System
-│       ├── SQLite Schema
-│       ├── FTS5 Full-Text Search
-│       └── Reference Tracking
+│   └── 29. catalog System
+│       ├── SQLite schema
+│       ├── FTS5 full-text search
+│       └── reference Tracking
 │
 ├── Part VIII: Appendixes
-│   ├── A. MDL Quick Reference (cheat sheet)
-│   ├── B. Data Type Mapping Table
+│   ├── A. MDL Quick reference (cheat sheet)
+│   ├── B. data type mapping table
 │   ├── C. Reserved Words
-│   ├── D. Mendix Version Compatibility
+│   ├── D. Mendix version Compatibility
 │   ├── E. Common Mistakes and Anti-Patterns
-│   ├── F. Error Messages Reference
+│   ├── F. error messages reference
 │   ├── G. Glossary (Mendix terms for non-Mendix developers)
 │   ├── H. TypeScript SDK Equivalence
 │   └── I. Changelog
 │
-└── Index
+└── index
 ```
 
 ---
@@ -294,70 +294,70 @@ mxcli Documentation
 Every statement in Part VI follows the same template (matching PostgreSQL):
 
 ```markdown
-# CREATE ENTITY
+# create entity
 
 ## Synopsis
 
-    CREATE [OR MODIFY] [PERSISTENT | NON-PERSISTENT] ENTITY module.name
-        [EXTENDS parent.entity]
+    create [or modify] [persistent | non-persistent] entity module.name
+        [extends parent.entity]
     (
-        attr_name: data_type [NOT NULL] [DEFAULT value] [UNIQUE],
+        attr_name: data_type [not null] [default value] [unique],
         ...
     );
 
-## Description
+## description
 
 Creates a new entity in the specified module's domain model. Entities
 are the data objects in a Mendix application, similar to database tables.
 
-## Parameters
+## parameters
 
-**PERSISTENT | NON-PERSISTENT**
-: Persistent entities are stored in the database. Non-persistent entities
-  exist only in memory during a session. Default: PERSISTENT.
+**persistent | non-persistent**
+: persistent entities are stored in the database. non-persistent entities
+  exist only in memory during a session. default: PERSISTENT.
 
-**EXTENDS parent.entity**
+**extends parent.entity**
 : Creates a generalization (inheritance) relationship. The new entity
   inherits all attributes from the parent. Must appear before the
   opening parenthesis.
 
 **attr_name: data_type**
-: Defines an attribute. See Data Types for available types.
+: Defines an attribute. See data Types for available types.
 
 ## Notes
 
-- EXTENDS must appear before `(`, not after `)` — this is a common mistake.
-- String attributes require an explicit length: `String(200)`, not `String`.
-- Use `OR MODIFY` for idempotent scripts that may be re-run.
+- extends must appear before `(`, not after `)` — this is a common mistake.
+- string attributes require an explicit length: `string(200)`, not `string`.
+- use `or modify` for idempotent scripts that may be re-run.
 
 ## Examples
 
-### Basic entity
+### basic entity
 
-    CREATE PERSISTENT ENTITY Sales.Customer (
-        Name: String(200) NOT NULL,
-        Email: String(200),
-        IsActive: Boolean DEFAULT true
+    create persistent entity Sales.Customer (
+        Name: string(200) not null,
+        Email: string(200),
+        IsActive: boolean default true
     );
 
-### Entity with generalization
+### entity with generalization
 
-    CREATE PERSISTENT ENTITY Sales.VIPCustomer EXTENDS Sales.Customer (
-        DiscountPercentage: Decimal,
-        LoyaltyTier: String(50) DEFAULT 'Silver'
+    create persistent entity Sales.VIPCustomer extends Sales.Customer (
+        DiscountPercentage: decimal,
+        LoyaltyTier: string(50) default 'Silver'
     );
 
 ### Idempotent creation
 
-    CREATE OR MODIFY PERSISTENT ENTITY Sales.Customer (
-        Name: String(200) NOT NULL,
-        Email: String(200),
-        Phone: String(50)
+    create or modify persistent entity Sales.Customer (
+        Name: string(200) not null,
+        Email: string(200),
+        Phone: string(50)
     );
 
 ## See Also
 
-ALTER ENTITY, DROP ENTITY, CREATE ASSOCIATION, DESCRIBE ENTITY
+alter entity, drop entity, create association, describe entity
 ```
 
 ---
@@ -412,15 +412,15 @@ Most content already exists. The work is reorganization and gap-filling, not wri
 # Part I: Tutorial
 
 - [Setting Up](tutorial/setup.md)
-- [Exploring a Project](tutorial/exploring.md)
+- [Exploring a project](tutorial/exploring.md)
 - [Your First Changes](tutorial/first-changes.md)
 - [Working with AI Assistants](tutorial/ai-assistants.md)
 
 # Part II: The MDL Language
 
 - [MDL Basics](language/basics.md)
-- [Data Types](language/data-types.md)
-- [Domain Model](language/domain-model.md)
+- [data Types](language/data-types.md)
+- [Domain model](language/domain-model.md)
   ...
 ```
 
@@ -464,7 +464,7 @@ Already used for `mxcli-overview.typ`. Typst produces high-quality PDFs.
 ```
 docs-site/
 ├── book.toml              # mdBook config
-├── SUMMARY.md             # Table of contents
+├── SUMMARY.md             # table of contents
 ├── src/                   # Markdown source (shared)
 │   ├── preface.md
 │   ├── tutorial/
@@ -477,7 +477,7 @@ docs-site/
 │   ├── main.typ           # Typst entry point (includes from src/)
 │   └── template.typ       # PDF styling
 └── .github/workflows/
-    └── docs.yml           # Build + deploy both formats
+    └── docs.yml           # build + deploy both formats
 ```
 
 ---

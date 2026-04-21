@@ -257,76 +257,76 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 	var widget pages.Widget
 	var err error
 
-	switch strings.ToUpper(w.Type) {
-	case "DATAVIEW":
+	switch strings.ToLower(w.Type) {
+	case "dataview":
 		widget, err = pb.buildDataViewV3(w)
-	case "DATAGRID":
+	case "datagrid":
 		widget, err = pb.buildDataGridV3(w)
-	case "LISTVIEW":
+	case "listview":
 		widget, err = pb.buildListViewV3(w)
-	case "LAYOUTGRID":
+	case "layoutgrid":
 		widget, err = pb.buildLayoutGridV3(w)
-	case "ROW":
+	case "row":
 		// ROW creates a container with LayoutGrid that contains one row
 		widget, err = pb.buildContainerWithRowV3(w)
-	case "COLUMN":
+	case "column":
 		// COLUMN creates a container with LayoutGrid that contains one column
 		widget, err = pb.buildContainerWithColumnV3(w)
-	case "CONTAINER", "CUSTOMCONTAINER":
+	case "container", "customcontainer":
 		widget, err = pb.buildContainerV3(w)
-	case "TEXTBOX":
+	case "textbox":
 		widget, err = pb.buildTextBoxV3(w)
-	case "TEXTAREA":
+	case "textarea":
 		widget, err = pb.buildTextAreaV3(w)
-	case "DATEPICKER":
+	case "datepicker":
 		widget, err = pb.buildDatePickerV3(w)
-	case "DROPDOWN":
+	case "dropdown":
 		widget, err = pb.buildDropdownV3(w)
-	case "CHECKBOX":
+	case "checkbox":
 		widget, err = pb.buildCheckBoxV3(w)
-	case "TEXT", "STATICTEXT":
+	case "text", "statictext":
 		widget, err = pb.buildTextWidgetV3(w)
-	case "DYNAMICTEXT":
+	case "dynamictext":
 		widget, err = pb.buildDynamicTextV3(w)
-	case "TITLE":
+	case "title":
 		widget, err = pb.buildTitleV3(w)
-	case "BUTTON", "ACTIONBUTTON":
+	case "button", "actionbutton":
 		widget, err = pb.buildButtonV3(w)
-	case "TABCONTAINER":
+	case "tabcontainer":
 		widget, err = pb.buildTabContainerV3(w)
-	case "TABPAGE":
+	case "tabpage":
 		// Tab pages are handled inside TabContainer
-		return nil, mdlerrors.NewValidation("TABPAGE must be a direct child of TABCONTAINER")
-	case "GROUPBOX":
+		return nil, mdlerrors.NewValidation("tabpage must be a direct child of tabcontainer")
+	case "groupbox":
 		widget, err = pb.buildGroupBoxV3(w)
-	case "RADIOBUTTONS":
+	case "radiobuttons":
 		widget, err = pb.buildRadioButtonsV3(w)
-	case "NAVIGATIONLIST":
+	case "navigationlist":
 		widget, err = pb.buildNavigationListV3(w)
-	case "ITEM":
+	case "item":
 		// Items are handled inside NavigationList
-		return nil, mdlerrors.NewValidation("ITEM must be a direct child of NAVIGATIONLIST")
-	case "SNIPPETCALL":
+		return nil, mdlerrors.NewValidation("item must be a direct child of navigationlist")
+	case "snippetcall":
 		widget, err = pb.buildSnippetCallV3(w)
-	case "FOOTER":
+	case "footer":
 		widget, err = pb.buildFooterV3(w)
-	case "HEADER":
+	case "header":
 		widget, err = pb.buildHeaderV3(w)
-	case "CONTROLBAR":
+	case "controlbar":
 		widget, err = pb.buildControlBarV3(w)
-	case "TEMPLATE":
+	case "template":
 		widget, err = pb.buildTemplateV3(w)
-	case "FILTER":
+	case "filter":
 		widget, err = pb.buildFilterV3(w)
-	case "STATICIMAGE":
+	case "staticimage":
 		widget, err = pb.buildStaticImageV3(w)
-	case "DYNAMICIMAGE":
+	case "dynamicimage":
 		widget, err = pb.buildDynamicImageV3(w)
-	case "IMAGE":
+	case "image":
 		// IMAGE routes to the pluggable React widget (com.mendix.widget.web.image.Image)
 		pb.initPluggableEngine()
 		if pb.widgetRegistry != nil {
-			if def, ok := pb.widgetRegistry.Get("IMAGE"); ok {
+			if def, ok := pb.widgetRegistry.Get("image"); ok {
 				return pb.pluggableEngine.Build(def, w)
 			}
 		}
@@ -340,7 +340,7 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 				return pb.pluggableEngine.Build(def, w)
 			}
 			// PLUGGABLEWIDGET/CUSTOMWIDGET 'widget.id' name — lookup by widget ID
-			if w.Type == "PLUGGABLEWIDGET" || w.Type == "CUSTOMWIDGET" {
+			if w.Type == "pluggablewidget" || w.Type == "customwidget" {
 				if widgetType, ok := w.Properties["WidgetType"].(string); ok {
 					if def, ok := pb.widgetRegistry.GetByWidgetID(widgetType); ok {
 						return pb.pluggableEngine.Build(def, w)
@@ -419,13 +419,13 @@ func applyWidgetAppearance(widget pages.Widget, w *ast.WidgetV3, theme *ThemeReg
 	if len(astProps) > 0 {
 		var dpValues []pages.DesignPropertyValue
 		for _, p := range astProps {
-			switch strings.ToUpper(p.Value) {
-			case "ON":
+			switch strings.ToLower(p.Value) {
+			case "on":
 				dpValues = append(dpValues, pages.DesignPropertyValue{
 					Key:       p.Key,
 					ValueType: "toggle",
 				})
-			case "OFF":
+			case "off":
 				// OFF means toggle absence - skip
 			default:
 				dpValues = append(dpValues, pages.DesignPropertyValue{
@@ -533,7 +533,7 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 		// Handle ORDER BY
 		for _, ob := range ds.OrderBy {
 			direction := pages.SortDirectionAscending
-			if strings.ToUpper(ob.Direction) == "DESC" {
+			if strings.ToLower(ob.Direction) == "desc" {
 				direction = pages.SortDirectionDescending
 			}
 			sortItem := &pages.GridSort{

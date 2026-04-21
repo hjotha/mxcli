@@ -407,7 +407,7 @@ func collectAllObjectsAndFlows(oc *microflows.MicroflowObjectCollection) ([]micr
 func emitMicroflowELK(ctx *ExecContext, data microflowELKData) error {
 	out, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return mdlerrors.NewBackend("marshal JSON", err)
+		return mdlerrors.NewBackend("marshal json", err)
 	}
 	fmt.Fprint(ctx.Output, string(out))
 	return nil

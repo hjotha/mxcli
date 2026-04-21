@@ -28,20 +28,20 @@
 --
 -- ============================================================================
 
-CREATE MODULE ModelTest;
+create module ModelTest;
 
 -- ============================================================================
 -- Setup: Create the key constant that the Model will reference
 -- ============================================================================
 
-CREATE CONSTANT ModelTest."GPT4Key"
-  TYPE String
-  DEFAULT '';
+create constant ModelTest."GPT4Key"
+  type string
+  default '';
 /
 
-CREATE CONSTANT ModelTest."ClaudeKey"
-  TYPE String
-  DEFAULT '';
+create constant ModelTest."ClaudeKey"
+  type string
+  default '';
 /
 
 -- MARK: Create
@@ -60,9 +60,9 @@ CREATE CONSTANT ModelTest."ClaudeKey"
  * After creation, the model appears in Studio Pro's Agent Editor and
  * can be selected when configuring an Agent.
  */
-CREATE MODEL ModelTest."GPT4Model" (
+create model ModelTest."GPT4Model" (
   Provider: MxCloudGenAI,
-  Key: ModelTest.GPT4Key
+  key: ModelTest.GPT4Key
 );
 /
 
@@ -72,9 +72,9 @@ CREATE MODEL ModelTest."GPT4Model" (
  * Projects commonly have multiple models (e.g., GPT-4 for complex tasks,
  * Claude for document analysis). Each references its own key constant.
  */
-CREATE MODEL ModelTest."ClaudeModel" (
+create model ModelTest."ClaudeModel" (
   Provider: MxCloudGenAI,
-  Key: ModelTest.ClaudeKey
+  key: ModelTest.ClaudeKey
 );
 /
 
@@ -90,9 +90,9 @@ CREATE MODEL ModelTest."ClaudeModel" (
  * in MDL for round-trip preservation (e.g., when DESCRIBE output is
  * re-executed), but setting them manually has no functional effect.
  */
-CREATE MODEL ModelTest."ConfiguredModel" (
+create model ModelTest."ConfiguredModel" (
   Provider: MxCloudGenAI,
-  Key: ModelTest.GPT4Key,
+  key: ModelTest.GPT4Key,
   DisplayName: 'GPT-4 Turbo (128K)',
   KeyName: 'prod-gpt4-turbo',
   Environment: 'production'
@@ -106,15 +106,15 @@ CREATE MODEL ModelTest."ConfiguredModel" (
 -- ============================================================================
 
 -- List all models across all modules
-LIST MODELS;
+list models;
 /
 
 -- List models in a specific module
-LIST MODELS IN ModelTest;
+list models in ModelTest;
 /
 
 -- SHOW also works (deprecated alias for LIST)
-SHOW MODELS IN ModelTest;
+show models in ModelTest;
 /
 
 -- MARK: Describe
@@ -125,8 +125,8 @@ SHOW MODELS IN ModelTest;
 
 -- Describe produces round-trippable MDL. User-set fields (Provider, Key)
 -- come first; Portal-populated fields only appear when non-empty.
-DESCRIBE MODEL ModelTest.GPT4Model;
-DESCRIBE MODEL ModelTest.ConfiguredModel;
+describe model ModelTest.GPT4Model;
+describe model ModelTest.ConfiguredModel;
 
 -- MARK: Drop
 
@@ -136,11 +136,11 @@ DESCRIBE MODEL ModelTest.ConfiguredModel;
 
 -- Drop a model by qualified name.
 -- The underlying CustomBlobDocument is removed from the project.
-DROP MODEL ModelTest.ConfiguredModel;
+drop model ModelTest.ConfiguredModel;
 /
 
 -- Verify it's gone
-LIST MODELS IN ModelTest;
+list models in ModelTest;
 /
 
 -- ============================================================================
@@ -165,6 +165,6 @@ LIST MODELS IN ModelTest;
 -- Cleanup
 -- ============================================================================
 
-DROP MODEL ModelTest.GPT4Model;
-DROP MODEL ModelTest.ClaudeModel;
+drop model ModelTest.GPT4Model;
+drop model ModelTest.ClaudeModel;
 /

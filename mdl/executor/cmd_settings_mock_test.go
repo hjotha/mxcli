@@ -44,5 +44,5 @@ func TestDescribeSettings_Mock(t *testing.T) {
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
 	assertNoError(t, describeSettings(ctx))
-	assertContainsStr(t, buf.String(), "ALTER SETTINGS")
+	assertContainsStr(t, buf.String(), "alter settings")
 }

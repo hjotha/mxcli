@@ -36,8 +36,8 @@ func TestRegistryGetByMDLName(t *testing.T) {
 		mdlName  string
 		widgetID string
 	}{
-		{"COMBOBOX", "com.mendix.widget.web.combobox.Combobox"},
-		{"GALLERY", "com.mendix.widget.web.gallery.Gallery"},
+		{"combobox", "com.mendix.widget.web.combobox.Combobox"},
+		{"gallery", "com.mendix.widget.web.gallery.Gallery"},
 	}
 
 	for _, tt := range tests {
@@ -60,14 +60,14 @@ func TestRegistryGetCaseInsensitive(t *testing.T) {
 	}
 
 	// Should work with any case
-	for _, name := range []string{"combobox", "ComboBox", "COMBOBOX", "Combobox"} {
+	for _, name := range []string{"combobox", "ComboBox", "combobox", "Combobox"} {
 		def, ok := reg.Get(name)
 		if !ok {
 			t.Errorf("Get(%q) not found", name)
 			continue
 		}
-		if def.MDLName != "COMBOBOX" {
-			t.Errorf("Get(%q).MDLName = %q, want COMBOBOX", name, def.MDLName)
+		if def.MDLName != "combobox" {
+			t.Errorf("Get(%q).MDLName = %q, want combobox", name, def.MDLName)
 		}
 	}
 }
@@ -94,8 +94,8 @@ func TestRegistryGetByWidgetID(t *testing.T) {
 	if !ok {
 		t.Fatal("GetByWidgetID(Gallery) not found")
 	}
-	if def.MDLName != "GALLERY" {
-		t.Errorf("MDLName = %q, want GALLERY", def.MDLName)
+	if def.MDLName != "gallery" {
+		t.Errorf("MDLName = %q, want gallery", def.MDLName)
 	}
 }
 
@@ -118,7 +118,7 @@ func TestAllEmbeddedDefinitionsAreValidJSON(t *testing.T) {
 
 			var def WidgetDefinition
 			if err := json.Unmarshal(data, &def); err != nil {
-				t.Fatalf("JSON unmarshal error: %v", err)
+				t.Fatalf("json unmarshal error: %v", err)
 			}
 
 			// Validate required fields
@@ -183,9 +183,9 @@ func TestRegistryLoadUserDefinitions(t *testing.T) {
 	}
 
 	// Built-in widgets should still be available
-	_, ok = reg.Get("COMBOBOX")
+	_, ok = reg.Get("combobox")
 	if !ok {
-		t.Error("built-in COMBOBOX lost after LoadUserDefinitions")
+		t.Error("built-in combobox lost after LoadUserDefinitions")
 	}
 }
 
@@ -332,7 +332,7 @@ func TestRegistryUserDefinitionOverrideLogsWarning(t *testing.T) {
 
 	overrideDef := `{
 		"widgetId": "com.mendix.widget.web.combobox.Combobox",
-		"mdlName": "COMBOBOX",
+		"mdlName": "combobox",
 		"templateFile": "combobox.json",
 		"defaultEditable": "Always",
 		"propertyMappings": [
@@ -354,8 +354,8 @@ func TestRegistryUserDefinitionOverrideLogsWarning(t *testing.T) {
 		t.Fatalf("LoadUserDefinitions error: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "COMBOBOX") {
-		t.Errorf("expected warning log about overriding COMBOBOX, got: %q", buf.String())
+	if !strings.Contains(buf.String(), "combobox") {
+		t.Errorf("expected warning log about overriding combobox, got: %q", buf.String())
 	}
 }
 
@@ -365,9 +365,9 @@ func TestRegistryComboboxModes(t *testing.T) {
 		t.Fatalf("NewWidgetRegistry() error: %v", err)
 	}
 
-	def, ok := reg.Get("COMBOBOX")
+	def, ok := reg.Get("combobox")
 	if !ok {
-		t.Fatal("COMBOBOX not found")
+		t.Fatal("combobox not found")
 	}
 
 	if len(def.Modes) != 2 {
@@ -400,9 +400,9 @@ func TestRegistryGalleryChildSlots(t *testing.T) {
 		t.Fatalf("NewWidgetRegistry() error: %v", err)
 	}
 
-	def, ok := reg.Get("GALLERY")
+	def, ok := reg.Get("gallery")
 	if !ok {
-		t.Fatal("GALLERY not found")
+		t.Fatal("gallery not found")
 	}
 
 	if len(def.ChildSlots) != 3 {
@@ -415,29 +415,29 @@ func TestRegistryGalleryChildSlots(t *testing.T) {
 		slotsByContainer[slot.MDLContainer] = slot
 	}
 
-	contentSlot, ok := slotsByContainer["TEMPLATE"]
+	contentSlot, ok := slotsByContainer["template"]
 	if !ok {
-		t.Fatal("TEMPLATE slot not found")
+		t.Fatal("template slot not found")
 	}
 	if contentSlot.PropertyKey != "content" {
-		t.Errorf("TEMPLATE slot propertyKey = %q, want content", contentSlot.PropertyKey)
+		t.Errorf("template slot propertyKey = %q, want content", contentSlot.PropertyKey)
 	}
 
-	emptySlot, ok := slotsByContainer["EMPTYPLACEHOLDER"]
+	emptySlot, ok := slotsByContainer["emptyplaceholder"]
 	if !ok {
-		t.Fatal("EMPTYPLACEHOLDER slot not found")
+		t.Fatal("emptyplaceholder slot not found")
 	}
 	if emptySlot.PropertyKey != "emptyPlaceholder" {
-		t.Errorf("EMPTYPLACEHOLDER slot propertyKey = %q, want emptyPlaceholder", emptySlot.PropertyKey)
+		t.Errorf("emptyplaceholder slot propertyKey = %q, want emptyPlaceholder", emptySlot.PropertyKey)
 	}
 
 	// FILTER must match what DESCRIBE outputs ("FILTER"), not the BSON property name
-	filterSlot, ok := slotsByContainer["FILTER"]
+	filterSlot, ok := slotsByContainer["filter"]
 	if !ok {
-		t.Fatal("FILTER slot not found — mdlContainer must be 'FILTER' to match DESCRIBE output")
+		t.Fatal("filter slot not found — mdlContainer must be 'filter' to match describe output")
 	}
 	if filterSlot.PropertyKey != "filtersPlaceholder" {
-		t.Errorf("FILTER slot propertyKey = %q, want filtersPlaceholder", filterSlot.PropertyKey)
+		t.Errorf("filter slot propertyKey = %q, want filtersPlaceholder", filterSlot.PropertyKey)
 	}
 }
 
@@ -447,9 +447,9 @@ func TestGallerySelectionDefaultIsSingle(t *testing.T) {
 		t.Fatalf("NewWidgetRegistry() error: %v", err)
 	}
 
-	def, ok := reg.Get("GALLERY")
+	def, ok := reg.Get("gallery")
 	if !ok {
-		t.Fatal("GALLERY not found")
+		t.Fatal("gallery not found")
 	}
 
 	// Find itemSelection mapping
@@ -461,7 +461,7 @@ func TestGallerySelectionDefaultIsSingle(t *testing.T) {
 			return
 		}
 	}
-	t.Fatal("itemSelection mapping not found in GALLERY definition")
+	t.Fatal("itemSelection mapping not found in gallery definition")
 }
 
 func TestComboboxAssociationModeUsesAssociationSource(t *testing.T) {
@@ -470,9 +470,9 @@ func TestComboboxAssociationModeUsesAssociationSource(t *testing.T) {
 		t.Fatalf("NewWidgetRegistry() error: %v", err)
 	}
 
-	def, ok := reg.Get("COMBOBOX")
+	def, ok := reg.Get("combobox")
 	if !ok {
-		t.Fatal("COMBOBOX not found")
+		t.Fatal("combobox not found")
 	}
 
 	// Find association mode
@@ -492,5 +492,5 @@ func TestComboboxAssociationModeUsesAssociationSource(t *testing.T) {
 			}
 		}
 	}
-	t.Fatal("attributeAssociation mapping not found in COMBOBOX association mode")
+	t.Fatal("attributeAssociation mapping not found in combobox association mode")
 }

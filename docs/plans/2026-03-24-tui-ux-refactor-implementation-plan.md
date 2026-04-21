@@ -26,7 +26,7 @@
 
 ### Current Routing in `app.go`
 
-The `Update()` method uses a priority chain of `if` checks:
+The `update()` method uses a priority chain of `if` checks:
 1. `a.picker != nil` → delegate to picker
 2. `a.diffView != nil` → delegate to DiffView
 3. `a.compare.IsVisible()` → delegate to CompareView
@@ -39,18 +39,18 @@ State sync is manual: every branch calls `a.syncTabBar()`, `a.syncStatusBar()`, 
 ### Key Coupling Points
 
 - `App` holds `overlay Overlay`, `compare CompareView`, `diffView *DiffView`, `picker *PickerModel`, `showHelp bool` — all direct struct fields
-- `App.View()` has the same priority chain as `Update()`
+- `App.View()` has the same priority chain as `update()`
 - `syncHintBar()` maps the priority chain to hint sets
 - `syncStatusBar()` reads directly into `tab.Miller.preview.mode`, `tab.Miller.current.cursor`
 - Compare/Overlay/Diff each render their own chrome (title bar, status bar, hint bar) — not shared
 - `CompareView` has a built-in fuzzy picker (`picker bool`, `pickerInput`, etc.)
-- `MillerView` directly renders preview content inside its `View()` method
+- `MillerView` directly renders preview content inside its `view()` method
 
 ---
 
 ## Phase 1: View System Foundation
 
-**Goal**: Introduce `View` interface + `ViewStack`; rewrite `app.go` to use them. All existing functionality preserved.
+**Goal**: Introduce `view` interface + `ViewStack`; rewrite `app.go` to use them. All existing functionality preserved.
 
 ### Step 1.1: Define core types — `view.go` (NEW, ~80 lines)
 
@@ -69,15 +69,15 @@ const (
 
 type StatusInfo struct {
     Breadcrumb []string
-    Position   string  // "3/47"
+    position   string  // "3/47"
     Mode       string  // "MDL", "NDSL"
     Extra      string  // view-specific
 }
 
-type Hint struct { Key string; Label string }  // already exists in hintbar.go — REUSE it
+type Hint struct { key string; label string }  // already exists in hintbar.go — REUSE it
 
-type View interface {
-    Update(tea.Msg) (View, tea.Cmd)
+type view interface {
+    update(tea.Msg) (view, tea.Cmd)
     Render(width, height int) string
     Hints() []Hint
     StatusInfo() StatusInfo
@@ -87,8 +87,8 @@ type View interface {
 
 **Notes**:
 - `Hint` struct already exists in `hintbar.go`. Do NOT duplicate — import from same package.
-- `View.Update()` returns `(View, tea.Cmd)` instead of `(tea.Model, tea.Cmd)` — this is intentional to stay within the `tui` package type system.
-- `View.Render(width, height int) string` replaces `View()` — explicit dimensions for layout composability.
+- `View.Update()` returns `(view, tea.Cmd)` instead of `(tea.Model, tea.Cmd)` — this is intentional to stay within the `tui` package type system.
+- `View.Render(width, height int) string` replaces `view()` — explicit dimensions for layout composability.
 
 ### Step 1.2: Implement ViewStack — `viewstack.go` (NEW, ~60 lines)
 
@@ -97,25 +97,25 @@ type View interface {
 package tui
 
 type ViewStack struct {
-    base  View     // always BrowserView
-    stack []View   // pushed views (overlay/compare/diff)
+    base  view     // always BrowserView
+    stack []view   // pushed views (overlay/compare/diff)
 }
 
-func NewViewStack(base View) ViewStack
-func (vs *ViewStack) Active() View        // top of stack, or base
-func (vs *ViewStack) Push(v View)
-func (vs *ViewStack) Pop() (View, bool)   // returns popped view + ok; no-op if stack empty
-func (vs *ViewStack) Depth() int          // len(stack) + 1 (for base)
-func (vs *ViewStack) SetActive(v View)    // replace top of stack (or base if empty)
+func NewViewStack(base view) ViewStack
+func (vs *ViewStack) Active() view        // top of stack, or base
+func (vs *ViewStack) Push(v view)
+func (vs *ViewStack) Pop() (view, bool)   // returns popped view + ok; no-op if stack empty
+func (vs *ViewStack) depth() int          // len(stack) + 1 (for base)
+func (vs *ViewStack) SetActive(v view)    // replace top of stack (or base if empty)
 ```
 
 **Notes**:
-- `SetActive()` is needed because `Update()` returns a new `View` value (Go value semantics).
+- `SetActive()` is needed because `update()` returns a new `view` value (Go value semantics).
 - `Pop()` returns the popped view so the caller can inspect it if needed.
 
 ### Step 1.3: Wrap MillerView as BrowserView — `browserview.go` (NEW, ~160 lines)
 
-This is a **wrapper**, not a rewrite. `BrowserView` embeds the existing `MillerView` and adds the `View` interface.
+This is a **wrapper**, not a rewrite. `BrowserView` embeds the existing `MillerView` and adds the `view` interface.
 
 ```go
 type BrowserView struct {
@@ -128,7 +128,7 @@ type BrowserView struct {
 ```
 
 **Interface methods**:
-- `Update(msg)` — delegates to `MillerView.Update()` for key/mouse/cursor/preview messages. Handles node-action keys (`b`, `m`, `c`, `d`, `y`) that currently live in `app.go:updateNormalMode()`. Returns `tea.Cmd` that may emit `PushViewMsg` (new message type) for overlay/compare/diff.
+- `update(msg)` — delegates to `MillerView.Update()` for key/mouse/cursor/preview messages. Handles node-action keys (`b`, `m`, `c`, `d`, `y`) that currently live in `app.go:updateNormalMode()`. Returns `tea.Cmd` that may emit `PushViewMsg` (new message type) for overlay/compare/diff.
 - `Render(w, h)` — calls `miller.SetSize(w, h)` + `miller.View()`.
 - `Hints()` — returns `ListBrowsingHints` or `FilterActiveHints` based on `miller.focusedColumn().IsFilterActive()`.
 - `StatusInfo()` — reads breadcrumb, position, mode from `miller`.
@@ -136,7 +136,7 @@ type BrowserView struct {
 
 **New message types** (in `view.go`):
 ```go
-type PushViewMsg struct { View View }
+type PushViewMsg struct { view view }
 type PopViewMsg  struct{}
 ```
 
@@ -155,10 +155,10 @@ These replace the implicit `a.overlay.Show()` / `a.compare.Show()` / `a.diffView
 
 ### Step 1.4: Wrap Overlay as OverlayView — modify `overlay.go` (~40 lines added)
 
-Add `View` interface methods to existing `Overlay` struct:
+Add `view` interface methods to existing `Overlay` struct:
 
 ```go
-func (o Overlay) Update(msg tea.Msg) (View, tea.Cmd)  // wraps existing o.Update()
+func (o Overlay) update(msg tea.Msg) (view, tea.Cmd)  // wraps existing o.Update()
 func (o Overlay) Render(w, h int) string               // wraps existing o.View()
 func (o Overlay) Hints() []Hint                        // returns OverlayHints
 func (o Overlay) StatusInfo() StatusInfo               // title + scroll position
@@ -189,11 +189,11 @@ The `OverlayView.Update()` handles `tab` for NDSL/MDL switching internally (move
 
 ### Step 1.5: Wrap CompareView — modify `compare.go` (~30 lines added)
 
-Add `View` interface methods to existing `CompareView`:
+Add `view` interface methods to existing `CompareView`:
 
 ```go
-func (c CompareView) Update(msg tea.Msg) (View, tea.Cmd)  // wraps existing
-func (c CompareView) Render(w, h int) string               // sets size, calls View()
+func (c CompareView) update(msg tea.Msg) (view, tea.Cmd)  // wraps existing
+func (c CompareView) Render(w, h int) string               // sets size, calls view()
 func (c CompareView) Hints() []Hint                        // CompareHints
 func (c CompareView) StatusInfo() StatusInfo
 func (c CompareView) Mode() ViewMode                       // ModeCompare
@@ -201,23 +201,23 @@ func (c CompareView) Mode() ViewMode                       // ModeCompare
 
 **Key change**: `esc`/`q` emits `PopViewMsg` instead of `c.visible = false`.
 
-**Issue**: `CompareView` currently stores `visible bool` and the `View()` method checks it. With ViewStack, visibility is implicit (it's on the stack or not). The `visible` field becomes redundant but can stay for backward compat during transition.
+**Issue**: `CompareView` currently stores `visible bool` and the `view()` method checks it. With ViewStack, visibility is implicit (it's on the stack or not). The `visible` field becomes redundant but can stay for backward compat during transition.
 
-**Diff launch**: When `D` is pressed in compare, it currently emits `DiffOpenMsg` which `app.go` handles by creating a `DiffView` and setting `a.diffView = &dv`. After refactor, it should emit `PushViewMsg{View: NewDiffViewWrapped(...)}`.
+**Diff launch**: When `D` is pressed in compare, it currently emits `DiffOpenMsg` which `app.go` handles by creating a `DiffView` and setting `a.diffView = &dv`. After refactor, it should emit `PushViewMsg{view: NewDiffViewWrapped(...)}`.
 
 ### Step 1.6: Wrap DiffView — modify `diffview.go` (~30 lines added)
 
-Add `View` interface methods:
+Add `view` interface methods:
 
 ```go
-func (dv DiffView) UpdateView(msg tea.Msg) (View, tea.Cmd)  // wraps existing, named differently to avoid conflict
+func (dv DiffView) UpdateView(msg tea.Msg) (view, tea.Cmd)  // wraps existing, named differently to avoid conflict
 func (dv DiffView) Render(w, h int) string
 func (dv DiffView) Hints() []Hint                           // DiffViewHints
 func (dv DiffView) StatusInfo() StatusInfo
 func (dv DiffView) Mode() ViewMode                          // ModeDiff
 ```
 
-**Naming conflict**: `DiffView` already has `func (dv DiffView) Update(msg tea.Msg) (DiffView, tea.Cmd)`. The `View` interface needs `Update(tea.Msg) (View, tea.Cmd)`. Solution: rename existing to `updateInternal` and add the interface method.
+**Naming conflict**: `DiffView` already has `func (dv DiffView) update(msg tea.Msg) (DiffView, tea.Cmd)`. The `view` interface needs `update(tea.Msg) (view, tea.Cmd)`. Solution: rename existing to `updateInternal` and add the interface method.
 
 **Key change**: `q`/`esc` emits `PopViewMsg` instead of `DiffCloseMsg`.
 
@@ -229,7 +229,7 @@ type PickerView struct {
 }
 ```
 
-Implements `View` interface. When picker completes, emits `PopViewMsg` + action message.
+Implements `view` interface. When picker completes, emits `PopViewMsg` + action message.
 
 ### Step 1.8: Rewrite `app.go` (~250 lines, down from 760)
 
@@ -255,10 +255,10 @@ type App struct {
 }
 ```
 
-**New `Update()` flow**:
+**New `update()` flow**:
 
 ```go
-func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (a App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
     // 1. Handle PushViewMsg / PopViewMsg
     // 2. Handle global keys (ctrl+c, tab management, help toggle)
     // 3. Delegate to active view
@@ -269,10 +269,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 ```
 
-**New `View()` flow**:
+**New `view()` flow**:
 
 ```go
-func (a App) View() string {
+func (a App) view() string {
     active := a.views.Active()
 
     // Chrome
@@ -338,15 +338,15 @@ func (a App) View() string {
 
 ### Risk Areas — Phase 1
 
-1. **Value semantics**: Go's Bubble Tea pattern uses value receivers. `View` interface methods must handle value/pointer semantics correctly. `MillerView` uses value receivers (`func (m MillerView) Update()`), so `BrowserView` wrapping it must copy correctly. `CompareView` already uses value receivers too.
+1. **Value semantics**: Go's Bubble Tea pattern uses value receivers. `view` interface methods must handle value/pointer semantics correctly. `MillerView` uses value receivers (`func (m MillerView) update()`), so `BrowserView` wrapping it must copy correctly. `CompareView` already uses value receivers too.
 
 2. **Overlay state**: Moving `overlayQName/nodeType/isNDSL` from `App` to `OverlayView` means the overlay reload command needs `mxcliPath` and `projectPath`. These are passed at construction time.
 
-3. **Compare → Diff flow**: Currently `CompareView.Update()` emits `DiffOpenMsg` which `App` handles. After refactor, `CompareView` should emit `PushViewMsg` with a constructed `DiffView`. But `CompareView` doesn't have access to the `View` constructor. **Solution**: `CompareView` still emits `DiffOpenMsg`; `App.Update()` intercepts it before delegating to active view and does `ViewStack.Push(NewDiffView(...))`.
+3. **Compare → Diff flow**: Currently `CompareView.Update()` emits `DiffOpenMsg` which `App` handles. After refactor, `CompareView` should emit `PushViewMsg` with a constructed `DiffView`. But `CompareView` doesn't have access to the `view` constructor. **Solution**: `CompareView` still emits `DiffOpenMsg`; `App.Update()` intercepts it before delegating to active view and does `ViewStack.Push(NewDiffView(...))`.
 
 4. **Compare needs `mxcliPath`/`projectPath`**: For `ComparePickMsg` handling, `App` currently calls `a.loadForCompare()` which uses `a.mxcliPath` and `tab.ProjectPath`. After refactor, `CompareView` needs these at construction time, or `BrowserView` handles `ComparePickMsg` and forwards the loaded content.
 
-   **Solution**: `CompareView` stores `mxcliPath` and `projectPath` (passed at construction). Its `Update()` handles `ComparePickMsg` internally using these fields. `CompareLoadMsg` is already handled by `CompareView`.
+   **Solution**: `CompareView` stores `mxcliPath` and `projectPath` (passed at construction). Its `update()` handles `ComparePickMsg` internally using these fields. `CompareLoadMsg` is already handled by `CompareView`.
 
 ---
 
@@ -399,7 +399,7 @@ In `Column.View()`:
 - When `!c.focused`: wrap entire output with `lipgloss.NewStyle().Faint(true)` (gray out)
 
 Changes to `column.go`:
-1. `View()` method: check `c.focused` flag
+1. `view()` method: check `c.focused` flag
 2. Title rendering: `FocusedTitleStyle` vs `ColumnTitleStyle`
 3. Line rendering: add `FocusedEdgeChar` prefix when focused
 4. Width calculation: subtract 1 for edge char when focused
@@ -432,8 +432,8 @@ Create `renderHeader()` in `app.go` (or separate `chrome.go`):
 ### Step 2.6: Enhance footer — modify `hintbar.go` + `statusbar.go` (~30 lines total)
 
 **HintBar** changes:
-- Remove `:` separator between key and label (currently `Key:Label`, change to `Key Label`)
-- This is a 1-line change in `View()`: `HintKeyStyle.Render(hint.Key) + " " + HintLabelStyle.Render(hint.Label)`
+- Remove `:` separator between key and label (currently `key:label`, change to `key label`)
+- This is a 1-line change in `view()`: `HintKeyStyle.Render(hint.Key) + " " + HintLabelStyle.Render(hint.Label)`
 
 **StatusBar** changes:
 - Use `›` instead of ` > ` for breadcrumb separator
@@ -476,7 +476,7 @@ type JumperView struct {
 }
 ```
 
-Implements `View` interface.
+Implements `view` interface.
 
 **Reuse**: Copy fuzzy scoring from `compare.go:fuzzyScore()`. The `PickerItem` type is already defined in `compare.go`. Consider extracting `fuzzyScore` and `PickerItem` to a shared file (`fuzzy.go`) to avoid duplication.
 
@@ -489,8 +489,8 @@ Implements `View` interface.
 ```
 ┌──────────────────────────────────────┐
 │ > cust_                              │
-│   🏢 MyModule.Customer       Entity  │
-│   📄 MyModule.Customer_Overview Page │
+│   🏢 MyModule.Customer       entity  │
+│   📄 MyModule.Customer_Overview page │
 │   ⚡ MyModule.ACT_Customer_Create MF │
 └──────────────────────────────────────┘
 ```
@@ -538,7 +538,7 @@ func (m MillerView) handleCursorChanged(msg CursorChangedMsg) (MillerView, tea.C
 
 Add `pendingPreviewNode *TreeNode` and `debounceCounter int` fields to `MillerView`.
 
-Handle `previewDebounceMsg` in `Update()`:
+Handle `previewDebounceMsg` in `update()`:
 - If `msg.counter != m.debounceCounter`, ignore (superseded by newer cursor move)
 - Otherwise, proceed with preview request
 
@@ -556,7 +556,7 @@ In `App.Update()` global key handler:
 
 ```go
 case " ", "ctrl+p":
-    // Build item list from active tab's nodes
+    // build item list from active tab's nodes
     items := flattenQualifiedNames(tab.AllNodes)
     jumper := NewJumperView(items, a.width, a.height)
     a.views.Push(jumper)
@@ -573,7 +573,7 @@ case "1", "2", ..., "9":
         // Tab switch (existing behavior)
         a.switchToTab(idx)
     }
-    // In other modes: let active view handle (compare uses 1/2/3 for mode)
+    // in other modes: let active view handle (compare uses 1/2/3 for mode)
     // Already handled by delegation to active.Update()
 ```
 
@@ -606,9 +606,9 @@ Each view prepends a machine-parseable line to its rendered output:
 
 | View | Anchor |
 |------|--------|
-| BrowserView | `[mxcli:browse] MyModule > Entities > Customer  3/47  MDL` |
+| BrowserView | `[mxcli:browse] MyModule > entities > Customer  3/47  MDL` |
 | OverlayView | `[mxcli:overlay] BSON: MyModule.Customer  NDSL` |
-| CompareView | `[mxcli:compare] Left: Entity.Customer  Right: Entity.Order  NDSL\|NDSL` |
+| CompareView | `[mxcli:compare] left: Entity.Customer  right: Entity.Order  NDSL\|NDSL` |
 | DiffView    | `[mxcli:diff] unified  +12 -8  3 hunks` |
 | JumperView  | `[mxcli:jump] > query_text  12 matches` |
 
@@ -620,7 +620,7 @@ Use Bubble Tea's zone manager or manual mouse zone tracking:
 
 ```go
 type BreadcrumbClickMsg struct {
-    Depth int // which breadcrumb segment was clicked (0 = root)
+    depth int // which breadcrumb segment was clicked (0 = root)
 }
 ```
 
@@ -681,9 +681,9 @@ Phase 1 (Foundation) — ~600 lines new/changed
   1.1  view.go (NEW)         — types
   1.2  viewstack.go (NEW)    — stack logic
   1.3  browserview.go (NEW)  — Miller wrapper
-  1.4  overlay.go (MODIFY)   — OverlayView wrapper
-  1.5  compare.go (MODIFY)   — View interface
-  1.6  diffview.go (MODIFY)  — View interface
+  1.4  overlay.go (modify)   — OverlayView wrapper
+  1.5  compare.go (modify)   — view interface
+  1.6  diffview.go (modify)  — view interface
   1.7  pickerview.go (NEW)   — Picker wrapper
   1.8  app.go (REWRITE)      — ViewStack-based routing
   1.9  message routing       — async result forwarding
@@ -691,27 +691,27 @@ Phase 1 (Foundation) — ~600 lines new/changed
 
 Phase 2 (Visual) — ~200 lines new/changed
   2.1  theme.go (NEW, replaces styles.go)
-  2.2  column.go (MODIFY)    — focus indicators
-  2.3  miller.go (MODIFY)    — faint unfocused
-  2.4  miller.go (MODIFY)    — accent preview label
-  2.5  app.go (MODIFY)       — enhanced header
-  2.6  hintbar.go + statusbar.go (MODIFY)
+  2.2  column.go (modify)    — focus indicators
+  2.3  miller.go (modify)    — faint unfocused
+  2.4  miller.go (modify)    — accent preview label
+  2.5  app.go (modify)       — enhanced header
+  2.6  hintbar.go + statusbar.go (modify)
   2.7  verification
 
-Phase 3 (Navigation) — ~300 lines new/changed
+Phase 3 (navigation) — ~300 lines new/changed
   3.1  jumper.go (NEW)       — fuzzy jump view
   3.2  fuzzy.go (NEW)        — extracted fuzzy logic
-  3.3  browserview.go (MODIFY) — navigateToNode
-  3.4  miller.go (MODIFY)    — preview debounce
+  3.3  browserview.go (modify) — navigateToNode
+  3.4  miller.go (modify)    — preview debounce
   3.5  (already done in P1)
-  3.6  app.go (MODIFY)       — Space keybinding
-  3.7  app.go (MODIFY)       — context-sensitive 1-9
+  3.6  app.go (modify)       — Space keybinding
+  3.7  app.go (modify)       — context-sensitive 1-9
   3.8  verification
 
 Phase 4 (Polish) — ~150 lines new/changed
-  4.1  all views (MODIFY)    — LLM anchors
+  4.1  all views (modify)    — LLM anchors
   4.2  statusbar.go + app.go — clickable breadcrumb
-  4.3  help.go (MODIFY)      — updated help text
+  4.3  help.go (modify)      — updated help text
   4.4  cleanup               — dead code removal
   4.5  verification
 ```

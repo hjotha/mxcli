@@ -113,7 +113,7 @@ func TestOutputWidgetMDLV3_DataGridColumnInheritsContext(t *testing.T) {
 	w := rawWidget{
 		Type:          "CustomWidgets$CustomWidget",
 		Name:          "dgProducts",
-		RenderMode:    "DATAGRID2",
+		RenderMode:    "datagrid2",
 		EntityContext: "Shop.Product",
 		DataSource:    &rawDataSource{Type: "database", Reference: "Shop.Product"},
 		DataGridColumns: []rawDataGridColumn{

@@ -15,17 +15,17 @@ If a document is stored with missing properties, wrong field order, or a schema 
 ## Current Architecture (What We Have)
 
 ```
-Reflection Data (JSON)              Hand-coded parsers/writers
+Reflection data (json)              Hand-coded parsers/writers
   ~111 versions available             parser_microflow.go (1200+ lines)
   structures.json per version         parser_page.go (800+ lines)
   storageNames.json per version       writer_microflow_actions.go (400+ lines)
                                       writer_widgets.go (300+ lines)
          │                                      │
          ▼                                      ▼
-  Code Generator                    Runtime serialization
+  Code Generator                    runtime serialization
   (generates Go structs             (type-switches on Go types,
    with BSON tags — but             builds bson.D manually,
-   these are NOT used               must know storage names,
+   these are not used               must know storage names,
    for serialization)               array prefixes, ref kinds)
 ```
 
@@ -42,10 +42,10 @@ The core idea is a **runtime schema registry** that loads type definitions from 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Schema Registry                        │
+│                      schema Registry                        │
 │                                                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ Type Schemas  │  │ Widget       │  │ Extension        │  │
+│  │ type Schemas  │  │ widget       │  │ Extension        │  │
 │  │ (from refl.  │  │ Schemas      │  │ Schemas          │  │
 │  │  data, per   │  │ (from widget │  │ (from extension  │  │
 │  │  version)    │  │  packages,   │  │  manifests,      │  │
@@ -54,7 +54,7 @@ The core idea is a **runtime schema registry** that loads type definitions from 
 │         └─────────────┬────┘                  │             │
 │                       ▼                       │             │
 │            ┌──────────────────┐               │             │
-│            │  Unified Schema  │◄──────────────┘             │
+│            │  Unified schema  │◄──────────────┘             │
 │            │  Lookup          │                              │
 │            └────────┬─────────┘                              │
 │                     │                                        │
@@ -87,10 +87,10 @@ type Registry struct {
 
 // TypeSchema describes one BSON document/element type.
 type TypeSchema struct {
-    QualifiedName string              // e.g. "DomainModels$Entity"
+    QualifiedName string              // e.g. "DomainModels$entity"
     StorageName   string              // e.g. "DomainModels$EntityImpl"
     IsAbstract    bool
-    Properties    []*PropertySchema   // ordered — field order matters for BSON
+    properties    []*PropertySchema   // ordered — field order matters for BSON
     Defaults      map[string]any      // default values from reflection data
     Subtypes      []string            // qualified names of concrete subtypes
     Parent        string              // parent type for inheritance
@@ -100,12 +100,12 @@ type TypeSchema struct {
 type PropertySchema struct {
     Name            string
     StorageName     string            // BSON field name (may differ from Name)
-    Type            PropertyType      // Primitive, Enum, Element, Unit
-    ElementType     string            // qualified name if Type is Element/Unit
+    type            PropertyType      // Primitive, enum, Element, Unit
+    ElementType     string            // qualified name if type is Element/Unit
     ReferenceKind   ReferenceKind     // PART, BY_NAME, BY_ID, LOCAL_BY_NAME
     IsList          bool
     ListEncoding    ListEncoding      // Compact(1), KeyValue(2), Array(3)
-    Required        bool
+    required        bool
     DefaultValue    any
     IntroducedIn    string            // version where this property first appeared
     RemovedIn       string            // version where this property was removed (empty = still present)
@@ -128,7 +128,7 @@ func LoadRegistry(version string) (*Registry, error) {
 The key insight is that we don't need to replace the hand-coded writers — we need to **augment** them. The registry handles:
 
 - **Field completeness**: Ensuring all required fields are present with defaults
-- **Storage name resolution**: Looking up the correct `$Type` value
+- **Storage name resolution**: Looking up the correct `$type` value
 - **Array encoding**: Applying the correct prefix (type 1, 2, or 3) per property
 - **Reference encoding**: Choosing BY_NAME (string) vs BY_ID (binary UUID) per property
 
@@ -151,10 +151,10 @@ func (sw *SchemaWriter) Complete(typeName string, doc bson.D) (bson.D, error) {
         existing[elem.Key] = true
     }
 
-    // Add missing properties with their default values
+    // add missing properties with their default values
     for _, prop := range schema.Properties {
         if !existing[prop.StorageName] && prop.DefaultValue != nil {
-            doc = append(doc, bson.E{Key: prop.StorageName, Value: prop.DefaultValue})
+            doc = append(doc, bson.E{key: prop.StorageName, value: prop.DefaultValue})
         }
     }
 
@@ -163,10 +163,10 @@ func (sw *SchemaWriter) Complete(typeName string, doc bson.D) (bson.D, error) {
 
 // Validate checks a bson.D document against its schema.
 func (sw *SchemaWriter) Validate(typeName string, doc bson.D) []ValidationError {
-    // Check required fields are present
-    // Check field types match schema
-    // Check reference kinds are correct
-    // Check list encodings are correct
+    // check required fields are present
+    // check field types match schema
+    // check reference kinds are correct
+    // check list encodings are correct
 }
 ```
 
@@ -180,13 +180,13 @@ For reading, the registry enables a **tolerant reader** pattern — we can parse
 // GenericParse reads any BSON document into a semi-structured representation
 // using the schema to interpret field types and references.
 func (r *Registry) GenericParse(raw map[string]interface{}) (*GenericDocument, error) {
-    typeName := raw["$Type"].(string)
+    typeName := raw["$type"].(string)
     schema := r.LookupByStorage(typeName)
 
     doc := &GenericDocument{
-        Type:       typeName,
-        Schema:     schema,
-        Properties: make(map[string]any),
+        type:       typeName,
+        schema:     schema,
+        properties: make(map[string]any),
     }
 
     for _, prop := range schema.Properties {
@@ -222,25 +222,25 @@ Widget schemas are different from platform schemas — they come from widget pac
 // WidgetSchema describes a pluggable widget's BSON structure.
 type WidgetSchema struct {
     WidgetID      string                      // e.g. "com.mendix.widget.web.combobox.Combobox"
-    Version       string                      // e.g. "3.5.0"
+    version       string                      // e.g. "3.5.0"
     PropertyTypes []*WidgetPropertyTypeSchema // from CustomWidgetType
     DefaultObject bson.D                      // default WidgetObject
 }
 
 // WidgetPropertyTypeSchema describes one property of a widget.
 type WidgetPropertyTypeSchema struct {
-    Key          string
+    key          string
     Category     string
-    ValueType    string   // "Enumeration", "TextTemplate", "Expression", etc.
+    ValueType    string   // "enumeration", "TextTemplate", "expression", etc.
     DefaultValue any
-    Required     bool
+    required     bool
 }
 ```
 
 **Loading strategy** (three tiers):
 
 ```
-Tier 1: Project widgets/  →  Extract schema from .mpk widget packages at project open time
+Tier 1: project widgets/  →  Extract schema from .mpk widget packages at project open time
 Tier 2: Embedded templates →  Bundled templates (current sdk/widgets/templates/) as fallback
 Tier 3: Generic passthrough → Unknown widgets preserved as raw BSON (round-trip safe)
 ```
@@ -308,9 +308,9 @@ type Migration struct {
     FromVersion string
     ToVersion   string
     TypeName    string
-    Added       []*PropertySchema    // new properties (need defaults)
+    added       []*PropertySchema    // new properties (need defaults)
     Removed     []*PropertySchema    // dropped properties (strip on write)
-    Changed     []*PropertyChange    // type/default changes
+    changed     []*PropertyChange    // type/default changes
 }
 
 // PropertyChange describes a property that changed between versions.
@@ -340,12 +340,12 @@ func (sw *SchemaWriter) Migrate(doc bson.D, fromVersion, toVersion string) (bson
         getType(doc),
     )
 
-    // Remove properties that don't exist in target version
+    // remove properties that don't exist in target version
     for _, removed := range migration.Removed {
         doc = removeField(doc, removed.StorageName)
     }
 
-    // Add new properties with defaults
+    // add new properties with defaults
     for _, added := range migration.Added {
         doc = addFieldWithDefault(doc, added.StorageName, added.DefaultValue)
     }
@@ -360,10 +360,10 @@ The validator checks BSON documents against their schema before writing:
 
 ```go
 type ValidationError struct {
-    Path     string          // e.g. "Microflows$Microflow.ObjectCollection.Objects[3].Action"
+    path     string          // e.g. "microflows$Microflow.ObjectCollection.Objects[3].Action"
     Code     string          // e.g. "MISSING_REQUIRED", "TYPE_MISMATCH", "UNKNOWN_FIELD"
-    Message  string
-    Severity Severity        // Error, Warning, Info
+    message  string
+    Severity Severity        // error, warning, info
 }
 
 type Validator struct {
@@ -375,34 +375,34 @@ func (v *Validator) ValidateDocument(doc bson.D) []ValidationError {
     typeName := getType(doc)
     schema := v.registry.LookupByStorage(typeName)
     if schema == nil {
-        return []ValidationError{{Code: "UNKNOWN_TYPE", Message: typeName}}
+        return []ValidationError{{Code: "UNKNOWN_TYPE", message: typeName}}
     }
 
     var errors []ValidationError
 
-    // Check required fields
+    // check required fields
     for _, prop := range schema.Properties {
         if prop.Required && !hasField(doc, prop.StorageName) {
             errors = append(errors, ValidationError{
-                Path: prop.StorageName,
+                path: prop.StorageName,
                 Code: "MISSING_REQUIRED",
             })
         }
     }
 
-    // Check widget schemas for pages
+    // check widget schemas for pages
     if isPageType(typeName) {
         errors = append(errors, v.validateWidgets(doc)...)
     }
 
-    // Check for fields not in schema (potential corruption)
+    // check for fields not in schema (potential corruption)
     for _, elem := range doc {
-        if elem.Key[0] == '$' { continue } // skip $ID, $Type
+        if elem.Key[0] == '$' { continue } // skip $ID, $type
         if !schema.HasProperty(elem.Key) {
             errors = append(errors, ValidationError{
-                Path: elem.Key,
+                path: elem.Key,
                 Code: "UNKNOWN_FIELD",
-                Severity: Warning,
+                Severity: warning,
             })
         }
     }
@@ -423,7 +423,7 @@ func (v *Validator) ValidateDocument(doc bson.D) []ValidationError {
 4. Add `registry` field to `mpr.Reader` and `mpr.Writer`, loaded from project version
 5. Write tests comparing registry lookups against current hardcoded values
 
-**Deliverable**: `registry.Lookup("DomainModels$Entity")` returns full property metadata including storage names, defaults, reference kinds, and list encodings.
+**Deliverable**: `registry.Lookup("DomainModels$entity")` returns full property metadata including storage names, defaults, reference kinds, and list encodings.
 
 ### Phase 2: Write-Side Completion
 
@@ -455,9 +455,9 @@ func (v *Validator) ValidateDocument(doc bson.D) []ValidationError {
 1. Implement `GenericDocument` type for semi-structured representation
 2. Implement `Registry.GenericParse()` using schema-driven field interpretation
 3. Add `GenericDocument` support to reader for unimplemented document types
-4. Enable MDL `DESCRIBE` for any document type via generic parsing
+4. Enable MDL `describe` for any document type via generic parsing
 
-**Deliverable**: `DESCRIBE WORKFLOW Module.MyWorkflow` works even though workflows don't have hand-coded parsers for every field.
+**Deliverable**: `describe workflow Module.MyWorkflow` works even though workflows don't have hand-coded parsers for every field.
 
 ### Phase 5: Version Migration
 
@@ -476,7 +476,7 @@ func (v *Validator) ValidateDocument(doc bson.D) []ValidationError {
 
 1. Implement `CustomBlobDocument` reader (parse outer structure, preserve Contents)
 2. Implement `CustomBlobDocument` writer (reconstruct outer structure, write Contents)
-3. Add MDL commands: `SHOW EXTENSIONS`, `DESCRIBE EXTENSION MODULE.Name`
+3. Add MDL commands: `show EXTENSIONS`, `describe EXTENSION MODULE.Name`
 4. Add extension documents to catalog tables
 
 **Deliverable**: Projects with Studio Pro extensions can be read and written without corrupting extension documents.

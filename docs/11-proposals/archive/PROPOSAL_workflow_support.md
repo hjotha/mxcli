@@ -8,7 +8,7 @@ Workflows are a core Mendix feature (introduced in Mendix 9.0) for orchestrating
 - **Evora-FactoryManagement**: 1 workflow (AltairIntegration: "WF Schedule technician appointment")
 - **LatoProductInventory**: 0 workflows
 
-Currently mxcli only *counts* workflows in `SHOW MODULES` output. It cannot parse, describe, query, or create workflow documents.
+Currently mxcli only *counts* workflows in `show modules` output. It cannot parse, describe, query, or create workflow documents.
 
 ## Current State
 
@@ -24,7 +24,7 @@ Currently mxcli only *counts* workflows in `SHOW MODULES` output. It cannot pars
 
 ## Workflow BSON Structure (from reflection data 11.6.0)
 
-### Top-Level Document: `Workflows$Workflow`
+### Top-Level Document: `workflows$workflow`
 
 | Field | Storage Name | Type | Notes |
 |-------|-------------|------|-------|
@@ -32,11 +32,11 @@ Currently mxcli only *counts* workflows in `SHOW MODULES` output. It cannot pars
 | Title | Title | String | Display title (deprecated, use WorkflowName) |
 | Documentation | Documentation | String | Description |
 | ExportLevel | ExportLevel | Enum (API/Hidden) | Visibility |
-| Parameter | Parameter | PART (`Workflows$Parameter`) | Workflow context parameter |
-| Flow | Flow | PART (`Workflows$Flow`) | Main flow container |
-| WorkflowName | WorkflowName | PART (`Microflows$StringTemplate`) | Runtime name template |
-| WorkflowDescription | WorkflowDescription | PART (`Microflows$StringTemplate`) | Runtime description template |
-| AdminPage | AdminPage | PART (`Workflows$PageReference`) | Admin overview page |
+| Parameter | Parameter | PART (`workflows$parameter`) | Workflow context parameter |
+| Flow | Flow | PART (`workflows$Flow`) | Main flow container |
+| WorkflowName | WorkflowName | PART (`microflows$stringtemplate`) | Runtime name template |
+| WorkflowDescription | WorkflowDescription | PART (`microflows$stringtemplate`) | Runtime description template |
+| AdminPage | AdminPage | PART (`workflows$PageReference`) | Admin overview page |
 | OnWorkflowEvent | OnWorkflowEvent | PART list | Event handlers |
 | WorkflowMetaData | WorkflowMetaData | PART | Visual layout data |
 | DueDate | DueDate | String | Due date expression |
@@ -45,35 +45,35 @@ Currently mxcli only *counts* workflows in `SHOW MODULES` output. It cannot pars
 ### Activity Type Hierarchy
 
 ```
-Workflows$WorkflowActivity (abstract)
-├── Workflows$StartWorkflowActivity
-├── Workflows$EndWorkflowActivity
-├── Workflows$SingleUserTaskActivity
-├── Workflows$MultiUserTaskActivity
-├── Workflows$CallMicroflowTask
-├── Workflows$CallWorkflowActivity
-├── Workflows$ExclusiveSplitActivity
-├── Workflows$ParallelSplitActivity
-├── Workflows$MergeActivity
-├── Workflows$JumpToActivity
-├── Workflows$WaitForTimerActivity
-├── Workflows$WaitForNotificationActivity
-├── Workflows$EndOfParallelSplitPathActivity
-└── Workflows$EndOfBoundaryEventPathActivity
+workflows$WorkflowActivity (abstract)
+├── workflows$StartWorkflowActivity
+├── workflows$EndWorkflowActivity
+├── workflows$SingleUserTaskActivity
+├── workflows$MultiUserTaskActivity
+├── workflows$CallMicroflowTask
+├── workflows$CallWorkflowActivity
+├── workflows$ExclusiveSplitActivity
+├── workflows$ParallelSplitActivity
+├── workflows$MergeActivity
+├── workflows$JumpToActivity
+├── workflows$WaitForTimerActivity
+├── workflows$WaitForNotificationActivity
+├── workflows$EndOfParallelSplitPathActivity
+└── workflows$EndOfBoundaryEventPathActivity
 ```
 
 ### Key Polymorphic Types
 
-**User Targeting** (`Workflows$UserTargeting`):
+**User Targeting** (`workflows$UserTargeting`):
 - `NoUserTargeting`, `MicroflowUserTargeting`, `MicroflowGroupTargeting`, `XPathUserTargeting`, `XPathGroupTargeting`
 
-**Completion Criteria** (`Workflows$UserTaskCompletionCriteria`):
+**Completion Criteria** (`workflows$UserTaskCompletionCriteria`):
 - `ConsensusCompletionCriteria`, `MajorityCompletionCriteria`, `ThresholdCompletionCriteria`, `VetoCompletionCriteria`, `MicroflowCompletionCriteria`
 
-**Condition Outcomes** (`Workflows$ConditionOutcome`):
+**Condition Outcomes** (`workflows$ConditionOutcome`):
 - `BooleanConditionOutcome`, `EnumerationValueConditionOutcome`, `VoidConditionOutcome`
 
-**Boundary Events** (`Workflows$BoundaryEvent`):
+**Boundary Events** (`workflows$BoundaryEvent`):
 - `InterruptingTimerBoundaryEvent`, `NonInterruptingTimerBoundaryEvent`
 
 ### Real Example: FactoryManagement Workflow
@@ -100,12 +100,12 @@ The "WF Schedule technician appointment" workflow contains:
 Create a new package with Go types for workflow documents:
 
 ```go
-type Workflow struct {
+type workflow struct {
     model.BaseElement
     Name          string
-    Documentation string
+    documentation string
     ExportLevel   string
-    Parameter     *Parameter
+    parameter     *parameter
     Flow          *Flow
     // ... other fields
 }
@@ -140,34 +140,34 @@ func (r *Reader) GetWorkflow(id string) (*workflows.Workflow, error)
 
 #### 1d. SHOW/DESCRIBE Commands
 
-- `SHOW WORKFLOWS [IN Module]` - List all workflows with activity counts
-- `DESCRIBE WORKFLOW Module.WorkflowName` - Full MDL-style output
+- `show workflows [in module]` - List all workflows with activity counts
+- `describe workflow Module.WorkflowName` - Full MDL-style output
 
 Example describe output:
 ```sql
-WORKFLOW AgentCore.WF_EnquiryProcessing
-  PARAMETER $WorkflowContext: AgentCore.Enquiry
+workflow AgentCore.WF_EnquiryProcessing
+  parameter $WorkflowContext: AgentCore.Enquiry
 
   START start1;
 
-  CALL MICROFLOW AgentCore.ACT_ClassifyEnquiry
+  call microflow AgentCore.ACT_ClassifyEnquiry
     ($Enquiry = $WorkflowContext)
-    ON Boolean DO
-      TRUE -> userTask1;
-      FALSE -> end1;
-    END;
+    on boolean DO
+      true -> userTask1;
+      false -> end1;
+    end;
 
-  USER TASK userTask1 'Review Classification'
-    PAGE AgentCore.WF_ReviewClassification
-    TARGETING MICROFLOW AgentCore.DS_GetReviewers
-    OUTCOMES
+  user task userTask1 'Review Classification'
+    page AgentCore.WF_ReviewClassification
+    targeting microflow AgentCore.DS_GetReviewers
+    outcomes
       'Approve' -> callMicroflow2;
       'Reject' -> end2;
-    END;
+    end;
 
-  END end1;
-  END end2;
-END WORKFLOW;
+  end end1;
+  end end2;
+end workflow;
 ```
 
 #### 1e. Catalog Table (`mdl/catalog/`)
@@ -189,7 +189,7 @@ Add `CATALOG.WORKFLOWS` table:
 | DecisionCount | INTEGER | Decision/split count |
 | ParameterEntity | TEXT | Context entity QN |
 
-Add to `objects` view UNION with `ObjectType = 'WORKFLOW'`.
+Add to `objects` view UNION with `ObjectType = 'workflow'`.
 
 #### 1f. Cross-References (refs table)
 
@@ -207,9 +207,9 @@ Add workflows to `buildSource()` in `builder_source.go` so they appear in full-t
 
 ### Phase 2: Context & Navigation
 
-- Add workflows to `SHOW CONTEXT OF` command
-- Add workflows to `SHOW CALLERS OF` / `SHOW CALLEES OF`
-- Add workflows to `SHOW IMPACT OF`
+- Add workflows to `show context of` command
+- Add workflows to `show callers of` / `show callees of`
+- Add workflows to `show impact of`
 - Add `detectElementType` support for workflows in `cmd_context.go`
 
 ### Phase 3: MDL Syntax (Future)
@@ -217,26 +217,26 @@ Add workflows to `buildSource()` in `builder_source.go` so they appear in full-t
 Define MDL grammar for creating/modifying workflows:
 
 ```sql
-CREATE WORKFLOW Module.WF_ProcessOrder
-  PARAMETER $Context: Module.Order
-BEGIN
+create workflow Module.WF_ProcessOrder
+  parameter $context: Module.Order
+begin
   START;
 
-  CALL MICROFLOW Module.ACT_ValidateOrder ($Order = $Context)
-    ON Boolean
-      TRUE -> reviewTask;
-      FALSE -> endReject;
+  call microflow Module.ACT_ValidateOrder ($Order = $context)
+    on boolean
+      true -> reviewTask;
+      false -> endReject;
 
-  USER TASK reviewTask 'Review Order'
-    PAGE Module.WF_ReviewOrder
-    TARGETING MICROFLOW Module.DS_GetReviewers
-    OUTCOMES
+  user task reviewTask 'Review Order'
+    page Module.WF_ReviewOrder
+    targeting microflow Module.DS_GetReviewers
+    outcomes
       'Approve' -> endApprove;
       'Reject' -> endReject;
 
-  END endApprove;
-  END endReject;
-END;
+  end endApprove;
+  end endReject;
+end;
 ```
 
 This is complex and should be deferred until read-only support is stable.
@@ -286,20 +286,20 @@ make build && make test
 
 # Test with FactoryManagement project (has 1 workflow)
 ./bin/mxcli -p mx-test-projects/Evora-FactoryManagement/Evora-FactoryManagement.mpr \
-  -c "SHOW WORKFLOWS"
+  -c "show workflows"
 
 ./bin/mxcli -p mx-test-projects/Evora-FactoryManagement/Evora-FactoryManagement.mpr \
-  -c "DESCRIBE WORKFLOW AltairIntegration.WF_Schedule_technician_appointment"
+  -c "describe workflow AltairIntegration.WF_Schedule_technician_appointment"
 
 # Test with EnquiriesManagement project (has 12 workflows)
 ./bin/mxcli -p mx-test-projects/EnquiriesManagement/EnquiriesManagement.mpr \
-  -c "SHOW WORKFLOWS"
+  -c "show workflows"
 
-# Catalog queries
+# catalog queries
 ./bin/mxcli -p mx-test-projects/EnquiriesManagement/EnquiriesManagement.mpr \
-  -c "REFRESH CATALOG FULL FORCE; SELECT * FROM CATALOG.WORKFLOWS"
+  -c "refresh catalog full force; select * from CATALOG.WORKFLOWS"
 
-# Cross-references
+# cross-references
 ./bin/mxcli -p mx-test-projects/EnquiriesManagement/EnquiriesManagement.mpr \
-  -c "REFRESH CATALOG FULL FORCE; SHOW CALLERS OF AgentCore.ACT_ClassifyEnquiry"
+  -c "refresh catalog full force; show callers of AgentCore.ACT_ClassifyEnquiry"
 ```

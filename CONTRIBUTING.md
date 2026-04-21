@@ -32,8 +32,8 @@ Thank you for your interest in contributing to mxcli! This document explains wha
 ```bash
 git clone https://github.com/mendixlabs/mxcli
 cd mxcli
-# Open in VS Code, then: Command Palette -> "Reopen in Container"
-# Podman users: select the "Mendix Model SDK Go (Podman)" configuration
+# open in VS Code, then: Command Palette -> "Reopen in container"
+# Podman users: select the "Mendix model SDK Go (Podman)" configuration
 ```
 
 **Option 2: Local Machine**
@@ -47,10 +47,10 @@ make build
 ### Common Tasks
 
 ```bash
-make build        # Build binary
-make test         # Run unit tests
-make test-mdl     # Run MDL integration tests
-make lint         # Run linter (fmt + vet)
+make build        # build binary
+make test         # run unit tests
+make test-mdl     # run MDL integration tests
+make lint         # run linter (fmt + vet)
 make clean        # Clean build artifacts
 make grammar      # Regenerate ANTLR parser (after modifying mdl/grammar/MDLParser.g4)
 ```
@@ -145,7 +145,7 @@ Add working examples in `mdl-examples/doctype-tests/` for any new syntax.
 
 **Example validation:**
 ```
-Tested: Created entity with FOLDER clause via MDL
+Tested: created entity with folder clause via MDL
 Mendix version: 11.8.0
 Result: mx check passes, entity appears in correct folder in Studio Pro
 ```
@@ -206,7 +206,7 @@ Every PR is checked against the review checklist in `CLAUDE.md`. Key items:
 
 ```bash
 make build    # Code compiles (CGO_ENABLED=0, no C compiler needed)
-make test     # All tests pass
+make test     # all tests pass
 make lint     # go fmt + go vet pass
 ```
 
@@ -242,18 +242,18 @@ For new MDL commands, add test scripts in `mdl-examples/doctype-tests/`:
 
 ```sql
 -- Create a module for testing
-CREATE MODULE TestFeature;
+create module TestFeature;
 
 -- Test the new feature
-CREATE JSON STRUCTURE TestFeature.MyStructure
-  FOLDER 'Resources'
-  SNIPPET '{"id": 1, "name": "test"}';
+create json structure TestFeature.MyStructure
+  folder 'Resources'
+  snippet '{"id": 1, "name": "test"}';
 
 -- Verify it exists
-DESCRIBE JSON STRUCTURE TestFeature.MyStructure;
+describe json structure TestFeature.MyStructure;
 
 -- Clean up
-DROP JSON STRUCTURE TestFeature.MyStructure;
+drop json structure TestFeature.MyStructure;
 ```
 
 Validate with:
@@ -280,7 +280,7 @@ mxcli's primary value is that AI agents (Claude Code, Cursor, etc.) can generate
 1. **Open the dev container** with Claude Code installed
 2. **Ask Claude Code to use your feature** without giving it the exact syntax:
    ```
-   I want to create a JSON structure for a customer API response
+   I want to create a json structure for a customer api response
    with name, email, and an addresses array. Can you write the MDL?
    ```
 3. **Evaluate the result:**
@@ -294,7 +294,7 @@ mxcli's primary value is that AI agents (Claude Code, Cursor, etc.) can generate
 |---------|-----|
 | Claude doesn't know the syntax exists | Add/update skill in `.claude/skills/` |
 | Claude generates wrong syntax | Improve examples in skill files |
-| Claude uses outdated patterns | Update CLI help text (`Short`/`Long`/`Example` in Cobra) |
+| Claude uses outdated patterns | Update CLI help text (`Short`/`long`/`Example` in Cobra) |
 | Error messages are unhelpful | Improve error text with hints |
 
 ### PR Section
@@ -307,7 +307,7 @@ Include in your PR:
 - [ ] Tested with Claude Code in dev container
 - [ ] Claude can generate correct MDL for this feature
 - [ ] Skills updated (if applicable)
-- [ ] Error messages are helpful for debugging
+- [ ] error messages are helpful for debugging
 ```
 
 ---
@@ -330,7 +330,7 @@ Use conventional commits:
 ```
 feat: add impact command for change analysis (closes #123)
 fix: handle unicode characters in entity names (closes #456)
-docs: add examples for CREATE WORKFLOW (closes #789)
+docs: add examples for create workflow (closes #789)
 refactor: simplify executor dispatch logic
 ```
 
@@ -409,7 +409,7 @@ If you're contributing from a fork, this is the full cycle:
 
 ### BSON Storage Names
 
-**Critical**: Mendix uses different storage names in BSON `$Type` fields than the qualified names in SDK documentation. Always verify against `reference/mendixmodellib/reflection-data/` or existing MPR files. See the table in `CLAUDE.md` for common mismatches.
+**Critical**: Mendix uses different storage names in BSON `$type` fields than the qualified names in SDK documentation. Always verify against `reference/mendixmodellib/reflection-data/` or existing MPR files. See the table in `CLAUDE.md` for common mismatches.
 
 ### BSON Tooling
 
@@ -423,7 +423,7 @@ When adding or debugging a new Mendix document type, see the [BSON Tooling Guide
 
 | Change | Where to Document |
 |--------|-------------------|
-| New CLI command | Cobra `Short`/`Long`/`Example` fields |
+| New CLI command | Cobra `Short`/`long`/`Example` fields |
 | New MDL statement | `docs/01-project/MDL_QUICK_REFERENCE.md`, skill in `.claude/skills/` |
 | New SDK function | Godoc comments, `docs/GO_LIBRARY.md` |
 | New site-facing feature | `docs-site/src/` pages |
@@ -436,12 +436,12 @@ Update `CHANGELOG.md`:
 ```markdown
 ## [Unreleased]
 
-### Added
-- `DESCRIBE NANOFLOW` with activities and control flows (#42)
-- FOLDER support for CREATE JSON STRUCTURE (#38)
+### added
+- `describe nanoflow` with activities and control flows (#42)
+- folder support for create json structure (#38)
 
 ### Fixed
-- Nanoflow parser now reads activities and return type from BSON (#43)
+- nanoflow parser now reads activities and return type from BSON (#43)
 ```
 
 ---
@@ -452,8 +452,8 @@ Update `CHANGELOG.md`:
 
 ```bash
 make build        # Ensure binary is up to date
-make test         # Run tests, read error output
-make lint         # Check formatting and vet
+make test         # run tests, read error output
+make lint         # check formatting and vet
 ```
 
 ### "Parser changes don't take effect"

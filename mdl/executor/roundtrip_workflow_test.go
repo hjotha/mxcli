@@ -31,125 +31,125 @@ func TestRoundtripWorkflow_Comprehensive(t *testing.T) {
 	// --- Prerequisites ---
 
 	// Context entity for both workflows
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.WfCtxEntity (
+	if err := env.executeMDL(`create or modify persistent entity ` + mod + `.WfCtxEntity (
 		Score: Integer,
-		IsApproved: Boolean DEFAULT false
+		IsApproved: Boolean default false
 	);`); err != nil {
 		t.Fatalf("create WfCtxEntity: %v", err)
 	}
 
 	// Microflow: single-user targeting
-	if err := env.executeMDL(`CREATE MICROFLOW ` + mod + `.GetSingleReviewer () RETURNS String BEGIN END;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + mod + `.GetSingleReviewer () returns String begin end;`); err != nil {
 		t.Fatalf("create GetSingleReviewer: %v", err)
 	}
 
 	// Microflow: multi-user targeting
-	if err := env.executeMDL(`CREATE MICROFLOW ` + mod + `.GetMultiReviewers () RETURNS String BEGIN END;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + mod + `.GetMultiReviewers () returns String begin end;`); err != nil {
 		t.Fatalf("create GetMultiReviewers: %v", err)
 	}
 
 	// Microflow: called by CALL MICROFLOW (returns Boolean)
-	if err := env.executeMDL(`CREATE MICROFLOW ` + mod + `.ScoreCalc (Score: Integer) RETURNS Boolean BEGIN END;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + mod + `.ScoreCalc (Score: Integer) returns Boolean begin end;`); err != nil {
 		t.Fatalf("create ScoreCalc: %v", err)
 	}
 
 	// Sub-workflow for CALL WORKFLOW
-	if err := env.executeMDL(`CREATE WORKFLOW ` + mod + `.SubApprovalFlow
-  PARAMETER $WorkflowContext: ` + mod + `.WfCtxEntity
-BEGIN
-  USER TASK SubTask 'Sub-Approval'
-    PAGE ` + mod + `.SubPage
-    OUTCOMES 'Done' { };
-END WORKFLOW;`); err != nil {
+	if err := env.executeMDL(`create workflow ` + mod + `.SubApprovalFlow
+  parameter $WorkflowContext: ` + mod + `.WfCtxEntity
+begin
+  user task SubTask 'Sub-Approval'
+    page ` + mod + `.SubPage
+    outcomes 'Done' { };
+end workflow;`); err != nil {
 		t.Fatalf("create SubApprovalFlow: %v", err)
 	}
 
 	// --- Main comprehensive workflow ---
-	createMDL := `CREATE WORKFLOW ` + mod + `.ComprehensiveFlow
-  PARAMETER $WorkflowContext: ` + mod + `.WfCtxEntity
-BEGIN
+	createMDL := `create workflow ` + mod + `.ComprehensiveFlow
+  parameter $WorkflowContext: ` + mod + `.WfCtxEntity
+begin
 
-  ANNOTATION 'Comprehensive workflow covering all MDL syntax';
+  annotation 'Comprehensive workflow covering all MDL syntax';
 
-  USER TASK ReviewTask 'Review Request'
-    PAGE ` + mod + `.ReviewPage
-    TARGETING MICROFLOW ` + mod + `.GetSingleReviewer
-    OUTCOMES
+  user task ReviewTask 'Review Request'
+    page ` + mod + `.ReviewPage
+    targeting microflow ` + mod + `.GetSingleReviewer
+    outcomes
       'Approve' { }
       'Reject' { }
-    BOUNDARY EVENT INTERRUPTING TIMER '${PT24H}' NON INTERRUPTING TIMER '${PT1H}';
+    boundary event interrupting timer '${PT24H}' non interrupting timer '${PT1H}';
 
-  MULTI USER TASK MultiReviewTask 'Multi-Person Review'
-    PAGE ` + mod + `.MultiReviewPage
-    TARGETING MICROFLOW ` + mod + `.GetMultiReviewers
-    OUTCOMES 'Complete' { };
+  multi user task MultiReviewTask 'Multi-Person Review'
+    page ` + mod + `.MultiReviewPage
+    targeting microflow ` + mod + `.GetMultiReviewers
+    outcomes 'Complete' { };
 
-  CALL MICROFLOW ` + mod + `.ScoreCalc
-    WITH (Score = '$WorkflowContext/Score')
-    OUTCOMES
-      TRUE -> { }
-      FALSE -> { };
+  call microflow ` + mod + `.ScoreCalc
+    with (Score = '$WorkflowContext/Score')
+    outcomes
+      true -> { }
+      false -> { };
 
-  DECISION '$WorkflowContext/IsApproved'
-    OUTCOMES
-      TRUE -> {
-        WAIT FOR TIMER '${PT2H}';
+  decision '$WorkflowContext/IsApproved'
+    outcomes
+      true -> {
+        wait for timer '${PT2H}';
       }
-      FALSE -> {
-        JUMP TO ReviewTask;
+      false -> {
+        jump to ReviewTask;
       };
 
-  PARALLEL SPLIT
-    PATH 1 {
-      USER TASK FinalApprove 'Final Approval'
-        PAGE ` + mod + `.ApprovePage
-        OUTCOMES 'Approved' { };
+  parallel split
+    path 1 {
+      user task FinalApprove 'Final Approval'
+        page ` + mod + `.ApprovePage
+        outcomes 'Approved' { };
     }
-    PATH 2 {
-      CALL WORKFLOW ` + mod + `.SubApprovalFlow;
+    path 2 {
+      call workflow ` + mod + `.SubApprovalFlow;
     };
 
-  WAIT FOR NOTIFICATION;
+  wait for notification;
 
-  ANNOTATION 'End of flow';
+  annotation 'End of flow';
 
-END WORKFLOW;`
+end workflow;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("create ComprehensiveFlow: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + mod + `.ComprehensiveFlow;`)
+	output, err := env.describeMDL(`describe workflow ` + mod + `.ComprehensiveFlow;`)
 	if err != nil {
 		t.Fatalf("describe ComprehensiveFlow: %v", err)
 	}
 
-	t.Logf("DESCRIBE output:\n%s", output)
+	t.Logf("describe output:\n%s", output)
 
 	checks := []struct {
 		label   string
 		keyword string
 	}{
-		{"annotation activity", "ANNOTATION 'Comprehensive workflow"},
-		{"user task", "USER TASK ReviewTask"},
+		{"annotation activity", "annotation 'Comprehensive workflow"},
+		{"user task", "user task ReviewTask"},
 		{"outcome approve", "'Approve'"},
 		{"outcome reject", "'Reject'"},
-		{"boundary interrupting", "BOUNDARY EVENT INTERRUPTING TIMER '${PT24H}'"},
-		{"boundary non interrupting", "BOUNDARY EVENT NON INTERRUPTING TIMER '${PT1H}'"},
-		{"multi user task", "MULTI USER TASK MultiReviewTask"},
-		{"call microflow with", "CALL MICROFLOW " + mod + ".ScoreCalc WITH (Score ="},
-		{"outcomes true", "TRUE ->"},
-		{"outcomes false", "FALSE ->"},
-		{"decision", "DECISION '$WorkflowContext/IsApproved'"},
-		{"wait for timer", "WAIT FOR TIMER '${PT2H}'"},
-		{"jump to", "JUMP TO ReviewTask"},
-		{"parallel split", "PARALLEL SPLIT"},
-		{"path 1", "PATH 1"},
-		{"path 2", "PATH 2"},
-		{"call workflow", "CALL WORKFLOW " + mod + ".SubApprovalFlow"},
-		{"wait for notification", "WAIT FOR NOTIFICATION"},
-		{"trailing annotation", "ANNOTATION 'End of flow'"},
-		{"parameter", "PARAMETER $WorkflowContext: " + mod + ".WfCtxEntity"},
+		{"boundary interrupting", "boundary event interrupting timer '${PT24H}'"},
+		{"boundary non interrupting", "boundary event non interrupting timer '${PT1H}'"},
+		{"multi user task", "multi user task MultiReviewTask"},
+		{"call microflow with", "call microflow " + mod + ".ScoreCalc with (Score ="},
+		{"outcomes true", "true ->"},
+		{"outcomes false", "false ->"},
+		{"decision", "decision '$WorkflowContext/IsApproved'"},
+		{"wait for timer", "wait for timer '${PT2H}'"},
+		{"jump to", "jump to ReviewTask"},
+		{"parallel split", "parallel split"},
+		{"path 1", "path 1"},
+		{"path 2", "path 2"},
+		{"call workflow", "call workflow " + mod + ".SubApprovalFlow"},
+		{"wait for notification", "wait for notification"},
+		{"trailing annotation", "annotation 'End of flow'"},
+		{"parameter", "parameter $WorkflowContext: " + mod + ".WfCtxEntity"},
 	}
 
 	var failed []string
@@ -159,7 +159,7 @@ END WORKFLOW;`
 		}
 	}
 	if len(failed) > 0 {
-		t.Errorf("DESCRIBE output missing %d expected keywords:\n  %s\n\nFull output:\n%s",
+		t.Errorf("describe output missing %d expected keywords:\n  %s\n\nFull output:\n%s",
 			len(failed), strings.Join(failed, "\n  "), output)
 	}
 }
@@ -168,17 +168,17 @@ func TestRoundtripWorkflow_BoundaryEventInterrupting(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE WORKFLOW ` + testModule + `.WfBoundaryInt
-  PARAMETER $WorkflowContext: ` + testModule + `.TestEntitySimple
-BEGIN
-  USER TASK act1 'Review'
-    PAGE ` + testModule + `.ReviewPage
-    OUTCOMES 'Approve' { }
-    BOUNDARY EVENT INTERRUPTING TIMER '${PT1H}'
+	createMDL := `create workflow ` + testModule + `.WfBoundaryInt
+  parameter $WorkflowContext: ` + testModule + `.TestEntitySimple
+begin
+  user task act1 'Review'
+    page ` + testModule + `.ReviewPage
+    outcomes 'Approve' { }
+    boundary event interrupting timer '${PT1H}'
     ;
-END WORKFLOW;`
+end workflow;`
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + testModule + `.TestEntitySimple (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntitySimple (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
@@ -186,13 +186,13 @@ END WORKFLOW;`
 		t.Fatalf("Failed to create workflow: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + testModule + `.WfBoundaryInt;`)
+	output, err := env.describeMDL(`describe workflow ` + testModule + `.WfBoundaryInt;`)
 	if err != nil {
 		t.Fatalf("Failed to describe workflow: %v", err)
 	}
 
-	if !strings.Contains(output, "BOUNDARY EVENT INTERRUPTING TIMER") {
-		t.Errorf("Expected DESCRIBE output to contain 'BOUNDARY EVENT INTERRUPTING TIMER', got:\n%s", output)
+	if !strings.Contains(output, "boundary event interrupting timer") {
+		t.Errorf("Expected describe output to contain 'boundary event interrupting timer', got:\n%s", output)
 	}
 }
 
@@ -200,17 +200,17 @@ func TestRoundtripWorkflow_BoundaryEventNonInterrupting(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE WORKFLOW ` + testModule + `.WfBoundaryNonInt
-  PARAMETER $WorkflowContext: ` + testModule + `.TestEntitySimple2
-BEGIN
-  USER TASK act1 'Review'
-    PAGE ` + testModule + `.ReviewPage
-    OUTCOMES 'Approve' { }
-    BOUNDARY EVENT NON INTERRUPTING TIMER '${PT2H}'
+	createMDL := `create workflow ` + testModule + `.WfBoundaryNonInt
+  parameter $WorkflowContext: ` + testModule + `.TestEntitySimple2
+begin
+  user task act1 'Review'
+    page ` + testModule + `.ReviewPage
+    outcomes 'Approve' { }
+    boundary event non interrupting timer '${PT2H}'
     ;
-END WORKFLOW;`
+end workflow;`
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + testModule + `.TestEntitySimple2 (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntitySimple2 (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
@@ -218,13 +218,13 @@ END WORKFLOW;`
 		t.Fatalf("Failed to create workflow: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + testModule + `.WfBoundaryNonInt;`)
+	output, err := env.describeMDL(`describe workflow ` + testModule + `.WfBoundaryNonInt;`)
 	if err != nil {
 		t.Fatalf("Failed to describe workflow: %v", err)
 	}
 
-	if !strings.Contains(output, "BOUNDARY EVENT NON INTERRUPTING TIMER") {
-		t.Errorf("Expected DESCRIBE output to contain 'BOUNDARY EVENT NON INTERRUPTING TIMER', got:\n%s", output)
+	if !strings.Contains(output, "boundary event non interrupting timer") {
+		t.Errorf("Expected describe output to contain 'boundary event non interrupting timer', got:\n%s", output)
 	}
 }
 
@@ -232,16 +232,16 @@ func TestRoundtripWorkflow_MultiUserTask(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE WORKFLOW ` + testModule + `.WfMultiUser
-  PARAMETER $WorkflowContext: ` + testModule + `.TestEntityMulti
-BEGIN
-  MULTI USER TASK act1 'Caption'
-    PAGE ` + testModule + `.ReviewPage
-    OUTCOMES 'Approve' { }
+	createMDL := `create workflow ` + testModule + `.WfMultiUser
+  parameter $WorkflowContext: ` + testModule + `.TestEntityMulti
+begin
+  multi user task act1 'Caption'
+    page ` + testModule + `.ReviewPage
+    outcomes 'Approve' { }
     ;
-END WORKFLOW;`
+end workflow;`
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + testModule + `.TestEntityMulti (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityMulti (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
@@ -249,13 +249,13 @@ END WORKFLOW;`
 		t.Fatalf("Failed to create workflow: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + testModule + `.WfMultiUser;`)
+	output, err := env.describeMDL(`describe workflow ` + testModule + `.WfMultiUser;`)
 	if err != nil {
 		t.Fatalf("Failed to describe workflow: %v", err)
 	}
 
-	if !strings.Contains(output, "MULTI USER TASK") {
-		t.Errorf("Expected DESCRIBE output to contain 'MULTI USER TASK', got:\n%s", output)
+	if !strings.Contains(output, "multi user task") {
+		t.Errorf("Expected describe output to contain 'multi user task', got:\n%s", output)
 	}
 }
 
@@ -263,13 +263,13 @@ func TestRoundtripWorkflow_AnnotationActivity(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE WORKFLOW ` + testModule + `.WfAnnotation
-  PARAMETER $WorkflowContext: ` + testModule + `.TestEntityAnnot
-BEGIN
-  ANNOTATION 'This is a workflow note';
-END WORKFLOW;`
+	createMDL := `create workflow ` + testModule + `.WfAnnotation
+  parameter $WorkflowContext: ` + testModule + `.TestEntityAnnot
+begin
+  annotation 'This is a workflow note';
+end workflow;`
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + testModule + `.TestEntityAnnot (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityAnnot (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
@@ -277,24 +277,24 @@ END WORKFLOW;`
 		t.Fatalf("Failed to create workflow: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + testModule + `.WfAnnotation;`)
+	output, err := env.describeMDL(`describe workflow ` + testModule + `.WfAnnotation;`)
 	if err != nil {
 		t.Fatalf("Failed to describe workflow: %v", err)
 	}
 
-	if !strings.Contains(output, "ANNOTATION 'This is a workflow note'") {
-		t.Errorf("Expected DESCRIBE output to contain \"ANNOTATION 'This is a workflow note'\", got:\n%s", output)
+	if !strings.Contains(output, "annotation 'This is a workflow note'") {
+		t.Errorf("Expected describe output to contain \"annotation 'This is a workflow note'\", got:\n%s", output)
 	}
 
 	// Full round-trip: DESCRIBE output must be re-executable (annotation must survive re-create)
 	describeOutput := output
 	// Replace WORKFLOW with CREATE OR REPLACE WORKFLOW for round-trip execution
-	createFromDescribe := strings.Replace(describeOutput, "\nWORKFLOW ", "\nCREATE OR REPLACE WORKFLOW ", 1)
+	createFromDescribe := strings.Replace(describeOutput, "\nworkflow ", "\ncreate or replace workflow ", 1)
 	// Strip comment header lines (-- ...) before the CREATE OR REPLACE WORKFLOW
 	var mdlLines []string
 	inBody := false
 	for _, line := range strings.Split(createFromDescribe, "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "CREATE OR REPLACE WORKFLOW") {
+		if strings.HasPrefix(strings.TrimSpace(line), "create or replace workflow") {
 			inBody = true
 		}
 		if inBody {
@@ -303,7 +303,7 @@ END WORKFLOW;`
 	}
 	roundTripMDL := strings.Join(mdlLines, "\n")
 	if err := env.executeMDL(roundTripMDL); err != nil {
-		t.Errorf("Round-trip execution failed (DESCRIBE output is not re-executable): %v\nMDL:\n%s", err, roundTripMDL)
+		t.Errorf("Round-trip execution failed (describe output is not re-executable): %v\nMDL:\n%s", err, roundTripMDL)
 	}
 }
 
@@ -316,14 +316,14 @@ func TestRoundtripWorkflow_AnnotationBeforeActivity(t *testing.T) {
 
 	// Create a workflow with an ANNOTATION before a WAIT FOR TIMER.
 	// This mimics the pattern from Studio Pro where an annotation is attached to an activity.
-	createMDL := `CREATE WORKFLOW ` + testModule + `.WfAnnotBeforeTimer
-  PARAMETER $WorkflowContext: ` + testModule + `.TestEntityAnnotTimer
-BEGIN
-  ANNOTATION 'I am a note';
-  WAIT FOR TIMER 'addDays([%CurrentDateTime%], 1)' COMMENT 'Timer';
-END WORKFLOW;`
+	createMDL := `create workflow ` + testModule + `.WfAnnotBeforeTimer
+  parameter $WorkflowContext: ` + testModule + `.TestEntityAnnotTimer
+begin
+  annotation 'I am a note';
+  wait for timer 'addDays([%CurrentDateTime%], 1)' comment 'Timer';
+end workflow;`
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + testModule + `.TestEntityAnnotTimer (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityAnnotTimer (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
@@ -331,20 +331,20 @@ END WORKFLOW;`
 		t.Fatalf("Failed to create workflow: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + testModule + `.WfAnnotBeforeTimer;`)
+	output, err := env.describeMDL(`describe workflow ` + testModule + `.WfAnnotBeforeTimer;`)
 	if err != nil {
 		t.Fatalf("Failed to describe workflow: %v", err)
 	}
 
 	// The annotation must appear as a parseable ANNOTATION statement, not as a SQL comment.
-	if !strings.Contains(output, "ANNOTATION 'I am a note'") {
-		t.Errorf("Expected DESCRIBE to emit ANNOTATION statement, got:\n%s", output)
+	if !strings.Contains(output, "annotation 'I am a note'") {
+		t.Errorf("Expected describe to emit annotation statement, got:\n%s", output)
 	}
 	if strings.Contains(output, "-- I am a note") {
-		t.Errorf("DESCRIBE must not emit annotation as SQL comment (not round-trippable), got:\n%s", output)
+		t.Errorf("describe must not emit annotation as sql comment (not round-trippable), got:\n%s", output)
 	}
-	if !strings.Contains(output, "WAIT FOR TIMER") {
-		t.Errorf("Expected DESCRIBE to contain WAIT FOR TIMER, got:\n%s", output)
+	if !strings.Contains(output, "wait for timer") {
+		t.Errorf("Expected describe to contain wait for timer, got:\n%s", output)
 	}
 }
 
@@ -352,18 +352,18 @@ func TestRoundtripWorkflow_CallMicroflowWithParams(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE WORKFLOW ` + testModule + `.WfCallMf
-  PARAMETER $WorkflowContext: ` + testModule + `.TestEntityCallMf
-BEGIN
-  CALL MICROFLOW ` + testModule + `.SomeMicroflow WITH (Amount = '$WorkflowContext/Amount')
-    OUTCOMES TRUE -> { } FALSE -> { };
-END WORKFLOW;`
+	createMDL := `create workflow ` + testModule + `.WfCallMf
+  parameter $WorkflowContext: ` + testModule + `.TestEntityCallMf
+begin
+  call microflow ` + testModule + `.SomeMicroflow with (Amount = '$WorkflowContext/Amount')
+    outcomes true -> { } false -> { };
+end workflow;`
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + testModule + `.TestEntityCallMf (Amount: Decimal);`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityCallMf (Amount: Decimal);`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE MICROFLOW ` + testModule + `.SomeMicroflow (Amount: Decimal) RETURNS Boolean BEGIN END;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + testModule + `.SomeMicroflow (Amount: Decimal) returns Boolean begin end;`); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
@@ -371,12 +371,12 @@ END WORKFLOW;`
 		t.Fatalf("Failed to create workflow: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE WORKFLOW ` + testModule + `.WfCallMf;`)
+	output, err := env.describeMDL(`describe workflow ` + testModule + `.WfCallMf;`)
 	if err != nil {
 		t.Fatalf("Failed to describe workflow: %v", err)
 	}
 
-	if !strings.Contains(output, "WITH (") {
-		t.Errorf("Expected DESCRIBE output to contain 'WITH (', got:\n%s", output)
+	if !strings.Contains(output, "with (") {
+		t.Errorf("Expected describe output to contain 'with (', got:\n%s", output)
 	}
 }

@@ -30,6 +30,9 @@ var scriptModuleDeps = map[string][]string{
 // These are syntax showcase scripts that intentionally omit entities, constants,
 // headers etc. that full validation requires.
 var scriptKnownCEErrors = map[string][]string{
+	"03-page-examples.mdl": {
+		"CE3637", // Data view listen to gallery in sibling layout-grid column — Mendix scoping limitation
+	},
 	"02-microflow-examples.mdl": {
 		"CE0117", // Expression error in LOG WARNING on Mendix 10.x (string concat syntax difference)
 	},
@@ -166,7 +169,7 @@ func TestMxCheck_DoctypeScripts(t *testing.T) {
 			output, mxErr := runMxCheck(t, env.projectPath)
 			if mxErr != nil {
 				// Check for actual errors: [error] lines or ERROR: crash messages
-				hasErrors := strings.Contains(output, "[error]") || strings.Contains(output, "ERROR:")
+				hasErrors := strings.Contains(output, "[error]") || strings.Contains(output, "error:")
 				if hasErrors {
 					// Check if all errors are from known CE codes (limitations of syntax showcases)
 					knownCodes := []string{
@@ -195,7 +198,7 @@ func TestMxCheck_DoctypeScripts(t *testing.T) {
 // allErrorsKnown returns true if every [error] line in the mx check output
 // contains at least one of the known CE codes.
 func allErrorsKnown(output string, knownCodes []string) bool {
-	if strings.Contains(output, "ERROR:") {
+	if strings.Contains(output, "error:") {
 		return false // Crash-level errors are never known
 	}
 	for _, line := range strings.Split(output, "\n") {

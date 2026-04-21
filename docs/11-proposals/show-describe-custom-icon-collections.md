@@ -22,7 +22,7 @@ Custom Icon Collections define icon fonts with named glyphs. Each collection has
 ```
 CustomIcons$CustomIconCollection:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
   CollectionClass: string (e.g., "mx-icon-lined")
@@ -39,7 +39,7 @@ CustomIcons$CustomIconCollection:
 ### SHOW ICON COLLECTIONS
 
 ```
-SHOW ICON COLLECTIONS [IN Module]
+show icon COLLECTIONS [in module]
 ```
 
 | Qualified Name | Module | Name | Class | Prefix | Icons |
@@ -48,14 +48,14 @@ SHOW ICON COLLECTIONS [IN Module]
 ### DESCRIBE ICON COLLECTION
 
 ```
-DESCRIBE ICON COLLECTION Module.Name
+describe icon collection Module.Name
 ```
 
 Output format:
 
 ```
-ICON COLLECTION MyModule.CustomIcons
-  CLASS 'mx-icon-lined'
+icon collection MyModule.CustomIcons
+  class 'mx-icon-lined'
   PREFIX 'mx-icon'
 {
   arrow-down (U+E900)
@@ -77,7 +77,7 @@ ICON COLLECTION MyModule.CustomIcons
 type CustomIconCollection struct {
     ContainerID     model.ID
     Name            string
-    Documentation   string
+    documentation   string
     Excluded        bool
     ExportLevel     string
     CollectionClass string
@@ -95,7 +95,7 @@ type CustomIcon struct {
 
 ### 2. Add Parser, Reader, AST, Grammar, Executor
 
-Standard pattern. Grammar tokens: `ICON`, `ICONS`, `COLLECTION`, `COLLECTIONS` (COLLECTION may be shared with IMAGE COLLECTION).
+Standard pattern. Grammar tokens: `icon`, `ICONS`, `collection`, `COLLECTIONS` (COLLECTION may be shared with IMAGE COLLECTION).
 
 ### 3. Add Autocomplete
 

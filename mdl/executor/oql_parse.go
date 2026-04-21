@@ -26,7 +26,7 @@ func ParseOQLString(oql string) *ast.OQLParsed {
 	// We need at least one attribute for valid syntax.
 	// No wrapping parens — LPAREN? in the grammar is optional and would conflict
 	// with subquery parentheses in FROM/JOIN clauses.
-	synthetic := fmt.Sprintf("CREATE VIEW ENTITY _Dummy._Dummy (X: String) AS %s ;", oql)
+	synthetic := fmt.Sprintf("create view entity _Dummy._Dummy (X: String) as %s ;", oql)
 
 	// Parse errors are expected for complex OQL expressions that the grammar
 	// doesn't fully handle (e.g., advanced expressions, subqueries). ANTLR still

@@ -40,8 +40,8 @@ Create separate serializer implementations per major version, with shared base l
 
 ```
 sdk/mpr/
-├── reader.go           # Version-agnostic reading (auto-detect)
-├── writer.go           # Version-aware writing (dispatches to version)
+├── reader.go           # version-agnostic reading (auto-detect)
+├── writer.go           # version-aware writing (dispatches to version)
 ├── version/
 │   ├── detector.go     # Detect MPR version from metadata
 │   ├── v9/
@@ -52,7 +52,7 @@ sdk/mpr/
 │       └── serializer.go
 └── schema/
     ├── loader.go       # Load reflection data at runtime
-    └── registry.go     # Version -> Schema mapping
+    └── registry.go     # version -> schema mapping
 ```
 
 **Pros:**
@@ -74,7 +74,7 @@ type SchemaRegistry struct {
 }
 
 type VersionSchema struct {
-    Structures map[string]*StructureDefinition
+    structures map[string]*StructureDefinition
     StorageNames map[string]string
 }
 
@@ -102,22 +102,22 @@ Combine both approaches:
 3. Share common serialization logic via composition
 
 ```go
-// Base serializer with common logic
+// base serializer with common logic
 type BaseSerializer struct {
     schema *VersionSchema
 }
 
-// Version-specific overrides
+// version-specific overrides
 type V10Serializer struct {
     BaseSerializer
 }
 
 func (s *V10Serializer) SerializeValidationRule(vr *ValidationRule) bson.D {
-    // V10+ uses BY_NAME_REFERENCE for Attribute
+    // V10+ uses BY_NAME_REFERENCE for attribute
     return bson.D{
-        {Key: "$ID", Value: s.serializeID(vr.ID)},
-        {Key: "$Type", Value: "DomainModels$ValidationRule"},
-        {Key: "Attribute", Value: s.qualifiedName(vr)},  // String
+        {key: "$ID", value: s.serializeID(vr.ID)},
+        {key: "$type", value: "DomainModels$ValidationRule"},
+        {key: "attribute", value: s.qualifiedName(vr)},  // string
         // ...
     }
 }
@@ -137,7 +137,7 @@ type ProjectVersion struct {
 }
 
 func (r *Reader) GetProjectVersion() (*ProjectVersion, error) {
-    // Read from _ProjectVersion or metadata table
+    // read from _ProjectVersion or metadata table
 }
 ```
 
@@ -154,8 +154,8 @@ type SchemaRegistry struct {
 }
 
 func (r *SchemaRegistry) GetSchema(version string) (*VersionSchema, error) {
-    // Find closest matching schema version
-    // Load and parse JSON
+    // find closest matching schema version
+    // Load and parse json
     // Cache result
 }
 ```
@@ -182,13 +182,13 @@ func NewWriter(path string, opts WriterOptions) (*Writer, error) {
 
 ```sql
 -- Specify target version in MDL
-SET VERSION '10.18';
+set version '10.18';
 
 -- Or detect from connected project
-CONNECT LOCAL './app.mpr';  -- Auto-detects version
+connect local './app.mpr';  -- Auto-detects version
 
 -- Version-specific features show warnings
-CREATE PERSISTENT ENTITY Module.Entity (
+create persistent entity Module.Entity (
     -- NewFeature only available in 11.x
     NewField: SomeNewType  -- Warning: SomeNewType requires Mendix 11+
 );
@@ -202,13 +202,13 @@ type CompatibilityChecker struct {
     schema        *VersionSchema
 }
 
-func (c *CompatibilityChecker) CheckEntity(e *Entity) []Warning {
-    var warnings []Warning
+func (c *CompatibilityChecker) CheckEntity(e *entity) []warning {
+    var warnings []warning
 
-    // Check if entity type is supported
+    // check if entity type is supported
     if e.Source == "SomeNewSource" && c.targetVersion.MajorVersion < 11 {
-        warnings = append(warnings, Warning{
-            Message: "Entity source 'SomeNewSource' requires Mendix 11+",
+        warnings = append(warnings, warning{
+            message: "entity source 'SomeNewSource' requires Mendix 11+",
             Element: e,
         })
     }
@@ -231,7 +231,7 @@ Based on reflection data analysis:
 
 | Structure | Property | Versions | Notes |
 |-----------|----------|----------|-------|
-| `DomainModels$Association` | `storageFormat` | 11.0+ only | New in Mendix 11 |
+| `DomainModels$association` | `storageFormat` | 11.0+ only | New in Mendix 11 |
 
 ### New Structure Types by Version
 
@@ -282,7 +282,7 @@ mxcli -p ./app.mpr
 mxcli -p ./app.mpr --target-version 10.18
 
 # MDL version specification
-mxcli -c "SET VERSION '10.18'; CREATE MODULE Foo;"
+mxcli -c "set version '10.18'; create module Foo;"
 ```
 
 ## Testing Strategy
@@ -312,11 +312,11 @@ sdk/mpr/
 
 reference/mendixmodellib/reflection-data/
 ├── *.json                    # Existing reflection data
-└── README.md                 # Documentation of schema format
+└── README.md                 # documentation of schema format
 
 docs/05-mdl-specification/
 ├── ...
-└── 20-version-compatibility.md  # User-facing version docs
+└── 20-version-compatibility.md  # user-facing version docs
 ```
 
 ## Open Questions

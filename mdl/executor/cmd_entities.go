@@ -74,7 +74,7 @@ func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 
 	// If entity exists and not using CREATE OR MODIFY, return error
 	if existingEntity != nil && !s.CreateOrModify {
-		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use CREATE OR MODIFY to update)", s.Name.Module, s.Name.Name))
+		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use create or modify to update)", s.Name.Module, s.Name.Name))
 	}
 
 	// Calculate position
@@ -124,7 +124,7 @@ func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 
 		// CALCULATED attributes are only supported on persistent entities
 		if a.Calculated && !persistable {
-			return mdlerrors.NewValidationf("attribute '%s': CALCULATED attributes are only supported on persistent entities", a.Name)
+			return mdlerrors.NewValidationf("attribute '%s': calculated attributes are only supported on persistent entities", a.Name)
 		}
 
 		// Use Documentation if available, fall back to Comment
@@ -300,7 +300,7 @@ func execCreateViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) error {
 
 	// Version pre-check
 	if err := checkFeature(ctx, "domain_model", "view_entities",
-		"CREATE VIEW ENTITY",
+		"create view entity",
 		"upgrade your project to 10.18+ or use a regular entity with a microflow data source"); err != nil {
 		return err
 	}
@@ -341,7 +341,7 @@ func execCreateViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) error {
 
 	// If entity exists: REPLACE drops and recreates, MODIFY updates in place
 	if existingEntity != nil && !s.CreateOrModify && !s.CreateOrReplace {
-		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use CREATE OR MODIFY to update, or CREATE OR REPLACE to drop and recreate)", s.Name.Module, s.Name.Name))
+		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use create or modify to update, or create or replace to drop and recreate)", s.Name.Module, s.Name.Name))
 	}
 
 	// CREATE OR REPLACE: delete existing entity and source doc, then recreate
@@ -515,7 +515,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		}
 		// CALCULATED attributes are only supported on persistent entities
 		if a.Calculated && !entity.Persistable {
-			return mdlerrors.NewValidationf("attribute '%s': CALCULATED attributes are only supported on persistent entities", a.Name)
+			return mdlerrors.NewValidationf("attribute '%s': calculated attributes are only supported on persistent entities", a.Name)
 		}
 		// Auto-default Boolean attributes to false if no DEFAULT specified
 		if a.Type.Kind == ast.TypeBoolean && !a.HasDefault {
@@ -622,7 +622,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 	case ast.AlterEntityModifyAttribute:
 		// CALCULATED attributes are only supported on persistent entities
 		if s.Calculated && !entity.Persistable {
-			return mdlerrors.NewValidationf("attribute '%s': CALCULATED attributes are only supported on persistent entities", s.AttributeName)
+			return mdlerrors.NewValidationf("attribute '%s': calculated attributes are only supported on persistent entities", s.AttributeName)
 		}
 		found := false
 		for _, attr := range entity.Attributes {
@@ -769,7 +769,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		// Warn about references in other documents that are NOT auto-cleaned
 		entityQName := s.Name.String()
 		fmt.Fprintf(ctx.Output, "  Warning: pages, microflows, and other documents may still reference '%s'. Update them manually.\n", s.AttributeName)
-		fmt.Fprintf(ctx.Output, "  Use SHOW REFERENCES TO %s to find usages (requires REFRESH CATALOG FULL).\n", entityQName)
+		fmt.Fprintf(ctx.Output, "  Use show references to %s to find usages (requires refresh catalog full).\n", entityQName)
 
 	case ast.AlterEntitySetDocumentation:
 		entity.Documentation = s.Documentation
@@ -908,7 +908,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
 
 	default:
-		return mdlerrors.NewUnsupported("unsupported ALTER ENTITY operation")
+		return mdlerrors.NewUnsupported("unsupported alter entity operation")
 	}
 
 	e.trackModifiedDomainModel(module.ID, module.Name)
@@ -963,7 +963,7 @@ func warnEntityReferences(ctx *ExecContext, entityName string) {
 	}
 
 	query := fmt.Sprintf(
-		"SELECT SourceType, SourceName, RefKind FROM refs WHERE TargetName = '%s'",
+		"select SourceType, SourceName, RefKind from refs where TargetName = '%s'",
 		strings.ReplaceAll(entityName, "'", "''"),
 	)
 	result, err := ctx.Catalog.Query(query)
@@ -971,7 +971,7 @@ func warnEntityReferences(ctx *ExecContext, entityName string) {
 		return
 	}
 
-	fmt.Fprintf(ctx.Output, "WARNING: %s is referenced by %d element(s):\n", entityName, result.Count)
+	fmt.Fprintf(ctx.Output, "warning: %s is referenced by %d element(s):\n", entityName, result.Count)
 	for _, row := range result.Rows {
 		sourceType, _ := row[0].(string)
 		sourceName, _ := row[1].(string)

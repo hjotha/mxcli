@@ -56,7 +56,7 @@ func (b *MprBackend) openWorkflowForMutation(unitID model.ID) (backend.WorkflowM
 
 func (m *mprWorkflowMutator) SetProperty(prop string, value string) error {
 	switch prop {
-	case "DISPLAY":
+	case "display":
 		wfName := dGetDoc(m.rawData, "WorkflowName")
 		if wfName == nil {
 			newName := bson.D{
@@ -71,7 +71,7 @@ func (m *mprWorkflowMutator) SetProperty(prop string, value string) error {
 		dSet(m.rawData, "Title", value)
 		return nil
 
-	case "DESCRIPTION":
+	case "description":
 		wfDesc := dGetDoc(m.rawData, "WorkflowDescription")
 		if wfDesc == nil {
 			newDesc := bson.D{
@@ -85,11 +85,11 @@ func (m *mprWorkflowMutator) SetProperty(prop string, value string) error {
 		}
 		return nil
 
-	case "EXPORT_LEVEL":
+	case "export_level":
 		dSet(m.rawData, "ExportLevel", value)
 		return nil
 
-	case "DUE_DATE":
+	case "due_date":
 		dSet(m.rawData, "DueDate", value)
 		return nil
 
@@ -100,7 +100,7 @@ func (m *mprWorkflowMutator) SetProperty(prop string, value string) error {
 
 func (m *mprWorkflowMutator) SetPropertyWithEntity(prop string, value string, entity string) error {
 	switch prop {
-	case "OVERVIEW_PAGE":
+	case "overview_page":
 		if value == "" {
 			dSet(m.rawData, "AdminPage", nil)
 		} else {
@@ -113,7 +113,7 @@ func (m *mprWorkflowMutator) SetPropertyWithEntity(prop string, value string, en
 		}
 		return nil
 
-	case "PARAMETER":
+	case "parameter":
 		if value == "" {
 			for i, elem := range m.rawData {
 				if elem.Key == "Parameter" {
@@ -159,7 +159,7 @@ func (m *mprWorkflowMutator) SetActivityProperty(activityRef string, atPos int, 
 	}
 
 	switch prop {
-	case "PAGE":
+	case "page":
 		taskPage := dGetDoc(actDoc, "TaskPage")
 		if taskPage != nil {
 			// TaskPage exists and has a value — update the Page field in place.
@@ -178,14 +178,14 @@ func (m *mprWorkflowMutator) SetActivityProperty(activityRef string, atPos int, 
 		}
 		return nil
 
-	case "DESCRIPTION":
+	case "description":
 		taskDesc := dGetDoc(actDoc, "TaskDescription")
 		if taskDesc != nil {
 			dSet(taskDesc, "Text", value)
 		}
 		return nil
 
-	case "TARGETING_MICROFLOW":
+	case "targeting_microflow":
 		userTargeting := bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Workflows$MicroflowUserTargeting"},
@@ -194,7 +194,7 @@ func (m *mprWorkflowMutator) SetActivityProperty(activityRef string, atPos int, 
 		dSet(actDoc, "UserTargeting", userTargeting)
 		return nil
 
-	case "TARGETING_XPATH":
+	case "targeting_xpath":
 		userTargeting := bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "Workflows$XPathUserTargeting"},
@@ -203,7 +203,7 @@ func (m *mprWorkflowMutator) SetActivityProperty(activityRef string, atPos int, 
 		dSet(actDoc, "UserTargeting", userTargeting)
 		return nil
 
-	case "DUE_DATE":
+	case "due_date":
 		dSet(actDoc, "DueDate", value)
 		return nil
 

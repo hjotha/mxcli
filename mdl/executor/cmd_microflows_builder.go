@@ -58,9 +58,9 @@ func errorExampleDeclareVariable(varName string) string {
 	if len(varName) > 0 && varName[0] == '$' {
 		cleanName = varName[1:]
 	}
-	return fmt.Sprintf(`    DECLARE $%s Boolean = true;  -- or String, Integer, Decimal, DateTime
+	return fmt.Sprintf(`    declare $%s Boolean = true;  -- or String, Integer, Decimal, DateTime
     ...
-    SET $%s = false;`, cleanName, cleanName)
+    set $%s = false;`, cleanName, cleanName)
 }
 
 // isVariableDeclared checks if a variable has been declared (either as primitive or entity).

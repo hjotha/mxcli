@@ -165,8 +165,8 @@ func TestAlterPageInsertAfter(t *testing.T) {
 		t.Fatalf("Expected 1 widget, got %d", len(insertOp.Widgets))
 	}
 
-	if insertOp.Widgets[0].Type != "TEXTBOX" {
-		t.Errorf("Expected TEXTBOX, got %s", insertOp.Widgets[0].Type)
+	if insertOp.Widgets[0].Type != "textbox" {
+		t.Errorf("Expected textbox, got %s", insertOp.Widgets[0].Type)
 	}
 }
 
@@ -278,8 +278,8 @@ func TestAlterPageReplace(t *testing.T) {
 		t.Fatalf("Expected 1 new widget, got %d", len(replaceOp.NewWidgets))
 	}
 
-	if replaceOp.NewWidgets[0].Type != "FOOTER" {
-		t.Errorf("Expected FOOTER, got %s", replaceOp.NewWidgets[0].Type)
+	if replaceOp.NewWidgets[0].Type != "footer" {
+		t.Errorf("Expected footer, got %s", replaceOp.NewWidgets[0].Type)
 	}
 }
 
@@ -411,8 +411,8 @@ func TestAlterSnippetReplace(t *testing.T) {
 	if len(replaceOp.NewWidgets) != 1 {
 		t.Fatalf("Expected 1 new widget, got %d", len(replaceOp.NewWidgets))
 	}
-	if replaceOp.NewWidgets[0].Type != "DYNAMICTEXT" {
-		t.Errorf("Expected DYNAMICTEXT, got %s", replaceOp.NewWidgets[0].Type)
+	if replaceOp.NewWidgets[0].Type != "dynamictext" {
+		t.Errorf("Expected dynamictext, got %s", replaceOp.NewWidgets[0].Type)
 	}
 }
 

@@ -139,7 +139,7 @@ func parseRestClientOpProp(ctx *parser.RestClientOpPropContext, op *ast.RestOper
 
 	// Method: GET
 	if mCtx := ctx.RestHttpMethod(); mCtx != nil {
-		op.Method = strings.ToUpper(mCtx.GetText())
+		op.Method = strings.ToLower(mCtx.GetText())
 		return
 	}
 
@@ -153,10 +153,10 @@ func parseRestClientOpProp(ctx *parser.RestClientOpPropContext, op *ast.RestOper
 		}
 		switch key {
 		case "body":
-			op.BodyType = "MAPPING"
+			op.BodyType = "mapping"
 			op.BodyMapping = md
 		case "response":
-			op.ResponseType = "MAPPING"
+			op.ResponseType = "mapping"
 			op.ResponseMapping = md
 		}
 		return
@@ -165,7 +165,7 @@ func parseRestClientOpProp(ctx *parser.RestClientOpPropContext, op *ast.RestOper
 	// TEMPLATE 'string'
 	if ctx.TEMPLATE() != nil {
 		if sl := ctx.STRING_LITERAL(); sl != nil {
-			op.BodyType = "TEMPLATE"
+			op.BodyType = "template"
 			op.BodyVariable = unquoteString(sl.GetText())
 		}
 		return
@@ -177,21 +177,21 @@ func parseRestClientOpProp(ctx *parser.RestClientOpPropContext, op *ast.RestOper
 		if ctx.FROM() != nil {
 			// Body: JSON FROM $var, FILE FROM $var
 			if ctx.JSON() != nil {
-				op.BodyType = "JSON"
+				op.BodyType = "json"
 			} else if ctx.FILE_KW() != nil {
-				op.BodyType = "FILE"
+				op.BodyType = "file"
 			}
 			op.BodyVariable = varName
 		} else if ctx.AS() != nil {
 			// Response: JSON AS $var, STRING AS $var, etc.
 			if ctx.JSON() != nil {
-				op.ResponseType = "JSON"
+				op.ResponseType = "json"
 			} else if ctx.STRING_TYPE() != nil {
-				op.ResponseType = "STRING"
+				op.ResponseType = "string"
 			} else if ctx.FILE_KW() != nil {
-				op.ResponseType = "FILE"
+				op.ResponseType = "file"
 			} else if ctx.STATUS() != nil {
-				op.ResponseType = "STATUS"
+				op.ResponseType = "status"
 			}
 			op.ResponseVariable = varName
 		}
@@ -202,7 +202,7 @@ func parseRestClientOpProp(ctx *parser.RestClientOpPropContext, op *ast.RestOper
 	if ctx.NONE() != nil {
 		switch key {
 		case "response":
-			op.ResponseType = "NONE"
+			op.ResponseType = "none"
 		case "authentication":
 			// handled at service level
 		}

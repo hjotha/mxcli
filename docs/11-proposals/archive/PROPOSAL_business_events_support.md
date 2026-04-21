@@ -8,7 +8,7 @@ Business Events is a Mendix feature for asynchronous event-driven integration, a
 
 ## Current State
 
-- mxcli counts Business Events per module in `SHOW MODULES` (checks `BusinessEvents$` prefix)
+- mxcli counts Business Events per module in `show modules` (checks `BusinessEvents$` prefix)
 - No BSON parser, reader methods, catalog table, or MDL syntax exists
 - Generated metamodel types exist in `generated/metamodel/types.go` (auto-generated from reflection data)
 
@@ -18,36 +18,36 @@ Business Events is a Mendix feature for asynchronous event-driven integration, a
 
 ```
 BusinessEvents$BusinessEventService (MODEL_UNIT - top-level document)
-├── Name: String
-├── Documentation: String
-├── ExportLevel: Enum (API | Hidden)
-├── Excluded: Boolean
-├── Document: String
+├── Name: string
+├── documentation: string
+├── ExportLevel: enum (api | Hidden)
+├── Excluded: boolean
+├── Document: string
 ├── Definition: BusinessEvents$BusinessEventDefinition?
-│   ├── ServiceName: String
-│   ├── EventNamePrefix: String
-│   ├── Description: String
-│   ├── Summary: String
-│   └── Channels: BusinessEvents$Channel[]
-│       ├── ChannelName: String
-│       ├── Description: String
-│       └── Messages: BusinessEvents$Message[]
-│           ├── MessageName: String
-│           ├── Description: String
-│           ├── CanPublish: Boolean
-│           ├── CanSubscribe: Boolean
-│           └── Attributes: BusinessEvents$MessageAttribute[]
-│               ├── AttributeName: String
+│   ├── ServiceName: string
+│   ├── EventNamePrefix: string
+│   ├── description: string
+│   ├── Summary: string
+│   └── channels: BusinessEvents$Channel[]
+│       ├── ChannelName: string
+│       ├── description: string
+│       └── messages: BusinessEvents$message[]
+│           ├── MessageName: string
+│           ├── description: string
+│           ├── CanPublish: boolean
+│           ├── CanSubscribe: boolean
+│           └── attributes: BusinessEvents$MessageAttribute[]
+│               ├── attributename: string
 │               ├── AttributeType: DomainModels$AttributeType (required)
-│               ├── Description: String
+│               ├── description: string
 │               └── EnumerationDefinition: BusinessEvents$AttributeEnumeration?
 │                   └── Items: BusinessEvents$AttributeEnumerationItem[]
-│                       └── Value: String
+│                       └── value: string
 └── OperationImplementations: BusinessEvents$ServiceOperation[]
-    ├── MessageName: String
-    ├── Operation: String
-    ├── Entity: DomainModels$Entity (BY_NAME, required)
-    └── Microflow: Microflows$Microflow (BY_NAME, optional)
+    ├── MessageName: string
+    ├── operation: string
+    ├── entity: DomainModels$entity (BY_NAME, required)
+    └── microflow: microflows$microflow (BY_NAME, optional)
 ```
 
 ### Cross-References to Other Domains
@@ -64,7 +64,7 @@ BusinessEvents$BusinessEventService (MODEL_UNIT - top-level document)
 |---------|---------|
 | 9.8.0 | Introduced `ConsumedBusinessEventService` and `PublishedBusinessEventService` |
 | 9.11.0 | Added `ConsumedBusinessEvent`, `PublishedMessage`, `PublishedMessageAttribute` |
-| 9.24.0 | **Major redesign**: Replaced published/consumed model with unified `BusinessEventService`, `BusinessEventDefinition`, `Channel`, `Message` |
+| 9.24.0 | **Major redesign**: Replaced published/consumed model with unified `BusinessEventService`, `BusinessEventDefinition`, `Channel`, `message` |
 | 10.0.0 | Added `AttributeEnumeration` and `AttributeEnumerationItem` |
 | 10.21.0 | Added `SourceApi` property |
 
@@ -76,7 +76,7 @@ All storage names match their qualified names (no aliasing):
 - `BusinessEvents$BusinessEventService`
 - `BusinessEvents$BusinessEventDefinition`
 - `BusinessEvents$Channel`
-- `BusinessEvents$Message`
+- `BusinessEvents$message`
 - `BusinessEvents$MessageAttribute`
 - `BusinessEvents$AttributeEnumeration`
 - `BusinessEvents$AttributeEnumerationItem`
@@ -96,7 +96,7 @@ Simple Go types mirroring the metamodel:
 type BusinessEventService struct {
     model.BaseElement
     Name                     string
-    Documentation            string
+    documentation            string
     ExportLevel              string
     Excluded                 bool
     Definition               *BusinessEventDefinition
@@ -107,40 +107,40 @@ type BusinessEventDefinition struct {
     model.BaseElement
     ServiceName     string
     EventNamePrefix string
-    Description     string
+    description     string
     Summary         string
-    Channels        []*Channel
+    channels        []*Channel
 }
 
 type Channel struct {
     model.BaseElement
     ChannelName string
-    Description string
-    Messages    []*Message
+    description string
+    messages    []*message
 }
 
-type Message struct {
+type message struct {
     model.BaseElement
     MessageName  string
-    Description  string
+    description  string
     CanPublish   bool
     CanSubscribe bool
-    Attributes   []*MessageAttribute
+    attributes   []*MessageAttribute
 }
 
 type MessageAttribute struct {
     model.BaseElement
-    AttributeName string
+    attributename string
     AttributeType string // simplified
-    Description   string
+    description   string
 }
 
 type ServiceOperation struct {
     model.BaseElement
     MessageName string
-    Operation   string
-    Entity      string // qualified name
-    Microflow   string // qualified name
+    operation   string
+    entity      string // qualified name
+    microflow   string // qualified name
 }
 ```
 
@@ -157,26 +157,26 @@ func (r *Reader) GetBusinessEventService(id string) (*businessevents.BusinessEve
 
 #### 1d. SHOW/DESCRIBE Commands
 
-- `SHOW BUSINESS EVENTS [IN Module]`
-- `DESCRIBE BUSINESS EVENT Module.ServiceName`
+- `show business events [in module]`
+- `describe business event Module.ServiceName`
 
 Example output:
 ```sql
-BUSINESS EVENT Module.OrderEvents
-  EXPORT LEVEL: API
+business event Module.OrderEvents
+  export level: api
   DEFINITION
-    SERVICE NAME: 'OrderService'
-    EVENT PREFIX: 'com.example.orders'
-    CHANNELS
+    service NAME: 'OrderService'
+    event PREFIX: 'com.example.orders'
+    channels
       CHANNEL 'orders'
-        MESSAGE 'OrderCreated' (Publish, Subscribe)
-          ATTRIBUTES
-            OrderId: Integer
-            CustomerName: String
-            Amount: Decimal
+        message 'OrderCreated' (publish, subscribe)
+          attributes
+            OrderId: integer
+            CustomerName: string
+            Amount: decimal
   OPERATIONS
-    'OrderCreated' -> Module.Order (MICROFLOW Module.ACT_HandleOrderCreated)
-END;
+    'OrderCreated' -> Module.Order (microflow Module.ACT_HandleOrderCreated)
+end;
 ```
 
 #### 1e. Catalog Table
@@ -236,8 +236,8 @@ Since we have no test projects with Business Events, verification would require:
 2. Or finding a Marketplace app that uses them
 
 ```bash
-# When a test project with Business Events is available:
-./bin/mxcli -p /path/to/app.mpr -c "SHOW BUSINESS EVENTS"
-./bin/mxcli -p /path/to/app.mpr -c "DESCRIBE BUSINESS EVENT Module.ServiceName"
-./bin/mxcli -p /path/to/app.mpr -c "REFRESH CATALOG FULL FORCE; SELECT * FROM CATALOG.BUSINESS_EVENTS"
+# when a test project with business events is available:
+./bin/mxcli -p /path/to/app.mpr -c "show business events"
+./bin/mxcli -p /path/to/app.mpr -c "describe business event Module.ServiceName"
+./bin/mxcli -p /path/to/app.mpr -c "refresh catalog full force; select * from CATALOG.BUSINESS_EVENTS"
 ```

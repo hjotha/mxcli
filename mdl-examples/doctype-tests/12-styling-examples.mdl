@@ -22,32 +22,32 @@
 -- Setup: Ensure StyleTest Entities Exist
 -- ============================================================================
 
-CREATE MODULE StyleTest;
+create module StyleTest;
 
-@Position(100,100)
-CREATE PERSISTENT ENTITY StyleTest.Employee (
-  Name: String(200) NOT NULL,
-  Email: String(200),
-  Department: String(100),
-  IsActive: Boolean DEFAULT true,
-  StartDate: DateTime,
-  Notes: String(1000),
-  Salary: Decimal
+@position(100,100)
+create persistent entity StyleTest.Employee (
+  Name: string(200) not null,
+  Email: string(200),
+  Department: string(100),
+  IsActive: boolean default true,
+  StartDate: datetime,
+  Notes: string(1000),
+  Salary: decimal
 );
 
-@Position(300,100)
-CREATE PERSISTENT ENTITY StyleTest.Task (
-  "Title": String(200) NOT NULL,
-  "Description": String(500),
-  DueDate: DateTime,
-  IsCompleted: Boolean DEFAULT false,
-  Priority: String(50)
+@position(300,100)
+create persistent entity StyleTest.task (
+  "title": string(200) not null,
+  "description": string(500),
+  DueDate: datetime,
+  IsCompleted: boolean default false,
+  Priority: string(50)
 );
 
-CREATE ASSOCIATION StyleTest.Task_Employee
-FROM StyleTest.Task TO StyleTest.Employee
-TYPE Reference
-OWNER Both;
+create association StyleTest.Task_Employee
+from StyleTest.task to StyleTest.Employee
+type reference
+owner both;
 
 -- @version: 11.0+
 -- MARK: Class — pages with Params require Mendix 11.0+
@@ -60,33 +60,33 @@ OWNER Both;
  * CSS classes applied to containers and widgets.
  * Atlas UI provides utility classes for spacing, colors, borders, etc.
  */
-CREATE PAGE StyleTest.P001_CSS_Classes
+create page StyleTest.P001_CSS_Classes
 (
-  Title: 'CSS Classes',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'style_001_css_classes/{Employee}',
-  Params: { $Employee: StyleTest.Employee }
+  title: 'CSS Classes',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'style_001_css_classes/{Employee}',
+  params: { $Employee: StyleTest.Employee }
 )
 {
   -- Single CSS class
-  CONTAINER ctnCard (Class: 'card') {
-    DYNAMICTEXT txtTitle (Content: 'Card Title', RenderMode: H3)
-    DYNAMICTEXT txtBody (Content: 'Card body content')
+  container ctnCard (class: 'card') {
+    dynamictext txtTitle (content: 'Card Title', rendermode: H3)
+    dynamictext txtBody (content: 'Card body content')
   }
 
   -- Multiple CSS classes (space-separated)
-  CONTAINER ctnSpaced (Class: 'card mx-spacing-top-lg mx-spacing-bottom-lg') {
-    DYNAMICTEXT txtSpaced (Content: 'Spaced card with margin')
+  container ctnSpaced (class: 'card mx-spacing-top-lg mx-spacing-bottom-lg') {
+    dynamictext txtSpaced (content: 'Spaced card with margin')
   }
 
   -- Classes on input widgets
-  DATAVIEW dvEmployee (DataSource: $Employee) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name, Class: 'form-control-lg')
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email, Class: 'text-muted')
+  dataview dvEmployee (datasource: $Employee) {
+    textbox txtName (label: 'Name', attribute: Name, class: 'form-control-lg')
+    textbox txtEmail (label: 'Email', attribute: Email, class: 'text-muted')
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary, Class: 'btn-lg')
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES, Class: 'btn-sm')
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary, class: 'btn-lg')
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes, class: 'btn-sm')
     }
   }
 }
@@ -101,34 +101,34 @@ CREATE PAGE StyleTest.P001_CSS_Classes
  * Inline CSS styles for quick one-off styling.
  * Use sparingly - prefer classes for reusable styles.
  */
-CREATE PAGE StyleTest.P002_Inline_Styles
+create page StyleTest.P002_Inline_Styles
 (
-  Title: 'Inline Styles',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'style_002_inline_styles'
+  title: 'Inline Styles',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'style_002_inline_styles'
 )
 {
   -- Inline style on a container
-  CONTAINER ctnCustom (Style: 'background-color: #f8f9fa; padding: 24px; border-radius: 8px;') {
-    DYNAMICTEXT txtStyled (Content: 'Custom styled container', RenderMode: H4)
+  container ctnCustom (style: 'background-color: #f8f9fa; padding: 24px; border-radius: 8px;') {
+    dynamictext txtStyled (content: 'Custom styled container', rendermode: H4)
   }
 
   -- Combining class and style
-  CONTAINER ctnMixed (Class: 'card', Style: 'border-left: 4px solid #264AE5;') {
-    DYNAMICTEXT txtMixed (Content: 'Card with accent border')
+  container ctnMixed (class: 'card', style: 'border-left: 4px solid #264AE5;') {
+    dynamictext txtMixed (content: 'Card with accent border')
   }
 
   -- Layout grid with styled columns
-  LAYOUTGRID lgStyled {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 6) {
-        CONTAINER ctnLeft (Style: 'min-height: 200px; background-color: #e3f2fd;') {
-          DYNAMICTEXT txtLeft (Content: 'Left panel')
+  layoutgrid lgStyled {
+    row row1 {
+      column col1 (desktopwidth: 6) {
+        container ctnLeft (style: 'min-height: 200px; background-color: #e3f2fd;') {
+          dynamictext txtLeft (content: 'Left panel')
         }
       }
-      COLUMN col2 (DesktopWidth: 6) {
-        CONTAINER ctnRight (Style: 'min-height: 200px; background-color: #fce4ec;') {
-          DYNAMICTEXT txtRight (Content: 'Right panel')
+      column col2 (desktopwidth: 6) {
+        container ctnRight (style: 'min-height: 200px; background-color: #fce4ec;') {
+          dynamictext txtRight (content: 'Right panel')
         }
       }
     }
@@ -150,51 +150,51 @@ CREATE PAGE StyleTest.P002_Inline_Styles
  *   Option: 'Key': 'Value'   - Dropdown/enum selection
  *   Toggle: 'Key': ON        - Boolean on/off (OFF omits the property)
  */
-CREATE PAGE StyleTest.P003_Design_Properties
+create page StyleTest.P003_Design_Properties
 (
-  Title: 'Design Properties',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'style_003_design_properties/{Task}',
-  Params: { $Task: StyleTest.Task }
+  title: 'Design Properties',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'style_003_design_properties/{task}',
+  params: { $task: StyleTest.task }
 )
 {
   -- Toggle property (ON) — 'Card style' is a genuine Toggle on Container
-  CONTAINER ctnFullWidth (DesignProperties: ['Card style': ON]) {
-    DYNAMICTEXT txtFull (Content: 'Container with card style', RenderMode: H3)
+  container ctnFullWidth (designproperties: ['Card style': on]) {
+    dynamictext txtFull (content: 'Container with card style', rendermode: H3)
   }
 
   -- Another Toggle property on Container
-  CONTAINER ctnBordered (DesignProperties: ['Disable row wrap': ON]) {
-    DYNAMICTEXT txtSpacing (Content: 'Container with flex nowrap')
+  container ctnBordered (designproperties: ['Disable row wrap': on]) {
+    dynamictext txtSpacing (content: 'Container with flex nowrap')
   }
 
   -- Multiple Toggle design properties
-  CONTAINER ctnMultiProps (DesignProperties: ['Card style': ON, 'Disable row wrap': ON]) {
-    DYNAMICTEXT txtMulti (Content: 'Multiple toggle properties applied')
+  container ctnMultiProps (designproperties: ['Card style': on, 'Disable row wrap': on]) {
+    dynamictext txtMulti (content: 'Multiple toggle properties applied')
   }
 
   -- Design properties on a layout grid (LayoutGrid has no theme-defined design properties)
-  LAYOUTGRID lgDesign {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 6) {
-        DYNAMICTEXT txtCol1 (Content: 'Column 1')
+  layoutgrid lgDesign {
+    row row1 {
+      column col1 (desktopwidth: 6) {
+        dynamictext txtCol1 (content: 'Column 1')
       }
-      COLUMN col2 (DesktopWidth: 6) {
-        DYNAMICTEXT txtCol2 (Content: 'Column 2')
+      column col2 (desktopwidth: 6) {
+        dynamictext txtCol2 (content: 'Column 2')
       }
     }
   }
 
   -- Design properties on input widgets (DataView requires PARAMETER, not DATABASE)
-  DATAVIEW dvTask (DataSource: $Task) {
-    TEXTBOX txtTitle (Label: 'Title', Attribute: Title)
-    TEXTAREA txtDesc (Label: 'Description', Attribute: Description)
-    DATEPICKER dpDue (Label: 'Due Date', Attribute: DueDate)
-    CHECKBOX chkDone (Label: 'Completed', Attribute: IsCompleted)
+  dataview dvTask (datasource: $task) {
+    textbox txtTitle (label: 'Title', attribute: title)
+    textarea txtDesc (label: 'Description', attribute: description)
+    datepicker dpDue (label: 'Due Date', attribute: DueDate)
+    checkbox chkDone (label: 'Completed', attribute: IsCompleted)
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary, DesignProperties: ['Full width': ON])
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary, designproperties: ['Full width': on])
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
@@ -209,99 +209,99 @@ CREATE PAGE StyleTest.P003_Design_Properties
  * Real-world example combining Class, Style, and DesignProperties
  * on the same widgets. All three can coexist on any widget.
  */
-CREATE PAGE StyleTest.P004_Combined_Styling
+create page StyleTest.P004_Combined_Styling
 (
-  Title: 'Combined Styling',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'style_004_combined_styling/{Employee}',
-  Params: { $Employee: StyleTest.Employee }
+  title: 'Combined Styling',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'style_004_combined_styling/{Employee}',
+  params: { $Employee: StyleTest.Employee }
 )
 {
   -- All three on a single container — Card style is a Toggle property
-  CONTAINER ctnHero (
-    Class: 'card',
-    Style: 'background: linear-gradient(135deg, #264AE5 0%, #1a237e 100%); color: white;',
-    DesignProperties: ['Card style': ON]
+  container ctnHero (
+    class: 'card',
+    style: 'background: linear-gradient(135deg, #264AE5 0%, #1a237e 100%); color: white;',
+    designproperties: ['Card style': on]
   ) {
-    DYNAMICTEXT txtHero (Content: 'Hero Section', RenderMode: H1)
-    DYNAMICTEXT txtSubtitle (Content: 'Combining Class, Style, and DesignProperties')
+    dynamictext txtHero (content: 'Hero Section', rendermode: H1)
+    dynamictext txtSubtitle (content: 'Combining Class, Style, and DesignProperties')
   }
 
   -- Dashboard-style card grid
-  LAYOUTGRID lgDashboard (Class: 'mx-spacing-top-lg') {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 4) {
-        CONTAINER ctnStat1 (
-          Class: 'card card-bordered',
-          Style: 'border-top: 3px solid #4caf50;',
-          DesignProperties: ['Card style': ON]
+  layoutgrid lgDashboard (class: 'mx-spacing-top-lg') {
+    row row1 {
+      column col1 (desktopwidth: 4) {
+        container ctnStat1 (
+          class: 'card card-bordered',
+          style: 'border-top: 3px solid #4caf50;',
+          designproperties: ['Card style': on]
         ) {
-          DYNAMICTEXT txtStat1Title (Content: 'Active Employees', RenderMode: H5)
-          DYNAMICTEXT txtStat1Value (Content: '42', Class: 'text-primary')
+          dynamictext txtStat1Title (content: 'Active Employees', rendermode: H5)
+          dynamictext txtStat1Value (content: '42', class: 'text-primary')
         }
       }
-      COLUMN col2 (DesktopWidth: 4) {
-        CONTAINER ctnStat2 (
-          Class: 'card card-bordered',
-          Style: 'border-top: 3px solid #ff9800;',
-          DesignProperties: ['Card style': ON]
+      column col2 (desktopwidth: 4) {
+        container ctnStat2 (
+          class: 'card card-bordered',
+          style: 'border-top: 3px solid #ff9800;',
+          designproperties: ['Card style': on]
         ) {
-          DYNAMICTEXT txtStat2Title (Content: 'Open Tasks', RenderMode: H5)
-          DYNAMICTEXT txtStat2Value (Content: '17', Class: 'text-warning')
+          dynamictext txtStat2Title (content: 'Open Tasks', rendermode: H5)
+          dynamictext txtStat2Value (content: '17', class: 'text-warning')
         }
       }
-      COLUMN col3 (DesktopWidth: 4) {
-        CONTAINER ctnStat3 (
-          Class: 'card card-bordered',
-          Style: 'border-top: 3px solid #f44336;',
-          DesignProperties: ['Card style': ON]
+      column col3 (desktopwidth: 4) {
+        container ctnStat3 (
+          class: 'card card-bordered',
+          style: 'border-top: 3px solid #f44336;',
+          designproperties: ['Card style': on]
         ) {
-          DYNAMICTEXT txtStat3Title (Content: 'Overdue', RenderMode: H5)
-          DYNAMICTEXT txtStat3Value (Content: '3', Class: 'text-danger')
+          dynamictext txtStat3Title (content: 'Overdue', rendermode: H5)
+          dynamictext txtStat3Value (content: '3', class: 'text-danger')
         }
       }
     }
   }
 
   -- Form with mixed styling
-  DATAVIEW dvEmployee (DataSource: $Employee) {
-    CONTAINER ctnFormHeader (Class: 'card-header', DesignProperties: ['Card style': ON]) {
-      DYNAMICTEXT txtFormTitle (Content: 'Employee Details', RenderMode: H4)
+  dataview dvEmployee (datasource: $Employee) {
+    container ctnFormHeader (class: 'card-header', designproperties: ['Card style': on]) {
+      dynamictext txtFormTitle (content: 'Employee Details', rendermode: H4)
     }
 
-    LAYOUTGRID lgForm {
-      ROW row1 {
-        COLUMN col1 (DesktopWidth: 6) {
-          TEXTBOX txtName (Label: 'Full Name', Attribute: Name)
+    layoutgrid lgForm {
+      row row1 {
+        column col1 (desktopwidth: 6) {
+          textbox txtName (label: 'Full Name', attribute: Name)
         }
-        COLUMN col2 (DesktopWidth: 6) {
-          TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-        }
-      }
-      ROW row2 {
-        COLUMN col3 (DesktopWidth: 6) {
-          TEXTBOX txtDept (Label: 'Department', Attribute: Department)
-        }
-        COLUMN col4 (DesktopWidth: 6) {
-          DATEPICKER dpStart (Label: 'Start Date', Attribute: StartDate)
+        column col2 (desktopwidth: 6) {
+          textbox txtEmail (label: 'Email', attribute: Email)
         }
       }
-      ROW row3 {
-        COLUMN col5 (DesktopWidth: 12) {
-          TEXTAREA txtNotes (Label: 'Notes', Attribute: Notes, Class: 'form-control-lg')
+      row row2 {
+        column col3 (desktopwidth: 6) {
+          textbox txtDept (label: 'Department', attribute: Department)
+        }
+        column col4 (desktopwidth: 6) {
+          datepicker dpStart (label: 'Start Date', attribute: StartDate)
+        }
+      }
+      row row3 {
+        column col5 (desktopwidth: 12) {
+          textarea txtNotes (label: 'Notes', attribute: Notes, class: 'form-control-lg')
         }
       }
     }
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (
-        Caption: 'Save Employee',
-        Action: SAVE_CHANGES,
-        ButtonStyle: Primary,
-        Class: 'btn-lg',
-        DesignProperties: ['Full width': ON, 'Border': ON]
+    footer footer1 {
+      actionbutton btnSave (
+        caption: 'Save Employee',
+        action: save_changes,
+        buttonstyle: primary,
+        class: 'btn-lg',
+        designproperties: ['Full width': on, 'Border': on]
       )
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
@@ -316,26 +316,26 @@ CREATE PAGE StyleTest.P004_Combined_Styling
  * OFF means the toggle property is disabled (omitted from serialization).
  * This is useful for documentation or when overriding a default.
  */
-CREATE PAGE StyleTest.P005_Toggle_OFF
+create page StyleTest.P005_Toggle_OFF
 (
-  Title: 'Toggle OFF Example',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'style_005_toggle_off'
+  title: 'Toggle OFF Example',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'style_005_toggle_off'
 )
 {
   -- ON enables a Toggle property — 'Card style' is a genuine Toggle on Container
-  CONTAINER ctnOn (DesignProperties: ['Card style': ON]) {
-    DYNAMICTEXT txtOn (Content: 'Card style is ON')
+  container ctnOn (designproperties: ['Card style': on]) {
+    dynamictext txtOn (content: 'Card style is ON')
   }
 
   -- OFF disables/omits the toggle (equivalent to not setting it)
-  CONTAINER ctnOff (DesignProperties: ['Card style': OFF]) {
-    DYNAMICTEXT txtOff (Content: 'Card style is OFF (omitted)')
+  container ctnOff (designproperties: ['Card style': off]) {
+    dynamictext txtOff (content: 'Card style is OFF (omitted)')
   }
 
   -- Mix Toggle ON/OFF with option values (Shadow is a ToggleButtonGroup)
-  CONTAINER ctnMixed (DesignProperties: ['Card style': ON, 'Disable row wrap': ON]) {
-    DYNAMICTEXT txtMixed (Content: 'Mixed Toggle with option values')
+  container ctnMixed (designproperties: ['Card style': on, 'Disable row wrap': on]) {
+    dynamictext txtMixed (content: 'Mixed Toggle with option values')
   }
 }
 
@@ -350,26 +350,26 @@ CREATE PAGE StyleTest.P005_Toggle_OFF
 -- DESCRIBE SNIPPET works the same way.
 
 -- Describe a page to see its styling (Class, Style, DesignProperties)
-DESCRIBE PAGE StyleTest.P004_Combined_Styling;
+describe page StyleTest.P004_Combined_Styling;
 
 -- Describe a simpler page
-DESCRIBE PAGE StyleTest.P001_CSS_Classes;
+describe page StyleTest.P001_CSS_Classes;
 
 -- Describe a snippet (creates it first so it exists)
-CREATE SNIPPET StyleTest.MySnippet
+create snippet StyleTest.MySnippet
 (
-  Params: { $Employee: StyleTest.Employee }
+  params: { $Employee: StyleTest.Employee }
 )
 {
-  CONTAINER ctnSnippet (Class: 'card', Style: 'padding: 12px;') {
-    DYNAMICTEXT txtSnippetTitle (Content: 'Employee Card', RenderMode: H4)
+  container ctnSnippet (class: 'card', style: 'padding: 12px;') {
+    dynamictext txtSnippetTitle (content: 'Employee Card', rendermode: H4)
   }
-  DATAVIEW dvSnippetEmployee (DataSource: $Employee) {
-    TEXTBOX txtSnippetName (Label: 'Name', Attribute: Name)
+  dataview dvSnippetEmployee (datasource: $Employee) {
+    textbox txtSnippetName (label: 'Name', attribute: Name)
   }
 }
 
-DESCRIBE SNIPPET StyleTest.MySnippet;
+describe snippet StyleTest.MySnippet;
 
 -- MARK: Show Widgets
 
@@ -382,25 +382,25 @@ DESCRIBE SNIPPET StyleTest.MySnippet;
 -- Supported operators: = (exact), LIKE (pattern with % wildcards)
 
 -- Show all widgets in the project
-SHOW WIDGETS;
+show widgets;
 
 -- Show widgets in a specific module
-SHOW WIDGETS IN StyleTest;
+show widgets in StyleTest;
 
 -- Filter by widget type (LIKE supports % wildcards)
-SHOW WIDGETS WHERE WidgetType LIKE '%textbox%';
-SHOW WIDGETS WHERE WidgetType LIKE '%Container%';
-SHOW WIDGETS WHERE WidgetType LIKE '%ActionButton%';
+show widgets where widgettype like '%textbox%';
+show widgets where widgettype like '%Container%';
+show widgets where widgettype like '%ActionButton%';
 
 -- Filter by widget name
-SHOW WIDGETS WHERE Name = 'btnSave';
-SHOW WIDGETS WHERE Name LIKE 'ctn%';
+show widgets where Name = 'btnSave';
+show widgets where Name like 'ctn%';
 
 -- Combine filters with AND
-SHOW WIDGETS WHERE WidgetType LIKE '%textbox%' AND Name LIKE 'txt%' IN StyleTest;
+show widgets where widgettype like '%textbox%' and Name like 'txt%' in StyleTest;
 
 -- Filter by container (page or snippet)
-SHOW WIDGETS WHERE Name LIKE 'ctn%' IN StyleTest;
+show widgets where Name like 'ctn%' in StyleTest;
 
 -- MARK: Update Widgets
 
@@ -413,38 +413,38 @@ SHOW WIDGETS WHERE Name LIKE 'ctn%' IN StyleTest;
 -- Property values: strings ('text'), numbers (123), booleans (true/false), null
 
 -- Preview: Add CSS class to all containers in a module
-UPDATE WIDGETS
-  SET 'Class' = 'card'
-  WHERE WidgetType LIKE '%Container%'
-  IN StyleTest
-  DRY RUN;
+update widgets
+  set 'Class' = 'card'
+  where widgettype like '%Container%'
+  in StyleTest
+  dry run;
 
 -- Apply: Set inline style on all action buttons
-UPDATE WIDGETS
-  SET 'Style' = 'margin-top: 8px;'
-  WHERE WidgetType LIKE '%ActionButton%'
-  IN StyleTest
-  DRY RUN;
+update widgets
+  set 'Style' = 'margin-top: 8px;'
+  where widgettype like '%ActionButton%'
+  in StyleTest
+  dry run;
 
 -- Set multiple properties at once
-UPDATE WIDGETS
-  SET 'showLabel' = false, 'labelWidth' = 4
-  WHERE WidgetType LIKE '%combobox%'
-  DRY RUN;
+update widgets
+  set 'showLabel' = false, 'labelWidth' = 4
+  where widgettype like '%combobox%'
+  dry run;
 
 -- Hide labels on all checkboxes in a module
-UPDATE WIDGETS
-  SET 'showLabel' = false
-  WHERE WidgetType LIKE '%CheckBox%'
-  IN StyleTest
-  DRY RUN;
+update widgets
+  set 'showLabel' = false
+  where widgettype like '%CheckBox%'
+  in StyleTest
+  dry run;
 
 -- Reset styling by setting to empty string
-UPDATE WIDGETS
-  SET 'Class' = '', 'Style' = ''
-  WHERE WidgetType LIKE '%Container%'
-  IN StyleTest
-  DRY RUN;
+update widgets
+  set 'Class' = '', 'Style' = ''
+  where widgettype like '%Container%'
+  in StyleTest
+  dry run;
 
 -- MARK: Roundtrip
 
@@ -458,75 +458,75 @@ UPDATE WIDGETS
  * Example page for roundtrip workflow.
  * Create it, then DESCRIBE it to see the styling output.
  */
-CREATE PAGE StyleTest.P006_Roundtrip
+create page StyleTest.P006_Roundtrip
 (
-  Title: 'Roundtrip Example',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'style_006_roundtrip/{Employee}',
-  Params: { $Employee: StyleTest.Employee }
+  title: 'Roundtrip Example',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'style_006_roundtrip/{Employee}',
+  params: { $Employee: StyleTest.Employee }
 )
 {
-  CONTAINER ctnHeader (
-    Class: 'card',
-    Style: 'padding: 16px;',
-    DesignProperties: ['Card style': ON]
+  container ctnHeader (
+    class: 'card',
+    style: 'padding: 16px;',
+    designproperties: ['Card style': on]
   ) {
-    DYNAMICTEXT txtHeader (Content: 'Employee Form', RenderMode: H3)
+    dynamictext txtHeader (content: 'Employee Form', rendermode: H3)
   }
 
-  DATAVIEW dvEmployee (DataSource: $Employee) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-    CHECKBOX chkActive (Label: 'Active', Attribute: IsActive)
+  dataview dvEmployee (datasource: $Employee) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtEmail (label: 'Email', attribute: Email)
+    checkbox chkActive (label: 'Active', attribute: IsActive)
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
 
 -- Step 2: Describe to see current state (shows Class, Style, DesignProperties)
-DESCRIBE PAGE StyleTest.P006_Roundtrip;
+describe page StyleTest.P006_Roundtrip;
 
 -- Step 3: Bulk update specific properties across widgets
-UPDATE WIDGETS
-  SET 'Class' = 'card card-bordered'
-  WHERE Name = 'ctnHeader' AND WidgetType LIKE '%Container%'
-  IN StyleTest
-  DRY RUN;
+update widgets
+  set 'Class' = 'card card-bordered'
+  where Name = 'ctnHeader' and widgettype like '%Container%'
+  in StyleTest
+  dry run;
 
 -- Step 4: Or CREATE OR REPLACE to rewrite the entire page with new styling
-CREATE OR REPLACE PAGE StyleTest.P006_Roundtrip
+create or replace page StyleTest.P006_Roundtrip
 (
-  Title: 'Roundtrip Example',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'style_006_roundtrip/{Employee}',
-  Params: { $Employee: StyleTest.Employee }
+  title: 'Roundtrip Example',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'style_006_roundtrip/{Employee}',
+  params: { $Employee: StyleTest.Employee }
 )
 {
-  CONTAINER ctnHeader (
-    Class: 'card card-bordered',
-    Style: 'padding: 16px;',
-    DesignProperties: ['Card style': ON, 'Disable row wrap': ON]
+  container ctnHeader (
+    class: 'card card-bordered',
+    style: 'padding: 16px;',
+    designproperties: ['Card style': on, 'Disable row wrap': on]
   ) {
-    DYNAMICTEXT txtHeader (Content: 'Employee Form', RenderMode: H3)
+    dynamictext txtHeader (content: 'Employee Form', rendermode: H3)
   }
 
-  DATAVIEW dvEmployee (DataSource: $Employee) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-    CHECKBOX chkActive (Label: 'Active', Attribute: IsActive)
+  dataview dvEmployee (datasource: $Employee) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtEmail (label: 'Email', attribute: Email)
+    checkbox chkActive (label: 'Active', attribute: IsActive)
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
 
 -- Step 5: Verify changes
-SHOW WIDGETS IN StyleTest;
+show widgets in StyleTest;
 
 -- MARK: Show Design Properties
 
@@ -537,12 +537,12 @@ SHOW WIDGETS IN StyleTest;
 -- Reads themesource/*/web/design-properties.json files.
 
 -- Show all available design properties
-SHOW DESIGN PROPERTIES;
+show design properties;
 
 -- Show properties for a specific widget type
-SHOW DESIGN PROPERTIES FOR CONTAINER;
-SHOW DESIGN PROPERTIES FOR ACTIONBUTTON;
-SHOW DESIGN PROPERTIES FOR DATAGRID;
+show design properties for container;
+show design properties for actionbutton;
+show design properties for datagrid;
 
 -- MARK: Describe Styling
 
@@ -554,15 +554,15 @@ SHOW DESIGN PROPERTIES FOR DATAGRID;
 -- With WIDGET filter, shows styling for that specific widget.
 
 -- Show all styled widgets on a page
-DESCRIBE STYLING ON PAGE StyleTest.P004_Combined_Styling;
+describe styling on page StyleTest.P004_Combined_Styling;
 
 -- Show styling for a specific widget
-DESCRIBE STYLING ON PAGE StyleTest.P004_Combined_Styling WIDGET ctnHero;
-DESCRIBE STYLING ON PAGE StyleTest.P006_Roundtrip WIDGET ctnHeader;
+describe styling on page StyleTest.P004_Combined_Styling widget ctnHero;
+describe styling on page StyleTest.P006_Roundtrip widget ctnHeader;
 
 -- Describe styling on a snippet
-DESCRIBE STYLING ON SNIPPET StyleTest.MySnippet;
-DESCRIBE STYLING ON SNIPPET StyleTest.MySnippet WIDGET ctnSnippet;
+describe styling on snippet StyleTest.MySnippet;
+describe styling on snippet StyleTest.MySnippet widget ctnSnippet;
 
 -- MARK: Alter Styling
 

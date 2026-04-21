@@ -9,7 +9,7 @@
 -- - Multi-tenancy support
 -- =============================================================================
 
-CREATE MODULE Shop;
+create module Shop;
 
 -- MARK: CORE ORDER ENTITIES
 
@@ -23,21 +23,21 @@ CREATE MODULE Shop;
  * @see Shop.OrderLine
  * @see Shop.Customer
  */
-@Position(560, 260)
-CREATE PERSISTENT ENTITY Shop.Order (
+@position(560, 260)
+create persistent entity Shop.Order (
   /** Unique identifier for the order. Auto-generated sequence. */
-  OrderId: Long NOT NULL UNIQUE DEFAULT 0,
+  OrderId: long not null unique default 0,
   /** Date and time when the order was placed. */
-  OrderDate: DateTime,
+  OrderDate: datetime,
   /** Discount percentage applied to the order (0-100). */
-  Discount: Integer DEFAULT 0,
+  Discount: integer default 0,
   /** Calculated total price after discount, in euros. */
-  TotalPrice: Decimal DEFAULT 0
+  TotalPrice: decimal default 0
 )
-INDEX (OrderId)
-INDEX (OrderDate);
+index (OrderId)
+index (OrderDate);
 
-GRANT Shop.ShopUser, Shop.UserRole ON Shop.Order (DELETE, READ *, WRITE *);
+grant Shop.ShopUser, Shop.UserRole on Shop.Order (delete, read *, write *);
 /
 
 /**
@@ -50,19 +50,19 @@ GRANT Shop.ShopUser, Shop.UserRole ON Shop.Order (DELETE, READ *, WRITE *);
  * @see Shop.Order
  * @see Shop.Product
  */
-@Position(870, 260)
-CREATE PERSISTENT ENTITY Shop.OrderLine (
+@position(870, 260)
+create persistent entity Shop.OrderLine (
   /** Unique identifier for the order line. */
-  OrderLineId: Long NOT NULL UNIQUE DEFAULT 0,
+  OrderLineId: long not null unique default 0,
   /** Quantity of the product ordered. */
-  Amount: Long DEFAULT 0,
+  Amount: long default 0,
   /** Optional note or special instructions for this line item. */
-  Note: String
+  Note: string
 )
-INDEX (OrderLineId)
-INDEX (Note);
+index (OrderLineId)
+index (Note);
 
-GRANT Shop.ShopUser ON Shop.OrderLine (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.OrderLine (delete, read *, write *);
 /
 
 /**
@@ -73,18 +73,18 @@ GRANT Shop.ShopUser ON Shop.OrderLine (DELETE, READ *, WRITE *);
  *
  * @since 1.0.0
  */
-@Position(570, 400)
-CREATE PERSISTENT ENTITY Shop.OrdersArchived (
+@position(570, 400)
+create persistent entity Shop.OrdersArchived (
   /** Original order identifier from the archived order. */
-  OrderId: Long NOT NULL UNIQUE DEFAULT 0,
+  OrderId: long not null unique default 0,
   /** Original date when the order was placed. */
-  OrderDate: DateTime,
+  OrderDate: datetime,
   /** Discount percentage that was applied to the order. */
-  Discount: Integer DEFAULT 0,
+  Discount: integer default 0,
   /** Final total price of the archived order. */
-  TotalPrice: Decimal DEFAULT 0
+  TotalPrice: decimal default 0
 )
-INDEX (OrderId);
+index (OrderId);
 /
 
 -- MARK: CUSTOMER ENTITIES
@@ -99,25 +99,25 @@ INDEX (OrderId);
  * @see Shop.Address
  * @see Shop.Order
  */
-@Position(560, 50)
-CREATE PERSISTENT ENTITY Shop.Customer (
+@position(560, 50)
+create persistent entity Shop.Customer (
   /** Unique identifier for the customer. */
-  CustomerId: Long NOT NULL UNIQUE DEFAULT 0,
+  CustomerId: long not null unique default 0,
   /** Customer first name. */
-  FirstName: String,
+  FirstName: string,
   /** Customer last name. Indexed for fast lookup. */
-  LastName: String,
+  LastName: string,
   /** Customer email address for communications and login. */
-  EmailAddress: String,
+  EmailAddress: string,
   /** Customer date of birth for age verification and marketing. */
-  DateOfBirth: DateTime,
+  DateOfBirth: datetime,
   /** Tenant identifier for multi-tenant deployments. */
-  TenantId: Long DEFAULT 0
+  TenantId: long default 0
 )
-INDEX (CustomerId)
-INDEX (LastName);
+index (CustomerId)
+index (LastName);
 
-GRANT Shop.ShopUser ON Shop.Customer (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.Customer (delete, read *, write *);
 /
 
 /**
@@ -129,26 +129,26 @@ GRANT Shop.ShopUser ON Shop.Customer (DELETE, READ *, WRITE *);
  * @since 1.0.0
  * @see Shop.Customer
  */
-@Position(950, 50)
-CREATE PERSISTENT ENTITY Shop.Address (
+@position(950, 50)
+create persistent entity Shop.Address (
   /** Unique identifier for the address. */
-  AddressId: Long NOT NULL UNIQUE DEFAULT 0,
+  AddressId: long not null unique default 0,
   /** Street name of the address. */
-  Streetname: String,
+  Streetname: string,
   /** Street/house number. */
-  StreetNumber: Integer DEFAULT 0,
+  StreetNumber: integer default 0,
   /** Postal/ZIP code. */
-  Zipcode: String,
+  Zipcode: string,
   /** City name. Indexed for geographic queries. */
-  City: String,
+  City: string,
   /** Country name. Indexed for geographic queries and reporting. */
-  Country: String
+  Country: string
 )
-INDEX (AddressId)
-INDEX (City)
-INDEX (Country);
+index (AddressId)
+index (City)
+index (Country);
 
-GRANT Shop.ShopUser ON Shop.Address (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.Address (delete, read *, write *);
 /
 
 /**
@@ -159,12 +159,12 @@ GRANT Shop.ShopUser ON Shop.Address (DELETE, READ *, WRITE *);
  *
  * @since 1.0.0
  */
-@Position(580, 640)
-CREATE PERSISTENT ENTITY Shop.UserTenant (
+@position(580, 640)
+create persistent entity Shop.UserTenant (
   /** Unique identifier for the tenant. */
-  TenantId: Long DEFAULT 0,
+  TenantId: long default 0,
   /** Display name of the tenant organization. */
-  TenantName: String
+  TenantName: string
 );
 /
 
@@ -180,24 +180,24 @@ CREATE PERSISTENT ENTITY Shop.UserTenant (
  * @see Shop.Price
  * @see Shop.Category
  */
-@Position(1150, 210)
-CREATE PERSISTENT ENTITY Shop.Product (
+@position(1150, 210)
+create persistent entity Shop.Product (
   /** Unique identifier for the product (SKU). */
-  ProductId: Integer NOT NULL UNIQUE DEFAULT 0,
+  ProductId: integer not null unique default 0,
   /** Product display name. Indexed for search. */
-  Name: String,
+  Name: string,
   /** Detailed product description for display. */
-  Description: String,
+  description: string,
   /** Product weight in grams for shipping calculations. */
-  WeightInGrams: Long DEFAULT 0,
+  WeightInGrams: long default 0,
   /** Whether the product is active and available for sale. */
-  IsActive: Boolean DEFAULT true
+  IsActive: boolean default true
 )
-INDEX (ProductId)
-INDEX (Name)
-INDEX (IsActive);
+index (ProductId)
+index (Name)
+index (IsActive);
 
-GRANT Shop.ShopUser ON Shop.Product (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.Product (delete, read *, write *);
 /
 
 /**
@@ -209,22 +209,22 @@ GRANT Shop.ShopUser ON Shop.Product (DELETE, READ *, WRITE *);
  * @since 1.0.0
  * @see Shop.Product
  */
-@Position(1150, 40)
-CREATE PERSISTENT ENTITY Shop.Price (
+@position(1150, 40)
+create persistent entity Shop.Price (
   /** Unique identifier for the price record. */
-  PriceId: Long NOT NULL UNIQUE DEFAULT 0,
+  PriceId: long not null unique default 0,
   /** Product price in euros. */
-  PriceInEuro: Decimal DEFAULT 0,
+  PriceInEuro: decimal default 0,
   /** Date when this price becomes effective. */
-  StartDate: DateTime,
+  StartDate: datetime,
   /** Composite key combining ProductId and StartDate for uniqueness. */
-  ProductIdPriceDate: String UNIQUE
+  ProductIdPriceDate: string unique
 )
-INDEX (PriceId)
-INDEX (StartDate)
-INDEX (PriceInEuro);
+index (PriceId)
+index (StartDate)
+index (PriceInEuro);
 
-GRANT Shop.ShopUser ON Shop.Price (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.Price (delete, read *, write *);
 /
 
 /**
@@ -235,22 +235,22 @@ GRANT Shop.ShopUser ON Shop.Price (DELETE, READ *, WRITE *);
  *
  * @since 1.0.0
  */
-@Position(1480, 220)
-CREATE PERSISTENT ENTITY Shop.Category (
+@position(1480, 220)
+create persistent entity Shop.Category (
   /** Unique identifier for the category. */
-  CategoryId: Long NOT NULL UNIQUE DEFAULT 0,
+  CategoryId: long not null unique default 0,
   /** Category display name. Required and indexed. */
-  Name: String NOT NULL,
+  Name: string not null,
   /** Detailed description of the category. */
-  Description: String,
+  description: string,
   /** Reference to parent category for hierarchical structure. 0 indicates root category. */
-  ParentCategoryId: Long DEFAULT 0
+  ParentCategoryId: long default 0
 )
-INDEX (CategoryId)
-INDEX (Name)
-INDEX (ParentCategoryId);
+index (CategoryId)
+index (Name)
+index (ParentCategoryId);
 
-GRANT Shop.ShopUser ON Shop.Category (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.Category (delete, read *, write *);
 /
 
 /**
@@ -262,19 +262,19 @@ GRANT Shop.ShopUser ON Shop.Category (DELETE, READ *, WRITE *);
  * @since 1.0.0
  * @see Shop.Product
  */
-@Position(1170, 410)
-CREATE PERSISTENT ENTITY Shop.ProductTranslations (
+@position(1170, 410)
+create persistent entity Shop.ProductTranslations (
   /** Reference to the product being translated. */
-  ProductId: Integer DEFAULT 0,
+  ProductId: integer default 0,
   /** ISO language code (e.g., en, nl, de, fr). */
-  LanguageCode: String,
+  LanguageCode: string,
   /** Translated product name. */
-  Name: String,
+  Name: string,
   /** Translated product description. */
-  Description: String
+  description: string
 );
 
-GRANT Shop.ShopUser ON Shop.ProductTranslations (CREATE, DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.ProductTranslations (create, delete, read *, write *);
 /
 
 -- MARK: TAGGING SYSTEM
@@ -289,18 +289,18 @@ GRANT Shop.ShopUser ON Shop.ProductTranslations (CREATE, DELETE, READ *, WRITE *
  * @since 1.0.0
  * @see Shop.TagValue
  */
-@Position(820, 640)
-CREATE PERSISTENT ENTITY Shop.Tag (
+@position(820, 640)
+create persistent entity Shop.Tag (
   /** Unique identifier for the tag type. */
-  TagId: Long NOT NULL UNIQUE DEFAULT 0,
+  TagId: long not null unique default 0,
   /** Tag type name (e.g., Color, Size, Material). Must be unique. */
-  Name: String UNIQUE,
+  Name: string unique,
   /** Description of what this tag type represents. */
-  Description: String
+  description: string
 )
-INDEX (TagId);
+index (TagId);
 
-GRANT Shop.ShopUser ON Shop.Tag (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.Tag (delete, read *, write *);
 /
 
 /**
@@ -313,21 +313,21 @@ GRANT Shop.ShopUser ON Shop.Tag (DELETE, READ *, WRITE *);
  * @see Shop.Tag
  * @see Shop.Product
  */
-@Position(980, 490)
-CREATE PERSISTENT ENTITY Shop.TagValue (
+@position(980, 490)
+create persistent entity Shop.TagValue (
   /** Unique identifier for the tag value. */
-  TagValueId: Long NOT NULL UNIQUE DEFAULT 0,
+  TagValueId: long not null unique default 0,
   /** Reference to the parent Tag type. */
-  TagId: Long NOT NULL DEFAULT 0,
+  TagId: long not null default 0,
   /** The actual tag value (e.g., Red, Large, Cotton). */
-  Value: String NOT NULL,
+  value: string not null,
   /** Optional description of this tag value. */
-  Description: String
+  description: string
 )
-INDEX (TagValueId)
-INDEX (TagId);
+index (TagValueId)
+index (TagId);
 
-GRANT Shop.ShopUser ON Shop.TagValue (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.TagValue (delete, read *, write *);
 /
 
 -- MARK: PAYMENT AND DELIVERY ENTITIES
@@ -341,18 +341,18 @@ GRANT Shop.ShopUser ON Shop.TagValue (DELETE, READ *, WRITE *);
  * @since 1.0.0
  * @see Shop.Order
  */
-@Position(220, 440)
-CREATE PERSISTENT ENTITY Shop.Payment (
+@position(220, 440)
+create persistent entity Shop.Payment (
   /** Unique identifier for the payment transaction. */
-  PaymentId: Long NOT NULL UNIQUE DEFAULT 0,
+  PaymentId: long not null unique default 0,
   /** Date and time when the payment was processed. */
-  PaymentTimestamp: DateTime,
+  PaymentTimestamp: datetime,
   /** Masked or tokenized credit card number for reference. */
-  CreditcardNumber: String
+  CreditcardNumber: string
 )
-INDEX (PaymentId);
+index (PaymentId);
 
-GRANT Shop.ShopUser ON Shop.Payment (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.Payment (delete, read *, write *);
 /
 
 /**
@@ -364,19 +364,19 @@ GRANT Shop.ShopUser ON Shop.Payment (DELETE, READ *, WRITE *);
  * @since 1.0.0
  * @see Shop.Order
  */
-@Position(220, 310)
-CREATE PERSISTENT ENTITY Shop.DeliveryStatus (
+@position(220, 310)
+create persistent entity Shop.DeliveryStatus (
   /** Unique identifier for the delivery status record. */
-  DeliveryStatusId: Long NOT NULL UNIQUE DEFAULT 0,
+  DeliveryStatusId: long not null unique default 0,
   /** Current delivery status (Pending, Shipped, InTransit, Delivered, etc.). */
-  Status: Enumeration(Shop.DeliveryStatusEnum),
+  status: enumeration(Shop.DeliveryStatusEnum),
   /** Date and time when this status was recorded. */
-  DeliveryStatusTimestamp: DateTime,
+  DeliveryStatusTimestamp: datetime,
   /** Current location or tracking information. */
-  Location: String
+  Location: string
 );
 
-GRANT Shop.ShopUser ON Shop.DeliveryStatus (DELETE, READ *, WRITE *);
+grant Shop.ShopUser on Shop.DeliveryStatus (delete, read *, write *);
 /
 
 -- MARK: VIEW ENTITIES
@@ -389,37 +389,37 @@ GRANT Shop.ShopUser ON Shop.DeliveryStatus (DELETE, READ *, WRITE *);
  *
  * @since 1.0.0
  */
-@Position(2340, 410)
-CREATE VIEW ENTITY Shop.TaskQueue (
+@position(2340, 410)
+create view entity Shop.TaskQueue (
   /** Sequence number of the task. */
-  TaskSequence: Long,
+  TaskSequence: long,
   /** Current status of the task. */
-  Status: Enumeration(System.QueueTaskStatus),
+  status: enumeration(System.QueueTaskStatus),
   /** Identifier of the queue. */
-  QueueId: String,
+  QueueId: string,
   /** Name of the queue. */
-  QueueName: String,
+  QueueName: string,
   /** Name of the microflow being executed. */
-  MicroflowName: String,
+  MicroflowName: string,
   /** When the task was created. */
-  Created: DateTime,
+  created: datetime,
   /** Scheduled start time. */
-  StartedAt: DateTime,
+  StartedAt: datetime,
   /** Actual start time. */
-  Started: DateTime,
+  Started: datetime,
   /** Completion time. */
-  Finished: DateTime,
+  Finished: datetime,
   /** Duration in seconds. */
-  Duration: Long
-) AS (
+  Duration: long
+) as (
   from System.ProcessedQueueTask as pqt
   select
     pqt.Sequence as TaskSequence
-  , pqt.Status as Status
+  , pqt.status as status
   , pqt.QueueId as QueueId
   , pqt.QueueName as QueueName
   , pqt.MicroflowName as MicroflowName
-  , pqt.Created as Created
+  , pqt.created as created
   , pqt.StartAt as StartedAt
   , pqt.Started as Started
   , pqt.Finished as Finished
@@ -428,18 +428,18 @@ CREATE VIEW ENTITY Shop.TaskQueue (
   from System.QueuedTask as qt
   select
     qt.Sequence as TaskSequence
-  , qt.Status as Status
+  , qt.status as status
   , qt.QueueId as QueueId
   , qt.QueueName as QueueName
   , qt.MicroflowName as MicroflowName
-  , qt.Created as Created
+  , qt.created as created
   , qt.StartAt as StartedAt
   , qt.Started as Started
   , '[%CurrentDateTime%]' as Finished
   , datediff(SECOND, qt.Started, '[%CurrentDateTime%]') as Duration
 );
 
-GRANT Shop.ShopUser ON Shop.TaskQueue (READ *, WRITE *);
+grant Shop.ShopUser on Shop.TaskQueue (read *, write *);
 /
 
 /**
@@ -450,13 +450,13 @@ GRANT Shop.ShopUser ON Shop.TaskQueue (READ *, WRITE *);
  *
  * @since 1.0.0
  */
-@Position(820, 840)
-CREATE VIEW ENTITY Shop.OrderTotalsVE (
+@position(820, 840)
+create view entity Shop.OrderTotalsVE (
   /** EU country name. */
-  Country: String,
+  Country: string,
   /** Number of customers with billing addresses in this country. */
-  CustomerCount: Integer
-) AS (
+  CustomerCount: integer
+) as (
   from Shop.Address as a
     inner join Shop.BillingAddress_Customer/Shop.Customer as c
   where a.Country in ('Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Ireland', 'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain', 'Sweden')
@@ -475,24 +475,24 @@ CREATE VIEW ENTITY Shop.OrderTotalsVE (
  *
  * @since 1.0.0
  */
-@Position(580, 840)
-CREATE VIEW ENTITY Shop.EuropeanCountryCustomerCountVe (
+@position(580, 840)
+create view entity Shop.EuropeanCountryCustomerCountVe (
   /** Country name (Netherlands, Germany, or Italy). */
-  Country: String,
+  Country: string,
   /** Number of customers with delivery addresses in this country. */
-  CustomerCount: Integer
-) AS (
-  SELECT
-    a.Country AS Country,
-    COUNT(c.CustomerId) AS CustomerCount
-  FROM
-    Shop.Customer AS c
-    INNER JOIN c/Shop.DeliveryAddress_Customer/Shop.Address AS a
-  WHERE
+  CustomerCount: integer
+) as (
+  select
+    a.Country as Country,
+    count(c.CustomerId) as CustomerCount
+  from
+    Shop.Customer as c
+    inner join c/Shop.DeliveryAddress_Customer/Shop.Address as a
+  where
     a.Country = 'Netherlands'
-    OR a.Country = 'Germany'
-    OR a.Country = 'Italy'
-  GROUP BY
+    or a.Country = 'Germany'
+    or a.Country = 'Italy'
+  GROUP by
     a.Country
 );
 /
@@ -507,11 +507,11 @@ CREATE VIEW ENTITY Shop.EuropeanCountryCustomerCountVe (
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.OrderLine_Order
-FROM Shop.OrderLine TO Shop.Order
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.OrderLine_Order
+from Shop.OrderLine to Shop.Order
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -522,11 +522,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.Order_Customer
-FROM Shop.Order TO Shop.Customer
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.Order_Customer
+from Shop.Order to Shop.Customer
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -537,11 +537,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.OrderLine_Product
-FROM Shop.OrderLine TO Shop.Product
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.OrderLine_Product
+from Shop.OrderLine to Shop.Product
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -552,11 +552,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.Payment_Order
-FROM Shop.Payment TO Shop.Order
-TYPE Reference
-OWNER Both
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.Payment_Order
+from Shop.Payment to Shop.Order
+type reference
+owner both
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -567,11 +567,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.DeliveryStatus_Order
-FROM Shop.DeliveryStatus TO Shop.Order
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.DeliveryStatus_Order
+from Shop.DeliveryStatus to Shop.Order
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -582,11 +582,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.Price_Product
-FROM Shop.Price TO Shop.Product
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.Price_Product
+from Shop.Price to Shop.Product
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -597,11 +597,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.BillingAddress_Customer
-FROM Shop.Address TO Shop.Customer
-TYPE Reference
-OWNER Both
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.BillingAddress_Customer
+from Shop.Address to Shop.Customer
+type reference
+owner both
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -612,11 +612,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.DeliveryAddress_Customer
-FROM Shop.Address TO Shop.Customer
-TYPE Reference
-OWNER Both
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.DeliveryAddress_Customer
+from Shop.Address to Shop.Customer
+type reference
+owner both
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -627,11 +627,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.Product_TagValue
-FROM Shop.Product TO Shop.TagValue
-TYPE ReferenceSet
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.Product_TagValue
+from Shop.Product to Shop.TagValue
+type ReferenceSet
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -642,11 +642,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.TagValue_Tag
-FROM Shop.TagValue TO Shop.Tag
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.TagValue_Tag
+from Shop.TagValue to Shop.Tag
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -657,11 +657,11 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.Product_Category
-FROM Shop.Product TO Shop.Category
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.Product_Category
+from Shop.Product to Shop.Category
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /**
@@ -672,9 +672,9 @@ DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Shop.ProductTranslations_Product
-FROM Shop.ProductTranslations TO Shop.Product
-TYPE Reference
-OWNER Default
-DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Shop.ProductTranslations_Product
+from Shop.ProductTranslations to Shop.Product
+type reference
+owner default
+delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /

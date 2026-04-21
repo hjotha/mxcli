@@ -30,23 +30,23 @@ Mendix validation follows a two-microflow pattern:
 ### VALIDATION FEEDBACK Statement
 
 ```mdl
-VALIDATION FEEDBACK $VariableName/AttributeName MESSAGE 'Error message';
+validation feedback $VariableName/attributename message 'Error message';
 ```
 
 With template arguments (for dynamic messages):
 ```mdl
-VALIDATION FEEDBACK $VariableName/AttributeName MESSAGE '{1}' OBJECTS [$MessageVariable];
+validation feedback $VariableName/attributename message '{1}' objects [$MessageVariable];
 ```
 
 ### CLOSE PAGE Statement
 
 ```mdl
-CLOSE PAGE;
+close page;
 ```
 
 Or to close multiple pages:
 ```mdl
-CLOSE PAGE 2;
+close page 2;
 ```
 
 ## Complete Example
@@ -63,46 +63,46 @@ CLOSE PAGE 2;
  * @param $Car The Car entity to validate
  * @returns Boolean indicating if all validations passed
  */
-CREATE MICROFLOW MdlTemplates.VAL_Car_NewEdit (
+create microflow MdlTemplates.VAL_Car_NewEdit (
   $Car: MdlTemplates.Car
 )
-RETURNS Boolean AS $IsValid
-FOLDER 'OverviewPages'
-BEGIN
+returns boolean as $IsValid
+folder 'OverviewPages'
+begin
   -- Initialize validation flag
-  DECLARE $IsValid Boolean = true;
+  declare $IsValid boolean = true;
 
   -- Validate Brand (required text field)
-  IF trim($Car/Brand) = '' THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Car/Brand MESSAGE 'Brand is required';
-  END IF;
+  if trim($Car/Brand) = '' then
+    set $IsValid = false;
+    validation feedback $Car/Brand message 'Brand is required';
+  end if;
 
   -- Validate Model (required text field)
-  IF trim($Car/Model) = '' THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Car/Model MESSAGE 'Model is required';
-  END IF;
+  if trim($Car/model) = '' then
+    set $IsValid = false;
+    validation feedback $Car/model message 'Model is required';
+  end if;
 
   -- Validate Price (required, must be positive)
-  IF $Car/Price = empty THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Car/Price MESSAGE 'Price is required';
-  ELSE
-    IF $Car/Price <= 0 THEN
-      SET $IsValid = false;
-      VALIDATION FEEDBACK $Car/Price MESSAGE 'Price must be greater than 0';
-    END IF;
-  END IF;
+  if $Car/Price = empty then
+    set $IsValid = false;
+    validation feedback $Car/Price message 'Price is required';
+  else
+    if $Car/Price <= 0 then
+      set $IsValid = false;
+      validation feedback $Car/Price message 'Price must be greater than 0';
+    end if;
+  end if;
 
   -- Validate enumeration (required)
-  IF $Car/CarType = empty THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Car/CarType MESSAGE 'Car type is required';
-  END IF;
+  if $Car/CarType = empty then
+    set $IsValid = false;
+    validation feedback $Car/CarType message 'Car type is required';
+  end if;
 
-  RETURN $IsValid;
-END;
+  return $IsValid;
+end;
 /
 ```
 
@@ -117,23 +117,23 @@ END;
  * @param $Car The Car entity to save
  * @returns Boolean indicating success
  */
-CREATE MICROFLOW MdlTemplates.ACT_Car_NewEdit (
+create microflow MdlTemplates.ACT_Car_NewEdit (
   $Car: MdlTemplates.Car
 )
-RETURNS Boolean AS $IsValid
-FOLDER 'OverviewPages'
-BEGIN
+returns boolean as $IsValid
+folder 'OverviewPages'
+begin
   -- Call validation microflow
-  $IsValid = CALL MICROFLOW MdlTemplates.VAL_Car_NewEdit($param = $Car);
+  $IsValid = call microflow MdlTemplates.VAL_Car_NewEdit($param = $Car);
 
   -- Only save if validation passed
-  IF $IsValid THEN
-    COMMIT $Car;
-    CLOSE PAGE;
-  END IF;
+  if $IsValid then
+    commit $Car;
+    close page;
+  end if;
 
-  RETURN $IsValid;
-END;
+  return $IsValid;
+end;
 /
 ```
 
@@ -142,30 +142,30 @@ END;
 ### Simple Required Field Validation
 
 ```mdl
-IF trim($Entity/TextField) = '' THEN
-  SET $IsValid = false;
-  VALIDATION FEEDBACK $Entity/TextField MESSAGE 'This field is required';
-END IF;
+if trim($entity/TextField) = '' then
+  set $IsValid = false;
+  validation feedback $entity/TextField message 'This field is required';
+end if;
 ```
 
 ### Numeric Range Validation
 
 ```mdl
-IF $Entity/Amount != empty THEN
-  IF $Entity/Amount < 0 OR $Entity/Amount > 1000 THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Entity/Amount MESSAGE 'Amount must be between 0 and 1000';
-  END IF;
-END IF;
+if $entity/Amount != empty then
+  if $entity/Amount < 0 or $entity/Amount > 1000 then
+    set $IsValid = false;
+    validation feedback $entity/Amount message 'Amount must be between 0 and 1000';
+  end if;
+end if;
 ```
 
 ### Enumeration Required Validation
 
 ```mdl
-IF $Entity/Status = empty THEN
-  SET $IsValid = false;
-  VALIDATION FEEDBACK $Entity/Status MESSAGE 'Status is required';
-END IF;
+if $entity/status = empty then
+  set $IsValid = false;
+  validation feedback $entity/status message 'Status is required';
+end if;
 ```
 
 ### Enumeration Value Comparison
@@ -174,13 +174,13 @@ END IF;
 
 ```mdl
 -- CORRECT: Use fully qualified enumeration value
-IF $Task/TaskStatus = Module.TaskStatus.Completed THEN
+if $task/TaskStatus = Module.TaskStatus.Completed then
   -- Task is completed
-END IF;
+end if;
 
-IF $Task/TaskStatus != Module.TaskStatus.Cancelled THEN
+if $task/TaskStatus != Module.TaskStatus.Cancelled then
   -- Task is not cancelled
-END IF;
+end if;
 
 -- WRONG: Do NOT use string literals for enumeration comparison
 -- IF $Task/TaskStatus = 'Completed' THEN  -- This is incorrect!
@@ -190,86 +190,86 @@ END IF;
 
 ```mdl
 -- Validate CompletedDate only when status is Completed
-IF $Task/TaskStatus = Module.TaskStatus.Completed THEN
-  IF $Task/CompletedDate = empty THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Task/CompletedDate MESSAGE 'Completed date is required';
-  END IF;
-END IF;
+if $task/TaskStatus = Module.TaskStatus.Completed then
+  if $task/CompletedDate = empty then
+    set $IsValid = false;
+    validation feedback $task/CompletedDate message 'Completed date is required';
+  end if;
+end if;
 
 -- Validate DueDate for active (non-completed, non-cancelled) tasks
-IF $Task/TaskStatus != Module.TaskStatus.Completed AND $Task/TaskStatus != Module.TaskStatus.Cancelled THEN
-  IF $Task/DueDate = empty THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Task/DueDate MESSAGE 'Due date is required for active tasks';
-  END IF;
-END IF;
+if $task/TaskStatus != Module.TaskStatus.Completed and $task/TaskStatus != Module.TaskStatus.Cancelled then
+  if $task/DueDate = empty then
+    set $IsValid = false;
+    validation feedback $task/DueDate message 'Due date is required for active tasks';
+  end if;
+end if;
 ```
 
 ### Date Validation
 
 ```mdl
-IF $Entity/StartDate != empty AND $Entity/EndDate != empty THEN
-  IF $Entity/EndDate < $Entity/StartDate THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Entity/EndDate MESSAGE 'End date must be after start date';
-  END IF;
-END IF;
+if $entity/StartDate != empty and $entity/EndDate != empty then
+  if $entity/EndDate < $entity/StartDate then
+    set $IsValid = false;
+    validation feedback $entity/EndDate message 'End date must be after start date';
+  end if;
+end if;
 ```
 
 ### Dynamic Message with Template Arguments
 
 ```mdl
 -- Build validation message with dynamic content
-DECLARE $ValidationMessage String = '';
-IF $Entity/Value < $Entity/MinValue THEN
-  SET $ValidationMessage = 'Value must be at least ' + toString($Entity/MinValue);
-END IF;
-IF $Entity/Value > $Entity/MaxValue THEN
-  SET $ValidationMessage = if trim($ValidationMessage) = ''
-    then 'Value must be at most ' + toString($Entity/MaxValue)
-    else $ValidationMessage + '. Value must be at most ' + toString($Entity/MaxValue);
-END IF;
+declare $ValidationMessage string = '';
+if $entity/value < $entity/MinValue then
+  set $ValidationMessage = 'Value must be at least ' + toString($entity/MinValue);
+end if;
+if $entity/value > $entity/MaxValue then
+  set $ValidationMessage = if trim($ValidationMessage) = ''
+    then 'Value must be at most ' + toString($entity/MaxValue)
+    else $ValidationMessage + '. Value must be at most ' + toString($entity/MaxValue);
+end if;
 
-IF trim($ValidationMessage) != '' THEN
-  SET $IsValid = false;
-  VALIDATION FEEDBACK $Entity/Value MESSAGE '{1}' OBJECTS [$ValidationMessage];
-END IF;
+if trim($ValidationMessage) != '' then
+  set $IsValid = false;
+  validation feedback $entity/value message '{1}' objects [$ValidationMessage];
+end if;
 ```
 
 ### Association Validation
 
 ```mdl
 -- Validate that an association is set
-IF $Order/Order_Customer = empty THEN
-  SET $IsValid = false;
-  VALIDATION FEEDBACK $Order/Module.Order_Customer MESSAGE 'Customer is required';
-END IF;
+if $Order/Order_Customer = empty then
+  set $IsValid = false;
+  validation feedback $Order/Module.Order_Customer message 'Customer is required';
+end if;
 ```
 
 ## Implementation Checklist
 
 When implementing validation microflows:
 
-1. **Initialize the validation flag**: Always start with `DECLARE $IsValid Boolean = true;`
+1. **Initialize the validation flag**: Always start with `declare $IsValid boolean = true;`
 
-2. **Declare all variables before using SET**: You must use `DECLARE` before `SET` for primitive variables. Parameters are automatically available but local variables require declaration.
+2. **Declare all variables before using SET**: You must use `declare` before `set` for primitive variables. Parameters are automatically available but local variables require declaration.
 
 3. **Validate all required fields**: Check each attribute that needs validation
 
-4. **Set flag to false on error**: `SET $IsValid = false;` before showing feedback
+4. **Set flag to false on error**: `set $IsValid = false;` before showing feedback
 
-5. **Show clear error messages**: Use `VALIDATION FEEDBACK` with descriptive messages
+5. **Show clear error messages**: Use `validation feedback` with descriptive messages
 
-6. **Return the validation flag**: End with `RETURN $IsValid;`
+6. **Return the validation flag**: End with `return $IsValid;`
 
 7. **Handle nullable fields**: Check for `empty` before validating nullable fields
 
 8. **Use appropriate validation order**: Validate presence before other constraints
 
-**Important**: The script executor validates that all variables used with `SET` are declared. If you use `SET $Var = ...` without a prior `DECLARE $Var Type = ...`, you will receive an error like:
+**Important**: The script executor validates that all variables used with `set` are declared. If you use `set $Var = ...` without a prior `declare $Var type = ...`, you will receive an error like:
 ```
-variable '$Var' is not declared. Use DECLARE $Var: <Type> before using SET
+variable '$Var' is not declared. use declare $Var: <type> before using set
 ```
 
 ## Files Modified

@@ -54,7 +54,7 @@ File: `~/.mxcli/tui-session.json` (overwritten on each exit)
   "tabs": [
     {
       "projectPath": "/path/to/App.mpr",
-      "millerPath": ["Project", "MyFirstModule", "Pages"],
+      "millerPath": ["project", "MyFirstModule", "pages"],
       "selectedNode": "P_ComboBox_Enum",
       "previewMode": "MDL"
     }

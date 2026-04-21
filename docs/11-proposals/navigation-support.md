@@ -2,7 +2,7 @@
 
 ## Background
 
-Every Mendix project has exactly one `Navigation$NavigationDocument` — a project-level singleton containing navigation profiles (Responsive, Phone, Tablet, Native). Each profile defines:
+Every Mendix project has exactly one `navigation$NavigationDocument` — a project-level singleton containing navigation profiles (Responsive, Phone, Tablet, Native). Each profile defines:
 
 - A **default home page** (page or microflow)
 - **Role-based home pages** (override per user role)
@@ -13,7 +13,7 @@ Every Mendix project has exactly one `Navigation$NavigationDocument` — a proje
 
 Navigation is currently the most significant gap in the MDL toolchain. The parser only extracts the document name — no profiles, home pages, menus, or role mappings are parsed. This means:
 
-- `SHOW CONTEXT` cannot trace "which pages are entry points"
+- `show context` cannot trace "which pages are entry points"
 - The catalog `refs` table has no `home_page`, `menu_item`, or `login_page` ref kinds
 - The architecture diagram proposal is blocked on knowing where users start
 
@@ -21,7 +21,7 @@ Navigation is currently the most significant gap in the MDL toolchain. The parse
 
 ### Storage structure (from QueryDemoApp.mpr)
 
-The navigation document BSON contains a `Profiles` array. Each profile is either `Navigation$NavigationProfile` (web) or `Navigation$NativeNavigationProfile` (native). The test project has one Responsive profile with:
+The navigation document BSON contains a `Profiles` array. Each profile is either `navigation$NavigationProfile` (web) or `navigation$NativeNavigationProfile` (native). The test project has one Responsive profile with:
 
 - **HomePage.Page**: `"Main.Home_Web"` (BY_NAME reference)
 - **3 menu items**: Home → `Main.Home_Web`, Users → `Administration.Account_Overview`, OQL Pad → `OqlPad.OqlEditor`
@@ -33,23 +33,23 @@ The navigation document BSON contains a `Profiles` array. Each profile is either
 | SDK property | BSON storage name | Notes |
 |---|---|---|
 | `roleBasedHomePages` | `HomeItems` | Not `RoleBasedHomePages` |
-| `menuItemCollection` | `Menu` | Not `MenuItemCollection` |
-| `Pages$PageSettings` | `Forms$FormSettings` | Form/Page legacy naming |
+| `menuItemCollection` | `menu` | Not `MenuItemCollection` |
+| `pages$PageSettings` | `Forms$FormSettings` | Form/Page legacy naming |
 | `PageSettings.page` | `Form` | Field also uses legacy name |
 
 ### All references navigation holds
 
 | What | Reference type | Target |
 |---|---|---|
-| Default home page | BY_NAME | `Pages$Page` or `Microflows$Microflow` |
-| Role-based home page | BY_NAME | `Pages$Page` or `Microflows$Microflow` + `Security$UserRole` |
-| Login page | BY_NAME | `Pages$Page` (via `Forms$FormSettings.Form`) |
-| Menu item action | BY_NAME | `Pages$Page` (via `Forms$FormAction.FormSettings.Form`) |
-| Not-found page | BY_NAME | `Pages$Page` or `Microflows$Microflow` (since 10.13.0) |
-| App icon | BY_NAME | `Images$Image` |
-| Offline entity | BY_NAME | `DomainModels$Entity` |
-| Native home page | BY_NAME | `Pages$Page` or `Microflows$Nanoflow` |
-| Native bottom bar | BY_NAME | `Pages$Page` |
+| Default home page | BY_NAME | `pages$page` or `microflows$microflow` |
+| Role-based home page | BY_NAME | `pages$page` or `microflows$microflow` + `security$UserRole` |
+| Login page | BY_NAME | `pages$page` (via `Forms$FormSettings.Form`) |
+| Menu item action | BY_NAME | `pages$page` (via `Forms$FormAction.FormSettings.Form`) |
+| Not-found page | BY_NAME | `pages$page` or `microflows$microflow` (since 10.13.0) |
+| App icon | BY_NAME | `Images$image` |
+| Offline entity | BY_NAME | `DomainModels$entity` |
+| Native home page | BY_NAME | `pages$page` or `microflows$nanoflow` |
+| Native bottom bar | BY_NAME | `pages$page` |
 
 ## Proposed MDL Support
 
@@ -62,22 +62,22 @@ This is the most valuable phase — it unlocks catalog integration and architect
 Display a summary of all navigation profiles:
 
 ```sql
-SHOW NAVIGATION;
+show navigation;
 ```
 
 Output:
 ```
-Navigation Profiles:
+navigation Profiles:
   Responsive (Web)
-    Home: Main.Home_Web
-    Menu: 3 items
-    Login: (default)
+    home: Main.Home_Web
+    menu: 3 items
+    login: (default)
 
   Phone (Mobile)
-    Home: Main.Home_Phone
-    Menu: 2 items
-    Login: Main.Login_Phone
-    Role-based homes:
+    home: Main.Home_Phone
+    menu: 2 items
+    login: Main.Login_Phone
+    role-based homes:
       Customer → Main.Customer_Home
       Admin → Administration.Admin_Home
 ```
@@ -87,37 +87,37 @@ Navigation Profiles:
 Show full detail for a specific profile:
 
 ```sql
-DESCRIBE NAVIGATION Responsive;
+describe navigation Responsive;
 ```
 
 Output:
 ```
 Profile: Responsive
 Kind: Responsive
-Home Page: Main.Home_Web
-Login Page: (default)
-Not Found Page: (not set)
+home page: Main.Home_Web
+login page: (default)
+not found page: (not set)
 
-Role-Based Home Pages:
+role-Based home pages:
   (none)
 
-Menu:
-  Home                → Main.Home_Web
-  Users               → Administration.Account_Overview
+menu:
+  home                → Main.Home_Web
+  users               → Administration.Account_Overview
   OQL Pad             → OqlPad.OqlEditor
 ```
 
 For nested menus:
 ```
-Menu:
+menu:
   Dashboard           → Main.Dashboard
   Orders              (submenu)
-    ├─ All Orders     → Orders.Order_Overview
+    ├─ all Orders     → Orders.Order_Overview
     ├─ New Order      → Orders.Order_New
     └─ Reports        (submenu)
          ├─ Monthly   → Reports.Monthly_Report
          └─ Yearly    → Reports.Yearly_Report
-  Settings            → Admin.Settings
+  settings            → Admin.Settings
 ```
 
 #### SHOW NAVIGATION MENU
@@ -125,8 +125,8 @@ Menu:
 Show just the menu tree for a profile:
 
 ```sql
-SHOW NAVIGATION MENU Responsive;
-SHOW NAVIGATION MENU;              -- defaults to first Responsive profile
+show navigation menu Responsive;
+show navigation menu;              -- defaults to first Responsive profile
 ```
 
 #### SHOW NAVIGATION HOMES
@@ -134,12 +134,12 @@ SHOW NAVIGATION MENU;              -- defaults to first Responsive profile
 Show home page assignments across all profiles:
 
 ```sql
-SHOW NAVIGATION HOMES;
+show navigation homes;
 ```
 
 Output:
 ```
-Profile      Role        Home Page
+Profile      role        home page
 Responsive   (default)   Main.Home_Web
 Phone        (default)   Main.Home_Phone
 Phone        Customer    Main.Customer_Home
@@ -149,7 +149,7 @@ Native       (default)   Main.NativeHome
 
 ### Phase 2: Catalog integration
 
-Add navigation references to the `refs` table so they participate in `SHOW CALLERS`, `SHOW IMPACT`, `SHOW CONTEXT`, and the architecture diagram.
+Add navigation references to the `refs` table so they participate in `show callers`, `show impact`, `show context`, and the architecture diagram.
 
 #### New ref kinds
 
@@ -168,55 +168,55 @@ After catalog integration, these commands automatically pick up navigation:
 
 ```sql
 -- "Which pages are entry points from navigation?"
-SHOW REFERENCES TO Main.Home_Web;
+show references to Main.Home_Web;
 -- Output now includes: Navigation.Responsive → Main.Home_Web (home_page)
 
 -- "What breaks if I rename this page?"
-SHOW IMPACT OF Main.Home_Web;
+show impact of Main.Home_Web;
 -- Output now includes: Navigation.Responsive (home_page)
 
 -- "Full context for architecture diagram"
-SHOW CONTEXT OF Main.Home_Web DEPTH 2;
+show context of Main.Home_Web depth 2;
 -- Output now includes: Referenced by navigation: Responsive (home page), Responsive (menu item)
 ```
 
 ### Phase 3: Write support (CREATE OR REPLACE NAVIGATION) — IMPLEMENTED
 
-Full replacement of navigation profiles using `CREATE OR REPLACE NAVIGATION`. This follows the same describe→create-or-modify pattern used by other MDL commands. The output from `DESCRIBE NAVIGATION` is directly executable.
+Full replacement of navigation profiles using `create or replace navigation`. This follows the same describe→create-or-modify pattern used by other MDL commands. The output from `describe navigation` is directly executable.
 
 #### Syntax
 
 ```sql
 -- Full replacement: home page, login page, menu
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE Main.Home_Web
-  LOGIN PAGE Administration.Login
-  MENU (
-    MENU ITEM 'Home' PAGE Main.Home_Web;
-    MENU 'Admin' (
-      MENU ITEM 'Users' PAGE Administration.Account_Overview;
+create or replace navigation Responsive
+  home page Main.Home_Web
+  login page Administration.Login
+  menu (
+    menu item 'Home' page Main.Home_Web;
+    menu 'Admin' (
+      menu item 'Users' page Administration.Account_Overview;
     );
   );
 
 -- With role-based home page overrides
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE Main.Home_Web
-  HOME PAGE Main.AdminHome FOR MyModule.Administrator
-  LOGIN PAGE Administration.Login;
+create or replace navigation Responsive
+  home page Main.Home_Web
+  home page Main.AdminHome for MyModule.Administrator
+  login page Administration.Login;
 
 -- Set not-found page
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE Main.Home_Web
-  NOT FOUND PAGE Main.Custom404;
+create or replace navigation Responsive
+  home page Main.Home_Web
+  not found page Main.Custom404;
 
 -- Clear the menu (empty MENU block removes all items)
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE Main.Home_Web
-  MENU ();
+create or replace navigation Responsive
+  home page Main.Home_Web
+  menu ();
 
 -- Use MICROFLOW instead of PAGE for home
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME MICROFLOW Main.ACT_ShowHome;
+create or replace navigation Responsive
+  home microflow Main.ACT_ShowHome;
 ```
 
 All clauses are optional — omitted clauses clear that section. Profile name is matched case-insensitively.
@@ -253,42 +253,42 @@ type NavigationProfile struct {
 }
 
 type HomePage struct {
-    Page      string // qualified name (BY_NAME)
-    Microflow string // qualified name (BY_NAME), alternative to Page
+    page      string // qualified name (BY_NAME)
+    microflow string // qualified name (BY_NAME), alternative to page
 }
 
 type RoleBasedHomePage struct {
     UserRole  string // qualified name
-    Page      string
-    Microflow string
+    page      string
+    microflow string
 }
 
 type MenuItem struct {
-    Caption  string
-    Page     string // target page qualified name
+    caption  string
+    page     string // target page qualified name
     Items    []MenuItem // sub-items (recursive)
 }
 
 type OfflineEntityConfig struct {
-    Entity     string // qualified entity name
-    SyncMode   string // "All", "Constrained", "Never", etc.
-    Constraint string // XPath
+    entity     string // qualified entity name
+    SyncMode   string // "all", "Constrained", "Never", etc.
+    constraint string // xpath
 }
 ```
 
 2. **`sdk/mpr/parser_misc.go`** — Expand `parseNavigationDocument()` to walk the BSON structure:
    - Parse `Profiles` array (handle storageListType marker at index 0)
-   - Dispatch on `$Type`: `Navigation$NavigationProfile` vs `Navigation$NativeNavigationProfile`
-   - Parse `HomePage` → extract `Page` and `Microflow` fields
-   - Parse `HomeItems` (roleBasedHomePages) → extract `UserRole`, `Page`, `Microflow`
-   - Parse `Menu` → `Items` → recursively extract `Caption`, `Action.FormSettings.Form`
+   - Dispatch on `$type`: `navigation$NavigationProfile` vs `navigation$NativeNavigationProfile`
+   - Parse `HomePage` → extract `page` and `microflow` fields
+   - Parse `HomeItems` (roleBasedHomePages) → extract `UserRole`, `page`, `microflow`
+   - Parse `menu` → `Items` → recursively extract `caption`, `Action.FormSettings.Form`
    - Parse `LoginPageSettings` → extract `Form` field
-   - Parse `NotFoundHomepage` → extract `Page` and `Microflow`
-   - Parse `OfflineEntityConfigs` → extract `Entity`, `SyncMode`, `Constraint`
+   - Parse `NotFoundHomepage` → extract `page` and `microflow`
+   - Parse `OfflineEntityConfigs` → extract `entity`, `SyncMode`, `constraint`
 
    Key BSON paths:
    ```
-   Profiles[1+].$Type                                    → profile type
+   Profiles[1+].$type                                    → profile type
    Profiles[1+].Kind                                     → profile kind enum
    Profiles[1+].Name                                     → profile name
    Profiles[1+].HomePage.Page                             → default home page
@@ -313,13 +313,13 @@ type OfflineEntityConfig struct {
 5. **`mdl/grammar/MDLLexer.g4` + `MDLParser.g4`** — Add tokens and rules:
    ```antlr
    // Lexer tokens
-   NAVIGATION: N A V I G A T I O N;
-   HOMES: H O M E S;
-   MENU: M E N U;
+   navigation: N A V I G A T I O N;
+   homes: H O M E S;
+   menu: M E N U;
 
    // Parser rules
-   showNavigationStmt: SHOW NAVIGATION (MENU qualifiedName? | HOMES)?;
-   describeNavigationStmt: DESCRIBE NAVIGATION qualifiedName?;
+   showNavigationStmt: show navigation (menu qualifiedName? | homes)?;
+   describeNavigationStmt: describe navigation qualifiedName?;
    ```
 
 6. **`mdl/visitor/`** — AST node types and visitor rules for the new statements.
@@ -341,14 +341,14 @@ type OfflineEntityConfig struct {
 
 2. **`mdl/catalog/tables.go`** — Optionally add a `navigation_profiles` table:
    ```sql
-   CREATE TABLE IF NOT EXISTS navigation_profiles (
-       Id TEXT PRIMARY KEY,
-       Name TEXT,
-       Kind TEXT,
-       IsNative INTEGER,
-       HomePage TEXT,
-       LoginPage TEXT,
-       MenuItemCount INTEGER
+   create table if not exists navigation_profiles (
+       Id text primary key,
+       Name text,
+       Kind text,
+       IsNative integer,
+       HomePage text,
+       LoginPage text,
+       MenuItemCount integer
    );
    ```
    This is optional — the `refs` table alone may be sufficient.
@@ -358,14 +358,14 @@ type OfflineEntityConfig struct {
 ### Phase 3: Write support — IMPLEMENTED
 
 Implemented in `sdk/mpr/writer_navigation.go` with full BSON serialization:
-- `Texts$Text` → `Texts$Translation` objects for menu captions
+- `Texts$text` → `Texts$Translation` objects for menu captions
 - `Forms$FormAction` → `Forms$FormSettings` wrapping for menu page actions
 - `Forms$MicroflowAction` → `Forms$MicroflowSettings` for menu microflow actions
 - `Forms$NoAction` for sub-menu containers
 - All embedded objects include `$ID` (binary UUID)
 - `FormSettings` includes required `ParameterMappings` and `TitleOverride` fields
-- `MenuItem` includes required `AlternativeText` and `Icon` fields
-- Supports both web profiles (`Navigation$NavigationProfile`) and native profiles (`Navigation$NativeNavigationProfile`)
+- `MenuItem` includes required `AlternativeText` and `icon` fields
+- Supports both web profiles (`navigation$NavigationProfile`) and native profiles (`navigation$NativeNavigationProfile`)
 
 ## Complexity Estimate
 
@@ -383,18 +383,18 @@ After Phase 1+2, verify with:
 
 ```bash
 # Parse navigation correctly
-./bin/mxcli -p QueryDemoApp.mpr -c "SHOW NAVIGATION"
-# Expected: Responsive profile, Home: Main.Home_Web, 3 menu items
+./bin/mxcli -p QueryDemoApp.mpr -c "show navigation"
+# Expected: Responsive profile, home: Main.Home_Web, 3 menu items
 
-# Catalog has navigation refs
-./bin/mxcli -p QueryDemoApp.mpr -c "REFRESH CATALOG FULL; SELECT * FROM CATALOG.REFS WHERE RefKind LIKE '%home%' OR RefKind LIKE '%menu%'"
+# catalog has navigation refs
+./bin/mxcli -p QueryDemoApp.mpr -c "refresh catalog full; select * from CATALOG.REFS where RefKind like '%home%' or RefKind like '%menu%'"
 # Expected: home_page and menu_item refs
 
-# Impact analysis includes navigation
-./bin/mxcli -p QueryDemoApp.mpr -c "REFRESH CATALOG FULL; SHOW IMPACT OF Main.Home_Web"
+# impact analysis includes navigation
+./bin/mxcli -p QueryDemoApp.mpr -c "refresh catalog full; show impact of Main.Home_Web"
 # Expected: includes "Navigation.Responsive (home_page, menu_item)"
 
-# Context assembly includes entry points
-./bin/mxcli -p QueryDemoApp.mpr -c "REFRESH CATALOG FULL; SHOW CONTEXT OF Main.Home_Web"
-# Expected: "Navigation entry point: Responsive (home page, menu item 'Home')"
+# context assembly includes entry points
+./bin/mxcli -p QueryDemoApp.mpr -c "refresh catalog full; show context of Main.Home_Web"
+# Expected: "navigation entry point: Responsive (home page, menu item 'Home')"
 ```

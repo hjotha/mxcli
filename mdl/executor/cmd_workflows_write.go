@@ -43,7 +43,7 @@ func execCreateWorkflow(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && existing.Name == s.Name.Name {
 			if !s.CreateOrModify {
-				return mdlerrors.NewAlreadyExistsMsg("workflow", s.Name.Module+"."+s.Name.Name, "workflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use CREATE OR REPLACE to overwrite)")
+				return mdlerrors.NewAlreadyExistsMsg("workflow", s.Name.Module+"."+s.Name.Name, "workflow '"+s.Name.Module+"."+s.Name.Name+"' already exists (use create or replace to overwrite)")
 			}
 			existingID = existing.ID
 			break

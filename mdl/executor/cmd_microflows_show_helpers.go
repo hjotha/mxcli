@@ -139,7 +139,7 @@ func emitActivityStatement(
 
 		errorSuffix := suffix
 		if errorSuffix == "" {
-			errorSuffix = " ON ERROR WITHOUT ROLLBACK"
+			errorSuffix = " on error without rollback"
 		}
 
 		if len(errStmts) == 0 {
@@ -233,7 +233,7 @@ func traverseFlow(
 
 		if isGuard {
 			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
-			*lines = append(*lines, indentStr+"END IF;")
+			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
 			// Continue from the false branch (skip through merge if present)
@@ -254,7 +254,7 @@ func traverseFlow(
 			}
 
 			if falseFlow != nil {
-				*lines = append(*lines, indentStr+"ELSE")
+				*lines = append(*lines, indentStr+"else")
 				visitedFalseBranch := make(map[model.ID]bool)
 				for id := range visited {
 					visitedFalseBranch[id] = true
@@ -262,7 +262,7 @@ func traverseFlow(
 				traverseFlowUntilMerge(ctx, falseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
-			*lines = append(*lines, indentStr+"END IF;")
+			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
 			// Continue after the merge point
@@ -380,7 +380,7 @@ func traverseFlowUntilMerge(
 
 		if isGuard {
 			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
-			*lines = append(*lines, indentStr+"END IF;")
+			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
 			// Continue from the false branch (skip through merge if present)
@@ -401,7 +401,7 @@ func traverseFlowUntilMerge(
 			}
 
 			if falseFlow != nil {
-				*lines = append(*lines, indentStr+"ELSE")
+				*lines = append(*lines, indentStr+"else")
 				visitedFalseBranch := make(map[model.ID]bool)
 				for id := range visited {
 					visitedFalseBranch[id] = true
@@ -409,7 +409,7 @@ func traverseFlowUntilMerge(
 				traverseFlowUntilMerge(ctx, falseFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
-			*lines = append(*lines, indentStr+"END IF;")
+			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
 			// Continue after nested merge
@@ -660,13 +660,13 @@ func findNormalFlows(flows []*microflows.SequenceFlow) []*microflows.SequenceFlo
 func formatErrorHandlingSuffix(errType microflows.ErrorHandlingType) string {
 	switch errType {
 	case microflows.ErrorHandlingTypeContinue:
-		return " ON ERROR CONTINUE"
+		return " on error continue"
 	case microflows.ErrorHandlingTypeRollback:
-		return " ON ERROR ROLLBACK"
+		return " on error rollback"
 	case microflows.ErrorHandlingTypeCustom:
-		return " ON ERROR" // Will be followed by block
+		return " on error" // Will be followed by block
 	case microflows.ErrorHandlingTypeCustomWithoutRollback:
-		return " ON ERROR WITHOUT ROLLBACK" // Will be followed by block
+		return " on error without rollback" // Will be followed by block
 	default:
 		return "" // Abort is the default, no suffix needed
 	}
@@ -760,9 +760,9 @@ func collectErrorHandlerStatements(
 // loopEndKeyword returns "END WHILE" for WHILE loops and "END LOOP" for FOR-EACH loops.
 func loopEndKeyword(loop *microflows.LoopedActivity) string {
 	if _, isWhile := loop.LoopSource.(*microflows.WhileLoopCondition); isWhile {
-		return "END WHILE"
+		return "end while"
 	}
-	return "END LOOP"
+	return "end loop"
 }
 
 // --- Executor method wrappers for callers in unmigrated code and tests ---

@@ -90,7 +90,7 @@ func (fb *flowBuilder) addGetWorkflowActivityRecordsAction(s *ast.GetWorkflowAct
 func (fb *flowBuilder) addWorkflowOperationAction(s *ast.WorkflowOperationStmt) model.ID {
 	var op microflows.WorkflowOperation
 	switch s.OperationType {
-	case "ABORT":
+	case "abort":
 		reason := ""
 		if s.Reason != nil {
 			reason = fb.exprToString(s.Reason)
@@ -100,27 +100,27 @@ func (fb *flowBuilder) addWorkflowOperationAction(s *ast.WorkflowOperationStmt) 
 			Reason:           reason,
 			WorkflowVariable: s.WorkflowVariable,
 		}
-	case "CONTINUE":
+	case "continue":
 		op = &microflows.ContinueOperation{
 			BaseElement:      model.BaseElement{ID: model.ID(types.GenerateID())},
 			WorkflowVariable: s.WorkflowVariable,
 		}
-	case "PAUSE":
+	case "pause":
 		op = &microflows.PauseOperation{
 			BaseElement:      model.BaseElement{ID: model.ID(types.GenerateID())},
 			WorkflowVariable: s.WorkflowVariable,
 		}
-	case "RESTART":
+	case "restart":
 		op = &microflows.RestartOperation{
 			BaseElement:      model.BaseElement{ID: model.ID(types.GenerateID())},
 			WorkflowVariable: s.WorkflowVariable,
 		}
-	case "RETRY":
+	case "retry":
 		op = &microflows.RetryOperation{
 			BaseElement:      model.BaseElement{ID: model.ID(types.GenerateID())},
 			WorkflowVariable: s.WorkflowVariable,
 		}
-	case "UNPAUSE":
+	case "unpause":
 		op = &microflows.UnpauseOperation{
 			BaseElement:      model.BaseElement{ID: model.ID(types.GenerateID())},
 			WorkflowVariable: s.WorkflowVariable,

@@ -26,7 +26,7 @@ func listRestClients(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list consumed REST services", err)
+		return mdlerrors.NewBackend("list consumed rest services", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -50,7 +50,7 @@ func listRestClients(ctx *ExecContext, moduleName string) error {
 			continue
 		}
 
-		auth := "NONE"
+		auth := "none"
 		if svc.Authentication != nil {
 			auth = strings.ToUpper(svc.Authentication.Scheme)
 		}
@@ -65,7 +65,7 @@ func listRestClients(ctx *ExecContext, moduleName string) error {
 	}
 
 	if len(rows) == 0 && ctx.Format != FormatJSON {
-		fmt.Fprintln(ctx.Output, "No consumed REST services found.")
+		fmt.Fprintln(ctx.Output, "No consumed rest services found.")
 		return nil
 	}
 
@@ -75,7 +75,7 @@ func listRestClients(ctx *ExecContext, moduleName string) error {
 
 	result := &TableResult{
 		Columns: []string{"Module", "QualifiedName", "BaseURL", "Auth", "Operations"},
-		Summary: fmt.Sprintf("(%d REST clients)", len(rows)),
+		Summary: fmt.Sprintf("(%d rest clients)", len(rows)),
 	}
 	for _, r := range rows {
 		result.Rows = append(result.Rows, []any{r.module, r.qualifiedName, r.baseUrl, r.auth, r.ops})
@@ -88,7 +88,7 @@ func describeRestClient(ctx *ExecContext, name ast.QualifiedName) error {
 
 	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list consumed REST services", err)
+		return mdlerrors.NewBackend("list consumed rest services", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -104,7 +104,7 @@ func describeRestClient(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 
-	return mdlerrors.NewNotFound("consumed REST service", name.String())
+	return mdlerrors.NewNotFound("consumed rest service", name.String())
 }
 
 // outputConsumedRestServiceMDL outputs a consumed REST service in the property-based { } format.
@@ -115,14 +115,14 @@ func outputConsumedRestServiceMDL(ctx *ExecContext, svc *model.ConsumedRestServi
 		outputJavadoc(w, svc.Documentation)
 	}
 
-	fmt.Fprintf(w, "CREATE REST CLIENT %s.%s (\n", moduleName, svc.Name)
+	fmt.Fprintf(w, "create rest client %s.%s (\n", moduleName, svc.Name)
 	fmt.Fprintf(w, "  BaseUrl: '%s',\n", svc.BaseUrl)
 	if svc.Authentication == nil {
-		fmt.Fprintln(w, "  Authentication: NONE")
+		fmt.Fprintln(w, "  Authentication: none")
 	} else {
 		username := resolveAndFormatRestAuthValue(ctx, svc.Authentication.Username)
 		password := resolveAndFormatRestAuthValue(ctx, svc.Authentication.Password)
-		fmt.Fprintf(w, "  Authentication: BASIC (Username: %s, Password: %s)\n",
+		fmt.Fprintf(w, "  Authentication: basic (Username: %s, Password: %s)\n",
 			username, password)
 	}
 	fmt.Fprintln(w, ")")
@@ -145,8 +145,8 @@ func outputRestOperation(w io.Writer, op *model.RestClientOperation) {
 		outputJavadocIndented(w, op.Documentation, "  ")
 	}
 
-	fmt.Fprintf(w, "  OPERATION %s {\n", op.Name)
-	fmt.Fprintf(w, "    Method: %s,\n", op.HttpMethod)
+	fmt.Fprintf(w, "  operation %s {\n", op.Name)
+	fmt.Fprintf(w, "    Method: %s,\n", strings.ToLower(op.HttpMethod))
 	fmt.Fprintf(w, "    Path: '%s',\n", op.Path)
 
 	// Parameters: ($var: Type, ...)
@@ -178,19 +178,19 @@ func outputRestOperation(w io.Writer, op *model.RestClientOperation) {
 
 	// Body
 	if op.BodyType != "" {
-		switch op.BodyType {
-		case "TEMPLATE":
-			fmt.Fprintf(w, "    Body: TEMPLATE '%s',\n", strings.ReplaceAll(op.BodyVariable, "'", "''"))
-		case "EXPORT_MAPPING":
+		switch strings.ToLower(op.BodyType) {
+		case "template":
+			fmt.Fprintf(w, "    Body: template '%s',\n", strings.ReplaceAll(op.BodyVariable, "'", "''"))
+		case "export_mapping":
 			if op.BodyVariable != "" && len(op.BodyMappings) > 0 {
-				fmt.Fprintf(w, "    Body: MAPPING %s {\n", op.BodyVariable)
+				fmt.Fprintf(w, "    Body: mapping %s {\n", op.BodyVariable)
 				writeExportMappings(w, op.BodyMappings, 6)
 				fmt.Fprintln(w, "    },")
 			} else if op.BodyVariable != "" {
-				fmt.Fprintf(w, "    Body: MAPPING %s,\n", op.BodyVariable)
+				fmt.Fprintf(w, "    Body: mapping %s,\n", op.BodyVariable)
 			}
 		default:
-			fmt.Fprintf(w, "    Body: %s FROM %s,\n", op.BodyType, op.BodyVariable)
+			fmt.Fprintf(w, "    Body: %s from %s,\n", strings.ToLower(op.BodyType), op.BodyVariable)
 		}
 	}
 
@@ -200,33 +200,33 @@ func outputRestOperation(w io.Writer, op *model.RestClientOperation) {
 	}
 
 	// Response
-	switch op.ResponseType {
-	case "NONE":
-		fmt.Fprintln(w, "    Response: NONE")
-	case "JSON":
+	switch strings.ToLower(op.ResponseType) {
+	case "none":
+		fmt.Fprintln(w, "    Response: none")
+	case "json":
 		if op.ResponseVariable != "" {
-			fmt.Fprintf(w, "    Response: JSON AS %s\n", op.ResponseVariable)
+			fmt.Fprintf(w, "    Response: json as %s\n", op.ResponseVariable)
 		} else {
-			fmt.Fprintln(w, "    Response: JSON")
+			fmt.Fprintln(w, "    Response: json")
 		}
-	case "STRING":
-		fmt.Fprintf(w, "    Response: STRING AS %s\n", op.ResponseVariable)
-	case "FILE":
-		fmt.Fprintf(w, "    Response: FILE AS %s\n", op.ResponseVariable)
-	case "STATUS":
-		fmt.Fprintf(w, "    Response: STATUS AS %s\n", op.ResponseVariable)
-	case "MAPPING":
+	case "string":
+		fmt.Fprintf(w, "    Response: string as %s\n", op.ResponseVariable)
+	case "file":
+		fmt.Fprintf(w, "    Response: file as %s\n", op.ResponseVariable)
+	case "status":
+		fmt.Fprintf(w, "    Response: status as %s\n", op.ResponseVariable)
+	case "mapping":
 		if op.ResponseEntity != "" && len(op.ResponseMappings) > 0 {
-			fmt.Fprintf(w, "    Response: MAPPING %s {\n", op.ResponseEntity)
+			fmt.Fprintf(w, "    Response: mapping %s {\n", op.ResponseEntity)
 			writeResponseMappings(w, op.ResponseMappings, 6)
 			fmt.Fprintln(w, "    }")
 		} else if op.ResponseEntity != "" {
-			fmt.Fprintf(w, "    Response: MAPPING %s\n", op.ResponseEntity)
+			fmt.Fprintf(w, "    Response: mapping %s\n", op.ResponseEntity)
 		} else {
-			fmt.Fprintln(w, "    Response: NONE")
+			fmt.Fprintln(w, "    Response: none")
 		}
 	default:
-		fmt.Fprintln(w, "    Response: NONE")
+		fmt.Fprintln(w, "    Response: none")
 	}
 
 	fmt.Fprintln(w, "  }")
@@ -239,7 +239,7 @@ func writeResponseMappings(w io.Writer, mappings []*model.RestResponseMapping, i
 	for _, m := range mappings {
 		if m.Entity != "" {
 			// Object mapping → nested entity via association (import style: CREATE Assoc/Entity = jsonField)
-			fmt.Fprintf(w, "%sCREATE %s/%s = %s", pad, m.Association, m.Entity, m.ExposedName)
+			fmt.Fprintf(w, "%screate %s/%s = %s", pad, m.Association, m.Entity, m.ExposedName)
 			if len(m.Children) > 0 {
 				fmt.Fprintln(w, " {")
 				writeResponseMappings(w, m.Children, indent+2)
@@ -288,7 +288,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 
 	// Version pre-check: REST clients require 10.1+
 	if err := checkFeature(ctx, "integration", "rest_client_basic",
-		"CREATE REST CLIENT",
+		"create rest client",
 		"upgrade your project to 10.1+"); err != nil {
 		return err
 	}
@@ -313,10 +313,10 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 			if stmt.CreateOrModify {
 				// Delete existing and recreate
 				if err := ctx.Backend.DeleteConsumedRestService(existing.ID); err != nil {
-					return mdlerrors.NewBackend("delete existing REST client", err)
+					return mdlerrors.NewBackend("delete existing rest client", err)
 				}
 			} else {
-				return mdlerrors.NewAlreadyExistsMsg("REST client", moduleName+"."+stmt.Name.Name, fmt.Sprintf("REST client already exists: %s.%s (use CREATE OR MODIFY to overwrite)", moduleName, stmt.Name.Name))
+				return mdlerrors.NewAlreadyExistsMsg("rest client", moduleName+"."+stmt.Name.Name, fmt.Sprintf("rest client already exists: %s.%s (use create or modify to overwrite)", moduleName, stmt.Name.Name))
 			}
 		}
 	}
@@ -387,10 +387,10 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 
 	// Write to project
 	if err := ctx.Backend.CreateConsumedRestService(svc); err != nil {
-		return mdlerrors.NewBackend("create REST client", err)
+		return mdlerrors.NewBackend("create rest client", err)
 	}
 
-	fmt.Fprintf(ctx.Output, "Created REST client: %s.%s (%d operations)\n", moduleName, stmt.Name.Name, len(svc.Operations))
+	fmt.Fprintf(ctx.Output, "Created rest client: %s.%s (%d operations)\n", moduleName, stmt.Name.Name, len(svc.Operations))
 	return nil
 }
 
@@ -410,14 +410,14 @@ func buildRestClientOperation(opDef *ast.RestOperationDef) *model.RestClientOper
 
 	// Convert body mapping (export direction: Left=jsonField, Right=entityAttr)
 	if opDef.BodyMapping != nil {
-		op.BodyType = "EXPORT_MAPPING"
+		op.BodyType = "export_mapping"
 		op.BodyVariable = opDef.BodyMapping.Entity.String()
 		op.BodyMappings = convertMappingEntries(opDef.BodyMapping.Entries, false)
 	}
 
 	// Convert response mapping (import direction: Left=entityAttr, Right=jsonField)
 	if opDef.ResponseMapping != nil {
-		op.ResponseType = "MAPPING"
+		op.ResponseType = "mapping"
 		op.ResponseEntity = opDef.ResponseMapping.Entity.String()
 		op.ResponseMappings = convertMappingEntries(opDef.ResponseMapping.Entries, true)
 	}
@@ -523,7 +523,7 @@ func dropRestClient(ctx *ExecContext, stmt *ast.DropRestClientStmt) error {
 
 	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {
-		return mdlerrors.NewBackend("list consumed REST services", err)
+		return mdlerrors.NewBackend("list consumed rest services", err)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -536,14 +536,14 @@ func dropRestClient(ctx *ExecContext, stmt *ast.DropRestClientStmt) error {
 		moduleName := h.GetModuleName(modID)
 		if strings.EqualFold(moduleName, stmt.Name.Module) && strings.EqualFold(svc.Name, stmt.Name.Name) {
 			if err := ctx.Backend.DeleteConsumedRestService(svc.ID); err != nil {
-				return mdlerrors.NewBackend("delete REST client", err)
+				return mdlerrors.NewBackend("delete rest client", err)
 			}
-			fmt.Fprintf(ctx.Output, "Dropped REST client: %s.%s\n", moduleName, svc.Name)
+			fmt.Fprintf(ctx.Output, "Dropped rest client: %s.%s\n", moduleName, svc.Name)
 			return nil
 		}
 	}
 
-	return mdlerrors.NewNotFound("REST client", stmt.Name.String())
+	return mdlerrors.NewNotFound("rest client", stmt.Name.String())
 }
 
 // formatRestAuthValue formats an authentication value for MDL output.

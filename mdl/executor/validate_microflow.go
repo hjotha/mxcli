@@ -63,9 +63,9 @@ func (v *microflowValidator) validate(body []ast.MicroflowStatement) {
 	if v.returnType != nil && v.returnType.Type.Kind != ast.TypeVoid {
 		if !bodyReturns(body) {
 			v.addViolation("MDL003", linter.SeverityError,
-				fmt.Sprintf("microflow returns %s but not all code paths have a RETURN statement",
+				fmt.Sprintf("microflow returns %s but not all code paths have a return statement",
 					returnTypeString(v.returnType)),
-				"Add RETURN statements to all code paths")
+				"Add return statements to all code paths")
 		}
 	}
 
@@ -80,9 +80,9 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 		case *ast.ValidationFeedbackStmt:
 			if isEmptyMessage(stmt.Message) {
 				v.addViolation("MDL007", linter.SeverityWarning,
-					"VALIDATION FEEDBACK has empty message template. "+
+					"validation feedback has empty message template. "+
 						"Mendix requires a non-empty feedback message (CE0091).",
-					"Add a message template to the VALIDATION FEEDBACK action")
+					"Add a message template to the validation feedback action")
 			}
 		case *ast.ReturnStmt:
 			v.checkReturn(stmt)
@@ -103,14 +103,14 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 			// Check: nested loop anti-pattern
 			if v.loopDepth > 0 {
 				v.addViolation("MDL001", linter.SeverityWarning,
-					"nested LOOP detected (loop inside a loop). "+
-						"Use RETRIEVE $Match FROM $List WHERE ... LIMIT 1 for list matching instead of nested loops (O(N^2) performance).",
-					"Replace nested loop with RETRIEVE ... WHERE ... LIMIT 1 for O(N) lookup")
+					"nested loop detected (loop inside a loop). "+
+						"Use retrieve $Match from $List where ... limit 1 for list matching instead of nested loops (O(N^2) performance).",
+					"Replace nested loop with retrieve ... where ... limit 1 for O(N) lookup")
 			}
 			// Check: loop over empty declared list
 			if v.emptyListVars[stmt.ListVariable] {
 				v.addViolation("MDL002", linter.SeverityWarning,
-					fmt.Sprintf("LOOP iterates over '$%s' which was declared as an empty list and never populated. "+
+					fmt.Sprintf("loop iterates over '$%s' which was declared as an empty list and never populated. "+
 						"Pass the list as a microflow parameter instead of creating an empty variable.",
 						stmt.ListVariable),
 					"Pass the list as a microflow parameter instead of creating an empty variable")
@@ -152,19 +152,19 @@ func (v *microflowValidator) checkErrorHandlingInLoop(stmt ast.MicroflowStatemen
 func stmtActivityName(stmt ast.MicroflowStatement) string {
 	switch stmt.(type) {
 	case *ast.CreateObjectStmt:
-		return "CREATE"
+		return "create"
 	case *ast.DeleteObjectStmt:
-		return "DELETE"
+		return "delete"
 	case *ast.MfCommitStmt:
-		return "COMMIT"
+		return "commit"
 	case *ast.RetrieveStmt:
-		return "RETRIEVE"
+		return "retrieve"
 	case *ast.CallMicroflowStmt:
-		return "CALL MICROFLOW"
+		return "call microflow"
 	case *ast.CallJavaActionStmt:
-		return "CALL JAVA ACTION"
+		return "call java action"
 	case *ast.ExecuteDatabaseQueryStmt:
-		return "EXECUTE DATABASE QUERY"
+		return "execute database query"
 	default:
 		return "Activity"
 	}
@@ -178,7 +178,7 @@ func (v *microflowValidator) checkReturn(stmt *ast.ReturnStmt) {
 	// Check 1: RETURN with no value when microflow has a return type
 	if !isVoid && !hasValue {
 		v.addViolation("MDL004", linter.SeverityError,
-			fmt.Sprintf("RETURN requires a value because microflow returns %s",
+			fmt.Sprintf("return requires a value because microflow returns %s",
 				returnTypeString(v.returnType)),
 			fmt.Sprintf("Add a return value of type %s", returnTypeString(v.returnType)))
 		return
@@ -193,7 +193,7 @@ func (v *microflowValidator) checkReturn(stmt *ast.ReturnStmt) {
 			}
 		}
 		v.addViolation("MDL004", linter.SeverityError,
-			"RETURN has a value but microflow does not declare a return type",
+			"return has a value but microflow does not declare a return type",
 			"Remove the return value or add a return type to the microflow")
 		return
 	}
@@ -204,7 +204,7 @@ func (v *microflowValidator) checkReturn(stmt *ast.ReturnStmt) {
 		if retKind == ast.TypeEntity || retKind == ast.TypeListOf {
 			if isScalarLiteral(stmt.Value) {
 				v.addViolation("MDL004", linter.SeverityError,
-					fmt.Sprintf("RETURN has a %s literal but microflow returns %s",
+					fmt.Sprintf("return has a %s literal but microflow returns %s",
 						literalKindName(stmt.Value), returnTypeString(v.returnType)),
 					fmt.Sprintf("Return an object of type %s instead of a scalar literal", returnTypeString(v.returnType)))
 			}
@@ -294,11 +294,11 @@ func (v *microflowValidator) checkBranchScoping(body []ast.MicroflowStatement) {
 		case *ast.IfStmt:
 			// Collect vars declared in THEN branch
 			for varName := range collectDeclaredVars(stmt.ThenBody) {
-				branchVars[varName] = "IF branch"
+				branchVars[varName] = "if branch"
 			}
 			// Collect vars declared in ELSE branch
 			for varName := range collectDeclaredVars(stmt.ElseBody) {
-				branchVars[varName] = "ELSE branch"
+				branchVars[varName] = "else branch"
 			}
 			// Recurse into branches for nested scoping checks
 			v.checkBranchScoping(stmt.ThenBody)
@@ -310,7 +310,7 @@ func (v *microflowValidator) checkBranchScoping(body []ast.MicroflowStatement) {
 		// Check ON ERROR bodies
 		if eh := stmtErrorHandling(s); eh != nil && len(eh.Body) > 0 {
 			for varName := range collectDeclaredVars(eh.Body) {
-				branchVars[varName] = "ON ERROR body"
+				branchVars[varName] = "on error body"
 			}
 			v.checkBranchScoping(eh.Body)
 		}
@@ -323,7 +323,7 @@ func (v *microflowValidator) checkBranchScoping(body []ast.MicroflowStatement) {
 						v.addViolation("MDL005", linter.SeverityWarning,
 							fmt.Sprintf("variable '$%s' is declared inside %s but used outside",
 								refVar, scope),
-							fmt.Sprintf("Declare '$%s' before the IF/ELSE block", refVar))
+							fmt.Sprintf("Declare '$%s' before the if/else block", refVar))
 						// Remove to avoid duplicate warnings
 						delete(branchVars, refVar)
 					}

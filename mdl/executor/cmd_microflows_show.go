@@ -235,7 +235,7 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 	// CREATE MICROFLOW header
 	qualifiedName := name.Module + "." + name.Name
 	if len(targetMf.Parameters) > 0 {
-		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY MICROFLOW %s (", qualifiedName))
+		lines = append(lines, fmt.Sprintf("create or modify microflow %s (", qualifiedName))
 		for i, param := range targetMf.Parameters {
 			paramType := "Object"
 			if param.Type != nil {
@@ -249,17 +249,17 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 		lines = append(lines, ")")
 	} else {
-		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY MICROFLOW %s ()", qualifiedName))
+		lines = append(lines, fmt.Sprintf("create or modify microflow %s ()", qualifiedName))
 	}
 
 	// Return type
 	if targetMf.ReturnType != nil {
 		returnType := formatMicroflowDataType(ctx, targetMf.ReturnType, entityNames)
 		if returnType != "Void" && returnType != "" {
-			returnLine := fmt.Sprintf("RETURNS %s", returnType)
+			returnLine := fmt.Sprintf("returns %s", returnType)
 			// Add variable name if specified (AS $VarName)
 			if targetMf.ReturnVariableName != "" && targetMf.ReturnVariableName != "Variable" {
-				returnLine += fmt.Sprintf(" AS $%s", targetMf.ReturnVariableName)
+				returnLine += fmt.Sprintf(" as $%s", targetMf.ReturnVariableName)
 			}
 			lines = append(lines, returnLine)
 		}
@@ -267,11 +267,11 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Folder
 	if folderPath := h.BuildFolderPath(targetMf.ContainerID); folderPath != "" {
-		lines = append(lines, fmt.Sprintf("FOLDER '%s'", folderPath))
+		lines = append(lines, fmt.Sprintf("folder '%s'", folderPath))
 	}
 
 	// BEGIN block
-	lines = append(lines, "BEGIN")
+	lines = append(lines, "begin")
 
 	// Generate activities
 	if targetMf.ObjectCollection != nil && len(targetMf.ObjectCollection.Objects) > 0 {
@@ -283,7 +283,7 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 		lines = append(lines, "  -- No activities")
 	}
 
-	lines = append(lines, "END;")
+	lines = append(lines, "end;")
 
 	// Add GRANT EXECUTE if roles are assigned
 	if len(targetMf.AllowedModuleRoles) > 0 {
@@ -292,7 +292,7 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 			roles[i] = string(r)
 		}
 		lines = append(lines, "")
-		lines = append(lines, fmt.Sprintf("GRANT EXECUTE ON MICROFLOW %s.%s TO %s;",
+		lines = append(lines, fmt.Sprintf("grant execute on microflow %s.%s to %s;",
 			name.Module, name.Name, strings.Join(roles, ", ")))
 	}
 
@@ -366,7 +366,7 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 	// CREATE NANOFLOW header
 	qualifiedName := name.Module + "." + name.Name
 	if len(targetNf.Parameters) > 0 {
-		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY NANOFLOW %s (", qualifiedName))
+		lines = append(lines, fmt.Sprintf("create or modify nanoflow %s (", qualifiedName))
 		for i, param := range targetNf.Parameters {
 			paramType := "Object"
 			if param.Type != nil {
@@ -380,24 +380,24 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 		lines = append(lines, ")")
 	} else {
-		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY NANOFLOW %s ()", qualifiedName))
+		lines = append(lines, fmt.Sprintf("create or modify nanoflow %s ()", qualifiedName))
 	}
 
 	// Return type
 	if targetNf.ReturnType != nil {
 		returnType := formatMicroflowDataType(ctx, targetNf.ReturnType, entityNames)
 		if returnType != "Void" && returnType != "" {
-			lines = append(lines, fmt.Sprintf("RETURNS %s", returnType))
+			lines = append(lines, fmt.Sprintf("returns %s", returnType))
 		}
 	}
 
 	// Folder
 	if folderPath := h.BuildFolderPath(targetNf.ContainerID); folderPath != "" {
-		lines = append(lines, fmt.Sprintf("FOLDER '%s'", folderPath))
+		lines = append(lines, fmt.Sprintf("folder '%s'", folderPath))
 	}
 
 	// BEGIN block with activities
-	lines = append(lines, "BEGIN")
+	lines = append(lines, "begin")
 
 	// Wrap nanoflow in a Microflow to reuse formatMicroflowActivities
 	if targetNf.ObjectCollection != nil && len(targetNf.ObjectCollection.Objects) > 0 {
@@ -412,7 +412,7 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 		lines = append(lines, "  -- No activities")
 	}
 
-	lines = append(lines, "END;")
+	lines = append(lines, "end;")
 	lines = append(lines, "/")
 
 	fmt.Fprintln(ctx.Output, strings.Join(lines, "\n"))
@@ -495,7 +495,7 @@ func renderMicroflowMDL(
 
 	qualifiedName := name.Module + "." + name.Name
 	if len(mf.Parameters) > 0 {
-		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY MICROFLOW %s (", qualifiedName))
+		lines = append(lines, fmt.Sprintf("create or modify microflow %s (", qualifiedName))
 		for i, param := range mf.Parameters {
 			paramType := "Object"
 			if param.Type != nil {
@@ -509,21 +509,21 @@ func renderMicroflowMDL(
 		}
 		lines = append(lines, ")")
 	} else {
-		lines = append(lines, fmt.Sprintf("CREATE OR MODIFY MICROFLOW %s ()", qualifiedName))
+		lines = append(lines, fmt.Sprintf("create or modify microflow %s ()", qualifiedName))
 	}
 
 	if mf.ReturnType != nil {
 		returnType := formatMicroflowDataType(ctx, mf.ReturnType, entityNames)
 		if returnType != "Void" && returnType != "" {
-			returnLine := fmt.Sprintf("RETURNS %s", returnType)
+			returnLine := fmt.Sprintf("returns %s", returnType)
 			if mf.ReturnVariableName != "" && mf.ReturnVariableName != "Variable" {
-				returnLine += fmt.Sprintf(" AS $%s", mf.ReturnVariableName)
+				returnLine += fmt.Sprintf(" as $%s", mf.ReturnVariableName)
 			}
 			lines = append(lines, returnLine)
 		}
 	}
 
-	lines = append(lines, "BEGIN")
+	lines = append(lines, "begin")
 	headerLineCount := len(lines)
 
 	if mf.ObjectCollection != nil && len(mf.ObjectCollection.Objects) > 0 {
@@ -540,7 +540,7 @@ func renderMicroflowMDL(
 		lines = append(lines, "  -- No activities")
 	}
 
-	lines = append(lines, "END;")
+	lines = append(lines, "end;")
 
 	if len(mf.AllowedModuleRoles) > 0 {
 		roles := make([]string, len(mf.AllowedModuleRoles))
@@ -548,7 +548,7 @@ func renderMicroflowMDL(
 			roles[i] = string(r)
 		}
 		lines = append(lines, "")
-		lines = append(lines, fmt.Sprintf("GRANT EXECUTE ON MICROFLOW %s.%s TO %s;",
+		lines = append(lines, fmt.Sprintf("grant execute on microflow %s.%s to %s;",
 			name.Module, name.Name, strings.Join(roles, ", ")))
 	}
 
@@ -602,7 +602,7 @@ func formatMicroflowDataType(ctx *ExecContext, dt microflows.DataType, entityNam
 		return "List"
 	case *microflows.EnumerationType:
 		if t.EnumerationQualifiedName != "" {
-			return "ENUM " + t.EnumerationQualifiedName
+			return "enum " + t.EnumerationQualifiedName
 		}
 		return "Enumeration"
 	default:
@@ -618,7 +618,7 @@ func formatMicroflowActivities(
 	microflowNames map[model.ID]string,
 ) []string {
 	if mf.ObjectCollection == nil {
-		return []string{"-- DEBUG: ObjectCollection is nil"}
+		return []string{"-- debug: ObjectCollection is nil"}
 	}
 
 	// Build activity map by ID for flow traversal
@@ -679,7 +679,7 @@ func formatMicroflowActivitiesWithSourceMap(
 	headerLineCount int,
 ) []string {
 	if mf.ObjectCollection == nil {
-		return []string{"-- DEBUG: ObjectCollection is nil"}
+		return []string{"-- debug: ObjectCollection is nil"}
 	}
 
 	activityMap := make(map[model.ID]microflows.MicroflowObject)

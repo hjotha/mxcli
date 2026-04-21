@@ -65,8 +65,8 @@ func execShowStructure(ctx *ExecContext, s *ast.ShowStmt) error {
 // and columns for each element type count.
 func structureDepth1JSON(ctx *ExecContext, modules []structureModule) error {
 	entityCounts := queryCountByModule(ctx, "entities")
-	mfCounts := queryCountByModule(ctx, "microflows WHERE MicroflowType = 'MICROFLOW'")
-	nfCounts := queryCountByModule(ctx, "microflows WHERE MicroflowType = 'NANOFLOW'")
+	mfCounts := queryCountByModule(ctx, "microflows where MicroflowType = 'microflow'")
+	nfCounts := queryCountByModule(ctx, "microflows where MicroflowType = 'nanoflow'")
 	pageCounts := queryCountByModule(ctx, "pages")
 	enumCounts := queryCountByModule(ctx, "enumerations")
 	snippetCounts := queryCountByModule(ctx, "snippets")
@@ -114,7 +114,7 @@ type structureModule struct {
 
 // getStructureModules returns filtered and sorted modules for structure output.
 func getStructureModules(ctx *ExecContext, filterModule string, includeAll bool) ([]structureModule, error) {
-	result, err := ctx.Catalog.Query("SELECT Id, Name, Source, AppStoreGuid FROM modules ORDER BY Name")
+	result, err := ctx.Catalog.Query("select Id, Name, Source, AppStoreGuid from modules ORDER by Name")
 	if err != nil {
 		return nil, mdlerrors.NewBackend("query modules", err)
 	}
@@ -184,8 +184,8 @@ func asString(v any) string {
 func structureDepth1(ctx *ExecContext, modules []structureModule) error {
 	// Query counts per module from catalog
 	entityCounts := queryCountByModule(ctx, "entities")
-	mfCounts := queryCountByModule(ctx, "microflows WHERE MicroflowType = 'MICROFLOW'")
-	nfCounts := queryCountByModule(ctx, "microflows WHERE MicroflowType = 'NANOFLOW'")
+	mfCounts := queryCountByModule(ctx, "microflows where MicroflowType = 'microflow'")
+	nfCounts := queryCountByModule(ctx, "microflows where MicroflowType = 'nanoflow'")
 	pageCounts := queryCountByModule(ctx, "pages")
 	enumCounts := queryCountByModule(ctx, "enumerations")
 	snippetCounts := queryCountByModule(ctx, "snippets")
@@ -260,7 +260,7 @@ func structureDepth1(ctx *ExecContext, modules []structureModule) error {
 // queryCountByModule queries a catalog table and returns a map of module name → count.
 func queryCountByModule(ctx *ExecContext, tableAndWhere string) map[string]int {
 	counts := make(map[string]int)
-	sql := fmt.Sprintf("SELECT ModuleName, COUNT(*) FROM %s GROUP BY ModuleName", tableAndWhere)
+	sql := fmt.Sprintf("select ModuleName, count(*) from %s GROUP by ModuleName", tableAndWhere)
 	result, err := ctx.Catalog.Query(sql)
 	if err != nil {
 		return counts
@@ -688,7 +688,7 @@ func structureEntities(ctx *ExecContext, moduleName string, dm *domainmodel.Doma
 				if withTypes {
 					// Add delete behavior if non-default (DeleteMeButKeepReferences is default)
 					if assoc.ChildDeleteBehavior != nil && assoc.ChildDeleteBehavior.Type == domainmodel.DeleteBehaviorTypeDeleteMeAndReferences {
-						part += " CASCADE"
+						part += " cascade"
 					} else if assoc.ChildDeleteBehavior != nil && assoc.ChildDeleteBehavior.Type == domainmodel.DeleteBehaviorTypeDeleteMeIfNoReferences {
 						part += " RESTRICT"
 					}
@@ -706,7 +706,7 @@ func structureEntities(ctx *ExecContext, moduleName string, dm *domainmodel.Doma
 func structurePages(ctx *ExecContext, moduleName string) {
 	// Query pages from catalog
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name FROM pages WHERE ModuleName = '%s' ORDER BY Name",
+		"select Name from pages where ModuleName = '%s' ORDER by Name",
 		escapeSQLString(moduleName)))
 	if err != nil || len(result.Rows) == 0 {
 		return
@@ -715,7 +715,7 @@ func structurePages(ctx *ExecContext, moduleName string) {
 	// Try to get top-level data widgets from widgets table
 	widgetsByPage := make(map[string][]string)
 	widgetResult, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT ContainerQualifiedName, WidgetType, EntityRef FROM widgets WHERE ModuleName = '%s' AND ParentWidget = '' ORDER BY ContainerQualifiedName, WidgetType",
+		"select ContainerQualifiedName, WidgetType, EntityRef from widgets where ModuleName = '%s' and ParentWidget = '' ORDER by ContainerQualifiedName, WidgetType",
 		escapeSQLString(moduleName)))
 	if err == nil {
 		for _, row := range widgetResult.Rows {
@@ -754,7 +754,7 @@ func structurePages(ctx *ExecContext, moduleName string) {
 // structureSnippets outputs snippets for a module from the catalog.
 func structureSnippets(ctx *ExecContext, moduleName string) {
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name FROM snippets WHERE ModuleName = '%s' ORDER BY Name",
+		"select Name from snippets where ModuleName = '%s' ORDER by Name",
 		escapeSQLString(moduleName)))
 	if err != nil || len(result.Rows) == 0 {
 		return
@@ -830,7 +830,7 @@ func formatJATypeDisplay(typeStr string) string {
 // structureODataClients outputs OData clients for a module.
 func structureODataClients(ctx *ExecContext, moduleName string) {
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, ODataVersion FROM odata_clients WHERE ModuleName = '%s' ORDER BY Name",
+		"select Name, ODataVersion from odata_clients where ModuleName = '%s' ORDER by Name",
 		escapeSQLString(moduleName)))
 	if err != nil || len(result.Rows) == 0 {
 		return
@@ -851,7 +851,7 @@ func structureODataClients(ctx *ExecContext, moduleName string) {
 // structureODataServices outputs OData services for a module.
 func structureODataServices(ctx *ExecContext, moduleName string) {
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, Path, EntitySetCount FROM odata_services WHERE ModuleName = '%s' ORDER BY Name",
+		"select Name, Path, EntitySetCount from odata_services where ModuleName = '%s' ORDER by Name",
 		escapeSQLString(moduleName)))
 	if err != nil || len(result.Rows) == 0 {
 		return
@@ -873,7 +873,7 @@ func structureODataServices(ctx *ExecContext, moduleName string) {
 // structureBusinessEventServices outputs business event services for a module.
 func structureBusinessEventServices(ctx *ExecContext, moduleName string) {
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, MessageCount, PublishCount, SubscribeCount FROM business_event_services WHERE ModuleName = '%s' ORDER BY Name",
+		"select Name, MessageCount, PublishCount, SubscribeCount from business_event_services where ModuleName = '%s' ORDER by Name",
 		escapeSQLString(moduleName)))
 	if err != nil || len(result.Rows) == 0 {
 		return

@@ -117,7 +117,7 @@ For an existing Mendix project, use `mxcli init` to add AI tooling and a Dev Con
 ```bash
 mxcli init /path/to/my-mendix-project
 
-# Or specify your tool(s)
+# or specify your tool(s)
 mxcli init --tool cursor /path/to/my-mendix-project
 mxcli init --tool claude --tool cursor /path/to/my-mendix-project
 ```
@@ -141,10 +141,10 @@ claude  # or use Cursor, Continue.dev, etc.
 | **Universal** | `AGENTS.md` | Works with all tools |
 
 ```bash
-# List supported tools
+# list supported tools
 mxcli init --list-tools
 
-# Add tool to existing project
+# add tool to existing project
 mxcli add-tool cursor
 ```
 
@@ -156,7 +156,7 @@ Download the latest release for your platform from the [releases page](https://g
 git clone https://github.com/mendixlabs/mxcli.git
 cd mxcli
 make build
-# Binary is at ./bin/mxcli
+# binary is at ./bin/mxcli
 ```
 
 ## Core Features
@@ -164,13 +164,13 @@ make build
 ### Explore Project Structure
 
 ```bash
-# List all modules
-mxcli -p app.mpr -c "SHOW MODULES"
+# list all modules
+mxcli -p app.mpr -c "show modules"
 
-# List entities in a module
-mxcli -p app.mpr -c "SHOW ENTITIES IN MyModule"
+# list entities in a module
+mxcli -p app.mpr -c "show entities in MyModule"
 
-# Describe any element (module, entity, microflow, nanoflow, page, etc.)
+# describe any element (module, entity, microflow, nanoflow, page, etc.)
 mxcli describe -p app.mpr module MyModule
 mxcli describe -p app.mpr entity MyModule.Customer
 mxcli describe -p app.mpr microflow MyModule.ProcessOrder
@@ -184,19 +184,19 @@ mxcli describe -p app.mpr json structure MyModule.CustomerResponse
 Search across validation messages, log messages, captions, labels, and MDL source:
 
 ```bash
-# Search for validation-related content
+# search for validation-related content
 mxcli search -p app.mpr "validation"
 
 # Pipe-friendly output (type<TAB>name per line)
 mxcli search -p app.mpr "error" -q --format names
 
-# JSON output for processing with jq
+# json output for processing with jq
 mxcli search -p app.mpr "Customer" -q --format json
 ```
 
 Pipe to describe:
 ```bash
-# Describe the first matching microflow
+# describe the first matching microflow
 mxcli search -p app.mpr "validation" -q --format names | head -1 | awk '{print $2}' | \
   xargs mxcli describe -p app.mpr microflow
 
@@ -210,14 +210,14 @@ done < results.txt
 ### Code Navigation
 
 ```bash
-# Find what calls a microflow
+# find what calls a microflow
 mxcli callers -p app.mpr MyModule.ProcessOrder
 mxcli callers -p app.mpr MyModule.ProcessOrder --transitive
 
-# Find what a microflow calls
+# find what a microflow calls
 mxcli callees -p app.mpr MyModule.ProcessOrder
 
-# Find all references to an element
+# find all references to an element
 mxcli refs -p app.mpr MyModule.Customer
 
 # Analyze impact of changing an element
@@ -230,53 +230,53 @@ mxcli context -p app.mpr MyModule.ProcessOrder --depth 3
 ### Widget Discovery and Bulk Updates
 
 > **EXPERIMENTAL**: These commands are an untested proof-of-concept.
-> Always use `DRY RUN` first and backup your project before applying changes.
+> Always use `dry run` first and backup your project before applying changes.
 
 Find and update widget properties across pages and snippets:
 
 ```bash
 # Discover widgets by type
-mxcli -p app.mpr -c "SHOW WIDGETS WHERE WidgetType LIKE '%combobox%'"
+mxcli -p app.mpr -c "show widgets where widgettype like '%combobox%'"
 
-# Filter by module
-mxcli -p app.mpr -c "SHOW WIDGETS IN MyModule"
+# filter by module
+mxcli -p app.mpr -c "show widgets in MyModule"
 
 # Preview changes (dry run)
-mxcli -p app.mpr -c "UPDATE WIDGETS SET 'showLabel' = false WHERE WidgetType LIKE '%DataGrid%' DRY RUN"
+mxcli -p app.mpr -c "update widgets set 'showLabel' = false where widgettype like '%DataGrid%' dry run"
 
-# Apply changes
-mxcli -p app.mpr -c "UPDATE WIDGETS SET 'showLabel' = false, 'labelWidth' = 4 WHERE WidgetType LIKE '%combobox%' IN MyModule"
+# apply changes
+mxcli -p app.mpr -c "update widgets set 'showLabel' = false, 'labelWidth' = 4 where widgettype like '%combobox%' in MyModule"
 ```
 
-Requires `REFRESH CATALOG FULL` to populate the widgets table.
+Requires `refresh catalog full` to populate the widgets table.
 
 ### Catalog Queries
 
 SQL-based querying of project metadata:
 
 ```bash
-# Find microflows with many activities
-mxcli -p app.mpr -c "SELECT Name, ActivityCount FROM CATALOG.MICROFLOWS WHERE ActivityCount > 10 ORDER BY ActivityCount DESC"
+# find microflows with many activities
+mxcli -p app.mpr -c "select Name, ActivityCount from CATALOG.MICROFLOWS where ActivityCount > 10 ORDER by ActivityCount desc"
 
-# Find all entity usages
-mxcli -p app.mpr -c "REFRESH CATALOG FULL; SELECT SourceName, RefKind, TargetName FROM CATALOG.REFS WHERE TargetName = 'MyModule.Customer'"
+# find all entity usages
+mxcli -p app.mpr -c "refresh catalog full; select SourceName, RefKind, TargetName from CATALOG.REFS where TargetName = 'MyModule.Customer'"
 
-# Search strings table directly
-mxcli -p app.mpr -c "SELECT * FROM CATALOG.STRINGS WHERE strings MATCH 'error' LIMIT 10"
+# search strings table directly
+mxcli -p app.mpr -c "select * from CATALOG.STRINGS where strings match 'error' limit 10"
 ```
 
-Available tables: `MODULES`, `ENTITIES`, `MICROFLOWS`, `NANOFLOWS`, `PAGES`, `SNIPPETS`, `ENUMERATIONS`, `WORKFLOWS`, `ACTIVITIES`, `WIDGETS`, `REFS`, `PERMISSIONS`, `STRINGS`, `SOURCE`
+Available tables: `modules`, `entities`, `microflows`, `nanoflows`, `pages`, `snippets`, `enumerations`, `workflows`, `ACTIVITIES`, `widgets`, `REFS`, `PERMISSIONS`, `STRINGS`, `source`
 
 ### Linting
 
 ```bash
-# Lint a project
+# lint a project
 mxcli lint -p app.mpr
 
-# SARIF output for CI/GitHub integration
+# sarif output for CI/GitHub integration
 mxcli lint -p app.mpr --format sarif > results.sarif
 
-# List available rules
+# list available rules
 mxcli lint -p app.mpr --list-rules
 
 # Exclude modules
@@ -288,13 +288,13 @@ mxcli lint -p app.mpr --exclude System --exclude Administration
 ### Best Practices Report
 
 ```bash
-# Generate a scored report (Markdown)
+# generate a scored report (Markdown)
 mxcli report -p app.mpr
 
 # HTML report
 mxcli report -p app.mpr --format html --output report.html
 
-# JSON report for CI
+# json report for CI
 mxcli report -p app.mpr --format json
 ```
 
@@ -305,13 +305,13 @@ The report evaluates the project across 6 categories (Security, Quality, Archite
 Test microflows using MDL syntax with javadoc-style annotations:
 
 ```bash
-# Run tests
+# run tests
 mxcli test tests/microflows.test.mdl -p app.mpr
 
-# List tests without executing
+# list tests without executing
 mxcli test tests/ --list
 
-# JUnit XML output for CI
+# JUnit xml output for CI
 mxcli test tests/ -p app.mpr --junit results.xml
 ```
 
@@ -320,16 +320,16 @@ Tests use `@test` and `@expect` annotations in `.test.mdl` or `.test.md` files. 
 ### Create and Modify
 
 ```bash
-# Execute MDL commands
-mxcli -p app.mpr -c "CREATE ENTITY MyModule.Product (Name: String(200) NOT NULL, Price: Decimal)"
+# execute MDL commands
+mxcli -p app.mpr -c "create entity MyModule.Product (Name: string(200) not null, Price: decimal)"
 
-# Execute an MDL script file
-mxcli -p app.mpr -c "EXECUTE SCRIPT 'setup.mdl'"
+# execute an MDL script file
+mxcli -p app.mpr -c "execute script 'setup.mdl'"
 
-# Check MDL syntax before executing
+# check MDL syntax before executing
 mxcli check script.mdl
 
-# Check syntax and validate references
+# check syntax and validate references
 mxcli check script.mdl -p app.mpr --references
 
 # Preview changes (diff against current state)
@@ -342,67 +342,67 @@ MDL (Mendix Definition Language) is a SQL-like syntax for working with Mendix mo
 
 ```sql
 -- Show project structure
-SHOW MODULES;
-SHOW ENTITIES IN MyModule;
-DESCRIBE ENTITY MyModule.Customer;
-DESCRIBE MICROFLOW MyModule.ProcessOrder;
-DESCRIBE PAGE MyModule.CustomerOverview;
+show modules;
+show entities in MyModule;
+describe entity MyModule.Customer;
+describe microflow MyModule.ProcessOrder;
+describe page MyModule.CustomerOverview;
 
 -- Create entities
-CREATE ENTITY MyModule.Product (
-  Name: String(200) NOT NULL,
-  Price: Decimal(10,2),
-  IsActive: Boolean DEFAULT true
+create entity MyModule.Product (
+  Name: string(200) not null,
+  Price: decimal(10,2),
+  IsActive: boolean default true
 );
 
 -- Create associations
-CREATE ASSOCIATION MyModule.Order_Product
-  FROM MyModule.Order TO MyModule.Product
-  TYPE ReferenceSet;
+create association MyModule.Order_Product
+  from MyModule.Order to MyModule.Product
+  type ReferenceSet;
 
 -- Create pages
-CREATE PAGE MyModule.Product_Edit
+create page MyModule.Product_Edit
 (
-  Params: { $Product: MyModule.Product },
-  Title: 'Edit Product',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Product: MyModule.Product },
+  title: 'Edit Product',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvProduct (DataSource: $Product) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    TEXTBOX txtPrice (Label: 'Price', Attribute: Price)
-    CHECKBOX cbActive (Label: 'Active', Attribute: IsActive)
+  dataview dvProduct (datasource: $Product) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtPrice (label: 'Price', attribute: Price)
+    checkbox cbActive (label: 'Active', attribute: IsActive)
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
 
 -- Security management
-CREATE MODULE ROLE MyModule.Admin DESCRIPTION 'Full access';
-CREATE MODULE ROLE MyModule.Viewer DESCRIPTION 'Read-only';
-GRANT EXECUTE ON MICROFLOW MyModule.ProcessOrder TO MyModule.Admin;
-GRANT VIEW ON PAGE MyModule.Product_Edit TO MyModule.Admin, MyModule.Viewer;
-GRANT MyModule.Admin ON MyModule.Product (CREATE, DELETE, READ *, WRITE *);
-GRANT MyModule.Viewer ON MyModule.Product (READ *);
-CREATE USER ROLE AppAdmin (MyModule.Admin) MANAGE ALL ROLES;
-ALTER PROJECT SECURITY LEVEL PRODUCTION;
-SHOW SECURITY MATRIX IN MyModule;
+create module role MyModule.Admin description 'Full access';
+create module role MyModule.Viewer description 'Read-only';
+grant execute on microflow MyModule.ProcessOrder to MyModule.Admin;
+grant view on page MyModule.Product_Edit to MyModule.Admin, MyModule.Viewer;
+grant MyModule.Admin on MyModule.Product (create, delete, read *, write *);
+grant MyModule.Viewer on MyModule.Product (read *);
+create user role AppAdmin (MyModule.Admin) manage all roles;
+alter project security level production;
+show security matrix in MyModule;
 
 -- Search
-SEARCH 'validation';
+search 'validation';
 
 -- Code navigation
-SHOW CALLERS OF MyModule.ProcessOrder TRANSITIVE;
-SHOW REFERENCES TO MyModule.Customer;
-SHOW IMPACT OF MyModule.Customer;
-SHOW CONTEXT OF MyModule.ProcessOrder DEPTH 3;
+show callers of MyModule.ProcessOrder transitive;
+show references to MyModule.Customer;
+show impact of MyModule.Customer;
+show context of MyModule.ProcessOrder depth 3;
 
 -- Widget discovery and bulk updates
-SHOW WIDGETS WHERE WidgetType LIKE '%combobox%';
-UPDATE WIDGETS SET 'showLabel' = false WHERE WidgetType LIKE '%DataGrid%' DRY RUN;
+show widgets where widgettype like '%combobox%';
+update widgets set 'showLabel' = false where widgettype like '%DataGrid%' dry run;
 ```
 
 Run `mxcli syntax` for MDL syntax reference, or `mxcli syntax <topic>` for specific topics:
@@ -417,17 +417,17 @@ Run `mxcli syntax` for MDL syntax reference, or `mxcli syntax <topic>` for speci
 The `mxcli init` command sets up a Mendix project for AI-assisted development:
 
 ```bash
-# Default: Claude Code + universal docs
+# default: Claude Code + universal docs
 mxcli init /path/to/my-mendix-project
 
 # Specify tool(s)
 mxcli init --tool cursor /path/to/my-mendix-project
 mxcli init --tool claude --tool cursor /path/to/my-mendix-project
 
-# All tools
+# all tools
 mxcli init --all-tools /path/to/my-mendix-project
 
-# Add tool to existing project
+# add tool to existing project
 mxcli add-tool cursor
 ```
 
@@ -472,7 +472,7 @@ mxcli add-tool cursor
 ```
 ~/.mxcli/mxbuild/{version}/modeler/mx    # mx check / mx build
 ~/.mxcli/runtime/{version}/               # Mendix runtime (auto-downloaded)
-./mxcli                                    # Project-local mxcli binary
+./mxcli                                    # project-local mxcli binary
 ```
 
 MxBuild is auto-downloaded on first use (via `mxcli setup mxbuild -p app.mpr` or `mxcli docker build`). To validate a project:
@@ -482,7 +482,7 @@ MxBuild is auto-downloaded on first use (via `mxcli setup mxbuild -p app.mpr` or
 mxcli setup mxbuild -p app.mpr
 ~/.mxcli/mxbuild/*/modeler/mx check app.mpr
 
-# Or use the integrated command
+# or use the integrated command
 mxcli docker check -p app.mpr
 ```
 
@@ -527,22 +527,22 @@ make vscode-install
 The `source_tree` tool provides a visual overview of the codebase, showing file sizes, dependency tiers, and optional quality metrics:
 
 ```bash
-# Basic source tree (file sizes + dependency depth)
+# basic source tree (file sizes + dependency depth)
 go run ./cmd/source_tree
 
-# With function metrics (count, longest function per file)
+# with function metrics (count, longest function per file)
 go run ./cmd/source_tree --fn
 
-# With intra-file duplication detection
+# with intra-file duplication detection
 go run ./cmd/source_tree --dup
 
-# With churn (commit frequency per file)
+# with churn (commit frequency per file)
 go run ./cmd/source_tree --churn
 
-# All metrics at once
+# all metrics at once
 go run ./cmd/source_tree --all
 
-# With test coverage (runs tests first if no coverage.out exists)
+# with test coverage (runs tests first if no coverage.out exists)
 go run ./cmd/source_tree --cover
 ```
 
@@ -553,13 +553,13 @@ Output is color-coded by severity (green/yellow/orange/red) for each metric, mak
 ```bash
 # Prerequisites: Go 1.24+, Make
 
-# Build
+# build
 make build
 
-# Run tests
+# run tests
 make test
 
-# Build release binaries for all platforms
+# build release binaries for all platforms
 make release
 
 # Regenerate parser (requires ANTLR4)
@@ -579,12 +579,12 @@ make grammar
 ```go
 import "github.com/mendixlabs/mxcli"
 
-// Read a project
+// read a project
 reader, _ := modelsdk.Open("/path/to/app.mpr")
 modules, _ := reader.ListModules()
 dm, _ := reader.GetDomainModel(modules[0].ID)
 
-// Write to a project
+// write to a project
 writer, _ := modelsdk.OpenForWriting("/path/to/app.mpr")
 entity := modelsdk.NewEntity("Customer")
 writer.CreateEntity(dm.ID, entity)

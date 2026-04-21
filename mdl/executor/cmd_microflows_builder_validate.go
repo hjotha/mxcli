@@ -111,7 +111,7 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 	case *ast.CreateObjectStmt:
 		// Check for duplicate variable — CREATE implicitly declares the variable
 		if s.Variable != "" && fb.isVariableDeclared(s.Variable) {
-			fb.addError("duplicate variable name '$%s' — CREATE implicitly declares the variable, remove the preceding DECLARE (CE0111)", s.Variable)
+			fb.addError("duplicate variable name '$%s' — create implicitly declares the variable, remove the preceding declare (CE0111)", s.Variable)
 		}
 		// Register created variable as entity type
 		if s.Variable != "" && s.EntityType.Module != "" {
@@ -213,7 +213,7 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 	case *ast.RetrieveStmt:
 		// Check for duplicate variable — RETRIEVE implicitly declares the variable
 		if s.Variable != "" && fb.isVariableDeclared(s.Variable) {
-			fb.addError("duplicate variable name '$%s' — RETRIEVE implicitly declares the variable, remove the preceding DECLARE (CE0111)", s.Variable)
+			fb.addError("duplicate variable name '$%s' — retrieve implicitly declares the variable, remove the preceding declare (CE0111)", s.Variable)
 		}
 		// Register retrieved variable
 		if s.Variable != "" && s.Source.Module != "" {

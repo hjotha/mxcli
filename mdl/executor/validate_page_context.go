@@ -58,14 +58,14 @@ func walkWidgetsWithContext(widgets []*ast.WidgetV3, paramNames map[string]bool,
 				paramRef := strings.TrimPrefix(ds.Reference, "$")
 				if paramRef != "" && !paramNames[paramRef] {
 					*errors = append(*errors,
-						fmt.Sprintf("widget '%s': PARAMETER DataSource references '$%s' but no such parameter is declared in Params", w.Name, paramRef))
+						fmt.Sprintf("widget '%s': parameter DataSource references '$%s' but no such parameter is declared in Params", w.Name, paramRef))
 				}
 				childHasContext = true
 
 			case "selection":
 				if ds.Reference != "" && !widgetNames[ds.Reference] {
 					*errors = append(*errors,
-						fmt.Sprintf("widget '%s': SELECTION DataSource references '%s' but no widget with that name exists on this page", w.Name, ds.Reference))
+						fmt.Sprintf("widget '%s': selection DataSource references '%s' but no widget with that name exists on this page", w.Name, ds.Reference))
 				}
 				childHasContext = true
 
@@ -75,9 +75,9 @@ func walkWidgetsWithContext(widgets []*ast.WidgetV3, paramNames map[string]bool,
 		}
 
 		// Check if this widget type is a data container that sets context
-		widgetType := strings.ToUpper(w.Type)
+		widgetType := strings.ToLower(w.Type)
 		switch widgetType {
-		case "DATAVIEW", "DATAGRID", "LISTVIEW", "GALLERY", "TEMPLATEVIEW":
+		case "dataview", "datagrid", "listview", "gallery", "templateview":
 			if ds == nil {
 				// Data container without DataSource — context comes from enclosing container
 				childHasContext = hasEntityContext

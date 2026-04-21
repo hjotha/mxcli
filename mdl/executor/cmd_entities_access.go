@@ -42,11 +42,11 @@ func outputEntityAccessGrants(ctx *ExecContext, entity *domainmodel.Entity, modu
 			continue
 		}
 
-		grantLine := fmt.Sprintf("\nGRANT %s ON %s.%s (%s)",
+		grantLine := fmt.Sprintf("\ngrant %s on %s.%s (%s)",
 			strings.Join(roleStrs, ", "), moduleName, entityName, rightsStr)
 
 		if rule.XPathConstraint != "" {
-			grantLine += fmt.Sprintf(" WHERE '%s'", rule.XPathConstraint)
+			grantLine += fmt.Sprintf(" where '%s'", rule.XPathConstraint)
 		}
 		grantLine += ";"
 
@@ -120,10 +120,10 @@ func resolveEntityMemberAccess(_ *ExecContext, rule *domainmodel.AccessRule, att
 func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attrNames map[string]string) string {
 	var rights []string
 	if rule.AllowCreate {
-		rights = append(rights, "CREATE")
+		rights = append(rights, "create")
 	}
 	if rule.AllowDelete {
-		rights = append(rights, "DELETE")
+		rights = append(rights, "delete")
 	}
 
 	hasRead := rule.DefaultMemberAccessRights == domainmodel.MemberAccessRightsReadOnly ||
@@ -145,16 +145,16 @@ func formatAccessRuleRights(ctx *ExecContext, rule *domainmodel.AccessRule, attr
 
 	if hasRead {
 		if readMembers == nil {
-			rights = append(rights, "READ *")
+			rights = append(rights, "read *")
 		} else {
-			rights = append(rights, fmt.Sprintf("READ (%s)", strings.Join(readMembers, ", ")))
+			rights = append(rights, fmt.Sprintf("read (%s)", strings.Join(readMembers, ", ")))
 		}
 	}
 	if hasWrite {
 		if writeMembers == nil {
-			rights = append(rights, "WRITE *")
+			rights = append(rights, "write *")
 		} else if len(writeMembers) > 0 {
-			rights = append(rights, fmt.Sprintf("WRITE (%s)", strings.Join(writeMembers, ", ")))
+			rights = append(rights, fmt.Sprintf("write (%s)", strings.Join(writeMembers, ", ")))
 		}
 	}
 

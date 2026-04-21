@@ -32,10 +32,10 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 	var containerID model.ID
 	containerType := s.ContainerType
 	if containerType == "" {
-		containerType = "PAGE"
+		containerType = "page"
 	}
 
-	if containerType == "SNIPPET" {
+	if containerType == "snippet" {
 		snippet, modID, err := findSnippetByName(ctx, s.PageName, h)
 		if err != nil {
 			return err
@@ -64,38 +64,38 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 		switch o := op.(type) {
 		case *ast.SetPropertyOp:
 			if err := applySetPropertyMutator(mutator, o); err != nil {
-				return mdlerrors.NewBackend("SET", err)
+				return mdlerrors.NewBackend("set", err)
 			}
 		case *ast.InsertWidgetOp:
 			if err := applyInsertWidgetMutator(ctx, mutator, o, modName, containerID); err != nil {
-				return mdlerrors.NewBackend("INSERT", err)
+				return mdlerrors.NewBackend("insert", err)
 			}
 		case *ast.DropWidgetOp:
 			if err := applyDropWidgetMutator(mutator, o); err != nil {
-				return mdlerrors.NewBackend("DROP", err)
+				return mdlerrors.NewBackend("drop", err)
 			}
 		case *ast.ReplaceWidgetOp:
 			if err := applyReplaceWidgetMutator(ctx, mutator, o, modName, containerID); err != nil {
-				return mdlerrors.NewBackend("REPLACE", err)
+				return mdlerrors.NewBackend("replace", err)
 			}
 		case *ast.AddVariableOp:
 			if err := mutator.AddVariable(o.Variable.Name, o.Variable.DataType, o.Variable.DefaultValue); err != nil {
-				return mdlerrors.NewBackend("ADD VARIABLE", err)
+				return mdlerrors.NewBackend("add VARIABLE", err)
 			}
 		case *ast.DropVariableOp:
 			if err := mutator.DropVariable(o.VariableName); err != nil {
-				return mdlerrors.NewBackend("DROP VARIABLE", err)
+				return mdlerrors.NewBackend("drop VARIABLE", err)
 			}
 		case *ast.SetLayoutOp:
-			if containerType == "SNIPPET" {
-				return mdlerrors.NewUnsupported("SET Layout is not supported for snippets")
+			if containerType == "snippet" {
+				return mdlerrors.NewUnsupported("set Layout is not supported for snippets")
 			}
 			newLayoutQN := o.NewLayout.Module + "." + o.NewLayout.Name
 			if err := mutator.SetLayout(newLayoutQN, o.Mappings); err != nil {
-				return mdlerrors.NewBackend("SET Layout", err)
+				return mdlerrors.NewBackend("set Layout", err)
 			}
 		default:
-			return mdlerrors.NewUnsupported(fmt.Sprintf("unknown ALTER %s operation type: %T", containerType, op))
+			return mdlerrors.NewUnsupported(fmt.Sprintf("unknown alter %s operation type: %T", containerType, op))
 		}
 	}
 
@@ -161,7 +161,7 @@ func convertASTDataSource(value interface{}) (pages.DataSource, error) {
 	case "nanoflow":
 		return &pages.NanoflowSource{Nanoflow: ds.Reference}, nil
 	default:
-		return nil, mdlerrors.NewUnsupported("unsupported DataSource type for ALTER PAGE SET: " + ds.Type)
+		return nil, mdlerrors.NewUnsupported("unsupported DataSource type for alter page set: " + ds.Type)
 	}
 }
 

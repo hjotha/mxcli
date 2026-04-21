@@ -40,7 +40,7 @@ func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error
 	// Check if enumeration already exists
 	existingEnum := findEnumeration(ctx, s.Name.Module, s.Name.Name)
 	if existingEnum != nil && !s.CreateOrModify {
-		return mdlerrors.NewAlreadyExistsMsg("enumeration", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("enumeration already exists: %s.%s (use CREATE OR MODIFY to update)", s.Name.Module, s.Name.Name))
+		return mdlerrors.NewAlreadyExistsMsg("enumeration", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("enumeration already exists: %s.%s (use create or modify to update)", s.Name.Module, s.Name.Name))
 	}
 
 	// Create enumeration values
@@ -106,7 +106,7 @@ func findEnumeration(ctx *ExecContext, moduleName, enumName string) *model.Enume
 // execAlterEnumeration handles ALTER ENUMERATION statements.
 func execAlterEnumeration(ctx *ExecContext, s *ast.AlterEnumerationStmt) error {
 	// TODO: Implement ALTER ENUMERATION
-	return mdlerrors.NewUnsupported("ALTER ENUMERATION not yet implemented")
+	return mdlerrors.NewUnsupported("alter enumeration not yet implemented")
 }
 
 // execDropEnumeration handles DROP ENUMERATION statements.
@@ -212,7 +212,7 @@ func describeEnumeration(ctx *ExecContext, name ast.QualifiedName) error {
 				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", enum.Documentation)
 			}
 
-			fmt.Fprintf(ctx.Output, "CREATE OR MODIFY ENUMERATION %s.%s (\n", modName, enum.Name)
+			fmt.Fprintf(ctx.Output, "create or modify enumeration %s.%s (\n", modName, enum.Name)
 			for i, v := range enum.Values {
 				comma := ","
 				if i == len(enum.Values)-1 {

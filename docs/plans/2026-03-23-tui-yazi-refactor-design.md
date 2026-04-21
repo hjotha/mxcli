@@ -13,16 +13,16 @@ Refactor the mxcli TUI from the current 2-panel + overlay model to a yazi-inspir
 ## Layout
 
 ```
- [1] Main > Entities  [2] Admin                    ← Tab bar
+ [1] Main > entities  [2] Admin                    ← Tab bar
                                                     ← separator
- Entities       │ ● Customer      │ Name : String   ← 3 columns
- Microflows     │   Order         │ Email : String
- Pages          │   Product       │ Age : Integer
- Enumerations   │   Invoice       │
+ entities       │ ● Customer      │ Name : string   ← 3 columns
+ microflows     │   Order         │ Email : string
+ pages          │   Product       │ Age : integer
+ enumerations   │   Invoice       │
                 │                 │ 4 attributes
                 │                 │ 2 associations
                                                     ← separator
- App > Main > Entities                    3/4  MDL  ← Status bar
+ App > Main > entities                    3/4  MDL  ← status bar
 ```
 
 ### Column Ratios
@@ -41,23 +41,23 @@ Single `│` character with dim styling. No box borders around panels.
 
 ```
 tui/
-├── app.go              # Root Model: tab management, global keys, window size
+├── app.go              # Root model: tab management, global keys, window size
 ├── tab.go              # Tab struct: holds MillerView + independent nav state
 ├── miller.go           # Miller 3-column layout: parent/current/preview coordination
-├── column.go           # Single column component: list rendering, cursor, filter
+├── column.go           # single column component: list rendering, cursor, filter
 ├── preview.go          # Preview engine: async loading, content cache, cancellation
 ├── statusbar.go        # Bottom status bar: breadcrumb + position + mode
 ├── tabbar.go           # Top tab bar rendering
 ├── keys.go             # Centralized key bindings
-├── hintbar.go          # Context-sensitive key hint bar (HUD)
+├── hintbar.go          # context-sensitive key hint bar (HUD)
 ├── styles.go           # Global style constants (rewritten for borderless)
 ├── overlay.go          # Fullscreen overlay (retained, minor adjustments)
 ├── compare.go          # Compare view (retained)
 ├── contentview.go      # Scrollable text view (retained)
 ├── highlight.go        # Syntax highlighting (retained)
 ├── clipboard.go        # Clipboard (retained)
-├── picker.go           # Project selector (retained)
-├── history.go          # Project history (retained)
+├── picker.go           # project selector (retained)
+├── history.go          # project history (retained)
 ├── runner.go           # Subprocess execution (retained)
 ```
 
@@ -69,16 +69,16 @@ tui/
 ### Data Flow
 
 ```
-Cursor move → Column sends CursorChangedMsg{node}
+Cursor move → column sends CursorChangedMsg{node}
   → MillerView receives:
       1. Updates parent column (show siblings of current column's parent)
-      2. If selected node has children → preview column shows child list (sync)
-      3. If selected node is leaf → preview engine triggers async load
+      2. if selected node has children → preview column shows child list (sync)
+      3. if selected node is leaf → preview engine triggers async load
   → PreviewEngine:
-      1. Cancel previous in-flight request
-      2. Check cache → hit: render immediately
+      1. cancel previous in-flight request
+      2. check cache → hit: render immediately
       3. Miss: start goroutine (mxcli describe/bson dump)
-      4. On completion: send PreviewReadyMsg → render to preview column
+      4. on completion: send PreviewReadyMsg → render to preview column
 ```
 
 ## Core Types
@@ -106,17 +106,17 @@ type App struct {
 ```go
 type Tab struct {
     ID          int
-    Label       string      // Display name (module name or project name)
+    label       string      // display name (module name or project name)
     ProjectPath string      // MPR path
     Miller      MillerView  // Independent 3-column view
-    NavStack    []NavState  // Navigation history stack
+    NavStack    []NavState  // navigation history stack
     NavIndex    int         // Current position in nav stack
     AllNodes    []*TreeNode // Flattened tree for this project
 }
 
 type NavState struct {
-    Path       []string    // Breadcrumb segments
-    ParentNode *TreeNode   // Node whose children fill the current column
+    path       []string    // Breadcrumb segments
+    ParentNode *TreeNode   // node whose children fill the current column
     CursorIdx  int         // Cursor position in current column
 }
 ```
@@ -125,17 +125,17 @@ type NavState struct {
 
 ```go
 type MillerView struct {
-    parent   Column       // Left: parent's siblings
-    current  Column       // Center: current level items
-    preview  PreviewPane  // Right: children or content preview
+    parent   column       // left: parent's siblings
+    current  column       // Center: current level items
+    preview  PreviewPane  // right: children or content preview
     focus    ColumnFocus  // Which column has input focus (always current)
 }
 
 type PreviewPane struct {
-    // When showing children
-    childColumn *Column
+    // when showing children
+    childColumn *column
 
-    // When showing content
+    // when showing content
     content     string
     highlighted string
     mode        PreviewMode  // MDL or NDSL
@@ -146,7 +146,7 @@ type PreviewPane struct {
 ### Column
 
 ```go
-type Column struct {
+type column struct {
     items        []ColumnItem
     cursor       int
     scrollOffset int
@@ -157,12 +157,12 @@ type Column struct {
 }
 
 type ColumnItem struct {
-    Label         string
-    Icon          string
-    Type          string      // Mendix node type
+    label         string
+    icon          string
+    type          string      // Mendix node type
     QualifiedName string
     HasChildren   bool
-    Node          *TreeNode
+    node          *TreeNode
 }
 
 type FilterState struct {
@@ -184,7 +184,7 @@ type PreviewEngine struct {
 }
 
 type PreviewResult struct {
-    Content       string
+    content       string
     HighlightType string  // "mdl" / "ndsl" / "plain"
 }
 ```
@@ -204,7 +204,7 @@ type PreviewResult struct {
 ### Tab Bar Rendering
 
 ```
- [1] Main > Entities  [2] Admin  [3] OtherProject
+ [1] Main > entities  [2] Admin  [3] OtherProject
    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 ```
 
@@ -270,7 +270,7 @@ While loading, preview pane shows:
 ### Status Bar
 
 ```
- App > Main > Entities                    3/4  MDL
+ App > Main > entities                    3/4  MDL
  └── breadcrumb (dim)                     └── position + mode
 ```
 
@@ -304,7 +304,7 @@ A context-sensitive hint bar sits above the status bar, showing available action
 
 ```
  h:back l:open /:filter z:zen c:compare Tab:mdl/ndsl
- App > Main > Entities                    3/4  MDL
+ App > Main > entities                    3/4  MDL
 ```
 
 ### Context-Sensitive Hints
@@ -337,8 +337,8 @@ type HintBar struct {
 }
 
 type Hint struct {
-    Key   string  // "h", "l", "/", "Tab"
-    Label string  // "back", "open", "filter"
+    key   string  // "h", "l", "/", "Tab"
+    label string  // "back", "open", "filter"
 }
 ```
 

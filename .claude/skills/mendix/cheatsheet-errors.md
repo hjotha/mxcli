@@ -10,19 +10,19 @@ Quick fixes for common MDL syntax errors.
 
 ```mdl
 -- WRONG
-IF $Value > 10 THEN
-  SET $IsValid = false;  -- ERROR: $IsValid not declared
-END IF;
+if $value > 10 then
+  set $IsValid = false;  -- ERROR: $IsValid not declared
+end if;
 ```
 
 **Fix**: Add DECLARE before SET.
 
 ```mdl
 -- CORRECT
-DECLARE $IsValid Boolean = true;
-IF $Value > 10 THEN
-  SET $IsValid = false;
-END IF;
+declare $IsValid boolean = true;
+if $value > 10 then
+  set $IsValid = false;
+end if;
 ```
 
 ### "Selected type is not allowed" (CE0053)
@@ -31,14 +31,14 @@ END IF;
 
 ```mdl
 -- WRONG: Missing AS keyword
-DECLARE $Product Module.Product = empty;
+declare $Product Module.Product = empty;
 ```
 
 **Fix**: Use AS keyword for entity types.
 
 ```mdl
 -- CORRECT
-DECLARE $Product AS Module.Product;
+declare $Product as Module.Product;
 ```
 
 ## Expression Errors
@@ -49,14 +49,14 @@ DECLARE $Product AS Module.Product;
 
 ```mdl
 -- WRONG: Missing module qualification
-SET $Name = $Order/Customer/Name;
+set $Name = $Order/Customer/Name;
 ```
 
 **Fix**: Use fully qualified association name.
 
 ```mdl
 -- CORRECT: Module.AssociationName
-SET $Name = $Order/Shop.Order_Customer/Name;
+set $Name = $Order/Shop.Order_Customer/Name;
 ```
 
 ### "Type mismatch" in enum comparison
@@ -65,14 +65,14 @@ SET $Name = $Order/Shop.Order_Customer/Name;
 
 ```mdl
 -- WRONG: String literal instead of enum value
-IF $Task/Status = 'Completed' THEN
+if $task/status = 'Completed' then
 ```
 
 **Fix**: Use qualified enumeration value.
 
 ```mdl
 -- CORRECT: Module.Enumeration.Value
-IF $Task/Status = Module.TaskStatus.Completed THEN
+if $task/status = Module.TaskStatus.Completed then
 ```
 
 ## Control Flow Errors
@@ -83,22 +83,22 @@ IF $Task/Status = Module.TaskStatus.Completed THEN
 
 ```mdl
 -- WRONG: No RETURN
-BEGIN
-  DECLARE $Result Boolean = true;
-  LOG INFO 'Done';
+begin
+  declare $Result boolean = true;
+  log info 'Done';
   -- Missing RETURN!
-END;
+end;
 ```
 
 **Fix**: Add RETURN statement.
 
 ```mdl
 -- CORRECT
-BEGIN
-  DECLARE $Result Boolean = true;
-  LOG INFO 'Done';
-  RETURN $Result;
-END;
+begin
+  declare $Result boolean = true;
+  log info 'Done';
+  return $Result;
+end;
 ```
 
 ### "Action activity is unreachable" (CE0104)
@@ -107,20 +107,20 @@ END;
 
 ```mdl
 -- WRONG: Code after RETURN
-IF $Value < 0 THEN
-  RETURN false;
-  LOG INFO 'Negative';  -- Unreachable!
-END IF;
+if $value < 0 then
+  return false;
+  log info 'Negative';  -- Unreachable!
+end if;
 ```
 
 **Fix**: Move code before RETURN.
 
 ```mdl
 -- CORRECT
-IF $Value < 0 THEN
-  LOG INFO 'Negative';
-  RETURN false;
-END IF;
+if $value < 0 then
+  log info 'Negative';
+  return false;
+end if;
 ```
 
 ## Syntax Errors
@@ -129,36 +129,36 @@ END IF;
 
 ```mdl
 -- WRONG: Using / for division
-SET $Average = $Total / $Count;
+set $average = $Total / $count;
 
 -- CORRECT: Use 'div' keyword
-SET $Average = $Total div $Count;
+set $average = $Total div $count;
 ```
 
 ### Missing END IF / END LOOP
 
 ```mdl
 -- WRONG: Missing END IF
-IF $Value > 0 THEN
-  SET $Positive = true;
+if $value > 0 then
+  set $Positive = true;
 -- Missing END IF!
 
 -- CORRECT
-IF $Value > 0 THEN
-  SET $Positive = true;
-END IF;
+if $value > 0 then
+  set $Positive = true;
+end if;
 ```
 
 ### Missing semicolons
 
 ```mdl
 -- WRONG: Missing semicolon
-DECLARE $Count Integer = 0
-SET $Count = 1
+declare $count integer = 0
+set $count = 1
 
 -- CORRECT
-DECLARE $Count Integer = 0;
-SET $Count = 1;
+declare $count integer = 0;
+set $count = 1;
 ```
 
 ## Reference Errors
@@ -167,14 +167,14 @@ SET $Count = 1;
 
 **Problem**: Using non-existent module name.
 
-**Fix**: Check module exists with `SHOW MODULES`.
+**Fix**: Check module exists with `show modules`.
 
 ### "Entity not found"
 
 **Problem**: Using non-existent entity name.
 
 **Fix**:
-1. Check entity exists: `SHOW ENTITIES IN ModuleName`
+1. Check entity exists: `show entities in ModuleName`
 2. Use fully qualified name: `Module.EntityName`
 
 ### "Microflow not found"
@@ -182,7 +182,7 @@ SET $Count = 1;
 **Problem**: Calling non-existent microflow.
 
 **Fix**:
-1. Check microflow exists: `SHOW MICROFLOWS IN ModuleName`
+1. Check microflow exists: `show microflows in ModuleName`
 2. Use fully qualified name: `Module.MicroflowName`
 
 ## Studio Pro Error Code Reference
@@ -199,9 +199,9 @@ SET $Count = 1;
 
 Before executing MDL:
 
-- [ ] All entity types use `DECLARE $var AS Module.Entity`
+- [ ] All entity types use `declare $var as Module.Entity`
 - [ ] All SET targets have prior DECLARE
-- [ ] Association paths are qualified: `$var/Module.Assoc/Attr`
+- [ ] Association paths are qualified: `$var/Module.Assoc/attr`
 - [ ] Enum comparisons use `Module.Enum.Value`
 - [ ] Every flow path ends with RETURN
 - [ ] Division uses `div` not `/`

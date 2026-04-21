@@ -118,9 +118,9 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 	qualifiedName := fmt.Sprintf("%s.%s", modName, ic.Name)
 
 	if len(ic.Images) == 0 {
-		fmt.Fprintf(ctx.Output, "CREATE OR REPLACE IMAGE COLLECTION %s", qualifiedName)
+		fmt.Fprintf(ctx.Output, "create or replace image collection %s", qualifiedName)
 		if exportLevel != "Hidden" {
-			fmt.Fprintf(ctx.Output, " EXPORT LEVEL '%s'", exportLevel)
+			fmt.Fprintf(ctx.Output, " export level '%s'", exportLevel)
 		}
 		fmt.Fprintln(ctx.Output, ";")
 		fmt.Fprintln(ctx.Output, "/")
@@ -133,9 +133,9 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewBackend("create preview directory", err)
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE OR REPLACE IMAGE COLLECTION %s", qualifiedName)
+	fmt.Fprintf(ctx.Output, "create or replace image collection %s", qualifiedName)
 	if exportLevel != "Hidden" {
-		fmt.Fprintf(ctx.Output, " EXPORT LEVEL '%s'", exportLevel)
+		fmt.Fprintf(ctx.Output, " export level '%s'", exportLevel)
 	}
 	fmt.Fprintln(ctx.Output, " (")
 
@@ -152,7 +152,7 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 		if i == len(ic.Images)-1 {
 			comma = ""
 		}
-		fmt.Fprintf(ctx.Output, "    IMAGE %s FROM FILE '%s'%s\n", img.Name, filePath, comma)
+		fmt.Fprintf(ctx.Output, "    image %s from file '%s'%s\n", img.Name, filePath, comma)
 	}
 
 	fmt.Fprintln(ctx.Output, ");")

@@ -88,7 +88,7 @@ func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Type parameters
-	sb.WriteString("CREATE JAVASCRIPT ACTION ")
+	sb.WriteString("create javascript action ")
 	sb.WriteString(qualifiedName)
 	if len(jsa.TypeParameters) > 0 {
 		sb.WriteString("<")
@@ -126,7 +126,7 @@ func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
 			sb.WriteString("Object")
 		}
 		if param.IsRequired {
-			sb.WriteString(" NOT NULL")
+			sb.WriteString(" not null")
 		}
 		if param.Description != "" {
 			paramDoc := strings.ReplaceAll(param.Description, "\r\n", "\n")
@@ -153,26 +153,26 @@ func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Return type
 	if jsa.ReturnType != nil {
-		sb.WriteString("\n  RETURNS ")
+		sb.WriteString("\n  returns ")
 		sb.WriteString(formatJavaActionReturnType(jsa.ReturnType))
 	}
 
 	// RETURN NAME metadata
 	if jsa.ActionDefaultReturnName != "" {
-		sb.WriteString("\n-- RETURN NAME: '")
+		sb.WriteString("\n-- return NAME: '")
 		sb.WriteString(jsa.ActionDefaultReturnName)
 		sb.WriteString("'")
 	}
 
 	// EXPOSED AS clause
 	if jsa.MicroflowActionInfo != nil && jsa.MicroflowActionInfo.Caption != "" {
-		sb.WriteString("\n  EXPOSED AS '")
+		sb.WriteString("\n  exposed as '")
 		sb.WriteString(jsa.MicroflowActionInfo.Caption)
-		sb.WriteString("' IN '")
+		sb.WriteString("' in '")
 		sb.WriteString(jsa.MicroflowActionInfo.Category)
 		sb.WriteString("'")
 		if jsa.MicroflowActionInfo.Icon != "" {
-			sb.WriteString("\n-- ICON: ")
+			sb.WriteString("\n-- icon: ")
 			sb.WriteString(jsa.MicroflowActionInfo.Icon)
 		}
 	}
@@ -180,7 +180,7 @@ func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
 	// JavaScript source code
 	userCode, extraCode := readJavaScriptActionSource(ctx.MprPath, name.Module, name.Name)
 	if userCode != "" {
-		sb.WriteString("\nAS $$\n")
+		sb.WriteString("\nas $$\n")
 		sb.WriteString(userCode)
 		sb.WriteString("\n$$")
 	}
@@ -191,7 +191,7 @@ func describeJavaScriptAction(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Additional info as comments
 	if jsa.ExportLevel != "" && jsa.ExportLevel != "Hidden" {
-		fmt.Fprintf(ctx.Output, "-- EXPORT LEVEL: %s\n", jsa.ExportLevel)
+		fmt.Fprintf(ctx.Output, "-- export level: %s\n", jsa.ExportLevel)
 	}
 	if jsa.Excluded {
 		fmt.Fprintln(ctx.Output, "-- EXCLUDED: true")
@@ -234,8 +234,8 @@ func readJavaScriptActionSource(mprPath, moduleName, actionName string) (userCod
 	source := string(content)
 
 	// Extract user code
-	beginUserCode := "// BEGIN USER CODE"
-	endUserCode := "// END USER CODE"
+	beginUserCode := "// begin user CODE"
+	endUserCode := "// end user CODE"
 	if beginIdx := strings.Index(source, beginUserCode); beginIdx != -1 {
 		if endIdx := strings.Index(source, endUserCode); endIdx != -1 && endIdx > beginIdx {
 			uc := source[beginIdx+len(beginUserCode) : endIdx]
@@ -247,8 +247,8 @@ func readJavaScriptActionSource(mprPath, moduleName, actionName string) (userCod
 	}
 
 	// Extract extra code
-	beginExtraCode := "// BEGIN EXTRA CODE"
-	endExtraCode := "// END EXTRA CODE"
+	beginExtraCode := "// begin EXTRA CODE"
+	endExtraCode := "// end EXTRA CODE"
 	if beginIdx := strings.Index(source, beginExtraCode); beginIdx != -1 {
 		if endIdx := strings.Index(source, endExtraCode); endIdx != -1 && endIdx > beginIdx {
 			ec := source[beginIdx+len(beginExtraCode) : endIdx]
@@ -270,9 +270,9 @@ func formatJavaScriptActionType(t javaactions.CodeActionParameterType) string {
 	// EntityTypeParameterType → ENTITY <name> syntax
 	if etp, ok := t.(*javaactions.EntityTypeParameterType); ok {
 		if etp.TypeParameterName != "" {
-			return "ENTITY <" + etp.TypeParameterName + ">"
+			return "entity <" + etp.TypeParameterName + ">"
 		}
-		return "ENTITY <>"
+		return "entity <>"
 	}
 	return t.TypeString()
 }

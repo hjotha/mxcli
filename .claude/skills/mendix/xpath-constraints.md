@@ -4,9 +4,9 @@ This skill provides reference for writing XPath constraint expressions in MDL RE
 
 ## When to Use This Skill
 
-- Writing `RETRIEVE ... WHERE [xpath]` statements in microflows
-- Writing `DATABASE FROM Entity WHERE [xpath]` in page data sources
-- Writing `GRANT ... WHERE 'xpath'` for row-level entity access
+- Writing `retrieve ... where [xpath]` statements in microflows
+- Writing `database from entity where [xpath]` in page data sources
+- Writing `grant ... where 'xpath'` for row-level entity access
 - Debugging XPath parsing or serialization issues
 
 ## XPath vs Mendix Expressions
@@ -16,28 +16,28 @@ This skill provides reference for writing XPath constraint expressions in MDL RE
 | Feature | XPath `[...]` | Mendix Expression |
 |---------|---------------|-------------------|
 | Path separator | `/` (always path traversal) | `/` (also division) |
-| Boolean ops | lowercase: `and`, `or`, `not()` | `AND`, `OR`, `NOT` |
-| Negation | `not(expr)` function | `NOT expr` |
+| Boolean ops | lowercase: `and`, `or`, `not()` | `and`, `or`, `not` |
+| Negation | `not(expr)` function | `not expr` |
 | Empty check | `= empty`, `!= empty` | `= empty` |
 | Token quoting | `'[%CurrentUser%]'` (quoted) | `[%CurrentUser%]` (unquoted) |
-| Nested filter | `Assoc/Entity[pred]` | Not applicable |
+| Nested filter | `Assoc/entity[pred]` | Not applicable |
 
 ## Syntax Reference
 
 ### Simple Comparisons
 
 ```mdl
-RETRIEVE $Orders FROM Module.Order
-  WHERE [State = 'Completed'];
+retrieve $Orders from Module.Order
+  where [State = 'Completed'];
 
-RETRIEVE $Active FROM Module.Customer
-  WHERE [IsActive = true];
+retrieve $Active from Module.Customer
+  where [IsActive = true];
 
-RETRIEVE $Recent FROM Module.Order
-  WHERE [OrderDate != empty];
+retrieve $Recent from Module.Order
+  where [OrderDate != empty];
 
-RETRIEVE $HighValue FROM Module.Order
-  WHERE [TotalAmount >= $MinAmount];
+retrieve $HighValue from Module.Order
+  where [TotalAmount >= $MinAmount];
 ```
 
 Operators: `=`, `!=`, `<`, `>`, `<=`, `>=`
@@ -46,17 +46,17 @@ Operators: `=`, `!=`, `<`, `>`, `<=`, `>=`
 
 ```mdl
 -- AND
-WHERE [State = 'Completed' and IsPaid = true]
+where [State = 'Completed' and IsPaid = true]
 
 -- OR
-WHERE [State = 'Pending' or State = 'Processing']
+where [State = 'Pending' or State = 'Processing']
 
 -- Grouped
-WHERE [State = 'Completed' and ($IgnorePaid or IsPaid = true)]
+where [State = 'Completed' and ($IgnorePaid or IsPaid = true)]
 
 -- NOT
-WHERE [not(IsPaid)]
-WHERE [not(contains(Name, 'demo'))]
+where [not(IsPaid)]
+where [not(contains(Name, 'demo'))]
 ```
 
 ### Association Path Traversal
@@ -65,16 +65,16 @@ Bare association paths (without `$variable` prefix) navigate through the domain 
 
 ```mdl
 -- Single-hop: filter by associated object
-WHERE [Module.Order_Customer = $Customer]
+where [Module.Order_Customer = $Customer]
 
 -- Multi-hop: traverse through associations
-WHERE [Module.Order_Customer/Module.Customer/Name = $CustomerName]
+where [Module.Order_Customer/Module.Customer/Name = $CustomerName]
 
 -- Existence check: has an associated object
-WHERE [Module.Order_Customer/Module.Customer]
+where [Module.Order_Customer/Module.Customer]
 
 -- Negated existence: has NO associated object
-WHERE [not(Module.Order_Customer/Module.Customer)]
+where [not(Module.Order_Customer/Module.Customer)]
 ```
 
 **Rule**: Always use the fully qualified association name (`Module.AssociationName`).
@@ -83,10 +83,10 @@ WHERE [not(Module.Order_Customer/Module.Customer)]
 
 ```mdl
 -- Compare attribute via variable path
-WHERE [Module.Assoc/Module.Entity/Name = $Variable/Name]
+where [Module.Assoc/Module.Entity/Name = $Variable/Name]
 
 -- Variable on right side
-WHERE [Name = $currentObject/SearchString]
+where [Name = $currentObject/SearchString]
 ```
 
 ### Nested Predicates
@@ -95,26 +95,26 @@ Filter intermediate path steps with inline `[predicate]`:
 
 ```mdl
 -- Only lines of completed orders
-WHERE [Module.OrderLine_Order/Module.Order[State = 'Completed']]
+where [Module.OrderLine_Order/Module.Order[State = 'Completed']]
 
 -- Nested predicate with further traversal
-WHERE [Module.OrderLine_Order/Module.Order[State = 'Active']/Module.Order_Category/Module.Category/Name = $CategoryName]
+where [Module.OrderLine_Order/Module.Order[State = 'Active']/Module.Order_Category/Module.Category/Name = $CategoryName]
 
 -- reversed() path modifier (traverse association in reverse direction)
-WHERE [System.grantableRoles[reversed()]/System.UserRole/System.UserRoles = '[%CurrentUser%]']
+where [System.grantableRoles[reversed()]/System.UserRole/System.UserRoles = '[%CurrentUser%]']
 ```
 
 ### Functions
 
 ```mdl
 -- String search
-WHERE [contains(Name, $SearchStr)]
-WHERE [starts-with(Name, $Prefix)]
-WHERE [not(contains(Name, 'demo'))]
+where [contains(Name, $SearchStr)]
+where [starts-with(Name, $Prefix)]
+where [not(contains(Name, 'demo'))]
 
 -- Boolean functions
-WHERE [IsActive = true()]
-WHERE [Displayed = false()]
+where [IsActive = true()]
+where [Displayed = false()]
 ```
 
 Supported functions: `contains()`, `starts-with()`, `not()`, `true()`, `false()`
@@ -125,11 +125,11 @@ Mendix tokens provide runtime values. In XPath, tokens used as values must be qu
 
 ```mdl
 -- Unquoted token (parsed by MDL, auto-quoted in BSON)
-WHERE [OrderDate < [%CurrentDateTime%]]
-WHERE [System.owner = [%CurrentUser%]]
+where [OrderDate < [%CurrentDateTime%]]
+where [System.owner = [%CurrentUser%]]
 
 -- Quoted token in string literal (passed through as-is)
-WHERE [System.owner = '[%CurrentUser%]']
+where [System.owner = '[%CurrentUser%]']
 ```
 
 Common tokens: `[%CurrentUser%]`, `[%CurrentDateTime%]`, `[%CurrentObject%]`, `[%UserRole_RoleName%]`, `[%DayLength%]`
@@ -139,9 +139,9 @@ Common tokens: `[%CurrentUser%]`, `[%CurrentDateTime%]`, `[%CurrentObject%]`, `[
 The `id` pseudo-attribute compares object identity (GUID):
 
 ```mdl
-WHERE [id = $currentUser]
-WHERE [id != $existingObject]
-WHERE [id = '[%CurrentUser%]']
+where [id = $currentUser]
+where [id != $existingObject]
+where [id = '[%CurrentUser%]']
 ```
 
 ## Usage Contexts
@@ -149,10 +149,10 @@ WHERE [id = '[%CurrentUser%]']
 ### RETRIEVE in Microflows
 
 ```mdl
-RETRIEVE $Results FROM Module.Entity
-  WHERE [IsActive = true and State = 'Ready']
-  SORT BY Name ASC
-  LIMIT 100;
+retrieve $Results from Module.Entity
+  where [IsActive = true and State = 'Ready']
+  sort by Name asc
+  limit 100;
 ```
 
 The expression inside `[...]` is parsed as XPath and stored in BSON as the `XpathConstraint` field.
@@ -160,10 +160,10 @@ The expression inside `[...]` is parsed as XPath and stored in BSON as the `Xpat
 ### Page Data Sources
 
 ```mdl
-DATAGRID dg (
-  DataSource: DATABASE FROM Module.Entity WHERE [State != 'Cancelled'] SORT BY Name ASC
+datagrid dg (
+  datasource: database from Module.Entity where [State != 'Cancelled'] sort by Name asc
 ) {
-  COLUMN col1 (Attribute: Name, Caption: 'Name')
+  column col1 (attribute: Name, caption: 'Name')
 }
 ```
 
@@ -171,13 +171,13 @@ Multiple bracket constraints can be chained. Consecutive brackets without an ope
 
 ```mdl
 -- Consecutive brackets (implicit AND) — standard Mendix XPath syntax
-DataSource: DATABASE FROM Module.Entity WHERE [IsActive = true][Stock > 0]
+datasource: database from Module.Entity where [IsActive = true][Stock > 0]
 
 -- Explicit AND: same result
-DataSource: DATABASE FROM Module.Entity WHERE [IsActive = true] AND [Stock > 0]
+datasource: database from Module.Entity where [IsActive = true] and [Stock > 0]
 
 -- Mix with OR: combines into single bracket
-DataSource: DATABASE FROM Module.Entity WHERE [IsActive = true] OR [Stock > 10]
+datasource: database from Module.Entity where [IsActive = true] or [Stock > 10]
 ```
 
 ### GRANT Entity Access (Security)
@@ -185,10 +185,10 @@ DataSource: DATABASE FROM Module.Entity WHERE [IsActive = true] OR [Stock > 10]
 For security rules, XPath is passed as a **string literal** (not parsed):
 
 ```mdl
-GRANT Module.Role ON Module.Entity (
-  READ *,
-  WRITE *
-) WHERE '[System.owner = ''[%CurrentUser%]'']';
+grant Module.Role on Module.Entity (
+  read *,
+  write *
+) where '[System.owner = ''[%CurrentUser%]'']';
 ```
 
 Note the double single-quotes for escaping inside the string literal.
@@ -198,28 +198,28 @@ Note the double single-quotes for escaping inside the string literal.
 ### Parameterized Search
 
 ```mdl
-CREATE MICROFLOW Module.Search ($Query: String, $ActiveOnly: Boolean)
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM Module.Customer
-    WHERE [($ActiveOnly = false or IsActive = true)
-      and (contains(Name, $Query) or contains(Email, $Query))];
-  RETURN true;
-END;
+create microflow Module.Search ($query: string, $ActiveOnly: boolean)
+returns boolean
+begin
+  retrieve $Results from Module.Customer
+    where [($ActiveOnly = false or IsActive = true)
+      and (contains(Name, $query) or contains(Email, $query))];
+  return true;
+end;
 ```
 
 ### Date Range Filter
 
 ```mdl
-RETRIEVE $Orders FROM Module.Order
-  WHERE [OrderDate >= $StartDate and OrderDate <= $EndDate];
+retrieve $Orders from Module.Order
+  where [OrderDate >= $StartDate and OrderDate <= $EndDate];
 ```
 
 ### Optional Filters (empty = skip)
 
 ```mdl
-RETRIEVE $Orders FROM Module.Order
-  WHERE [($Category = empty or Module.Order_Category = $Category)
+retrieve $Orders from Module.Order
+  where [($Category = empty or Module.Order_Category = $Category)
     and ($State = empty or State = $State)];
 ```
 
@@ -227,11 +227,11 @@ RETRIEVE $Orders FROM Module.Order
 
 ```mdl
 -- In microflow
-RETRIEVE $MyItems FROM Module.Item
-  WHERE [System.owner = '[%CurrentUser%]'];
+retrieve $MyItems from Module.Item
+  where [System.owner = '[%CurrentUser%]'];
 
 -- In security rule
-GRANT Module.User ON Module.Item (READ ALL) WHERE '[System.owner = ''[%CurrentUser%]'']';
+grant Module.User on Module.Item (read all) where '[System.owner = ''[%CurrentUser%]'']';
 ```
 
 ## Validation
@@ -242,7 +242,7 @@ Always validate XPath syntax before execution:
 # Syntax check (no project needed)
 ./bin/mxcli check script.mdl
 
-# With reference validation (needs project)
+# with reference validation (needs project)
 ./bin/mxcli check script.mdl -p app.mpr --references
 ```
 
@@ -253,4 +253,4 @@ Always validate XPath syntax before execution:
 | `mismatched input` on keyword | Attribute name is a reserved word | This is handled — `xpathWord` accepts any keyword as identifier |
 | Token not quoted in BSON | Token in Mendix expression context | Use `[...]` bracket syntax for XPath, not bare expression |
 | `CE0111` path error | Missing module prefix on association | Use `Module.AssociationName`, not just `AssociationName` |
-| `not` parsed as keyword | Using `NOT` (uppercase) in XPath | XPath uses lowercase `not()` as a function |
+| `not` parsed as keyword | Using `not` (uppercase) in XPath | XPath uses lowercase `not()` as a function |

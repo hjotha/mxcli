@@ -253,7 +253,7 @@ func assertContainsStr(t *testing.T, got, want string) {
 func assertNotContainsStr(t *testing.T, got, unwanted string) {
 	t.Helper()
 	if strings.Contains(got, unwanted) {
-		t.Errorf("output should NOT contain %q, got:\n%s", unwanted, got)
+		t.Errorf("output should not contain %q, got:\n%s", unwanted, got)
 	}
 }
 
@@ -264,10 +264,10 @@ func assertValidJSON(t *testing.T, s string) {
 	t.Helper()
 	trimmed := strings.TrimSpace(s)
 	if len(trimmed) == 0 || (trimmed[0] != '{' && trimmed[0] != '[') {
-		t.Errorf("expected JSON array or object, got:\n%s", s)
+		t.Errorf("expected json array or object, got:\n%s", s)
 		return
 	}
 	if !json.Valid([]byte(trimmed)) {
-		t.Errorf("expected valid JSON, got:\n%s", s)
+		t.Errorf("expected valid json, got:\n%s", s)
 	}
 }

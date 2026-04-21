@@ -372,12 +372,12 @@ func entityBsonToMDL(ctx *ExecContext, raw map[string]any, qualifiedName string)
 	}
 
 	// Determine entity type
-	entityType := "PERSISTENT"
+	entityType := "persistent"
 	if persistable, ok := raw["Persistable"].(bool); ok && !persistable {
-		entityType = "NON-PERSISTENT"
+		entityType = "non-persistent"
 	}
 
-	lines = append(lines, fmt.Sprintf("CREATE %s ENTITY %s (", entityType, qualifiedName))
+	lines = append(lines, fmt.Sprintf("create %s entity %s (", entityType, qualifiedName))
 
 	// Attributes
 	attributes := extractBsonArray(raw["Attributes"])
@@ -481,7 +481,7 @@ func attributeBsonToMDL(_ *ExecContext, raw map[string]any) string {
 		for _, rule := range rules {
 			if ruleMap, ok := rule.(map[string]any); ok {
 				if ruleType := extractString(ruleMap["$Type"]); strings.Contains(ruleType, "RequiredRule") {
-					result.WriteString(" NOT NULL")
+					result.WriteString(" not null")
 					break
 				}
 			}
@@ -498,7 +498,7 @@ func microflowBsonToMDL(ctx *ExecContext, raw map[string]any, qualifiedName stri
 	qn := splitQualifiedName(qualifiedName)
 	mf := ctx.Backend.ParseMicroflowFromRaw(raw, model.ID(qn.Name), "")
 	if mf == nil {
-		return fmt.Sprintf("MICROFLOW %s\n  -- parse failed --\nEND MICROFLOW\n", qualifiedName)
+		return fmt.Sprintf("microflow %s\n  -- parse failed --\nend microflow\n", qualifiedName)
 	}
 
 	entityNames, microflowNames := buildNameLookups(ctx)
@@ -554,17 +554,17 @@ func nanoflowBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string)
 		lines = append(lines, " */")
 	}
 
-	lines = append(lines, fmt.Sprintf("CREATE NANOFLOW %s ()", qualifiedName))
+	lines = append(lines, fmt.Sprintf("create nanoflow %s ()", qualifiedName))
 
 	returnType := "Void"
 	if rt := extractString(raw["ReturnType"]); rt != "" {
 		returnType = rt
 	}
-	lines = append(lines, fmt.Sprintf("RETURNS %s", returnType))
+	lines = append(lines, fmt.Sprintf("returns %s", returnType))
 
-	lines = append(lines, "BEGIN")
+	lines = append(lines, "begin")
 	lines = append(lines, "  -- (nanoflow body)")
-	lines = append(lines, "END;")
+	lines = append(lines, "end;")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -580,7 +580,7 @@ func enumerationBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName stri
 		lines = append(lines, " */")
 	}
 
-	lines = append(lines, fmt.Sprintf("CREATE ENUMERATION %s (", qualifiedName))
+	lines = append(lines, fmt.Sprintf("create enumeration %s (", qualifiedName))
 
 	values := extractBsonArray(raw["Values"])
 	for i, val := range values {
@@ -614,22 +614,22 @@ func pageBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string) str
 		lines = append(lines, " */")
 	}
 
-	lines = append(lines, fmt.Sprintf("CREATE PAGE %s ()", qualifiedName))
+	lines = append(lines, fmt.Sprintf("create page %s ()", qualifiedName))
 
 	if title := extractString(raw["Title"]); title != "" {
-		lines = append(lines, fmt.Sprintf("TITLE '%s'", title))
+		lines = append(lines, fmt.Sprintf("title '%s'", title))
 	}
 
 	// Layout reference
 	if layoutCall, ok := raw["LayoutCall"].(map[string]any); ok {
 		if layout := extractString(layoutCall["Layout"]); layout != "" {
-			lines = append(lines, fmt.Sprintf("LAYOUT %s", layout))
+			lines = append(lines, fmt.Sprintf("layout %s", layout))
 		}
 	}
 
-	lines = append(lines, "BEGIN")
+	lines = append(lines, "begin")
 	lines = append(lines, "  -- (page widgets)")
-	lines = append(lines, "END;")
+	lines = append(lines, "end;")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -645,10 +645,10 @@ func snippetBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string) 
 		lines = append(lines, " */")
 	}
 
-	lines = append(lines, fmt.Sprintf("CREATE SNIPPET %s ()", qualifiedName))
-	lines = append(lines, "BEGIN")
+	lines = append(lines, fmt.Sprintf("create snippet %s ()", qualifiedName))
+	lines = append(lines, "begin")
 	lines = append(lines, "  -- (snippet widgets)")
-	lines = append(lines, "END;")
+	lines = append(lines, "end;")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -664,10 +664,10 @@ func layoutBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string) s
 		lines = append(lines, " */")
 	}
 
-	lines = append(lines, fmt.Sprintf("CREATE LAYOUT %s ()", qualifiedName))
-	lines = append(lines, "BEGIN")
+	lines = append(lines, fmt.Sprintf("create layout %s ()", qualifiedName))
+	lines = append(lines, "begin")
 	lines = append(lines, "  -- (layout structure)")
-	lines = append(lines, "END;")
+	lines = append(lines, "end;")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -684,7 +684,7 @@ func moduleBsonToMDL(_ *ExecContext, raw map[string]any) string {
 		lines = append(lines, " */")
 	}
 
-	lines = append(lines, fmt.Sprintf("CREATE MODULE %s;", name))
+	lines = append(lines, fmt.Sprintf("create module %s;", name))
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")

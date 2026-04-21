@@ -103,5 +103,14 @@ func dataTypeSimpleName(ctx parser.IDataTypeContext) string {
 	if idx := strings.Index(text, "("); idx >= 0 {
 		text = text[:idx]
 	}
+	// Normalize to Mendix canonical casing (grammar is case-insensitive, Mendix BSON is not).
+	canonical := map[string]string{
+		"string": "String", "integer": "Integer", "long": "Long",
+		"decimal": "Decimal", "boolean": "Boolean", "datetime": "DateTime",
+		"binary": "Binary",
+	}
+	if c, ok := canonical[strings.ToLower(text)]; ok {
+		return c
+	}
 	return text
 }

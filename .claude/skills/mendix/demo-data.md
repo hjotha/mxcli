@@ -20,23 +20,23 @@ Mendix's internal ID system, and safely inserting rows with correct IDs and asso
 Use `mxcli` to read the project's configured database connection:
 
 ```bash
-./mxcli -p <project>.mpr -c "SHOW SETTINGS;"
+./mxcli -p <project>.mpr -c "show settings;"
 ```
 
 Example output:
 ```
-| Configuration 'Default' | PostgreSql, localhost:5434, db=mxcli2-dev, http=8080 |
+| configuration 'Default' | PostgreSql, localhost:5434, db=mxcli2-dev, http=8080 |
 ```
 
 For full credentials (username, password):
 
 ```bash
-./mxcli -p <project>.mpr -c "DESCRIBE SETTINGS;"
+./mxcli -p <project>.mpr -c "describe settings;"
 ```
 
 Example output:
 ```sql
-ALTER SETTINGS CONFIGURATION 'Default'
+alter settings configuration 'Default'
   DatabaseType = 'PostgreSql',
   DatabaseUrl = 'localhost:5434',
   DatabaseName = 'mxcli2-dev',
@@ -61,15 +61,15 @@ PGPASSWORD=mendix psql -h host.docker.internal -p 5434 -U mendix -d mxcli2-dev
 ### Useful psql commands
 
 ```bash
-# List all tables
+# list all tables
 \dt
 
-# Describe a table
+# describe a table
 \d tasklist$task
 
-# Run a query and exit
+# run a query and exit
 PGPASSWORD=mendix psql -h host.docker.internal -p 5434 -U mendix -d mxcli2-dev \
-  -c "SELECT * FROM \"tasklist\$task\" LIMIT 5;"
+  -c "select * from \"tasklist\$task\" limit 5;"
 ```
 
 ---
@@ -92,11 +92,11 @@ enumeration attacks (e.g., IDOR). Generate it with `floor(random() * 128)` in SQ
 ### Look up an entity's short_id and current sequence
 
 ```sql
-SELECT e.entity_name, e.table_name, ei.short_id, ei.object_sequence,
-       (ei.short_id::bigint << 48) AS id_base
-FROM mendixsystem$entityidentifier ei
-JOIN mendixsystem$entity e ON e.id = ei.id
-WHERE e.entity_name = 'TaskList.Task';
+select e.entity_name, e.table_name, ei.short_id, ei.object_sequence,
+       (ei.short_id::bigint << 48) as id_base
+from mendixsystem$entityidentifier ei
+join mendixsystem$entity e on e.id = ei.id
+where e.entity_name = 'TaskList.Task';
 ```
 
 Example result:
@@ -109,12 +109,12 @@ Example result:
 ### Decode an existing ID
 
 ```sql
-SELECT id,
-       to_hex(id::bigint)                          AS hex_id,
-       (id::bigint >> 48)                           AS entity_short_id,
-       (id::bigint >> 7) & x'1ffffffffff'::bigint   AS sequence_num,
-       id::bigint & 127                              AS random_bits
-FROM "tasklist$task";
+select id,
+       to_hex(id::bigint)                          as hex_id,
+       (id::bigint >> 48)                           as entity_short_id,
+       (id::bigint >> 7) & x'1ffffffffff'::bigint   as sequence_num,
+       id::bigint & 127                              as random_bits
+from "tasklist$task";
 ```
 
 ### ID generation rules
@@ -136,15 +136,15 @@ FROM "tasklist$task";
 Query `mendixsystem$association` to see how each association is stored:
 
 ```sql
-SELECT association_name, table_name, child_column_name, storage_format
-FROM mendixsystem$association
-WHERE table_name LIKE 'tasklist%';
+select association_name, table_name, child_column_name, storage_format
+from mendixsystem$association
+where table_name like 'tasklist%';
 ```
 
 Mendix stores associations in one of two ways, controlled by the project's
-`AssocStorage` convention setting (check with `SHOW SETTINGS`):
+`AssocStorage` convention setting (check with `show settings`):
 
-#### Mode A — Column storage (`AssocStorage: Column`)
+#### Mode A — Column storage (`AssocStorage: column`)
 
 The FK is a regular column in the **owner** entity's table. No junction table exists.
 
@@ -161,8 +161,8 @@ Column naming convention: `{module}${associationname}` — all lowercase, `$` se
 To insert a note linked to a task, simply set the FK column (note the random suffix per ID):
 
 ```sql
-INSERT INTO "tasklist$note" (id, content, author, datecreated, "tasklist$note_task", mxobjectversion)
-VALUES (
+insert into "tasklist$note" (id, content, author, datecreated, "tasklist$note_task", mxobjectversion)
+values (
   (59::bigint << 48) | (18::bigint << 7) | floor(random() * 128)::bigint,
   'Note text', 'Alice', '2026-02-18 10:00:00',
   (50::bigint << 48) | (11::bigint << 7) | floor(random() * 128)::bigint,
@@ -184,18 +184,18 @@ Inspect with `\d "tasklist$note_task"`. Insert the entity row first, then the li
 Use a CTE or variable to capture the generated ID so both statements share it:
 
 ```sql
-WITH new_note AS (
-  SELECT (59::bigint << 48) | (18::bigint << 7) | floor(random() * 128)::bigint AS id
+with new_note as (
+  select (59::bigint << 48) | (18::bigint << 7) | floor(random() * 128)::bigint as id
 )
-INSERT INTO "tasklist$note" (id, content, author, datecreated)
-SELECT id, 'Note text', 'Alice', '2026-02-18 10:00:00' FROM new_note;
+insert into "tasklist$note" (id, content, author, datecreated)
+select id, 'Note text', 'Alice', '2026-02-18 10:00:00' from new_note;
 
 -- Then link (reuse the same id — query it back or generate in application code)
-INSERT INTO "tasklist$note_task" ("tasklist$noteid", "tasklist$taskid") VALUES
+insert into "tasklist$note_task" ("tasklist$noteid", "tasklist$taskid") values
   (<the_generated_note_id>, <task_id>);
 ```
 
-In practice, pre-generate IDs in application code or use `RETURNING id` to capture them.
+In practice, pre-generate IDs in application code or use `returning id` to capture them.
 
 ### Optimistic locking — `mxobjectversion`
 
@@ -203,16 +203,16 @@ When the project has optimistic locking enabled, every entity table gets an
 `mxobjectversion bigint` column. The runtime:
 
 - Initialises the column to `1` for all existing rows during schema sync
-- Increments it by 1 on every `COMMIT`
+- Increments it by 1 on every `commit`
 - Rejects a save if the version in the DB doesn't match what the client loaded
 
-**Always set `mxobjectversion = 1` when inserting rows directly.** Leaving it `NULL`
+**Always set `mxobjectversion = 1` when inserting rows directly.** Leaving it `null`
 will cause the runtime to reject the object the first time a user saves it.
 
 Check whether a table has the column:
 ```sql
-SELECT column_name FROM information_schema.columns
-WHERE table_name = 'tasklist$task' AND column_name = 'mxobjectversion';
+select column_name from information_schema.columns
+where table_name = 'tasklist$task' and column_name = 'mxobjectversion';
 ```
 
 ---
@@ -222,12 +222,12 @@ WHERE table_name = 'tasklist$task' AND column_name = 'mxobjectversion';
 ### Template — entity with column-storage association + optimistic locking
 
 ```sql
-BEGIN;
+begin;
 
 -- short_id=59 for Note, short_id=50 for Task
 -- sequence 18 and 19 for the two new notes; task id uses sequence 11
-INSERT INTO "tasklist$note" (id, content, author, datecreated, "tasklist$note_task", mxobjectversion)
-VALUES
+insert into "tasklist$note" (id, content, author, datecreated, "tasklist$note_task", mxobjectversion)
+values
   ((59::bigint << 48) | (18::bigint << 7) | floor(random() * 128)::bigint,
    'First note content',  'Bob',   '2026-02-18 10:00:00',
    (50::bigint << 48) | (11::bigint << 7) | floor(random() * 128)::bigint, 1),
@@ -236,43 +236,43 @@ VALUES
    (50::bigint << 48) | (11::bigint << 7) | floor(random() * 128)::bigint, 1);
 
 -- Advance Note sequence (was 18, inserted 2, now 20)
-UPDATE mendixsystem$entityidentifier ei
-SET object_sequence = 20
-FROM mendixsystem$entity e
-WHERE e.id = ei.id AND e.entity_name = 'TaskList.Note';
+update mendixsystem$entityidentifier ei
+set object_sequence = 20
+from mendixsystem$entity e
+where e.id = ei.id and e.entity_name = 'TaskList.Note';
 
-COMMIT;
+commit;
 ```
 
 ### Template — entity with junction-table association (no optimistic locking)
 
 For junction-table associations, IDs must be reused across two INSERT statements.
-Pre-generate them in a CTE or use `RETURNING`:
+Pre-generate them in a CTE or use `returning`:
 
 ```sql
-BEGIN;
+begin;
 
 -- Pre-generate IDs for the new notes (short_id=59, sequences 18 and 19)
-WITH new_ids AS (
-  SELECT (59::bigint << 48) | (18::bigint << 7) | floor(random() * 128)::bigint AS id1,
-         (59::bigint << 48) | (19::bigint << 7) | floor(random() * 128)::bigint AS id2
+with new_ids as (
+  select (59::bigint << 48) | (18::bigint << 7) | floor(random() * 128)::bigint as id1,
+         (59::bigint << 48) | (19::bigint << 7) | floor(random() * 128)::bigint as id2
 )
-INSERT INTO "tasklist$note" (id, content, author, datecreated)
-SELECT id1, 'First note content',  'Bob',   '2026-02-18 10:00:00' FROM new_ids
-UNION ALL
-SELECT id2, 'Second note content', 'Alice', '2026-02-18 11:00:00' FROM new_ids;
+insert into "tasklist$note" (id, content, author, datecreated)
+select id1, 'First note content',  'Bob',   '2026-02-18 10:00:00' from new_ids
+union all
+select id2, 'Second note content', 'Alice', '2026-02-18 11:00:00' from new_ids;
 
 -- Link notes to task (use the same generated IDs — query them back)
-INSERT INTO "tasklist$note_task" ("tasklist$noteid", "tasklist$taskid")
-SELECT id, <task_id> FROM "tasklist$note"
-WHERE content IN ('First note content', 'Second note content');
+insert into "tasklist$note_task" ("tasklist$noteid", "tasklist$taskid")
+select id, <task_id> from "tasklist$note"
+where content in ('First note content', 'Second note content');
 
-UPDATE mendixsystem$entityidentifier ei
-SET object_sequence = 20
-FROM mendixsystem$entity e
-WHERE e.id = ei.id AND e.entity_name = 'TaskList.Note';
+update mendixsystem$entityidentifier ei
+set object_sequence = 20
+from mendixsystem$entity e
+where e.id = ei.id and e.entity_name = 'TaskList.Note';
 
-COMMIT;
+commit;
 ```
 
 **Tip:** In application code, generate the random suffix in Go/Python and use literal
@@ -281,21 +281,21 @@ IDs to avoid the need for CTEs.
 ### Template — standalone entity (no association)
 
 ```sql
-BEGIN;
+begin;
 
 -- short_id=50, object_sequence=11, random suffix appended
-INSERT INTO "tasklist$task" (id, title, taskstatus, priority, assignedto, duedate, iscompleted, estimatedhours, mxobjectversion)
-VALUES
+insert into "tasklist$task" (id, title, taskstatus, priority, assignedto, duedate, iscompleted, estimatedhours, mxobjectversion)
+values
   ((50::bigint << 48) | (11::bigint << 7) | floor(random() * 128)::bigint,
    'My demo task', 'ToDo', 'Medium', 'Alice', '2026-03-01 09:00:00', false, 4.0, 1);
 
 -- Advance sequence (was 11, inserted 1 row)
-UPDATE mendixsystem$entityidentifier ei
-SET object_sequence = 12
-FROM mendixsystem$entity e
-WHERE e.id = ei.id AND e.entity_name = 'TaskList.Task';
+update mendixsystem$entityidentifier ei
+set object_sequence = 12
+from mendixsystem$entity e
+where e.id = ei.id and e.entity_name = 'TaskList.Task';
 
-COMMIT;
+commit;
 ```
 
 ### Helper query — compute next N IDs for an entity
@@ -304,15 +304,15 @@ The random suffix means you cannot pre-compute exact IDs, but you can compute th
 deterministic portion (short_id + sequence) and see the available sequence range:
 
 ```sql
-SELECT
+select
   entity_name,
   short_id,
-  object_sequence                                          AS next_seq,
-  (short_id::bigint << 48) | (object_sequence::bigint << 7) AS first_new_id_base,
-  (short_id::bigint << 48) | ((object_sequence + 9)::bigint << 7) AS last_id_base_if_10_rows
-FROM mendixsystem$entityidentifier ei
-JOIN mendixsystem$entity e ON e.id = ei.id
-WHERE e.entity_name = 'TaskList.Note';
+  object_sequence                                          as next_seq,
+  (short_id::bigint << 48) | (object_sequence::bigint << 7) as first_new_id_base,
+  (short_id::bigint << 48) | ((object_sequence + 9)::bigint << 7) as last_id_base_if_10_rows
+from mendixsystem$entityidentifier ei
+join mendixsystem$entity e on e.id = ei.id
+where e.entity_name = 'TaskList.Note';
 ```
 
 Each actual ID = `id_base | floor(random() * 128)` — the random part is added at insert time.
@@ -330,7 +330,7 @@ for custom attributes — they will cause errors when the app tries to sync the 
 |---------------|----------------|
 | `CreatedDate` | Auto-set on object creation |
 | `ChangedDate` | Auto-set on every commit |
-| `Owner`       | Reference to creating user |
+| `owner`       | Reference to creating user |
 | `ChangedBy`   | Reference to last user to commit |
 
 If you need a "date created" field, name it `DateCreated`, `NoteDate`, etc.
@@ -361,36 +361,36 @@ current `object_sequence` to leave headroom.
 ## Quick Reference
 
 ```bash
-# Get DB settings
-./mxcli -p <project>.mpr -c "DESCRIBE SETTINGS;"
+# get DB settings
+./mxcli -p <project>.mpr -c "describe settings;"
 
-# Connect (devcontainer on macOS)
+# connect (devcontainer on macOS)
 PGPASSWORD=mendix psql -h host.docker.internal -p 5434 -U mendix -d mxcli2-dev
 
-# Find entity short_id and id_base
-SELECT e.entity_name, ei.short_id, ei.object_sequence,
-       (ei.short_id::bigint << 48) AS id_base
-FROM mendixsystem$entityidentifier ei
-JOIN mendixsystem$entity e ON e.id = ei.id
-WHERE e.entity_name = 'Module.Entity';
+# find entity short_id and id_base
+select e.entity_name, ei.short_id, ei.object_sequence,
+       (ei.short_id::bigint << 48) as id_base
+from mendixsystem$entityidentifier ei
+join mendixsystem$entity e on e.id = ei.id
+where e.entity_name = 'Module.Entity';
 
 # ID formula
 id = (short_id::bigint << 48) | (sequence_number::bigint << 7) | floor(random() * 128)
 
-# Check association storage mode
-SELECT association_name, table_name, child_column_name
-FROM mendixsystem$association
-WHERE table_name LIKE 'mymodule%';
+# check association storage mode
+select association_name, table_name, child_column_name
+from mendixsystem$association
+where table_name like 'mymodule%';
 
-# Check if optimistic locking is enabled on a table
-SELECT column_name FROM information_schema.columns
-WHERE table_name = 'mymodule$myentity' AND column_name = 'mxobjectversion';
+# check if optimistic locking is enabled on a table
+select column_name from information_schema.columns
+where table_name = 'mymodule$myentity' and column_name = 'mxobjectversion';
 
-# After inserting N rows, advance the sequence
-UPDATE mendixsystem$entityidentifier ei
-SET object_sequence = <old_value + N>
-FROM mendixsystem$entity e
-WHERE e.id = ei.id AND e.entity_name = 'Module.Entity';
+# after inserting N rows, advance the sequence
+update mendixsystem$entityidentifier ei
+set object_sequence = <old_value + N>
+from mendixsystem$entity e
+where e.id = ei.id and e.entity_name = 'Module.Entity';
 ```
 
 ### INSERT column checklist
@@ -406,42 +406,42 @@ WHERE e.id = ei.id AND e.entity_name = 'Module.Entity';
 
 ## Automated Alternative: IMPORT FROM
 
-For bulk imports from an external database, use the `IMPORT FROM` command instead of
+For bulk imports from an external database, use the `import from` command instead of
 writing manual INSERT statements. It handles ID generation, sequence updates, and
 `mxobjectversion` automatically:
 
 ```sql
 -- Connect to external database
-SQL CONNECT postgres 'postgres://user:pass@host:5432/legacydb' AS source;
+sql connect postgres 'postgres://user:pass@host:5432/legacydb' as source;
 
 -- Import rows directly into Mendix app database
-IMPORT FROM source QUERY 'SELECT name, email, department FROM employees'
-  INTO HRModule.Employee
-  MAP (name AS Name, email AS Email, department AS Department)
-  BATCH 500;
+import from source query 'SELECT name, email, department FROM employees'
+  into HRModule.Employee
+  map (name as Name, email as Email, department as Department)
+  batch 500;
 
 -- Import with association linking (lookup by natural key)
-IMPORT FROM source QUERY 'SELECT name, email, dept_name FROM employees'
-  INTO HR.Employee
-  MAP (name AS Name, email AS Email)
-  LINK (dept_name TO Employee_Department ON Name);
+import from source query 'SELECT name, email, dept_name FROM employees'
+  into HR.Employee
+  map (name as Name, email as Email)
+  link (dept_name to Employee_Department on Name);
 
 -- Multiple associations
-IMPORT FROM source QUERY 'SELECT name, dept, mgr_email FROM employees'
-  INTO HR.Employee
-  MAP (name AS Name)
-  LINK (dept TO Employee_Department ON Name,
-        mgr_email TO Employee_Manager ON Email);
+import from source query 'SELECT name, dept, mgr_email FROM employees'
+  into HR.Employee
+  map (name as Name)
+  link (dept to Employee_Department on Name,
+        mgr_email to Employee_Manager on Email);
 ```
 
-The `IMPORT` command auto-connects to the Mendix app's PostgreSQL database using
+The `import` command auto-connects to the Mendix app's PostgreSQL database using
 project settings. Override with env vars for devcontainers/Docker:
 `MXCLI_DB_TYPE`, `MXCLI_DB_HOST`, `MXCLI_DB_PORT`, `MXCLI_DB_NAME`,
 `MXCLI_DB_USER`, `MXCLI_DB_PASSWORD`.
 
-The `LINK` clause maps source columns to Mendix associations:
-- `ON ChildAttr` — looks up the child entity by attribute value (builds a cache)
-- Without `ON` — treats the source value as a raw Mendix object ID
+The `link` clause maps source columns to Mendix associations:
+- `on ChildAttr` — looks up the child entity by attribute value (builds a cache)
+- Without `on` — treats the source value as a raw Mendix object ID
 - Handles both Column storage (inline FK) and Table storage (junction table) automatically
 - Only Reference associations supported (not ReferenceSet)
 
@@ -453,5 +453,5 @@ Use manual INSERT (described above) when you need:
 ## Related Skills
 
 - [database-connections.md](./database-connections.md) — Connecting to *external* databases from Mendix microflows
-- [project-settings.md](./project-settings.md) — Reading and changing project configuration with `ALTER SETTINGS`
+- [project-settings.md](./project-settings.md) — Reading and changing project configuration with `alter settings`
 - [generate-domain-model.md](./generate-domain-model.md) — Creating entities before inserting data

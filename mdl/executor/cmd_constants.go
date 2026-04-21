@@ -110,25 +110,25 @@ func outputConstantMDL(ctx *ExecContext, c *model.Constant, moduleName string) e
 	// Format default value based on type
 	defaultValueStr := formatDefaultValue(c.Type, c.DefaultValue)
 
-	fmt.Fprintf(ctx.Output, "CREATE OR MODIFY CONSTANT %s.%s\n", moduleName, c.Name)
-	fmt.Fprintf(ctx.Output, "  TYPE %s\n", formatConstantTypeForMDL(c.Type))
-	fmt.Fprintf(ctx.Output, "  DEFAULT %s", defaultValueStr)
+	fmt.Fprintf(ctx.Output, "create or modify constant %s.%s\n", moduleName, c.Name)
+	fmt.Fprintf(ctx.Output, "  type %s\n", formatConstantTypeForMDL(c.Type))
+	fmt.Fprintf(ctx.Output, "  default %s", defaultValueStr)
 
 	// Add folder if present
 	h, _ := getHierarchy(ctx)
 	if h != nil {
 		if folderPath := h.BuildFolderPath(c.ContainerID); folderPath != "" {
-			fmt.Fprintf(ctx.Output, "\n  FOLDER '%s'", folderPath)
+			fmt.Fprintf(ctx.Output, "\n  folder '%s'", folderPath)
 		}
 	}
 
 	// Add options if present
 	if c.Documentation != "" {
 		escaped := strings.ReplaceAll(c.Documentation, "'", "''")
-		fmt.Fprintf(ctx.Output, "\n  COMMENT '%s'", escaped)
+		fmt.Fprintf(ctx.Output, "\n  comment '%s'", escaped)
 	}
 	if c.ExposedToClient {
-		fmt.Fprintf(ctx.Output, "\n  EXPOSED TO CLIENT")
+		fmt.Fprintf(ctx.Output, "\n  exposed to client")
 	}
 
 	fmt.Fprintln(ctx.Output, ";")
@@ -260,7 +260,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 
 	// Validate module name is specified
 	if stmt.Name.Module == "" {
-		return mdlerrors.NewValidation("module name required for constant: use CREATE CONSTANT Module.ConstantName")
+		return mdlerrors.NewValidation("module name required for constant: use create constant Module.ConstantName")
 	}
 
 	// Find or auto-create module
@@ -303,7 +303,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 					fmt.Fprintf(ctx.Output, "Modified constant: %s.%s\n", modName, c.Name)
 					return nil
 				}
-				return mdlerrors.NewAlreadyExistsMsg("constant", modName+"."+c.Name, fmt.Sprintf("constant already exists: %s.%s (use CREATE OR MODIFY to update)", modName, c.Name))
+				return mdlerrors.NewAlreadyExistsMsg("constant", modName+"."+c.Name, fmt.Sprintf("constant already exists: %s.%s (use create or modify to update)", modName, c.Name))
 			}
 		}
 	}

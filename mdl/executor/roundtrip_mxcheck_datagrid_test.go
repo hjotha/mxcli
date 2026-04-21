@@ -27,10 +27,10 @@ func TestMxCheck_DataGridPage(t *testing.T) {
 	entityName := testModule + ".MxCheckDGItem"
 	env.registerCleanup("entity", entityName)
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Description: String(500),
-		Active: Boolean DEFAULT true
+		Active: Boolean default true
 	);`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
@@ -39,17 +39,17 @@ func TestMxCheck_DataGridPage(t *testing.T) {
 	pageName := testModule + ".MxCheckDataGridPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid Check Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		LAYOUTGRID mainGrid {
-			ROW row1 {
-				COLUMN col1 (DesktopWidth: 12) {
-					DATAGRID dg (DataSource: DATABASE ` + entityName + `) {
-						COLUMN colName (Attribute: Name, Caption: 'Name')
-						COLUMN colDesc (Attribute: Description, Caption: 'Description')
-						COLUMN colActive (Attribute: Active, Caption: 'Active')
+		layoutgrid mainGrid {
+			row row1 {
+				column col1 (DesktopWidth: 12) {
+					datagrid dg (DataSource: database ` + entityName + `) {
+						column colName (Attribute: Name, Caption: 'Name')
+						column colDesc (Attribute: Description, Caption: 'Description')
+						column colActive (Attribute: Active, Caption: 'Active')
 					}
 				}
 			}
@@ -57,7 +57,7 @@ func TestMxCheck_DataGridPage(t *testing.T) {
 	}`
 
 	if err := env.executeMDL(createPageMDL); err != nil {
-		t.Fatalf("Failed to create page with DATAGRID: %v", err)
+		t.Fatalf("Failed to create page with datagrid: %v", err)
 	}
 
 	// Disconnect to flush changes before mx check
@@ -67,12 +67,12 @@ func TestMxCheck_DataGridPage(t *testing.T) {
 	output, err := runMxCheck(t, env.projectPath)
 	if err != nil {
 		if strings.Contains(output, "error") || strings.Contains(output, "Error") {
-			t.Errorf("mx check found errors for DATAGRID page:\n%s", output)
+			t.Errorf("mx check found errors for datagrid page:\n%s", output)
 		} else {
 			t.Logf("mx check output:\n%s", output)
 		}
 	} else {
-		t.Logf("mx check passed for DATAGRID page:\n%s", output)
+		t.Logf("mx check passed for datagrid page:\n%s", output)
 	}
 }
 
@@ -92,7 +92,7 @@ func TestMxCheck_DataGridNoColumns(t *testing.T) {
 	entityName := testModule + ".MxCheckDGNoColItem"
 	env.registerCleanup("entity", entityName)
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
 		Code: String(50),
 		Value: Integer
 	);`); err != nil {
@@ -102,21 +102,21 @@ func TestMxCheck_DataGridNoColumns(t *testing.T) {
 	pageName := testModule + ".MxCheckDGNoColPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid No Columns Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		LAYOUTGRID mainGrid {
-			ROW row1 {
-				COLUMN col1 (DesktopWidth: 12) {
-					DATAGRID dg (DataSource: DATABASE ` + entityName + `)
+		layoutgrid mainGrid {
+			row row1 {
+				column col1 (DesktopWidth: 12) {
+					datagrid dg (DataSource: database ` + entityName + `)
 				}
 			}
 		}
 	}`
 
 	if err := env.executeMDL(createPageMDL); err != nil {
-		t.Fatalf("Failed to create page with DATAGRID (no columns): %v", err)
+		t.Fatalf("Failed to create page with datagrid (no columns): %v", err)
 	}
 
 	// Disconnect to flush changes before mx check
@@ -133,7 +133,7 @@ func TestMxCheck_DataGridNoColumns(t *testing.T) {
 			t.Logf("mx check output (attribute errors expected for template defaults):\n%s", output)
 		}
 	} else {
-		t.Logf("mx check passed for DATAGRID (no columns) page:\n%s", output)
+		t.Logf("mx check passed for datagrid (no columns) page:\n%s", output)
 	}
 }
 
@@ -152,7 +152,7 @@ func TestMxCheck_GalleryPage(t *testing.T) {
 	entityName := testModule + ".MxCheckGalleryItem"
 	env.registerCleanup("entity", entityName)
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
 		Heading: String(200),
 		Summary: String(500)
 	);`); err != nil {
@@ -162,15 +162,15 @@ func TestMxCheck_GalleryPage(t *testing.T) {
 	pageName := testModule + ".MxCheckGalleryPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'Gallery Check Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		LAYOUTGRID mainGrid {
-			ROW row1 {
-				COLUMN col1 (DesktopWidth: 12) {
-					GALLERY gal (DataSource: DATABASE ` + entityName + `) {
-						DYNAMICTEXT dtHeading (Content: '{1}', ContentParams: [{1} = Heading])
+		layoutgrid mainGrid {
+			row row1 {
+				column col1 (DesktopWidth: 12) {
+					gallery gal (DataSource: database ` + entityName + `) {
+						dynamictext dtHeading (Content: '{1}', ContentParams: [{1} = Heading])
 					}
 				}
 			}
@@ -178,7 +178,7 @@ func TestMxCheck_GalleryPage(t *testing.T) {
 	}`
 
 	if err := env.executeMDL(createPageMDL); err != nil {
-		t.Fatalf("Failed to create page with GALLERY: %v", err)
+		t.Fatalf("Failed to create page with gallery: %v", err)
 	}
 
 	env.executor.Execute(&ast.DisconnectStmt{})
@@ -188,11 +188,11 @@ func TestMxCheck_GalleryPage(t *testing.T) {
 	output, err := runMxCheck(t, env.projectPath)
 	if err != nil {
 		if strings.Contains(output, "placeholder") || strings.Contains(output, "CE0463") {
-			t.Errorf("mx check found structural errors for GALLERY page (possible placeholder leak):\n%s", output)
+			t.Errorf("mx check found structural errors for gallery page (possible placeholder leak):\n%s", output)
 		} else {
 			t.Logf("mx check output:\n%s", output)
 		}
 	} else {
-		t.Logf("mx check passed for GALLERY page:\n%s", output)
+		t.Logf("mx check passed for gallery page:\n%s", output)
 	}
 }

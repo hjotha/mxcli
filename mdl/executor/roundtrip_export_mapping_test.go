@@ -15,14 +15,14 @@ func TestRoundtripExportMapping_NoSchema(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE ENTITY ` + testModule + `.EMPet (
+	if err := env.executeMDL(`create entity ` + testModule + `.EMPet (
   PetId: Integer,
   Name: String(200)
 );`); err != nil {
-		t.Fatalf("CREATE ENTITY failed: %v", err)
+		t.Fatalf("create entity failed: %v", err)
 	}
 
-	createMDL := `CREATE EXPORT MAPPING ` + testModule + `.ExportPetBasic {
+	createMDL := `create export mapping ` + testModule + `.ExportPetBasic {
   ` + testModule + `.EMPet {
     id = PetId,
     name = Name
@@ -30,31 +30,31 @@ func TestRoundtripExportMapping_NoSchema(t *testing.T) {
 };`
 
 	env.assertContains(createMDL, []string{
-		"EXPORT MAPPING",
+		"export mapping",
 		"ExportPetBasic",
 		"EMPet",
 	})
 }
 
 func TestRoundtripExportMapping_WithJsonStructureRef(t *testing.T) {
-	t.Skip("TODO: fix DESCRIBE output for ExposedName vs original JSON key")
+	t.Skip("TODO: fix describe output for ExposedName vs original json key")
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE ENTITY ` + testModule + `.EMOrder (
+	if err := env.executeMDL(`create entity ` + testModule + `.EMOrder (
   OrderId: Integer,
   Total: Decimal
 );`); err != nil {
-		t.Fatalf("CREATE ENTITY failed: %v", err)
+		t.Fatalf("create entity failed: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE JSON STRUCTURE ` + testModule + `.EMOrderJS
-SNIPPET '{"orderId": 1, "total": 99.99}';`); err != nil {
-		t.Fatalf("CREATE JSON STRUCTURE failed: %v", err)
+	if err := env.executeMDL(`create json structure ` + testModule + `.EMOrderJS
+snippet '{"orderId": 1, "total": 99.99}';`); err != nil {
+		t.Fatalf("create json structure failed: %v", err)
 	}
 
-	createMDL := `CREATE EXPORT MAPPING ` + testModule + `.ExportOrder
-  WITH JSON STRUCTURE ` + testModule + `.EMOrderJS
+	createMDL := `create export mapping ` + testModule + `.ExportOrder
+  with json structure ` + testModule + `.EMOrderJS
 {
   ` + testModule + `.EMOrder {
     orderId = OrderId,
@@ -63,9 +63,9 @@ SNIPPET '{"orderId": 1, "total": 99.99}';`); err != nil {
 };`
 
 	env.assertContains(createMDL, []string{
-		"EXPORT MAPPING",
+		"export mapping",
 		"ExportOrder",
-		"WITH JSON STRUCTURE",
+		"with json structure",
 		"EMOrder",
 		"orderId",
 		"total",
@@ -76,29 +76,29 @@ func TestRoundtripExportMapping_NullValueOption(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE ENTITY ` + testModule + `.EMNullPet (
+	if err := env.executeMDL(`create entity ` + testModule + `.EMNullPet (
   PetId: Integer
 );`); err != nil {
-		t.Fatalf("CREATE ENTITY failed: %v", err)
+		t.Fatalf("create entity failed: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE EXPORT MAPPING ` + testModule + `.ExportNullPet
-  NULL VALUES SendAsNil
+	if err := env.executeMDL(`create export mapping ` + testModule + `.ExportNullPet
+  null values SendAsNil
 {
   ` + testModule + `.EMNullPet {
     id = PetId
   }
 };`); err != nil {
-		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
+		t.Fatalf("create export mapping failed: %v", err)
 	}
 
-	out, err := env.describeMDL(`DESCRIBE EXPORT MAPPING ` + testModule + `.ExportNullPet;`)
+	out, err := env.describeMDL(`describe export mapping ` + testModule + `.ExportNullPet;`)
 	if err != nil {
-		t.Fatalf("DESCRIBE failed: %v", err)
+		t.Fatalf("describe failed: %v", err)
 	}
 
 	if !strings.Contains(out, "SendAsNil") {
-		t.Errorf("expected 'SendAsNil' in DESCRIBE output:\n%s", out)
+		t.Errorf("expected 'SendAsNil' in describe output:\n%s", out)
 	}
 }
 
@@ -106,30 +106,30 @@ func TestRoundtripExportMapping_Drop(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE ENTITY ` + testModule + `.EMDropPet (
+	if err := env.executeMDL(`create entity ` + testModule + `.EMDropPet (
   PetId: Integer
 );`); err != nil {
-		t.Fatalf("CREATE ENTITY failed: %v", err)
+		t.Fatalf("create entity failed: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE EXPORT MAPPING ` + testModule + `.ToDropEM {
+	if err := env.executeMDL(`create export mapping ` + testModule + `.ToDropEM {
   ` + testModule + `.EMDropPet {
     id = PetId
   }
 };`); err != nil {
-		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
+		t.Fatalf("create export mapping failed: %v", err)
 	}
 
-	if _, err := env.describeMDL(`DESCRIBE EXPORT MAPPING ` + testModule + `.ToDropEM;`); err != nil {
-		t.Fatalf("export mapping should exist before DROP: %v", err)
+	if _, err := env.describeMDL(`describe export mapping ` + testModule + `.ToDropEM;`); err != nil {
+		t.Fatalf("export mapping should exist before drop: %v", err)
 	}
 
-	if err := env.executeMDL(`DROP EXPORT MAPPING ` + testModule + `.ToDropEM;`); err != nil {
-		t.Fatalf("DROP EXPORT MAPPING failed: %v", err)
+	if err := env.executeMDL(`drop export mapping ` + testModule + `.ToDropEM;`); err != nil {
+		t.Fatalf("drop export mapping failed: %v", err)
 	}
 
-	if _, err := env.describeMDL(`DESCRIBE EXPORT MAPPING ` + testModule + `.ToDropEM;`); err == nil {
-		t.Error("export mapping should not exist after DROP")
+	if _, err := env.describeMDL(`describe export mapping ` + testModule + `.ToDropEM;`); err == nil {
+		t.Error("export mapping should not exist after drop")
 	}
 }
 
@@ -137,34 +137,34 @@ func TestRoundtripExportMapping_ShowAppearsInList(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE ENTITY ` + testModule + `.EMListPet (
+	if err := env.executeMDL(`create entity ` + testModule + `.EMListPet (
   PetId: Integer
 );`); err != nil {
-		t.Fatalf("CREATE ENTITY failed: %v", err)
+		t.Fatalf("create entity failed: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE EXPORT MAPPING ` + testModule + `.ListableEM {
+	if err := env.executeMDL(`create export mapping ` + testModule + `.ListableEM {
   ` + testModule + `.EMListPet {
     id = PetId
   }
 };`); err != nil {
-		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
+		t.Fatalf("create export mapping failed: %v", err)
 	}
 
 	env.output.Reset()
-	if err := env.executeMDL(`SHOW EXPORT MAPPINGS IN ` + testModule + `;`); err != nil {
-		t.Fatalf("SHOW failed: %v", err)
+	if err := env.executeMDL(`show export mappings in ` + testModule + `;`); err != nil {
+		t.Fatalf("show failed: %v", err)
 	}
 
 	if !strings.Contains(env.output.String(), "ListableEM") {
-		t.Errorf("expected 'ListableEM' in SHOW output:\n%s", env.output.String())
+		t.Errorf("expected 'ListableEM' in show output:\n%s", env.output.String())
 	}
 }
 
 // --- MX Check ---
 
 func TestMxCheck_ExportMapping_Basic(t *testing.T) {
-	t.Skip("TODO: fix mapping BSON alignment with JSON structure schema (ExposedName/MaxOccurs)")
+	t.Skip("TODO: fix mapping BSON alignment with json structure schema (ExposedName/MaxOccurs)")
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
@@ -172,27 +172,27 @@ func TestMxCheck_ExportMapping_Basic(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE ENTITY ` + testModule + `.MxCheckEMPet (
+	if err := env.executeMDL(`create entity ` + testModule + `.MxCheckEMPet (
   PetId: Integer,
   Name: String(200)
 );`); err != nil {
-		t.Fatalf("CREATE ENTITY failed: %v", err)
+		t.Fatalf("create entity failed: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE JSON STRUCTURE ` + testModule + `.MxCheckEMJS
-SNIPPET '{"id": 1, "name": "Fido"}';`); err != nil {
-		t.Fatalf("CREATE JSON STRUCTURE failed: %v", err)
+	if err := env.executeMDL(`create json structure ` + testModule + `.MxCheckEMJS
+snippet '{"id": 1, "name": "Fido"}';`); err != nil {
+		t.Fatalf("create json structure failed: %v", err)
 	}
 
-	if err := env.executeMDL(`CREATE EXPORT MAPPING ` + testModule + `.MxCheckExportPet
-  WITH JSON STRUCTURE ` + testModule + `.MxCheckEMJS
+	if err := env.executeMDL(`create export mapping ` + testModule + `.MxCheckExportPet
+  with json structure ` + testModule + `.MxCheckEMJS
 {
   ` + testModule + `.MxCheckEMPet {
     id = PetId,
     name = Name
   }
 };`); err != nil {
-		t.Fatalf("CREATE EXPORT MAPPING failed: %v", err)
+		t.Fatalf("create export mapping failed: %v", err)
 	}
 
 	env.executor.Execute(&ast.DisconnectStmt{})

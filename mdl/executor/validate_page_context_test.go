@@ -15,12 +15,12 @@ func TestValidatePageContextTree_ParameterDSValid(t *testing.T) {
 	}
 	widgets := []*ast.WidgetV3{
 		{
-			Type: "DATAVIEW", Name: "dvCustomer",
+			Type: "dataview", Name: "dvCustomer",
 			Properties: map[string]any{
 				"DataSource": &ast.DataSourceV3{Type: "parameter", Reference: "$Customer"},
 			},
 			Children: []*ast.WidgetV3{
-				{Type: "TEXTBOX", Name: "txtName", Properties: map[string]any{"Attribute": "Name"}},
+				{Type: "textbox", Name: "txtName", Properties: map[string]any{"Attribute": "Name"}},
 			},
 		},
 	}
@@ -37,7 +37,7 @@ func TestValidatePageContextTree_ParameterDSInvalid(t *testing.T) {
 	}
 	widgets := []*ast.WidgetV3{
 		{
-			Type: "DATAVIEW", Name: "dvCustomer",
+			Type: "dataview", Name: "dvCustomer",
 			Properties: map[string]any{
 				"DataSource": &ast.DataSourceV3{Type: "parameter", Reference: "$Customer"},
 			},
@@ -56,18 +56,18 @@ func TestValidatePageContextTree_ParameterDSInvalid(t *testing.T) {
 func TestValidatePageContextTree_SelectionDSValid(t *testing.T) {
 	widgets := []*ast.WidgetV3{
 		{
-			Type: "DATAGRID", Name: "dgOrders",
+			Type: "datagrid", Name: "dgOrders",
 			Properties: map[string]any{
 				"DataSource": &ast.DataSourceV3{Type: "database", Reference: "Mod.Order"},
 			},
 		},
 		{
-			Type: "DATAVIEW", Name: "dvDetail",
+			Type: "dataview", Name: "dvDetail",
 			Properties: map[string]any{
 				"DataSource": &ast.DataSourceV3{Type: "selection", Reference: "dgOrders"},
 			},
 			Children: []*ast.WidgetV3{
-				{Type: "TEXTBOX", Name: "txtNum", Properties: map[string]any{"Attribute": "OrderNumber"}},
+				{Type: "textbox", Name: "txtNum", Properties: map[string]any{"Attribute": "OrderNumber"}},
 			},
 		},
 	}
@@ -81,7 +81,7 @@ func TestValidatePageContextTree_SelectionDSValid(t *testing.T) {
 func TestValidatePageContextTree_SelectionDSInvalid(t *testing.T) {
 	widgets := []*ast.WidgetV3{
 		{
-			Type: "DATAVIEW", Name: "dvDetail",
+			Type: "dataview", Name: "dvDetail",
 			Properties: map[string]any{
 				"DataSource": &ast.DataSourceV3{Type: "selection", Reference: "nonExistentGrid"},
 			},
@@ -99,7 +99,7 @@ func TestValidatePageContextTree_SelectionDSInvalid(t *testing.T) {
 
 func TestValidatePageContextTree_AttributeWithoutContext(t *testing.T) {
 	widgets := []*ast.WidgetV3{
-		{Type: "TEXTBOX", Name: "txtName", Properties: map[string]any{"Attribute": "Name"}},
+		{Type: "textbox", Name: "txtName", Properties: map[string]any{"Attribute": "Name"}},
 	}
 
 	errors := validatePageContextTree(nil, widgets)
@@ -114,13 +114,13 @@ func TestValidatePageContextTree_AttributeWithoutContext(t *testing.T) {
 func TestValidatePageContextTree_AttributeInsideDataView(t *testing.T) {
 	widgets := []*ast.WidgetV3{
 		{
-			Type: "DATAVIEW", Name: "dv1",
+			Type: "dataview", Name: "dv1",
 			Properties: map[string]any{
 				"DataSource": &ast.DataSourceV3{Type: "database", Reference: "Mod.Customer"},
 			},
 			Children: []*ast.WidgetV3{
-				{Type: "TEXTBOX", Name: "txtName", Properties: map[string]any{"Attribute": "Name"}},
-				{Type: "DROPDOWN", Name: "ddCountry", Properties: map[string]any{"Attribute": "Country"}},
+				{Type: "textbox", Name: "txtName", Properties: map[string]any{"Attribute": "Name"}},
+				{Type: "dropdown", Name: "ddCountry", Properties: map[string]any{"Attribute": "Country"}},
 			},
 		},
 	}

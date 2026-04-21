@@ -29,7 +29,7 @@ Investigate and document all entities, their attributes, and relationships.
 
 | Technology | Data Model Location |
 |------------|-------------------|
-| Java/Spring | `@Entity` classes, JPA annotations, Hibernate mappings |
+| Java/Spring | `@entity` classes, JPA annotations, Hibernate mappings |
 | .NET/EF | `DbContext`, entity classes, EF migrations |
 | Django | `models.py` files |
 | Rails | `app/models/`, `db/schema.rb` |
@@ -40,37 +40,37 @@ Investigate and document all entities, their attributes, and relationships.
 **Output format:**
 
 ```markdown
-### Data Model
+### data model
 
-#### Entities
+#### entities
 
-| Entity | Attributes | Type | Constraints | Mendix Mapping |
+| entity | attributes | type | Constraints | Mendix mapping |
 |--------|-----------|------|-------------|----------------|
-| Customer | id | Long (auto) | PK | (auto-generated) |
-| | name | String(200) | NOT NULL | String(200) |
-| | email | String(200) | UNIQUE | String(200) |
-| | creditLimit | Decimal(10,2) | | Decimal |
-| | isActive | Boolean | DEFAULT true | Boolean |
-| | createdAt | DateTime | | DateTime |
-| Order | id | Long (auto) | PK | (auto-generated) |
-| | orderNumber | String(50) | UNIQUE, NOT NULL | String(50) |
-| | status | Enum | | Enumeration |
-| | totalAmount | Decimal | | Decimal |
+| Customer | id | long (auto) | PK | (auto-generated) |
+| | name | string(200) | not null | string(200) |
+| | email | string(200) | unique | string(200) |
+| | creditLimit | decimal(10,2) | | decimal |
+| | isActive | boolean | default true | boolean |
+| | createdAt | datetime | | datetime |
+| Order | id | long (auto) | PK | (auto-generated) |
+| | orderNumber | string(50) | unique, not null | string(50) |
+| | status | enum | | enumeration |
+| | totalAmount | decimal | | decimal |
 
-#### Associations
+#### associations
 
-| From | To | Type | Mendix Mapping |
+| from | to | type | Mendix mapping |
 |------|----|------|----------------|
-| Order | Customer | Many-to-One | Reference (Order → Customer) |
-| Order | OrderLine | One-to-Many | Reference (OrderLine → Order) |
-| User | Role | Many-to-Many | ReferenceSet |
+| Order | Customer | Many-to-One | reference (Order → Customer) |
+| Order | OrderLine | One-to-Many | reference (OrderLine → Order) |
+| user | role | Many-to-Many | ReferenceSet |
 
-#### Enumerations
+#### enumerations
 
-| Name | Values | Used By |
+| Name | values | Used by |
 |------|--------|---------|
 | OrderStatus | PENDING, PROCESSING, COMPLETED, CANCELLED | Order.status |
-| UserRole | ADMIN, MANAGER, USER | User.role |
+| UserRole | ADMIN, MANAGER, user | User.role |
 ```
 
 ### Step 3: Catalog Business Logic and Rules
@@ -81,7 +81,7 @@ This is the most critical part. Identify and explicitly document all business lo
 
 | Technology | Logic Location |
 |------------|---------------|
-| Java/Spring | `@Service` classes, `@Component`, `@Transactional` methods |
+| Java/Spring | `@service` classes, `@Component`, `@Transactional` methods |
 | .NET | Service classes, domain logic, middleware |
 | Django | Views, forms, signals, managers |
 | Rails | Models (callbacks, validations), services, concerns |
@@ -91,40 +91,40 @@ This is the most critical part. Identify and explicitly document all business lo
 **Categorize each piece of logic:**
 
 ```markdown
-### Business Logic
+### business Logic
 
-#### Validation Rules
+#### validation rules
 
-| Rule | Location | Description | Mendix Mapping |
+| rule | Location | description | Mendix mapping |
 |------|----------|-------------|----------------|
-| VR-001 | CustomerService.validate() | Customer name is required, max 200 chars | Validation microflow |
-| VR-002 | OrderService.validate() | Order date cannot be in the past | Validation microflow |
-| VR-003 | DB trigger: trg_check_credit | Credit limit cannot exceed $1M for non-premium | Validation microflow + before commit |
-| VR-004 | OrderLine model | Quantity must be > 0 | Attribute validation |
+| VR-001 | CustomerService.validate() | Customer name is required, max 200 chars | validation microflow |
+| VR-002 | OrderService.validate() | Order date cannot be in the past | validation microflow |
+| VR-003 | DB trigger: trg_check_credit | Credit limit cannot exceed $1M for non-premium | validation microflow + before commit |
+| VR-004 | OrderLine model | Quantity must be > 0 | attribute validation |
 
-#### Business Rules
+#### business rules
 
-| Rule | Location | Description | Mendix Mapping |
+| rule | Location | description | Mendix mapping |
 |------|----------|-------------|----------------|
-| BR-001 | OrderService.calculateTotal() | Sum of line items * quantity, apply tax | Microflow |
-| BR-002 | DiscountService.applyDiscount() | 10% for orders > $1000, 15% for premium | Microflow |
+| BR-001 | OrderService.calculateTotal() | sum of line items * quantity, apply tax | microflow |
+| BR-002 | DiscountService.applyDiscount() | 10% for orders > $1000, 15% for premium | microflow |
 | BR-003 | CustomerService.updateStatus() | Deactivate customer after 12 months inactive | Scheduled microflow |
-| BR-004 | DB proc: sp_close_month | Monthly closing with balance calculations | Microflow + scheduled event |
+| BR-004 | DB proc: sp_close_month | Monthly closing with balance calculations | microflow + scheduled event |
 
-#### Workflows / Multi-Step Processes
+#### workflows / multi-Step Processes
 
-| Workflow | Steps | Description | Mendix Mapping |
+| workflow | Steps | description | Mendix mapping |
 |----------|-------|-------------|----------------|
-| Order Approval | Submit → Review → Approve/Reject → Notify | Orders > $5000 need manager approval | Workflow or microflow chain |
-| User Onboarding | Register → Verify Email → Complete Profile → Activate | New user registration flow | Microflow chain + pages |
+| Order Approval | Submit → Review → Approve/Reject → notify | Orders > $5000 need manager approval | workflow or microflow chain |
+| user Onboarding | Register → Verify Email → Complete Profile → Activate | New user registration flow | microflow chain + pages |
 
-#### Calculated Fields / Derived Data
+#### calculated Fields / Derived data
 
-| Field | Calculation | Location | Mendix Mapping |
+| Field | Calculation | Location | Mendix mapping |
 |-------|-------------|----------|----------------|
-| Order.totalAmount | SUM(lines.price * lines.qty) | OrderService | Calculated attribute or microflow |
-| Customer.orderCount | COUNT(orders) | SQL view | Microflow or calculated attribute |
-| Invoice.dueDate | invoiceDate + paymentTerms | InvoiceService | Microflow |
+| Order.totalAmount | sum(lines.price * lines.qty) | OrderService | calculated attribute or microflow |
+| Customer.orderCount | count(orders) | sql view | microflow or calculated attribute |
+| Invoice.dueDate | invoiceDate + paymentTerms | InvoiceService | microflow |
 ```
 
 ### Step 4: Inventory Pages and UI
@@ -145,16 +145,16 @@ Document all screens, their purpose, and the data they display or edit.
 **Output format:**
 
 ```markdown
-### Pages / Screens
+### pages / Screens
 
-| Page | Type | Data | Key Actions | Mendix Mapping |
+| page | type | data | key actions | Mendix mapping |
 |------|------|------|-------------|----------------|
-| Customer List | Overview | Customer (filtered, paged) | Search, New, Edit, Delete | Overview page + DataGrid |
-| Customer Edit | Form | Customer + Addresses | Save, Cancel, Validate | Edit page + DataView |
-| Order Dashboard | Dashboard | Orders (grouped by status) | Filter, Drill-down | Page + multiple DataGrids |
-| Order Entry | Multi-step form | Order + OrderLines | Add line, Calculate, Submit | Page + ListView + microflows |
-| Reports | Read-only | Aggregated data | Export, Print | Page + charts or custom widgets |
-| Login | Authentication | Credentials | Login, Forgot Password | Login page (built-in) |
+| Customer list | overview | Customer (filtered, paged) | search, New, Edit, delete | overview page + datagrid |
+| Customer Edit | Form | Customer + Addresses | Save, cancel, Validate | Edit page + dataview |
+| Order Dashboard | Dashboard | Orders (grouped by status) | filter, Drill-down | page + multiple DataGrids |
+| Order Entry | multi-step form | Order + OrderLines | add line, Calculate, Submit | page + listview + microflows |
+| Reports | read-only | Aggregated data | export, Print | page + charts or custom widgets |
+| login | authentication | Credentials | login, Forgot password | login page (built-in) |
 ```
 
 ### Step 5: Map Integrations
@@ -175,37 +175,37 @@ Document all external system connections, APIs consumed, and APIs exposed.
 ```markdown
 ### Integrations
 
-#### APIs Consumed (Outbound)
+#### APIs consumed (Outbound)
 
-| Integration | Protocol | Endpoint | Auth | Mendix Mapping |
+| Integration | Protocol | Endpoint | auth | Mendix mapping |
 |-------------|----------|----------|------|----------------|
-| Payment Gateway | REST | api.stripe.com | API Key | REST client (consumed) |
-| Email Service | REST | api.sendgrid.com | API Key | Email module or REST |
+| Payment Gateway | rest | api.stripe.com | api key | rest client (consumed) |
+| Email service | rest | api.sendgrid.com | api key | Email module or rest |
 | ERP Sync | SOAP | erp.company.com/ws | Certificate | Web service call |
-| File Storage | SDK | AWS S3 | IAM | FileDocument + custom Java |
+| file storage | SDK | AWS S3 | IAM | FileDocument + custom java |
 
-#### APIs Exposed (Inbound)
+#### APIs exposed (Inbound)
 
-| Endpoint | Method | Purpose | Mendix Mapping |
+| Endpoint | method | Purpose | Mendix mapping |
 |----------|--------|---------|----------------|
-| /api/customers | GET, POST | Customer CRUD | Published REST service |
-| /api/orders/{id} | GET, PUT | Order management | Published REST service |
-| /webhooks/payment | POST | Payment notifications | Published REST service |
+| /api/customers | get, post | Customer CRUD | published rest service |
+| /api/orders/{id} | get, put | Order management | published rest service |
+| /webhooks/payment | post | Payment notifications | published rest service |
 
-#### Data Feeds
+#### data Feeds
 
-| Feed | Format | Direction | Frequency | Mendix Mapping |
+| Feed | format | Direction | Frequency | Mendix mapping |
 |------|--------|-----------|-----------|----------------|
 | Customer export | CSV | Outbound | Daily | Scheduled microflow + export mapping |
-| Product catalog | XML | Inbound | Hourly | Scheduled microflow + import mapping |
-| Financial data | OData | Both | Real-time | External entities (OData) |
+| Product catalog | xml | Inbound | Hourly | Scheduled microflow + import mapping |
+| Financial data | odata | both | Real-time | external entities (odata) |
 
-#### Message Queues / Events
+#### message Queues / events
 
-| Queue/Topic | Direction | Purpose | Mendix Mapping |
+| Queue/Topic | Direction | Purpose | Mendix mapping |
 |-------------|-----------|---------|----------------|
-| order-events | Publish | Order status changes | Business events |
-| inventory-updates | Subscribe | Stock level changes | Business events |
+| order-events | publish | Order status changes | business events |
+| inventory-updates | subscribe | Stock level changes | business events |
 ```
 
 ### Step 6: Document Security Model
@@ -226,43 +226,43 @@ Investigate how authentication, authorization, user roles, and data access contr
 **Output format:**
 
 ```markdown
-### Security
+### security
 
-#### Authentication
+#### authentication
 
-| Method | Details | Mendix Mapping |
+| method | Details | Mendix mapping |
 |--------|---------|----------------|
-| Username/Password | Local DB with bcrypt | Built-in authentication |
-| OAuth 2.0 | Google, Microsoft SSO | OIDC SSO module |
+| username/password | local DB with bcrypt | Built-in authentication |
+| oauth 2.0 | Google, Microsoft SSO | OIDC SSO module |
 | SAML | Corporate IdP | SAML module |
-| API Keys | For service accounts | Custom implementation |
+| api Keys | for service accounts | Custom implementation |
 
-#### User Roles
+#### user roles
 
-| Role | Description | Rough Privileges | Mendix Mapping |
+| role | description | Rough Privileges | Mendix mapping |
 |------|-------------|------------------|----------------|
-| Admin | Full system access | All CRUD, user management, settings | Administrator role |
+| Admin | full system access | all CRUD, user management, settings | Administrator role |
 | Manager | Department-level access | Approve orders, view reports, manage team | Custom module role |
-| User | Standard operations | Create/edit own records, view assigned | Custom module role |
-| Viewer | Read-only access | View only, no modifications | Custom module role |
-| API Service | Machine-to-machine | Specific API endpoints only | Custom module role |
+| user | Standard operations | create/edit own records, view assigned | Custom module role |
+| Viewer | read-only access | view only, no modifications | Custom module role |
+| api service | Machine-to-machine | Specific api endpoints only | Custom module role |
 
-#### Data Access Rules
+#### data access rules
 
-| Entity | Role | Create | Read | Write | Delete | Constraint |
+| entity | role | create | read | write | delete | constraint |
 |--------|------|--------|------|-------|--------|------------|
-| Customer | Admin | Yes | All | All | Yes | None |
+| Customer | Admin | Yes | all | all | Yes | none |
 | Customer | Manager | Yes | Department | Department | No | Department = User.Department |
-| Customer | User | No | Own | Own | No | CreatedBy = CurrentUser |
-| Order | Manager | Yes | Department | Department | No | Status != 'Closed' |
+| Customer | user | No | Own | Own | No | CreatedBy = CurrentUser |
+| Order | Manager | Yes | Department | Department | No | status != 'Closed' |
 
-#### Row-Level Security / Data Filtering
+#### row-level security / data Filtering
 
-| Rule | Description | Mendix Mapping |
+| rule | description | Mendix mapping |
 |------|-------------|----------------|
-| Department isolation | Users only see their department's data | XPath constraint on entity access |
-| Record ownership | Users only edit records they created | XPath: `[CreatedBy = '[%CurrentUser%]']` |
-| Status-based locking | Closed records are read-only | XPath on write: `[Status != 'Closed']` |
+| Department isolation | users only see their department's data | XPath constraint on entity access |
+| Record ownership | users only edit records they created | xpath: `[CreatedBy = '[%CurrentUser%]']` |
+| status-based locking | Closed records are read-only | xpath on write: `[status != 'Closed']` |
 ```
 
 ## Assessment Report Template
@@ -274,57 +274,57 @@ Combine all findings into a structured report:
 
 ## Executive Summary
 - **Application**: [Name and brief description]
-- **Technology stack**: [Languages, frameworks, databases]
-- **Size**: [Entities, services/controllers, pages, integrations]
+- **Technology stack**: [languages, frameworks, databases]
+- **Size**: [entities, services/controllers, pages, integrations]
 - **Complexity**: [Low / Medium / High]
 - **Recommended approach**: [Big bang / Phased / Strangler fig]
 
 ## Inventory Summary
 
-| Category | Count | Complexity | Notes |
+| Category | count | Complexity | Notes |
 |----------|-------|------------|-------|
-| Entities | X | | |
-| Associations | X | | |
-| Enumerations | X | | |
-| Business rules | X | | List the critical ones |
-| Validation rules | X | | |
-| Pages/Screens | X | | |
-| Integrations | X | | List external systems |
-| User roles | X | | |
+| entities | X | | |
+| associations | X | | |
+| enumerations | X | | |
+| business rules | X | | list the critical ones |
+| validation rules | X | | |
+| pages/Screens | X | | |
+| Integrations | X | | list external systems |
+| user roles | X | | |
 | Scheduled jobs | X | | |
 
-## Data Model
-[From Step 2]
+## data model
+[from Step 2]
 
-## Business Logic and Rules
-[From Step 3 — this is the most important section]
+## business Logic and rules
+[from Step 3 — this is the most important section]
 
-## Pages and UI
-[From Step 4]
+## pages and UI
+[from Step 4]
 
 ## Integrations
-[From Step 5]
+[from Step 5]
 
-## Security
-[From Step 6]
+## security
+[from Step 6]
 
 ## Migration Risks
 
-| Risk | Impact | Mitigation |
+| Risk | impact | Mitigation |
 |------|--------|------------|
-| Complex stored procedures | Logic may not map 1:1 to microflows | Review and simplify, consider Java actions |
+| Complex stored procedures | Logic may not map 1:1 to microflows | Review and simplify, consider java actions |
 | Custom UI components | No direct Mendix equivalent | Evaluate pluggable widgets or custom widgets |
 | Real-time integrations | Mendix has different async patterns | Consider business events or polling |
-| Row-level security complexity | Mendix XPath constraints have limits | Simplify access rules where possible |
+| row-level security complexity | Mendix xpath constraints have limits | Simplify access rules where possible |
 
 ## Recommended Migration Phases
 
-1. **Domain model** — Entities, associations, enumerations
-2. **Core business logic** — Validation rules, business rules, calculations
-3. **Pages** — Overview pages, edit forms, dashboards
-4. **Integrations** — REST clients, file handling, external systems
-5. **Security** — Roles, access rules, authentication
-6. **Testing & cutover** — Data migration, parallel running, go-live
+1. **Domain model** — entities, associations, enumerations
+2. **Core business logic** — validation rules, business rules, calculations
+3. **pages** — overview pages, edit forms, dashboards
+4. **Integrations** — rest clients, file handling, external systems
+5. **security** — roles, access rules, authentication
+6. **Testing & cutover** — data migration, parallel running, go-live
 ```
 
 ## Tips

@@ -75,7 +75,7 @@ Located in `libs/mendixmodellib/reflection-data/`:
 ```
 reflection-data/
 ├── 6.0.0-structures.json      # Mendix 6.0.0 type definitions
-├── 6.0.0-storageNames.json    # Storage name mappings
+├── 6.0.0-storageNames.json    # storage name mappings
 ├── ...
 ├── 11.6.0-structures.json     # Latest version
 └── 11.6.0-storageNames.json
@@ -85,9 +85,9 @@ Each `{version}-structures.json` contains:
 
 ```json
 {
-  "DomainModels$Entity": {
-    "qualifiedName": "DomainModels$Entity",
-    "storageName": "DomainModels$Entity",
+  "DomainModels$entity": {
+    "qualifiedName": "DomainModels$entity",
+    "storageName": "DomainModels$entity",
     "superTypeName": "DomainModels$MaybeRemotableElement",
     "abstract": false,
     "type": "ELEMENT",
@@ -98,16 +98,16 @@ Each `{version}-structures.json` contains:
         "list": false,
         "typeInfo": {
           "type": "PRIMITIVE",
-          "primitiveType": "STRING"
+          "primitiveType": "string"
         }
       },
       "attributes": {
         "name": "attributes",
-        "storageName": "Attributes",
+        "storageName": "attributes",
         "list": true,
         "typeInfo": {
           "type": "ELEMENT",
-          "elementType": "DomainModels$Attribute",
+          "elementType": "DomainModels$attribute",
           "kind": "PART"
         }
       }
@@ -129,14 +129,14 @@ Each `{version}-structures.json` contains:
 
 ```
 modelsdk-go/
-├── modelsdk.go           # Public API entry points
-├── model/                # Core types (ID, Module, Project, etc.)
-├── domainmodel/          # Entity, Attribute, Association types
-├── microflows/           # Microflow, Nanoflow types
-├── pages/                # Page, Layout, Snippet types
+├── modelsdk.go           # Public api entry points
+├── model/                # Core types (ID, module, project, etc.)
+├── domainmodel/          # entity, attribute, association types
+├── microflows/           # microflow, nanoflow types
+├── pages/                # page, layout, snippet types
 ├── mpr/                  # MPR file reading/writing
-│   ├── reader.go         # Read-only access
-│   ├── writer.go         # Read-write access
+│   ├── reader.go         # read-only access
+│   ├── writer.go         # read-write access
 │   ├── parser.go         # BSON parsing
 │   └── utils.go          # UUID generation, etc.
 └── examples/             # Usage examples
@@ -213,10 +213,10 @@ Even in implemented domains, many subtypes are missing:
 - ... and 140+ more
 
 **Pages (500+ widgets needed):**
-- Container widgets: `DataView`, `ListView`, `DataGrid`, `TemplateGrid`
-- Input widgets: `TextBox`, `TextArea`, `DropDown`, `DatePicker`
-- Button widgets: `ActionButton`, `LinkButton`
-- Layout widgets: `Container`, `GroupBox`, `TabContainer`
+- Container widgets: `dataview`, `listview`, `datagrid`, `TemplateGrid`
+- Input widgets: `textbox`, `textarea`, `dropdown`, `datepicker`
+- Button widgets: `actionbutton`, `linkbutton`
+- Layout widgets: `container`, `groupbox`, `tabcontainer`
 - ... and 480+ more
 
 ### Missing Infrastructure
@@ -252,9 +252,9 @@ The `mendixmodellib/reflection-data/` contains complete metamodel definitions in
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │   Parser     │───▶│  Transformer │───▶│   Emitter    │  │
+│  │   Parser     │───▶│  transformer │───▶│   Emitter    │  │
 │  │              │    │              │    │              │  │
-│  │ Read JSON    │    │ Build type   │    │ Generate Go  │  │
+│  │ read json    │    │ build type   │    │ generate Go  │  │
 │  │ metamodel    │    │ hierarchy    │    │ source code  │  │
 │  └──────────────┘    └──────────────┘    └──────────────┘  │
 │         │                   │                   │           │
@@ -275,19 +275,19 @@ package main
 
 // Generator reads reflection data and produces Go types
 type Generator struct {
-    Version     string           // Target Mendix version
-    Structures  map[string]*Structure
+    version     string           // Target Mendix version
+    structures  map[string]*structure
     OutputDir   string
 }
 
-// Structure from reflection-data JSON
-type Structure struct {
+// structure from reflection-data json
+type structure struct {
     QualifiedName    string              `json:"qualifiedName"`
     StorageName      string              `json:"storageName"`
     SuperTypeName    string              `json:"superTypeName,omitempty"`
     Abstract         bool                `json:"abstract"`
-    Type             string              `json:"type"` // ELEMENT, MODEL_UNIT, STRUCTURAL_UNIT
-    Properties       map[string]*Property `json:"properties"`
+    type             string              `json:"type"` // ELEMENT, MODEL_UNIT, STRUCTURAL_UNIT
+    properties       map[string]*Property `json:"properties"`
     DefaultSettings  map[string]any      `json:"defaultSettings"`
 }
 
@@ -295,14 +295,14 @@ type Structure struct {
 type Property struct {
     Name        string    `json:"name"`
     StorageName string    `json:"storageName"`
-    List        bool      `json:"list"`
+    list        bool      `json:"list"`
     Public      bool      `json:"public"`
     TypeInfo    *TypeInfo `json:"typeInfo"`
 }
 
 // TypeInfo for property types
 type TypeInfo struct {
-    Type          string `json:"type"` // PRIMITIVE, ELEMENT, ENUMERATION, UNIT
+    type          string `json:"type"` // PRIMITIVE, ELEMENT, enumeration, UNIT
     PrimitiveType string `json:"primitiveType,omitempty"`
     ElementType   string `json:"elementType,omitempty"`
     Kind          string `json:"kind,omitempty"` // PART, BY_ID_REFERENCE, BY_NAME_REFERENCE
@@ -321,7 +321,7 @@ generated/
 ├── microflows/
 │   ├── microflow.go
 │   ├── activities.go      # 150+ activity types
-│   ├── actions.go         # Action implementations
+│   ├── actions.go         # action implementations
 │   └── types.go
 ├── pages/
 │   ├── page.go
@@ -339,10 +339,10 @@ generated/
 
 | JSON Type | Go Type |
 |-----------|---------|
-| `PRIMITIVE/STRING` | `string` |
-| `PRIMITIVE/INTEGER` | `int64` |
+| `PRIMITIVE/string` | `string` |
+| `PRIMITIVE/integer` | `int64` |
 | `PRIMITIVE/DOUBLE` | `float64` |
-| `PRIMITIVE/BOOLEAN` | `bool` |
+| `PRIMITIVE/boolean` | `bool` |
 | `PRIMITIVE/DATE_TIME` | `time.Time` |
 | `PRIMITIVE/GUID` | `model.ID` |
 | `PRIMITIVE/POINT` | `model.Point` |
@@ -353,28 +353,28 @@ generated/
 | `ELEMENT` (list) | `[]*TypeName` |
 | `BY_ID_REFERENCE` | `model.ID` |
 | `BY_NAME_REFERENCE` | `model.QualifiedName` |
-| `ENUMERATION` | Custom enum type |
+| `enumeration` | Custom enum type |
 
 ### Example Generated Code
 
 Input (`11.6.0-structures.json`):
 ```json
 {
-  "DomainModels$Entity": {
-    "qualifiedName": "DomainModels$Entity",
+  "DomainModels$entity": {
+    "qualifiedName": "DomainModels$entity",
     "superTypeName": "DomainModels$MaybeRemotableElement",
     "properties": {
       "name": {
         "storageName": "Name",
-        "typeInfo": { "type": "PRIMITIVE", "primitiveType": "STRING" }
+        "typeInfo": { "type": "PRIMITIVE", "primitiveType": "string" }
       },
       "attributes": {
-        "storageName": "Attributes",
+        "storageName": "attributes",
         "list": true,
-        "typeInfo": { "type": "ELEMENT", "elementType": "DomainModels$Attribute", "kind": "PART" }
+        "typeInfo": { "type": "ELEMENT", "elementType": "DomainModels$attribute", "kind": "PART" }
       },
       "generalization": {
-        "storageName": "Generalization",
+        "storageName": "generalization",
         "typeInfo": { "type": "ELEMENT", "elementType": "DomainModels$GeneralizationBase", "kind": "PART" }
       }
     }
@@ -384,36 +384,36 @@ Input (`11.6.0-structures.json`):
 
 Output (`generated/domainmodels/entity.go`):
 ```go
-// Code generated by modelsdk-generator. DO NOT EDIT.
-// Source: 11.6.0-structures.json
+// Code generated by modelsdk-generator. DO not EDIT.
+// source: 11.6.0-structures.json
 
 package domainmodels
 
 import "github.com/mendixlabs/mxcli/model"
 
-// Entity represents a DomainModels$Entity element.
-type Entity struct {
+// entity represents a DomainModels$entity element.
+type entity struct {
     model.BaseElement
 
     // Name is the entity name (storage: Name)
     Name string `json:"name" bson:"Name"`
 
-    // Attributes contains the entity's attributes (storage: Attributes)
-    Attributes []*Attribute `json:"attributes,omitempty" bson:"Attributes"`
+    // attributes contains the entity's attributes (storage: Attributes)
+    attributes []*attribute `json:"attributes,omitempty" bson:"attributes"`
 
-    // Generalization defines inheritance (storage: Generalization)
-    Generalization GeneralizationBase `json:"generalization,omitempty" bson:"Generalization"`
+    // generalization defines inheritance (storage: generalization)
+    generalization GeneralizationBase `json:"generalization,omitempty" bson:"generalization"`
 }
 
 // GetName returns the entity's name.
-func (e *Entity) GetName() string {
+func (e *entity) GetName() string {
     return e.Name
 }
 
-// Ensure Entity implements the required interfaces.
+// Ensure entity implements the required interfaces.
 var (
-    _ model.Element      = (*Entity)(nil)
-    _ model.NamedElement = (*Entity)(nil)
+    _ model.Element      = (*entity)(nil)
+    _ model.NamedElement = (*entity)(nil)
 )
 ```
 
@@ -427,26 +427,26 @@ When a new Mendix version is released:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  Version Update Process                      │
+│                  version update Process                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  1. Obtain new reflection data                               │
-│     └─▶ Get {version}-structures.json from mendixmodellib   │
+│     └─▶ get {version}-structures.json from mendixmodellib   │
 │                                                              │
-│  2. Run generator                                            │
+│  2. run generator                                            │
 │     └─▶ go run cmd/generate/main.go -version=11.7.0         │
 │                                                              │
 │  3. Review changes                                           │
 │     └─▶ git diff generated/                                 │
 │                                                              │
-│  4. Update parser mappings                                   │
-│     └─▶ Add new type handlers if needed                     │
+│  4. update parser mappings                                   │
+│     └─▶ add new type handlers if needed                     │
 │                                                              │
-│  5. Run tests                                                │
+│  5. run tests                                                │
 │     └─▶ go test ./...                                       │
 │                                                              │
-│  6. Update version constants                                 │
-│     └─▶ Add to supported versions list                      │
+│  6. update version constants                                 │
+│     └─▶ add to supported versions list                      │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -456,12 +456,12 @@ When a new Mendix version is released:
 #### 1. Obtain Reflection Data
 
 ```bash
-# Option A: From npm package
+# Option A: from npm package
 npm pack mendixmodellib@latest
 tar -xzf mendixmodellib-*.tgz
 cp package/reflection-data/*.json libs/mendixmodellib/reflection-data/
 
-# Option B: From existing installation
+# Option B: from existing installation
 cp ~/Projects/mcpmxsdk/node_modules/mendixmodellib/reflection-data/*.json \
    libs/mendixmodellib/reflection-data/
 ```
@@ -469,13 +469,13 @@ cp ~/Projects/mcpmxsdk/node_modules/mendixmodellib/reflection-data/*.json \
 #### 2. Run Generator
 
 ```bash
-# Generate for specific version
+# generate for specific version
 go run cmd/generate/main.go -version=11.7.0 -output=generated/
 
-# Generate for latest version
+# generate for latest version
 go run cmd/generate/main.go -latest -output=generated/
 
-# Generate for all versions (creates version-specific packages)
+# generate for all versions (creates version-specific packages)
 go run cmd/generate/main.go -all -output=generated/
 ```
 
@@ -485,7 +485,7 @@ go run cmd/generate/main.go -all -output=generated/
 # See what changed
 git diff generated/
 
-# Check for breaking changes
+# check for breaking changes
 go build ./...
 go test ./...
 ```
@@ -509,7 +509,7 @@ var LatestVersion = "11.7.0"
 
 ```yaml
 # .github/workflows/update-metamodel.yml
-name: Update Metamodel
+name: update Metamodel
 
 on:
   schedule:
@@ -531,25 +531,25 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Setup Node
+      - name: Setup node
         uses: actions/setup-node@v4
 
-      - name: Get latest mendixmodellib
+      - name: get latest mendixmodellib
         run: |
           npm pack mendixmodellib@latest
           tar -xzf mendixmodellib-*.tgz
           cp package/reflection-data/*.json libs/mendixmodellib/reflection-data/
 
-      - name: Generate types
+      - name: generate types
         run: go run cmd/generate/main.go -latest -output=generated/
 
-      - name: Run tests
+      - name: run tests
         run: go test ./...
 
-      - name: Create PR
+      - name: create PR
         uses: peter-evans/create-pull-request@v6
         with:
-          title: "Update metamodel to latest version"
+          title: "update metamodel to latest version"
           branch: update-metamodel
 ```
 

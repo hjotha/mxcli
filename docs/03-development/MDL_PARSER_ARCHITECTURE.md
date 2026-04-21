@@ -10,15 +10,15 @@ The MDL parser translates SQL-like MDL syntax into executable operations against
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         MDL Input String                            │
-│              "SHOW ENTITIES IN MyModule"                            │
+│                         MDL Input string                            │
+│              "show entities in MyModule"                            │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    ANTLR4 Lexer (mdl_lexer.go)                      │
-│    Generated from MDLLexer.g4 - Tokenizes input into SHOW, ENTITIES,│
-│    IN, IDENTIFIER tokens                                            │
+│    Generated from MDLLexer.g4 - Tokenizes input into show, entities,│
+│    in, IDENTIFIER tokens                                            │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
@@ -36,13 +36,13 @@ The MDL parser translates SQL-like MDL syntax into executable operations against
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         AST (ast/ast.go)                            │
-│    *ast.ShowStmt{Type: "ENTITIES", Module: "MyModule"}             │
+│    *ast.ShowStmt{type: "entities", module: "MyModule"}             │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Executor (executor/executor.go)                  │
-│    Executes AST against modelsdk-go API                            │
+│    Executes AST against modelsdk-go api                            │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
@@ -59,7 +59,7 @@ mdl/
 ├── grammar/
 │   ├── MDLLexer.g4         # ANTLR4 lexer grammar (tokens)
 │   ├── MDLParser.g4        # ANTLR4 parser grammar (rules)
-│   └── parser/             # Generated parser code (DO NOT EDIT)
+│   └── parser/             # Generated parser code (DO not EDIT)
 │       ├── mdl_lexer.go
 │       ├── mdl_parser.go
 │       ├── mdlparser_listener.go
@@ -70,7 +70,7 @@ mdl/
 │   └── visitor.go          # ANTLR listener implementation
 ├── executor/
 │   ├── executor.go              # AST execution logic
-│   ├── cmd_microflows_builder.go  # Microflow builder (variable tracking)
+│   ├── cmd_microflows_builder.go  # microflow builder (variable tracking)
 │   └── validate_microflow.go     # AST-level semantic checks (mxcli check)
 ├── catalog/
 │   └── catalog.go          # SQLite-based project metadata catalog
@@ -97,10 +97,10 @@ Uses fragment rules for case-insensitive matching:
 
 ```antlr
 // Keywords are case-insensitive
-SHOW    : S H O W ;
-ENTITY  : E N T I T Y ;
+show    : S H O W ;
+entity  : E N T I T Y ;
 
-// Fragment rules for each letter
+// fragment rules for each letter
 fragment S : [sS] ;
 fragment H : [hH] ;
 fragment O : [oO] ;
@@ -113,9 +113,9 @@ Parser rules use labeled alternatives for type-safe listener methods:
 
 ```antlr
 showStatement
-    : SHOW MODULES SEMI?                       # ShowModules
-    | SHOW ENTITIES (IN IDENTIFIER)? SEMI?     # ShowEntities
-    | SHOW ENTITY qualifiedName SEMI?          # ShowEntity
+    : show modules SEMI?                       # ShowModules
+    | show entities (in IDENTIFIER)? SEMI?     # ShowEntities
+    | show entity qualifiedName SEMI?          # ShowEntity
     ;
 ```
 
@@ -165,26 +165,26 @@ type Statement interface {
     statementNode()
 }
 
-// ShowStmt represents SHOW commands
+// ShowStmt represents show commands
 type ShowStmt struct {
-    Type   string        // MODULES, ENTITIES, ASSOCIATIONS, ENUMERATIONS
-    Module string        // Optional: filter by module
-    Name   QualifiedName // For SHOW ENTITY/ASSOCIATION
+    type   string        // modules, entities, associations, enumerations
+    module string        // Optional: filter by module
+    Name   QualifiedName // for show entity/association
 }
 
-// CreateEntityStmt represents CREATE ENTITY
+// CreateEntityStmt represents create entity
 type CreateEntityStmt struct {
     Name        QualifiedName
-    Persistent  bool
-    Attributes  []Attribute
-    Position    *Position
-    Comment     string
+    persistent  bool
+    attributes  []attribute
+    position    *position
+    comment     string
     Doc         string
 }
 
 // QualifiedName represents Module.Name or just Name
 type QualifiedName struct {
-    Module string
+    module string
     Name   string
 }
 ```
@@ -200,9 +200,9 @@ ANTLR generates interface types for rule contexts. To access specific methods, t
 
 ```go
 func (v *Visitor) EnterShowEntities(ctx *parser.ShowEntitiesContext) {
-    stmt := &ast.ShowStmt{Type: "ENTITIES"}
+    stmt := &ast.ShowStmt{type: "entities"}
 
-    // Access IDENTIFIER token if present (IN clause)
+    // access IDENTIFIER token if present (in clause)
     if id := ctx.IDENTIFIER(); id != nil {
         stmt.Module = id.GetText()
     }
@@ -223,7 +223,7 @@ func buildQualifiedName(ctx parser.IQualifiedNameContext) ast.QualifiedName {
         return ast.QualifiedName{Name: ids[0].GetText()}
     }
     return ast.QualifiedName{
-        Module: ids[0].GetText(),
+        module: ids[0].GetText(),
         Name:   ids[1].GetText(),
     }
 }
@@ -254,7 +254,7 @@ type Executor struct {
     output io.Writer
 }
 
-func (e *Executor) Execute(stmt ast.Statement) error {
+func (e *Executor) execute(stmt ast.Statement) error {
     switch s := stmt.(type) {
     case *ast.ConnectStmt:
         return e.executeConnect(s)
@@ -271,14 +271,14 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 
 ```go
 func (e *Executor) executeCreateEntity(stmt *ast.CreateEntityStmt) error {
-    // Build domain model entity
+    // build domain model entity
     entity := &domainmodel.Entity{
         ID:   mpr.GenerateID(),
         Name: stmt.Name.Name,
         // ... other fields
     }
 
-    // Get module and add entity
+    // get module and add entity
     module := e.getOrCreateModule(stmt.Name.Module)
     dm := module.DomainModel
     dm.Entities = append(dm.Entities, entity)
@@ -298,7 +298,7 @@ type REPL struct {
     output   io.Writer
 }
 
-func (r *REPL) Run() error {
+func (r *REPL) run() error {
     scanner := bufio.NewScanner(r.input)
     for {
         fmt.Fprint(r.output, "mdl> ")
@@ -315,7 +315,7 @@ func (r *REPL) Run() error {
 
         for _, stmt := range prog.Statements {
             if err := r.executor.Execute(stmt); err != nil {
-                fmt.Fprintf(r.output, "Error: %v\n", err)
+                fmt.Fprintf(r.output, "error: %v\n", err)
             }
         }
     }
@@ -329,12 +329,12 @@ Cobra-based command-line interface.
 
 ```go
 var rootCmd = &cobra.Command{
-    Use:   "mxcli",
+    use:   "mxcli",
     Short: "Mendix CLI - Work with Mendix projects using MDL syntax",
-    Run: func(cmd *cobra.Command, args []string) {
+    run: func(cmd *cobra.Command, args []string) {
         commands, _ := cmd.Flags().GetString("command")
         if commands != "" {
-            // Execute commands from -c flag
+            // execute commands from -c flag
             exec := executor.New(os.Stdout)
             prog, _ := visitor.Build(commands)
             for _, stmt := range prog.Statements {
@@ -372,11 +372,11 @@ For MDL, statements are independent and don't need return value propagation, mak
 MDL follows SQL conventions with case-insensitive keywords. ANTLR handles this via fragment rules:
 
 ```antlr
-SHOW : S H O W ;
+show : S H O W ;
 fragment S : [sS] ;
 ```
 
-This allows `SHOW`, `show`, `Show`, etc. to all match the same token.
+This allows `show`, `show`, `show`, etc. to all match the same token.
 
 ## Extending the Parser
 
@@ -386,7 +386,7 @@ This allows `SHOW`, `show`, `Show`, etc. to all match the same token.
 ```antlr
 ddlStatement
     : createStatement
-    | newStatement      // Add new statement
+    | newStatement      // add new statement
     ;
 
 newStatement
@@ -423,7 +423,7 @@ func (v *Visitor) EnterNewKeyword(ctx *parser.NewKeywordContext) {
 
 5. **Update executor** (`executor/executor.go`):
 ```go
-func (e *Executor) Execute(stmt ast.Statement) error {
+func (e *Executor) execute(stmt ast.Statement) error {
     switch s := stmt.(type) {
     // ... existing cases
     case *ast.NewKeywordStmt:
@@ -438,7 +438,7 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 
 ```go
 func TestParseShowEntities(t *testing.T) {
-    prog, errs := visitor.Build("SHOW ENTITIES IN MyModule")
+    prog, errs := visitor.Build("show entities in MyModule")
 
     if len(errs) > 0 {
         t.Fatalf("unexpected errors: %v", errs)
@@ -453,7 +453,7 @@ func TestParseShowEntities(t *testing.T) {
         t.Fatalf("expected ShowStmt, got %T", prog.Statements[0])
     }
 
-    if show.Type != "ENTITIES" || show.Module != "MyModule" {
+    if show.Type != "entities" || show.Module != "MyModule" {
         t.Errorf("unexpected statement: %+v", show)
     }
 }
@@ -463,9 +463,9 @@ func TestParseShowEntities(t *testing.T) {
 
 ```go
 func TestExecuteShowEntities(t *testing.T) {
-    // Create test MPR file
-    // Connect executor
-    // Execute SHOW ENTITIES
+    // create test MPR file
+    // connect executor
+    // execute show entities
     // Verify output
 }
 ```
@@ -475,7 +475,7 @@ func TestExecuteShowEntities(t *testing.T) {
 ### "no viable alternative at input" Error
 
 Usually caused by:
-1. Typo in grammar keyword definition (e.g., `ENTITIES : E N T I E S` missing letters)
+1. Typo in grammar keyword definition (e.g., `entities : E N T I E S` missing letters)
 2. Lexer rule ordering issues (longer matches should come first)
 3. Missing whitespace handling
 
@@ -508,7 +508,7 @@ Before execution, `mxcli check` runs AST-level semantic checks on microflow bodi
 
 The `microflowValidator` struct walks the body and checks:
 
-1. **Return value consistency** — RETURN must provide a value when the microflow declares a return type; RETURN must not provide a value on void microflows (except `RETURN empty`).
+1. **Return value consistency** — RETURN must provide a value when the microflow declares a return type; RETURN must not provide a value on void microflows (except `return empty`).
 2. **Return type plausibility** — Scalar literals (string, integer, boolean, decimal) cannot be returned from entity-typed microflows.
 3. **Return path coverage** — All code paths must end with RETURN for non-void microflows. The `bodyReturns()` helper recursively checks whether the last statement in a body is a RETURN, or an IF/ELSE where both branches return.
 4. **Variable scope** — Variables declared inside IF/ELSE branches or ON ERROR bodies cannot be referenced after the branch ends. The `checkBranchScoping()` method collects variables declared inside branches and checks if subsequent statements reference them.
@@ -526,25 +526,25 @@ The `flowBuilder` struct maintains a `map[string]string` called `varTypes` that 
 
 **Type Format:**
 - Single entity: `"Module.Entity"` (e.g., `"MfTest.Product"`)
-- List of entities: `"List of Module.Entity"` (e.g., `"List of MfTest.Product"`)
+- List of entities: `"list of Module.Entity"` (e.g., `"list of MfTest.Product"`)
 
 **Sources of Variable Types:**
 
 | Source | Registration | Type Format |
 |--------|-------------|-------------|
-| Parameters (entity/list) | `cmd_microflows_create.go` | `"Module.Entity"` or `"List of Module.Entity"` |
+| Parameters (entity/list) | `cmd_microflows_create.go` | `"Module.Entity"` or `"list of Module.Entity"` |
 | CREATE statement | `addCreateObjectAction` | `"Module.Entity"` (single) |
 | RETRIEVE with LIMIT 1 | `addRetrieveAction` | `"Module.Entity"` (single) |
-| RETRIEVE without LIMIT 1 | `addRetrieveAction` | `"List of Module.Entity"` (list) |
+| RETRIEVE without LIMIT 1 | `addRetrieveAction` | `"list of Module.Entity"` (list) |
 | FOREACH loop variable | `addLoopStatement` | Derived from list type |
 
 **FOREACH Loop Variable Derivation:**
 
 ```go
-// If $ProductList is "List of MfTest.Product", then $Product is "MfTest.Product"
+// if $ProductList is "list of MfTest.Product", then $Product is "MfTest.Product"
 listType := fb.varTypes[s.ListVariable]
-if strings.HasPrefix(listType, "List of ") {
-    elementType := strings.TrimPrefix(listType, "List of ")
+if strings.HasPrefix(listType, "list of ") {
+    elementType := strings.TrimPrefix(listType, "list of ")
     fb.varTypes[s.LoopVariable] = elementType
 }
 ```
@@ -561,7 +561,7 @@ memberChange.AttributeQualifiedName = entityQN + "." + change.Attribute
 
 ### Common Pitfalls
 
-1. **RETRIEVE Type Depends on LIMIT**: RETRIEVE with `LIMIT 1` returns a single entity, otherwise it returns a list. The output variable must be registered accordingly. FOREACH loops require a list type to derive the element type.
+1. **RETRIEVE Type Depends on LIMIT**: RETRIEVE with `limit 1` returns a single entity, otherwise it returns a list. The output variable must be registered accordingly. FOREACH loops require a list type to derive the element type.
 
 2. **Variable Scope Sharing**: The `loopBuilder` shares the same `varTypes` map with its parent, so loop variable registrations are visible to nested statements.
 
@@ -575,16 +575,16 @@ memberChange.AttributeQualifiedName = entityQN + "." + change.Attribute
 
 When parsing malformed MDL like:
 ```mdl
-CREATE PERSISTENT ENTITY Test.Broken (
-  : String(100),    -- missing attribute name
-  ValidAttr: Integer
+create persistent entity Test.Broken (
+  : string(100),    -- missing attribute name
+  ValidAttr: integer
 );
 ```
 
-The ANTLR parser creates an `AttributeDefinitionContext` for the malformed line, but `AttributeName()` returns `nil` because there's no valid identifier. Code like this will panic:
+The ANTLR parser creates an `AttributeDefinitionContext` for the malformed line, but `attributename()` returns `nil` because there's no valid identifier. Code like this will panic:
 
 ```go
-// DANGEROUS - will panic if AttributeName() returns nil
+// DANGEROUS - will panic if attributename() returns nil
 attr.Name = a.AttributeName().GetText()
 ```
 
@@ -597,10 +597,10 @@ Always add nil checks before accessing potentially-nil grammar elements:
 if a.AttributeName() == nil {
     b.addErrorWithExample(
         "Invalid attribute: each attribute must have a name and type",
-        `  CREATE PERSISTENT ENTITY MyModule.Customer (
-    Name: String(100) NOT NULL,
-    Email: String(200),
-    Age: Integer
+        `  create persistent entity MyModule.Customer (
+    Name: string(100) not null,
+    Email: string(200),
+    Age: integer
   );`)
     continue
 }
@@ -622,21 +622,21 @@ The error output will look like:
 Invalid attribute: each attribute must have a name and type
 
 Expected syntax:
-  CREATE PERSISTENT ENTITY MyModule.Customer (
-    Name: String(100) NOT NULL,
-    Email: String(200),
-    Age: Integer
+  create persistent entity MyModule.Customer (
+    Name: string(100) not null,
+    Email: string(200),
+    Age: integer
   );
 ```
 
 ### Grammar Elements That May Return Nil
 
 Common ANTLR context methods that can return `nil` on parse errors:
-- `AttributeName()` - missing attribute identifier
+- `attributename()` - missing attribute identifier
 - `EnumValueName()` - missing enumeration value identifier
 - `QualifiedName()` - missing or malformed qualified name
 - `DataType()` - missing type specification
-- `Expression()` - missing or malformed expression
+- `expression()` - missing or malformed expression
 
 **Rule of thumb**: Any grammar element that could be missing due to a syntax error should be checked for `nil` before use.
 

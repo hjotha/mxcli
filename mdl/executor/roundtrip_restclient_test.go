@@ -17,27 +17,27 @@ func TestRoundtripRestClient_SimpleGet(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.SimpleAPI (
+	createMDL := `create rest client ` + testModule + `.SimpleAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION GetStatus {
-    Method: GET,
+  operation GetStatus {
+    Method: get,
     Path: '/status',
-    Response: NONE
+    Response: none
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"REST CLIENT",
+		"rest client",
 		"SimpleAPI",
 		"BaseUrl: 'https://api.example.com'",
-		"Authentication: NONE",
-		"OPERATION GetStatus",
-		"Method: GET",
+		"Authentication: none",
+		"operation GetStatus",
+		"Method: get",
 		"Path: '/status'",
-		"Response: NONE",
+		"Response: none",
 	})
 }
 
@@ -45,28 +45,28 @@ func TestRoundtripRestClient_WithJsonResponse(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.JsonAPI (
+	createMDL := `create rest client ` + testModule + `.JsonAPI (
   BaseUrl: 'https://jsonplaceholder.typicode.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION GetPosts {
-    Method: GET,
+  operation GetPosts {
+    Method: get,
     Path: '/posts',
     Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Posts
+    Response: json as $Posts
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"REST CLIENT",
+		"rest client",
 		"JsonAPI",
 		"BaseUrl: 'https://jsonplaceholder.typicode.com'",
-		"OPERATION GetPosts",
-		"Method: GET",
+		"operation GetPosts",
+		"Method: get",
 		"Path: '/posts'",
 		"'Accept' = 'application/json'",
-		"Response: JSON",
+		"Response: json",
 	})
 }
 
@@ -74,24 +74,24 @@ func TestRoundtripRestClient_WithPathParams(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.ParamAPI (
+	createMDL := `create rest client ` + testModule + `.ParamAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION GetItem {
-    Method: GET,
+  operation GetItem {
+    Method: get,
     Path: '/items/{itemId}',
     Parameters: ($itemId: Integer),
-    Response: JSON AS $Item
+    Response: json as $Item
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"OPERATION GetItem",
+		"operation GetItem",
 		"Path: '/items/{itemId}'",
 		"$itemId: Integer",
-		"Response: JSON",
+		"Response: json",
 	})
 }
 
@@ -99,25 +99,25 @@ func TestRoundtripRestClient_WithQueryParams(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.SearchAPI (
+	createMDL := `create rest client ` + testModule + `.SearchAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION SearchItems {
-    Method: GET,
+  operation SearchItems {
+    Method: get,
     Path: '/search',
     Query: ($q: String, $page: String),
-    Response: JSON AS $Results
+    Response: json as $Results
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"OPERATION SearchItems",
+		"operation SearchItems",
 		"Path: '/search'",
 		"$q: String",
 		"$page: String",
-		"Response: JSON",
+		"Response: json",
 	})
 }
 
@@ -125,25 +125,25 @@ func TestRoundtripRestClient_PostWithBody(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.CrudAPI (
+	createMDL := `create rest client ` + testModule + `.CrudAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION CreateItem {
-    Method: POST,
+  operation CreateItem {
+    Method: post,
     Path: '/items',
     Headers: ('Content-Type' = 'application/json'),
-    Body: JSON FROM $NewItem,
-    Response: JSON AS $CreatedItem
+    Body: json from $NewItem,
+    Response: json as $CreatedItem
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"OPERATION CreateItem",
-		"Method: POST",
-		"Body: JSON FROM $NewItem",
-		"Response: JSON",
+		"operation CreateItem",
+		"Method: post",
+		"Body: json from $NewItem",
+		"Response: json",
 	})
 }
 
@@ -151,25 +151,25 @@ func TestRoundtripRestClient_BasicAuth(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.AuthAPI (
+	createMDL := `create rest client ` + testModule + `.AuthAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: BASIC (Username: 'admin', Password: 'secret')
+  Authentication: basic (Username: 'admin', Password: 'secret')
 )
 {
-  OPERATION GetData {
-    Method: GET,
+  operation GetData {
+    Method: get,
     Path: '/data',
-    Response: JSON AS $Data
+    Response: json as $Data
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"REST CLIENT",
+		"rest client",
 		"AuthAPI",
-		"Authentication: BASIC",
+		"Authentication: basic",
 		"Username: 'admin'",
 		"Password: 'secret'",
-		"OPERATION GetData",
+		"operation GetData",
 	})
 }
 
@@ -177,23 +177,23 @@ func TestRoundtripRestClient_WithTimeout(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.TimeoutAPI (
+	createMDL := `create rest client ` + testModule + `.TimeoutAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION SlowQuery {
-    Method: GET,
+  operation SlowQuery {
+    Method: get,
     Path: '/slow',
     Timeout: 60,
-    Response: JSON AS $Result
+    Response: json as $Result
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"OPERATION SlowQuery",
+		"operation SlowQuery",
 		"Timeout: 60",
-		"Response: JSON",
+		"Response: json",
 	})
 }
 
@@ -201,57 +201,57 @@ func TestRoundtripRestClient_MultipleOperations(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.PetStoreAPI (
+	createMDL := `create rest client ` + testModule + `.PetStoreAPI (
   BaseUrl: 'https://petstore.swagger.io/v2',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION ListPets {
-    Method: GET,
+  operation ListPets {
+    Method: get,
     Path: '/pet/findByStatus',
     Query: ($status: String),
     Headers: ('Accept' = 'application/json'),
     Timeout: 30,
-    Response: JSON AS $PetList
+    Response: json as $PetList
   }
 
-  OPERATION GetPet {
-    Method: GET,
+  operation GetPet {
+    Method: get,
     Path: '/pet/{petId}',
     Parameters: ($petId: Integer),
-    Response: JSON AS $Pet
+    Response: json as $Pet
   }
 
-  OPERATION AddPet {
-    Method: POST,
+  operation AddPet {
+    Method: post,
     Path: '/pet',
     Headers: ('Content-Type' = 'application/json'),
-    Body: JSON FROM $NewPet,
-    Response: JSON AS $CreatedPet
+    Body: json from $NewPet,
+    Response: json as $CreatedPet
   }
 
-  OPERATION RemovePet {
-    Method: DELETE,
+  operation RemovePet {
+    Method: delete,
     Path: '/pet/{petId}',
     Parameters: ($petId: Integer),
-    Response: NONE
+    Response: none
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"REST CLIENT",
+		"rest client",
 		"PetStoreAPI",
-		"OPERATION ListPets",
+		"operation ListPets",
 		"$status: String",
 		"Timeout: 30",
-		"OPERATION GetPet",
+		"operation GetPet",
 		"$petId: Integer",
-		"OPERATION AddPet",
-		"Method: POST",
-		"Body: JSON FROM $NewPet",
-		"OPERATION RemovePet",
-		"Method: DELETE",
-		"Response: NONE",
+		"operation AddPet",
+		"Method: post",
+		"Body: json from $NewPet",
+		"operation RemovePet",
+		"Method: delete",
+		"Response: none",
 	})
 }
 
@@ -259,24 +259,24 @@ func TestRoundtripRestClient_DeleteNoResponse(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.DeleteAPI (
+	createMDL := `create rest client ` + testModule + `.DeleteAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION DeleteResource {
-    Method: DELETE,
+  operation DeleteResource {
+    Method: delete,
     Path: '/resources/{id}',
     Parameters: ($id: Integer),
-    Response: NONE
+    Response: none
   }
 };`
 
 	env.assertContains(createMDL, []string{
-		"OPERATION DeleteResource",
-		"Method: DELETE",
+		"operation DeleteResource",
+		"Method: delete",
 		"$id: Integer",
-		"Response: NONE",
+		"Response: none",
 	})
 }
 
@@ -285,43 +285,43 @@ func TestRoundtripRestClient_CreateOrModify(t *testing.T) {
 	defer env.teardown()
 
 	// Create first version
-	createMDL := `CREATE REST CLIENT ` + testModule + `.MutableAPI (
+	createMDL := `create rest client ` + testModule + `.MutableAPI (
   BaseUrl: 'https://api.example.com/v1',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION GetData {
-    Method: GET,
+  operation GetData {
+    Method: get,
     Path: '/data',
-    Response: JSON AS $Data
+    Response: json as $Data
   }
 };`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create REST client: %v", err)
+		t.Fatalf("Failed to create rest client: %v", err)
 	}
 
 	// Update with CREATE OR MODIFY
-	updateMDL := `CREATE OR MODIFY REST CLIENT ` + testModule + `.MutableAPI (
+	updateMDL := `create or modify rest client ` + testModule + `.MutableAPI (
   BaseUrl: 'https://api.example.com/v2',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION GetDataV2 {
-    Method: GET,
+  operation GetDataV2 {
+    Method: get,
     Path: '/data/v2',
-    Response: JSON AS $DataV2
+    Response: json as $DataV2
   }
 };`
 
 	if err := env.executeMDL(updateMDL); err != nil {
-		t.Fatalf("Failed to update REST client: %v", err)
+		t.Fatalf("Failed to update rest client: %v", err)
 	}
 
 	// Verify the updated version
-	output, err := env.describeMDL("DESCRIBE REST CLIENT " + testModule + ".MutableAPI;")
+	output, err := env.describeMDL("describe rest client " + testModule + ".MutableAPI;")
 	if err != nil {
-		t.Fatalf("Failed to describe REST client: %v", err)
+		t.Fatalf("Failed to describe rest client: %v", err)
 	}
 
 	if !strings.Contains(output, "v2") {
@@ -337,37 +337,37 @@ func TestRoundtripRestClient_Drop(t *testing.T) {
 	defer env.teardown()
 
 	// Create a REST client
-	createMDL := `CREATE REST CLIENT ` + testModule + `.ToBeDropped (
+	createMDL := `create rest client ` + testModule + `.ToBeDropped (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION Ping {
-    Method: GET,
+  operation Ping {
+    Method: get,
     Path: '/ping',
-    Response: NONE
+    Response: none
   }
 };`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create REST client: %v", err)
+		t.Fatalf("Failed to create rest client: %v", err)
 	}
 
 	// Verify it exists
-	_, err := env.describeMDL("DESCRIBE REST CLIENT " + testModule + ".ToBeDropped;")
+	_, err := env.describeMDL("describe rest client " + testModule + ".ToBeDropped;")
 	if err != nil {
-		t.Fatalf("REST client should exist before DROP: %v", err)
+		t.Fatalf("rest client should exist before drop: %v", err)
 	}
 
 	// Drop it
-	if err := env.executeMDL("DROP REST CLIENT " + testModule + ".ToBeDropped;"); err != nil {
-		t.Fatalf("Failed to drop REST client: %v", err)
+	if err := env.executeMDL("drop rest client " + testModule + ".ToBeDropped;"); err != nil {
+		t.Fatalf("Failed to drop rest client: %v", err)
 	}
 
 	// Verify it's gone
-	_, err = env.describeMDL("DESCRIBE REST CLIENT " + testModule + ".ToBeDropped;")
+	_, err = env.describeMDL("describe rest client " + testModule + ".ToBeDropped;")
 	if err == nil {
-		t.Error("REST client should not exist after DROP")
+		t.Error("rest client should not exist after drop")
 	}
 }
 
@@ -381,21 +381,21 @@ func TestMxCheck_RestClient_SimpleGet(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	createMDL := `CREATE REST CLIENT ` + testModule + `.MxCheckSimpleAPI (
+	createMDL := `create rest client ` + testModule + `.MxCheckSimpleAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION GetStatus {
-    Method: GET,
+  operation GetStatus {
+    Method: get,
     Path: '/status',
     Headers: ('Accept' = '*/*'),
-    Response: NONE
+    Response: none
   }
 };`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create REST client: %v", err)
+		t.Fatalf("Failed to create rest client: %v", err)
 	}
 
 	// Disconnect to flush changes to disk
@@ -415,22 +415,22 @@ func TestMxCheck_RestClient_PostWithBody(t *testing.T) {
 	defer env.teardown()
 
 	// Test with path parameters (GET to avoid body requirements).
-	createMDL := `CREATE REST CLIENT ` + testModule + `.MxCheckParamAPI (
+	createMDL := `create rest client ` + testModule + `.MxCheckParamAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION GetItem {
-    Method: GET,
+  operation GetItem {
+    Method: get,
     Path: '/items/{itemId}',
     Parameters: ($itemId: Integer),
     Headers: ('Accept' = '*/*'),
-    Response: NONE
+    Response: none
   }
 };`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create REST client: %v", err)
+		t.Fatalf("Failed to create rest client: %v", err)
 	}
 
 	env.executor.Execute(&ast.DisconnectStmt{})
@@ -445,7 +445,7 @@ func assertMxCheckPassed(t *testing.T, output string, err error) {
 	t.Helper()
 	if err != nil {
 		// Non-zero exit code — could be a crash or validation errors
-		if strings.Contains(output, "[error]") || strings.Contains(output, "ERROR:") {
+		if strings.Contains(output, "[error]") || strings.Contains(output, "error:") {
 			t.Errorf("mx check failed:\n%s", output)
 		} else {
 			t.Logf("mx check exited with error but no validation errors:\n%s", output)
@@ -466,21 +466,21 @@ func TestMxCheck_RestClient_BasicAuth(t *testing.T) {
 	defer env.teardown()
 
 	// Use RESPONSE NONE to avoid entity mapping requirements (CE0061)
-	createMDL := `CREATE REST CLIENT ` + testModule + `.MxCheckAuthAPI (
+	createMDL := `create rest client ` + testModule + `.MxCheckAuthAPI (
   BaseUrl: 'https://api.example.com',
-  Authentication: BASIC (Username: 'user', Password: 'pass')
+  Authentication: basic (Username: 'user', Password: 'pass')
 )
 {
-  OPERATION GetSecureData {
-    Method: GET,
+  operation GetSecureData {
+    Method: get,
     Path: '/secure/data',
     Headers: ('Accept' = '*/*'),
-    Response: NONE
+    Response: none
   }
 };`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create REST client: %v", err)
+		t.Fatalf("Failed to create rest client: %v", err)
 	}
 
 	env.executor.Execute(&ast.DisconnectStmt{})
@@ -499,39 +499,39 @@ func TestMxCheck_RestClient_MultipleOperations(t *testing.T) {
 
 	// Use RESPONSE NONE for all operations to avoid entity mapping requirements (CE0061).
 	// All operations include Accept header to avoid CE7062.
-	createMDL := `CREATE REST CLIENT ` + testModule + `.MxCheckPetStore (
+	createMDL := `create rest client ` + testModule + `.MxCheckPetStore (
   BaseUrl: 'https://petstore.swagger.io/v2',
-  Authentication: NONE
+  Authentication: none
 )
 {
-  OPERATION ListPets {
-    Method: GET,
+  operation ListPets {
+    Method: get,
     Path: '/pet/findByStatus',
     Query: ($status: String),
     Headers: ('Accept' = 'application/json'),
     Timeout: 30,
-    Response: NONE
+    Response: none
   }
 
-  OPERATION GetPet {
-    Method: GET,
+  operation GetPet {
+    Method: get,
     Path: '/pet/{petId}',
     Parameters: ($petId: Integer),
     Headers: ('Accept' = 'application/json'),
-    Response: NONE
+    Response: none
   }
 
-  OPERATION RemovePet {
-    Method: DELETE,
+  operation RemovePet {
+    Method: delete,
     Path: '/pet/{petId}',
     Parameters: ($petId: Integer),
     Headers: ('Accept' = '*/*'),
-    Response: NONE
+    Response: none
   }
 };`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create REST client: %v", err)
+		t.Fatalf("Failed to create rest client: %v", err)
 	}
 
 	env.executor.Execute(&ast.DisconnectStmt{})

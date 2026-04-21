@@ -20,7 +20,7 @@
 
 The statement parses, the visitor silently produces nothing, and execution completes with zero errors and zero work done.
 
-**Working reference:** `ALTER ENUMERATION` is fully implemented across all three layers (`ast_enumeration.go`, `visitor_enumeration.go:37`, `executor.go:118`).
+**Working reference:** `alter enumeration` is fully implemented across all three layers (`ast_enumeration.go`, `visitor_enumeration.go:37`, `executor.go:118`).
 
 **Fix:** Implement `AlterEntityStmt` AST type, `ExitAlterEntityAction` visitor method, and `execAlterEntity` executor handler following the enumeration pattern.
 
@@ -51,11 +51,11 @@ The error handler builder at line 66 of the same file correctly copies `declared
 ### Bug 3: IMAGE Widget Not Supported in Page Builder
 
 **Severity:** Medium
-**Symptom:** `CREATE OR REPLACE PAGE` fails at execution with `unsupported V3 widget type: IMAGE`, even though `--references` passes. Existing pages with IMAGE widgets can't be round-tripped.
+**Symptom:** `create or replace page` fails at execution with `unsupported V3 widget type: image`, even though `--references` passes. Existing pages with IMAGE widgets can't be round-tripped.
 
-**Root Cause:** The grammar defines IMAGE, the lexer has the token (`MDLLexer.g4:301`), and SDK types exist (`DynamicImage`/`StaticImage` in `sdk/pages/pages_widgets_display.go`), but `cmd_pages_builder_v3.go:buildWidgetV3()` has no `case "IMAGE"` — it falls through to the default error at line 287.
+**Root Cause:** The grammar defines IMAGE, the lexer has the token (`MDLLexer.g4:301`), and SDK types exist (`dynamicimage`/`staticimage` in `sdk/pages/pages_widgets_display.go`), but `cmd_pages_builder_v3.go:buildWidgetV3()` has no `case "image"` — it falls through to the default error at line 287.
 
-**Fix:** Add a `case "IMAGE"` to the switch in `buildWidgetV3()` and implement a `buildImageV3()` function.
+**Fix:** Add a `case "image"` to the switch in `buildWidgetV3()` and implement a `buildImageV3()` function.
 
 **Files to change:**
 - `mdl/executor/cmd_pages_builder_v3.go` — add case in `buildWidgetV3()` switch
@@ -66,13 +66,13 @@ The error handler builder at line 66 of the same file correctly copies `declared
 ### Bug 4: CUSTOMCONTAINER Widget Not Recognized by Parser
 
 **Severity:** Medium
-**Symptom:** `mismatched input 'CUSTOMCONTAINER'` at syntax-check time. Existing pages using CUSTOMCONTAINER can't be reconstructed.
+**Symptom:** `mismatched input 'customcontainer'` at syntax-check time. Existing pages using CUSTOMCONTAINER can't be reconstructed.
 
 **Root Cause:** Unlike IMAGE (which has a token but no builder), CUSTOMCONTAINER has no lexer token in `MDLLexer.g4` and no alternative in the `widgetTypeV3` rule in `MDLParser.g4`. The parser treats it as an unknown identifier and fails.
 
 **Fix:**
-1. Add `CUSTOMCONTAINER` token to `MDLLexer.g4`
-2. Add `CUSTOMCONTAINER` to `widgetTypeV3` in `MDLParser.g4`
+1. Add `customcontainer` token to `MDLLexer.g4`
+2. Add `customcontainer` to `widgetTypeV3` in `MDLParser.g4`
 3. Regenerate parser (`make grammar`)
 4. Add builder function in the page builder
 
@@ -105,14 +105,14 @@ The error handler builder at line 66 of the same file correctly copies `declared
 ### Bug 6: CREATE OR REPLACE PERSISTENT ENTITY Fails on Reserved-Word Attribute Names
 
 **Severity:** Medium
-**Symptom:** Entity with attribute named `Range` (a reserved MDL keyword) can't be reconstructed via MDL. No quoting/escaping mechanism exists for attribute names.
+**Symptom:** Entity with attribute named `range` (a reserved MDL keyword) can't be reconstructed via MDL. No quoting/escaping mechanism exists for attribute names.
 
-**Root Cause:** The `attributeName` rule in `MDLParser.g4:397` only allows `IDENTIFIER` plus a hardcoded whitelist of ~25 keywords. `RANGE` (and many others) aren't in this whitelist. `QUOTED_IDENTIFIER` is not accepted — even though it IS supported for qualified names (`identifierOrKeyword`) and enum value names (`enumValueName`).
+**Root Cause:** The `attributename` rule in `MDLParser.g4:397` only allows `IDENTIFIER` plus a hardcoded whitelist of ~25 keywords. `range` (and many others) aren't in this whitelist. `QUOTED_IDENTIFIER` is not accepted — even though it IS supported for qualified names (`identifierOrKeyword`) and enum value names (`enumValueName`).
 
-**Fix (recommended):** Add `QUOTED_IDENTIFIER` to the `attributeName` rule so users can escape any keyword with double-quotes or backticks (`"Range"`, `` `Range` ``). Apply the same fix to `parameterName`, `indexColumnName`, and `memberAttributeName` for consistency.
+**Fix (recommended):** Add `QUOTED_IDENTIFIER` to the `attributename` rule so users can escape any keyword with double-quotes or backticks (`"range"`, `` `range` ``). Apply the same fix to `parameterName`, `indexColumnName`, and `memberAttributeName` for consistency.
 
 **Files to change:**
-- `mdl/grammar/MDLParser.g4` — add `QUOTED_IDENTIFIER` to `attributeName` and related rules
+- `mdl/grammar/MDLParser.g4` — add `QUOTED_IDENTIFIER` to `attributename` and related rules
 - `mdl/grammar/parser/` — regenerate
 - `mdl/visitor/visitor_helpers.go` — may need to strip quotes from `QUOTED_IDENTIFIER` text
 
@@ -124,13 +124,13 @@ The error handler builder at line 66 of the same file correctly copies `declared
 
 ```sql
 -- These don't exist:
-DROP MICROFLOW IF EXISTS Catalogue.ACT_CalculateVAT;
-CREATE ENTITY IF NOT EXISTS Catalogue.VATInfo (...);
+drop microflow if exists Catalogue.ACT_CalculateVAT;
+create entity if not exists Catalogue.VATInfo (...);
 ```
 
-Without them, scripts aren't safely re-runnable. Any partial execution leaves the project in a state where rerunning fails immediately. Note that `CREATE OR REPLACE` provides partial idempotency for creates, but there is no equivalent for `DROP`.
+Without them, scripts aren't safely re-runnable. Any partial execution leaves the project in a state where rerunning fails immediately. Note that `create or replace` provides partial idempotency for creates, but there is no equivalent for `drop`.
 
-**Implementation scope:** Medium. Grammar already has `IF` and `EXISTS` tokens. Need to add optional clause to all DROP/CREATE rules, add `IfExists`/`IfNotExists` fields to AST types, and add conditional logic in executors.
+**Implementation scope:** Medium. Grammar already has `if` and `exists` tokens. Need to add optional clause to all DROP/CREATE rules, add `IfExists`/`IfNotExists` fields to AST types, and add conditional logic in executors.
 
 ### No Transaction / Rollback
 

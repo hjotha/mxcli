@@ -26,35 +26,35 @@
 -- Module & Domain Model
 -- ============================================================================
 
-CREATE MODULE CWTest;
+create module CWTest;
 
-CREATE ENUMERATION CWTest.Priority (
+create enumeration CWTest.Priority (
   LOW 'Low',
   MEDIUM 'Medium',
   HIGH 'High',
-  CRITICAL 'Critical'
+  critical 'Critical'
 );
 /
 
-@Position(100,300)
-CREATE PERSISTENT ENTITY CWTest.Category (
-  Name: String(200) NOT NULL,
-  Description: String(500)
+@position(100,300)
+create persistent entity CWTest.Category (
+  Name: string(200) not null,
+  description: string(500)
 );
 
-@Position(300,300)
-CREATE PERSISTENT ENTITY CWTest.Task (
-  Title: String(200) NOT NULL,
-  Description: String(1000),
-  Priority: Enumeration(CWTest.Priority),
-  DueDate: DateTime,
-  IsCompleted: Boolean DEFAULT false
+@position(300,300)
+create persistent entity CWTest.task (
+  title: string(200) not null,
+  description: string(1000),
+  Priority: enumeration(CWTest.Priority),
+  DueDate: datetime,
+  IsCompleted: boolean default false
 );
 
-CREATE ASSOCIATION CWTest.Task_Category
-FROM CWTest.Task TO CWTest.Category
-TYPE Reference
-OWNER Both;
+create association CWTest.Task_Category
+from CWTest.task to CWTest.Category
+type reference
+owner both;
 
 -- MARK: GALLERY basic (PASS)
 
@@ -67,22 +67,22 @@ OWNER Both;
  * Basic Gallery showing Task cards with title and description.
  * Validates: GALLERY widget, DATABASE datasource, TEMPLATE with DYNAMICTEXT.
  */
-CREATE PAGE CWTest.P_Gallery_Basic
+create page CWTest.P_Gallery_Basic
 (
-  Title: 'Gallery Basic',
-  Layout: Atlas_Core.Atlas_Default,
-  Folder: 'CustomWidgets'
+  title: 'Gallery Basic',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'CustomWidgets'
 )
 {
-  LAYOUTGRID lgMain {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 12) {
-        GALLERY galTasks (
-          DataSource: DATABASE CWTest.Task SORT BY Title ASC
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        gallery galTasks (
+          datasource: database CWTest.task sort by title asc
         ) {
-          TEMPLATE tpl1 {
-            DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H4)
-            DYNAMICTEXT dtDesc (Content: '{1}', ContentParams: [{1} = Description])
+          template tpl1 {
+            dynamictext dtTitle (content: '{1}', contentparams: [{1} = title], rendermode: H4)
+            dynamictext dtDesc (content: '{1}', contentparams: [{1} = description])
           }
         }
       }
@@ -102,25 +102,25 @@ CREATE PAGE CWTest.P_Gallery_Basic
  * KNOWN BUG: CE0463 on TEXTFILTER due to embedded template mismatch.
  * The MDL syntax is correct; the engine template needs re-extraction.
  */
-CREATE PAGE CWTest.P_Gallery_Filtered
+create page CWTest.P_Gallery_Filtered
 (
-  Title: 'Gallery with Filter',
-  Layout: Atlas_Core.Atlas_Default,
-  Folder: 'CustomWidgets'
+  title: 'Gallery with Filter',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'CustomWidgets'
 )
 {
-  LAYOUTGRID lgMain {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 12) {
-        GALLERY galFiltered (
-          DataSource: DATABASE CWTest.Task SORT BY DueDate DESC
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        gallery galFiltered (
+          datasource: database CWTest.task sort by DueDate desc
         ) {
-          TEMPLATE tpl1 {
-            DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H4)
-            DYNAMICTEXT dtPriority (Content: 'Priority: {1}', ContentParams: [{1} = Priority])
+          template tpl1 {
+            dynamictext dtTitle (content: '{1}', contentparams: [{1} = title], rendermode: H4)
+            dynamictext dtPriority (content: 'Priority: {1}', contentparams: [{1} = Priority])
           }
-          FILTER flt1 {
-            TEXTFILTER tfSearch (Attribute: Title)
+          filter flt1 {
+            textfilter tfSearch (attribute: title)
           }
         }
       }
@@ -141,29 +141,29 @@ CREATE PAGE CWTest.P_Gallery_Filtered
  *
  * @param $Task The task to edit
  */
-CREATE PAGE CWTest.P_ComboBox_Enum
+create page CWTest.P_ComboBox_Enum
 (
-  Params: {
-    $Task: CWTest.Task
+  params: {
+    $task: CWTest.task
   },
-  Title: 'ComboBox Enum',
-  Layout: Atlas_Core.PopupLayout,
-  Folder: 'CustomWidgets'
+  title: 'ComboBox Enum',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'CustomWidgets'
 )
 {
-  DATAVIEW dvTask (DataSource: $Task) {
-    LAYOUTGRID lg1 {
-      ROW row1 {
-        COLUMN col1 (DesktopWidth: 12) {
-          TEXTBOX txtTitle (Label: 'Title', Attribute: Title)
-          COMBOBOX cmbPriority (Label: 'Priority', Attribute: Priority)
-          DATEPICKER dpDue (Label: 'Due Date', Attribute: DueDate)
+  dataview dvTask (datasource: $task) {
+    layoutgrid lg1 {
+      row row1 {
+        column col1 (desktopwidth: 12) {
+          textbox txtTitle (label: 'Title', attribute: title)
+          combobox cmbPriority (label: 'Priority', attribute: Priority)
+          datepicker dpDue (label: 'Due Date', attribute: DueDate)
         }
       }
     }
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES CLOSE_PAGE, ButtonStyle: Success)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES CLOSE_PAGE, ButtonStyle: Default)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes close_page, buttonstyle: success)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page, buttonstyle: default)
     }
   }
 }
@@ -181,33 +181,33 @@ CREATE PAGE CWTest.P_ComboBox_Enum
  *
  * @param $Task The task to edit
  */
-CREATE PAGE CWTest.P_ComboBox_Assoc
+create page CWTest.P_ComboBox_Assoc
 (
-  Params: {
-    $Task: CWTest.Task
+  params: {
+    $task: CWTest.task
   },
-  Title: 'ComboBox Association',
-  Layout: Atlas_Core.PopupLayout,
-  Folder: 'CustomWidgets'
+  title: 'ComboBox Association',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'CustomWidgets'
 )
 {
-  DATAVIEW dvTask (DataSource: $Task) {
-    LAYOUTGRID lg1 {
-      ROW row1 {
-        COLUMN col1 (DesktopWidth: 12) {
-          TEXTBOX txtTitle (Label: 'Title', Attribute: Title)
-          COMBOBOX cmbCategory (
-            Label: 'Category',
-            Attribute: Task_Category,
-            DataSource: DATABASE CWTest.Category,
+  dataview dvTask (datasource: $task) {
+    layoutgrid lg1 {
+      row row1 {
+        column col1 (desktopwidth: 12) {
+          textbox txtTitle (label: 'Title', attribute: title)
+          combobox cmbCategory (
+            label: 'Category',
+            attribute: Task_Category,
+            datasource: database CWTest.Category,
             CaptionAttribute: Name
           )
         }
       }
     }
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES CLOSE_PAGE, ButtonStyle: Success)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES CLOSE_PAGE, ButtonStyle: Default)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes close_page, buttonstyle: success)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page, buttonstyle: default)
     }
   }
 }
@@ -223,17 +223,17 @@ CREATE PAGE CWTest.P_ComboBox_Assoc
  * Page with a basic pluggable Image widget using default settings.
  * The IMAGE keyword creates a com.mendix.widget.web.image.Image widget.
  */
-CREATE PAGE CWTest.P_Image_Basic
+create page CWTest.P_Image_Basic
 (
-  Title: 'Image Basic',
-  Layout: Atlas_Core.Atlas_Default,
-  Folder: 'CustomWidgets'
+  title: 'Image Basic',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'CustomWidgets'
 )
 {
-  LAYOUTGRID lgMain {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 12) {
-        IMAGE imgLogo
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        image imgLogo
       }
     }
   }
@@ -252,22 +252,22 @@ CREATE PAGE CWTest.P_Image_Basic
  * the template's imageUrl property is null and cannot be created from
  * scratch without triggering CE0463.
  */
-CREATE PAGE CWTest.P_Image_Dimensions
+create page CWTest.P_Image_Dimensions
 (
-  Title: 'Image Dimensions',
-  Layout: Atlas_Core.Atlas_Default,
-  Folder: 'CustomWidgets'
+  title: 'Image Dimensions',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'CustomWidgets'
 )
 {
-  LAYOUTGRID lgMain {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 12) {
-        IMAGE imgBanner (
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        image imgBanner (
           AlternativeText: 'Company banner',
           WidthUnit: pixels,
-          Width: 800,
+          width: 800,
           HeightUnit: pixels,
-          Height: 200,
+          height: 200,
           Responsive: false
         )
       }
@@ -288,30 +288,30 @@ CREATE PAGE CWTest.P_Image_Dimensions
  *
  * @param $Task The task whose image to display
  */
-CREATE PAGE CWTest.P_Image_OnClick
+create page CWTest.P_Image_OnClick
 (
-  Params: {
-    $Task: CWTest.Task
+  params: {
+    $task: CWTest.task
   },
-  Title: 'Image with OnClick',
-  Layout: Atlas_Core.Atlas_Default,
-  Folder: 'CustomWidgets'
+  title: 'Image with OnClick',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'CustomWidgets'
 )
 {
-  DATAVIEW dvTask (DataSource: $Task) {
-    LAYOUTGRID lgMain {
-      ROW row1 {
-        COLUMN col1 (DesktopWidth: 6) {
-          IMAGE imgTask (
+  dataview dvTask (datasource: $task) {
+    layoutgrid lgMain {
+      row row1 {
+        column col1 (desktopwidth: 6) {
+          image imgTask (
             AlternativeText: 'Task image',
             DisplayAs: thumbnail,
             WidthUnit: pixels,
-            Width: 300
+            width: 300
           )
         }
-        COLUMN col2 (DesktopWidth: 6) {
-          DYNAMICTEXT dtTitle (Content: '{1}', ContentParams: [{1} = Title], RenderMode: H3)
-          DYNAMICTEXT dtDesc (Content: '{1}', ContentParams: [{1} = Description])
+        column col2 (desktopwidth: 6) {
+          dynamictext dtTitle (content: '{1}', contentparams: [{1} = title], rendermode: H3)
+          dynamictext dtDesc (content: '{1}', contentparams: [{1} = description])
         }
       }
     }

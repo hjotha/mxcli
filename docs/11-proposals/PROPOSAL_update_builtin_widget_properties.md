@@ -6,18 +6,18 @@
 
 ## Problem Statement
 
-`UPDATE WIDGETS` currently only works for **pluggable widgets** (ComboBox, DataGrid2, etc.) — it cannot modify properties on **built-in widgets** like `Forms$LayoutGrid`, `Forms$DataView`, `Forms$TextBox`, etc.
+`update widgets` currently only works for **pluggable widgets** (ComboBox, DataGrid2, etc.) — it cannot modify properties on **built-in widgets** like `Forms$layoutgrid`, `Forms$dataview`, `Forms$textbox`, etc.
 
-A real user scenario: 51 pages in a module needed `Width` changed from `"FixedWidth"` to `"FullWidth"` on `Forms$LayoutGrid`. The only workaround was `dump-bson`.
+A real user scenario: 51 pages in a module needed `width` changed from `"FixedWidth"` to `"FullWidth"` on `Forms$layoutgrid`. The only workaround was `dump-bson`.
 
 ### Root Cause: Lossy Round-Trip
 
-Built-in widget properties are stored as direct BSON fields (e.g., `"Width": "FullWidth"`), but the Go structs don't capture most of them. `LayoutGrid` has no `Width` field — it's hardcoded to `"FullWidth"` during serialization:
+Built-in widget properties are stored as direct BSON fields (e.g., `"width": "FullWidth"`), but the Go structs don't capture most of them. `layoutgrid` has no `width` field — it's hardcoded to `"FullWidth"` during serialization:
 
 ```
-Read from MPR (BSON) → Parse to Go struct → Modify struct → Serialize back to BSON
+read from MPR (BSON) → Parse to Go struct → modify struct → Serialize back to BSON
                           ↑                                         ↑
-                    Drops Width field                    Hardcodes Width="FullWidth"
+                    Drops width field                    Hardcodes width="FullWidth"
 ```
 
 ## Design Principles
@@ -32,16 +32,16 @@ Read from MPR (BSON) → Parse to Go struct → Modify struct → Serialize back
 
 ### How the reflection data solves this
 
-The reflection data (`reference/mendixmodellib/reflection-data/{version}-structures.json`) already contains exact property metadata for every built-in widget type. For example, `Pages$LayoutGrid`:
+The reflection data (`reference/mendixmodellib/reflection-data/{version}-structures.json`) already contains exact property metadata for every built-in widget type. For example, `pages$layoutgrid`:
 
 ```json
 {
   "properties": {
     "width": {
       "name": "width",
-      "storageName": "Width",
+      "storageName": "width",
       "typeInfo": {
-        "type": "ENUMERATION",
+        "type": "enumeration",
         "values": ["FixedWidth", "FullWidth"]
       }
     }
@@ -56,37 +56,37 @@ This gives us everything a hand-curated registry would — BSON field name, allo
 
 ### Which properties are settable?
 
-Not all BSON properties make sense for `UPDATE WIDGETS SET`. Only **scalar** properties can be assigned a simple value:
+Not all BSON properties make sense for `update widgets set`. Only **scalar** properties can be assigned a simple value:
 
 | `typeInfo.type` | Settable? | Example |
 |----------------|-----------|---------|
-| `ENUMERATION` | Yes | `Width` = `"FullWidth"`, `Editability` = `"Never"` |
+| `enumeration` | Yes | `width` = `"FullWidth"`, `Editability` = `"Never"` |
 | `PRIMITIVE` (STRING) | Yes | `Name` = `"grid1"` |
-| `PRIMITIVE` (INTEGER) | Yes | `TabIndex` = `5` |
+| `PRIMITIVE` (INTEGER) | Yes | `tabindex` = `5` |
 | `PRIMITIVE` (BOOLEAN) | Yes | `ShowFooter` = `true` |
-| `ELEMENT` (PART) | No | `Appearance`, `DataSource` — complex nested objects |
+| `ELEMENT` (PART) | No | `Appearance`, `datasource` — complex nested objects |
 | `ELEMENT` (BY_*_REFERENCE) | No | References to other elements |
 
-The schema naturally provides this filter — only properties with `typeInfo.type` of `ENUMERATION` or `PRIMITIVE` are eligible for the `SET` clause.
+The schema naturally provides this filter — only properties with `typeInfo.type` of `enumeration` or `PRIMITIVE` are eligible for the `set` clause.
 
 ### Architecture
 
 ```
-Reflection Data ({version}-structures.json)
+Reflection data ({version}-structures.json)
          │
          ▼
    SchemaRegistry (loaded at project open, keyed by storage name)
          │
     ┌────┴─────┐
     ▼          ▼
-DESCRIBE    UPDATE WIDGETS
-  PAGE        (write)
+describe    update widgets
+  page        (write)
   (read)
     │          │
     ▼          ▼
-  Display    Validate value against typeInfo.values
-  non-default   Set BSON field directly in raw map
-  scalar props   Write raw BSON back to MPR
+  display    Validate value against typeInfo.values
+  non-default   set BSON field directly in raw map
+  scalar props   write raw BSON back to MPR
 ```
 
 Both read and write use the **same schema lookup**, so they are always in sync.
@@ -103,22 +103,22 @@ Move the schema types out of `internal/codegen/schema/` (build-time only) into a
 package schema
 
 // Registry holds type schemas for a specific Mendix version.
-// This is a minimal Phase 1 slice of the BSON Schema Registry.
+// This is a minimal Phase 1 slice of the BSON schema Registry.
 type Registry struct {
     version      string
-    byQualified  map[string]*TypeDefinition  // "Pages$LayoutGrid" → def
-    byStorage    map[string]*TypeDefinition  // "Forms$LayoutGrid" → def
+    byQualified  map[string]*TypeDefinition  // "pages$layoutgrid" → def
+    byStorage    map[string]*TypeDefinition  // "Forms$layoutgrid" → def
 }
 
 // LoadRegistry loads reflection data for the given Mendix version.
 // Falls back to nearest available version if exact match not found.
 func LoadRegistry(version string) (*Registry, error)
 
-// LookupByStorage finds a type by its BSON $Type name.
+// LookupByStorage finds a type by its BSON $type name.
 func (r *Registry) LookupByStorage(storageName string) *TypeDefinition
 
-// ScalarProperties returns only ENUMERATION and PRIMITIVE properties
-// for a type — the ones that can be displayed and set via UPDATE WIDGETS.
+// ScalarProperties returns only enumeration and PRIMITIVE properties
+// for a type — the ones that can be displayed and set via update WIDGETS.
 func (r *Registry) ScalarProperties(storageName string) []*PropertyDef
 ```
 
@@ -174,14 +174,14 @@ func (e *Executor) extractScalarProperties(w map[string]interface{}) map[string]
         return nil
     }
 
-    widgetType, _ := w["$Type"].(string)
-    props := registry.ScalarProperties(widgetType)
+    widgettype, _ := w["$type"].(string)
+    props := registry.ScalarProperties(widgettype)
     if len(props) == 0 {
         return nil
     }
 
     result := make(map[string]string)
-    typeDef := registry.LookupByStorage(widgetType)
+    typeDef := registry.LookupByStorage(widgettype)
 
     for _, prop := range props {
         val, ok := w[prop.StorageName]
@@ -209,7 +209,7 @@ This is called generically for **every** widget type in `parseRawWidget`, not ju
 In the output for each widget type, include scalar properties:
 
 ```go
-// For LayoutGrid, DataView, Container, etc. — all widget types
+// for layoutgrid, dataview, container, etc. — all widget types
 if len(w.BuiltinProps) > 0 {
     for key, val := range w.BuiltinProps {
         props = append(props, fmt.Sprintf("%s: %s", key, val))
@@ -217,10 +217,10 @@ if len(w.BuiltinProps) > 0 {
 }
 ```
 
-After this, `DESCRIBE PAGE` automatically shows:
+After this, `describe page` automatically shows:
 ```sql
-LAYOUTGRID layoutgrid1 (Width: FixedWidth) {
-  ROW row1 { ... }
+layoutgrid layoutgrid1 (width: FixedWidth) {
+  row row1 { ... }
 }
 ```
 
@@ -243,20 +243,20 @@ The setter validates against the schema:
 
 ```go
 func setRawWidgetProperty(registry *schema.Registry, widget map[string]interface{}, propertyName string, value interface{}) error {
-    widgetType, _ := widget["$Type"].(string)
+    widgettype, _ := widget["$type"].(string)
 
     // Pluggable widgets: existing Object.Properties[] path (no schema needed)
-    if widgetType == "CustomWidgets$CustomWidget" {
+    if widgettype == "CustomWidgets$customwidget" {
         return setRawPluggableWidgetProperty(widget, propertyName, value)
     }
 
     // Built-in widgets: validate against schema
-    typeDef := registry.LookupByStorage(widgetType)
+    typeDef := registry.LookupByStorage(widgettype)
     if typeDef == nil {
-        return fmt.Errorf("unknown widget type: %s", widgetType)
+        return fmt.Errorf("unknown widget type: %s", widgettype)
     }
 
-    // Find property by storage name (case-insensitive)
+    // find property by storage name (case-insensitive)
     var prop *schema.PropertyDef
     for _, p := range typeDef.Properties {
         if strings.EqualFold(p.StorageName, propertyName) {
@@ -266,18 +266,18 @@ func setRawWidgetProperty(registry *schema.Registry, widget map[string]interface
     }
     if prop == nil {
         // Suggest available scalar properties
-        scalars := registry.ScalarProperties(widgetType)
+        scalars := registry.ScalarProperties(widgettype)
         var names []string
         for _, s := range scalars {
             names = append(names, s.StorageName)
         }
         return fmt.Errorf("unknown property '%s' on %s (settable: %s)",
-            propertyName, widgetType, strings.Join(names, ", "))
+            propertyName, widgettype, strings.Join(names, ", "))
     }
 
     // Only allow scalar types
     if prop.TypeInfo.Type != schema.TypeInfoEnumeration && prop.TypeInfo.Type != schema.TypeInfoPrimitive {
-        return fmt.Errorf("property '%s' is a complex type (%s) and cannot be set via UPDATE WIDGETS",
+        return fmt.Errorf("property '%s' is a complex type (%s) and cannot be set via update widgets",
             propertyName, prop.TypeInfo.Type)
     }
 
@@ -314,7 +314,7 @@ func setRawWidgetProperty(registry *schema.Registry, widget map[string]interface
 
 ```go
 func (e *Executor) updateWidgetsInPage(...) (int, error) {
-    // Read raw BSON (preserves ALL fields)
+    // read raw BSON (preserves all fields)
     rawBytes, err := e.reader.GetRawUnitBytes(model.ID(containerID))
     var rawDoc map[string]interface{}
     bson.Unmarshal(rawBytes, &rawDoc)
@@ -338,7 +338,7 @@ func (e *Executor) updateWidgetsInPage(...) (int, error) {
         return nil
     })
 
-    // Write back
+    // write back
     if !dryRun && updated > 0 {
         data, _ := bson.Marshal(rawDoc)
         e.writer.UpdateRawUnit(model.ID(containerID), data)
@@ -359,32 +359,32 @@ func (w *Writer) UpdateRawUnit(id model.ID, data []byte) error {
 
 ```sql
 -- 1. See current values — Width: FixedWidth appears because it's non-default
-DESCRIBE PAGE Main.AddressType_Overview;
+describe page Main.AddressType_Overview;
 -- LAYOUTGRID layoutgrid1 (Width: FixedWidth) { ... }
 
 -- 2. Preview bulk change
-UPDATE WIDGETS SET 'Width' = 'FullWidth'
-WHERE WidgetType LIKE '%LayoutGrid%' IN Main DRY RUN;
+update widgets set 'Width' = 'FullWidth'
+where widgettype like '%LayoutGrid%' in Main dry run;
 -- Found 51 widget(s)... Would set 'Width' = FullWidth on layoutgrid1 in ...
 
 -- 3. Apply
-UPDATE WIDGETS SET 'Width' = 'FullWidth'
-WHERE WidgetType LIKE '%LayoutGrid%' IN Main;
+update widgets set 'Width' = 'FullWidth'
+where widgettype like '%LayoutGrid%' in Main;
 -- Updated 51 widget(s)
 
 -- 4. Verify — Width disappears (it's now the default)
-DESCRIBE PAGE Main.AddressType_Overview;
+describe page Main.AddressType_Overview;
 -- LAYOUTGRID layoutgrid1 { ... }
 ```
 
 Validation is automatic:
 ```sql
-UPDATE WIDGETS SET 'Width' = 'Narrow'
-WHERE WidgetType LIKE '%LayoutGrid%' IN Main;
+update widgets set 'Width' = 'Narrow'
+where widgettype like '%LayoutGrid%' in Main;
 -- Error: invalid value 'Narrow' for Width (allowed: FixedWidth, FullWidth)
 
-UPDATE WIDGETS SET 'Appearance' = 'something'
-WHERE WidgetType LIKE '%LayoutGrid%' IN Main;
+update widgets set 'Appearance' = 'something'
+where widgettype like '%LayoutGrid%' in Main;
 -- Error: property 'Appearance' is a complex type (ELEMENT) and cannot be set via UPDATE WIDGETS
 ```
 

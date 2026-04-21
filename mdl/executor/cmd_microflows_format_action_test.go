@@ -20,7 +20,7 @@ func TestFormatAction_CreateObject_Simple(t *testing.T) {
 		OutputVariable:      "NewCustomer",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "$NewCustomer = CREATE MyModule.Customer;" {
+	if got != "$NewCustomer = create MyModule.Customer;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -36,7 +36,7 @@ func TestFormatAction_CreateObject_WithMembers(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$NewCustomer = CREATE MyModule.Customer (Name = 'John', Age = 25);"
+	want := "$NewCustomer = create MyModule.Customer (Name = 'John', Age = 25);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -52,7 +52,7 @@ func TestFormatAction_CreateObject_WithAssociationMember(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$NewOrder = CREATE MyModule.Order (Order_Customer = $Customer);"
+	want := "$NewOrder = create MyModule.Order (Order_Customer = $Customer);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -66,7 +66,7 @@ func TestFormatAction_CreateObject_FallbackEntityID(t *testing.T) {
 		OutputVariable: "NewProduct",
 	}
 	got := e.formatAction(action, entityNames, nil)
-	if got != "$NewProduct = CREATE MyModule.Product;" {
+	if got != "$NewProduct = create MyModule.Product;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -80,7 +80,7 @@ func TestFormatAction_ChangeObject(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "CHANGE $Customer (Name = 'Jane');" {
+	if got != "change $Customer (Name = 'Jane');" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -89,7 +89,7 @@ func TestFormatAction_ChangeObject_NoChanges(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ChangeObjectAction{ChangeVariable: "Obj"}
 	got := e.formatAction(action, nil, nil)
-	if got != "CHANGE $Obj;" {
+	if got != "change $Obj;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -98,7 +98,7 @@ func TestFormatAction_DeleteObject(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.DeleteObjectAction{DeleteVariable: "Customer"}
 	got := e.formatAction(action, nil, nil)
-	if got != "DELETE $Customer;" {
+	if got != "delete $Customer;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -107,7 +107,7 @@ func TestFormatAction_CommitObjects_WithEvents(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.CommitObjectsAction{CommitVariable: "Order", WithEvents: true}
 	got := e.formatAction(action, nil, nil)
-	if got != "COMMIT $Order WITH EVENTS;" {
+	if got != "commit $Order with events;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -116,7 +116,7 @@ func TestFormatAction_CommitObjects_WithoutEvents(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.CommitObjectsAction{CommitVariable: "Order"}
 	got := e.formatAction(action, nil, nil)
-	if got != "COMMIT $Order;" {
+	if got != "commit $Order;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -125,7 +125,7 @@ func TestFormatAction_CommitObjects_Refresh(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.CommitObjectsAction{CommitVariable: "Order", RefreshInClient: true}
 	got := e.formatAction(action, nil, nil)
-	if got != "COMMIT $Order REFRESH;" {
+	if got != "commit $Order refresh;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -134,7 +134,7 @@ func TestFormatAction_CommitObjects_WithEventsAndRefresh(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.CommitObjectsAction{CommitVariable: "Order", WithEvents: true, RefreshInClient: true}
 	got := e.formatAction(action, nil, nil)
-	if got != "COMMIT $Order WITH EVENTS REFRESH;" {
+	if got != "commit $Order with events refresh;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -143,7 +143,7 @@ func TestFormatAction_RollbackObject(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.RollbackObjectAction{RollbackVariable: "Order"}
 	got := e.formatAction(action, nil, nil)
-	if got != "ROLLBACK $Order;" {
+	if got != "rollback $Order;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -152,7 +152,7 @@ func TestFormatAction_RollbackObject_Refresh(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.RollbackObjectAction{RollbackVariable: "Order", RefreshInClient: true}
 	got := e.formatAction(action, nil, nil)
-	if got != "ROLLBACK $Order REFRESH;" {
+	if got != "rollback $Order refresh;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -169,7 +169,7 @@ func TestFormatAction_CreateVariable(t *testing.T) {
 		InitialValue: "0",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "DECLARE $Counter Integer = 0;" {
+	if got != "declare $Counter Integer = 0;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -181,7 +181,7 @@ func TestFormatAction_CreateVariable_NoInitial(t *testing.T) {
 		DataType:     &microflows.StringType{},
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "DECLARE $Name String = empty;" {
+	if got != "declare $Name String = empty;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -193,7 +193,7 @@ func TestFormatAction_ChangeVariable_Simple(t *testing.T) {
 		Value:        "$Counter + 1",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "SET $Counter = $Counter + 1;" {
+	if got != "set $Counter = $Counter + 1;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -205,7 +205,7 @@ func TestFormatAction_ChangeVariable_WithDollarPrefix(t *testing.T) {
 		Value:        "42",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "SET $Counter = 42;" {
+	if got != "set $Counter = 42;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -217,7 +217,7 @@ func TestFormatAction_ChangeVariable_XPath(t *testing.T) {
 		Value:        "9.99",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "CHANGE $Product (Price = 9.99);" {
+	if got != "change $Product (Price = 9.99);" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -233,7 +233,7 @@ func TestFormatAction_CreateList(t *testing.T) {
 		OutputVariable:      "OrderList",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "$OrderList = CREATE LIST of MyModule.Order;" {
+	if got != "$OrderList = create list of MyModule.Order;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -246,7 +246,7 @@ func TestFormatAction_ChangeList_Add(t *testing.T) {
 		Value:          "$NewOrder",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "ADD $NewOrder TO $OrderList;" {
+	if got != "add $NewOrder to $OrderList;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -259,7 +259,7 @@ func TestFormatAction_ChangeList_Remove(t *testing.T) {
 		Value:          "$OldOrder",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "REMOVE $OldOrder FROM $OrderList;" {
+	if got != "remove $OldOrder from $OrderList;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -271,7 +271,7 @@ func TestFormatAction_ChangeList_Clear(t *testing.T) {
 		Type:           microflows.ChangeListTypeClear,
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "CLEAR $OrderList;" {
+	if got != "clear $OrderList;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -284,7 +284,7 @@ func TestFormatAction_ChangeList_Set(t *testing.T) {
 		Value:          "$OtherList",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "SET $OrderList = $OtherList;" {
+	if got != "set $OrderList = $OtherList;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -297,7 +297,7 @@ func TestFormatAction_AggregateList_Count(t *testing.T) {
 		Function:       microflows.AggregateFunctionCount,
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "$Total = COUNT($Orders);" {
+	if got != "$Total = count($Orders);" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -311,7 +311,7 @@ func TestFormatAction_AggregateList_Sum(t *testing.T) {
 		AttributeQualifiedName: "MyModule.Order.Amount",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "$TotalAmount = SUM($Orders.Amount);" {
+	if got != "$TotalAmount = sum($Orders.Amount);" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -332,7 +332,7 @@ func TestFormatAction_MicroflowCall_WithResult(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$Result = CALL MICROFLOW MyModule.ProcessOrder(Order = $Order);"
+	want := "$Result = call microflow MyModule.ProcessOrder(Order = $Order);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -346,7 +346,7 @@ func TestFormatAction_MicroflowCall_NoResult(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "CALL MICROFLOW MyModule.DoSomething();" {
+	if got != "call microflow MyModule.DoSomething();" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -366,7 +366,7 @@ func TestFormatAction_JavaActionCall(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$Success = CALL JAVA ACTION MyModule.SendEmail(To = $Customer/Email);"
+	want := "$Success = call java action MyModule.SendEmail(To = $Customer/Email);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -380,7 +380,7 @@ func TestFormatAction_CallExternal(t *testing.T) {
 		ResultVariableName:   "Orders",
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$Orders = CALL EXTERNAL ACTION MyModule.OrderService.GetOrders();"
+	want := "$Orders = call external action MyModule.OrderService.GetOrders();"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -396,7 +396,7 @@ func TestFormatAction_ShowPage(t *testing.T) {
 		PageName: "MyModule.CustomerEdit",
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "SHOW PAGE MyModule.CustomerEdit;" {
+	if got != "show page MyModule.CustomerEdit;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -410,7 +410,7 @@ func TestFormatAction_ShowPage_WithParams(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "SHOW PAGE MyModule.OrderDetail($Order = $Order);"
+	want := "show page MyModule.OrderDetail($Order = $Order);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -420,7 +420,7 @@ func TestFormatAction_ClosePage(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ClosePageAction{NumberOfPages: 1}
 	got := e.formatAction(action, nil, nil)
-	if got != "CLOSE PAGE;" {
+	if got != "close page;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -429,7 +429,7 @@ func TestFormatAction_ClosePage_Multiple(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ClosePageAction{NumberOfPages: 3}
 	got := e.formatAction(action, nil, nil)
-	if got != "CLOSE PAGE 3;" {
+	if got != "close page 3;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -443,7 +443,7 @@ func TestFormatAction_ShowMessage(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "SHOW MESSAGE 'Order saved' TYPE Warning;" {
+	if got != "show message 'Order saved' type Warning;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -457,7 +457,7 @@ func TestFormatAction_ShowMessage_EscapesQuotes(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "SHOW MESSAGE 'It''s done' TYPE Information;" {
+	if got != "show message 'It''s done' type Information;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -472,7 +472,7 @@ func TestFormatAction_ValidationFeedback(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "VALIDATION FEEDBACK $Customer/Email MESSAGE 'Email is required';"
+	want := "validation feedback $Customer/Email message 'Email is required';"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -488,7 +488,7 @@ func TestFormatAction_LogMessage(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "LOG WARNING NODE 'OrderService' 'Processing order';"
+	want := "log warning node 'OrderService' 'Processing order';"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -505,7 +505,7 @@ func TestFormatAction_LogMessage_WithTemplateParams(t *testing.T) {
 		TemplateParameters: []string{"$OrderNumber", "$CustomerName"},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "LOG INFO NODE 'App' 'Order {1} for {2}' WITH ({1} = $OrderNumber, {2} = $CustomerName);"
+	want := "log info node 'App' 'Order {1} for {2}' with ({1} = $OrderNumber, {2} = $CustomerName);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -541,7 +541,7 @@ func TestFormatAction_Retrieve_Database(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	if got != "RETRIEVE $Customers FROM MyModule.Customer;" {
+	if got != "retrieve $Customers from MyModule.Customer;" {
 		t.Errorf("got %q", got)
 	}
 }
@@ -556,7 +556,7 @@ func TestFormatAction_Retrieve_WithXPath(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "RETRIEVE $ActiveCustomers FROM MyModule.Customer\n    WHERE IsActive = true();"
+	want := "retrieve $ActiveCustomers from MyModule.Customer\n    where IsActive = true();"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -572,7 +572,7 @@ func TestFormatAction_Retrieve_WithLimit(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "RETRIEVE $First FROM MyModule.Customer\n    LIMIT 1;"
+	want := "retrieve $First from MyModule.Customer\n    limit 1;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -591,7 +591,7 @@ func TestFormatAction_Retrieve_WithSorting(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "RETRIEVE $Sorted FROM MyModule.Customer\n    SORT BY MyModule.Customer.Name ASC, MyModule.Customer.Age DESC;"
+	want := "retrieve $Sorted from MyModule.Customer\n    sort by MyModule.Customer.Name asc, MyModule.Customer.Age desc;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -607,7 +607,7 @@ func TestFormatAction_Retrieve_Association(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "RETRIEVE $Address FROM $Customer/MyModule.Customer_Address;"
+	want := "retrieve $Address from $Customer/MyModule.Customer_Address;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

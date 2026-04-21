@@ -36,10 +36,10 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "generalization": null,
       "documentation": "Represents a customer in the system",
       "attributes": [
-        { "name": "Name", "type": "String" },
-        { "name": "Email", "type": "String" },
-        { "name": "DateOfBirth", "type": "DateTime" },
-        { "name": "IsActive", "type": "Boolean" }
+        { "name": "Name", "type": "string" },
+        { "name": "Email", "type": "string" },
+        { "name": "DateOfBirth", "type": "datetime" },
+        { "name": "IsActive", "type": "boolean" }
       ]
     },
     {
@@ -48,10 +48,10 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "generalization": null,
       "documentation": "A customer order",
       "attributes": [
-        { "name": "OrderNumber", "type": "AutoNumber" },
-        { "name": "OrderDate", "type": "DateTime" },
-        { "name": "TotalAmount", "type": "Decimal" },
-        { "name": "Status", "type": "Enum" }
+        { "name": "OrderNumber", "type": "autonumber" },
+        { "name": "OrderDate", "type": "datetime" },
+        { "name": "TotalAmount", "type": "decimal" },
+        { "name": "status", "type": "enum" }
       ]
     },
     {
@@ -60,8 +60,8 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "generalization": null,
       "documentation": "",
       "attributes": [
-        { "name": "Quantity", "type": "Integer" },
-        { "name": "UnitPrice", "type": "Decimal" }
+        { "name": "Quantity", "type": "integer" },
+        { "name": "UnitPrice", "type": "decimal" }
       ]
     },
     {
@@ -70,9 +70,9 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "generalization": null,
       "documentation": "Product catalog item",
       "attributes": [
-        { "name": "ProductName", "type": "String" },
-        { "name": "SKU", "type": "String" },
-        { "name": "Price", "type": "Decimal" }
+        { "name": "ProductName", "type": "string" },
+        { "name": "SKU", "type": "string" },
+        { "name": "Price", "type": "decimal" }
       ]
     },
     {
@@ -81,18 +81,18 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "generalization": "Order",
       "documentation": "An order with special handling",
       "attributes": [
-        { "name": "Priority", "type": "Enum" },
-        { "name": "SpecialInstructions", "type": "String" }
+        { "name": "Priority", "type": "enum" },
+        { "name": "SpecialInstructions", "type": "string" }
       ]
     },
     {
       "name": "CustomerSearchParams",
       "persistent": false,
       "generalization": null,
-      "documentation": "Non-persistent helper entity for search",
+      "documentation": "non-persistent helper entity for search",
       "attributes": [
-        { "name": "SearchName", "type": "String" },
-        { "name": "SearchEmail", "type": "String" }
+        { "name": "SearchName", "type": "string" },
+        { "name": "SearchEmail", "type": "string" }
       ]
     }
   ],
@@ -101,7 +101,7 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "name": "Customer_Order",
       "parentEntity": "Customer",
       "childEntity": "Order",
-      "type": "Reference",
+      "type": "reference",
       "parentDeleteBehavior": "delete",
       "childDeleteBehavior": "error"
     },
@@ -109,7 +109,7 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "name": "Order_OrderLine",
       "parentEntity": "Order",
       "childEntity": "OrderLine",
-      "type": "Reference",
+      "type": "reference",
       "parentDeleteBehavior": "delete",
       "childDeleteBehavior": "error"
     },
@@ -117,7 +117,7 @@ The extension should accept JSON like this (either from `mxcli` stdout or a file
       "name": "OrderLine_Product",
       "parentEntity": "OrderLine",
       "childEntity": "Product",
-      "type": "Reference",
+      "type": "reference",
       "parentDeleteBehavior": "error",
       "childDeleteBehavior": "error"
     }
@@ -179,9 +179,9 @@ sprotty-domain-model/
 │   │   ├── di.config.ts      # Inversify DI container config
 │   │   ├── model.ts          # Sprotty model element types
 │   │   ├── views.tsx         # SVG views for entities, edges
-│   │   └── model-source.ts   # Transforms JSON → Sprotty model
+│   │   └── model-source.ts   # Transforms json → Sprotty model
 │   └── common/
-│       └── domain-model.ts   # Shared types (JSON schema interfaces)
+│       └── domain-model.ts   # Shared types (json schema interfaces)
 ├── sample/
 │   └── sample-domain-model.json
 └── media/

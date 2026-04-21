@@ -13,16 +13,16 @@
 -- Setup: Create a module and page so this example is self-contained
 -- ============================================================================
 
-CREATE MODULE NavTest;
+create module NavTest;
 
-CREATE PAGE NavTest.NavTest_Home
+create page NavTest.NavTest_Home
 (
-  Title: 'Navigation Test Home',
-  Layout: Atlas_Core.Atlas_Default
+  title: 'Navigation Test Home',
+  layout: Atlas_Core.Atlas_Default
 )
 {
-  CONTAINER ctnMain {
-    DYNAMICTEXT txtWelcome (Content: 'Welcome to the Navigation Test page.')
+  container ctnMain {
+    dynamictext txtWelcome (content: 'Welcome to the Navigation Test page.')
   }
 }
 
@@ -32,31 +32,31 @@ CREATE PAGE NavTest.NavTest_Home
 -- SHOW NAVIGATION — summary of all profiles
 -- ============================================================================
 
-SHOW NAVIGATION;
+show navigation;
 
 -- ============================================================================
 -- DESCRIBE NAVIGATION — full detail for a specific profile
 -- ============================================================================
 
-DESCRIBE NAVIGATION Responsive;
+describe navigation Responsive;
 
 -- ============================================================================
 -- SHOW NAVIGATION MENU — menu tree for a specific profile
 -- ============================================================================
 
-SHOW NAVIGATION MENU Responsive;
+show navigation menu Responsive;
 
 -- ============================================================================
 -- SHOW NAVIGATION MENU (all) — menu tree for all profiles
 -- ============================================================================
 
-SHOW NAVIGATION MENU;
+show navigation menu;
 
 -- ============================================================================
 -- SHOW NAVIGATION HOMES — home page assignments across all profiles and roles
 -- ============================================================================
 
-SHOW NAVIGATION HOMES;
+show navigation homes;
 
 -- MARK: CREATE OR REPLACE NAVIGATION
 
@@ -67,34 +67,34 @@ SHOW NAVIGATION HOMES;
 -- ============================================================================
 
 -- Set the home page and login page for Responsive profile
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE NavTest.NavTest_Home
-  LOGIN PAGE Administration.Login;
+create or replace navigation Responsive
+  home page NavTest.NavTest_Home
+  login page Administration.login;
 
 -- Set home page with a role-based override
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE NavTest.NavTest_Home
-  HOME PAGE NavTest.NavTest_Home FOR Administration.Administrator
-  LOGIN PAGE Administration.Login;
+create or replace navigation Responsive
+  home page NavTest.NavTest_Home
+  home page NavTest.NavTest_Home for Administration.Administrator
+  login page Administration.login;
 
 -- Replace the entire menu tree
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE NavTest.NavTest_Home
-  LOGIN PAGE Administration.Login
-  MENU (
-    MENU ITEM 'Home' PAGE NavTest.NavTest_Home;
-    MENU 'Admin' (
-      MENU ITEM 'Users' PAGE Administration.Account_Overview;
+create or replace navigation Responsive
+  home page NavTest.NavTest_Home
+  login page Administration.login
+  menu (
+    menu item 'Home' page NavTest.NavTest_Home;
+    menu 'Admin' (
+      menu item 'Users' page Administration.Account_Overview;
     );
   );
 
 -- Clear the menu (empty MENU block removes all items)
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE NavTest.NavTest_Home
-  MENU ();
+create or replace navigation Responsive
+  home page NavTest.NavTest_Home
+  menu ();
 
 -- Verify the changes
-DESCRIBE NAVIGATION Responsive;
+describe navigation Responsive;
 
 -- MARK: Catalog Queries
 
@@ -104,27 +104,27 @@ DESCRIBE NAVIGATION Responsive;
 -- with kinds: home_page, menu_item, login_page
 -- ============================================================================
 
-REFRESH CATALOG FULL;
+refresh catalog full;
 
 -- Find all pages that are navigation entry points
-SELECT SourceName, TargetName, RefKind
-FROM CATALOG.REFS
-WHERE RefKind IN ('home_page', 'menu_item', 'login_page');
+select SourceName, TargetName, RefKind
+from catalog.REFS
+where RefKind in ('home_page', 'menu_item', 'login_page');
 
 -- ============================================================================
 -- Impact & context analysis on the page we created
 -- ============================================================================
 
-SHOW IMPACT OF NavTest.NavTest_Home;
+show impact of NavTest.NavTest_Home;
 
-SHOW CONTEXT OF NavTest.NavTest_Home;
+show context of NavTest.NavTest_Home;
 
 /**
  * Responsive navigation
  */
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyFirstModule.Home_Web
-  MENU (
-    MENU ITEM 'Home' PAGE MyFirstModule.Home_Web;
+create or replace navigation Responsive
+  home page MyFirstModule.Home_Web
+  menu (
+    menu item 'Home' page MyFirstModule.Home_Web;
   )
 ;

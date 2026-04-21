@@ -7,7 +7,7 @@ Provide a skill file that teaches Claude to autonomously create Mendix pluggable
 ## Flow
 
 ```
-User describes widget → Claude generates source files → npm install → npm run build → .mpk output
+user describes widget → Claude generates source files → npm install → npm run build → .mpk output
 ```
 
 ## Key Decisions
@@ -26,7 +26,7 @@ User describes widget → Claude generates source files → npm install → npm 
 ├── src/
 │   ├── package.xml
 │   ├── <Name>.xml           # widget property definitions
-│   ├── <Name>.tsx            # entry point (Mendix API → React)
+│   ├── <Name>.tsx            # entry point (Mendix api → React)
 │   ├── <Name>.editorConfig.ts
 │   ├── components/
 │   │   └── <Component>.tsx   # actual React UI

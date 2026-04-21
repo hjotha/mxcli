@@ -87,7 +87,7 @@ func TestDescribeConstant_Mock(t *testing.T) {
 	assertNoError(t, describeConstant(ctx, ast.QualifiedName{Module: "MyModule", Name: "AppURL"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE OR MODIFY CONSTANT MyModule.AppURL")
+	assertContainsStr(t, out, "create or modify constant MyModule.AppURL")
 	assertContainsStr(t, out, "String")
 }
 

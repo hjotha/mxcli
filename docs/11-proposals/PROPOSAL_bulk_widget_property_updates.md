@@ -27,23 +27,23 @@ Custom widgets (pluggable widgets) in Mendix have complex nested property struct
 Custom widgets have a complex nested structure:
 
 ```
-CustomWidget
-├── WidgetType (schema definition)
+customwidget
+├── widgettype (schema definition)
 │   ├── WidgetID: "com.mendix.widget.web.combobox.Combobox"
 │   ├── Name: "Combo box"
 │   └── ObjectType
 │       └── PropertyTypes[]
-│           ├── Key: "showLabel"
-│           ├── ValueType: "Boolean"
+│           ├── key: "showLabel"
+│           ├── ValueType: "boolean"
 │           └── ID: <uuid>
 │
 └── WidgetObject (property values)
-    └── Properties[]
+    └── properties[]
         ├── TypePointer: <references PropertyType.ID>
-        └── Value
+        └── value
             ├── PrimitiveValue: "true"
             ├── AttributeRef: "Module.Entity.Attribute"
-            ├── Microflow: "Module.MicroflowName"
+            ├── microflow: "Module.MicroflowName"
             └── ... (other value types)
 ```
 
@@ -57,55 +57,55 @@ SQL-like syntax that's familiar and consistent with catalog queries:
 
 ```sql
 -- Update all widgets of a specific type across all pages
-UPDATE WIDGETS
-SET 'propertyPath' = 'newValue'
-WHERE WidgetType = 'com.mendix.widget.web.combobox.Combobox';
+update widgets
+set 'propertyPath' = 'newValue'
+where widgettype = 'com.mendix.widget.web.combobox.Combobox';
 
 -- Update with conditions
-UPDATE WIDGETS
-SET 'labelCaption' = 'Select Customer'
-WHERE WidgetType = 'com.mendix.widget.web.combobox.Combobox'
-  AND 'attributeEnumeration' LIKE '%Customer%';
+update widgets
+set 'labelCaption' = 'Select Customer'
+where widgettype = 'com.mendix.widget.web.combobox.Combobox'
+  and 'attributeEnumeration' like '%Customer%';
 
 -- Update in specific pages only
-UPDATE WIDGETS IN MyModule.CustomerPage, MyModule.OrderPage
-SET 'backgroundColor' = '#f5f5f5'
-WHERE WidgetType = 'com.mendix.widget.web.datagrid.Datagrid';
+update widgets in MyModule.CustomerPage, MyModule.OrderPage
+set 'backgroundColor' = '#f5f5f5'
+where widgettype = 'com.mendix.widget.web.datagrid.Datagrid';
 
 -- Update in module
-UPDATE WIDGETS IN MODULE MyModule
-SET 'showLabel' = false
-WHERE WidgetType = 'com.mendix.widget.web.combobox.Combobox';
+update widgets in module MyModule
+set 'showLabel' = false
+where widgettype = 'com.mendix.widget.web.combobox.Combobox';
 ```
 
 ### Option B: ALTER PAGE ... WIDGETS Statement
 
 ```sql
 -- Modify widgets within a specific page
-ALTER PAGE MyModule.CustomerOverview
-MODIFY WIDGETS WHERE WidgetType = 'Combobox'
-SET 'source.type' = 'Database';
+alter page MyModule.CustomerOverview
+modify widgets where widgettype = 'Combobox'
+set 'source.type' = 'Database';
 
 -- Modify all pages in module
-ALTER PAGES IN MyModule
-MODIFY WIDGETS WHERE WidgetType = 'DataGrid2'
-SET 'pagination.pageSize' = 25;
+alter pages in MyModule
+modify widgets where widgettype = 'DataGrid2'
+set 'pagination.pageSize' = 25;
 ```
 
 ### Option C: CHANGE WIDGET Command (Action-Oriented)
 
 ```sql
 -- Simple property change
-CHANGE WIDGET PROPERTY 'showLabel' TO false
-FOR WIDGET TYPE 'Combobox';
+change widget PROPERTY 'showLabel' to false
+for widget type 'Combobox';
 
 -- Multiple properties
-CHANGE WIDGET PROPERTIES (
+change widget properties (
   'showLabel' = false,
   'readOnly' = true
 )
-FOR WIDGET TYPE 'Combobox'
-IN MODULE MyModule;
+for widget type 'Combobox'
+in module MyModule;
 ```
 
 ### Recommendation
@@ -144,33 +144,33 @@ First implement discovery commands to find widgets and inspect properties:
 
 ```sql
 -- Find all widgets of a type
-SHOW WIDGETS WHERE WidgetType = 'Combobox';
+show widgets where widgettype = 'Combobox';
 
 -- Show available properties for a widget type
-SHOW WIDGET PROPERTIES FOR 'com.mendix.widget.web.combobox.Combobox';
+show widget properties for 'com.mendix.widget.web.combobox.Combobox';
 
 -- Query current property values
-SELECT PageName, WidgetName, Property('showLabel')
-FROM CATALOG.WIDGETS
-WHERE WidgetType LIKE '%combobox%';
+select PageName, WidgetName, Property('showLabel')
+from CATALOG.WIDGETS
+where widgettype like '%combobox%';
 ```
 
 ### Phase 2: Single Page Update
 
 ```sql
 -- Update widgets in one page
-UPDATE WIDGETS IN MyModule.CustomerPage
-SET 'showLabel' = false
-WHERE WidgetType = 'Combobox';
+update widgets in MyModule.CustomerPage
+set 'showLabel' = false
+where widgettype = 'Combobox';
 ```
 
 ### Phase 3: Bulk Update
 
 ```sql
 -- Update across all pages
-UPDATE WIDGETS
-SET 'showLabel' = false
-WHERE WidgetType = 'Combobox';
+update widgets
+set 'showLabel' = false
+where widgettype = 'Combobox';
 ```
 
 ## Technical Implementation
@@ -180,18 +180,18 @@ WHERE WidgetType = 'Combobox';
 Extend the existing WIDGETS catalog table with property information:
 
 ```sql
-CREATE TABLE widgets_details (
-  PageID TEXT,
-  PageName TEXT,
-  WidgetID TEXT,
-  WidgetName TEXT,
-  WidgetType TEXT,           -- e.g., 'com.mendix.widget.web.combobox.Combobox'
-  PropertyKey TEXT,          -- e.g., 'showLabel'
-  PropertyPath TEXT,         -- e.g., 'dataSource.type'
-  PropertyValue TEXT,        -- JSON-encoded value
-  PropertyValueType TEXT,    -- 'Primitive', 'Attribute', 'Microflow', etc.
-  PropertyTypeID TEXT,       -- For serialization reference
-  ModuleName TEXT
+create table widgets_details (
+  PageID text,
+  PageName text,
+  WidgetID text,
+  WidgetName text,
+  widgettype text,           -- e.g., 'com.mendix.widget.web.combobox.Combobox'
+  PropertyKey text,          -- e.g., 'showLabel'
+  PropertyPath text,         -- e.g., 'dataSource.type'
+  PropertyValue text,        -- JSON-encoded value
+  PropertyValueType text,    -- 'Primitive', 'Attribute', 'Microflow', etc.
+  PropertyTypeID text,       -- For serialization reference
+  ModuleName text
 );
 ```
 
@@ -209,10 +209,10 @@ CREATE TABLE widgets_details (
 ```go
 // WidgetFilter defines criteria for finding widgets
 type WidgetFilter struct {
-    WidgetType     string            // Full or partial widget type ID
+    widgettype     string            // full or partial widget type ID
     PropertyFilter map[string]string // Property conditions
-    Pages          []string          // Limit to specific pages
-    Modules        []string          // Limit to specific modules
+    pages          []string          // limit to specific pages
+    modules        []string          // limit to specific modules
 }
 
 // WidgetMatch represents a found widget
@@ -221,20 +221,20 @@ type WidgetMatch struct {
     PageName   string
     WidgetID   model.ID
     WidgetName string
-    WidgetType string
-    Widget     *pages.CustomWidget
+    widgettype string
+    widget     *pages.CustomWidget
 }
 
-// Find all widgets matching criteria
+// find all widgets matching criteria
 func (e *Executor) findWidgets(filter WidgetFilter) ([]*WidgetMatch, error)
 
-// Update property value in widget
+// update property value in widget
 func updateWidgetProperty(widget *pages.CustomWidget, path string, value interface{}) error
 
 // Navigate nested property path
 func getPropertyByPath(obj *pages.WidgetObject, path string) (*pages.WidgetProperty, error)
 
-// Set property value with type conversion
+// set property value with type conversion
 func setPropertyValue(prop *pages.WidgetProperty, value interface{}) error
 ```
 
@@ -244,16 +244,16 @@ func setPropertyValue(prop *pages.WidgetProperty, value interface{}) error
 type PropertyValueType int
 
 const (
-    PropertyValuePrimitive PropertyValueType = iota  // String, Integer, Boolean, Decimal
+    PropertyValuePrimitive PropertyValueType = iota  // string, integer, boolean, decimal
     PropertyValueExpression                          // Mendix expression
     PropertyValueAttribute                           // Entity.Attribute reference
-    PropertyValueMicroflow                           // Microflow reference
-    PropertyValueNanoflow                            // Nanoflow reference
-    PropertyValuePage                                // Page reference
-    PropertyValueDataSource                          // DataSource configuration
+    PropertyValueMicroflow                           // microflow reference
+    PropertyValueNanoflow                            // nanoflow reference
+    PropertyValuePage                                // page reference
+    PropertyValueDataSource                          // datasource configuration
     PropertyValueAction                              // ClientAction
     PropertyValueObject                              // Nested WidgetObject
-    PropertyValueObjectList                          // List of WidgetObjects
+    PropertyValueObjectList                          // list of WidgetObjects
 )
 ```
 
@@ -290,13 +290,13 @@ After modification, the page must be correctly re-serialized to BSON format with
 
 Should show what will change before applying.
 
-**Solution:** Implement `DRY RUN` mode that reports changes without applying them.
+**Solution:** Implement `dry run` mode that reports changes without applying them.
 
 ## Example Workflow
 
 ```sql
 -- 1. Discover: Find all ComboBox widgets
-SHOW WIDGETS WHERE WidgetType LIKE '%combobox%';
+show widgets where widgettype like '%combobox%';
 
 -- Result:
 -- | Page                    | Widget    | WidgetType                               |
@@ -305,14 +305,14 @@ SHOW WIDGETS WHERE WidgetType LIKE '%combobox%';
 -- | MyModule.OrderPage      | cmbCountry| com.mendix.widget.web.combobox.Combobox  |
 
 -- 2. Check current values
-SELECT PageName, WidgetName, Property('showLabel')
-FROM CATALOG.WIDGETS_DETAILS
-WHERE WidgetType LIKE '%combobox%';
+select PageName, WidgetName, Property('showLabel')
+from CATALOG.WIDGETS_DETAILS
+where widgettype like '%combobox%';
 
 -- 3. Preview changes (dry-run)
-UPDATE WIDGETS DRY RUN
-SET 'showLabel' = false
-WHERE WidgetType LIKE '%combobox%';
+update widgets dry run
+set 'showLabel' = false
+where widgettype like '%combobox%';
 
 -- Result:
 -- Will update 2 widget(s):
@@ -320,9 +320,9 @@ WHERE WidgetType LIKE '%combobox%';
 --   MyModule.OrderPage.cmbCountry: showLabel: true -> false
 
 -- 4. Apply changes
-UPDATE WIDGETS
-SET 'showLabel' = false
-WHERE WidgetType LIKE '%combobox%';
+update widgets
+set 'showLabel' = false
+where widgettype like '%combobox%';
 
 -- Result:
 -- Updated 2 widget(s) in 2 page(s)
@@ -334,22 +334,22 @@ WHERE WidgetType LIKE '%combobox%';
 
 ```antlr
 // Already exists
-WIDGETS: W I D G E T S;
+widgets: W I D G E T S;
 
 // May need to add
 PROPERTY: P R O P E R T Y;
-DRY: D R Y;
-RUN: R U N;
+dry: D R Y;
+run: R U N;
 ```
 
 ### Parser (MDLParser.g4)
 
 ```antlr
 updateWidgetsStatement
-    : UPDATE WIDGETS (DRY RUN)?
-      (IN (qualifiedNameList | MODULE IDENTIFIER))?
-      SET widgetPropertyAssignmentList
-      (WHERE widgetFilterExpression)?
+    : update widgets (dry run)?
+      (in (qualifiedNameList | module IDENTIFIER))?
+      set widgetPropertyAssignmentList
+      (where widgetFilterExpression)?
     ;
 
 widgetPropertyAssignmentList
@@ -357,15 +357,15 @@ widgetPropertyAssignmentList
     ;
 
 widgetPropertyAssignment
-    : STRING_LITERAL EQUALS expression
+    : STRING_LITERAL equals expression
     ;
 
 widgetFilterExpression
-    : WIDGET_TYPE EQUALS STRING_LITERAL
-    | WIDGET_TYPE LIKE STRING_LITERAL
-    | STRING_LITERAL (EQUALS | LIKE) expression
-    | widgetFilterExpression AND widgetFilterExpression
-    | widgetFilterExpression OR widgetFilterExpression
+    : WIDGET_TYPE equals STRING_LITERAL
+    | WIDGET_TYPE like STRING_LITERAL
+    | STRING_LITERAL (equals | like) expression
+    | widgetFilterExpression and widgetFilterExpression
+    | widgetFilterExpression or widgetFilterExpression
     | LPAREN widgetFilterExpression RPAREN
     ;
 ```
@@ -374,12 +374,12 @@ widgetFilterExpression
 
 | Phase | Feature | Effort | Priority |
 |-------|---------|--------|----------|
-| 1 | `SHOW WIDGETS` query (discovery) | Low | High |
+| 1 | `show widgets` query (discovery) | Low | High |
 | 2 | `CATALOG.WIDGETS_DETAILS` table with properties | Medium | High |
-| 3 | `UPDATE WIDGETS` single page | Medium | High |
-| 4 | `UPDATE WIDGETS` bulk (all pages) | Medium | Medium |
+| 3 | `update widgets` single page | Medium | High |
+| 4 | `update widgets` bulk (all pages) | Medium | Medium |
 | 5 | Nested property path support | High | Medium |
-| 6 | `DRY RUN` preview mode | Low | Medium |
+| 6 | `dry run` preview mode | Low | Medium |
 | 7 | Property validation | Medium | Low |
 
 ## Alternative Approaches
@@ -390,8 +390,8 @@ For simpler use cases, could provide direct widget property access:
 
 ```sql
 -- Update specific widget in specific page
-ALTER PAGE MyModule.CustomerPage
-SET WIDGET 'cmbStatus' PROPERTY 'showLabel' = false;
+alter page MyModule.CustomerPage
+set widget 'cmbStatus' PROPERTY 'showLabel' = false;
 ```
 
 ### Scripted Approach
@@ -400,11 +400,11 @@ For complex transformations, expose widget data as JSON for external processing:
 
 ```sql
 -- Export widget data
-EXPORT WIDGETS TO 'widgets.json'
-WHERE WidgetType LIKE '%combobox%';
+export widgets to 'widgets.json'
+where widgettype like '%combobox%';
 
 -- After external modification, import back
-IMPORT WIDGETS FROM 'widgets_modified.json';
+import widgets from 'widgets_modified.json';
 ```
 
 ## Success Criteria

@@ -463,7 +463,7 @@ func extractAttributes(_ *ExecContext, lines []string) map[string]string {
 	attrs := make(map[string]string)
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.Contains(line, ":") && !strings.HasPrefix(line, "CREATE") && !strings.HasPrefix(line, "/**") && !strings.HasPrefix(line, "*") {
+		if strings.Contains(line, ":") && !strings.HasPrefix(line, "create") && !strings.HasPrefix(line, "/**") && !strings.HasPrefix(line, "*") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
 				name := strings.TrimSpace(parts[0])
@@ -481,7 +481,7 @@ func extractEnumValues(_ *ExecContext, lines []string) map[string]bool {
 	values := make(map[string]bool)
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.Contains(line, "'") && !strings.HasPrefix(line, "CREATE") {
+		if strings.Contains(line, "'") && !strings.HasPrefix(line, "create") {
 			parts := strings.Fields(line)
 			if len(parts) >= 1 {
 				name := strings.TrimSuffix(parts[0], ",")
@@ -500,7 +500,7 @@ func extractParameters(_ *ExecContext, lines []string) map[string]bool {
 	inParams := false
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "CREATE MICROFLOW") || strings.HasPrefix(line, "CREATE NANOFLOW") {
+		if strings.HasPrefix(line, "create microflow") || strings.HasPrefix(line, "create nanoflow") {
 			inParams = true
 			continue
 		}
@@ -528,11 +528,11 @@ func countBodyStatements(_ *ExecContext, mdl string) int {
 	inBody := false
 	for line := range strings.SplitSeq(mdl, "\n") {
 		line = strings.TrimSpace(line)
-		if line == "BEGIN" {
+		if line == "begin" {
 			inBody = true
 			continue
 		}
-		if line == "END;" {
+		if line == "end;" {
 			break
 		}
 		if inBody && line != "" && !strings.HasPrefix(line, "--") {

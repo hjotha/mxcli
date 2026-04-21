@@ -6,24 +6,24 @@ This document describes the overall architecture of the ModelSDK Go project, a G
 
 ```mermaid
 graph TB
-    subgraph "User Interface"
+    subgraph "user Interface"
         CLI[mxcli CLI]
-        API[Go API]
+        api[Go api]
         VSCODE[VS Code Extension]
     end
 
     subgraph "MDL Layer"
         REPL[REPL Interface]
         LSP[LSP Server]
-        EXEC[Executor]
+        exec[Executor]
         PARSER[ANTLR4 Parser]
         AST[AST Nodes]
         VISITOR[AST Visitor]
-        CATALOG[Catalog]
+        catalog[catalog]
         LINTER[Linter]
     end
 
-    subgraph "High-Level API"
+    subgraph "High-level api"
         HLAPI[api/]
         DMAPI[DomainModelsAPI]
         MFAPI[MicroflowsAPI]
@@ -37,16 +37,16 @@ graph TB
         DM[domainmodel]
         MF[microflows]
         PG[pages]
-        MODEL[model]
-        WIDGETS[widgets]
+        model[model]
+        widgets[widgets]
     end
 
-    subgraph "External SQL"
+    subgraph "external sql"
         SQLPKG[sql/]
-        SQLCONN[Connection Manager]
-        SQLQUERY[Query Engine]
-        SQLIMPORT[Import Pipeline]
-        SQLGEN[Connector Generator]
+        SQLCONN[connection Manager]
+        SQLQUERY[query Engine]
+        SQLIMPORT[import Pipeline]
+        SQLGEN[connector Generator]
     end
 
     subgraph "Backend Layer (mdl/backend/)"
@@ -63,22 +63,22 @@ graph TB
         BSONUTIL[bsonutil/]
     end
 
-    subgraph "Storage Layer"
+    subgraph "storage Layer"
         READER[MPR Reader]
         WRITER[MPR Writer]
         BSONP[BSON Parser]
     end
 
-    subgraph "File System"
-        MPR[(MPR File)]
+    subgraph "file System"
+        MPR[(MPR file)]
         CONTENTS[(mprcontents/)]
-        EXTDB[(External DBs)]
+        EXTDB[(external DBs)]
     end
 
     CLI --> REPL
     CLI --> LSP
-    API --> HLAPI
-    API --> SDK
+    api --> HLAPI
+    api --> SDK
     VSCODE --> LSP
     HLAPI --> SDK
     HLAPI --> READER
@@ -86,14 +86,14 @@ graph TB
 
     REPL --> EXEC
     LSP --> EXEC
-    EXEC --> PARSER
+    exec --> PARSER
     PARSER --> AST
     AST --> VISITOR
     VISITOR --> AST
-    EXEC --> BACKEND
-    EXEC --> SQLPKG
-    EXEC --> CATALOG
-    EXEC --> LINTER
+    exec --> BACKEND
+    exec --> SQLPKG
+    exec --> CATALOG
+    exec --> LINTER
 
     BACKEND --> PAGEMUT
     BACKEND --> WFMUT
@@ -244,17 +244,17 @@ The MDL (Mendix Definition Language) layer provides a SQL-like interface for que
 
 ```mermaid
 sequenceDiagram
-    participant User
+    participant user
     participant REPL
     participant Parser
     participant Visitor
     participant Executor
     participant SDK
 
-    User->>REPL: "SHOW ENTITIES IN MyModule"
+    user->>REPL: "show entities in MyModule"
     REPL->>Parser: Parse MDL command
     Parser->>Visitor: Walk parse tree
-    Visitor->>Executor: Build AST node
+    Visitor->>Executor: build AST node
     Executor->>SDK: ListDomainModels()
     SDK-->>Executor: []*DomainModel
     Executor-->>REPL: Formatted output
@@ -285,29 +285,29 @@ classDiagram
     class ModelAPI {
         +writer *Writer
         +reader *Reader
-        +currentModule *Module
+        +currentModule *module
         +DomainModels *DomainModelsAPI
-        +Microflows *MicroflowsAPI
-        +Pages *PagesAPI
-        +Enumerations *EnumerationsAPI
-        +Modules *ModulesAPI
+        +microflows *MicroflowsAPI
+        +pages *PagesAPI
+        +enumerations *EnumerationsAPI
+        +modules *ModulesAPI
         +New(writer) *ModelAPI
         +SetModule(module) *ModelAPI
     }
 
     class EntityBuilder {
-        +Persistent() *EntityBuilder
+        +persistent() *EntityBuilder
         +NonPersistent() *EntityBuilder
         +WithStringAttribute(name, length) *EntityBuilder
         +WithIntegerAttribute(name) *EntityBuilder
-        +Build() (*Entity, error)
+        +build() (*entity, error)
     }
 
     class MicroflowBuilder {
         +WithParameter(name, entity) *MicroflowBuilder
         +WithStringParameter(name) *MicroflowBuilder
         +ReturnsBoolean() *MicroflowBuilder
-        +Build() (*Microflow, error)
+        +build() (*microflow, error)
     }
 
     ModelAPI --> EntityBuilder : creates
@@ -330,13 +330,13 @@ The SDK layer provides Go types and APIs for Mendix model elements.
 ```mermaid
 classDiagram
     class Reader {
-        +Open(path) Reader
-        +ListModules() []*Module
+        +open(path) Reader
+        +ListModules() []*module
         +ListDomainModels() []*DomainModel
-        +ListMicroflows() []*Microflow
-        +ListPages() []*Page
+        +ListMicroflows() []*microflow
+        +ListPages() []*page
         +FindCustomWidgetType(widgetID) *RawCustomWidgetType
-        +Close()
+        +close()
     }
 
     class Writer {
@@ -344,21 +344,21 @@ classDiagram
         +AddEntity(dm, entity)
         +AddAssociation(dm, assoc)
         +Save()
-        +Close()
+        +close()
     }
 
     class DomainModel {
         +ID
         +ContainerID
-        +Entities []*Entity
-        +Associations []*Association
+        +entities []*entity
+        +associations []*association
     }
 
-    class Entity {
+    class entity {
         +ID
         +Name
-        +Attributes []*Attribute
-        +Source string
+        +attributes []*attribute
+        +source string
         +OqlQuery string
     }
 
@@ -401,17 +401,17 @@ classDiagram
     }
 
     class QualifiedName {
-        +Module string
+        +module string
         +Name string
     }
 
-    class Module {
+    class module {
         +BaseElement
         +Name string
         +FromAppStore bool
     }
 
-    class Text {
+    class text {
         +Translations map
         +GetTranslation(lang) string
     }
@@ -426,31 +426,31 @@ The `sql/` package provides external database connectivity for querying PostgreS
 ```mermaid
 flowchart LR
     subgraph "MDL Commands"
-        CONNECT["SQL CONNECT"]
-        QUERY["SQL alias SELECT ..."]
-        IMPORT["IMPORT FROM alias ..."]
-        GENERATE["SQL alias GENERATE CONNECTOR"]
+        connect["sql connect"]
+        query["sql alias select ..."]
+        import["import from alias ..."]
+        generate["sql alias generate connector"]
     end
 
     subgraph "sql/ Package"
-        CONN[Connection Manager]
-        QE[Query Engine]
-        IMP[Import Pipeline]
-        GEN[Connector Generator]
-        META[Schema Introspection]
+        CONN[connection Manager]
+        QE[query Engine]
+        IMP[import Pipeline]
+        GEN[connector Generator]
+        META[schema Introspection]
         FMT[Output Formatters]
     end
 
     subgraph "Databases"
         PG[(PostgreSQL)]
         ORA[(Oracle)]
-        MSSQL[(SQL Server)]
+        MSSQL[(sql Server)]
     end
 
-    CONNECT --> CONN
-    QUERY --> QE
-    IMPORT --> IMP
-    GENERATE --> GEN
+    connect --> CONN
+    query --> QE
+    import --> IMP
+    generate --> GEN
 
     CONN --> PG
     CONN --> ORA
@@ -493,18 +493,18 @@ The VS Code extension provides MDL language support via an LSP client that commu
 graph TB
     subgraph "VS Code"
         EXT[extension.ts]
-        TREE[Project Tree Provider]
-        LINK[Terminal Link Provider]
-        CONTENT[MDL Content Provider]
+        TREE[project Tree Provider]
+        link[Terminal link Provider]
+        content[MDL content Provider]
         PREVIEW[Preview Provider]
     end
 
     subgraph "Preview Renderers"
-        DMRENDER[Domain Model]
-        MFRENDER[Microflow]
-        PGRENDER[Page Wireframe]
-        MODRENDER[Module Overview]
-        QPRENDER[Query Plan]
+        DMRENDER[Domain model]
+        MFRENDER[microflow]
+        PGRENDER[page Wireframe]
+        MODRENDER[module overview]
+        QPRENDER[query Plan]
     end
 
     subgraph "mxcli"
@@ -547,7 +547,7 @@ Mendix projects are stored in two formats:
 ```mermaid
 graph TB
     subgraph "MPR v1 (Mendix < 10.18)"
-        V1[Single .mpr SQLite file]
+        V1[single .mpr SQLite file]
         V1DB[(Unit table with BSON blobs)]
         V1 --> V1DB
     end
@@ -569,9 +569,9 @@ Each model element (entity, microflow, page, etc.) is stored as a BSON document:
 graph LR
     subgraph "BSON Document"
         ID["$ID: binary UUID"]
-        TYPE["$Type: 'DomainModels$Entity'"]
+        type["$type: 'DomainModels$Entity'"]
         NAME["Name: 'Customer'"]
-        ATTRS["Attributes: [...]"]
+        ATTRS["attributes: [...]"]
         LOC["Location: '100;200'"]
     end
 ```
@@ -586,21 +586,21 @@ sequenceDiagram
     participant SDK as modelsdk
     participant Reader
     participant Parser
-    participant FS as File System
+    participant FS as file System
 
-    App->>SDK: Open("project.mpr")
+    App->>SDK: open("project.mpr")
     SDK->>Reader: NewReader(path)
     Reader->>FS: Detect MPR version
     alt MPR v1
-        Reader->>FS: Open SQLite database
+        Reader->>FS: open SQLite database
     else MPR v2
-        Reader->>FS: Read mprcontents/
+        Reader->>FS: read mprcontents/
     end
     SDK-->>App: Reader
 
     App->>SDK: ListDomainModels()
     SDK->>Reader: listUnitsByType("DomainModels$DomainModel")
-    Reader->>FS: Read unit contents
+    Reader->>FS: read unit contents
     Reader->>Parser: parseDomainModel(bson)
     Parser-->>Reader: *DomainModel
     Reader-->>SDK: []*DomainModel
@@ -614,7 +614,7 @@ sequenceDiagram
     participant App
     participant SDK as modelsdk
     participant Writer
-    participant FS as File System
+    participant FS as file System
 
     App->>SDK: OpenForWriting("project.mpr")
     SDK->>Writer: NewWriter(path)
@@ -626,32 +626,32 @@ sequenceDiagram
 
     App->>SDK: AddEntity(dm, entity)
     SDK->>Writer: SerializeEntity(entity)
-    Writer->>Writer: Generate BSON
+    Writer->>Writer: generate BSON
 
     App->>SDK: Save()
-    SDK->>Writer: Write all modified units
-    Writer->>FS: Write .mxunit files
-    Writer->>FS: Update .mpr metadata
+    SDK->>Writer: write all modified units
+    Writer->>FS: write .mxunit files
+    Writer->>FS: update .mpr metadata
 ```
 
 ### External SQL Query Flow
 
 ```mermaid
 sequenceDiagram
-    participant User
+    participant user
     participant Executor
-    participant SQL as sql/ Package
-    participant DB as External Database
+    participant sql as sql/ Package
+    participant DB as external database
 
-    User->>Executor: SQL mydb SELECT * FROM users
-    Executor->>SQL: Connect("mydb")
-    SQL->>DB: Open connection (pgx/ora/mssql)
-    SQL-->>Executor: Connection
+    user->>Executor: sql mydb select * from users
+    Executor->>sql: connect("mydb")
+    sql->>DB: open connection (pgx/ora/mssql)
+    sql-->>Executor: Connection
 
-    Executor->>SQL: Execute("SELECT * FROM users")
-    SQL->>DB: database/sql query
+    Executor->>sql: execute("select * from users")
+    sql->>DB: database/sql query
     DB-->>SQL: Rows
-    SQL-->>Executor: Formatted table
+    sql-->>Executor: Formatted table
     Executor-->>User: Display results
 ```
 
@@ -659,7 +659,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    INPUT[/"SHOW ENTITIES IN MyModule"/]
+    INPUT[/"show entities in MyModule"/]
 
     subgraph Parsing
         LEXER[ANTLR4 Lexer]
@@ -669,16 +669,16 @@ flowchart TD
 
     subgraph "AST Building"
         VISITOR[AST Visitor]
-        AST[ShowStmt AST Node]
+        AST[ShowStmt AST node]
     end
 
     subgraph Execution
-        EXEC[Executor]
-        SDK[SDK API Call]
-        FORMAT[Format Output]
+        exec[Executor]
+        SDK[SDK api call]
+        format[format Output]
     end
 
-    OUTPUT[/Markdown Table/]
+    OUTPUT[/Markdown table/]
 
     INPUT --> LEXER
     LEXER --> PARSER
@@ -686,9 +686,9 @@ flowchart TD
     TREE --> VISITOR
     VISITOR --> AST
     AST --> EXEC
-    EXEC --> SDK
+    exec --> SDK
     SDK --> FORMAT
-    FORMAT --> OUTPUT
+    format --> OUTPUT
 ```
 
 ## Key Design Decisions
@@ -701,7 +701,7 @@ flowchart TD
 ### 2. BSON for Serialization
 - Native Mendix format compatibility
 - Uses `go.mongodb.org/mongo-driver/bson` package
-- Handles polymorphic types via `$Type` field
+- Handles polymorphic types via `$type` field
 
 ### 3. Two-Phase Loading
 - Units loaded on-demand for performance
@@ -718,16 +718,16 @@ Pluggable widgets (React client) require complex BSON structures with internal I
 
 ```mermaid
 flowchart LR
-    subgraph "Template Creation (one-time)"
-        SP[Studio Pro Widget] --> EXTRACT[Extract Type + Object]
+    subgraph "template Creation (one-time)"
+        SP[Studio Pro widget] --> EXTRACT[Extract Type + Object]
         EXTRACT --> JSON[combobox.json]
     end
 
-    subgraph "Widget Creation (runtime)"
-        JSON --> LOAD[Load Template]
+    subgraph "widget Creation (runtime)"
+        json --> LOAD[Load Template]
         LOAD --> CLONE[Clone with New IDs]
         CLONE --> UPDATE[Update Properties]
-        UPDATE --> BSON[Serialize to BSON]
+        update --> BSON[Serialize to BSON]
     end
 ```
 
@@ -764,13 +764,13 @@ flowchart TD
     subgraph "WidgetRegistry (3-tier)"
         EMBEDDED["Embedded definitions\n(sdk/widgets/definitions/)"]
         GLOBAL["Global definitions\n(~/.mxcli/widgets/)"]
-        PROJECT["Project definitions\n(.mxcli/widgets/)"]
+        project["project definitions\n(.mxcli/widgets/)"]
     end
 
     subgraph "PluggableWidgetEngine"
         DEF[".def.json definition"]
         OPS["OperationRegistry\n(attribute, association,\nprimitive, selection,\ndatasource, widgets)"]
-        COND["Condition evaluator"]
+        COND["condition evaluator"]
         MAPPER["Property mapper"]
     end
 
@@ -780,7 +780,7 @@ flowchart TD
         BSON["Serialize to BSON"]
     end
 
-    PROJECT -->|overrides| GLOBAL
+    project -->|overrides| GLOBAL
     GLOBAL -->|overrides| EMBEDDED
     EMBEDDED --> DEF
     DEF --> OPS
@@ -797,7 +797,7 @@ Each file describes a single widget type — its MDL property mappings, conditio
 {
   "widgetId": "com.mendix.widget.web.combobox.ComboBox",
   "properties": [
-    { "key": "attribute",  "op": "attribute",  "mdl": "ATTRIBUTE" },
+    { "key": "attribute",  "op": "attribute",  "mdl": "attribute" },
     { "key": "datasource", "op": "datasource", "mdl": "DATA_SOURCE" }
   ]
 }
@@ -839,15 +839,15 @@ The SQLite-based catalog (`mdl/catalog/`) enables cross-reference queries and co
 
 ```mermaid
 flowchart LR
-    subgraph "REFRESH CATALOG"
+    subgraph "refresh catalog"
         SDK[SDK Reader] --> BUILDERS[Catalog Builders]
         BUILDERS --> SQLITE[(SQLite DB)]
     end
 
-    subgraph "Query"
-        QUERY["SELECT ... FROM CATALOG.table"] --> SQLITE
-        REFS["SHOW CALLERS/CALLEES/REFERENCES"] --> SQLITE
-        SEARCH["SEARCH 'keyword'"] --> SQLITE
+    subgraph "query"
+        query["select ... from CATALOG.table"] --> SQLITE
+        REFS["show callers/callees/references"] --> SQLITE
+        search["search 'keyword'"] --> SQLITE
     end
 ```
 
@@ -878,7 +878,7 @@ Mendix projects vary along three versioning axes: **platform version** (9.x–11
 
 ```mermaid
 flowchart LR
-    TMPL[Static JSON Template] --> CLONE[Deep Clone]
+    TMPL[Static json template] --> CLONE[Deep Clone]
     MPK[".mpk from project widgets/"] --> PARSE[Parse Widget XML]
     CLONE --> AUG[Augment: add missing, remove stale]
     PARSE --> AUG
@@ -901,13 +901,13 @@ The executor **never imports `sdk/mpr`**. All project access goes through `ctx.B
 ```mermaid
 flowchart LR
     subgraph "Executor (thin orchestrator)"
-        HANDLER["applySetProperty(ctx, op)"]
+        handler["applySetProperty(ctx, op)"]
         CTX["ctx.Backend.OpenPageForMutation(id)"]
     end
 
     subgraph "backend.PageMutator interface"
-        SET["SetWidgetProperty(ref, prop, value)"]
-        INSERT["InsertWidget(target, pos, widgets)"]
+        set["SetWidgetProperty(ref, prop, value)"]
+        insert["InsertWidget(target, pos, widgets)"]
         SAVE["Save()"]
     end
 
@@ -919,10 +919,10 @@ flowchart LR
         FUNC["SetWidgetPropertyFunc(ref, prop, value)"]
     end
 
-    HANDLER --> CTX
+    handler --> CTX
     CTX --> SET
-    SET --> BSON
-    SET --> FUNC
+    set --> BSON
+    set --> FUNC
 ```
 
 **Rule for new executor commands:**

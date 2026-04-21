@@ -66,7 +66,7 @@ func listPages(ctx *ExecContext, moduleName string) error {
 	})
 
 	result := &TableResult{
-		Columns: []string{"Qualified Name", "Module", "Name", "Excluded", "Folder", "Title", "URL", "Params"},
+		Columns: []string{"Qualified Name", "Module", "Name", "Excluded", "Folder", "Title", "url", "Params"},
 		Summary: fmt.Sprintf("(%d pages)", len(rows)),
 	}
 	for _, r := range rows {

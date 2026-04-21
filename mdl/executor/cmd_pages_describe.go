@@ -92,7 +92,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// V3 syntax: CREATE PAGE Module.Page (Title: '...', Layout: ..., Params: { })
-	header := fmt.Sprintf("CREATE OR MODIFY PAGE %s.%s", modName, foundPage.Name)
+	header := fmt.Sprintf("create or modify page %s.%s", modName, foundPage.Name)
 	props := []string{}
 	if title != "" {
 		props = append(props, fmt.Sprintf("Title: %s", mdlQuote(title)))
@@ -152,7 +152,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		for i, r := range foundPage.AllowedRoles {
 			roles[i] = string(r)
 		}
-		fmt.Fprintf(ctx.Output, "\n\nGRANT VIEW ON PAGE %s.%s TO %s;",
+		fmt.Fprintf(ctx.Output, "\n\ngrant view on page %s.%s to %s;",
 			modName, foundPage.Name, strings.Join(roles, ", "))
 	}
 
@@ -224,7 +224,7 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Output CREATE SNIPPET statement (V3 syntax)
-	fmt.Fprintf(ctx.Output, "CREATE OR MODIFY SNIPPET %s.%s", modName, foundSnippet.Name)
+	fmt.Fprintf(ctx.Output, "create or modify snippet %s.%s", modName, foundSnippet.Name)
 	folderPath := h.BuildFolderPath(foundSnippet.ContainerID)
 	if len(params) > 0 || folderPath != "" {
 		snippetProps := []string{}
@@ -310,7 +310,7 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 	fmt.Fprintf(ctx.Output, "-- Layouts cannot be created via MDL; they must be created in Studio Pro.\n\n")
 
 	// Output as a comment showing the layout name
-	fmt.Fprintf(ctx.Output, "-- LAYOUT %s.%s\n", modName, foundLayout.Name)
+	fmt.Fprintf(ctx.Output, "-- layout %s.%s\n", modName, foundLayout.Name)
 
 	// Output widgets from raw layout data
 	rawWidgets := getLayoutWidgetsFromRaw(ctx, foundLayout.ID)

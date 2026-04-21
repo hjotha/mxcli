@@ -22,7 +22,7 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 
 	// Version pre-check: workflows require Mendix 9.12+
 	if err := checkFeature(ctx, "workflows", "basic",
-		"ALTER WORKFLOW",
+		"alter workflow",
 		"upgrade your project to Mendix 9.12+ to use workflows"); err != nil {
 		return err
 	}
@@ -62,40 +62,40 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 		switch o := op.(type) {
 		case *ast.SetWorkflowPropertyOp:
 			switch o.Property {
-			case "OVERVIEW_PAGE":
-				// OVERVIEW_PAGE uses Entity as the page qualified name (Value is unused).
+			case "overview_page":
+				// overview_page uses Entity as the page qualified name (Value is unused).
 				qn := o.Entity.Module + "." + o.Entity.Name
 				if qn == "." {
 					qn = ""
 				}
 				if err := mutator.SetPropertyWithEntity(o.Property, qn, qn); err != nil {
-					return mdlerrors.NewBackend("SET "+o.Property, err)
+					return mdlerrors.NewBackend("set "+o.Property, err)
 				}
-			case "PARAMETER":
+			case "parameter":
 				// PARAMETER uses Value as the variable name and Entity as the entity qualified name.
 				qn := o.Entity.Module + "." + o.Entity.Name
 				if qn == "." {
 					qn = ""
 				}
 				if err := mutator.SetPropertyWithEntity(o.Property, o.Value, qn); err != nil {
-					return mdlerrors.NewBackend("SET "+o.Property, err)
+					return mdlerrors.NewBackend("set "+o.Property, err)
 				}
 			default:
 				if err := mutator.SetProperty(o.Property, o.Value); err != nil {
-					return mdlerrors.NewBackend("SET "+o.Property, err)
+					return mdlerrors.NewBackend("set "+o.Property, err)
 				}
 			}
 
 		case *ast.SetActivityPropertyOp:
 			value := o.Value
 			switch o.Property {
-			case "PAGE":
+			case "page":
 				value = o.PageName.Module + "." + o.PageName.Name
-			case "TARGETING_MICROFLOW":
+			case "targeting_microflow":
 				value = o.Microflow.Module + "." + o.Microflow.Name
 			}
 			if err := mutator.SetActivityProperty(o.ActivityRef, o.AtPosition, o.Property, value); err != nil {
-				return mdlerrors.NewBackend("SET ACTIVITY", err)
+				return mdlerrors.NewBackend("set activity", err)
 			}
 
 		case *ast.InsertAfterOp:
@@ -104,12 +104,12 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 				return mdlerrors.NewValidation("failed to build new activity")
 			}
 			if err := mutator.InsertAfterActivity(o.ActivityRef, o.AtPosition, acts); err != nil {
-				return mdlerrors.NewBackend("INSERT AFTER", err)
+				return mdlerrors.NewBackend("insert after", err)
 			}
 
 		case *ast.DropActivityOp:
 			if err := mutator.DropActivity(o.ActivityRef, o.AtPosition); err != nil {
-				return mdlerrors.NewBackend("DROP ACTIVITY", err)
+				return mdlerrors.NewBackend("drop activity", err)
 			}
 
 		case *ast.ReplaceActivityOp:
@@ -118,55 +118,55 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 				return mdlerrors.NewValidation("failed to build replacement activity")
 			}
 			if err := mutator.ReplaceActivity(o.ActivityRef, o.AtPosition, acts); err != nil {
-				return mdlerrors.NewBackend("REPLACE ACTIVITY", err)
+				return mdlerrors.NewBackend("replace activity", err)
 			}
 
 		case *ast.InsertOutcomeOp:
 			acts := buildAndBindActivities(ctx, o.Activities)
 			if err := mutator.InsertOutcome(o.ActivityRef, o.AtPosition, o.OutcomeName, acts); err != nil {
-				return mdlerrors.NewBackend("INSERT OUTCOME", err)
+				return mdlerrors.NewBackend("insert outcome", err)
 			}
 
 		case *ast.DropOutcomeOp:
 			if err := mutator.DropOutcome(o.ActivityRef, o.AtPosition, o.OutcomeName); err != nil {
-				return mdlerrors.NewBackend("DROP OUTCOME", err)
+				return mdlerrors.NewBackend("drop outcome", err)
 			}
 
 		case *ast.InsertPathOp:
 			acts := buildAndBindActivities(ctx, o.Activities)
 			if err := mutator.InsertPath(o.ActivityRef, o.AtPosition, "", acts); err != nil {
-				return mdlerrors.NewBackend("INSERT PATH", err)
+				return mdlerrors.NewBackend("insert path", err)
 			}
 
 		case *ast.DropPathOp:
 			if err := mutator.DropPath(o.ActivityRef, o.AtPosition, o.PathCaption); err != nil {
-				return mdlerrors.NewBackend("DROP PATH", err)
+				return mdlerrors.NewBackend("drop path", err)
 			}
 
 		case *ast.InsertBranchOp:
 			acts := buildAndBindActivities(ctx, o.Activities)
 			if err := mutator.InsertBranch(o.ActivityRef, o.AtPosition, o.Condition, acts); err != nil {
-				return mdlerrors.NewBackend("INSERT BRANCH", err)
+				return mdlerrors.NewBackend("insert branch", err)
 			}
 
 		case *ast.DropBranchOp:
 			if err := mutator.DropBranch(o.ActivityRef, o.AtPosition, o.BranchName); err != nil {
-				return mdlerrors.NewBackend("DROP BRANCH", err)
+				return mdlerrors.NewBackend("drop branch", err)
 			}
 
 		case *ast.InsertBoundaryEventOp:
 			acts := buildAndBindActivities(ctx, o.Activities)
 			if err := mutator.InsertBoundaryEvent(o.ActivityRef, o.AtPosition, o.EventType, o.Delay, acts); err != nil {
-				return mdlerrors.NewBackend("INSERT BOUNDARY EVENT", err)
+				return mdlerrors.NewBackend("insert boundary event", err)
 			}
 
 		case *ast.DropBoundaryEventOp:
 			if err := mutator.DropBoundaryEvent(o.ActivityRef, o.AtPosition); err != nil {
-				return mdlerrors.NewBackend("DROP BOUNDARY EVENT", err)
+				return mdlerrors.NewBackend("drop boundary event", err)
 			}
 
 		default:
-			return mdlerrors.NewUnsupported(fmt.Sprintf("unknown ALTER WORKFLOW operation type: %T", op))
+			return mdlerrors.NewUnsupported(fmt.Sprintf("unknown alter workflow operation type: %T", op))
 		}
 	}
 

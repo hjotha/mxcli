@@ -16,31 +16,31 @@ Use this skill when the user wants to:
 
 ```sql
 -- Overview table of all settings parts
-SHOW SETTINGS;
+show settings;
 
 -- Full MDL output (round-trippable ALTER SETTINGS statements)
-DESCRIBE SETTINGS;
+describe settings;
 ```
 
 ### Modify Model Settings
 
 ```sql
-ALTER SETTINGS MODEL AfterStartupMicroflow = 'Module.MF_Startup';
-ALTER SETTINGS MODEL BeforeShutdownMicroflow = 'Module.MF_Shutdown';
-ALTER SETTINGS MODEL HealthCheckMicroflow = 'Module.MF_HealthCheck';
-ALTER SETTINGS MODEL HashAlgorithm = 'BCrypt';
-ALTER SETTINGS MODEL BcryptCost = 12;
-ALTER SETTINGS MODEL JavaVersion = 'Java21';
-ALTER SETTINGS MODEL RoundingMode = 'HalfUp';
-ALTER SETTINGS MODEL AllowUserMultipleSessions = true;
-ALTER SETTINGS MODEL ScheduledEventTimeZoneCode = 'Etc/UTC';
+alter settings model AfterStartupMicroflow = 'Module.MF_Startup';
+alter settings model BeforeShutdownMicroflow = 'Module.MF_Shutdown';
+alter settings model HealthCheckMicroflow = 'Module.MF_HealthCheck';
+alter settings model HashAlgorithm = 'BCrypt';
+alter settings model BcryptCost = 12;
+alter settings model JavaVersion = 'Java21';
+alter settings model RoundingMode = 'HalfUp';
+alter settings model AllowUserMultipleSessions = true;
+alter settings model ScheduledEventTimeZoneCode = 'Etc/UTC';
 ```
 
 ### Modify Configuration Settings
 
 ```sql
 -- Full database configuration
-ALTER SETTINGS CONFIGURATION 'Default'
+alter settings configuration 'Default'
   DatabaseType = 'PostgreSql',
   DatabaseUrl = 'localhost:5432',
   DatabaseName = 'mydb',
@@ -50,7 +50,7 @@ ALTER SETTINGS CONFIGURATION 'Default'
   ServerPortNumber = 8090;
 
 -- Update a single field
-ALTER SETTINGS CONFIGURATION 'Default'
+alter settings configuration 'Default'
   DatabaseUrl = 'newhost:5432';
 ```
 
@@ -58,42 +58,42 @@ ALTER SETTINGS CONFIGURATION 'Default'
 
 ```sql
 -- View constant values across all configurations
-SHOW CONSTANT VALUES;
-SHOW CONSTANT VALUES IN MyModule;    -- Filter by module
+show constant values;
+show constant values in MyModule;    -- Filter by module
 
 -- Override a constant value in a configuration
-ALTER SETTINGS CONSTANT 'BusinessEvents.ServerUrl' VALUE 'kafka:9092'
-  IN CONFIGURATION 'Default';
+alter settings constant 'BusinessEvents.ServerUrl' value 'kafka:9092'
+  in configuration 'Default';
 
 -- Without IN CONFIGURATION (uses first configuration)
-ALTER SETTINGS CONSTANT 'MyModule.ApiKey' VALUE 'abc123';
+alter settings constant 'MyModule.ApiKey' value 'abc123';
 
 -- Remove a constant override (reset to default)
-ALTER SETTINGS DROP CONSTANT 'MyModule.ApiKey' IN CONFIGURATION 'Default';
+alter settings drop constant 'MyModule.ApiKey' in configuration 'Default';
 ```
 
 ### Create / Drop Configurations
 
 ```sql
 -- Create a new server configuration
-CREATE CONFIGURATION 'Staging';
+create configuration 'Staging';
 
 -- Create with properties
-CREATE CONFIGURATION 'Production'
+create configuration 'Production'
   DatabaseType = 'POSTGRESQL',
   DatabaseUrl = 'prod-db:5432',
   HttpPortNumber = 8080;
 
 -- Drop a configuration
-DROP CONFIGURATION 'Staging';
+drop configuration 'Staging';
 ```
 
 ### Language and Workflow Settings
 
 ```sql
-ALTER SETTINGS LANGUAGE DefaultLanguageCode = 'en_US';
+alter settings LANGUAGE DefaultLanguageCode = 'en_US';
 
-ALTER SETTINGS WORKFLOWS
+alter settings workflows
   UserEntity = 'System.User',
   DefaultTaskParallelism = 3;
 ```
@@ -102,7 +102,7 @@ ALTER SETTINGS WORKFLOWS
 
 ### PostgreSQL Configuration
 ```sql
-ALTER SETTINGS CONFIGURATION 'Default'
+alter settings configuration 'Default'
   DatabaseType = 'PostgreSql',
   DatabaseUrl = 'localhost:5432',
   DatabaseName = 'myapp',
@@ -113,7 +113,7 @@ ALTER SETTINGS CONFIGURATION 'Default'
 
 ### SQL Server Configuration
 ```sql
-ALTER SETTINGS CONFIGURATION 'Default'
+alter settings configuration 'Default'
   DatabaseType = 'SqlServer',
   DatabaseUrl = 'localhost:1433',
   DatabaseName = 'myapp',
@@ -124,8 +124,8 @@ ALTER SETTINGS CONFIGURATION 'Default'
 
 ## Checklist
 
-- [ ] Always run `SHOW SETTINGS` or `DESCRIBE SETTINGS` first to see current values
-- [ ] Verify changes after modification with `SHOW SETTINGS`
+- [ ] Always run `show settings` or `describe settings` first to see current values
+- [ ] Verify changes after modification with `show settings`
 - [ ] There is always exactly one ProjectSettings document; it cannot be created or deleted
 - [ ] Model setting key names are case-sensitive (e.g., `JavaVersion`, not `javaversion`)
-- [ ] Configuration names are case-insensitive (e.g., `'Default'` matches `'default'`)
+- [ ] Configuration names are case-insensitive (e.g., `'default'` matches `'default'`)

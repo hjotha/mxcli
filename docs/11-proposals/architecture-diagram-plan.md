@@ -14,7 +14,7 @@ The original proposal (`journey-architecture-viz.md`) has several issues when ma
 
 3. **The proposed file structure doesn't match the codebase.** The proposal suggests `cmd/journey/`, `internal/journey/`, `internal/mendix/` — none of which exist. The actual pattern is one Go file in `mdl/executor/`, one renderer function in `previewProvider.ts`.
 
-4. **The data extraction is already done.** The catalog `refs` table already has `call`, `create`, `retrieve`, `show_page`, `datasource`, `parameter`, `action` ref kinds. The `SHOW CONTEXT` command already walks these relationships recursively.
+4. **The data extraction is already done.** The catalog `refs` table already has `call`, `create`, `retrieve`, `show_page`, `datasource`, `parameter`, `action` ref kinds. The `show context` command already walks these relationships recursively.
 
 ## What we build instead
 
@@ -22,13 +22,13 @@ A **layered architecture diagram** that shows, for a given scope (module or expl
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  PAGES          [Page A]    [Page B]    [Page C]    │
+│  pages          [page A]    [page B]    [page C]    │
 │                    │            │           │        │
-│  MICROFLOWS    [MF_1] [MF_2] [MF_3]   [MF_4]      │
+│  microflows    [MF_1] [MF_2] [MF_3]   [MF_4]      │
 │                  │       │      │         │         │
-│  ENTITIES      [Order] [Customer] [Product]         │
+│  entities      [Order] [Customer] [Product]         │
 │                                                     │
-│  EXTERNAL      [REST: PaymentAPI]                   │
+│  external      [rest: PaymentAPI]                   │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -48,7 +48,7 @@ mxcli describe -p app.mpr --format elk architecture MyModule
 # Architecture scoped to a specific page and its transitive dependencies
 mxcli describe -p app.mpr --format elk architecture MyModule.Customer_Overview
 
-# Full project architecture (may be large)
+# full project architecture (may be large)
 mxcli describe -p app.mpr --format elk architecture _all
 ```
 
@@ -75,8 +75,8 @@ Go backend that queries the catalog and emits ELK-compatible JSON.
 
 ```go
 type architectureData struct {
-    Format string              `json:"format"`
-    Type   string              `json:"type"`    // "architecture"
+    format string              `json:"format"`
+    type   string              `json:"type"`    // "architecture"
     Scope  string              `json:"scope"`   // module name or page name
     Layers []architectureLayer `json:"layers"`
     Nodes  []architectureNode  `json:"nodes"`
@@ -85,14 +85,14 @@ type architectureData struct {
 
 type architectureLayer struct {
     ID    string `json:"id"`    // "pages", "microflows", "entities", "external"
-    Label string `json:"label"`
+    label string `json:"label"`
 }
 
 type architectureNode struct {
     ID       string `json:"id"`
     Name     string `json:"name"`
     Layer    string `json:"layer"`     // which layer this belongs to
-    Module   string `json:"module"`    // source module
+    module   string `json:"module"`    // source module
     NodeType string `json:"nodeType"`  // "page", "microflow", "entity", "service"
     Metric   int    `json:"metric"`    // complexity metric (widget/activity/attribute count)
     Details  []string `json:"details"` // hover details
@@ -100,7 +100,7 @@ type architectureNode struct {
 
 type architectureEdge struct {
     ID       string `json:"id"`
-    Source   string `json:"source"`
+    source   string `json:"source"`
     Target   string `json:"target"`
     RefKind  string `json:"refKind"`  // from refs table
 }
@@ -113,26 +113,26 @@ type architectureEdge struct {
 3. Query pages in scope from `pages` table
 4. Query microflows connected to those pages:
    ```sql
-   SELECT DISTINCT SourceName FROM refs
-   WHERE TargetName IN (<pages>) AND RefKind = 'action'
-   UNION
-   SELECT DISTINCT TargetName FROM refs
-   WHERE SourceName IN (<pages>) AND RefKind = 'action'
+   select distinct SourceName from refs
+   where TargetName in (<pages>) and RefKind = 'action'
+   union
+   select distinct TargetName from refs
+   where SourceName in (<pages>) and RefKind = 'action'
    ```
    Plus microflows in the same module, plus transitive `call` refs
 5. Query entities connected to those microflows:
    ```sql
-   SELECT DISTINCT TargetName FROM refs
-   WHERE SourceName IN (<microflows>) AND RefKind IN ('create', 'retrieve')
-   UNION
-   SELECT DISTINCT TargetName FROM refs
-   WHERE SourceName IN (<pages>) AND RefKind IN ('datasource', 'parameter')
+   select distinct TargetName from refs
+   where SourceName in (<microflows>) and RefKind in ('create', 'retrieve')
+   union
+   select distinct TargetName from refs
+   where SourceName in (<pages>) and RefKind in ('datasource', 'parameter')
    ```
 6. Query external service references from `activities` table:
    ```sql
-   SELECT DISTINCT EntityRef FROM activities
-   WHERE MicroflowQualifiedName IN (<microflows>)
-   AND ActivityType IN ('RestCallAction', 'WebServiceCallAction', 'HttpCallAction')
+   select distinct EntityRef from activities
+   where MicroflowQualifiedName in (<microflows>)
+   and ActivityType in ('RestCallAction', 'WebServiceCallAction', 'HttpCallAction')
    ```
 7. Build node list with layer assignments
 8. Build edge list from refs between the collected nodes
@@ -145,7 +145,7 @@ Add `architecture` to the describe command's ELK format dispatch (alongside `sys
 ```go
 case "ARCHITECTURE":
     if err := exec.ArchitectureDiagram(args[1]); err != nil {
-        fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+        fmt.Fprintf(os.Stderr, "error: %v\n", err)
         os.Exit(1)
     }
 ```

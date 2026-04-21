@@ -52,7 +52,7 @@ This causes:
 ```json
 {
   "widgetId": "com.mendix.widget.web.combobox.Combobox",
-  "mdlName": "COMBOBOX",
+  "mdlName": "combobox",
   "templateFile": "combobox.json",
   "defaultEditable": "Always",
 
@@ -60,7 +60,7 @@ This causes:
     {
       "name": "association",
       "condition": "hasDataSource",
-      "description": "Association mode with DataSource",
+      "description": "association mode with datasource",
       "propertyMappings": [
         {
           "propertyKey": "optionsSourceType",
@@ -69,12 +69,12 @@ This causes:
         },
         {
           "propertyKey": "optionsSourceAssociationDataSource",
-          "source": "DataSource",
+          "source": "datasource",
           "operation": "datasource"
         },
         {
           "propertyKey": "attributeAssociation",
-          "source": "Attribute",
+          "source": "attribute",
           "operation": "association"
         },
         {
@@ -86,11 +86,11 @@ This causes:
     },
     {
       "name": "default",
-      "description": "Enumeration mode",
+      "description": "enumeration mode",
       "propertyMappings": [
         {
           "propertyKey": "attributeEnumeration",
-          "source": "Attribute",
+          "source": "attribute",
           "operation": "attribute"
         }
       ]
@@ -104,14 +104,14 @@ Gallery (with child slots):
 ```json
 {
   "widgetId": "com.mendix.widget.web.gallery.Gallery",
-  "mdlName": "GALLERY",
+  "mdlName": "gallery",
   "templateFile": "gallery.json",
   "defaultEditable": "Always",
 
   "propertyMappings": [
     {"propertyKey": "advanced", "value": "false", "operation": "primitive"},
-    {"propertyKey": "datasource", "source": "DataSource", "operation": "datasource"},
-    {"propertyKey": "itemSelection", "source": "Selection", "operation": "selection"},
+    {"propertyKey": "datasource", "source": "datasource", "operation": "datasource"},
+    {"propertyKey": "itemSelection", "source": "selection", "operation": "selection"},
     {"propertyKey": "itemSelectionMode", "value": "clear", "operation": "primitive"},
     {"propertyKey": "desktopItems", "value": "1", "operation": "primitive"},
     {"propertyKey": "tabletItems", "value": "1", "operation": "primitive"},
@@ -124,9 +124,9 @@ Gallery (with child slots):
   ],
 
   "childSlots": [
-    {"propertyKey": "content", "mdlContainer": "TEMPLATE", "operation": "widgets"},
+    {"propertyKey": "content", "mdlContainer": "template", "operation": "widgets"},
     {"propertyKey": "emptyPlaceholder", "mdlContainer": "EMPTYPLACEHOLDER", "operation": "widgets"},
-    {"propertyKey": "filtersPlaceholder", "mdlContainer": "FILTER", "operation": "widgets"}
+    {"propertyKey": "filtersPlaceholder", "mdlContainer": "filter", "operation": "widgets"}
   ]
 }
 ```
@@ -140,11 +140,11 @@ All existing pluggable widget builders use combinations of these 6 operations:
 | `attribute` | `setAttributeRef()` | `source` → MDL Attribute prop | Sets `AttributeRef` with qualified path (`Module.Entity.Attr`) |
 | `association` | `setAssociationRef()` | `source` → MDL Attribute prop | Sets association path + entity ref |
 | `primitive` | `setPrimitiveValue()` | `value` or `source` | Sets `PrimitiveValue` string (enum selection, boolean, etc.) |
-| `datasource` | `setDataSource()` | `source` → MDL DataSource prop | Builds and sets `DataSource` object |
+| `datasource` | `setDataSource()` | `source` → MDL DataSource prop | Builds and sets `datasource` object |
 | `selection` | `setSelectionMode()` | `value` or `source` | Set widget selection mode (Single/Multi) |
-| `widgets` | inline child BSON | `childSlots` config | Embeds serialized child widgets into `Widgets` array |
+| `widgets` | inline child BSON | `childSlots` config | Embeds serialized child widgets into `widgets` array |
 | `texttemplate` | `setTextTemplateValue()` | `source` → string prop | Sets text in `TextTemplate` (Forms$ClientTemplate) |
-| `action` | `SerializeClientAction()` | `OnClick` → AST Action | Sets `Action` with serialized client action BSON |
+| `action` | `SerializeClientAction()` | `onclick` → AST Action | Sets `action` with serialized client action BSON |
 
 Operations are registered in an `OperationRegistry` and new types can be added without modifying the engine.
 
@@ -162,30 +162,30 @@ type WidgetDefinition struct {
     PropertyMappings []PropertyMapping           `json:"propertyMappings,omitempty"`
     ChildSlots       []ChildSlotMapping          `json:"childSlots,omitempty"`
 
-    // Multi-mode case (e.g., ComboBox enum vs association)
+    // multi-mode case (e.g., combobox enum vs association)
     // Uses slice instead of map to preserve evaluation order (first-match-wins semantics)
     Modes            []WidgetMode                `json:"modes,omitempty"`
 }
 
 type WidgetMode struct {
-    Condition        string                      `json:"condition,omitempty"`
-    Description      string                      `json:"description,omitempty"`
+    condition        string                      `json:"condition,omitempty"`
+    description      string                      `json:"description,omitempty"`
     PropertyMappings []PropertyMapping           `json:"propertyMappings"`
     ChildSlots       []ChildSlotMapping          `json:"childSlots,omitempty"`
 }
 
 type PropertyMapping struct {
-    PropertyKey string `json:"propertyKey"`       // Template property key
-    Source      string `json:"source,omitempty"`   // MDL AST property name
-    Value       string `json:"value,omitempty"`    // Static value (mutually exclusive with Source)
-    Operation   string `json:"operation"`          // attribute|association|primitive|datasource
-    Default     string `json:"default,omitempty"`  // Default value if source is empty
+    PropertyKey string `json:"propertyKey"`       // template property key
+    source      string `json:"source,omitempty"`   // MDL AST property name
+    value       string `json:"value,omitempty"`    // Static value (mutually exclusive with source)
+    operation   string `json:"operation"`          // attribute|association|primitive|datasource
+    default     string `json:"default,omitempty"`  // default value if source is empty
 }
 
 type ChildSlotMapping struct {
-    PropertyKey  string `json:"propertyKey"`       // Template property key for widget list
-    MDLContainer string `json:"mdlContainer"`      // MDL child container name (TEMPLATE, FILTER)
-    Operation    string `json:"operation"`          // Always "widgets"
+    PropertyKey  string `json:"propertyKey"`       // template property key for widget list
+    MDLContainer string `json:"mdlContainer"`      // MDL child container name (template, filter)
+    operation    string `json:"operation"`          // Always "widgets"
 }
 ```
 
@@ -216,15 +216,15 @@ Built-in conditions (extensible):
 ### Engine Flow
 
 ```go
-func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*pages.CustomWidget, error) {
+func (e *PluggableWidgetEngine) build(def *WidgetDefinition, w *ast.WidgetV3) (*pages.CustomWidget, error) {
     // 1. Load template
     tmplType, tmplObj, tmplIDs, objTypeID, err := widgets.GetTemplateFullBSON(
         def.WidgetID, mpr.GenerateID, e.projectPath)
 
-    // 2. Select mode
+    // 2. select mode
     mode := e.selectMode(def, w)
 
-    // 3. Apply property mappings
+    // 3. apply property mappings
     propTypeIDs := convertPropertyTypeIDs(tmplIDs)
     updatedObj := tmplObj
     for _, mapping := range mode.PropertyMappings {
@@ -233,16 +233,16 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
         updatedObj = op.Apply(updatedObj, propTypeIDs, mapping.PropertyKey, value, e.buildCtx)
     }
 
-    // 4. Apply child slots
+    // 4. apply child slots
     for _, slot := range mode.ChildSlots {
         childBSONs := e.buildChildWidgets(w, slot.MDLContainer)
         updatedObj = e.applyWidgetSlot(updatedObj, propTypeIDs, slot.PropertyKey, childBSONs)
     }
 
-    // 5. Build CustomWidget
+    // 5. build customwidget
     return &pages.CustomWidget{
         BaseWidget:        pages.BaseWidget{...},
-        Editable:          def.DefaultEditable,
+        editable:          def.DefaultEditable,
         RawType:           tmplType,
         RawObject:         updatedObj,
         PropertyTypeIDMap: propTypeIDs,
@@ -257,16 +257,16 @@ func (e *PluggableWidgetEngine) Build(def *WidgetDefinition, w *ast.WidgetV3) (*
 func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
     switch strings.ToUpper(w.Type) {
     // Native Mendix widgets — keep hardcoded (different BSON structure)
-    case "DATAVIEW":
+    case "dataview":
         return pb.buildDataViewV3(w)
-    case "LISTVIEW":
+    case "listview":
         return pb.buildListViewV3(w)
-    case "TEXTBOX":
+    case "textbox":
         return pb.buildTextBoxV3(w)
     // ... other native widgets
 
     default:
-        // All pluggable widgets go through declarative engine
+        // all pluggable widgets go through declarative engine
         if def, ok := pb.widgetRegistry.Get(strings.ToUpper(w.Type)); ok {
             return pb.pluggableEngine.Build(def, w)
         }
@@ -283,7 +283,7 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (pages.Widget, error) {
 project/
 └── .mxcli/
     └── widgets/
-        ├── my-rating-widget.def.json      # Widget definition
+        ├── my-rating-widget.def.json      # widget definition
         └── my-rating-widget.json          # BSON template
 
 ~/.mxcli/
@@ -314,7 +314,7 @@ mxcli widget extract --mpk path/to/widget.mpk
 
 ### What Stays Hardcoded
 
-**Native Mendix widgets** (TextBox, DataView, ListView, LayoutGrid, Container, etc.) use a fundamentally different BSON structure (`Forms$TextBox`, `Forms$DataView`) — NOT `CustomWidgets$CustomWidget`. These stay as hardcoded builders because:
+**Native Mendix widgets** (TextBox, DataView, ListView, LayoutGrid, Container, etc.) use a fundamentally different BSON structure (`Forms$textbox`, `Forms$dataview`) — NOT `CustomWidgets$customwidget`. These stay as hardcoded builders because:
 - They don't use the template system
 - Their BSON structure varies significantly per widget type
 - There are ~20 of them and they're stable (rarely new ones added)

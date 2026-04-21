@@ -54,5 +54,5 @@ func TestDescribeJavaAction_Mock(t *testing.T) {
 	assertNoError(t, describeJavaAction(ctx, ast.QualifiedName{Module: "MyModule", Name: "DoSomething"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE JAVA ACTION")
+	assertContainsStr(t, out, "create java action")
 }

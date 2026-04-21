@@ -75,7 +75,7 @@ func formatDesignPropertiesMDL(dps []rawDesignProp) string {
 	for _, dp := range dps {
 		switch dp.ValueType {
 		case "toggle":
-			entries = append(entries, fmt.Sprintf("%s: ON", mdlQuote(dp.Key)))
+			entries = append(entries, fmt.Sprintf("%s: on", mdlQuote(dp.Key)))
 		case "option":
 			entries = append(entries, fmt.Sprintf("%s: %s", mdlQuote(dp.Key), mdlQuote(dp.Option)))
 		}
@@ -130,7 +130,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 
 	switch w.Type {
 	case "Forms$DivContainer", "Pages$DivContainer":
-		header := fmt.Sprintf("CONTAINER %s", w.Name)
+		header := fmt.Sprintf("container %s", w.Name)
 		props := appendAppearanceProps(nil, w)
 		if len(w.Children) > 0 {
 			formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
@@ -143,7 +143,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		}
 
 	case "Forms$GroupBox", "Pages$GroupBox":
-		header := fmt.Sprintf("GROUPBOX %s", w.Name)
+		header := fmt.Sprintf("groupbox %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Caption: %s", mdlQuote(w.Caption)))
@@ -173,14 +173,14 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		}
 
 	case "Forms$LayoutGrid", "Pages$LayoutGrid":
-		header := "LAYOUTGRID"
+		header := "layoutgrid"
 		if w.Name != "" {
 			header += " " + w.Name
 		}
 		props := appendAppearanceProps(nil, w)
 		formatWidgetProps(ctx.Output, prefix, header, props, " {\n")
 		for rowIdx, row := range w.Rows {
-			fmt.Fprintf(ctx.Output, "%s  ROW row%d {\n", prefix, rowIdx+1)
+			fmt.Fprintf(ctx.Output, "%s  row row%d {\n", prefix, rowIdx+1)
 			for colIdx, col := range row.Columns {
 				var colProps []string
 				widthStr := "AutoFill"
@@ -194,7 +194,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				if col.PhoneWidth > 0 && col.PhoneWidth <= 12 {
 					colProps = append(colProps, fmt.Sprintf("PhoneWidth: %d", col.PhoneWidth))
 				}
-				fmt.Fprintf(ctx.Output, "%s    COLUMN col%d (%s) {\n", prefix, colIdx+1, strings.Join(colProps, ", "))
+				fmt.Fprintf(ctx.Output, "%s    column col%d (%s) {\n", prefix, colIdx+1, strings.Join(colProps, ", "))
 				for _, cw := range col.Widgets {
 					outputWidgetMDLV3(ctx, cw, indent+3)
 				}
@@ -205,7 +205,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$DynamicText", "Pages$DynamicText":
-		header := fmt.Sprintf("DYNAMICTEXT %s", w.Name)
+		header := fmt.Sprintf("dynamictext %s", w.Name)
 		props := []string{}
 		if w.Content != "" {
 			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Content)))
@@ -220,7 +220,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$ActionButton", "Pages$ActionButton":
-		header := fmt.Sprintf("ACTIONBUTTON %s", w.Name)
+		header := fmt.Sprintf("actionbutton %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Caption: %s", mdlQuote(w.Caption)))
@@ -243,10 +243,10 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Content)))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(ctx.Output, prefix, "STATICTEXT", props, "\n")
+		formatWidgetProps(ctx.Output, prefix, "statictext", props, "\n")
 
 	case "Forms$Title", "Pages$Title":
-		header := fmt.Sprintf("TITLE %s", w.Name)
+		header := fmt.Sprintf("title %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Content: %s", mdlQuote(w.Caption)))
@@ -255,14 +255,14 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$DataView", "Pages$DataView":
-		header := fmt.Sprintf("DATAVIEW %s", w.Name)
+		header := fmt.Sprintf("dataview %s", w.Name)
 		props := []string{}
 		if w.DataSource != nil {
 			switch w.DataSource.Type {
 			case "microflow":
-				props = append(props, fmt.Sprintf("DataSource: MICROFLOW %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
 			case "nanoflow":
-				props = append(props, fmt.Sprintf("DataSource: NANOFLOW %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("DataSource: nanoflow %s", w.DataSource.Reference))
 			case "parameter":
 				props = append(props, fmt.Sprintf("DataSource: $%s", w.DataSource.Reference))
 			}
@@ -276,7 +276,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$TextBox", "Pages$TextBox":
-		header := fmt.Sprintf("TEXTBOX %s", w.Name)
+		header := fmt.Sprintf("textbox %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
@@ -288,7 +288,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$TextArea", "Pages$TextArea":
-		header := fmt.Sprintf("TEXTAREA %s", w.Name)
+		header := fmt.Sprintf("textarea %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
@@ -300,7 +300,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$DatePicker", "Pages$DatePicker":
-		header := fmt.Sprintf("DATEPICKER %s", w.Name)
+		header := fmt.Sprintf("datepicker %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
@@ -312,7 +312,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$RadioButtons", "Pages$RadioButtons":
-		header := fmt.Sprintf("RADIOBUTTONS %s", w.Name)
+		header := fmt.Sprintf("radiobuttons %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
@@ -324,7 +324,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$CheckBox", "Pages$CheckBox":
-		header := fmt.Sprintf("CHECKBOX %s", w.Name)
+		header := fmt.Sprintf("checkbox %s", w.Name)
 		props := []string{}
 		if w.Caption != "" {
 			props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
@@ -350,33 +350,33 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 	case "CustomWidgets$CustomWidget":
 		widgetType := w.RenderMode // We stored widget type in RenderMode
 		if widgetType == "" {
-			widgetType = "CUSTOMWIDGET"
+			widgetType = "customwidget"
 		}
 		// Handle DataGrid2 specially with datasource and columns
-		if widgetType == "DATAGRID2" && (w.DataSource != nil || len(w.DataGridColumns) > 0) {
-			header := fmt.Sprintf("DATAGRID %s", w.Name)
+		if widgetType == "datagrid2" && (w.DataSource != nil || len(w.DataGridColumns) > 0) {
+			header := fmt.Sprintf("datagrid %s", w.Name)
 			props := []string{}
 			if w.DataSource != nil {
 				switch w.DataSource.Type {
 				case "database":
-					dsVal := fmt.Sprintf("DATABASE FROM %s", w.DataSource.Reference)
+					dsVal := fmt.Sprintf("database from %s", w.DataSource.Reference)
 					if w.DataSource.XPathConstraint != "" {
 						xpath := w.DataSource.XPathConstraint
 						if len(xpath) >= 2 && xpath[0] == '[' && xpath[len(xpath)-1] == ']' {
 							xpath = xpath[1 : len(xpath)-1]
 						}
-						dsVal += fmt.Sprintf(" WHERE %s", xpath)
+						dsVal += fmt.Sprintf(" where %s", xpath)
 					}
 					if len(w.DataSource.SortColumns) > 0 {
 						var sortParts []string
 						for _, col := range w.DataSource.SortColumns {
 							sortParts = append(sortParts, col.Attribute+" "+col.Order)
 						}
-						dsVal += fmt.Sprintf(" SORT BY %s", strings.Join(sortParts, ", "))
+						dsVal += fmt.Sprintf(" sort by %s", strings.Join(sortParts, ", "))
 					}
 					props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
 				case "microflow":
-					props = append(props, fmt.Sprintf("DataSource: MICROFLOW %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
 				case "parameter":
 					props = append(props, fmt.Sprintf("DataSource: %s", w.DataSource.Reference))
 				}
@@ -395,7 +395,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
 				// Output CONTROLBAR section if control bar widgets present
 				if len(w.ControlBar) > 0 {
-					fmt.Fprintf(ctx.Output, "%s  CONTROLBAR controlBar1 {\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  controlbar controlBar1 {\n", prefix)
 					for _, cb := range w.ControlBar {
 						outputWidgetMDLV3(ctx, cb, indent+2)
 					}
@@ -410,20 +410,20 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			} else {
 				formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 			}
-		} else if widgetType == "GALLERY" {
+		} else if widgetType == "gallery" {
 			// Handle Gallery specially with datasource, selection, filter and content widgets
-			header := fmt.Sprintf("GALLERY %s", w.Name)
+			header := fmt.Sprintf("gallery %s", w.Name)
 			props := []string{}
 			if w.DataSource != nil {
 				switch w.DataSource.Type {
 				case "database":
-					dsVal := fmt.Sprintf("DATABASE FROM %s", w.DataSource.Reference)
+					dsVal := fmt.Sprintf("database from %s", w.DataSource.Reference)
 					if w.DataSource.XPathConstraint != "" {
 						xpath := w.DataSource.XPathConstraint
 						if len(xpath) >= 2 && xpath[0] == '[' && xpath[len(xpath)-1] == ']' {
 							xpath = xpath[1 : len(xpath)-1]
 						}
-						dsVal += fmt.Sprintf(" WHERE %s", xpath)
+						dsVal += fmt.Sprintf(" where %s", xpath)
 					}
 					// Add SORT BY if present
 					if len(w.DataSource.SortColumns) > 0 {
@@ -431,11 +431,11 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 						for _, col := range w.DataSource.SortColumns {
 							sortParts = append(sortParts, col.Attribute+" "+col.Order)
 						}
-						dsVal += fmt.Sprintf(" SORT BY %s", strings.Join(sortParts, ", "))
+						dsVal += fmt.Sprintf(" sort by %s", strings.Join(sortParts, ", "))
 					}
 					props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
 				case "microflow":
-					props = append(props, fmt.Sprintf("DataSource: MICROFLOW %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
 				}
 			}
 			// Add column counts if non-default
@@ -460,7 +460,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				outputDataContainerContext(ctx.Output, prefix+"  ", w.Name, w.EntityContext, true)
 				// Output FILTER section if filter widgets present
 				if len(w.FilterWidgets) > 0 {
-					fmt.Fprintf(ctx.Output, "%s  FILTER filter1 {\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  filter filter1 {\n", prefix)
 					for _, filter := range w.FilterWidgets {
 						outputWidgetMDLV3(ctx, filter, indent+2)
 					}
@@ -468,7 +468,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				}
 				// Output TEMPLATE section if content widgets present
 				if len(w.Children) > 0 {
-					fmt.Fprintf(ctx.Output, "%s  TEMPLATE template1 {\n", prefix)
+					fmt.Fprintf(ctx.Output, "%s  template template1 {\n", prefix)
 					for _, child := range w.Children {
 						outputWidgetMDLV3(ctx, child, indent+2)
 					}
@@ -478,8 +478,8 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			} else {
 				formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 			}
-		} else if widgetType == "IMAGE" {
-			header := fmt.Sprintf("IMAGE %s", w.Name)
+		} else if widgetType == "image" {
+			header := fmt.Sprintf("image %s", w.Name)
 			props := []string{}
 			if w.ImageType != "" && w.ImageType != "image" {
 				props = append(props, fmt.Sprintf("ImageType: %s", w.ImageType))
@@ -519,7 +519,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 			formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 		} else if len(w.ExplicitProperties) > 0 && w.WidgetID != "" {
 			// Generic pluggable widget with explicit properties
-			header := fmt.Sprintf("PLUGGABLEWIDGET '%s' %s", w.WidgetID, w.Name)
+			header := fmt.Sprintf("pluggablewidget '%s' %s", w.WidgetID, w.Name)
 			props := []string{}
 			if w.Caption != "" {
 				props = append(props, fmt.Sprintf("Label: %s", mdlQuote(w.Caption)))
@@ -539,12 +539,12 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 				props = append(props, fmt.Sprintf("Attribute: %s", w.Content))
 			}
 			// Show DataSource and CaptionAttribute for ComboBox association mode
-			if w.DataSource != nil && widgetType == "COMBOBOX" {
+			if w.DataSource != nil && widgetType == "combobox" {
 				switch w.DataSource.Type {
 				case "database":
-					props = append(props, fmt.Sprintf("DataSource: DATABASE FROM %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("DataSource: database from %s", w.DataSource.Reference))
 				case "microflow":
-					props = append(props, fmt.Sprintf("DataSource: MICROFLOW %s", w.DataSource.Reference))
+					props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
 				}
 				if w.CaptionAttribute != "" {
 					props = append(props, fmt.Sprintf("CaptionAttribute: %s", w.CaptionAttribute))
@@ -563,9 +563,9 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		}
 
 	case "Forms$NavigationList", "Pages$NavigationList":
-		fmt.Fprintf(ctx.Output, "%sNAVIGATIONLIST %s {\n", prefix, w.Name)
+		fmt.Fprintf(ctx.Output, "%snavigationlist %s {\n", prefix, w.Name)
 		for _, child := range w.Children {
-			itemHeader := fmt.Sprintf("ITEM %s", child.Name)
+			itemHeader := fmt.Sprintf("item %s", child.Name)
 			props := []string{}
 			if child.Action != "" {
 				props = append(props, fmt.Sprintf("Action: %s", child.Action))
@@ -582,32 +582,32 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$Label", "Pages$Label":
-		fmt.Fprintf(ctx.Output, "%sSTATICTEXT (Content: %s)\n", prefix, mdlQuote(w.Content))
+		fmt.Fprintf(ctx.Output, "%sstatictext (Content: %s)\n", prefix, mdlQuote(w.Content))
 
 	case "Forms$Gallery", "Pages$Gallery":
-		header := fmt.Sprintf("GALLERY %s", w.Name)
+		header := fmt.Sprintf("gallery %s", w.Name)
 		props := []string{}
 		if w.DataSource != nil {
 			switch w.DataSource.Type {
 			case "database":
-				dsVal := fmt.Sprintf("DATABASE FROM %s", w.DataSource.Reference)
+				dsVal := fmt.Sprintf("database from %s", w.DataSource.Reference)
 				if w.DataSource.XPathConstraint != "" {
 					xpath := w.DataSource.XPathConstraint
 					if len(xpath) >= 2 && xpath[0] == '[' && xpath[len(xpath)-1] == ']' {
 						xpath = xpath[1 : len(xpath)-1]
 					}
-					dsVal += fmt.Sprintf(" WHERE %s", xpath)
+					dsVal += fmt.Sprintf(" where %s", xpath)
 				}
 				if len(w.DataSource.SortColumns) > 0 {
 					var sortParts []string
 					for _, col := range w.DataSource.SortColumns {
 						sortParts = append(sortParts, col.Attribute+" "+col.Order)
 					}
-					dsVal += fmt.Sprintf(" SORT BY %s", strings.Join(sortParts, ", "))
+					dsVal += fmt.Sprintf(" sort by %s", strings.Join(sortParts, ", "))
 				}
 				props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
 			case "microflow":
-				props = append(props, fmt.Sprintf("DataSource: MICROFLOW %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
 			case "parameter":
 				props = append(props, fmt.Sprintf("DataSource: %s", w.DataSource.Reference))
 			}
@@ -625,7 +625,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		}
 
 	case "Forms$SnippetCallWidget", "Pages$SnippetCallWidget":
-		header := fmt.Sprintf("SNIPPETCALL %s", w.Name)
+		header := fmt.Sprintf("snippetcall %s", w.Name)
 		props := []string{}
 		if w.Content != "" {
 			props = append(props, fmt.Sprintf("Snippet: %s", w.Content))
@@ -634,7 +634,7 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Footer":
-		fmt.Fprintf(ctx.Output, "%sFOOTER %s {\n", prefix, w.Name)
+		fmt.Fprintf(ctx.Output, "%sfooter %s {\n", prefix, w.Name)
 		for _, child := range w.Children {
 			outputWidgetMDLV3(ctx, child, indent+1)
 		}
@@ -642,24 +642,24 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 
 	case "Forms$ListView", "Pages$ListView":
 		// ListView (also used for Gallery serialization)
-		header := fmt.Sprintf("LISTVIEW %s", w.Name)
+		header := fmt.Sprintf("listview %s", w.Name)
 		props := []string{}
 		if w.DataSource != nil {
 			switch w.DataSource.Type {
 			case "database":
-				dsVal := fmt.Sprintf("DATABASE FROM %s", w.DataSource.Reference)
+				dsVal := fmt.Sprintf("database from %s", w.DataSource.Reference)
 				if w.DataSource.XPathConstraint != "" {
 					xpath := w.DataSource.XPathConstraint
 					if len(xpath) >= 2 && xpath[0] == '[' && xpath[len(xpath)-1] == ']' {
 						xpath = xpath[1 : len(xpath)-1]
 					}
-					dsVal += fmt.Sprintf(" WHERE %s", xpath)
+					dsVal += fmt.Sprintf(" where %s", xpath)
 				}
 				props = append(props, fmt.Sprintf("DataSource: %s", dsVal))
 			case "microflow":
-				props = append(props, fmt.Sprintf("DataSource: MICROFLOW %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("DataSource: microflow %s", w.DataSource.Reference))
 			case "nanoflow":
-				props = append(props, fmt.Sprintf("DataSource: NANOFLOW %s", w.DataSource.Reference))
+				props = append(props, fmt.Sprintf("DataSource: nanoflow %s", w.DataSource.Reference))
 			case "parameter":
 				props = append(props, fmt.Sprintf("DataSource: %s", w.DataSource.Reference))
 			}
@@ -778,7 +778,7 @@ func outputDataGrid2ColumnV3(ctx *ExecContext, prefix, colName string, col rawDa
 	}
 
 	// Check if we have content widgets to display
-	header := fmt.Sprintf("COLUMN %s", colName)
+	header := fmt.Sprintf("column %s", colName)
 	hasContent := len(col.ContentWidgets) > 0
 
 	if hasContent {
@@ -859,27 +859,27 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 	typeName, _ := action["$Type"].(string)
 	switch typeName {
 	case "Forms$SaveChangesClientAction", "Pages$SaveChangesClientAction":
-		result := "SAVE_CHANGES"
+		result := "save_changes"
 		if closePage, ok := action["ClosePage"].(bool); ok && closePage {
-			result += " CLOSE_PAGE"
+			result += " close_page"
 		}
 		return result
 	case "Forms$CancelChangesClientAction", "Pages$CancelChangesClientAction":
-		result := "CANCEL_CHANGES"
+		result := "cancel_changes"
 		if closePage, ok := action["ClosePage"].(bool); ok && closePage {
-			result += " CLOSE_PAGE"
+			result += " close_page"
 		}
 		return result
 	case "Forms$ClosePageClientAction", "Pages$ClosePageClientAction":
-		return "CLOSE_PAGE"
+		return "close_page"
 	case "Forms$DeleteClientAction", "Pages$DeleteClientAction":
-		result := "DELETE_OBJECT"
+		result := "delete_object"
 		if closePage, ok := action["ClosePage"].(bool); ok && closePage {
-			result += " CLOSE_PAGE"
+			result += " close_page"
 		}
 		return result
 	case "Forms$CreateObjectClientAction", "Pages$CreateObjectClientAction":
-		result := "CREATE_OBJECT"
+		result := "create_object"
 		// Extract entity reference
 		if entityRef, ok := action["EntityRef"].(map[string]any); ok {
 			if entityName, ok := entityRef["Entity"].(string); ok && entityName != "" {
@@ -890,13 +890,13 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 		if pageSettings, ok := action["PageSettings"].(map[string]any); ok {
 			// The page is stored in "Form" field as a qualified name string (BY_NAME_REFERENCE)
 			if pageName, ok := pageSettings["Form"].(string); ok && pageName != "" {
-				pageAction := "SHOW_PAGE " + pageName
+				pageAction := "show_page " + pageName
 				// Extract page parameters
 				params := extractPageParameters(ctx, pageSettings)
 				if params != "" {
 					pageAction += "(" + params + ")"
 				}
-				result += " THEN " + pageAction
+				result += " then " + pageAction
 			}
 		}
 		return result
@@ -905,7 +905,7 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 		// or PageSettings.Form, or Page field (binary ID for legacy)
 		if formSettings, ok := action["FormSettings"].(map[string]any); ok {
 			if pageName, ok := formSettings["Form"].(string); ok && pageName != "" {
-				result := "SHOW_PAGE " + pageName
+				result := "show_page " + pageName
 				params := extractPageParameters(ctx, formSettings)
 				if params != "" {
 					result += "(" + params + ")"
@@ -915,7 +915,7 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 		}
 		if pageSettings, ok := action["PageSettings"].(map[string]any); ok {
 			if pageName, ok := pageSettings["Form"].(string); ok && pageName != "" {
-				result := "SHOW_PAGE " + pageName
+				result := "show_page " + pageName
 				params := extractPageParameters(ctx, pageSettings)
 				if params != "" {
 					result += "(" + params + ")"
@@ -927,15 +927,15 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 		if pageID := extractBinaryID(action["Page"]); pageID != "" {
 			pageName := getPageQualifiedName(ctx, model.ID(pageID))
 			if pageName != "" {
-				return "SHOW_PAGE " + pageName
+				return "show_page " + pageName
 			}
 		}
-		return "SHOW_PAGE"
+		return "show_page"
 	case "Forms$MicroflowAction", "Pages$MicroflowClientAction":
 		// Extract microflow reference from MicroflowSettings
 		if settings, ok := action["MicroflowSettings"].(map[string]any); ok {
 			if mfName, ok := settings["Microflow"].(string); ok && mfName != "" {
-				result := "CALL_MICROFLOW " + mfName
+				result := "call_microflow " + mfName
 				// Extract parameter mappings
 				params := extractMicroflowParameters(ctx, settings)
 				if params != "" {
@@ -944,10 +944,10 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 				return result
 			}
 		}
-		return "CALL_MICROFLOW"
+		return "call_microflow"
 	case "Forms$CallNanoflowClientAction", "Pages$CallNanoflowClientAction":
 		if nfName, ok := action["Nanoflow"].(string); ok && nfName != "" {
-			result := "CALL_NANOFLOW " + nfName
+			result := "call_nanoflow " + nfName
 			// Extract parameter mappings (directly in the action)
 			params := extractNanoflowParameters(ctx, action)
 			if params != "" {
@@ -955,10 +955,10 @@ func extractButtonAction(ctx *ExecContext, w map[string]any) string {
 			}
 			return result
 		}
-		return "CALL_NANOFLOW"
+		return "call_nanoflow"
 	case "Forms$SetTaskOutcomeClientAction", "Pages$SetTaskOutcomeClientAction":
 		outcomeValue, _ := action["OutcomeValue"].(string)
-		return "COMPLETE_TASK '" + strings.ReplaceAll(outcomeValue, "'", "''") + "'"
+		return "complete_task '" + strings.ReplaceAll(outcomeValue, "'", "''") + "'"
 	case "Forms$NoClientAction", "Pages$NoClientAction":
 		return ""
 	default:

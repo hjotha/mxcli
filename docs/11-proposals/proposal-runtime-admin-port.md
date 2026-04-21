@@ -16,7 +16,7 @@ feature additions.
 | **P1** | Admin `addresses = *` config | Small diff, unblocks `--direct` mode for `reload` and `oql` |
 | **P1** | OQL verification test pattern | Document Playwright + OQL pattern; works today with no new code |
 | **P2** | Update skill files | Document reload workflow post-implementation; `runtime-admin-api.md` already covers M2EE basics |
-| **P2** | `CREATE PUBLISHED REST SERVICE` | New MDL domain; enables microflow unit testing and API development |
+| **P2** | `create published rest service` | New MDL domain; enables microflow unit testing and API development |
 | **P3** | `mxcli test microflow` | Purpose-built test command; depends on Published REST or `/xas/` protocol |
 | **P3** | `mxcli stats --slow-queries` | High diagnostic value for AI-assisted development loop |
 | **P4** | `mxcli debug` | Defer until there's a clear non-interactive interaction model (see review notes) |
@@ -28,13 +28,13 @@ feature additions.
 The Mendix runtime exposes an HTTP JSON API on the admin port (default 8090). mxcli already uses
 this internally for `mxcli oql` — but it is not exposed for other uses.
 
-**Authentication:** HTTP header `X-M2EE-Authentication` with the password **base64-encoded**.
+**Authentication:** HTTP header `X-M2EE-authentication` with the password **base64-encoded**.
 
 ```bash
 PASS_B64=$(echo -n "$M2EE_ADMIN_PASS" | base64)
-curl -X POST http://localhost:8090/ \
-  -H "Content-Type: application/json" \
-  -H "X-M2EE-Authentication: $PASS_B64" \
+curl -X post http://localhost:8090/ \
+  -H "content-type: application/json" \
+  -H "X-M2EE-authentication: $PASS_B64" \
   -d '{"action":"ACTION_NAME","params":{...}}'
 ```
 
@@ -45,7 +45,7 @@ This is already how `mxcli oql` works internally (verified via strace). The pass
 
 | Action | Response | Notes |
 |--------|----------|-------|
-| `about` | `{"feedback":{"version":"11.6.3","name":"Mendix Runtime",...}}` | Runtime info |
+| `about` | `{"feedback":{"version":"11.6.3","name":"Mendix runtime",...}}` | Runtime info |
 | `runtime_status` | `{"feedback":{"status":"running"}}` | Health check |
 | `reload_model` | `{"feedback":{"startup_metrics":{"duration":98,...}}}` | **Hot reload** — reloads compiled model from disk in ~100ms, no container restart |
 | `update_styling` | `{"feedback":{}}` | Pushes CSS hot reload to all connected browser clients |
@@ -59,7 +59,7 @@ This is already how `mxcli oql` works internally (verified via strace). The pass
 
 ## Discovery: `/mxdevtools/` WebSocket Protocol
 
-The Mendix runtime exposes a WebSocket endpoint at `ws://HOST:8080/mxdevtools/` (on the app port,
+The Mendix runtime exposes a WebSocket endpoint at `ws://host:8080/mxdevtools/` (on the app port,
 not the admin port). This is a **server-push-only** channel — the server pushes instructions to
 connected browser clients. Studio Pro uses the M2EE admin API to trigger these pushes.
 
@@ -163,7 +163,7 @@ App updated at http://localhost:8080
 > suggests DDL may require explicit approval rather than automatic application. Test scenarios:
 >
 > 1. Add a new entity + `reload_model` → does the table appear in PostgreSQL?
-> 2. Add a new attribute to an existing entity + `reload_model` → does `ALTER TABLE ADD COLUMN` run?
+> 2. Add a new attribute to an existing entity + `reload_model` → does `alter table add column` run?
 > 3. Remove an attribute + `reload_model` → does the column get dropped, or does the runtime error?
 > 4. Change an attribute type (e.g., String → Integer) + `reload_model` → what happens?
 >
@@ -261,7 +261,7 @@ browser clients.
 A separate `debugger/` HTTP endpoint is also registered at startup:
 
 ```
-Added request handler 'debugger/' with class com.mendix.modules.debugger.internal.DebuggerHandler
+added request handler 'debugger/' with class com.mendix.modules.debugger.internal.DebuggerHandler
 ```
 
 This endpoint likely handles breakpoint management and variable inspection — the same backend that
@@ -303,7 +303,7 @@ stepping. Defer the full breakpoint management UX until there's demand.
 The Mendix runtime exposes a **Prometheus metrics endpoint** registered at startup:
 
 ```
-Added admin request handler '/prometheus' with class com.mendix.metrics.prometheus.PrometheusServlet
+added admin request handler '/prometheus' with class com.mendix.metrics.prometheus.PrometheusServlet
 ```
 
 This is accessible at `http://localhost:8090/prometheus` (admin port) and likely exposes:
@@ -360,15 +360,15 @@ feedback — not "click through 5 pages and check a database row."
 Mendix supports publishing microflows as REST operations. The workflow would be:
 
 ```
-1. CREATE MICROFLOW Module.ACT_CalculateTotal (...)     -- write the logic
-2. CREATE PUBLISHED REST SERVICE Module.TestAPI (...)    -- expose it as HTTP
+1. create microflow Module.ACT_CalculateTotal (...)     -- write the logic
+2. create published rest service Module.TestAPI (...)    -- expose it as HTTP
 3. mxcli docker reload -p app.mpr                       -- hot deploy
 4. curl http://localhost:8080/rest/testapi/v1/calculate  -- call it
 5. Assert on the HTTP response                           -- verify
 ```
 
-The metamodel types exist (`Rest$PublishedRestService`, `Rest$PublishedRestServiceOperation` with a
-`Microflow` field), but MDL doesn't support `CREATE PUBLISHED REST SERVICE` yet. This is the most
+The metamodel types exist (`rest$PublishedRestService`, `rest$PublishedRestServiceOperation` with a
+`microflow` field), but MDL doesn't support `create published rest service` yet. This is the most
 stable approach since it uses Mendix's own REST infrastructure.
 
 **Approach 2: The `/xas/` client API (browser protocol)**
@@ -377,13 +377,13 @@ The Mendix browser client calls microflows through `/xas/` using a JSON-RPC-styl
 could replicate what the browser does:
 
 ```bash
-# 1. Login to get a session + CSRF token
+# 1. login to get a session + CSRF token
 curl -c cookies.txt http://localhost:8080/xas/ \
   -d '{"action":"login","params":{"username":"MxAdmin","password":"AdminPassword1!"}}'
 
-# 2. Call a microflow via the same protocol the browser uses
+# 2. call a microflow via the same protocol the browser uses
 curl -b cookies.txt http://localhost:8080/xas/ \
-  -H "X-Csrf-Token: $TOKEN" \
+  -H "X-Csrf-token: $token" \
   -d '{"action":"executeaction","params":{"actionname":"MyModule.ACT_CalculateTotal","applyto":"none"}}'
 ```
 
@@ -404,9 +404,9 @@ For microflows that create/modify data, we can verify side effects without calli
 directly:
 
 ```bash
-# Trigger the microflow through the UI (Playwright) or a REST endpoint
-# Then verify the result via OQL:
-mxcli oql -p app.mpr "SELECT Total FROM MyModule.Order WHERE OrderNumber = 'TEST-001'"
+# Trigger the microflow through the UI (Playwright) or a rest endpoint
+# then verify the result via OQL:
+mxcli oql -p app.mpr "select Total from MyModule.Order where OrderNumber = 'TEST-001'"
 ```
 
 This already works with the current `mxcli oql` command. It doesn't test the microflow in
@@ -429,32 +429,32 @@ npx playwright test tests/order-processing.spec.ts
 
 # 3. Verify side effects
 mxcli oql -p app.mpr --json \
-  "SELECT Total, Status FROM MyModule.Order WHERE OrderNumber = 'TEST-001'" \
+  "select Total, status from MyModule.Order where OrderNumber = 'TEST-001'" \
   | jq '.[0] | select(.Status == "Completed" and .Total == "150.00")'
 ```
 
-**Phase 2: `CREATE PUBLISHED REST SERVICE` in MDL**
+**Phase 2: `create published rest service` in MDL**
 
 Add grammar, visitor, and executor support for publishing microflows as REST endpoints:
 
 ```sql
-CREATE PUBLISHED REST SERVICE MyModule.TestAPI
-  PATH '/test-api'
-  VERSION 'v1'
-BEGIN
-  OPERATION CalculateTotal
-    METHOD POST
-    PATH '/calculate'
-    MICROFLOW MyModule.ACT_CalculateTotal;
+create published rest service MyModule.TestAPI
+  path '/test-api'
+  version 'v1'
+begin
+  operation CalculateTotal
+    method post
+    path '/calculate'
+    microflow MyModule.ACT_CalculateTotal;
 
-  OPERATION GetCustomer
-    METHOD GET
-    PATH '/customer/{id}'
-    MICROFLOW MyModule.ACT_GetCustomer;
-END;
+  operation GetCustomer
+    method get
+    path '/customer/{id}'
+    microflow MyModule.ACT_GetCustomer;
+end;
 ```
 
-This is a significant feature (new MDL domain, BSON serialization for `Rest$PublishedRestService`)
+This is a significant feature (new MDL domain, BSON serialization for `rest$PublishedRestService`)
 but has value beyond testing — it enables building APIs from the CLI.
 
 **Phase 3: `mxcli test microflow` command**
@@ -508,7 +508,7 @@ undocumented API.
 
 > **TODO: Test parameter passing.** How are entity-typed parameters passed via REST vs `/xas/`?
 > The REST approach uses JSON body mapping; `/xas/` likely uses object GUIDs. Entity parameters
-> may need a `RETRIEVE` + pass-by-ID pattern rather than pass-by-value.
+> may need a `retrieve` + pass-by-ID pattern rather than pass-by-value.
 
 ---
 
@@ -521,7 +521,7 @@ undocumented API.
 | **P1** | Admin API bind to `*` in dev config | Config change | Proposed | Enables direct host access to admin API; unblocks `--direct` mode. Non-blocking since docker exec workaround exists. |
 | **P1** | OQL verification test pattern | Docs/skill | Proposed | Document Playwright + OQL side-effect verification. Works today, no new code. |
 | **P2** | Hot reload / docker runtime skill | Skill file | Partial | M2EE API basics done in `runtime-admin-api.md`. Update with reload workflow post-implementation. |
-| **P2** | `CREATE PUBLISHED REST SERVICE` | New MDL domain | Proposed | Publish microflows as HTTP endpoints. Enables microflow unit testing and API development from CLI. |
+| **P2** | `create published rest service` | New MDL domain | Proposed | Publish microflows as HTTP endpoints. Enables microflow unit testing and API development from CLI. |
 | **P3** | `mxcli test microflow` | New command | Proposed | Wraps deploy-call-verify cycle. Depends on Published REST or `/xas/` protocol. |
 | **P3** | `mxcli stats --slow-queries` | Future command | Proposed | High diagnostic value; `--slow-queries` is the killer feature. Curated summary preferred over raw Prometheus dump. |
 | **P4** | `mxcli debug` | Future command | Proposed | Defer full subcommand tree. Focus on "run and capture" model (`debug inspect`) that fits AI development loop. |

@@ -195,9 +195,9 @@ func listNavigationHomes(ctx *ExecContext) error {
 		// Default home page
 		if p.HomePage != nil {
 			if p.HomePage.Page != "" {
-				fmt.Fprintf(ctx.Output, "  Default Home: PAGE %s\n", p.HomePage.Page)
+				fmt.Fprintf(ctx.Output, "  Default Home: page %s\n", p.HomePage.Page)
 			} else if p.HomePage.Microflow != "" {
-				fmt.Fprintf(ctx.Output, "  Default Home: MICROFLOW %s\n", p.HomePage.Microflow)
+				fmt.Fprintf(ctx.Output, "  Default Home: microflow %s\n", p.HomePage.Microflow)
 			}
 		} else {
 			fmt.Fprintln(ctx.Output, "  Default Home: (none)")
@@ -209,9 +209,9 @@ func listNavigationHomes(ctx *ExecContext) error {
 			for _, rh := range p.RoleBasedHomePages {
 				target := ""
 				if rh.Page != "" {
-					target = "PAGE " + rh.Page
+					target = "page " + rh.Page
 				} else if rh.Microflow != "" {
-					target = "MICROFLOW " + rh.Microflow
+					target = "microflow " + rh.Microflow
 				}
 				fmt.Fprintf(ctx.Output, "    %s -> %s\n", rh.UserRole, target)
 			}
@@ -252,45 +252,45 @@ func describeNavigation(ctx *ExecContext, name ast.QualifiedName) error {
 
 // outputNavigationProfile outputs a single profile in round-trippable CREATE OR REPLACE NAVIGATION format.
 func outputNavigationProfile(ctx *ExecContext, p *types.NavigationProfile) {
-	fmt.Fprintf(ctx.Output, "-- NAVIGATION PROFILE: %s\n", p.Name)
+	fmt.Fprintf(ctx.Output, "-- navigation PROFILE: %s\n", p.Name)
 	fmt.Fprintf(ctx.Output, "--   Kind: %s\n", p.Kind)
 	if p.IsNative {
 		fmt.Fprintf(ctx.Output, "--   Native: Yes\n")
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE OR REPLACE NAVIGATION %s\n", p.Name)
+	fmt.Fprintf(ctx.Output, "create or replace navigation %s\n", p.Name)
 
 	// Home page
 	if p.HomePage != nil {
 		if p.HomePage.Page != "" {
-			fmt.Fprintf(ctx.Output, "  HOME PAGE %s\n", p.HomePage.Page)
+			fmt.Fprintf(ctx.Output, "  home page %s\n", p.HomePage.Page)
 		} else if p.HomePage.Microflow != "" {
-			fmt.Fprintf(ctx.Output, "  HOME MICROFLOW %s\n", p.HomePage.Microflow)
+			fmt.Fprintf(ctx.Output, "  home microflow %s\n", p.HomePage.Microflow)
 		}
 	}
 
 	// Role-based home pages
 	for _, rh := range p.RoleBasedHomePages {
 		if rh.Page != "" {
-			fmt.Fprintf(ctx.Output, "  HOME PAGE %s FOR %s\n", rh.Page, rh.UserRole)
+			fmt.Fprintf(ctx.Output, "  home page %s for %s\n", rh.Page, rh.UserRole)
 		} else if rh.Microflow != "" {
-			fmt.Fprintf(ctx.Output, "  HOME MICROFLOW %s FOR %s\n", rh.Microflow, rh.UserRole)
+			fmt.Fprintf(ctx.Output, "  home microflow %s for %s\n", rh.Microflow, rh.UserRole)
 		}
 	}
 
 	// Login page
 	if p.LoginPage != "" {
-		fmt.Fprintf(ctx.Output, "  LOGIN PAGE %s\n", p.LoginPage)
+		fmt.Fprintf(ctx.Output, "  login page %s\n", p.LoginPage)
 	}
 
 	// Not-found page
 	if p.NotFoundPage != "" {
-		fmt.Fprintf(ctx.Output, "  NOT FOUND PAGE %s\n", p.NotFoundPage)
+		fmt.Fprintf(ctx.Output, "  not found page %s\n", p.NotFoundPage)
 	}
 
 	// Menu items
 	if len(p.MenuItems) > 0 {
-		fmt.Fprintln(ctx.Output, "  MENU (")
+		fmt.Fprintln(ctx.Output, "  menu (")
 		printMenuMDL(ctx.Output, p.MenuItems, 2)
 		fmt.Fprintln(ctx.Output, "  )")
 	}
@@ -301,7 +301,7 @@ func outputNavigationProfile(ctx *ExecContext, p *types.NavigationProfile) {
 		for _, oe := range p.OfflineEntities {
 			constraint := ""
 			if oe.Constraint != "" {
-				constraint = fmt.Sprintf(" WHERE '%s'", oe.Constraint)
+				constraint = fmt.Sprintf(" where '%s'", oe.Constraint)
 			}
 			fmt.Fprintf(ctx.Output, "  -- SYNC %s MODE %s%s;\n", oe.Entity, oe.SyncMode, constraint)
 		}
@@ -349,15 +349,15 @@ func printMenuMDL(w io.Writer, items []*types.NavMenuItem, depth int) {
 	for _, item := range items {
 		if len(item.Items) > 0 {
 			// Sub-menu container
-			fmt.Fprintf(w, "%sMENU '%s' (\n", indent, item.Caption)
+			fmt.Fprintf(w, "%smenu '%s' (\n", indent, item.Caption)
 			printMenuMDL(w, item.Items, depth+1)
 			fmt.Fprintf(w, "%s);\n", indent)
 		} else if item.Page != "" {
-			fmt.Fprintf(w, "%sMENU ITEM '%s' PAGE %s;\n", indent, item.Caption, item.Page)
+			fmt.Fprintf(w, "%smenu item '%s' page %s;\n", indent, item.Caption, item.Page)
 		} else if item.Microflow != "" {
-			fmt.Fprintf(w, "%sMENU ITEM '%s' MICROFLOW %s;\n", indent, item.Caption, item.Microflow)
+			fmt.Fprintf(w, "%smenu item '%s' microflow %s;\n", indent, item.Caption, item.Microflow)
 		} else {
-			fmt.Fprintf(w, "%sMENU ITEM '%s';\n", indent, item.Caption)
+			fmt.Fprintf(w, "%smenu item '%s';\n", indent, item.Caption)
 		}
 	}
 }

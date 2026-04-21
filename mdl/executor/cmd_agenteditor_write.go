@@ -25,7 +25,7 @@ func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServ
 		return err
 	}
 	if existing := findAgentEditorConsumedMCPService(ctx, s.Name.Module, s.Name.Name); existing != nil {
-		return mdlerrors.NewAlreadyExists("consumed MCP service", s.Name.String())
+		return mdlerrors.NewAlreadyExists("consumed mcp service", s.Name.String())
 	}
 
 	c := &agenteditor.ConsumedMCPService{
@@ -39,10 +39,10 @@ func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServ
 	}
 
 	if err := ctx.Backend.CreateAgentEditorConsumedMCPService(c); err != nil {
-		return mdlerrors.NewBackend("create consumed MCP service", err)
+		return mdlerrors.NewBackend("create consumed mcp service", err)
 	}
 	invalidateHierarchy(ctx)
-	fmt.Fprintf(ctx.Output, "Created consumed MCP service: %s\n", s.Name)
+	fmt.Fprintf(ctx.Output, "Created consumed mcp service: %s\n", s.Name)
 	return nil
 }
 
@@ -52,12 +52,12 @@ func execDropConsumedMCPService(ctx *ExecContext, s *ast.DropConsumedMCPServiceS
 	}
 	c := findAgentEditorConsumedMCPService(ctx, s.Name.Module, s.Name.Name)
 	if c == nil {
-		return mdlerrors.NewNotFound("consumed MCP service", s.Name.String())
+		return mdlerrors.NewNotFound("consumed mcp service", s.Name.String())
 	}
 	if err := ctx.Backend.DeleteAgentEditorConsumedMCPService(string(c.ID)); err != nil {
-		return mdlerrors.NewBackend("delete consumed MCP service", err)
+		return mdlerrors.NewBackend("delete consumed mcp service", err)
 	}
-	fmt.Fprintf(ctx.Output, "Dropped consumed MCP service: %s\n", s.Name)
+	fmt.Fprintf(ctx.Output, "Dropped consumed mcp service: %s\n", s.Name)
 	return nil
 }
 
@@ -81,7 +81,7 @@ func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) e
 	if s.Key != nil {
 		keyRef, err = resolveConstantRef(ctx, *s.Key)
 		if err != nil {
-			return fmt.Errorf("CREATE KNOWLEDGE BASE %s: %w", s.Name, err)
+			return fmt.Errorf("create knowledge base %s: %w", s.Name, err)
 		}
 	}
 
@@ -161,7 +161,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 	if s.Model != nil {
 		m := findAgentEditorModel(ctx, s.Model.Module, s.Model.Name)
 		if m == nil {
-			return fmt.Errorf("CREATE AGENT %s: model not found: %s", s.Name, s.Model)
+			return fmt.Errorf("create agent %s: model not found: %s", s.Name, s.Model)
 		}
 		a.Model = &agenteditor.DocRef{
 			DocumentID:    string(m.ID),
@@ -194,11 +194,11 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 			Enabled:     td.Enabled,
 			ToolType:    td.ToolType,
 		}
-		if td.Document != nil && td.ToolType == "MCP" {
+		if td.Document != nil && td.ToolType == "mcp" {
 			// Resolve MCP service document reference
 			svc := findAgentEditorConsumedMCPService(ctx, td.Document.Module, td.Document.Name)
 			if svc == nil {
-				return fmt.Errorf("CREATE AGENT %s: consumed MCP service not found: %s", s.Name, td.Document)
+				return fmt.Errorf("create agent %s: consumed mcp service not found: %s", s.Name, td.Document)
 			}
 			at.Document = &agenteditor.DocRef{
 				DocumentID:    string(svc.ID),
@@ -220,7 +220,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 		if kbd.Source != nil {
 			kb := findAgentEditorKnowledgeBase(ctx, kbd.Source.Module, kbd.Source.Name)
 			if kb == nil {
-				return fmt.Errorf("CREATE AGENT %s: knowledge base not found: %s", s.Name, kbd.Source)
+				return fmt.Errorf("create agent %s: knowledge base not found: %s", s.Name, kbd.Source)
 			}
 			akt.Document = &agenteditor.DocRef{
 				DocumentID:    string(kb.ID),

@@ -597,5 +597,5 @@ func TestShowPublishedRestServices_Mock_JSON_EmptyResult(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
 	assertNoError(t, listPublishedRestServices(ctx, ""))
 	assertValidJSON(t, buf.String())
-	assertNotContainsStr(t, buf.String(), "No published REST services found")
+	assertNotContainsStr(t, buf.String(), "No published rest services found")
 }

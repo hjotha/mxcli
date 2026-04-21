@@ -40,7 +40,7 @@ func execShowCatalogTables(ctx *ExecContext) error {
 	for _, t := range tables {
 		// Get count for this table
 		actualTable := strings.TrimPrefix(strings.ToLower(t), "catalog.")
-		result, err := ctx.Catalog.Query(fmt.Sprintf("SELECT COUNT(*) FROM %s", actualTable))
+		result, err := ctx.Catalog.Query(fmt.Sprintf("select count(*) from %s", actualTable))
 		count := 0
 		if err == nil && len(result.Rows) > 0 {
 			if v, ok := result.Rows[0][0].(int64); ok {
@@ -109,9 +109,9 @@ func warnIfCatalogModeInsufficient(ctx *ExecContext, query string) {
 	currentRank := modeRank[buildMode]
 
 	if sourceOnlyTables[table] && currentRank < modeRank["source"] {
-		fmt.Fprintf(ctx.Output, "Warning: CATALOG.%s requires REFRESH CATALOG FULL SOURCE (current mode: %s)\n", strings.ToUpper(table), buildMode)
+		fmt.Fprintf(ctx.Output, "Warning: CATALOG.%s requires refresh catalog full source (current mode: %s)\n", strings.ToUpper(table), buildMode)
 	} else if fullOnlyTables[table] && currentRank < modeRank["full"] {
-		fmt.Fprintf(ctx.Output, "Warning: CATALOG.%s requires REFRESH CATALOG FULL (current mode: %s)\n", strings.ToUpper(table), buildMode)
+		fmt.Fprintf(ctx.Output, "Warning: CATALOG.%s requires refresh catalog full (current mode: %s)\n", strings.ToUpper(table), buildMode)
 	}
 }
 
@@ -150,12 +150,12 @@ func execCatalogQuery(ctx *ExecContext, query string) error {
 // tableRequiredMode returns the minimum catalog build mode for a table.
 func tableRequiredMode(table string) string {
 	if sourceOnlyTables[table] {
-		return "REFRESH CATALOG FULL SOURCE"
+		return "refresh catalog full source"
 	}
 	if fullOnlyTables[table] {
-		return "REFRESH CATALOG FULL"
+		return "refresh catalog full"
 	}
-	return "REFRESH CATALOG"
+	return "refresh catalog"
 }
 
 // execDescribeCatalogTable handles DESCRIBE CATALOG.tablename.
@@ -524,12 +524,12 @@ func execShowCatalogStatus(ctx *ExecContext) error {
 	if info.BuildMode == "full" || info.BuildMode == "source" {
 		fmt.Fprintln(ctx.Output, "Full mode: ✓ Available")
 	} else {
-		fmt.Fprintln(ctx.Output, "Full mode: ✗ Not cached (use REFRESH CATALOG FULL)")
+		fmt.Fprintln(ctx.Output, "Full mode: ✗ Not cached (use refresh catalog full)")
 	}
 	if info.BuildMode == "source" {
 		fmt.Fprintln(ctx.Output, "Source mode: ✓ Available")
 	} else {
-		fmt.Fprintln(ctx.Output, "Source mode: ✗ Not cached (use REFRESH CATALOG SOURCE)")
+		fmt.Fprintln(ctx.Output, "Source mode: ✗ Not cached (use refresh catalog source)")
 	}
 
 	return nil
@@ -655,18 +655,18 @@ func captureDescribe(ctx *ExecContext, objectType string, qualifiedName string) 
 	defer func() { ctx.Output = origOutput }()
 
 	var err error
-	switch strings.ToUpper(objectType) {
-	case "ENTITY":
+	switch strings.ToLower(objectType) {
+	case "entity":
 		err = describeEntity(ctx, qn)
-	case "MICROFLOW", "NANOFLOW":
+	case "microflow", "nanoflow":
 		err = describeMicroflow(ctx, qn)
-	case "PAGE":
+	case "page":
 		err = describePage(ctx, qn)
-	case "SNIPPET":
+	case "snippet":
 		err = describeSnippet(ctx, qn)
-	case "ENUMERATION":
+	case "enumeration":
 		err = describeEnumeration(ctx, qn)
-	case "WORKFLOW":
+	case "workflow":
 		err = describeWorkflow(ctx, qn)
 	default:
 		return "", mdlerrors.NewUnsupported("object type for describe: " + objectType)
@@ -713,18 +713,18 @@ func captureDescribeParallel(ctx *ExecContext, objectType string, qualifiedName 
 	}
 
 	var err error
-	switch strings.ToUpper(objectType) {
-	case "ENTITY":
+	switch strings.ToLower(objectType) {
+	case "entity":
 		err = describeEntity(localCtx, qn)
-	case "MICROFLOW", "NANOFLOW":
+	case "microflow", "nanoflow":
 		err = describeMicroflow(localCtx, qn)
-	case "PAGE":
+	case "page":
 		err = describePage(localCtx, qn)
-	case "SNIPPET":
+	case "snippet":
 		err = describeSnippet(localCtx, qn)
-	case "ENUMERATION":
+	case "enumeration":
 		err = describeEnumeration(localCtx, qn)
-	case "WORKFLOW":
+	case "workflow":
 		err = describeWorkflow(localCtx, qn)
 	default:
 		return "", mdlerrors.NewUnsupported("object type for describe: " + objectType)
@@ -787,7 +787,7 @@ func execSearch(ctx *ExecContext, stmt *ast.SearchStmt) error {
 
 	// Search strings table
 	stringsQuery := fmt.Sprintf(
-		"SELECT QualifiedName, ObjectType, snippet(strings, 2, '>>>', '<<<', '...', 32) AS Match, StringContext, ModuleName FROM strings WHERE strings MATCH '%s' LIMIT 50",
+		"select QualifiedName, ObjectType, snippet(strings, 2, '>>>', '<<<', '...', 32) as Match, StringContext, ModuleName from strings where strings match '%s' limit 50",
 		escapeFTSQuery(query))
 	strResult, err := ctx.Catalog.Query(stringsQuery)
 	if err == nil && strResult.Count > 0 {
@@ -799,7 +799,7 @@ func execSearch(ctx *ExecContext, stmt *ast.SearchStmt) error {
 
 	// Search source table (if available)
 	sourceQuery := fmt.Sprintf(
-		"SELECT QualifiedName, ObjectType, snippet(source, 2, '>>>', '<<<', '...', 48) AS Match, ModuleName FROM source WHERE source MATCH '%s' LIMIT 50",
+		"select QualifiedName, ObjectType, snippet(source, 2, '>>>', '<<<', '...', 48) as Match, ModuleName from source where source match '%s' limit 50",
 		escapeFTSQuery(query))
 	srcResult, err := ctx.Catalog.Query(sourceQuery)
 	if err == nil && srcResult.Count > 0 {
@@ -811,7 +811,7 @@ func execSearch(ctx *ExecContext, stmt *ast.SearchStmt) error {
 
 	if !found {
 		fmt.Fprintln(ctx.Output, "No matches found.")
-		fmt.Fprintln(ctx.Output, "Tip: Use REFRESH CATALOG SOURCE to enable source-level search.")
+		fmt.Fprintln(ctx.Output, "Tip: Use refresh catalog source to enable source-level search.")
 	}
 
 	return nil
@@ -858,7 +858,7 @@ func search(ctx *ExecContext, query, format string) error {
 
 	// Search strings table
 	stringsQuery := fmt.Sprintf(
-		"SELECT QualifiedName, ObjectType, snippet(strings, 2, '>>>', '<<<', '...', 32) AS Match, StringContext, ModuleName FROM strings WHERE strings MATCH '%s' LIMIT 50",
+		"select QualifiedName, ObjectType, snippet(strings, 2, '>>>', '<<<', '...', 32) as Match, StringContext, ModuleName from strings where strings match '%s' limit 50",
 		escapeFTSQuery(query))
 	strResult, err := ctx.Catalog.Query(stringsQuery)
 	if err == nil && strResult.Count > 0 {
@@ -877,7 +877,7 @@ func search(ctx *ExecContext, query, format string) error {
 
 	// Search source table (if available)
 	sourceQuery := fmt.Sprintf(
-		"SELECT QualifiedName, ObjectType, snippet(source, 2, '>>>', '<<<', '...', 48) AS Match, ModuleName FROM source WHERE source MATCH '%s' LIMIT 50",
+		"select QualifiedName, ObjectType, snippet(source, 2, '>>>', '<<<', '...', 48) as Match, ModuleName from source where source match '%s' limit 50",
 		escapeFTSQuery(query))
 	srcResult, err := ctx.Catalog.Query(sourceQuery)
 	if err == nil && srcResult.Count > 0 {
@@ -896,7 +896,7 @@ func search(ctx *ExecContext, query, format string) error {
 	if len(allResults) == 0 {
 		if format != "json" {
 			fmt.Fprintln(ctx.Output, "No matches found.")
-			fmt.Fprintln(ctx.Output, "Tip: Use REFRESH CATALOG SOURCE to enable source-level search.")
+			fmt.Fprintln(ctx.Output, "Tip: Use refresh catalog source to enable source-level search.")
 		} else {
 			fmt.Fprintln(ctx.Output, "[]")
 		}

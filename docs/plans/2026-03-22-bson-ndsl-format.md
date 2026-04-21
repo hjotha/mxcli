@@ -13,25 +13,25 @@
 ## Output Format Spec
 
 ```
-Workflows$Workflow
-  Documentation: ""
+workflows$workflow
+  documentation: ""
   DueDate: ""
   Excluded: false
   ExportLevel: "Hidden"
-  Flow: Workflows$Flow
+  Flow: workflows$Flow
     Activities [marker=3]:
-      - Workflows$StartWorkflowActivity
-          Annotation: null
+      - workflows$StartWorkflowActivity
+          annotation: null
           BoundaryEvents [marker=2]: []
-          Caption: "Start"
+          caption: "Start"
           Name: "startWorkflow1"
           PersistentId: <uuid>
   OnWorkflowEvent [marker=2]: []
-  Parameter: Workflows$Parameter
-    Entity: "WorkflowBaseline.Entity"
+  parameter: workflows$parameter
+    entity: "WorkflowBaseline.Entity"
     Name: "WorkflowContext"
-  WorkflowName: Microflows$StringTemplate
-    Text: "Workflow"
+  WorkflowName: microflows$stringtemplate
+    text: "workflow"
 ```
 
 **Rules:**
@@ -41,8 +41,8 @@ Workflows$Workflow
 - `null` values printed explicitly
 - Arrays with int32 first element → `[marker=N]:` header, elements as `- TypeName` or values
 - Empty arrays → `[marker=N]: []` on one line
-- Nested objects with `$Type` → inline type name, fields indented below
-- `$Type` is rendered as the object header, not as a field
+- Nested objects with `$type` → inline type name, fields indented below
+- `$type` is rendered as the object header, not as a field
 
 ---
 
@@ -69,13 +69,13 @@ import (
 
 func TestRenderScalarFields(t *testing.T) {
     doc := bson.D{
-        {Key: "$Type", Value: "Workflows$Workflow"},
-        {Key: "Name", Value: "TestWf"},
-        {Key: "Excluded", Value: false},
-        {Key: "AdminPage", Value: nil},
+        {key: "$type", value: "workflows$workflow"},
+        {key: "Name", value: "TestWf"},
+        {key: "Excluded", value: false},
+        {key: "AdminPage", value: nil},
     }
     got := Render(doc, 0)
-    want := `Workflows$Workflow
+    want := `workflows$workflow
   AdminPage: null
   Excluded: false
   Name: "TestWf"`
@@ -86,12 +86,12 @@ func TestRenderScalarFields(t *testing.T) {
 
 func TestRenderUUIDNormalized(t *testing.T) {
     doc := bson.D{
-        {Key: "$Type", Value: "Workflows$Flow"},
-        {Key: "$ID", Value: primitive.Binary{Subtype: 3, Data: []byte("anything")}},
-        {Key: "PersistentId", Value: primitive.Binary{Subtype: 3, Data: []byte("anything")}},
+        {key: "$type", value: "workflows$Flow"},
+        {key: "$ID", value: primitive.Binary{Subtype: 3, data: []byte("anything")}},
+        {key: "PersistentId", value: primitive.Binary{Subtype: 3, data: []byte("anything")}},
     }
     got := Render(doc, 0)
-    want := `Workflows$Flow
+    want := `workflows$Flow
   PersistentId: <uuid>`
     if got != want {
         t.Errorf("got:\n%s\nwant:\n%s", got, want)
@@ -100,16 +100,16 @@ func TestRenderUUIDNormalized(t *testing.T) {
 
 func TestRenderArrayWithMarker(t *testing.T) {
     doc := bson.D{
-        {Key: "$Type", Value: "Workflows$Flow"},
-        {Key: "Activities", Value: bson.A{int32(3), bson.D{
-            {Key: "$Type", Value: "Workflows$EndWorkflowActivity"},
-            {Key: "Name", Value: "end1"},
+        {key: "$type", value: "workflows$Flow"},
+        {key: "Activities", value: bson.A{int32(3), bson.D{
+            {key: "$type", value: "workflows$EndWorkflowActivity"},
+            {key: "Name", value: "end1"},
         }}},
     }
     got := Render(doc, 0)
-    want := `Workflows$Flow
+    want := `workflows$Flow
   Activities [marker=3]:
-    - Workflows$EndWorkflowActivity
+    - workflows$EndWorkflowActivity
         Name: "end1"`
     if got != want {
         t.Errorf("got:\n%s\nwant:\n%s", got, want)
@@ -118,11 +118,11 @@ func TestRenderArrayWithMarker(t *testing.T) {
 
 func TestRenderEmptyArray(t *testing.T) {
     doc := bson.D{
-        {Key: "$Type", Value: "Workflows$StartWorkflowActivity"},
-        {Key: "BoundaryEvents", Value: bson.A{int32(2)}},
+        {key: "$type", value: "workflows$StartWorkflowActivity"},
+        {key: "BoundaryEvents", value: bson.A{int32(2)}},
     }
     got := Render(doc, 0)
-    want := `Workflows$StartWorkflowActivity
+    want := `workflows$StartWorkflowActivity
   BoundaryEvents [marker=2]: []`
     if got != want {
         t.Errorf("got:\n%s\nwant:\n%s", got, want)
@@ -164,10 +164,10 @@ func Render(doc bson.D, indent int) string {
 func renderDoc(sb *strings.Builder, doc bson.D, indent int) {
     pad := strings.Repeat("  ", indent)
 
-    // Extract $Type for header
+    // Extract $type for header
     typeName := ""
     for _, e := range doc {
-        if e.Key == "$Type" {
+        if e.Key == "$type" {
             typeName, _ = e.Value.(string)
             break
         }
@@ -183,7 +183,7 @@ func renderDoc(sb *strings.Builder, doc bson.D, indent int) {
     }
     var fields []field
     for _, e := range doc {
-        if e.Key == "$ID" || e.Key == "$Type" {
+        if e.Key == "$ID" || e.Key == "$type" {
             continue
         }
         fields = append(fields, field{e.Key, e.Value})
@@ -209,10 +209,10 @@ func renderField(sb *strings.Builder, key string, val any, indent int) {
         fmt.Fprintf(sb, "%s%s: <uuid>\n", pad, key)
 
     case bson.D:
-        // Nested object with $Type
+        // Nested object with $type
         typeName := ""
         for _, e := range v {
-            if e.Key == "$Type" {
+            if e.Key == "$type" {
                 typeName, _ = e.Value.(string)
                 break
             }
@@ -242,7 +242,7 @@ func renderField(sb *strings.Builder, key string, val any, indent int) {
 func renderArray(sb *strings.Builder, key string, arr bson.A, indent int) {
     pad := strings.Repeat("  ", indent)
 
-    // Check for array marker (first element is int32)
+    // check for array marker (first element is int32)
     markerStr := ""
     startIdx := 0
     if len(arr) > 0 {
@@ -271,7 +271,7 @@ func renderArrayElement(sb *strings.Builder, elem any, indent int) {
     case bson.D:
         typeName := ""
         for _, e := range v {
-            if e.Key == "$Type" {
+            if e.Key == "$type" {
                 typeName, _ = e.Value.(string)
                 break
             }
@@ -285,7 +285,7 @@ func renderArrayElement(sb *strings.Builder, elem any, indent int) {
             }
             var fields []field
             for _, e := range v {
-                if e.Key == "$ID" || e.Key == "$Type" {
+                if e.Key == "$ID" || e.Key == "$type" {
                     continue
                 }
                 fields = append(fields, field{e.Key, e.Value})
@@ -348,7 +348,7 @@ format, _ := cmd.Flags().GetString("format")
 if format == "ndsl" {
     var doc bson.D
     if err := bson.Unmarshal(unit.Contents, &doc); err != nil {
-        fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
+        fmt.Fprintf(os.Stderr, "error parsing BSON: %v\n", err)
         os.Exit(1)
     }
     fmt.Println(bsondebug.Render(doc, 0))
@@ -389,10 +389,10 @@ git commit -m "feat(bson): add --format ndsl flag to bson dump command"
 
 When `--format ndsl`, instead of current diff output, print:
 ```
-=== LEFT: WorkflowBaseline.Workflow ===
+=== left: WorkflowBaseline.Workflow ===
 <ndsl of left>
 
-=== RIGHT: WorkflowBaseline.Sub_Workflow ===
+=== right: WorkflowBaseline.Sub_Workflow ===
 <ndsl of right>
 ```
 
@@ -406,7 +406,7 @@ if format == "ndsl" {
     var leftDoc, rightDoc bson.D
     bson.Unmarshal(leftUnit.Contents, &leftDoc)
     bson.Unmarshal(rightUnit.Contents, &rightDoc)
-    fmt.Printf("=== LEFT: %s ===\n%s\n\n=== RIGHT: %s ===\n%s\n",
+    fmt.Printf("=== left: %s ===\n%s\n\n=== right: %s ===\n%s\n",
         leftName, bsondebug.Render(leftDoc, 0),
         rightName, bsondebug.Render(rightDoc, 0))
     return

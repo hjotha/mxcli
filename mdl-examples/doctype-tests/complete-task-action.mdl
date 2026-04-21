@@ -1,21 +1,21 @@
 -- Test: COMPLETE_TASK action type for ACTIONBUTTON
 -- Verifies parsing of workflow task completion buttons
 
-CREATE PAGE TestModule.UserTaskPage
+create page TestModule.UserTaskPage
 (
-  Title: 'User Task Page',
-  Layout: Atlas_Core.Atlas_Default,
-  Params: { $WorkflowUserTask: System.WorkflowUserTask }
+  title: 'User Task Page',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
 )
 {
-  ACTIONBUTTON btnApprove (
-    Caption: 'Approve',
-    Action: COMPLETE_TASK 'Approve',
-    ButtonStyle: Success
+  actionbutton btnApprove (
+    caption: 'Approve',
+    action: complete_task 'Approve',
+    buttonstyle: success
   )
-  ACTIONBUTTON btnReject (
-    Caption: 'Reject',
-    Action: COMPLETE_TASK 'Reject',
-    ButtonStyle: Danger
+  actionbutton btnReject (
+    caption: 'Reject',
+    action: complete_task 'Reject',
+    buttonstyle: danger
   )
 }

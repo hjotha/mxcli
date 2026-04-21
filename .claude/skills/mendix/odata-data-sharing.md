@@ -19,24 +19,24 @@ OData data sharing follows a **producer/consumer** pattern with three layers:
 ┌─────────────────────────────────────────────┐
 │  PRODUCER APP                               │
 │                                             │
-│  Persistent Entities  ──▶  View Entities    │
+│  persistent entities  ──▶  view entities    │
 │  (Shop.Customer,          (Api.CustomerVE)  │
 │   Shop.Address)                             │
 │                          ▼                  │
-│                    OData Service             │
+│                    odata service             │
 │                   (Api.CustomerApi)          │
 └──────────────────────┬──────────────────────┘
                        │ HTTP/OData4
 ┌──────────────────────▼──────────────────────┐
 │  CONSUMER APP                               │
 │                                             │
-│                    OData Client             │
+│                    odata client             │
 │                  (Client.CustomerApiClient)  │
 │                          ▼                  │
-│                  External Entities           │
+│                  external entities           │
 │                 (Client.CustomersEE)         │
 │                          ▼                  │
-│                  Pages & Microflows          │
+│                  pages & microflows          │
 └─────────────────────────────────────────────┘
 ```
 
@@ -55,10 +55,10 @@ Publishing persistent entities directly exposes your internal schema. When you c
 ### Step 1: Create the Producer Module and Role
 
 ```sql
-CREATE MODULE ProductApi;
+create module ProductApi;
 
-CREATE MODULE ROLE ProductApi.ApiUser
-  DESCRIPTION 'Role for OData API access';
+create module role ProductApi.ApiUser
+  description 'Role for OData API access';
 ```
 
 ### Step 2: Create View Entities as the API Layer
@@ -70,16 +70,16 @@ Instead of publishing `Shop.Product` and `Shop.Price` directly, create a view th
  * Flattened product with current active price.
  * Joins Product with the most recent Price entry.
  */
-CREATE VIEW ENTITY ProductApi.ProductWithPriceVE (
-  ProductId: Integer,
-  Name: String,
-  Description: String,
-  PriceInEuro: Decimal
-) AS (
+create view entity ProductApi.ProductWithPriceVE (
+  ProductId: integer,
+  Name: string,
+  description: string,
+  PriceInEuro: decimal
+) as (
   select p.ID         as ProdId
   ,      p.ProductId  as ProductId
   ,      p.Name       as Name
-  ,      p.Description as Description
+  ,      p.Description as description
   ,      ( select pr.PriceInEuro
            from   Shop.Price as pr
            where  pr.StartDate <= '[%BeginOfTomorrow%]'
@@ -91,8 +91,8 @@ CREATE VIEW ENTITY ProductApi.ProductWithPriceVE (
   where  p.IsActive
 );
 
-GRANT ProductApi.ApiUser ON ProductApi.ProductWithPriceVE
-  (READ *, WRITE *);
+grant ProductApi.ApiUser on ProductApi.ProductWithPriceVE
+  (read *, write *);
 ```
 
 For aggregated data:
@@ -101,10 +101,10 @@ For aggregated data:
 /**
  * Daily sales totals for cheap products.
  */
-CREATE VIEW ENTITY ProductApi.CheapProductSalesVE (
-  OrderDate: DateTime,
-  TotalItems: Long
-) AS (
+create view entity ProductApi.CheapProductSalesVE (
+  OrderDate: datetime,
+  TotalItems: long
+) as (
   select o.OrderDate     as OrderDate
   ,      sum(ol.Amount)  as TotalItems
   from   Shop.OrderLine as ol
@@ -115,8 +115,8 @@ CREATE VIEW ENTITY ProductApi.CheapProductSalesVE (
   limit 1000
 );
 
-GRANT ProductApi.ApiUser ON ProductApi.CheapProductSalesVE
-  (READ *, WRITE *);
+grant ProductApi.ApiUser on ProductApi.CheapProductSalesVE
+  (read *, write *);
 ```
 
 For flattening across associations:
@@ -125,17 +125,17 @@ For flattening across associations:
 /**
  * Customer with billing and delivery address flattened into one resource.
  */
-CREATE VIEW ENTITY ProductApi.CustomerAddressVE (
-  CustomerId: Long,
-  CustomerName: String,
-  Email: String,
-  BillingStreet: String,
-  BillingCity: String,
-  BillingCountry: String,
-  DeliveryStreet: String,
-  DeliveryCity: String,
-  DeliveryCountry: String
-) AS (
+create view entity ProductApi.CustomerAddressVE (
+  CustomerId: long,
+  CustomerName: string,
+  Email: string,
+  BillingStreet: string,
+  BillingCity: string,
+  BillingCountry: string,
+  DeliveryStreet: string,
+  DeliveryCity: string,
+  DeliveryCountry: string
+) as (
   select c.ID                              as CustomerID
   ,      c.CustomerId                      as CustomerId
   ,      c.FirstName + ' ' + c.LastName    as CustomerName
@@ -151,8 +151,8 @@ CREATE VIEW ENTITY ProductApi.CustomerAddressVE (
     left outer join c/Shop.DeliveryAddress_Customer/Shop.Address as da
 );
 
-GRANT ProductApi.ApiUser ON ProductApi.CustomerAddressVE
-  (READ *, WRITE *);
+grant ProductApi.ApiUser on ProductApi.CustomerAddressVE
+  (read *, write *);
 ```
 
 ### Step 3: Publish the OData Service
@@ -162,51 +162,51 @@ GRANT ProductApi.ApiUser ON ProductApi.CustomerAddressVE
  * Product and customer data API.
  * Exposes flattened views for external consumers.
  */
-CREATE ODATA SERVICE ProductApi.ProductDataApi (
-  Path: 'odata/productdataapi/v1/',
-  Version: '1.0.0',
+create odata service ProductApi.ProductDataApi (
+  path: 'odata/productdataapi/v1/',
+  version: '1.0.0',
   ODataVersion: OData4,
-  Namespace: 'DefaultNamespace',
+  namespace: 'DefaultNamespace',
   ServiceName: 'ProductDataApi',
   Summary: 'Product and customer data API',
   PublishAssociations: No
 )
-AUTHENTICATION Basic
+authentication basic
 {
-  PUBLISH ENTITY ProductApi.ProductWithPriceVE AS 'Product' (
+  publish entity ProductApi.ProductWithPriceVE as 'Product' (
     ReadMode: ReadFromDatabase,
     InsertMode: NotSupported,
     UpdateMode: NotSupported,
     DeleteMode: NotSupported
   )
-  EXPOSE (
-    ProductId AS 'ProductId' (Filterable, Sortable, Key),
-    Name AS 'Name' (Filterable, Sortable),
-    Description AS 'Description' (Filterable, Sortable),
-    PriceInEuro AS 'PriceInEuro' (Filterable, Sortable)
+  expose (
+    ProductId as 'ProductId' (Filterable, Sortable, key),
+    Name as 'Name' (Filterable, Sortable),
+    description as 'Description' (Filterable, Sortable),
+    PriceInEuro as 'PriceInEuro' (Filterable, Sortable)
   );
 
-  PUBLISH ENTITY ProductApi.CustomerAddressVE AS 'CustomerAddress' (
+  publish entity ProductApi.CustomerAddressVE as 'CustomerAddress' (
     ReadMode: ReadFromDatabase,
     InsertMode: NotSupported,
     UpdateMode: NotSupported,
     DeleteMode: NotSupported
   )
-  EXPOSE (
-    CustomerId AS 'CustomerId' (Filterable, Sortable, Key),
-    CustomerName AS 'CustomerName' (Filterable, Sortable),
-    Email AS 'Email' (Filterable, Sortable),
-    BillingStreet AS 'BillingStreet' (Filterable, Sortable),
-    BillingCity AS 'BillingCity' (Filterable, Sortable),
-    BillingCountry AS 'BillingCountry' (Filterable, Sortable),
-    DeliveryStreet AS 'DeliveryStreet' (Filterable, Sortable),
-    DeliveryCity AS 'DeliveryCity' (Filterable, Sortable),
-    DeliveryCountry AS 'DeliveryCountry' (Filterable, Sortable)
+  expose (
+    CustomerId as 'CustomerId' (Filterable, Sortable, key),
+    CustomerName as 'CustomerName' (Filterable, Sortable),
+    Email as 'Email' (Filterable, Sortable),
+    BillingStreet as 'BillingStreet' (Filterable, Sortable),
+    BillingCity as 'BillingCity' (Filterable, Sortable),
+    BillingCountry as 'BillingCountry' (Filterable, Sortable),
+    DeliveryStreet as 'DeliveryStreet' (Filterable, Sortable),
+    DeliveryCity as 'DeliveryCity' (Filterable, Sortable),
+    DeliveryCountry as 'DeliveryCountry' (Filterable, Sortable)
   );
 };
 
-GRANT ACCESS ON ODATA SERVICE ProductApi.ProductDataApi
-  TO ProductApi.ApiUser;
+grant access on odata service ProductApi.ProductDataApi
+  to ProductApi.ApiUser;
 ```
 
 ### Step 4: Set Up the Consumer App
@@ -214,20 +214,20 @@ GRANT ACCESS ON ODATA SERVICE ProductApi.ProductDataApi
 In the consuming application, create an OData client and external entities:
 
 ```sql
-CREATE MODULE ProductClient;
+create module ProductClient;
 
-CREATE MODULE ROLE ProductClient.User;
+create module role ProductClient.User;
 
 -- Location constant (configure per environment)
-CREATE CONSTANT ProductClient.ProductDataApiLocation
-  TYPE String
-  DEFAULT 'http://localhost:8080/odata/productdataapi/v1/';
+create constant ProductClient.ProductDataApiLocation
+  type string
+  default 'http://localhost:8080/odata/productdataapi/v1/';
 
 -- OData client connection
-CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+create odata client ProductClient.ProductDataApiClient (
   ODataVersion: OData4,
   MetadataUrl: 'http://localhost:8080/odata/productdataapi/v1/$metadata',
-  Timeout: 300,
+  timeout: 300,
   ServiceUrl: '@ProductClient.ProductDataApiLocation',
   UseAuthentication: Yes,
   HttpUsername: 'MxAdmin',
@@ -235,56 +235,56 @@ CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
 );
 
 -- External entities (mapped from published service)
-CREATE EXTERNAL ENTITY ProductClient.ProductsEE
-FROM ODATA CLIENT ProductClient.ProductDataApiClient
+create external entity ProductClient.ProductsEE
+from odata client ProductClient.ProductDataApiClient
 (
   EntitySet: 'Product',
   RemoteName: 'Product',
   Countable: Yes
 )
 (
-  ProductId: Long,
-  Name: String,
-  Description: String,
-  PriceInEuro: Decimal
+  ProductId: long,
+  Name: string,
+  description: string,
+  PriceInEuro: decimal
 );
 
-GRANT ProductClient.User ON ProductClient.ProductsEE (READ *);
+grant ProductClient.User on ProductClient.ProductsEE (read *);
 
-CREATE EXTERNAL ENTITY ProductClient.CustomerAddressesEE
-FROM ODATA CLIENT ProductClient.ProductDataApiClient
+create external entity ProductClient.CustomerAddressesEE
+from odata client ProductClient.ProductDataApiClient
 (
   EntitySet: 'CustomerAddress',
   RemoteName: 'CustomerAddress',
   Countable: Yes
 )
 (
-  CustomerId: Long,
-  CustomerName: String,
-  Email: String,
-  BillingStreet: String,
-  BillingCity: String,
-  BillingCountry: String,
-  DeliveryStreet: String,
-  DeliveryCity: String,
-  DeliveryCountry: String
+  CustomerId: long,
+  CustomerName: string,
+  Email: string,
+  BillingStreet: string,
+  BillingCity: string,
+  BillingCountry: string,
+  DeliveryStreet: string,
+  DeliveryCity: string,
+  DeliveryCountry: string
 );
 
-GRANT ProductClient.User ON ProductClient.CustomerAddressesEE (READ *);
+grant ProductClient.User on ProductClient.CustomerAddressesEE (read *);
 ```
 
 **Bulk alternative:** Instead of creating external entities one by one, import all (or a subset) from the contract:
 
 ```sql
 -- All entities from the service
-CREATE EXTERNAL ENTITIES FROM ProductClient.ProductDataApiClient;
+create external entities from ProductClient.ProductDataApiClient;
 
 -- Or specific ones only
-CREATE EXTERNAL ENTITIES FROM ProductClient.ProductDataApiClient
-  ENTITIES (Product, CustomerAddress);
+create external entities from ProductClient.ProductDataApiClient
+  entities (Product, CustomerAddress);
 
 -- Idempotent re-import
-CREATE OR MODIFY EXTERNAL ENTITIES FROM ProductClient.ProductDataApiClient;
+create or modify external entities from ProductClient.ProductDataApiClient;
 ```
 
 ## Step-by-Step: Read-Write API with Microflow Handlers
@@ -300,72 +300,72 @@ Each microflow receives the view entity and an `$HttpRequest` parameter:
  * Handles INSERT on ProductWithPriceVE.
  * Creates a new Product and initial Price entry.
  */
-CREATE MICROFLOW ProductApi.InsertProductWithPriceVE (
+create microflow ProductApi.InsertProductWithPriceVE (
   $ProductWithPriceVE: ProductApi.ProductWithPriceVE,
   $HttpRequest: System.HttpRequest
 )
-BEGIN
+begin
   -- Map view fields to persistent entities
-  $Product = CREATE Shop.Product (
+  $Product = create Shop.Product (
     Name = $ProductWithPriceVE/Name,
-    Description = $ProductWithPriceVE/Description,
+    description = $ProductWithPriceVE/description,
     IsActive = true
   );
-  COMMIT $Product;
+  commit $Product;
 
-  $Price = CREATE Shop.Price (
+  $Price = create Shop.Price (
     PriceInEuro = $ProductWithPriceVE/PriceInEuro,
     StartDate = '[%CurrentDateTime%]'
   );
-  CHANGE $Price (Shop.Price_Product = $Product);
-  COMMIT $Price;
-END;
+  change $Price (Shop.Price_Product = $Product);
+  commit $Price;
+end;
 
-GRANT EXECUTE ON MICROFLOW ProductApi.InsertProductWithPriceVE
-  TO ProductApi.ApiUser;
+grant execute on microflow ProductApi.InsertProductWithPriceVE
+  to ProductApi.ApiUser;
 
 /**
  * Handles UPDATE on ProductWithPriceVE.
  * Updates the Product name/description and creates a new Price entry.
  */
-CREATE MICROFLOW ProductApi.UpdateProductWithPriceVE (
+create microflow ProductApi.UpdateProductWithPriceVE (
   $ProductWithPriceVE: ProductApi.ProductWithPriceVE,
   $HttpRequest: System.HttpRequest
 )
-BEGIN
-  RETRIEVE $Product FROM Shop.Product
-    WHERE ProductId = $ProductWithPriceVE/ProductId
-    LIMIT 1;
+begin
+  retrieve $Product from Shop.Product
+    where ProductId = $ProductWithPriceVE/ProductId
+    limit 1;
 
-  CHANGE $Product (
+  change $Product (
     Name = $ProductWithPriceVE/Name,
-    Description = $ProductWithPriceVE/Description
+    description = $ProductWithPriceVE/description
   );
-  COMMIT $Product;
-END;
+  commit $Product;
+end;
 
-GRANT EXECUTE ON MICROFLOW ProductApi.UpdateProductWithPriceVE
-  TO ProductApi.ApiUser;
+grant execute on microflow ProductApi.UpdateProductWithPriceVE
+  to ProductApi.ApiUser;
 
 /**
  * Handles DELETE on ProductWithPriceVE.
  * Soft-deletes the product by setting IsActive = false.
  */
-CREATE MICROFLOW ProductApi.DeleteProductWithPriceVE (
+create microflow ProductApi.DeleteProductWithPriceVE (
   $ProductWithPriceVE: ProductApi.ProductWithPriceVE,
   $HttpRequest: System.HttpRequest
 )
-BEGIN
-  RETRIEVE $Product FROM Shop.Product
-    WHERE ProductId = $ProductWithPriceVE/ProductId
-    LIMIT 1;
+begin
+  retrieve $Product from Shop.Product
+    where ProductId = $ProductWithPriceVE/ProductId
+    limit 1;
 
-  CHANGE $Product (IsActive = false);
-  COMMIT $Product;
-END;
+  change $Product (IsActive = false);
+  commit $Product;
+end;
 
-GRANT EXECUTE ON MICROFLOW ProductApi.DeleteProductWithPriceVE
-  TO ProductApi.ApiUser;
+grant execute on microflow ProductApi.DeleteProductWithPriceVE
+  to ProductApi.ApiUser;
 ```
 
 ### Step 2: Wire Microflows to Published Entity
@@ -373,13 +373,13 @@ GRANT EXECUTE ON MICROFLOW ProductApi.DeleteProductWithPriceVE
 Set `InsertMode`, `UpdateMode`, `DeleteMode` to `CallMicroflow`:
 
 ```sql
-  PUBLISH ENTITY ProductApi.ProductWithPriceVE AS 'Product' (
+  publish entity ProductApi.ProductWithPriceVE as 'Product' (
     ReadMode: ReadFromDatabase,
-    InsertMode: MICROFLOW ProductApi.InsertProductWithPriceVE,
-    UpdateMode: MICROFLOW ProductApi.UpdateProductWithPriceVE,
-    DeleteMode: MICROFLOW ProductApi.DeleteProductWithPriceVE
+    InsertMode: microflow ProductApi.InsertProductWithPriceVE,
+    UpdateMode: microflow ProductApi.UpdateProductWithPriceVE,
+    DeleteMode: microflow ProductApi.DeleteProductWithPriceVE
   )
-  EXPOSE (...);
+  expose (...);
 ```
 
 ### Step 3: Grant Write Access on External Entity
@@ -387,8 +387,8 @@ Set `InsertMode`, `UpdateMode`, `DeleteMode` to `CallMicroflow`:
 On the consumer side, grant CREATE, WRITE, and DELETE rights:
 
 ```sql
-GRANT ProductClient.User ON ProductClient.ProductsEE
-  (CREATE, DELETE, READ *, WRITE *);
+grant ProductClient.User on ProductClient.ProductsEE
+  (create, delete, read *, write *);
 ```
 
 The consumer can now create, update, and delete products through the OData API, and the producer's microflows handle the mapping to persistent entities.
@@ -401,27 +401,27 @@ When the consumer needs to pass custom headers (e.g., for audit trails or user c
 /**
  * Adds current user name as custom header for audit logging.
  */
-CREATE MICROFLOW ProductClient.SetClientHeaders (
+create microflow ProductClient.SetClientHeaders (
   $httpResponse: System.HttpResponse
 )
-RETURNS List of System.HttpHeader AS $HttpHeaderList
-BEGIN
-  $HttpHeaderList = CREATE LIST of System.HttpHeader;
-  $NewHttpHeader = CREATE System.HttpHeader (
-    Key = 'X-Audit-User',
-    Value = $currentUser/Name
+returns list of System.HttpHeader as $HttpHeaderList
+begin
+  $HttpHeaderList = create list of System.HttpHeader;
+  $NewHttpHeader = create System.HttpHeader (
+    key = 'X-Audit-User',
+    value = $currentUser/Name
   );
-  ADD $NewHttpHeader TO $HttpHeaderList;
-  RETURN $HttpHeaderList;
-END;
+  add $NewHttpHeader to $HttpHeaderList;
+  return $HttpHeaderList;
+end;
 ```
 
 Reference it in the client:
 
 ```sql
-CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+create odata client ProductClient.ProductDataApiClient (
   ...
-  ConfigurationMicroflow: MICROFLOW ProductClient.SetClientHeaders
+  ConfigurationMicroflow: microflow ProductClient.SetClientHeaders
 );
 ```
 
@@ -431,51 +431,51 @@ When your API contract changes, create a new version rather than breaking existi
 
 ```sql
 -- v1: Original API (keep running for existing consumers)
-CREATE ODATA SERVICE ProductApi.ProductDataApi (
-  Path: 'odata/productdataapi/v1/',
-  Version: '1.0.0',
+create odata service ProductApi.ProductDataApi (
+  path: 'odata/productdataapi/v1/',
+  version: '1.0.0',
   ...
 );
 
 -- v2: New version with additional fields
-CREATE ODATA SERVICE ProductApi.ProductDataApi_v2 (
-  Path: 'odata/productdataapi/v2/',
-  Version: '2.0.0',
+create odata service ProductApi.ProductDataApi_v2 (
+  path: 'odata/productdataapi/v2/',
+  version: '2.0.0',
   ODataVersion: OData4,
   ServiceName: 'ProductDataApi',
   Summary: 'Product API v2 - includes weight and tags',
   ...
 )
-AUTHENTICATION Basic
+authentication basic
 {
-  PUBLISH ENTITY ProductApi.ProductWithPriceAndTagsVE AS 'Product' (
+  publish entity ProductApi.ProductWithPriceAndTagsVE as 'Product' (
     ReadMode: ReadFromDatabase,
-    InsertMode: MICROFLOW ProductApi.InsertProductV2,
-    UpdateMode: MICROFLOW ProductApi.UpdateProductV2,
-    DeleteMode: MICROFLOW ProductApi.DeleteProductV2
+    InsertMode: microflow ProductApi.InsertProductV2,
+    UpdateMode: microflow ProductApi.UpdateProductV2,
+    DeleteMode: microflow ProductApi.DeleteProductV2
   )
-  EXPOSE (...);
+  expose (...);
 };
 ```
 
 ## Folder Organization
 
-Use the `Folder` property to organize OData documents within modules:
+Use the `folder` property to organize OData documents within modules:
 
 ```sql
-CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+create odata client ProductClient.ProductDataApiClient (
   ODataVersion: OData4,
   MetadataUrl: 'http://localhost:8080/odata/productdataapi/v1/$metadata',
-  Folder: 'Integration/ProductAPI'
+  folder: 'Integration/ProductAPI'
 );
 
-CREATE ODATA SERVICE ProductApi.ProductDataApi (
-  Path: 'odata/productdataapi/v1/',
-  Version: '1.0.0',
+create odata service ProductApi.ProductDataApi (
+  path: 'odata/productdataapi/v1/',
+  version: '1.0.0',
   ODataVersion: OData4,
-  Folder: 'Integration/APIs'
+  folder: 'Integration/APIs'
 )
-AUTHENTICATION Basic
+authentication basic
 { ... };
 ```
 
@@ -497,7 +497,7 @@ This keeps the API contract separate from the domain logic, and the consumer sep
 
 Before publishing:
 - [ ] View entities expose only the fields consumers need (no internal IDs unless needed for writes)
-- [ ] View entity has at least one `Key` field for OData identity
+- [ ] View entity has at least one `key` field for OData identity
 - [ ] Module role created and granted on view entities (READ, optionally WRITE)
 - [ ] OData service has AUTHENTICATION set (Basic, Session, or Microflow)
 - [ ] GRANT ACCESS ON ODATA SERVICE to the API module role
@@ -516,25 +516,25 @@ Use these commands to inspect existing OData setup in a project:
 
 ```sql
 -- List all published and consumed services
-SHOW ODATA SERVICES;
-SHOW ODATA CLIENTS;
+show odata services;
+show odata clients;
 
 -- Inspect a specific service
-DESCRIBE ODATA SERVICE ShopViews.ShopViewsApi;
-DESCRIBE ODATA CLIENT ShopViewsClient.ShopViewsApiClient;
+describe odata service ShopViews.ShopViewsApi;
+describe odata client ShopViewsClient.ShopViewsApiClient;
 
 -- See external entities and view entities
-SHOW ENTITIES IN ShopViewsClient;
-SHOW EXTERNAL ENTITIES;
-SHOW EXTERNAL ACTIONS;
+show entities in ShopViewsClient;
+show external entities;
+show external actions;
 
 -- Browse available assets from cached $metadata contract
-SHOW CONTRACT ENTITIES FROM ShopViewsClient.ShopViewsApiClient;
-SHOW CONTRACT ACTIONS FROM ShopViewsClient.ShopViewsApiClient;
-DESCRIBE CONTRACT ENTITY ShopViewsClient.ShopViewsApiClient.Product;
-DESCRIBE CONTRACT ENTITY ShopViewsClient.ShopViewsApiClient.Product FORMAT mdl;
+show contract entities from ShopViewsClient.ShopViewsApiClient;
+show contract actions from ShopViewsClient.ShopViewsApiClient;
+describe contract entity ShopViewsClient.ShopViewsApiClient.Product;
+describe contract entity ShopViewsClient.ShopViewsApiClient.Product format mdl;
 
 -- Check security setup
-SHOW ACCESS ON ODATA SERVICE ShopViews.ShopViewsApi;
-SHOW MODULE ROLES IN ShopViews;
+show access on odata service ShopViews.ShopViewsApi;
+show module roles in ShopViews;
 ```

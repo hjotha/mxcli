@@ -24,7 +24,7 @@ func (pb *pageBuilder) buildLayoutGridV3(w *ast.WidgetV3) (*pages.LayoutGrid, er
 
 	// Build rows from children
 	for _, child := range w.Children {
-		if strings.ToUpper(child.Type) == "ROW" {
+		if strings.ToLower(child.Type) == "row" {
 			row, err := pb.buildLayoutGridRowV3(child)
 			if err != nil {
 				return nil, err
@@ -46,7 +46,7 @@ func (pb *pageBuilder) buildLayoutGridRowV3(w *ast.WidgetV3) (*pages.LayoutGridR
 
 	// Build columns from children
 	for _, child := range w.Children {
-		if strings.ToUpper(child.Type) == "COLUMN" {
+		if strings.ToLower(child.Type) == "column" {
 			col, err := pb.buildLayoutGridColumnV3(child)
 			if err != nil {
 				return nil, err
@@ -73,7 +73,7 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (*pages.LayoutGr
 		case int:
 			col.Weight = v
 		case string:
-			if strings.ToUpper(v) == "AUTOFILL" {
+			if strings.ToUpper(v) == "autofill" {
 				col.Weight = -1 // Auto
 			}
 		}
@@ -85,7 +85,7 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (*pages.LayoutGr
 		case int:
 			col.TabletWeight = v
 		case string:
-			if strings.ToUpper(v) == "AUTOFILL" {
+			if strings.ToUpper(v) == "autofill" {
 				col.TabletWeight = -1
 			}
 		}
@@ -97,7 +97,7 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (*pages.LayoutGr
 		case int:
 			col.PhoneWeight = v
 		case string:
-			if strings.ToUpper(v) == "AUTOFILL" {
+			if strings.ToUpper(v) == "autofill" {
 				col.PhoneWeight = -1
 			}
 		}
@@ -228,7 +228,7 @@ func (pb *pageBuilder) buildTabContainerV3(w *ast.WidgetV3) (*pages.TabContainer
 
 	// Build tab pages from children
 	for _, child := range w.Children {
-		if strings.ToUpper(child.Type) == "TABPAGE" {
+		if strings.ToLower(child.Type) == "tabpage" {
 			tp, err := pb.buildTabPageV3(child)
 			if err != nil {
 				return nil, err

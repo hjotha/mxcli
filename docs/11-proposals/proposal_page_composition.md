@@ -4,9 +4,9 @@
 
 ## Problem Statement
 
-Large MDL page scripts become unwieldy to write, read, and maintain. Currently, the only way to create or modify a page is to specify the entire page structure in a single `CREATE PAGE` or `CREATE OR REPLACE PAGE` statement. This creates several issues:
+Large MDL page scripts become unwieldy to write, read, and maintain. Currently, the only way to create or modify a page is to specify the entire page structure in a single `create page` or `create or replace page` statement. This creates several issues:
 
-1. **Unsafe editing of pages with unsupported widgets** - `CREATE OR REPLACE PAGE` rebuilds the entire page from MDL. Any widget type not yet supported by the MDL writer is **lost**. `DESCRIBE PAGE` renders unsupported widget types as comments (`-- Pages$SomeType (name)`), so round-tripping a page silently drops content. With partial updates (ALTER PAGE), we can add, change, or remove specific widgets while leaving unsupported parts of the page untouched.
+1. **Unsafe editing of pages with unsupported widgets** - `create or replace page` rebuilds the entire page from MDL. Any widget type not yet supported by the MDL writer is **lost**. `describe page` renders unsupported widget types as comments (`-- pages$SomeType (name)`), so round-tripping a page silently drops content. With partial updates (ALTER PAGE), we can add, change, or remove specific widgets while leaving unsupported parts of the page untouched.
 2. **No reusability** - Common widget patterns (save/cancel buttons, form layouts) must be copy-pasted
 3. **All-or-nothing updates** - Changing a single property requires rewriting the entire page
 4. **Large script files** - Complex pages result in hundreds of lines of MDL
@@ -32,33 +32,33 @@ Large MDL page scripts become unwieldy to write, read, and maintain. Currently, 
 
 ## Relationship to Existing Features
 
-This proposal complements existing features. `UPDATE WIDGETS` (bulk property updates) and `ALTER STYLING ON PAGE` (partial styling updates) are already implemented and prove that partial page modification works.
+This proposal complements existing features. `update widgets` (bulk property updates) and `alter styling on page` (partial styling updates) are already implemented and prove that partial page modification works.
 
 | Feature | Status | Scope | Target | Use Case |
 |---------|--------|-------|--------|----------|
-| `UPDATE WIDGETS SET ... WHERE ...` | **Implemented** | Project-wide or module | Multiple widgets by filter | "Disable labels on all comboboxes" |
-| `ALTER STYLING ON PAGE ... WIDGET ...` | **Implemented** | Single page | Widget styling by name | "Change CSS class on this container" |
-| `ALTER PAGE SET ... ON widget` | Proposed | Single page | Single widget by name | "Change this button's caption" |
-| `ALTER PAGE REPLACE widget WITH {...}` | Proposed | Single page | Widget subtree | "Restructure this form section" |
-| `DEFINE/USE FRAGMENT` | Proposed | Script scope | Reusable widget groups | "Standard save/cancel buttons" |
+| `update widgets set ... where ...` | **Implemented** | Project-wide or module | Multiple widgets by filter | "Disable labels on all comboboxes" |
+| `alter styling on page ... widget ...` | **Implemented** | Single page | Widget styling by name | "Change CSS class on this container" |
+| `alter page set ... on widget` | Proposed | Single page | Single widget by name | "Change this button's caption" |
+| `alter page replace widget with {...}` | Proposed | Single page | Widget subtree | "Restructure this form section" |
+| `define/use fragment` | Proposed | Script scope | Reusable widget groups | "Standard save/cancel buttons" |
 
 **How they work together:**
 
 ```sql
 -- Bulk update (existing): Change ALL combobox labels project-wide
-UPDATE WIDGETS
-SET 'showLabel' = false
-WHERE WidgetType LIKE '%combobox%'
+update widgets
+set 'showLabel' = false
+where widgettype like '%combobox%'
 
 -- Targeted update (proposed): Change ONE specific widget's property
-ALTER PAGE Module.CustomerEdit {
-  SET 'showLabel' = true ON cbStatus  -- Exception to the rule above
+alter page Module.CustomerEdit {
+  set 'showLabel' = true on cbStatus  -- Exception to the rule above
 }
 
 -- Structural change (proposed): Replace entire section
-ALTER PAGE Module.CustomerEdit {
-  REPLACE footer1 WITH {
-    USE FRAGMENT NewFooterLayout
+alter page Module.CustomerEdit {
+  replace footer1 with {
+    use fragment NewFooterLayout
   }
 }
 ```
@@ -73,29 +73,29 @@ Define reusable widget groups that can be inserted into pages:
 
 ```sql
 -- Simple fragment
-DEFINE FRAGMENT SaveCancelFooter AS {
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+define fragment SaveCancelFooter as {
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 }
 
 -- Fragment with layout structure
-DEFINE FRAGMENT TwoColumnForm AS {
-  LAYOUTGRID formGrid {
-    ROW row1 {
-      COLUMN colLeft (DesktopWidth: 6) { }
-      COLUMN colRight (DesktopWidth: 6) { }
+define fragment TwoColumnForm as {
+  layoutgrid formGrid {
+    row row1 {
+      column colLeft (desktopwidth: 6) { }
+      column colRight (desktopwidth: 6) { }
     }
   }
 }
 
 -- Fragment for consistent headings
-DEFINE FRAGMENT PageHeader AS {
-  LAYOUTGRID headerGrid {
-    ROW headerRow {
-      COLUMN headerCol (DesktopWidth: 12) {
-        DYNAMICTEXT pageTitle (Content: 'Page Title', RenderMode: H2)
+define fragment PageHeader as {
+  layoutgrid headerGrid {
+    row headerRow {
+      column headerCol (desktopwidth: 12) {
+        dynamictext pageTitle (content: 'Page Title', rendermode: H2)
       }
     }
   }
@@ -107,19 +107,19 @@ DEFINE FRAGMENT PageHeader AS {
 Insert a defined fragment at the current position:
 
 ```sql
-CREATE PAGE Module.CustomerEdit
+create page Module.CustomerEdit
 (
-  Params: { $Customer: Module.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: Module.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
+  dataview dvCustomer (datasource: $Customer) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtEmail (label: 'Email', attribute: Email)
 
     -- Insert the reusable footer
-    USE FRAGMENT SaveCancelFooter
+    use fragment SaveCancelFooter
   }
 }
 ```
@@ -129,13 +129,13 @@ CREATE PAGE Module.CustomerEdit
 Future enhancement - fragments that accept parameters:
 
 ```sql
-DEFINE FRAGMENT FormField($label, $attr) AS {
-  TEXTBOX txt$attr (Label: $label, Attribute: $attr)
+define fragment FormField($label, $attr) as {
+  textbox txt$attr (label: $label, attribute: $attr)
 }
 
 -- Usage
-USE FRAGMENT FormField('Customer Name', 'Name')
-USE FRAGMENT FormField('Email Address', 'Email')
+use fragment FormField('Customer Name', 'Name')
+use fragment FormField('Email Address', 'Email')
 ```
 
 ### Fragment Naming and Prefixes
@@ -143,19 +143,19 @@ USE FRAGMENT FormField('Email Address', 'Email')
 When using fragments multiple times, use a prefix to avoid name conflicts:
 
 ```sql
-DEFINE FRAGMENT SaveCancelFooter AS {
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+define fragment SaveCancelFooter as {
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 }
 
 -- Use with prefix to create unique names
-USE FRAGMENT SaveCancelFooter AS customer_   -- Creates customer_footer1, customer_btnSave, customer_btnCancel
-USE FRAGMENT SaveCancelFooter AS order_      -- Creates order_footer1, order_btnSave, order_btnCancel
+use fragment SaveCancelFooter as customer_   -- Creates customer_footer1, customer_btnSave, customer_btnCancel
+use fragment SaveCancelFooter as order_      -- Creates order_footer1, order_btnSave, order_btnCancel
 
 -- Without prefix (only use once per page)
-USE FRAGMENT SaveCancelFooter
+use fragment SaveCancelFooter
 ```
 
 ### Fragment Scope
@@ -170,10 +170,10 @@ USE FRAGMENT SaveCancelFooter
 List all defined fragments in the current session:
 
 ```sql
-DEFINE FRAGMENT SaveCancelFooter AS { ... }
-DEFINE FRAGMENT FormHeader AS { ... }
+define fragment SaveCancelFooter as { ... }
+define fragment FormHeader as { ... }
 
-SHOW FRAGMENTS;
+show fragments;
 -- Output:
 -- SaveCancelFooter
 -- FormHeader
@@ -184,7 +184,7 @@ SHOW FRAGMENTS;
 Show the definition of a script-defined fragment:
 
 ```sql
-DESCRIBE FRAGMENT SaveCancelFooter;
+describe fragment SaveCancelFooter;
 
 -- Output:
 -- DEFINE FRAGMENT SaveCancelFooter AS {
@@ -204,14 +204,14 @@ Extract a widget subtree from an existing page as a fragment definition. This en
 ### Basic Syntax
 
 ```sql
-DESCRIBE FRAGMENT FROM PAGE Module.PageName WIDGET widgetName;
+describe fragment from page Module.PageName widget widgetName;
 ```
 
 ### Example Workflow
 
 ```sql
 -- 1. Extract part of an existing page as a fragment
-DESCRIBE FRAGMENT FROM PAGE Module.CustomerEdit WIDGET dvCustomer;
+describe fragment from page Module.CustomerEdit widget dvCustomer;
 
 -- Output (can be copied, modified, and used in ALTER PAGE):
 -- {
@@ -226,15 +226,15 @@ DESCRIBE FRAGMENT FROM PAGE Module.CustomerEdit WIDGET dvCustomer;
 -- }
 
 -- 2. Copy the output, modify it, then replace
-ALTER PAGE Module.CustomerEdit {
-  REPLACE dvCustomer WITH {
-    DATAVIEW dvCustomer (DataSource: $Customer) {
-      TEXTBOX txtName (Label: 'Name', Attribute: Name)
-      TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-      TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)  -- Added new field
-      FOOTER footer1 {
-        ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)  -- Added style
-        ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+alter page Module.CustomerEdit {
+  replace dvCustomer with {
+    dataview dvCustomer (datasource: $Customer) {
+      textbox txtName (label: 'Name', attribute: Name)
+      textbox txtEmail (label: 'Email', attribute: Email)
+      textbox txtPhone (label: 'Phone', attribute: Phone)  -- Added new field
+      footer footer1 {
+        actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)  -- Added style
+        actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
       }
     }
   }
@@ -245,21 +245,21 @@ ALTER PAGE Module.CustomerEdit {
 
 ```sql
 -- Extract footer from one page
-DESCRIBE FRAGMENT FROM PAGE Module.CustomerEdit WIDGET footer1;
+describe fragment from page Module.CustomerEdit widget footer1;
 
 -- Output can be wrapped in DEFINE FRAGMENT for reuse:
-DEFINE FRAGMENT StandardFooter AS {
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+define fragment StandardFooter as {
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 }
 
 -- Now use in other pages
-CREATE PAGE Module.OrderEdit (...) {
-  DATAVIEW dvOrder (DataSource: $Order) {
+create page Module.OrderEdit (...) {
+  dataview dvOrder (datasource: $Order) {
     -- ... fields ...
-    USE FRAGMENT StandardFooter
+    use fragment StandardFooter
   }
 }
 ```
@@ -280,7 +280,7 @@ Modify existing pages without full replacement:
 ### Basic Syntax
 
 ```sql
-ALTER PAGE Module.PageName {
+alter page Module.PageName {
   -- One or more operations
 }
 ```
@@ -290,19 +290,19 @@ ALTER PAGE Module.PageName {
 Update widget properties by name:
 
 ```sql
-ALTER PAGE Module.CustomerEdit {
+alter page Module.CustomerEdit {
   -- Single property
-  SET Caption = 'Update' ON btnSave
+  set caption = 'Update' on btnSave
 
   -- Multiple properties
-  SET (Caption: 'Save Changes', ButtonStyle: Success) ON btnSave
+  set (caption: 'Save Changes', buttonstyle: success) on btnSave
 
   -- Property on page itself
-  SET Title = 'Edit Customer Record'
+  set title = 'Edit Customer Record'
 
   -- Nested property for pluggable widgets (dot notation in quotes)
-  SET 'showLabel' = false ON cbStatus
-  SET 'labelWidth' = 4 ON cbStatus
+  set 'showLabel' = false on cbStatus
+  set 'labelWidth' = 4 on cbStatus
 }
 ```
 
@@ -311,30 +311,30 @@ ALTER PAGE Module.CustomerEdit {
 Add new widgets to existing containers:
 
 ```sql
-ALTER PAGE Module.CustomerEdit {
+alter page Module.CustomerEdit {
   -- Insert after a named widget
-  INSERT AFTER txtName {
-    TEXTBOX txtMiddleName (Label: 'Middle Name', Attribute: MiddleName)
+  insert after txtName {
+    textbox txtMiddleName (label: 'Middle Name', attribute: MiddleName)
   }
 
   -- Insert before a named widget
-  INSERT BEFORE btnSave {
-    ACTIONBUTTON btnValidate (Caption: 'Validate', Action: MICROFLOW Module.VAL_Customer)
+  insert before btnSave {
+    actionbutton btnValidate (caption: 'Validate', action: microflow Module.VAL_Customer)
   }
 
   -- Insert as first child of a container
-  INSERT FIRST IN dvCustomer {
-    DYNAMICTEXT formHeader (Content: 'Customer Information', RenderMode: H3)
+  insert FIRST in dvCustomer {
+    dynamictext formHeader (content: 'Customer Information', rendermode: H3)
   }
 
   -- Insert as last child of a container
-  INSERT LAST IN footer1 {
-    LINKBUTTON lnkHelp (Caption: 'Help', Action: SHOW_PAGE Module.HelpPage)
+  insert LAST in footer1 {
+    linkbutton lnkHelp (caption: 'Help', action: show_page Module.HelpPage)
   }
 
   -- Insert fragment
-  INSERT AFTER txtEmail {
-    USE FRAGMENT AddressFields
+  insert after txtEmail {
+    use fragment AddressFields
   }
 }
 ```
@@ -344,15 +344,15 @@ ALTER PAGE Module.CustomerEdit {
 Remove widgets from a page:
 
 ```sql
-ALTER PAGE Module.CustomerEdit {
+alter page Module.CustomerEdit {
   -- Remove a single widget
-  DROP WIDGET txtMiddleName
+  drop widget txtMiddleName
 
   -- Remove multiple widgets
-  DROP WIDGET txtFax, txtPager
+  drop widget txtFax, txtPager
 
   -- Remove with IF EXISTS (no error if not found)
-  DROP WIDGET IF EXISTS txtLegacyField
+  drop widget if exists txtLegacyField
 }
 ```
 
@@ -361,15 +361,15 @@ ALTER PAGE Module.CustomerEdit {
 Swap a widget with new content:
 
 ```sql
-ALTER PAGE Module.CustomerEdit {
+alter page Module.CustomerEdit {
   -- Replace widget entirely
-  REPLACE btnCancel WITH {
-    LINKBUTTON lnkCancel (Caption: 'Cancel', Action: CLOSE_PAGE)
+  replace btnCancel with {
+    linkbutton lnkCancel (caption: 'Cancel', action: close_page)
   }
 
   -- Replace with fragment
-  REPLACE oldFooter WITH {
-    USE FRAGMENT SaveCancelFooter
+  replace oldFooter with {
+    use fragment SaveCancelFooter
   }
 }
 ```
@@ -379,12 +379,12 @@ ALTER PAGE Module.CustomerEdit {
 Relocate a widget within the page:
 
 ```sql
-ALTER PAGE Module.CustomerEdit {
+alter page Module.CustomerEdit {
   -- Move to different position
-  MOVE txtPhone AFTER txtEmail
+  move txtPhone after txtEmail
 
   -- Move to different container
-  MOVE btnHelp LAST IN footer1
+  move btnHelp LAST in footer1
 }
 ```
 
@@ -398,30 +398,30 @@ Build pages step by step, useful for REPL sessions:
 
 ```sql
 -- Create minimal page structure
-CREATE EMPTY PAGE Module.NewPage
+create empty page Module.NewPage
 (
-  Title: 'New Page',
-  Layout: Atlas_Core.Atlas_Default
+  title: 'New Page',
+  layout: Atlas_Core.Atlas_Default
 )
 
 -- Now build it up incrementally
-ALTER PAGE Module.NewPage {
-  INSERT FIRST IN Main {  -- Main is the layout placeholder
-    LAYOUTGRID mainGrid { }
+alter page Module.NewPage {
+  insert FIRST in Main {  -- Main is the layout placeholder
+    layoutgrid mainGrid { }
   }
 }
 
-ALTER PAGE Module.NewPage {
-  INSERT FIRST IN mainGrid {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 12) { }
+alter page Module.NewPage {
+  insert FIRST in mainGrid {
+    row row1 {
+      column col1 (desktopwidth: 12) { }
     }
   }
 }
 
-ALTER PAGE Module.NewPage {
-  INSERT FIRST IN col1 {
-    DYNAMICTEXT heading (Content: 'Welcome', RenderMode: H2)
+alter page Module.NewPage {
+  insert FIRST in col1 {
+    dynamictext heading (content: 'Welcome', rendermode: H2)
   }
 }
 ```
@@ -434,29 +434,29 @@ ALTER PAGE Module.NewPage {
 
 ```sql
 -- fragments.mdl - Define reusable fragments
-DEFINE FRAGMENT SaveCancelFooter AS { ... }
-DEFINE FRAGMENT FormHeader AS { ... }
-DEFINE FRAGMENT AddressFields AS { ... }
+define fragment SaveCancelFooter as { ... }
+define fragment FormHeader as { ... }
+define fragment AddressFields as { ... }
 /
 
 -- customer-edit.mdl - Create the page
-USE SCRIPT 'fragments.mdl'  -- Future: import fragments from other files
+use script 'fragments.mdl'  -- Future: import fragments from other files
 
-CREATE PAGE Module.CustomerEdit (...) {
-  USE FRAGMENT FormHeader
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    USE FRAGMENT AddressFields
-    USE FRAGMENT SaveCancelFooter
+create page Module.CustomerEdit (...) {
+  use fragment FormHeader
+  dataview dvCustomer (datasource: $Customer) {
+    textbox txtName (label: 'Name', attribute: Name)
+    use fragment AddressFields
+    use fragment SaveCancelFooter
   }
 }
 /
 
 -- Later modifications
-ALTER PAGE Module.CustomerEdit {
-  SET Title = 'Edit Customer v2'
-  INSERT AFTER txtName {
-    TEXTBOX txtNickname (Label: 'Nickname', Attribute: Nickname)
+alter page Module.CustomerEdit {
+  set title = 'Edit Customer v2'
+  insert after txtName {
+    textbox txtNickname (label: 'Nickname', attribute: Nickname)
   }
 }
 ```
@@ -466,41 +466,41 @@ ALTER PAGE Module.CustomerEdit {
 ## Implementation Phases
 
 ### Phase 1: Core Fragment System
-- `DEFINE FRAGMENT name AS { ... }`
-- `USE FRAGMENT name [AS prefix_]` within CREATE PAGE
-- `SHOW FRAGMENTS` - list defined fragments
-- `DESCRIBE FRAGMENT name` - show fragment definition
+- `define fragment name as { ... }`
+- `use fragment name [as prefix_]` within CREATE PAGE
+- `show fragments` - list defined fragments
+- `describe fragment name` - show fragment definition
 - Fragment storage in executor context
 - Fragment expansion during page building with prefix support
 
 ### Phase 2: DESCRIBE FRAGMENT FROM PAGE
-- `DESCRIBE FRAGMENT FROM PAGE Module.Page WIDGET widgetName`
+- `describe fragment from page Module.Page widget widgetName`
 - Extract widget subtree as MDL fragment syntax
 - Enables the describe → edit → replace workflow
 
 ### Phase 3: ALTER PAGE Basics
-- `SET property = value ON widgetName`
-- `SET (prop1: val1, prop2: val2) ON widgetName`
-- `INSERT AFTER/BEFORE widgetName { ... }`
-- `DROP WIDGET widgetName`
-- `REPLACE widgetName WITH { ... }`
+- `set property = value on widgetName`
+- `set (prop1: val1, prop2: val2) on widgetName`
+- `insert after/before widgetName { ... }`
+- `drop widget widgetName`
+- `replace widgetName with { ... }`
 - Page loading, modification, and saving
 - Operations work on raw BSON widget trees, preserving unsupported widget types
 - Property validation against widget types
 
 ### Phase 4: Advanced ALTER Operations
-- `INSERT FIRST/LAST IN containerName`
-- `MOVE widgetName AFTER/BEFORE target`
-- `DROP WIDGET IF EXISTS`
+- `insert FIRST/LAST in containerName`
+- `move widgetName after/before target`
+- `drop widget if exists`
 
 ### Phase 5: Future Enhancements
-- Parameterized fragments: `DEFINE FRAGMENT Name($param) AS { ... }`
-- `USE SCRIPT 'file.mdl'` for file includes
+- Parameterized fragments: `define fragment Name($param) as { ... }`
+- `use script 'file.mdl'` for file includes
 - Fragment libraries
-- Conditional fragments (`USE FRAGMENT X IF condition`)
+- Conditional fragments (`use fragment X if condition`)
 
 ### Already Implemented (not in scope)
-- **Bulk Widget Updates** — `UPDATE WIDGETS SET ... WHERE ...` with module and widget-type filtering, `DRY RUN` support. Fully working in `cmd_widgets.go`.
+- **Bulk Widget Updates** — `update widgets set ... where ...` with module and widget-type filtering, `dry run` support. Fully working in `cmd_widgets.go`.
 - **ALTER STYLING ON PAGE** — Partial styling updates on individual widgets. Working in `cmd_styling.go`. Proves the partial page modification pattern.
 
 ---
@@ -510,44 +510,44 @@ ALTER PAGE Module.CustomerEdit {
 ### New Tokens (MDLLexer.g4)
 
 ```antlr
-DEFINE: D E F I N E;
-FRAGMENT: F R A G M E N T;
-INSERT: I N S E R T;
-BEFORE: B E F O R E;
-AFTER: A F T E R;
+define: D E F I N E;
+fragment: F R A G M E N T;
+insert: I N S E R T;
+before: B E F O R E;
+after: A F T E R;
 FIRST: F I R S T;
 LAST: L A S T;
 ```
 
-The following tokens already exist in the lexer: `ALTER`, `MOVE`, `REPLACE`, `WITH`, `EMPTY`.
+The following tokens already exist in the lexer: `alter`, `move`, `replace`, `with`, `empty`.
 
 ### New Rules (MDLParser.g4)
 
 ```antlr
-// Fragment definition
+// fragment definition
 defineFragmentStatement
-    : DEFINE FRAGMENT IDENTIFIER AS LBRACE widgetV3* RBRACE
+    : define fragment IDENTIFIER as LBRACE widgetV3* RBRACE
     ;
 
-// Fragment usage (within widget children)
+// fragment usage (within widget children)
 useFragmentStatement
-    : USE FRAGMENT IDENTIFIER (AS IDENTIFIER)?  // Optional prefix
+    : use fragment IDENTIFIER (as IDENTIFIER)?  // Optional prefix
     ;
 
-// Show fragments list
+// show fragments list
 showFragmentsStatement
-    : SHOW FRAGMENTS
+    : show fragments
     ;
 
-// Describe fragment (script-defined or from page)
+// describe fragment (script-defined or from page)
 describeFragmentStatement
-    : DESCRIBE FRAGMENT IDENTIFIER
-    | DESCRIBE FRAGMENT FROM PAGE qualifiedName WIDGET IDENTIFIER
+    : describe fragment IDENTIFIER
+    | describe fragment from page qualifiedName widget IDENTIFIER
     ;
 
-// ALTER PAGE statement
+// alter page statement
 alterPageStatement
-    : ALTER PAGE qualifiedName LBRACE alterOperation+ RBRACE
+    : alter page qualifiedName LBRACE alterOperation+ RBRACE
     ;
 
 alterOperation
@@ -559,27 +559,27 @@ alterOperation
     ;
 
 setPropertyOperation
-    : SET propertyAssignment ON IDENTIFIER
-    | SET LPAREN propertyAssignmentList RPAREN ON IDENTIFIER
-    | SET propertyAssignment  // Page-level property
+    : set propertyAssignment on IDENTIFIER
+    | set LPAREN propertyAssignmentList RPAREN on IDENTIFIER
+    | set propertyAssignment  // page-level property
     ;
 
 insertOperation
-    : INSERT (AFTER | BEFORE) IDENTIFIER LBRACE widgetV3+ RBRACE
-    | INSERT (FIRST | LAST) IN IDENTIFIER LBRACE widgetV3+ RBRACE
+    : insert (after | before) IDENTIFIER LBRACE widgetV3+ RBRACE
+    | insert (FIRST | LAST) in IDENTIFIER LBRACE widgetV3+ RBRACE
     ;
 
 dropWidgetOperation
-    : DROP WIDGET (IF EXISTS)? identifierList
+    : drop widget (if exists)? identifierList
     ;
 
 replaceWidgetOperation
-    : REPLACE IDENTIFIER WITH LBRACE widgetV3+ RBRACE
+    : replace IDENTIFIER with LBRACE widgetV3+ RBRACE
     ;
 
 moveWidgetOperation
-    : MOVE IDENTIFIER (AFTER | BEFORE) IDENTIFIER
-    | MOVE IDENTIFIER (FIRST | LAST) IN IDENTIFIER
+    : move IDENTIFIER (after | before) IDENTIFIER
+    | move IDENTIFIER (FIRST | LAST) in IDENTIFIER
     ;
 ```
 
@@ -592,7 +592,7 @@ moveWidgetOperation
 
 type DefineFragmentStmt struct {
     Name    string
-    Widgets []*WidgetV3
+    widgets []*WidgetV3
 }
 
 func (s *DefineFragmentStmt) isStatement() {}
@@ -607,10 +607,10 @@ type ShowFragmentsStmt struct{}
 func (s *ShowFragmentsStmt) isStatement() {}
 
 type DescribeFragmentStmt struct {
-    FragmentName string        // For script-defined fragments
-    PageName     QualifiedName // For DESCRIBE FRAGMENT FROM PAGE
-    WidgetName   string        // Widget to extract
-    FromPage     bool          // true if FROM PAGE syntax
+    FragmentName string        // for script-defined fragments
+    PageName     QualifiedName // for describe fragment from page
+    WidgetName   string        // widget to extract
+    FromPage     bool          // true if from page syntax
 }
 
 func (s *DescribeFragmentStmt) isStatement() {}
@@ -626,13 +626,13 @@ type AlterOperation interface {
 
 type SetPropertyOp struct {
     WidgetName  string // empty for page-level
-    Properties  map[string]interface{}
+    properties  map[string]interface{}
 }
 
 type InsertOp struct {
-    Position    InsertPosition // AFTER, BEFORE, FIRST, LAST
+    position    InsertPosition // after, before, FIRST, LAST
     TargetName  string
-    Widgets     []*WidgetV3
+    widgets     []*WidgetV3
 }
 
 type DropWidgetOp struct {
@@ -647,14 +647,14 @@ type ReplaceWidgetOp struct {
 
 type MoveWidgetOp struct {
     WidgetName  string
-    Position    InsertPosition
+    position    InsertPosition
     TargetName  string
 }
 
 type InsertPosition string
 const (
-    InsertAfter  InsertPosition = "AFTER"
-    InsertBefore InsertPosition = "BEFORE"
+    InsertAfter  InsertPosition = "after"
+    InsertBefore InsertPosition = "before"
     InsertFirst  InsertPosition = "FIRST"
     InsertLast   InsertPosition = "LAST"
 )
@@ -683,7 +683,7 @@ func (e *Executor) execDefineFragment(s *ast.DefineFragmentStmt) error {
 
 ### Fragment Expansion
 
-During page building, when encountering `USE FRAGMENT`:
+During page building, when encountering `use fragment`:
 
 ```go
 func (pb *pageBuilder) expandFragment(name string) ([]*ast.WidgetV3, error) {
@@ -691,7 +691,7 @@ func (pb *pageBuilder) expandFragment(name string) ([]*ast.WidgetV3, error) {
     if !ok {
         return nil, fmt.Errorf("fragment not found: %s", name)
     }
-    // Return copy of widgets to avoid mutation
+    // return copy of widgets to avoid mutation
     return cloneWidgets(fragment.Widgets), nil
 }
 ```
@@ -706,10 +706,10 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
         return err
     }
 
-    // 2. Build widget index by name
+    // 2. build widget index by name
     widgetIndex := buildWidgetIndex(page)
 
-    // 3. Apply operations in order
+    // 3. apply operations in order
     for _, op := range s.Operations {
         if err := e.applyAlterOperation(page, widgetIndex, op); err != nil {
             return err
@@ -729,39 +729,39 @@ func (e *Executor) execAlterPage(s *ast.AlterPageStmt) error {
 
 ```sql
 -- Step 1: Define reusable fragments
-DEFINE FRAGMENT CrudButtons AS {
-  FOOTER formFooter {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
-    ACTIONBUTTON btnDelete (Caption: 'Delete', Action: DELETE, ButtonStyle: Danger)
+define fragment CrudButtons as {
+  footer formFooter {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
+    actionbutton btnDelete (caption: 'Delete', action: delete, buttonstyle: danger)
   }
 }
 /
 
 -- Step 2: Create page using fragments
-CREATE PAGE CRM.Customer_Edit
+create page CRM.Customer_Edit
 (
-  Params: { $Customer: CRM.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: CRM.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-    TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
-    USE FRAGMENT CrudButtons
+  dataview dvCustomer (datasource: $Customer) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtEmail (label: 'Email', attribute: Email)
+    textbox txtPhone (label: 'Phone', attribute: Phone)
+    use fragment CrudButtons
   }
 }
 /
 
 -- Step 3: Simple modifications with ALTER
-ALTER PAGE CRM.Customer_Edit {
-  INSERT AFTER txtEmail {
-    TEXTBOX txtWebsite (Label: 'Website', Attribute: Website)
+alter page CRM.Customer_Edit {
+  insert after txtEmail {
+    textbox txtWebsite (label: 'Website', attribute: Website)
   }
-  SET Caption = 'Save Customer' ON btnSave
-  DROP WIDGET btnDelete
+  set caption = 'Save Customer' on btnSave
+  drop widget btnDelete
 }
 ```
 
@@ -771,7 +771,7 @@ This is the key workflow for modifying complex existing pages:
 
 ```sql
 -- Step 1: Extract the section you want to modify
-DESCRIBE FRAGMENT FROM PAGE CRM.Customer_Edit WIDGET dvCustomer;
+describe fragment from page CRM.Customer_Edit widget dvCustomer;
 
 -- Output:
 -- {
@@ -788,25 +788,25 @@ DESCRIBE FRAGMENT FROM PAGE CRM.Customer_Edit WIDGET dvCustomer;
 -- }
 
 -- Step 2: Copy output, edit in your editor, then replace
-ALTER PAGE CRM.Customer_Edit {
-  REPLACE dvCustomer WITH {
-    DATAVIEW dvCustomer (DataSource: $Customer) {
+alter page CRM.Customer_Edit {
+  replace dvCustomer with {
+    dataview dvCustomer (datasource: $Customer) {
       -- Reorganized into two columns
-      LAYOUTGRID formGrid {
-        ROW row1 {
-          COLUMN colLeft (DesktopWidth: 6) {
-            TEXTBOX txtName (Label: 'Name', Attribute: Name)
-            TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
+      layoutgrid formGrid {
+        row row1 {
+          column colLeft (desktopwidth: 6) {
+            textbox txtName (label: 'Name', attribute: Name)
+            textbox txtEmail (label: 'Email', attribute: Email)
           }
-          COLUMN colRight (DesktopWidth: 6) {
-            TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
-            TEXTBOX txtWebsite (Label: 'Website', Attribute: Website)
+          column colRight (desktopwidth: 6) {
+            textbox txtPhone (label: 'Phone', attribute: Phone)
+            textbox txtWebsite (label: 'Website', attribute: Website)
           }
         }
       }
-      FOOTER formFooter {
-        ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-        ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+      footer formFooter {
+        actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+        actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
       }
     }
   }
@@ -817,25 +817,25 @@ ALTER PAGE CRM.Customer_Edit {
 
 ```sql
 -- Extract a well-designed footer from a Studio Pro page
-DESCRIBE FRAGMENT FROM PAGE Atlas_Core.ExamplePage WIDGET footerActions;
+describe fragment from page Atlas_Core.ExamplePage widget footerActions;
 
 -- Wrap in DEFINE FRAGMENT for reuse
-DEFINE FRAGMENT StandardActions AS {
+define fragment StandardActions as {
   -- paste extracted content here
 }
 
 -- Use in your pages
-CREATE PAGE Module.NewPage (...) {
-  DATAVIEW dv (...) {
+create page Module.NewPage (...) {
+  dataview dv (...) {
     -- ... fields ...
-    USE FRAGMENT StandardActions
+    use fragment StandardActions
   }
 }
 ```
 
 ### Workflow D: Safe Editing of Pages with Unsupported Widgets
 
-This is the primary motivation for this proposal. A page may contain widgets that MDL cannot yet describe or round-trip (e.g., newer pluggable widgets, specialized marketplace widgets). Today, `DESCRIBE PAGE` renders these as comments and `CREATE OR REPLACE PAGE` silently drops them. With ALTER PAGE, we can safely modify the known parts:
+This is the primary motivation for this proposal. A page may contain widgets that MDL cannot yet describe or round-trip (e.g., newer pluggable widgets, specialized marketplace widgets). Today, `describe page` renders these as comments and `create or replace page` silently drops them. With ALTER PAGE, we can safely modify the known parts:
 
 ```sql
 -- Page contains a mix of supported and unsupported widgets.
@@ -847,11 +847,11 @@ This is the primary motivation for this proposal. A page may contain widgets tha
 --   }
 
 -- ALTER PAGE works on the raw BSON widget tree, so unsupported widgets are preserved:
-ALTER PAGE Module.CustomerEdit {
-  INSERT AFTER txtName {
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
+alter page Module.CustomerEdit {
+  insert after txtName {
+    textbox txtEmail (label: 'Email', attribute: Email)
   }
-  SET Caption = 'Update' ON btnSave
+  set caption = 'Update' on btnSave
 }
 -- mpWidget1 is untouched — it stays in the page exactly as it was.
 ```
@@ -860,21 +860,21 @@ ALTER PAGE Module.CustomerEdit {
 
 ## Design Decisions
 
-1. **Raw BSON widget tree for ALTER PAGE**: ALTER PAGE operations must work on the raw BSON widget tree (not parsed/reconstructed widgets). This is what makes unsupported widget preservation possible — widgets that MDL cannot parse are kept as opaque BSON documents and passed through unchanged. Only the targeted widgets are modified. This follows the same approach proven by the existing `UPDATE WIDGETS` and `ALTER STYLING` implementations.
+1. **Raw BSON widget tree for ALTER PAGE**: ALTER PAGE operations must work on the raw BSON widget tree (not parsed/reconstructed widgets). This is what makes unsupported widget preservation possible — widgets that MDL cannot parse are kept as opaque BSON documents and passed through unchanged. Only the targeted widgets are modified. This follows the same approach proven by the existing `update widgets` and `alter styling` implementations.
 
 2. **Fragment naming conflicts**: Use prefix syntax to avoid conflicts
-   - `USE FRAGMENT Name AS prefix_` creates prefixed widget names
+   - `use fragment Name as prefix_` creates prefixed widget names
    - Without prefix, error if names conflict
 
 3. **Validation**: ALTER operations validate property assignments against widget types
-   - `SET Caption` only valid on widgets that have Caption property
+   - `set caption` only valid on widgets that have Caption property
    - Prevents creating invalid models
 
 4. **Dry run**: Not needed for ALTER PAGE (keep it simple for now)
 
 5. **Fragment scope**: Script-scoped (transient)
    - Fragments exist only during script execution
-   - Use `DESCRIBE FRAGMENT FROM PAGE` to extract and recreate
+   - Use `describe fragment from page` to extract and recreate
 
 ---
 

@@ -14,49 +14,49 @@ This skill covers discovering external services, browsing cached contracts, and 
 
 ```sql
 -- All OData clients (consumed services)
-SHOW ODATA CLIENTS;
+show odata clients;
 
 -- All published OData services
-SHOW ODATA SERVICES;
+show odata services;
 
 -- All consumed REST services
-SHOW REST CLIENTS;
+show rest clients;
 
 -- All published REST services
-SHOW PUBLISHED REST SERVICES;
+show published rest services;
 
 -- All business event services
-SHOW BUSINESS EVENT SERVICES;
+show business event services;
 
 -- All database connections
-SHOW DATABASE CONNECTIONS;
+show database connections;
 
 -- All external entities (imported from OData)
-SHOW EXTERNAL ENTITIES;
+show external entities;
 
 -- All external actions used in microflows
-SHOW EXTERNAL ACTIONS;
+show external actions;
 ```
 
 ## Contract Browsing: OData $metadata
 
-`CREATE ODATA CLIENT` auto-fetches and caches the `$metadata` XML. Browse it without network access:
+`create odata client` auto-fetches and caches the `$metadata` XML. Browse it without network access:
 
 ```sql
 -- List all entity types from the contract
-SHOW CONTRACT ENTITIES FROM MyModule.SalesforceAPI;
+show contract entities from MyModule.SalesforceAPI;
 
 -- List actions/functions
-SHOW CONTRACT ACTIONS FROM MyModule.SalesforceAPI;
+show contract actions from MyModule.SalesforceAPI;
 
 -- Inspect a specific entity (properties, keys, navigation)
-DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder;
+describe contract entity MyModule.SalesforceAPI.PurchaseOrder;
 
 -- Generate a CREATE EXTERNAL ENTITY statement from the contract
-DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder FORMAT mdl;
+describe contract entity MyModule.SalesforceAPI.PurchaseOrder format mdl;
 
 -- Inspect an action's signature
-DESCRIBE CONTRACT ACTION MyModule.SalesforceAPI.CreateOrder;
+describe contract action MyModule.SalesforceAPI.CreateOrder;
 ```
 
 ## Contract Browsing: AsyncAPI (Business Events)
@@ -65,50 +65,50 @@ Business event client services cache the AsyncAPI YAML:
 
 ```sql
 -- List channels
-SHOW CONTRACT CHANNELS FROM MyModule.ShopEventsClient;
+show contract channels from MyModule.ShopEventsClient;
 
 -- List messages with payload info
-SHOW CONTRACT MESSAGES FROM MyModule.ShopEventsClient;
+show contract messages from MyModule.ShopEventsClient;
 
 -- Inspect a message's payload properties
-DESCRIBE CONTRACT MESSAGE MyModule.ShopEventsClient.OrderChangedEvent;
+describe contract message MyModule.ShopEventsClient.OrderChangedEvent;
 ```
 
 ## Catalog Queries (requires REFRESH CATALOG)
 
 ```sql
-REFRESH CATALOG;
+refresh catalog;
 
 -- All contract entities across all OData clients
-SELECT ServiceQualifiedName, EntityName, EntitySetName, PropertyCount, Summary
-FROM CATALOG.CONTRACT_ENTITIES;
+select ServiceQualifiedName, EntityName, EntitySetName, PropertyCount, Summary
+from CATALOG.CONTRACT_ENTITIES;
 
 -- All contract actions
-SELECT ServiceQualifiedName, ActionName, ParameterCount, ReturnType
-FROM CATALOG.CONTRACT_ACTIONS;
+select ServiceQualifiedName, ActionName, ParameterCount, ReturnType
+from CATALOG.CONTRACT_ACTIONS;
 
 -- All contract messages
-SELECT ServiceQualifiedName, MessageName, ChannelName, OperationType, PropertyCount
-FROM CATALOG.CONTRACT_MESSAGES;
+select ServiceQualifiedName, MessageName, ChannelName, OperationType, PropertyCount
+from CATALOG.CONTRACT_MESSAGES;
 
 -- Find available entities NOT YET imported
-SELECT ce.EntityName, ce.ServiceQualifiedName, ce.PropertyCount
-FROM CATALOG.CONTRACT_ENTITIES ce
-LEFT JOIN CATALOG.EXTERNAL_ENTITIES ee
-  ON ce.ServiceQualifiedName = ee.ServiceName AND ce.EntityName = ee.RemoteName
-WHERE ee.Id IS NULL;
+select ce.EntityName, ce.ServiceQualifiedName, ce.PropertyCount
+from CATALOG.CONTRACT_ENTITIES ce
+left join CATALOG.EXTERNAL_ENTITIES ee
+  on ce.ServiceQualifiedName = ee.ServiceName and ce.EntityName = ee.RemoteName
+where ee.Id IS null;
 
 -- All REST operations across all consumed services
-SELECT ServiceQualifiedName, HttpMethod, Path, Name
-FROM CATALOG.REST_OPERATIONS
-ORDER BY ServiceQualifiedName, Path;
+select ServiceQualifiedName, HttpMethod, path, Name
+from CATALOG.REST_OPERATIONS
+ORDER by ServiceQualifiedName, path;
 
 -- Cross-cutting: all integration services in a module
-SELECT ObjectType, QualifiedName
-FROM CATALOG.OBJECTS
-WHERE ObjectType IN ('ODATA_CLIENT', 'REST_CLIENT', 'ODATA_SERVICE',
+select ObjectType, QualifiedName
+from CATALOG.OBJECTS
+where ObjectType in ('ODATA_CLIENT', 'REST_CLIENT', 'ODATA_SERVICE',
   'PUBLISHED_REST_SERVICE', 'BUSINESS_EVENT_SERVICE', 'DATABASE_CONNECTION')
-AND ModuleName = 'Integration';
+and ModuleName = 'Integration';
 ```
 
 ## Workflow: Import Entities from a Contract
@@ -117,47 +117,47 @@ AND ModuleName = 'Integration';
 
 ```sql
 -- Import all entity types at once
-CREATE EXTERNAL ENTITIES FROM MyModule.SalesforceAPI;
+create external entities from MyModule.SalesforceAPI;
 
 -- Import into a different module
-CREATE EXTERNAL ENTITIES FROM MyModule.SalesforceAPI INTO Integration;
+create external entities from MyModule.SalesforceAPI into Integration;
 
 -- Import only specific entities
-CREATE EXTERNAL ENTITIES FROM MyModule.SalesforceAPI ENTITIES (PurchaseOrder, Supplier);
+create external entities from MyModule.SalesforceAPI entities (PurchaseOrder, Supplier);
 
 -- Idempotent re-import (updates existing)
-CREATE OR MODIFY EXTERNAL ENTITIES FROM MyModule.SalesforceAPI;
+create or modify external entities from MyModule.SalesforceAPI;
 ```
 
 ### Single entity (with customization)
 
 1. Browse available entities:
    ```sql
-   SHOW CONTRACT ENTITIES FROM MyModule.SalesforceAPI;
+   show contract entities from MyModule.SalesforceAPI;
    ```
 
 2. Inspect the entity you want:
    ```sql
-   DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder;
+   describe contract entity MyModule.SalesforceAPI.PurchaseOrder;
    ```
 
 3. Generate the CREATE statement:
    ```sql
-   DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder FORMAT mdl;
+   describe contract entity MyModule.SalesforceAPI.PurchaseOrder format mdl;
    ```
 
 4. Copy, customize (remove unwanted attributes), and execute:
    ```sql
-   CREATE EXTERNAL ENTITY MyModule.PurchaseOrder
-   FROM ODATA CLIENT MyModule.SalesforceAPI (
+   create external entity MyModule.PurchaseOrder
+   from odata client MyModule.SalesforceAPI (
        EntitySet: 'PurchaseOrders',
        RemoteName: 'PurchaseOrder',
        Countable: Yes
    )
    (
-       Number: Long,
-       Status: String(200),
-       SupplierName: String(200),
-       GrossAmount: Decimal
+       Number: long,
+       status: string(200),
+       SupplierName: string(200),
+       GrossAmount: decimal
    );
    ```

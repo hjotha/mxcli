@@ -93,7 +93,7 @@ func TestDescribeMicroflow_Mock_Minimal(t *testing.T) {
 	assertNoError(t, describeMicroflow(ctx, ast.QualifiedName{Module: "MyModule", Name: "ACT_DoSomething"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE OR MODIFY MICROFLOW MyModule.ACT_DoSomething")
+	assertContainsStr(t, out, "create or modify microflow MyModule.ACT_DoSomething")
 }
 
 func TestDescribeMicroflow_Mock_NotFound(t *testing.T) {

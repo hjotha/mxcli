@@ -14,7 +14,7 @@ import (
 // It assembles relevant context information for LLM consumption.
 func execShowContext(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
-		return mdlerrors.NewValidation("SHOW CONTEXT requires a qualified name")
+		return mdlerrors.NewValidation("show context requires a qualified name")
 	}
 
 	// Ensure catalog is built with full mode for refs
@@ -85,7 +85,7 @@ func detectElementType(ctx *ExecContext, name string) (string, error) {
 
 	for _, check := range catalogChecks {
 		result, err := ctx.Catalog.Query(fmt.Sprintf(
-			"SELECT 1 FROM %s WHERE QualifiedName = '%s' LIMIT 1", check.table, name))
+			"select 1 from %s where QualifiedName = '%s' limit 1", check.table, name))
 		if err == nil && result.Count > 0 {
 			return check.elemType, nil
 		}
@@ -99,7 +99,7 @@ func assembleMicroflowContext(ctx *ExecContext, out *strings.Builder, name strin
 	// Get microflow basic info
 	out.WriteString("### Microflow Definition\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, ReturnType, ParameterCount, ActivityCount FROM microflows WHERE QualifiedName = '%s'", name))
+		"select Name, ReturnType, ParameterCount, ActivityCount from microflows where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -112,9 +112,9 @@ func assembleMicroflowContext(ctx *ExecContext, out *strings.Builder, name strin
 	// Entities used by this microflow
 	out.WriteString("### Entities Used\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName, RefKind FROM refs
-		 WHERE SourceName = '%s' AND TargetType = 'entity'
-		 ORDER BY RefKind, TargetName`, name))
+		`select distinct TargetName, RefKind from refs
+		 where SourceName = '%s' and TargetType = 'entity'
+		 ORDER by RefKind, TargetName`, name))
 	if err == nil && result.Count > 0 {
 		out.WriteString("| Entity | Usage |\n")
 		out.WriteString("|--------|-------|\n")
@@ -129,9 +129,9 @@ func assembleMicroflowContext(ctx *ExecContext, out *strings.Builder, name strin
 	// Pages shown by this microflow
 	out.WriteString("### Pages Shown\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName FROM refs
-		 WHERE SourceName = '%s' AND RefKind = 'show_page'
-		 ORDER BY TargetName`, name))
+		`select distinct TargetName from refs
+		 where SourceName = '%s' and RefKind = 'show_page'
+		 ORDER by TargetName`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -151,9 +151,9 @@ func assembleMicroflowContext(ctx *ExecContext, out *strings.Builder, name strin
 	// Direct callers
 	out.WriteString("### Direct Callers\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT SourceName FROM refs
-		 WHERE TargetName = '%s' AND RefKind = 'call'
-		 ORDER BY SourceName LIMIT 10`, name))
+		`select SourceName from refs
+		 where TargetName = '%s' and RefKind = 'call'
+		 ORDER by SourceName limit 10`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -174,9 +174,9 @@ func addCallees(ctx *ExecContext, out *strings.Builder, name string, maxDepth, c
 
 	indent := strings.Repeat("  ", currentDepth-1)
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName FROM refs
-		 WHERE SourceName = '%s' AND RefKind = 'call'
-		 ORDER BY TargetName`, name))
+		`select distinct TargetName from refs
+		 where SourceName = '%s' and RefKind = 'call'
+		 ORDER by TargetName`, name))
 	if err != nil || result.Count == 0 {
 		return
 	}
@@ -196,7 +196,7 @@ func assembleEntityContext(ctx *ExecContext, out *strings.Builder, name string, 
 	// Get entity basic info
 	out.WriteString("### Entity Definition\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, EntityType, Generalization, AttributeCount, IndexCount FROM entities WHERE QualifiedName = '%s'", name))
+		"select Name, EntityType, Generalization, AttributeCount, IndexCount from entities where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -212,9 +212,9 @@ func assembleEntityContext(ctx *ExecContext, out *strings.Builder, name string, 
 	// Microflows that use this entity
 	out.WriteString("### Microflows Using This Entity\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT SourceName, RefKind FROM refs
-		 WHERE TargetName = '%s' AND SourceType = 'microflow'
-		 ORDER BY RefKind, SourceName LIMIT 20`, name))
+		`select distinct SourceName, RefKind from refs
+		 where TargetName = '%s' and SourceType = 'microflow'
+		 ORDER by RefKind, SourceName limit 20`, name))
 	if err == nil && result.Count > 0 {
 		out.WriteString("| Microflow | Usage |\n")
 		out.WriteString("|-----------|-------|\n")
@@ -232,9 +232,9 @@ func assembleEntityContext(ctx *ExecContext, out *strings.Builder, name string, 
 	// Pages displaying this entity
 	out.WriteString("### Pages Displaying This Entity\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT SourceName FROM refs
-		 WHERE TargetName = '%s' AND SourceType = 'page'
-		 ORDER BY SourceName LIMIT 10`, name))
+		`select distinct SourceName from refs
+		 where TargetName = '%s' and SourceType = 'page'
+		 ORDER by SourceName limit 10`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -247,12 +247,12 @@ func assembleEntityContext(ctx *ExecContext, out *strings.Builder, name string, 
 	// Related entities (via associations or generalization)
 	out.WriteString("### Related Entities\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName, RefKind FROM refs
-		 WHERE SourceName = '%s' AND TargetType = 'entity'
-		 UNION
-		 SELECT DISTINCT SourceName, RefKind FROM refs
-		 WHERE TargetName = '%s' AND SourceType = 'entity'
-		 ORDER BY RefKind, TargetName LIMIT 10`, name, name))
+		`select distinct TargetName, RefKind from refs
+		 where SourceName = '%s' and TargetType = 'entity'
+		 union
+		 select distinct SourceName, RefKind from refs
+		 where TargetName = '%s' and SourceType = 'entity'
+		 ORDER by RefKind, TargetName limit 10`, name, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v (%v)\n", row[0], row[1]))
@@ -267,7 +267,7 @@ func assemblePageContext(ctx *ExecContext, out *strings.Builder, name string, de
 	// Get page basic info
 	out.WriteString("### Page Definition\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, Title, URL, LayoutRef, WidgetCount FROM pages WHERE QualifiedName = '%s'", name))
+		"select Name, Title, url, LayoutRef, WidgetCount from pages where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -275,7 +275,7 @@ func assemblePageContext(ctx *ExecContext, out *strings.Builder, name string, de
 			out.WriteString(fmt.Sprintf("- **Title**: %v\n", row[1]))
 		}
 		if row[2] != nil && row[2] != "" {
-			out.WriteString(fmt.Sprintf("- **URL**: %v\n", row[2]))
+			out.WriteString(fmt.Sprintf("- **url**: %v\n", row[2]))
 		}
 		if row[3] != nil && row[3] != "" {
 			out.WriteString(fmt.Sprintf("- **Layout**: %v\n", row[3]))
@@ -287,9 +287,9 @@ func assemblePageContext(ctx *ExecContext, out *strings.Builder, name string, de
 	// Entities used on this page
 	out.WriteString("### Entities Used\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName FROM refs
-		 WHERE SourceName = '%s' AND TargetType = 'entity'
-		 ORDER BY TargetName`, name))
+		`select distinct TargetName from refs
+		 where SourceName = '%s' and TargetType = 'entity'
+		 ORDER by TargetName`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -302,9 +302,9 @@ func assemblePageContext(ctx *ExecContext, out *strings.Builder, name string, de
 	// Microflows called from this page
 	out.WriteString("### Microflows Called\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName FROM refs
-		 WHERE SourceName = '%s' AND TargetType = 'microflow'
-		 ORDER BY TargetName LIMIT 15`, name))
+		`select distinct TargetName from refs
+		 where SourceName = '%s' and TargetType = 'microflow'
+		 ORDER by TargetName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -317,9 +317,9 @@ func assemblePageContext(ctx *ExecContext, out *strings.Builder, name string, de
 	// Microflows that show this page
 	out.WriteString("### Shown By\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT SourceName FROM refs
-		 WHERE TargetName = '%s' AND RefKind = 'show_page'
-		 ORDER BY SourceName LIMIT 10`, name))
+		`select SourceName from refs
+		 where TargetName = '%s' and RefKind = 'show_page'
+		 ORDER by SourceName limit 10`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -334,7 +334,7 @@ func assembleEnumerationContext(ctx *ExecContext, out *strings.Builder, name str
 	// Get enumeration basic info
 	out.WriteString("### Enumeration Definition\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, ValueCount FROM enumerations WHERE QualifiedName = '%s'", name))
+		"select Name, ValueCount from enumerations where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -345,9 +345,9 @@ func assembleEnumerationContext(ctx *ExecContext, out *strings.Builder, name str
 	// Entities with attributes of this enumeration type
 	out.WriteString("### Used By Entities\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT SourceName FROM refs
-		 WHERE TargetName = '%s' AND SourceType = 'entity'
-		 ORDER BY SourceName LIMIT 15`, name))
+		`select distinct SourceName from refs
+		 where TargetName = '%s' and SourceType = 'entity'
+		 ORDER by SourceName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -360,9 +360,9 @@ func assembleEnumerationContext(ctx *ExecContext, out *strings.Builder, name str
 	// Microflows that use this enumeration
 	out.WriteString("### Used By Microflows\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT SourceName FROM refs
-		 WHERE TargetName = '%s' AND SourceType = 'microflow'
-		 ORDER BY SourceName LIMIT 15`, name))
+		`select distinct SourceName from refs
+		 where TargetName = '%s' and SourceType = 'microflow'
+		 ORDER by SourceName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -376,7 +376,7 @@ func assembleEnumerationContext(ctx *ExecContext, out *strings.Builder, name str
 func assembleSnippetContext(ctx *ExecContext, out *strings.Builder, name string, depth int) {
 	out.WriteString("### Snippet Definition\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, ParameterCount, WidgetCount FROM snippets WHERE QualifiedName = '%s'", name))
+		"select Name, ParameterCount, WidgetCount from snippets where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -403,9 +403,9 @@ func assembleSnippetContext(ctx *ExecContext, out *strings.Builder, name string,
 	// Pages that use this snippet
 	out.WriteString("### Used By Pages\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT SourceName FROM refs
-		 WHERE TargetName = '%s' AND RefKind = 'snippet_call'
-		 ORDER BY SourceName LIMIT 15`, name))
+		`select distinct SourceName from refs
+		 where TargetName = '%s' and RefKind = 'snippet_call'
+		 ORDER by SourceName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -434,9 +434,9 @@ func assembleJavaActionContext(ctx *ExecContext, out *strings.Builder, name stri
 	// Microflows that call this java action
 	out.WriteString("### Called By Microflows\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT SourceName FROM refs
-		 WHERE TargetName = '%s' AND RefKind = 'call'
-		 ORDER BY SourceName LIMIT 15`, name))
+		`select distinct SourceName from refs
+		 where TargetName = '%s' and RefKind = 'call'
+		 ORDER by SourceName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -450,22 +450,22 @@ func assembleJavaActionContext(ctx *ExecContext, out *strings.Builder, name stri
 func assembleODataClientContext(ctx *ExecContext, out *strings.Builder, name string) {
 	out.WriteString("### Consumed OData Service\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, Version, ODataVersion, MetadataUrl FROM odata_clients WHERE QualifiedName = '%s'", name))
+		"select Name, Version, ODataVersion, MetadataUrl from odata_clients where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
 		out.WriteString(fmt.Sprintf("- **Version**: %v\n", row[1]))
 		out.WriteString(fmt.Sprintf("- **OData Version**: %v\n", row[2]))
-		out.WriteString(fmt.Sprintf("- **Metadata URL**: %v\n", row[3]))
+		out.WriteString(fmt.Sprintf("- **Metadata url**: %v\n", row[3]))
 	}
 	out.WriteString("\n")
 
 	// External entities from this service
 	out.WriteString("### External Entities\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName FROM refs
-		 WHERE SourceName = '%s' AND RefKind = 'odata_entity'
-		 ORDER BY TargetName LIMIT 15`, name))
+		`select distinct TargetName from refs
+		 where SourceName = '%s' and RefKind = 'odata_entity'
+		 ORDER by TargetName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))
@@ -480,7 +480,7 @@ func assembleWorkflowContext(ctx *ExecContext, out *strings.Builder, name string
 	// Get workflow basic info
 	out.WriteString("### Workflow Definition\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, ParameterEntity, ActivityCount, UserTaskCount, MicroflowCallCount, DecisionCount, Description FROM workflows WHERE QualifiedName = '%s'", name))
+		"select Name, ParameterEntity, ActivityCount, UserTaskCount, MicroflowCallCount, DecisionCount, Description from workflows where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -515,9 +515,9 @@ func assembleWorkflowContext(ctx *ExecContext, out *strings.Builder, name string
 	// Microflows called by this workflow
 	out.WriteString("### Microflows Called\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName, RefKind FROM refs
-		 WHERE SourceName = '%s' AND TargetType = 'MICROFLOW'
-		 ORDER BY RefKind, TargetName`, name))
+		`select distinct TargetName, RefKind from refs
+		 where SourceName = '%s' and TargetType = 'microflow'
+		 ORDER by RefKind, TargetName`, name))
 	if err == nil && result.Count > 0 {
 		out.WriteString("| Microflow | Usage |\n")
 		out.WriteString("|-----------|-------|\n")
@@ -532,9 +532,9 @@ func assembleWorkflowContext(ctx *ExecContext, out *strings.Builder, name string
 	// Pages used by this workflow (user task pages, overview page)
 	out.WriteString("### Pages Used\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName, RefKind FROM refs
-		 WHERE SourceName = '%s' AND TargetType = 'PAGE'
-		 ORDER BY TargetName`, name))
+		`select distinct TargetName, RefKind from refs
+		 where SourceName = '%s' and TargetType = 'page'
+		 ORDER by TargetName`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v (%v)\n", row[0], row[1]))
@@ -547,9 +547,9 @@ func assembleWorkflowContext(ctx *ExecContext, out *strings.Builder, name string
 	// Entities referenced by this workflow
 	out.WriteString("### Entities Used\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName, RefKind FROM refs
-		 WHERE SourceName = '%s' AND TargetType = 'ENTITY'
-		 ORDER BY TargetName`, name))
+		`select distinct TargetName, RefKind from refs
+		 where SourceName = '%s' and TargetType = 'entity'
+		 ORDER by TargetName`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v (%v)\n", row[0], row[1]))
@@ -562,9 +562,9 @@ func assembleWorkflowContext(ctx *ExecContext, out *strings.Builder, name string
 	// Direct callers (what calls this workflow)
 	out.WriteString("### Direct Callers\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT SourceName, SourceType FROM refs
-		 WHERE TargetName = '%s'
-		 ORDER BY SourceName LIMIT 15`, name))
+		`select SourceName, SourceType from refs
+		 where TargetName = '%s'
+		 ORDER by SourceName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v (%v)\n", row[0], row[1]))
@@ -581,7 +581,7 @@ func assembleWorkflowContext(ctx *ExecContext, out *strings.Builder, name string
 func assembleODataServiceContext(ctx *ExecContext, out *strings.Builder, name string) {
 	out.WriteString("### Published OData Service\n\n")
 	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"SELECT Name, Path, Version, ODataVersion, EntitySetCount FROM odata_services WHERE QualifiedName = '%s'", name))
+		"select Name, Path, Version, ODataVersion, EntitySetCount from odata_services where QualifiedName = '%s'", name))
 	if err == nil && result.Count > 0 {
 		row := result.Rows[0]
 		out.WriteString(fmt.Sprintf("- **Name**: %v\n", row[0]))
@@ -595,9 +595,9 @@ func assembleODataServiceContext(ctx *ExecContext, out *strings.Builder, name st
 	// Published entities
 	out.WriteString("### Published Entities\n\n")
 	result, err = ctx.Catalog.Query(fmt.Sprintf(
-		`SELECT DISTINCT TargetName FROM refs
-		 WHERE SourceName = '%s' AND RefKind = 'odata_publish'
-		 ORDER BY TargetName LIMIT 15`, name))
+		`select distinct TargetName from refs
+		 where SourceName = '%s' and RefKind = 'odata_publish'
+		 ORDER by TargetName limit 15`, name))
 	if err == nil && result.Count > 0 {
 		for _, row := range result.Rows {
 			out.WriteString(fmt.Sprintf("- %v\n", row[0]))

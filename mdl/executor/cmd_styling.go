@@ -127,7 +127,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 
 	var rawWidgets []rawWidget
 
-	if s.ContainerType == "PAGE" {
+	if s.ContainerType == "page" {
 		// Find page
 		allPages, err := ctx.Backend.ListPages()
 		if err != nil {
@@ -147,7 +147,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 			return mdlerrors.NewNotFound("page", s.ContainerName.String())
 		}
 		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
-	} else if s.ContainerType == "SNIPPET" {
+	} else if s.ContainerType == "snippet" {
 		// Find snippet
 		allSnippets, err := ctx.Backend.ListSnippets()
 		if err != nil {
@@ -191,7 +191,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 			fmt.Fprintln(ctx.Output)
 		}
 		displayName := getWidgetDisplayName(w.Type)
-		fmt.Fprintf(ctx.Output, "WIDGET %s (%s)\n", w.Name, displayName)
+		fmt.Fprintf(ctx.Output, "widget %s (%s)\n", w.Name, displayName)
 		if w.Class != "" {
 			fmt.Fprintf(ctx.Output, "  Class: '%s'\n", w.Class)
 		}
@@ -205,7 +205,7 @@ func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
 					fmt.Fprint(ctx.Output, ", ")
 				}
 				if dp.ValueType == "toggle" {
-					fmt.Fprintf(ctx.Output, "'%s': ON", dp.Key)
+					fmt.Fprintf(ctx.Output, "'%s': on", dp.Key)
 				} else {
 					fmt.Fprintf(ctx.Output, "'%s': '%s'", dp.Key, dp.Option)
 				}
@@ -271,9 +271,9 @@ func execAlterStyling(ctx *ExecContext, s *ast.AlterStylingStmt) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	if s.ContainerType == "PAGE" {
+	if s.ContainerType == "page" {
 		return alterStylingOnPage(ctx, s, h)
-	} else if s.ContainerType == "SNIPPET" {
+	} else if s.ContainerType == "snippet" {
 		return alterStylingOnSnippet(ctx, s, h)
 	}
 

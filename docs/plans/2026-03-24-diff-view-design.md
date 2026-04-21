@@ -36,16 +36,16 @@ const (
 )
 
 type DiffSegment struct {
-    Text    string
-    Changed bool // true = this specific segment was modified
+    text    string
+    changed bool // true = this specific segment was modified
 }
 
 type DiffLine struct {
-    Type      DiffLineType
-    OldLineNo int          // 0 for Insert lines
-    NewLineNo int          // 0 for Delete lines
-    Content   string       // raw text
-    Segments  []DiffSegment // word-level breakdown (Insert/Delete only)
+    type      DiffLineType
+    OldLineNo int          // 0 for insert lines
+    NewLineNo int          // 0 for delete lines
+    content   string       // raw text
+    Segments  []DiffSegment // word-level breakdown (insert/delete only)
 }
 
 type DiffResult struct {
@@ -62,7 +62,7 @@ Uses `github.com/sergi/go-diff/diffmatchpatch`.
 
 1. **Line-level diff**: Use `DiffLinesToChars()` + `DiffMain()` + `DiffCharsToLines()` to get line-level differences. This avoids character-level fragmentation that breaks TUI layout.
 
-2. **Word-level diff** (second pass): For adjacent Delete/Insert line pairs, run `DiffMain()` on the raw text to identify which words/characters changed. Map results to `[]DiffSegment` with `Changed` flags.
+2. **Word-level diff** (second pass): For adjacent Delete/Insert line pairs, run `DiffMain()` on the raw text to identify which words/characters changed. Map results to `[]DiffSegment` with `changed` flags.
 
 ```go
 func ComputeDiff(oldText, newText string) *DiffResult
@@ -86,13 +86,13 @@ func computeWordSegments(oldLine, newLine string) (oldSegs, newSegs []DiffSegmen
 #### Color Palette
 
 ```
-// Insert (added)
+// insert (added)
 AddedFg         = "#00D787"  // light green — unchanged segments
 AddedChangedFg  = "#FFFFFF"  // white — changed word text
 AddedChangedBg  = "#005F00"  // dark green — changed word background
 AddedGutter     = "#00D787"  // gutter "+"
 
-// Delete (removed)
+// delete (removed)
 RemovedFg       = "#FF5F87"  // light red — unchanged segments
 RemovedChangedFg = "#FFFFFF" // white — changed word text
 RemovedChangedBg = "#5F0000" // dark red — changed word background
@@ -148,7 +148,7 @@ type DiffView struct {
     rightLines []string  // side-by-side only
     hunkStarts []int     // line indices where hunks begin (for ]c/[c)
 
-    // View state
+    // view state
     viewMode    DiffViewMode
     yOffset     int
     width       int
@@ -160,7 +160,7 @@ type DiffView struct {
     leftOffset  int
     rightOffset int
 
-    // Search
+    // search
     searching   bool
     searchInput textinput.Model
     searchQuery string
@@ -195,7 +195,7 @@ type DiffOpenMsg struct {
     OldText  string
     NewText  string
     Language string // "sql", "go", "ndsl", "" (auto-detect)
-    Title    string
+    title    string
 }
 
 type DiffCloseMsg struct{}
@@ -206,8 +206,8 @@ type DiffCloseMsg struct{}
 Add `diffView *DiffView` field to the root `App` model.
 
 When `diffView != nil`:
-- `Update()` delegates all input to `diffView.Update()`
-- `View()` renders `diffView.View()` as full-screen overlay
+- `update()` delegates all input to `diffView.Update()`
+- `view()` renders `diffView.View()` as full-screen overlay
 - On `DiffCloseMsg`, set `diffView = nil`
 
 ## New Dependencies

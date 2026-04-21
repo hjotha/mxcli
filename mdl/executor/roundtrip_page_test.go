@@ -21,7 +21,7 @@ func TestRoundtripPage_V3DataGridColumns(t *testing.T) {
 	entityName := testModule + ".V3GridTestEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		FirstName: String(100),
 		LastName: String(100),
 		Email: String(200)
@@ -35,17 +35,17 @@ func TestRoundtripPage_V3DataGridColumns(t *testing.T) {
 	pageName := testModule + ".V3DataGridColumnsPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid Columns Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		LAYOUTGRID mainGrid {
-			ROW row1 {
-				COLUMN col1 (DesktopWidth: 12) {
-					DATAGRID dg (DataSource: DATABASE ` + entityName + `) {
-						COLUMN colFirst (Attribute: FirstName, Caption: 'First Name')
-						COLUMN colLast (Attribute: LastName, Caption: 'Last Name')
-						COLUMN colEmail (Attribute: Email, Caption: 'Email Address')
+		layoutgrid mainGrid {
+			row row1 {
+				column col1 (DesktopWidth: 12) {
+					datagrid dg (DataSource: database ` + entityName + `) {
+						column colFirst (Attribute: FirstName, Caption: 'First Name')
+						column colLast (Attribute: LastName, Caption: 'Last Name')
+						column colEmail (Attribute: Email, Caption: 'Email Address')
 					}
 				}
 			}
@@ -57,7 +57,7 @@ func TestRoundtripPage_V3DataGridColumns(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
@@ -68,13 +68,13 @@ func TestRoundtripPage_V3DataGridColumns(t *testing.T) {
 
 	for _, col := range expectedColumns {
 		if !strings.Contains(output, col) {
-			t.Errorf("Expected column '%s' not found in DESCRIBE output.\nOutput:\n%s", col, output)
+			t.Errorf("Expected column '%s' not found in describe output.\nOutput:\n%s", col, output)
 		}
 	}
 
 	for _, col := range unexpectedColumns {
 		if strings.Contains(output, col) {
-			t.Errorf("Unexpected template column '%s' found in DESCRIBE output - user columns may have been ignored.\nOutput:\n%s", col, output)
+			t.Errorf("Unexpected template column '%s' found in describe output - user columns may have been ignored.\nOutput:\n%s", col, output)
 		}
 	}
 
@@ -101,7 +101,7 @@ func TestRoundtripPage_V3DataGridNoColumns(t *testing.T) {
 	entityName := testModule + ".V3GridNoColEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100)
 	);`
 
@@ -113,14 +113,14 @@ func TestRoundtripPage_V3DataGridNoColumns(t *testing.T) {
 	pageName := testModule + ".V3DataGridNoColumnsPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid No Columns Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		LAYOUTGRID mainGrid {
-			ROW row1 {
-				COLUMN col1 (DesktopWidth: 12) {
-					DATAGRID dg (DataSource: DATABASE ` + entityName + `)
+		layoutgrid mainGrid {
+			row row1 {
+				column col1 (DesktopWidth: 12) {
+					datagrid dg (DataSource: database ` + entityName + `)
 				}
 			}
 		}
@@ -131,14 +131,14 @@ func TestRoundtripPage_V3DataGridNoColumns(t *testing.T) {
 	}
 
 	// Describe the page - should have template columns
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
 
 	// When no columns are specified, template columns should be used
-	if !strings.Contains(output, "DATA GRID") && !strings.Contains(output, "DATAGRID") {
-		t.Error("Expected DATAGRID in output")
+	if !strings.Contains(output, "data GRID") && !strings.Contains(output, "datagrid") {
+		t.Error("Expected datagrid in output")
 	}
 
 	t.Logf("V3 DataGrid (no columns) roundtrip successful:\n%s", output)
@@ -153,7 +153,7 @@ func TestRoundtripPage_V3DataGridWithOrderBy(t *testing.T) {
 	entityName := testModule + ".V3GridOrderEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Price: Decimal,
 		Stock: Integer
@@ -167,14 +167,14 @@ func TestRoundtripPage_V3DataGridWithOrderBy(t *testing.T) {
 	pageName := testModule + ".V3DataGridOrderByPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid OrderBy Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAGRID dg (DataSource: DATABASE FROM ` + entityName + ` SORT BY Name ASC) {
-			COLUMN colName (Attribute: Name, Caption: 'Product Name')
-			COLUMN colPrice (Attribute: Price, Caption: 'Price')
-			COLUMN colStock (Attribute: Stock, Caption: 'In Stock')
+		datagrid dg (DataSource: database from ` + entityName + ` sort by Name asc) {
+			column colName (Attribute: Name, Caption: 'Product Name')
+			column colPrice (Attribute: Price, Caption: 'Price')
+			column colStock (Attribute: Stock, Caption: 'In Stock')
 		}
 	}`
 
@@ -183,7 +183,7 @@ func TestRoundtripPage_V3DataGridWithOrderBy(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
@@ -211,9 +211,9 @@ func TestRoundtripPage_V3DataGridWithFilter(t *testing.T) {
 	entityName := testModule + ".V3GridFilterEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
-		IsActive: Boolean DEFAULT true,
+		IsActive: Boolean default true,
 		Stock: Integer
 	);`
 
@@ -225,16 +225,16 @@ func TestRoundtripPage_V3DataGridWithFilter(t *testing.T) {
 	pageName := testModule + ".V3DataGridFilterPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid Filter Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAGRID dg (
-			DataSource: DATABASE FROM ` + entityName + ` WHERE [IsActive = true] SORT BY Name ASC
+		datagrid dg (
+			DataSource: database from ` + entityName + ` where [IsActive = true] sort by Name asc
 		) {
-			COLUMN colName (Attribute: Name, Caption: 'Name')
-			COLUMN colStock (Attribute: Stock, Caption: 'Stock')
-			COLUMN colActive (Attribute: IsActive, Caption: 'Active')
+			column colName (Attribute: Name, Caption: 'Name')
+			column colStock (Attribute: Stock, Caption: 'Stock')
+			column colActive (Attribute: IsActive, Caption: 'Active')
 		}
 	}`
 
@@ -243,7 +243,7 @@ func TestRoundtripPage_V3DataGridWithFilter(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestRoundtripPage_V3DataGridWithControlBar(t *testing.T) {
 	entityName := testModule + ".V3GridControlEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Code: String(50)
 	);`
@@ -282,13 +282,13 @@ func TestRoundtripPage_V3DataGridWithControlBar(t *testing.T) {
 	editPageName := testModule + ".V3GridControlEditPage"
 	env.registerCleanup("page", editPageName)
 
-	createEditPageMDL := `CREATE PAGE ` + editPageName + ` (
+	createEditPageMDL := `create page ` + editPageName + ` (
 		Params: { $Item: ` + entityName + ` },
 		Title: 'Edit Item',
 		Layout: Atlas_Core.PopupLayout
 	) {
-		DATAVIEW dv (DataSource: $Item) {
-			TEXTBOX txtName (Label: 'Name', Attribute: Name)
+		dataview dv (DataSource: $Item) {
+			textbox txtName (Label: 'Name', Attribute: Name)
 		}
 	}`
 
@@ -300,23 +300,23 @@ func TestRoundtripPage_V3DataGridWithControlBar(t *testing.T) {
 	pageName := testModule + ".V3DataGridControlBarPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid ControlBar Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		LAYOUTGRID mainGrid {
-			ROW row1 {
-				COLUMN col1 (DesktopWidth: 12) {
-					DATAGRID dg (DataSource: DATABASE ` + entityName + `) {
-						CONTROLBAR controlBar1 {
-							ACTIONBUTTON btnNew (
+		layoutgrid mainGrid {
+			row row1 {
+				column col1 (DesktopWidth: 12) {
+					datagrid dg (DataSource: database ` + entityName + `) {
+						controlbar controlBar1 {
+							actionbutton btnNew (
 								Caption: 'New Item',
-								Action: CREATE_OBJECT ` + entityName + ` THEN SHOW_PAGE ` + editPageName + `,
+								Action: create_object ` + entityName + ` then show_page ` + editPageName + `,
 								ButtonStyle: Primary
 							)
 						}
-						COLUMN colName (Attribute: Name, Caption: 'Name')
-						COLUMN colCode (Attribute: Code, Caption: 'Code')
+						column colName (Attribute: Name, Caption: 'Name')
+						column colCode (Attribute: Code, Caption: 'Code')
 					}
 				}
 			}
@@ -328,7 +328,7 @@ func TestRoundtripPage_V3DataGridWithControlBar(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
@@ -358,13 +358,13 @@ func TestRoundtripPage_V3DataGridManyColumns(t *testing.T) {
 	entityName := testModule + ".V3GridManyColEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Field1: String(100),
 		Field2: String(100),
 		Field3: String(100),
 		Field4: Integer,
 		Field5: Decimal,
-		Field6: Boolean DEFAULT false,
+		Field6: Boolean default false,
 		Field7: DateTime
 	);`
 
@@ -376,18 +376,18 @@ func TestRoundtripPage_V3DataGridManyColumns(t *testing.T) {
 	pageName := testModule + ".V3DataGridManyColumnsPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'DataGrid Many Columns Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAGRID dg (DataSource: DATABASE ` + entityName + `) {
-			COLUMN col1 (Attribute: Field1, Caption: 'First Field')
-			COLUMN col2 (Attribute: Field2, Caption: 'Second Field')
-			COLUMN col3 (Attribute: Field3, Caption: 'Third Field')
-			COLUMN col4 (Attribute: Field4, Caption: 'Integer Field')
-			COLUMN col5 (Attribute: Field5, Caption: 'Decimal Field')
-			COLUMN col6 (Attribute: Field6, Caption: 'Boolean Field')
-			COLUMN col7 (Attribute: Field7, Caption: 'DateTime Field')
+		datagrid dg (DataSource: database ` + entityName + `) {
+			column col1 (Attribute: Field1, Caption: 'First Field')
+			column col2 (Attribute: Field2, Caption: 'Second Field')
+			column col3 (Attribute: Field3, Caption: 'Third Field')
+			column col4 (Attribute: Field4, Caption: 'Integer Field')
+			column col5 (Attribute: Field5, Caption: 'Decimal Field')
+			column col6 (Attribute: Field6, Caption: 'Boolean Field')
+			column col7 (Attribute: Field7, Caption: 'DateTime Field')
 		}
 	}`
 
@@ -396,7 +396,7 @@ func TestRoundtripPage_V3DataGridManyColumns(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
@@ -418,7 +418,7 @@ func TestRoundtripPage_V3DataGridManyColumns(t *testing.T) {
 	}
 
 	// Count columns in output (rough check)
-	columnCount := strings.Count(output, "COLUMN ")
+	columnCount := strings.Count(output, "column ")
 	if columnCount < 7 {
 		t.Errorf("Expected at least 7 columns, found %d", columnCount)
 	}
@@ -435,12 +435,12 @@ func TestRoundtripPage_V3DataGridComplexFilter(t *testing.T) {
 	entityName := testModule + ".V3GridComplexEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Code: String(50),
 		Price: Decimal,
 		Stock: Integer,
-		IsActive: Boolean DEFAULT true
+		IsActive: Boolean default true
 	);`
 
 	if err := env.executeMDL(createEntityMDL); err != nil {
@@ -451,18 +451,18 @@ func TestRoundtripPage_V3DataGridComplexFilter(t *testing.T) {
 	pageName := testModule + ".V3DataGridComplexFilterPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'Complex Filter Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAGRID dg (
-			DataSource: DATABASE FROM ` + entityName + ` WHERE [IsActive = true AND Price > 10] OR [Stock < 5] SORT BY Name ASC, Price DESC
+		datagrid dg (
+			DataSource: database from ` + entityName + ` where [IsActive = true and Price > 10] or [Stock < 5] sort by Name asc, Price desc
 		) {
-			COLUMN colName (Attribute: Name, Caption: 'Product')
-			COLUMN colCode (Attribute: Code, Caption: 'SKU')
-			COLUMN colPrice (Attribute: Price, Caption: 'Price')
-			COLUMN colStock (Attribute: Stock, Caption: 'Available')
-			COLUMN colActive (Attribute: IsActive, Caption: 'Active')
+			column colName (Attribute: Name, Caption: 'Product')
+			column colCode (Attribute: Code, Caption: 'SKU')
+			column colPrice (Attribute: Price, Caption: 'Price')
+			column colStock (Attribute: Stock, Caption: 'Available')
+			column colActive (Attribute: IsActive, Caption: 'Active')
 		}
 	}`
 
@@ -471,7 +471,7 @@ func TestRoundtripPage_V3DataGridComplexFilter(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
@@ -498,7 +498,7 @@ func TestRoundtripPage_MicroflowButtonWithParams(t *testing.T) {
 	entityName := testModule + ".MfButtonEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Status: String(50)
 	);`
@@ -511,14 +511,14 @@ func TestRoundtripPage_MicroflowButtonWithParams(t *testing.T) {
 	mfName := testModule + ".MfButtonProcess"
 	env.registerCleanup("microflow", mfName)
 
-	createMfMDL := `CREATE MICROFLOW ` + mfName + ` (
+	createMfMDL := `create microflow ` + mfName + ` (
 		$Product: ` + entityName + `
 	)
-	RETURNS Boolean
-	BEGIN
-		LOG INFO NODE 'Test' 'Processing item';
-		RETURN true;
-	END;`
+	returns Boolean
+	begin
+		log info node 'Test' 'Processing item';
+		return true;
+	end;`
 
 	if err := env.executeMDL(createMfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -528,14 +528,14 @@ func TestRoundtripPage_MicroflowButtonWithParams(t *testing.T) {
 	pageName := testModule + ".MfButtonPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Params: { $Product: ` + entityName + ` },
 		Title: 'Microflow Button Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAVIEW dv (DataSource: $Product) {
-			TEXTBOX txt (Label: 'Name', Attribute: Name)
-			ACTIONBUTTON btnProcess (Caption: 'Process', Action: MICROFLOW ` + mfName + `(Product: $Product))
+		dataview dv (DataSource: $Product) {
+			textbox txt (Label: 'Name', Attribute: Name)
+			actionbutton btnProcess (Caption: 'Process', Action: microflow ` + mfName + `(Product: $Product))
 		}
 	}`
 
@@ -544,20 +544,20 @@ func TestRoundtripPage_MicroflowButtonWithParams(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
 
 	// Verify that the microflow call with parameter is in the output
-	if !strings.Contains(output, "CALL_MICROFLOW") {
-		t.Errorf("Expected CALL_MICROFLOW in DESCRIBE output.\nOutput:\n%s", output)
+	if !strings.Contains(output, "call_microflow") {
+		t.Errorf("Expected call_microflow in describe output.\nOutput:\n%s", output)
 	}
 	if !strings.Contains(output, mfName) {
-		t.Errorf("Expected microflow name '%s' in DESCRIBE output.\nOutput:\n%s", mfName, output)
+		t.Errorf("Expected microflow name '%s' in describe output.\nOutput:\n%s", mfName, output)
 	}
 	if !strings.Contains(output, "Product = $Product") {
-		t.Errorf("Expected 'Product = $Product' parameter mapping in DESCRIBE output.\nOutput:\n%s", output)
+		t.Errorf("Expected 'Product = $Product' parameter mapping in describe output.\nOutput:\n%s", output)
 	}
 
 	t.Logf("Microflow button with params roundtrip successful:\n%s", output)
@@ -573,7 +573,7 @@ func TestRoundtripPage_MicroflowButtonWithCurrentObject(t *testing.T) {
 	entityName := testModule + ".MfCurrentObjEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100)
 	);`
 
@@ -585,12 +585,12 @@ func TestRoundtripPage_MicroflowButtonWithCurrentObject(t *testing.T) {
 	mfName := testModule + ".MfCurrentObjProcess"
 	env.registerCleanup("microflow", mfName)
 
-	createMfMDL := `CREATE MICROFLOW ` + mfName + ` (
+	createMfMDL := `create microflow ` + mfName + ` (
 		$Target: ` + entityName + `
 	)
-	BEGIN
-		LOG INFO NODE 'Test' 'Processing: ' + $Target/Name;
-	END;`
+	begin
+		log info node 'Test' 'Processing: ' + $Target/Name;
+	end;`
 
 	if err := env.executeMDL(createMfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -600,14 +600,14 @@ func TestRoundtripPage_MicroflowButtonWithCurrentObject(t *testing.T) {
 	pageName := testModule + ".MfCurrentObjPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'CurrentObject Button Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAGRID dg (DataSource: DATABASE ` + entityName + `) {
-			COLUMN colName (Attribute: Name, Caption: 'Name')
-			COLUMN colActions (Attribute: Name, Caption: 'Actions', ShowContentAs: customContent) {
-				ACTIONBUTTON btnProcess (Caption: 'Process', Action: MICROFLOW ` + mfName + `(Target: $currentObject))
+		datagrid dg (DataSource: database ` + entityName + `) {
+			column colName (Attribute: Name, Caption: 'Name')
+			column colActions (Attribute: Name, Caption: 'Actions', ShowContentAs: customContent) {
+				actionbutton btnProcess (Caption: 'Process', Action: microflow ` + mfName + `(Target: $currentObject))
 			}
 		}
 	}`
@@ -617,20 +617,20 @@ func TestRoundtripPage_MicroflowButtonWithCurrentObject(t *testing.T) {
 	}
 
 	// Describe the page
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
 
 	// Verify that the microflow call with $currentObject parameter is in the output
-	if !strings.Contains(output, "CALL_MICROFLOW") {
-		t.Errorf("Expected CALL_MICROFLOW in DESCRIBE output.\nOutput:\n%s", output)
+	if !strings.Contains(output, "call_microflow") {
+		t.Errorf("Expected call_microflow in describe output.\nOutput:\n%s", output)
 	}
 	if !strings.Contains(output, mfName) {
-		t.Errorf("Expected microflow name '%s' in DESCRIBE output.\nOutput:\n%s", mfName, output)
+		t.Errorf("Expected microflow name '%s' in describe output.\nOutput:\n%s", mfName, output)
 	}
 	if !strings.Contains(output, "Target = $currentObject") {
-		t.Errorf("Expected 'Target = $currentObject' parameter mapping in DESCRIBE output.\nOutput:\n%s", output)
+		t.Errorf("Expected 'Target = $currentObject' parameter mapping in describe output.\nOutput:\n%s", output)
 	}
 
 	t.Logf("Microflow button with $currentObject roundtrip successful:\n%s", output)
@@ -646,10 +646,10 @@ func TestRoundtripPage_DataViewAttributeShortNames(t *testing.T) {
 	entityName := testModule + ".AttrShortNameEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		FirstName: String(100),
 		Email: String(200),
-		IsActive: Boolean DEFAULT false,
+		IsActive: Boolean default false,
 		BirthDate: DateTime
 	);`
 
@@ -660,16 +660,16 @@ func TestRoundtripPage_DataViewAttributeShortNames(t *testing.T) {
 	pageName := testModule + ".AttrShortNamePage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Params: { $Item: ` + entityName + ` },
 		Title: 'Short Attribute Names Test',
 		Layout: Atlas_Core.PopupLayout
 	) {
-		DATAVIEW dv (DataSource: $Item) {
-			TEXTBOX txtFirst (Label: 'First Name', Attribute: FirstName)
-			TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-			CHECKBOX cbActive (Label: 'Active', Attribute: IsActive)
-			DATEPICKER dpBirth (Label: 'Birthday', Attribute: BirthDate)
+		dataview dv (DataSource: $Item) {
+			textbox txtFirst (Label: 'First Name', Attribute: FirstName)
+			textbox txtEmail (Label: 'Email', Attribute: Email)
+			checkbox cbActive (Label: 'Active', Attribute: IsActive)
+			datepicker dpBirth (Label: 'Birthday', Attribute: BirthDate)
 		}
 	}`
 
@@ -677,7 +677,7 @@ func TestRoundtripPage_DataViewAttributeShortNames(t *testing.T) {
 		t.Fatalf("Failed to create page: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
@@ -708,7 +708,7 @@ func TestRoundtripPage_DataGridAttributeShortNames(t *testing.T) {
 	entityName := testModule + ".GridAttrEntity"
 	env.registerCleanup("entity", entityName)
 
-	createEntityMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createEntityMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Code: String(50),
 		Price: Decimal
@@ -721,14 +721,14 @@ func TestRoundtripPage_DataGridAttributeShortNames(t *testing.T) {
 	pageName := testModule + ".GridAttrPage"
 	env.registerCleanup("page", pageName)
 
-	createPageMDL := `CREATE PAGE ` + pageName + ` (
+	createPageMDL := `create page ` + pageName + ` (
 		Title: 'Grid Attribute Names Test',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAGRID dg (DataSource: DATABASE ` + entityName + `) {
-			COLUMN colName (Attribute: Name, Caption: 'Name')
-			COLUMN colCode (Attribute: Code, Caption: 'Code')
-			COLUMN colPrice (Attribute: Price, Caption: 'Price')
+		datagrid dg (DataSource: database ` + entityName + `) {
+			column colName (Attribute: Name, Caption: 'Name')
+			column colCode (Attribute: Code, Caption: 'Code')
+			column colPrice (Attribute: Price, Caption: 'Price')
 		}
 	}`
 
@@ -736,7 +736,7 @@ func TestRoundtripPage_DataGridAttributeShortNames(t *testing.T) {
 		t.Fatalf("Failed to create page: %v", err)
 	}
 
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}

@@ -90,7 +90,7 @@ func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Build CREATE JAVA ACTION statement
-	sb.WriteString("CREATE JAVA ACTION ")
+	sb.WriteString("create java action ")
 	sb.WriteString(qualifiedName)
 	sb.WriteString("(")
 
@@ -118,7 +118,7 @@ func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
 			sb.WriteString("Object")
 		}
 		if param.IsRequired {
-			sb.WriteString(" NOT NULL")
+			sb.WriteString(" not null")
 		}
 		if param.Description != "" {
 			paramDoc := strings.ReplaceAll(param.Description, "\r\n", "\n")
@@ -135,26 +135,26 @@ func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Return type
 	if ja.ReturnType != nil {
-		sb.WriteString(" RETURNS ")
+		sb.WriteString(" returns ")
 		sb.WriteString(formatJavaActionReturnType(ja.ReturnType))
 	}
 
 	// RETURN NAME metadata
 	if ja.ActionDefaultReturnName != "" {
-		sb.WriteString("\n-- RETURN NAME: '")
+		sb.WriteString("\n-- return NAME: '")
 		sb.WriteString(ja.ActionDefaultReturnName)
 		sb.WriteString("'")
 	}
 
 	// EXPOSED AS clause
 	if ja.MicroflowActionInfo != nil && ja.MicroflowActionInfo.Caption != "" {
-		sb.WriteString("\nEXPOSED AS '")
+		sb.WriteString("\nexposed as '")
 		sb.WriteString(ja.MicroflowActionInfo.Caption)
-		sb.WriteString("' IN '")
+		sb.WriteString("' in '")
 		sb.WriteString(ja.MicroflowActionInfo.Category)
 		sb.WriteString("'")
 		if ja.MicroflowActionInfo.Icon != "" {
-			sb.WriteString("\n-- ICON: ")
+			sb.WriteString("\n-- icon: ")
 			sb.WriteString(ja.MicroflowActionInfo.Icon)
 		}
 	}
@@ -162,7 +162,7 @@ func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
 	// Try to read and include Java source code
 	javaCode := readJavaActionUserCode(ctx.MprPath, name.Module, name.Name)
 	if javaCode != "" {
-		sb.WriteString("\nAS $$\n")
+		sb.WriteString("\nas $$\n")
 		sb.WriteString(javaCode)
 		sb.WriteString("\n$$")
 	}
@@ -174,7 +174,7 @@ func describeJavaAction(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Additional info as comments
 	if ja.ExportLevel != "" && ja.ExportLevel != "Hidden" {
-		fmt.Fprintf(ctx.Output, "-- EXPORT LEVEL: %s\n", ja.ExportLevel)
+		fmt.Fprintf(ctx.Output, "-- export level: %s\n", ja.ExportLevel)
 	}
 	if ja.Excluded {
 		fmt.Fprintln(ctx.Output, "-- EXCLUDED: true")
@@ -202,8 +202,8 @@ func readJavaActionUserCode(mprPath, moduleName, actionName string) string {
 
 	// Extract user code between BEGIN USER CODE and END USER CODE markers
 	source := string(content)
-	beginMarker := "// BEGIN USER CODE"
-	endMarker := "// END USER CODE"
+	beginMarker := "// begin user CODE"
+	endMarker := "// end user CODE"
 
 	beginIdx := strings.Index(source, beginMarker)
 	endIdx := strings.Index(source, endMarker)
@@ -230,9 +230,9 @@ func formatJavaActionType(t javaactions.CodeActionParameterType) string {
 	// EntityTypeParameterType → ENTITY <name> syntax
 	if etp, ok := t.(*javaactions.EntityTypeParameterType); ok {
 		if etp.TypeParameterName != "" {
-			return "ENTITY <" + etp.TypeParameterName + ">"
+			return "entity <" + etp.TypeParameterName + ">"
 		}
-		return "ENTITY <>"
+		return "entity <>"
 	}
 	return t.TypeString()
 }

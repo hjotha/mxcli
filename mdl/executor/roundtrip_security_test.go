@@ -30,7 +30,7 @@ func setupSecurityTestEnv(t *testing.T) *securityTestEnv {
 
 	// Create two module roles for testing
 	for _, role := range []string{"SecTestAdmin", "SecTestViewer"} {
-		mdl := "CREATE MODULE ROLE " + securityTestModule + "." + role + ";"
+		mdl := "create module role " + securityTestModule + "." + role + ";"
 		if err := env.executeMDL(mdl); err != nil {
 			// Ignore if already exists
 			if !strings.Contains(err.Error(), "already exists") {
@@ -57,7 +57,7 @@ func TestRoundtripSecurity_EntityAccessGrant(t *testing.T) {
 	env.registerCleanup("entity", entityName)
 
 	// Create entity
-	createMDL := `CREATE PERSISTENT ENTITY ` + entityName + ` (
+	createMDL := `create persistent entity ` + entityName + ` (
 		Name: String(100),
 		Email: String(200)
 	);`
@@ -66,29 +66,29 @@ func TestRoundtripSecurity_EntityAccessGrant(t *testing.T) {
 	}
 
 	// Grant access
-	grantMDL := `GRANT ` + securityTestModule + `.SecTestAdmin ON ` + entityName + ` (CREATE, DELETE, READ *, WRITE *);`
+	grantMDL := `grant ` + securityTestModule + `.SecTestAdmin on ` + entityName + ` (create, delete, read *, write *);`
 	if err := env.executeMDL(grantMDL); err != nil {
 		t.Fatalf("Failed to grant entity access: %v", err)
 	}
 
 	// Describe and verify
-	output, err := env.describeMDL(`DESCRIBE ENTITY ` + entityName + `;`)
+	output, err := env.describeMDL(`describe entity ` + entityName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe entity: %v", err)
 	}
 
 	// Verify GRANT line is present
-	if !strings.Contains(output, "GRANT") {
-		t.Errorf("Expected GRANT statement in DESCRIBE output.\nActual:\n%s", output)
+	if !strings.Contains(output, "grant") {
+		t.Errorf("Expected grant statement in describe output.\nActual:\n%s", output)
 	}
 	if !strings.Contains(output, securityTestModule+".SecTestAdmin") {
-		t.Errorf("Expected role %s.SecTestAdmin in GRANT statement.\nActual:\n%s", securityTestModule, output)
+		t.Errorf("Expected role %s.SecTestAdmin in grant statement.\nActual:\n%s", securityTestModule, output)
 	}
-	if !strings.Contains(output, "CREATE") || !strings.Contains(output, "DELETE") {
-		t.Errorf("Expected CREATE, DELETE in GRANT rights.\nActual:\n%s", output)
+	if !strings.Contains(output, "create") || !strings.Contains(output, "delete") {
+		t.Errorf("Expected create, delete in grant rights.\nActual:\n%s", output)
 	}
-	if !strings.Contains(output, "READ *") || !strings.Contains(output, "WRITE *") {
-		t.Errorf("Expected READ * and WRITE * in GRANT rights.\nActual:\n%s", output)
+	if !strings.Contains(output, "read *") || !strings.Contains(output, "write *") {
+		t.Errorf("Expected read * and write * in grant rights.\nActual:\n%s", output)
 	}
 
 	t.Logf("Entity security roundtrip successful:\n%s", output)
@@ -96,7 +96,7 @@ func TestRoundtripSecurity_EntityAccessGrant(t *testing.T) {
 	// Round-trip: parse the DESCRIBE output and verify it's valid MDL
 	_, parseErrs := visitor.Build(output)
 	if len(parseErrs) > 0 {
-		t.Errorf("DESCRIBE output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
+		t.Errorf("describe output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
 	}
 }
 
@@ -108,7 +108,7 @@ func TestRoundtripSecurity_EntityAccessMultipleRoles(t *testing.T) {
 	env.registerCleanup("entity", entityName)
 
 	// Create entity
-	createMDL := `CREATE PERSISTENT ENTITY ` + entityName + ` (
+	createMDL := `create persistent entity ` + entityName + ` (
 		DisplayName: String(200)
 	);`
 	if err := env.executeMDL(createMDL); err != nil {
@@ -116,27 +116,27 @@ func TestRoundtripSecurity_EntityAccessMultipleRoles(t *testing.T) {
 	}
 
 	// Grant full access to Admin
-	grantAdmin := `GRANT ` + securityTestModule + `.SecTestAdmin ON ` + entityName + ` (CREATE, DELETE, READ *, WRITE *);`
+	grantAdmin := `grant ` + securityTestModule + `.SecTestAdmin on ` + entityName + ` (create, delete, read *, write *);`
 	if err := env.executeMDL(grantAdmin); err != nil {
 		t.Fatalf("Failed to grant Admin access: %v", err)
 	}
 
 	// Grant read-only access to Viewer
-	grantViewer := `GRANT ` + securityTestModule + `.SecTestViewer ON ` + entityName + ` (READ *);`
+	grantViewer := `grant ` + securityTestModule + `.SecTestViewer on ` + entityName + ` (read *);`
 	if err := env.executeMDL(grantViewer); err != nil {
 		t.Fatalf("Failed to grant Viewer access: %v", err)
 	}
 
 	// Describe and verify
-	output, err := env.describeMDL(`DESCRIBE ENTITY ` + entityName + `;`)
+	output, err := env.describeMDL(`describe entity ` + entityName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe entity: %v", err)
 	}
 
 	// Should contain two GRANT statements
-	grantCount := strings.Count(output, "GRANT")
+	grantCount := strings.Count(output, "grant")
 	if grantCount < 2 {
-		t.Errorf("Expected at least 2 GRANT statements, got %d.\nOutput:\n%s", grantCount, output)
+		t.Errorf("Expected at least 2 grant statements, got %d.\nOutput:\n%s", grantCount, output)
 	}
 	if !strings.Contains(output, securityTestModule+".SecTestAdmin") {
 		t.Errorf("Expected SecTestAdmin role in output.\nActual:\n%s", output)
@@ -150,7 +150,7 @@ func TestRoundtripSecurity_EntityAccessMultipleRoles(t *testing.T) {
 	// Round-trip parse check
 	_, parseErrs := visitor.Build(output)
 	if len(parseErrs) > 0 {
-		t.Errorf("DESCRIBE output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
+		t.Errorf("describe output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
 	}
 }
 
@@ -162,7 +162,7 @@ func TestRoundtripSecurity_EntityAccessWithXPath(t *testing.T) {
 	env.registerCleanup("entity", entityName)
 
 	// Create entity
-	createMDL := `CREATE PERSISTENT ENTITY ` + entityName + ` (
+	createMDL := `create persistent entity ` + entityName + ` (
 		Owner: String(100)
 	);`
 	if err := env.executeMDL(createMDL); err != nil {
@@ -170,19 +170,19 @@ func TestRoundtripSecurity_EntityAccessWithXPath(t *testing.T) {
 	}
 
 	// Grant with XPath constraint
-	grantMDL := `GRANT ` + securityTestModule + `.SecTestViewer ON ` + entityName + ` (READ *) WHERE '[%CurrentUser%] = Owner';`
+	grantMDL := `grant ` + securityTestModule + `.SecTestViewer on ` + entityName + ` (read *) where '[%CurrentUser%] = Owner';`
 	if err := env.executeMDL(grantMDL); err != nil {
 		t.Fatalf("Failed to grant entity access with XPath: %v", err)
 	}
 
 	// Describe and verify
-	output, err := env.describeMDL(`DESCRIBE ENTITY ` + entityName + `;`)
+	output, err := env.describeMDL(`describe entity ` + entityName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe entity: %v", err)
 	}
 
-	if !strings.Contains(output, "WHERE") {
-		t.Errorf("Expected WHERE clause in GRANT statement.\nActual:\n%s", output)
+	if !strings.Contains(output, "where") {
+		t.Errorf("Expected where clause in grant statement.\nActual:\n%s", output)
 	}
 	if !strings.Contains(output, "[%CurrentUser%] = Owner") {
 		t.Errorf("Expected XPath constraint in output.\nActual:\n%s", output)
@@ -193,7 +193,7 @@ func TestRoundtripSecurity_EntityAccessWithXPath(t *testing.T) {
 	// Round-trip parse check
 	_, parseErrs := visitor.Build(output)
 	if len(parseErrs) > 0 {
-		t.Errorf("DESCRIBE output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
+		t.Errorf("describe output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
 	}
 }
 
@@ -205,7 +205,7 @@ func TestRoundtripSecurity_EntityNoAccess(t *testing.T) {
 	env.registerCleanup("entity", entityName)
 
 	// Create entity without granting any access
-	createMDL := `CREATE PERSISTENT ENTITY ` + entityName + ` (
+	createMDL := `create persistent entity ` + entityName + ` (
 		Value: Integer
 	);`
 	if err := env.executeMDL(createMDL); err != nil {
@@ -213,13 +213,13 @@ func TestRoundtripSecurity_EntityNoAccess(t *testing.T) {
 	}
 
 	// Describe — should NOT contain any GRANT
-	output, err := env.describeMDL(`DESCRIBE ENTITY ` + entityName + `;`)
+	output, err := env.describeMDL(`describe entity ` + entityName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe entity: %v", err)
 	}
 
-	if strings.Contains(output, "GRANT") {
-		t.Errorf("Expected NO GRANT statement for entity without access rules.\nActual:\n%s", output)
+	if strings.Contains(output, "grant") {
+		t.Errorf("Expected NO grant statement for entity without access rules.\nActual:\n%s", output)
 	}
 
 	t.Logf("Entity no-access roundtrip successful:\n%s", output)
@@ -233,28 +233,28 @@ func TestRoundtripSecurity_MicroflowAccess(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	// Create microflow
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ()
-	BEGIN
-		LOG INFO 'test';
-	END;`
+	createMDL := `create microflow ` + mfName + ` ()
+	begin
+		log info 'test';
+	end;`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
 	// Grant execute access to both roles
-	grantMDL := `GRANT EXECUTE ON MICROFLOW ` + mfName + ` TO ` + securityTestModule + `.SecTestAdmin, ` + securityTestModule + `.SecTestViewer;`
+	grantMDL := `grant execute on microflow ` + mfName + ` to ` + securityTestModule + `.SecTestAdmin, ` + securityTestModule + `.SecTestViewer;`
 	if err := env.executeMDL(grantMDL); err != nil {
 		t.Fatalf("Failed to grant microflow access: %v", err)
 	}
 
 	// Describe and verify
-	output, err := env.describeMDL(`DESCRIBE MICROFLOW ` + mfName + `;`)
+	output, err := env.describeMDL(`describe microflow ` + mfName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
-	if !strings.Contains(output, "GRANT EXECUTE ON MICROFLOW") {
-		t.Errorf("Expected GRANT EXECUTE statement.\nActual:\n%s", output)
+	if !strings.Contains(output, "grant execute on microflow") {
+		t.Errorf("Expected grant execute statement.\nActual:\n%s", output)
 	}
 	if !strings.Contains(output, securityTestModule+".SecTestAdmin") {
 		t.Errorf("Expected SecTestAdmin role in output.\nActual:\n%s", output)
@@ -268,7 +268,7 @@ func TestRoundtripSecurity_MicroflowAccess(t *testing.T) {
 	// Round-trip parse check
 	_, parseErrs := visitor.Build(output)
 	if len(parseErrs) > 0 {
-		t.Errorf("DESCRIBE output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
+		t.Errorf("describe output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
 	}
 }
 
@@ -280,22 +280,22 @@ func TestRoundtripSecurity_MicroflowNoAccess(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	// Create microflow without granting access
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ()
-	BEGIN
-		LOG INFO 'test';
-	END;`
+	createMDL := `create microflow ` + mfName + ` ()
+	begin
+		log info 'test';
+	end;`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
 	// Describe — should NOT contain GRANT
-	output, err := env.describeMDL(`DESCRIBE MICROFLOW ` + mfName + `;`)
+	output, err := env.describeMDL(`describe microflow ` + mfName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
-	if strings.Contains(output, "GRANT") {
-		t.Errorf("Expected NO GRANT statement for microflow without access.\nActual:\n%s", output)
+	if strings.Contains(output, "grant") {
+		t.Errorf("Expected NO grant statement for microflow without access.\nActual:\n%s", output)
 	}
 
 	t.Logf("Microflow no-access roundtrip successful:\n%s", output)
@@ -309,9 +309,9 @@ func TestRoundtripSecurity_PageAccess(t *testing.T) {
 	env.registerCleanup("page", pageName)
 
 	// Create page
-	createMDL := `CREATE PAGE ` + pageName + ` (Title: 'Security Test', Layout: Atlas_Core.Atlas_Default) {
-		CONTAINER container1 {
-			DYNAMICTEXT text1 (Content: 'Hello')
+	createMDL := `create page ` + pageName + ` (Title: 'Security Test', Layout: Atlas_Core.Atlas_Default) {
+		container container1 {
+			dynamictext text1 (Content: 'Hello')
 		}
 	}`
 	if err := env.executeMDL(createMDL); err != nil {
@@ -319,19 +319,19 @@ func TestRoundtripSecurity_PageAccess(t *testing.T) {
 	}
 
 	// Grant view access
-	grantMDL := `GRANT VIEW ON PAGE ` + pageName + ` TO ` + securityTestModule + `.SecTestAdmin;`
+	grantMDL := `grant view on page ` + pageName + ` to ` + securityTestModule + `.SecTestAdmin;`
 	if err := env.executeMDL(grantMDL); err != nil {
 		t.Fatalf("Failed to grant page access: %v", err)
 	}
 
 	// Describe and verify
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
 
-	if !strings.Contains(output, "GRANT VIEW ON PAGE") {
-		t.Errorf("Expected GRANT VIEW statement.\nActual:\n%s", output)
+	if !strings.Contains(output, "grant view on page") {
+		t.Errorf("Expected grant view statement.\nActual:\n%s", output)
 	}
 	if !strings.Contains(output, securityTestModule+".SecTestAdmin") {
 		t.Errorf("Expected SecTestAdmin role in output.\nActual:\n%s", output)
@@ -342,7 +342,7 @@ func TestRoundtripSecurity_PageAccess(t *testing.T) {
 	// Round-trip parse check
 	_, parseErrs := visitor.Build(output)
 	if len(parseErrs) > 0 {
-		t.Errorf("DESCRIBE output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
+		t.Errorf("describe output is not valid MDL: %v\nOutput:\n%s", parseErrs[0], output)
 	}
 }
 
@@ -354,9 +354,9 @@ func TestRoundtripSecurity_PageNoAccess(t *testing.T) {
 	env.registerCleanup("page", pageName)
 
 	// Create page without granting access
-	createMDL := `CREATE PAGE ` + pageName + ` (Title: 'No Access', Layout: Atlas_Core.Atlas_Default) {
-		CONTAINER container1 {
-			DYNAMICTEXT text1 (Content: 'Hello')
+	createMDL := `create page ` + pageName + ` (Title: 'No Access', Layout: Atlas_Core.Atlas_Default) {
+		container container1 {
+			dynamictext text1 (Content: 'Hello')
 		}
 	}`
 	if err := env.executeMDL(createMDL); err != nil {
@@ -364,13 +364,13 @@ func TestRoundtripSecurity_PageNoAccess(t *testing.T) {
 	}
 
 	// Describe — should NOT contain GRANT
-	output, err := env.describeMDL(`DESCRIBE PAGE ` + pageName + `;`)
+	output, err := env.describeMDL(`describe page ` + pageName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe page: %v", err)
 	}
 
-	if strings.Contains(output, "GRANT") {
-		t.Errorf("Expected NO GRANT statement for page without access.\nActual:\n%s", output)
+	if strings.Contains(output, "grant") {
+		t.Errorf("Expected NO grant statement for page without access.\nActual:\n%s", output)
 	}
 
 	t.Logf("Page no-access roundtrip successful:\n%s", output)

@@ -16,7 +16,7 @@
  *
  * @since 1.0.0
  */
-CREATE MODULE ProductCatalog;
+create module ProductCatalog;
 
 -- MARK: ENUMERATIONS
 
@@ -27,7 +27,7 @@ CREATE MODULE ProductCatalog;
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION ProductCatalog.ProductStatus (
+create enumeration ProductCatalog.ProductStatus (
   Draft 'Draft',
   Active 'Active',
   Discontinued 'Discontinued'
@@ -40,7 +40,7 @@ CREATE ENUMERATION ProductCatalog.ProductStatus (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION ProductCatalog.FinishType (
+create enumeration ProductCatalog.FinishType (
   Natural 'Natural',
   Stained 'Stained',
   Painted 'Painted',
@@ -61,16 +61,16 @@ CREATE ENUMERATION ProductCatalog.FinishType (
  * @since 1.0.0
  * @see ProductCatalog.CatalogProduct
  */
-@Position(50, 50)
-CREATE PERSISTENT ENTITY ProductCatalog.ProductCategory (
+@position(50, 50)
+create persistent entity ProductCatalog.ProductCategory (
   /** Category display name */
-  CategoryName: String(200) NOT NULL ERROR 'Category name is required',
+  CategoryName: string(200) not null error 'Category name is required',
   /** Brief description of this category */
-  CategoryDescription: String(1000),
+  CategoryDescription: string(1000),
   /** Sort position for display ordering */
-  SortOrder: Integer DEFAULT 0,
+  SortOrder: integer default 0,
   /** Whether this category is visible to users */
-  IsActive: Boolean DEFAULT true
+  IsActive: boolean default true
 );
 
 /**
@@ -84,31 +84,31 @@ CREATE PERSISTENT ENTITY ProductCatalog.ProductCategory (
  * @see ProductCatalog.ProductCategory
  * @see ProductCatalog.ProductVariant
  */
-@Position(350, 50)
-CREATE PERSISTENT ENTITY ProductCatalog.CatalogProduct (
+@position(350, 50)
+create persistent entity ProductCatalog.CatalogProduct (
   /** Unique product code / SKU prefix */
-  ProductCode: String(50) NOT NULL ERROR 'Product code is required' UNIQUE ERROR 'Product code must be unique',
+  ProductCode: string(50) not null error 'Product code is required' unique error 'Product code must be unique',
   /** Product display name */
-  ProductName: String(200) NOT NULL ERROR 'Product name is required',
+  ProductName: string(200) not null error 'Product name is required',
   /** Detailed product description */
-  ProductDescription: String(4000),
+  ProductDescription: string(4000),
   /** Base price before variant adjustments */
-  BasePrice: Decimal,
+  BasePrice: decimal,
   /** Estimated production lead time in days */
-  LeadTimeDays: Integer DEFAULT 14,
+  LeadTimeDays: integer default 14,
   /** Overall dimensions description */
-  Dimensions: String(200),
+  Dimensions: string(200),
   /** Primary material used */
-  PrimaryMaterial: String(100),
+  PrimaryMaterial: string(100),
   /** Weight in kilograms */
-  WeightKg: Decimal,
+  WeightKg: decimal,
   /** Lifecycle status */
-  ProductStatus: Enumeration(ProductCatalog.ProductStatus) NOT NULL ERROR 'Product status is required',
+  ProductStatus: enumeration(ProductCatalog.ProductStatus) not null error 'Product status is required',
   /** Date when product was first made available */
-  LaunchDate: DateTime
+  LaunchDate: datetime
 )
-INDEX (ProductStatus)
-INDEX (ProductCode);
+index (ProductStatus)
+index (ProductCode);
 
 /**
  * Product variant entity
@@ -119,26 +119,26 @@ INDEX (ProductCode);
  * @since 1.0.0
  * @see ProductCatalog.CatalogProduct
  */
-@Position(650, 50)
-CREATE PERSISTENT ENTITY ProductCatalog.ProductVariant (
+@position(650, 50)
+create persistent entity ProductCatalog.ProductVariant (
   /** Full SKU for this variant */
-  SKU: String(50) NOT NULL ERROR 'SKU is required' UNIQUE ERROR 'SKU must be unique',
+  SKU: string(50) not null error 'SKU is required' unique error 'SKU must be unique',
   /** Variant label (e.g. 'Large Oak Natural') */
-  VariantLabel: String(200) NOT NULL ERROR 'Variant label is required',
+  VariantLabel: string(200) not null error 'Variant label is required',
   /** Size descriptor (e.g. 'Small', 'Medium', 'Large', '120x80cm') */
-  SizeDescription: String(100),
+  SizeDescription: string(100),
   /** Material used for this variant */
-  MaterialDescription: String(100),
+  MaterialDescription: string(100),
   /** Finish type for this variant */
-  FinishType: Enumeration(ProductCatalog.FinishType),
+  FinishType: enumeration(ProductCatalog.FinishType),
   /** Price adjustment from base (can be negative) */
-  PriceAdjustment: Decimal DEFAULT 0,
+  PriceAdjustment: decimal default 0,
   /** Whether this variant is currently available */
-  IsAvailable: Boolean DEFAULT true,
+  IsAvailable: boolean default true,
   /** Current stock quantity */
-  StockQuantity: Integer DEFAULT 0
+  StockQuantity: integer default 0
 )
-INDEX (SKU);
+index (SKU);
 
 /**
  * Product image entity
@@ -149,15 +149,15 @@ INDEX (SKU);
  * @since 1.0.0
  * @see ProductCatalog.CatalogProduct
  */
-@Position(350, 250)
-CREATE PERSISTENT ENTITY ProductCatalog.ProductImage
-EXTENDS System.Image (
+@position(350, 250)
+create persistent entity ProductCatalog.ProductImage
+extends System.Image (
   /** Caption describing the image */
-  ImageCaption: String(500),
+  ImageCaption: string(500),
   /** Whether this is the primary display image */
-  IsPrimary: Boolean DEFAULT false,
+  IsPrimary: boolean default false,
   /** Sort order for gallery display */
-  SortIndex: Integer DEFAULT 0
+  SortIndex: integer default 0
 );
 
 -- MARK: ASSOCIATIONS
@@ -170,10 +170,10 @@ EXTENDS System.Image (
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION ProductCatalog.ProductCategory_ParentCategory
-  FROM ProductCatalog.ProductCategory TO ProductCatalog.ProductCategory
-  TYPE Reference
-  OWNER Default;
+create association ProductCatalog.ProductCategory_ParentCategory
+  from ProductCatalog.ProductCategory to ProductCatalog.ProductCategory
+  type reference
+  owner default;
 
 /**
  * Links products to their category
@@ -182,11 +182,11 @@ CREATE ASSOCIATION ProductCatalog.ProductCategory_ParentCategory
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION ProductCatalog.CatalogProduct_ProductCategory
-  FROM ProductCatalog.CatalogProduct TO ProductCatalog.ProductCategory
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association ProductCatalog.CatalogProduct_ProductCategory
+  from ProductCatalog.CatalogProduct to ProductCatalog.ProductCategory
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links variants to their parent product
@@ -195,11 +195,11 @@ CREATE ASSOCIATION ProductCatalog.CatalogProduct_ProductCategory
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION ProductCatalog.ProductVariant_CatalogProduct
-  FROM ProductCatalog.ProductVariant TO ProductCatalog.CatalogProduct
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association ProductCatalog.ProductVariant_CatalogProduct
+  from ProductCatalog.ProductVariant to ProductCatalog.CatalogProduct
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links images to their product
@@ -208,8 +208,8 @@ CREATE ASSOCIATION ProductCatalog.ProductVariant_CatalogProduct
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION ProductCatalog.ProductImage_CatalogProduct
-  FROM ProductCatalog.ProductImage TO ProductCatalog.CatalogProduct
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association ProductCatalog.ProductImage_CatalogProduct
+  from ProductCatalog.ProductImage to ProductCatalog.CatalogProduct
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;

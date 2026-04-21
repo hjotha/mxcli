@@ -13,7 +13,7 @@ Add an extensible linting framework to mxcli that leverages the existing SQLite-
 | Component | Location | What It Provides |
 |-----------|----------|------------------|
 | **Catalog** | `mdl/catalog/` | In-memory SQLite with modules, entities, microflows, pages, etc. |
-| **Catalog Builder** | `mdl/catalog/builder*.go` | Populates catalog from MPR via `REFRESH CATALOG [FULL]` |
+| **Catalog Builder** | `mdl/catalog/builder*.go` | Populates catalog from MPR via `refresh catalog [full]` |
 | **CLI Structure** | `cmd/mxcli/main.go` | Cobra-based commands with `-p` project flag |
 | **Init System** | `cmd/mxcli/init.go` | Creates `.claude/` folder with skills |
 | **Executor** | `mdl/executor/` | Executes MDL statements, has access to catalog |
@@ -21,30 +21,30 @@ Add an extensible linting framework to mxcli that leverages the existing SQLite-
 ### Existing Catalog Schema (from `mdl/catalog/tables.go`)
 
 ```
-modules      - Id, Name, QualifiedName, ModuleName, Description, IsSystemModule, ...
-entities     - Id, Name, QualifiedName, ModuleName, EntityType, Description, Generalization, AttributeCount, ...
-microflows   - Id, Name, QualifiedName, ModuleName, MicroflowType, Description, ReturnType, ParameterCount, ActivityCount, ...
-pages        - Id, Name, QualifiedName, ModuleName, Title, URL, LayoutRef, Description, WidgetCount, ...
-snippets     - Id, Name, QualifiedName, ModuleName, Description, WidgetCount, ...
-enumerations - Id, Name, QualifiedName, ModuleName, Description, ValueCount, ...
-activities   - Id, Name, Caption, ActivityType, MicroflowId, EntityRef, ActionType, ... (FULL mode only)
-widgets      - Id, Name, WidgetType, ContainerId, EntityRef, AttributeRef, ... (FULL mode only)
-objects      - VIEW: union of all types above
+modules      - Id, Name, QualifiedName, ModuleName, description, IsSystemModule, ...
+entities     - Id, Name, QualifiedName, ModuleName, EntityType, description, generalization, AttributeCount, ...
+microflows   - Id, Name, QualifiedName, ModuleName, MicroflowType, description, ReturnType, ParameterCount, ActivityCount, ...
+pages        - Id, Name, QualifiedName, ModuleName, title, url, LayoutRef, description, WidgetCount, ...
+snippets     - Id, Name, QualifiedName, ModuleName, description, WidgetCount, ...
+enumerations - Id, Name, QualifiedName, ModuleName, description, ValueCount, ...
+activities   - Id, Name, caption, ActivityType, MicroflowId, EntityRef, ActionType, ... (full mode only)
+widgets      - Id, Name, widgettype, ContainerId, EntityRef, AttributeRef, ... (full mode only)
+objects      - view: union of all types above
 ```
 
 ### What's Missing (Required from code-search-implementation.md)
 
 ```sql
 -- References table (from code-search-implementation.md proposal)
-CREATE TABLE references (
-    Id TEXT PRIMARY KEY,
-    SourceType TEXT NOT NULL,
-    SourceId TEXT NOT NULL,
-    SourceName TEXT NOT NULL,
-    TargetType TEXT NOT NULL,
-    TargetId TEXT,
-    TargetName TEXT NOT NULL,
-    RefKind TEXT NOT NULL,  -- 'call', 'create', 'retrieve', 'change', 'show_page', etc.
+create table references (
+    Id text primary key,
+    SourceType text not null,
+    SourceId text not null,
+    SourceName text not null,
+    TargetType text not null,
+    TargetId text,
+    TargetName text not null,
+    RefKind text not null,  -- 'call', 'create', 'retrieve', 'change', 'show_page', etc.
     ...
 );
 ```
@@ -55,25 +55,25 @@ CREATE TABLE references (
 ┌─────────────────────────────────────────────────────────────────────┐
 │                           CLI Layer                                  │
 │  mxcli lint [-p app.mpr] [--format text|json|sarif] [--config path] │
-│  MDL: LINT [MODULE.* | *] [FORMAT text|json|sarif]                  │
+│  MDL: lint [MODULE.* | *] [format text|json|sarif]                  │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                          Linter Core                                 │
 │  mdl/linter/linter.go                                               │
-│  - Rule registration & orchestration                                 │
-│  - Parallel rule execution (goroutines + semaphore)                 │
-│  - Configuration management (.claude/lint-config.yaml)              │
-│  - Output formatting (text, JSON, SARIF)                            │
+│  - rule registration & orchestration                                 │
+│  - parallel rule execution (goroutines + semaphore)                 │
+│  - configuration management (.claude/lint-config.yaml)              │
+│  - Output formatting (text, json, sarif)                            │
 └─────────────────────────────────────────────────────────────────────┘
                 │                               │
                 ▼                               ▼
 ┌───────────────────────────┐     ┌─────────────────────────────┐
-│   Built-in Go Rules       │     │   Starlark Rule Engine      │
+│   Built-in Go rules       │     │   Starlark rule Engine      │
 │   mdl/linter/rules/       │     │   mdl/linter/starlark.go    │
-│   - MDL001: NamingConv    │     │   - Script loading          │
-│   - MDL002: EmptyMicroflow│     │   - API bindings            │
+│   - MDL001: NamingConv    │     │   - script loading          │
+│   - MDL002: EmptyMicroflow│     │   - api bindings            │
 │   - MDL003: UnusedEntity  │     │   - Sandboxed execution     │
 │   - MDL004: CircularDeps  │     │   (uses go.starlark.net)    │
 └───────────────────────────┘     └─────────────────────────────┘
@@ -83,20 +83,20 @@ CREATE TABLE references (
 ┌─────────────────────────────────────────────────────────────────────┐
 │                          LintContext                                 │
 │  mdl/linter/context.go                                              │
-│  Wraps *catalog.Catalog and provides rule-friendly API:             │
-│  - Entities(), Microflows(), Pages() - iterators                    │
+│  Wraps *catalog.Catalog and provides rule-friendly api:             │
+│  - entities(), microflows(), pages() - iterators                    │
 │  - FindReferences(id) - requires references table                   │
 │  - FindUnused(kind) - requires references table                     │
 │  - ModuleDependencies() - derived from references                   │
-│  - Query(sql) - raw SQL access                                      │
+│  - query(sql) - raw sql access                                      │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    SQLite Catalog (In-Memory)                        │
-│  Built by: REFRESH CATALOG FULL                                      │
-│  Tables: modules, entities, microflows, pages, activities, widgets   │
-│  Required: references table (from code-search proposal)              │
+│                    SQLite catalog (in-Memory)                        │
+│  Built by: refresh catalog full                                      │
+│  tables: modules, entities, microflows, pages, activities, widgets   │
+│  required: references table (from code-search proposal)              │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -106,11 +106,11 @@ CREATE TABLE references (
 
 ```
 mdl/linter/
-├── linter.go          # Core orchestration, Linter struct, Run()
+├── linter.go          # Core orchestration, Linter struct, run()
 ├── context.go         # LintContext wrapping catalog, query methods
 ├── config.go          # Config loading from .claude/lint-config.yaml
-├── output.go          # Formatters: Text, JSON, SARIF
-├── starlark.go        # Starlark rule engine, API bindings
+├── output.go          # Formatters: text, json, sarif
+├── starlark.go        # Starlark rule engine, api bindings
 ├── rules/             # Built-in Go rules
 │   ├── naming.go      # MDL001: NamingConvention
 │   ├── empty.go       # MDL002: EmptyMicroflow
@@ -143,22 +143,22 @@ Following the existing `.claude/` pattern from `mxcli init`:
 ### CLI Commands
 
 ```bash
-# Lint with default rules (requires catalog)
+# lint with default rules (requires catalog)
 mxcli lint -p app.mpr
 
-# Output as JSON
+# Output as json
 mxcli lint -p app.mpr --format json
 
-# Output as SARIF (for GitHub/IDE integration)
+# Output as sarif (for GitHub/IDE integration)
 mxcli lint -p app.mpr --format sarif > results.sarif
 
-# Use custom config file
+# use custom config file
 mxcli lint -p app.mpr --config ./my-lint-config.yaml
 
-# List available rules
+# list available rules
 mxcli lint -p app.mpr --list-rules
 
-# Lint specific module(s)
+# lint specific module(s)
 mxcli lint -p app.mpr --module Sales --module Customers
 ```
 
@@ -166,20 +166,20 @@ mxcli lint -p app.mpr --module Sales --module Customers
 
 ```sql
 -- Build catalog first (required for linting)
-REFRESH CATALOG FULL;
+refresh catalog full;
 
 -- Lint all modules
-LINT;
+lint;
 
 -- Lint specific module
-LINT Sales.*;
+lint Sales.*;
 
 -- Lint with format
-LINT FORMAT json;
-LINT FORMAT sarif;
+lint format json;
+lint format sarif;
 
 -- Show available rules
-SHOW LINT RULES;
+show lint rules;
 ```
 
 ## Configuration
@@ -187,7 +187,7 @@ SHOW LINT RULES;
 **File:** `.claude/lint-config.yaml`
 
 ```yaml
-# mxcli Linter Configuration
+# mxcli Linter configuration
 linter:
   # Directory containing custom Starlark rules (relative to project)
   rules_dir: ".claude/lint-rules"
@@ -195,7 +195,7 @@ linter:
   # Output format: text, json, sarif
   output_format: text
 
-  # Modules/patterns to exclude from linting
+  # modules/patterns to exclude from linting
   exclude:
     - "System"
     - "Administration"
@@ -251,35 +251,35 @@ const (
 type Violation struct {
     RuleID      string
     Severity    Severity
-    Message     string
+    message     string
     Location    Location
     Suggestion  string
 }
 
 type Location struct {
-    Module       string  // e.g., "Sales"
+    module       string  // e.g., "Sales"
     DocumentType string  // "entity", "microflow", "page"
     DocumentName string  // e.g., "Customer"
     DocumentID   string  // UUID
 }
 
-type Rule interface {
+type rule interface {
     ID() string
     Name() string
-    Description() string
+    description() string
     Severity() Severity
     Category() string
-    Check(ctx *LintContext) []Violation
+    check(ctx *LintContext) []Violation
 }
 
 type Linter struct {
     ctx       *LintContext
-    rules     []Rule
+    rules     []rule
     config    *Config
 }
 
-func (l *Linter) Run(ctx context.Context) ([]Violation, error) {
-    // Parallel rule execution with semaphore
+func (l *Linter) run(ctx context.Context) ([]Violation, error) {
+    // parallel rule execution with semaphore
 }
 ```
 
@@ -313,27 +313,27 @@ func NewLintContext(cat *catalog.Catalog, cfg *Config) *LintContext {
     }
 }
 
-// Entity represents a lintable entity
-type Entity struct {
+// entity represents a lintable entity
+type entity struct {
     ID             string
     Name           string
     QualifiedName  string
     ModuleName     string
-    EntityType     string  // "Persistent", "NonPersistent", "View"
-    Description    string
-    Generalization string
+    EntityType     string  // "persistent", "NonPersistent", "view"
+    description    string
+    generalization string
     AttributeCount int
 }
 
-// Entities returns an iterator over all entities (excluding system modules)
-func (ctx *LintContext) Entities() iter.Seq[Entity] {
-    return func(yield func(Entity) bool) {
+// entities returns an iterator over all entities (excluding system modules)
+func (ctx *LintContext) entities() iter.Seq[entity] {
+    return func(yield func(entity) bool) {
         rows, err := ctx.db.Query(`
-            SELECT Id, Name, QualifiedName, ModuleName, EntityType,
-                   Description, Generalization, AttributeCount
-            FROM entities
-            WHERE ModuleName NOT IN (SELECT Name FROM modules WHERE IsSystemModule = 1)
-            ORDER BY ModuleName, Name
+            select Id, Name, QualifiedName, ModuleName, EntityType,
+                   description, generalization, AttributeCount
+            from entities
+            where ModuleName not in (select Name from modules where IsSystemModule = 1)
+            ORDER by ModuleName, Name
         `)
         if err != nil {
             return
@@ -341,7 +341,7 @@ func (ctx *LintContext) Entities() iter.Seq[Entity] {
         defer rows.Close()
 
         for rows.Next() {
-            var e Entity
+            var e entity
             var desc, gen sql.NullString
             rows.Scan(&e.ID, &e.Name, &e.QualifiedName, &e.ModuleName,
                       &e.EntityType, &desc, &gen, &e.AttributeCount)
@@ -359,16 +359,16 @@ func (ctx *LintContext) Entities() iter.Seq[Entity] {
     }
 }
 
-// Similar iterators for Microflows(), Pages(), etc.
+// Similar iterators for microflows(), pages(), etc.
 
-// Query executes raw SQL (for advanced rules)
-func (ctx *LintContext) Query(query string, args ...any) (*sql.Rows, error) {
+// query executes raw sql (for advanced rules)
+func (ctx *LintContext) query(query string, args ...any) (*sql.Rows, error) {
     return ctx.db.Query(query, args...)
 }
 
 // FindReferences finds all references to a given element
 // Requires: references table from code-search-implementation.md
-func (ctx *LintContext) FindReferences(targetID string) []Reference {
+func (ctx *LintContext) FindReferences(targetID string) []reference {
     // ...
 }
 
@@ -389,16 +389,16 @@ func (ctx *LintContext) ModuleDependencies() map[string][]string {
 
 **MDL001: NamingConvention** - Works with current schema
 ```go
-func (r *NamingConventionRule) Check(ctx *LintContext) []Violation {
+func (r *NamingConventionRule) check(ctx *LintContext) []Violation {
     var violations []Violation
 
     for entity := range ctx.Entities() {
         if !isPascalCase(entity.Name) {
             violations = append(violations, Violation{
                 RuleID:  "MDL001",
-                Message: fmt.Sprintf("Entity name '%s' should use PascalCase", entity.Name),
+                message: fmt.Sprintf("entity name '%s' should use PascalCase", entity.Name),
                 Location: Location{
-                    Module:       entity.ModuleName,
+                    module:       entity.ModuleName,
                     DocumentType: "entity",
                     DocumentName: entity.Name,
                     DocumentID:   entity.ID,
@@ -414,21 +414,21 @@ func (r *NamingConventionRule) Check(ctx *LintContext) []Violation {
 
 **MDL002: EmptyMicroflow** - Works with current schema
 ```go
-func (r *EmptyMicroflowRule) Check(ctx *LintContext) []Violation {
+func (r *EmptyMicroflowRule) check(ctx *LintContext) []Violation {
     var violations []Violation
 
     for mf := range ctx.Microflows() {
         if mf.ActivityCount == 0 {
             violations = append(violations, Violation{
                 RuleID:  "MDL002",
-                Message: fmt.Sprintf("Microflow '%s' has no activities", mf.Name),
+                message: fmt.Sprintf("microflow '%s' has no activities", mf.Name),
                 Location: Location{
-                    Module:       mf.ModuleName,
+                    module:       mf.ModuleName,
                     DocumentType: "microflow",
                     DocumentName: mf.Name,
                     DocumentID:   mf.ID,
                 },
-                Suggestion: "Add activities or remove unused microflow",
+                Suggestion: "add activities or remove unused microflow",
             })
         }
     }
@@ -439,7 +439,7 @@ func (r *EmptyMicroflowRule) Check(ctx *LintContext) []Violation {
 
 **MDL003: UnusedEntity** - Requires references table
 ```go
-func (r *UnusedEntityRule) Check(ctx *LintContext) []Violation {
+func (r *UnusedEntityRule) check(ctx *LintContext) []Violation {
     // This rule requires the references table from code-search-implementation.md
     if !ctx.HasReferencesTable() {
         return nil  // Skip if references not available
@@ -469,13 +469,13 @@ type StarlarkRule struct {
 
 func LoadStarlarkRule(path string, ctx *LintContext) (*StarlarkRule, error) {
     // Load and parse .star file
-    // Extract metadata: RULE_ID, RULE_NAME, DESCRIPTION, SEVERITY, CATEGORY
-    // Get check() function
+    // Extract metadata: RULE_ID, RULE_NAME, description, SEVERITY, CATEGORY
+    // get check() function
 }
 
 func (r *StarlarkRule) buildPredeclared() starlark.StringDict {
     return starlark.StringDict{
-        // Query functions - map to LintContext methods
+        // query functions - map to LintContext methods
         "entities":     starlark.NewBuiltin("entities", r.builtinEntities),
         "microflows":   starlark.NewBuiltin("microflows", r.builtinMicroflows),
         "pages":        starlark.NewBuiltin("pages", r.builtinPages),
@@ -485,7 +485,7 @@ func (r *StarlarkRule) buildPredeclared() starlark.StringDict {
         "violation":    starlark.NewBuiltin("violation", r.builtinViolation),
         "location":     starlark.NewBuiltin("location", r.builtinLocation),
 
-        // String utilities
+        // string utilities
         "is_pascal_case": starlark.NewBuiltin("is_pascal_case", builtinIsPascalCase),
         "is_camel_case":  starlark.NewBuiltin("is_camel_case", builtinIsCamelCase),
         "matches":        starlark.NewBuiltin("matches", builtinMatches),
@@ -497,14 +497,14 @@ func (r *StarlarkRule) buildPredeclared() starlark.StringDict {
 
 ```go
 var lintCmd = &cobra.Command{
-    Use:   "lint",
-    Short: "Lint a Mendix project for issues",
-    Long: `Run linting rules against a Mendix project to find potential issues.
+    use:   "lint",
+    Short: "lint a Mendix project for issues",
+    long: `run linting rules against a Mendix project to find potential issues.
 
 Built-in rules check for:
   - Naming conventions (MDL001)
-  - Empty microflows (MDL002)
-  - Unused entities (MDL003) - requires REFRESH CATALOG FULL
+  - empty microflows (MDL002)
+  - Unused entities (MDL003) - requires refresh catalog full
   - Circular dependencies (MDL004) - requires references table
 
 Custom rules can be added as Starlark scripts in .claude/lint-rules/
@@ -514,7 +514,7 @@ Examples:
   mxcli lint -p app.mpr --format sarif > results.sarif
   mxcli lint -p app.mpr --module Sales
 `,
-    Run: func(cmd *cobra.Command, args []string) {
+    run: func(cmd *cobra.Command, args []string) {
         // Implementation
     },
 }
@@ -522,8 +522,8 @@ Examples:
 func init() {
     lintCmd.Flags().StringP("format", "f", "text", "Output format: text, json, sarif")
     lintCmd.Flags().StringP("config", "c", "", "Config file path")
-    lintCmd.Flags().StringSliceP("module", "m", nil, "Modules to lint (default: all)")
-    lintCmd.Flags().Bool("list-rules", false, "List available rules")
+    lintCmd.Flags().StringSliceP("module", "m", nil, "modules to lint (default: all)")
+    lintCmd.Flags().Bool("list-rules", false, "list available rules")
 
     rootCmd.AddCommand(lintCmd)
 }
@@ -532,37 +532,37 @@ func init() {
 ### 6. MDL Grammar Extensions (`mdl/grammar/MDLParser.g4`)
 
 ```antlr
-// Add to statement rule:
+// add to statement rule:
 statement
     : ...
     | lintStatement
     ;
 
 lintStatement
-    : LINT (qualifiedNamePattern)? (FORMAT lintFormat)?
-    | SHOW LINT RULES
+    : lint (qualifiedNamePattern)? (format lintFormat)?
+    | show lint rules
     ;
 
 qualifiedNamePattern
     : qualifiedName              // Specific element
-    | moduleName DOT STAR        // All in module
-    | STAR                       // All
+    | moduleName DOT STAR        // all in module
+    | STAR                       // all
     ;
 
 lintFormat
-    : TEXT | JSON | SARIF
+    : text | json | sarif
     ;
 
 // New keywords
-LINT: L I N T;
-SARIF: S A R I F;
+lint: L I N T;
+sarif: S A R I F;
 ```
 
 ### 7. Executor Integration (`mdl/executor/cmd_lint.go`)
 
 ```go
 func (e *Executor) execLint(s *ast.LintStmt) error {
-    // Ensure catalog is built (FULL mode for activities)
+    // Ensure catalog is built (full mode for activities)
     if e.catalog == nil || !e.catalog.IsBuilt() {
         if err := e.buildCatalog(true); err != nil {
             return err
@@ -575,7 +575,7 @@ func (e *Executor) execLint(s *ast.LintStmt) error {
         return err
     }
 
-    // Create linter
+    // create linter
     ctx := linter.NewLintContext(e.catalog, cfg)
     lint := linter.New(ctx)
 
@@ -585,7 +585,7 @@ func (e *Executor) execLint(s *ast.LintStmt) error {
         return fmt.Errorf("loading custom rules: %w", err)
     }
 
-    // Run
+    // run
     violations, err := lint.Run(context.Background())
     if err != nil {
         return err
@@ -604,19 +604,19 @@ func (e *Executor) execLint(s *ast.LintStmt) error {
 ```
 Sales
 -----
-  ⚠ Entity name 'customer_info' should use PascalCase [MDL001]
+  ⚠ entity name 'customer_info' should use PascalCase [MDL001]
       at Sales.customer_info
       → CustomerInfo
 
-  ⚠ Microflow 'test' has no activities [MDL002]
+  ⚠ microflow 'test' has no activities [MDL002]
       at Sales.test
-      → Add activities or remove unused microflow
+      → add activities or remove unused microflow
 
 MyModule
 --------
-  ℹ Entity 'TempData' is not referenced anywhere [MDL003]
+  ℹ entity 'TempData' is not referenced anywhere [MDL003]
       at MyModule.TempData
-      → Remove entity or add references
+      → remove entity or add references
 
 3 issues: 0 errors, 2 warnings, 1 info
 ```
@@ -642,7 +642,7 @@ MyModule
       {
         "ruleId": "MDL001",
         "level": "warning",
-        "message": {"text": "Entity name 'customer_info' should use PascalCase"},
+        "message": {"text": "entity name 'customer_info' should use PascalCase"},
         "locations": [{"physicalLocation": {"artifactLocation": {"uri": "Sales/customer_info"}}}]
       }
     ]
@@ -655,12 +655,12 @@ MyModule
 **File:** `.claude/lint-rules/entity_documentation.star`
 
 ```python
-# Entity Documentation Rule
+# entity documentation rule
 # Checks that all entities have documentation
 
 RULE_ID = "CUSTOM_001"
 RULE_NAME = "EntityDocumentation"
-DESCRIPTION = "Entities should have documentation explaining their purpose"
+description = "entities should have documentation explaining their purpose"
 SEVERITY = "info"
 CATEGORY = "documentation"
 
@@ -669,17 +669,17 @@ def check():
     violations = []
 
     for entity in entities():
-        # Check if documentation is empty
+        # check if documentation is empty
         if not entity.description or not entity.description.strip():
             violations.append(violation(
-                message = "Entity '{}' has no documentation".format(entity.name),
+                message = "entity '{}' has no documentation".format(entity.name),
                 location = location(
                     module = entity.module_name,
                     document_type = "entity",
                     document_name = entity.name,
                     id = entity.id
                 ),
-                suggestion = "Add a description using /** ... */ comment"
+                suggestion = "add a description using /** ... */ comment"
             ))
 
     return violations

@@ -17,31 +17,31 @@ Implementing a new MDL feature requires changes across multiple layers:
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    1. INVESTIGATION                                  │
-│    Dump BSON from MPR → Understand structure → Design MDL syntax    │
+│    Dump BSON from MPR → Understand structure → design MDL syntax    │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    2. GRAMMAR (MDLLexer.g4 + MDLParser.g4)          │
-│    Add tokens → Add parser rules → Regenerate (make grammar)        │
+│    add tokens → add parser rules → Regenerate (make grammar)        │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    3. AST (mdl/ast/)                                 │
-│    Define Go structs representing the parsed syntax                  │
+│    define Go structs representing the parsed syntax                  │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    4. VISITOR (mdl/visitor/)                         │
-│    Parse ANTLR context → Build AST nodes                            │
+│    Parse ANTLR context → build AST nodes                            │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    5. SDK TYPES (sdk/microflows/ or sdk/pages/)     │
-│    Add/update Go structs for the Mendix concept                     │
+│    add/update Go structs for the Mendix concept                     │
 └─────────────────────────────────────────────────────────────────────┘
                                   │
                   ┌───────────────┴───────────────┐
@@ -49,7 +49,7 @@ Implementing a new MDL feature requires changes across multiple layers:
 ┌─────────────────────────────┐   ┌─────────────────────────────┐
 │  6a. PARSER (BSON → Go)     │   │  6b. WRITER (Go → BSON)     │
 │  sdk/mpr/parser_*.go        │   │  sdk/mpr/writer_*.go        │
-│  For DESCRIBE to work       │   │  For CREATE to work         │
+│  for describe to work       │   │  for create to work         │
 └─────────────────────────────┘   └─────────────────────────────┘
                   │                               │
                   └───────────────┬───────────────┘
@@ -62,7 +62,7 @@ Implementing a new MDL feature requires changes across multiple layers:
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    8. TESTING                                        │
-│    Syntax check → Describe roundtrip → Create in project            │
+│    Syntax check → describe roundtrip → create in project            │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -81,7 +81,7 @@ First, create or find an example of the feature in Mendix Studio Pro:
 
 ```bash
 ./bin/mxcli -p mx-test-projects/test2-go-app/test2-go.mpr \
-  -c "SELECT Id, QualifiedName FROM CATALOG.MICROFLOWS WHERE QualifiedName = 'RestTemplate.GetWebpage'"
+  -c "select Id, QualifiedName from CATALOG.MICROFLOWS where QualifiedName = 'RestTemplate.GetWebpage'"
 ```
 
 ### Step 3: Dump Raw BSON
@@ -95,30 +95,30 @@ mxcli bson dump -p mx-test-projects/test2-go-app/test2-go.mpr --type microflow -
 Example output (abbreviated):
 ```json
 {
-  "$Type": "Microflows$Microflow",
+  "$type": "microflows$microflow",
   "ObjectCollection": {
-    "Objects": [
+    "objects": [
       {
-        "$Type": "Microflows$ActionActivity",
-        "Action": {
-          "$Type": "Microflows$RestCallAction",
+        "$type": "microflows$ActionActivity",
+        "action": {
+          "$type": "microflows$RestCallAction",
           "HttpConfiguration": {
-            "$Type": "Microflows$HttpConfiguration",
-            "HttpMethod": "Get",
+            "$type": "microflows$HttpConfiguration",
+            "HttpMethod": "get",
             "CustomLocationTemplate": {
-              "Text": "{1}",
-              "Parameters": [
-                {"Expression": "'http://example.com'"}
+              "text": "{1}",
+              "parameters": [
+                {"expression": "'http://example.com'"}
               ]
             },
             "HttpHeaderEntries": [
-              {"Key": "Accept", "Value": "'text/html'"}
+              {"key": "Accept", "value": "'text/html'"}
             ]
           },
           "ResultHandling": {
             "ResultVariableName": "MyPage"
           },
-          "ResultHandlingType": "String",
+          "ResultHandlingType": "string",
           "TimeOutExpression": "300"
         }
       }
@@ -136,14 +136,14 @@ Based on the BSON structure, design MDL syntax that:
 
 Example design for REST call:
 ```sql
-$Response = REST CALL GET 'http://api.example.com/data'
-  HEADER 'Content-Type' = 'application/json'
-  HEADER Accept = 'application/json'
-  AUTH BASIC $username PASSWORD $password
-  BODY '{"key": "{1}"}' WITH ({1} = $value)
-  TIMEOUT 30
-  RETURNS String
-  ON ERROR ROLLBACK;
+$response = rest call get 'http://api.example.com/data'
+  header 'Content-Type' = 'application/json'
+  header Accept = 'application/json'
+  auth basic $username password $password
+  body '{"key": "{1}"}' with ({1} = $value)
+  timeout 30
+  returns string
+  on error rollback;
 ```
 
 ### Step 5: Create Examples
@@ -151,15 +151,15 @@ $Response = REST CALL GET 'http://api.example.com/data'
 Add examples to `mdl-examples/doctype-tests/`:
 
 ```bash
-# Add to 02-microflow-examples.mdl
-CREATE MICROFLOW RestExamples.SimpleGet()
-RETURNS String AS $Response
-BEGIN
-  $Response = REST CALL GET 'https://api.example.com/data'
-    TIMEOUT 30
-    RETURNS String;
-  RETURN $Response;
-END;
+# add to 02-microflow-examples.mdl
+create microflow RestExamples.SimpleGet()
+returns string as $response
+begin
+  $response = rest call get 'https://api.example.com/data'
+    timeout 30
+    returns string;
+  return $response;
+end;
 ```
 
 ## Part 2: Grammar Implementation
@@ -169,28 +169,28 @@ END;
 Add new keywords if needed:
 
 ```antlr
-// In MDLLexer.g4, alphabetically ordered
-AUTH: A U T H;
-BODY: B O D Y;
-HEADER: H E A D E R;
-MAPPING: M A P P I N G;
-PASSWORD: P A S S W O R D;
-REST: R E S T;
-TIMEOUT: T I M E O U T;
+// in MDLLexer.g4, alphabetically ordered
+auth: A U T H;
+body: B O D Y;
+header: H E A D E R;
+mapping: M A P P I N G;
+password: P A S S W O R D;
+rest: R E S T;
+timeout: T I M E O U T;
 ```
 
 ### Step 2: Add Parser Rules (MDLParser.g4)
 
 ```antlr
-// Add to microflowStatement alternatives
+// add to microflowStatement alternatives
 microflowStatement
     : // ... existing alternatives
     | restCallStatement
     ;
 
-// Define the new statement
+// define the new statement
 restCallStatement
-    : (VARIABLE EQUALS)? REST CALL httpMethod restCallUrl restCallUrlParams?
+    : (VARIABLE equals)? rest call httpMethod restCallUrl restCallUrlParams?
       restCallHeaderClause*
       restCallAuthClause?
       restCallBodyClause?
@@ -200,7 +200,7 @@ restCallStatement
     ;
 
 httpMethod
-    : GET | POST | PUT | PATCH | DELETE
+    : get | post | put | patch | delete
     ;
 
 restCallUrl
@@ -208,7 +208,7 @@ restCallUrl
     ;
 
 restCallHeaderClause
-    : HEADER (IDENTIFIER | STRING_LITERAL) EQUALS expression
+    : header (IDENTIFIER | STRING_LITERAL) equals expression
     ;
 
 // ... other clauses
@@ -231,29 +231,29 @@ Add AST types in `mdl/ast/ast_microflow.go`:
 type HttpMethod string
 
 const (
-    HttpMethodGet    HttpMethod = "Get"
-    HttpMethodPost   HttpMethod = "Post"
-    HttpMethodPut    HttpMethod = "Put"
-    HttpMethodPatch  HttpMethod = "Patch"
-    HttpMethodDelete HttpMethod = "Delete"
+    HttpMethodGet    HttpMethod = "get"
+    HttpMethodPost   HttpMethod = "post"
+    HttpMethodPut    HttpMethod = "put"
+    HttpMethodPatch  HttpMethod = "patch"
+    HttpMethodDelete HttpMethod = "delete"
 )
 
 // RestHeader represents a custom HTTP header.
 type RestHeader struct {
     Name  string
-    Value Expression
+    value expression
 }
 
-// RestCallStmt represents a REST call statement.
+// RestCallStmt represents a rest call statement.
 type RestCallStmt struct {
     OutputVariable string
-    Method         HttpMethod
-    URL            Expression
+    method         HttpMethod
+    url            expression
     URLParams      []TemplateParam
-    Headers        []RestHeader
-    Auth           *RestAuth
-    Body           *RestBody
-    Timeout        Expression
+    headers        []RestHeader
+    auth           *RestAuth
+    body           *RestBody
+    timeout        expression
     Result         RestResult
     ErrorHandling  *ErrorHandlingClause
 }
@@ -286,11 +286,11 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
         // ... other methods
     }
 
-    // URL
+    // url
     if urlC := restCtx.RestCallUrl(); urlC != nil {
         urlCtx := urlC.(*parser.RestCallUrlContext)
         if strLit := urlCtx.STRING_LITERAL(); strLit != nil {
-            stmt.URL = &ast.StringLiteral{Value: unquoteString(strLit.GetText())}
+            stmt.URL = &ast.StringLiteral{value: unquoteString(strLit.GetText())}
         }
     }
 
@@ -312,7 +312,7 @@ case ctx.RestCallStatement() != nil:
 Update or add types in `sdk/microflows/microflows_actions.go`:
 
 ```go
-// RestCallAction represents a REST call action.
+// RestCallAction represents a rest call action.
 type RestCallAction struct {
     model.BaseElement
     HttpConfiguration *HttpConfiguration `json:"httpConfiguration,omitempty"`
@@ -325,7 +325,7 @@ type RestCallAction struct {
 
 func (RestCallAction) isMicroflowAction() {}
 
-// HttpConfiguration represents HTTP configuration for a REST call.
+// HttpConfiguration represents HTTP configuration for a rest call.
 type HttpConfiguration struct {
     model.BaseElement
     HttpMethod        HttpMethod    `json:"httpMethod"`
@@ -333,8 +333,8 @@ type HttpConfiguration struct {
     LocationParams    []string      `json:"locationParams,omitempty"`
     CustomHeaders     []*HttpHeader `json:"customHeaders,omitempty"`
     UseAuthentication bool          `json:"useAuthentication,omitempty"`
-    Username          string        `json:"username,omitempty"`
-    Password          string        `json:"password,omitempty"`
+    username          string        `json:"username,omitempty"`
+    password          string        `json:"password,omitempty"`
 }
 ```
 
@@ -343,11 +343,11 @@ type HttpConfiguration struct {
 Add parsing logic in `sdk/mpr/parser_microflow.go`:
 
 ```go
-// Add case in parseActionActivity switch
-case "Microflows$RestCallAction":
+// add case in parseActionActivity switch
+case "microflows$RestCallAction":
     return parseRestCallAction(raw)
 
-// Add parser function
+// add parser function
 func parseRestCallAction(raw map[string]interface{}) *microflows.RestCallAction {
     action := &microflows.RestCallAction{}
     action.ID = model.ID(extractBsonID(raw["$ID"]))
@@ -376,17 +376,17 @@ Add serialization logic in `sdk/mpr/writer_microflow.go`:
 ```go
 func serializeRestCallAction(action *microflows.RestCallAction) bson.D {
     doc := bson.D{
-        {Key: "$ID", Value: idToBsonBinary(action.ID)},
-        {Key: "$Type", Value: "Microflows$RestCallAction"},
-        {Key: "ErrorHandlingType", Value: string(action.ErrorHandlingType)},
-        {Key: "TimeOutExpression", Value: action.TimeoutExpression},
-        {Key: "UseRequestTimeOut", Value: action.TimeoutExpression != ""},
+        {key: "$ID", value: idToBsonBinary(action.ID)},
+        {key: "$type", value: "microflows$RestCallAction"},
+        {key: "ErrorHandlingType", value: string(action.ErrorHandlingType)},
+        {key: "TimeOutExpression", value: action.TimeoutExpression},
+        {key: "UseRequestTimeOut", value: action.TimeoutExpression != ""},
     }
 
     // Serialize HttpConfiguration
     if action.HttpConfiguration != nil {
-        doc = append(doc, bson.E{Key: "HttpConfiguration",
-            Value: serializeHttpConfiguration(action.HttpConfiguration)})
+        doc = append(doc, bson.E{key: "HttpConfiguration",
+            value: serializeHttpConfiguration(action.HttpConfiguration)})
     }
 
     // ... serialize other fields
@@ -402,22 +402,22 @@ func serializeRestCallAction(action *microflows.RestCallAction) bson.D {
 In `mdl/executor/cmd_microflows_builder.go`:
 
 ```go
-// Add case in addStatement switch
+// add case in addStatement switch
 case *ast.RestCallStmt:
     return mb.addRestCallAction(stmt)
 
-// Add builder method
+// add builder method
 func (mb *MicroflowBuilder) addRestCallAction(stmt *ast.RestCallStmt) error {
     action := &microflows.RestCallAction{
         ErrorHandlingType: mb.mapErrorHandling(stmt.ErrorHandling),
     }
 
-    // Build HttpConfiguration
+    // build HttpConfiguration
     action.HttpConfiguration = &microflows.HttpConfiguration{
         HttpMethod: microflows.HttpMethod(stmt.Method),
     }
 
-    // Evaluate URL expression
+    // Evaluate url expression
     if stmt.URL != nil {
         urlVal, err := mb.evaluateExpression(stmt.URL)
         if err != nil {
@@ -438,11 +438,11 @@ func (mb *MicroflowBuilder) addRestCallAction(stmt *ast.RestCallStmt) error {
 In `mdl/executor/cmd_microflows_show.go`:
 
 ```go
-// Add case in formatActionStatement switch
+// add case in formatActionStatement switch
 case *microflows.RestCallAction:
     return e.formatRestCallAction(a)
 
-// Add formatter
+// add formatter
 func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
     var sb strings.Builder
 
@@ -453,7 +453,7 @@ func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
         sb.WriteString(" = ")
     }
 
-    sb.WriteString("REST CALL ")
+    sb.WriteString("rest call ")
 
     // HTTP method
     if a.HttpConfiguration != nil {
@@ -461,13 +461,13 @@ func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
     }
     sb.WriteString(" ")
 
-    // URL with parameters
+    // url with parameters
     if a.HttpConfiguration != nil {
         sb.WriteString("'")
         sb.WriteString(a.HttpConfiguration.LocationTemplate)
         sb.WriteString("'")
         if len(a.HttpConfiguration.LocationParams) > 0 {
-            sb.WriteString(" WITH (")
+            sb.WriteString(" with (")
             for i, param := range a.HttpConfiguration.LocationParams {
                 if i > 0 {
                     sb.WriteString(", ")
@@ -499,7 +499,7 @@ Expected: `Syntax OK (N statements)`
 
 ```bash
 ./bin/mxcli -p mx-test-projects/test2-go-app/test2-go.mpr \
-  -c "DESCRIBE MICROFLOW RestTemplate.GetWebpage"
+  -c "describe microflow RestTemplate.GetWebpage"
 ```
 
 Expected: Valid MDL output that could be re-parsed.
@@ -507,19 +507,19 @@ Expected: Valid MDL output that could be re-parsed.
 ### Step 3: Create and Verify
 
 ```bash
-# Create via MDL
+# create via MDL
 ./bin/mxcli -p test-project.mpr -c "
-CREATE MICROFLOW Test.RestExample()
-RETURNS String AS \$R
-BEGIN
-  \$R = REST CALL GET 'http://example.com' TIMEOUT 30 RETURNS String;
-  RETURN \$R;
-END;"
+create microflow Test.RestExample()
+returns string as \$R
+begin
+  \$R = rest call get 'http://example.com' timeout 30 returns string;
+  return \$R;
+end;"
 
-# Describe to verify
-./bin/mxcli -p test-project.mpr -c "DESCRIBE MICROFLOW Test.RestExample"
+# describe to verify
+./bin/mxcli -p test-project.mpr -c "describe microflow Test.RestExample"
 
-# Open in Studio Pro to verify it works
+# open in Studio Pro to verify it works
 ```
 
 ### Step 4: Run Existing Tests

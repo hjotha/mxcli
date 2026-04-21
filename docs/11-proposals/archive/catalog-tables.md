@@ -6,7 +6,7 @@ Add support for catalog tables that enable flexible SQL querying of Mendix proje
 
 ## Motivation
 
-Current MDL commands like `SHOW ENTITIES`, `SHOW MICROFLOWS`, etc. provide fixed-format output. Catalog tables enable:
+Current MDL commands like `show entities`, `show microflows`, etc. provide fixed-format output. Catalog tables enable:
 
 1. **Flexible querying** - Filter, join, aggregate data using standard SQL
 2. **Cross-referencing** - Find relationships between objects (e.g., which microflows use entity X)
@@ -19,22 +19,22 @@ Current MDL commands like `SHOW ENTITIES`, `SHOW MICROFLOWS`, etc. provide fixed
 ### Building the Catalog
 
 ```
-mdl> SHOW CATALOG TABLES;
+mdl> show catalog tables;
 Building catalog...
-✓ Modules: 12
-✓ Entities: 45
-✓ Microflows: 120
-✓ Nanoflows: 15
-✓ Pages: 65
-✓ Snippets: 8
-✓ Enumerations: 12
+✓ modules: 12
+✓ entities: 45
+✓ microflows: 120
+✓ nanoflows: 15
+✓ pages: 65
+✓ snippets: 8
+✓ enumerations: 12
 ✓ Activities: 450
-✓ Widgets: 890
-✓ XPath Expressions: 78
-✓ Catalog ready (1.8s)
+✓ widgets: 890
+✓ xpath Expressions: 78
+✓ catalog ready (1.8s)
 
-Found 13 catalog table(s)
-| Table                     |
+found 13 catalog table(s)
+| table                     |
 |---------------------------|
 | CATALOG.MODULES           |
 | CATALOG.ENTITIES          |
@@ -55,32 +55,32 @@ Found 13 catalog table(s)
 
 ```sql
 -- Find all entities in a specific module
-SELECT Name, QualifiedName, EntityType
-FROM CATALOG.ENTITIES
-WHERE ModuleName = 'MyModule';
+select Name, QualifiedName, EntityType
+from CATALOG.ENTITIES
+where ModuleName = 'MyModule';
 
 -- Find microflows that contain Java actions
-SELECT DISTINCT m.QualifiedName, m.Description
-FROM CATALOG.MICROFLOWS m
-JOIN CATALOG.ACTIVITIES a ON m.Id = a.MicroflowId
-WHERE a.ActivityType = 'JavaActionCallAction';
+select distinct m.QualifiedName, m.Description
+from CATALOG.MICROFLOWS m
+join CATALOG.ACTIVITIES a on m.Id = a.MicroflowId
+where a.ActivityType = 'JavaActionCallAction';
 
 -- Find pages using a specific entity
-SELECT p.QualifiedName, w.WidgetType
-FROM CATALOG.PAGES p
-JOIN CATALOG.WIDGETS w ON p.Id = w.ContainerId
-WHERE w.EntityRef LIKE '%Customer%';
+select p.QualifiedName, w.WidgetType
+from CATALOG.PAGES p
+join CATALOG.WIDGETS w on p.Id = w.ContainerId
+where w.EntityRef like '%Customer%';
 
 -- Count activities by type across project
-SELECT ActivityType, COUNT(*) as Count
-FROM CATALOG.ACTIVITIES
-GROUP BY ActivityType
-ORDER BY Count DESC;
+select ActivityType, count(*) as count
+from CATALOG.ACTIVITIES
+GROUP by ActivityType
+ORDER by count desc;
 
 -- Find complex XPath expressions
-SELECT DocumentQualifiedName, XPathExpression
-FROM CATALOG.XPATH_EXPRESSIONS
-WHERE LENGTH(XPathExpression) > 50;
+select DocumentQualifiedName, XPathExpression
+from CATALOG.XPATH_EXPRESSIONS
+where length(XPathExpression) > 50;
 ```
 
 ## Catalog Table Schema
@@ -302,18 +302,18 @@ Union view of all object types for generic querying:
 ```
 mdl/
 ├── catalog/
-│   ├── catalog.go           # Main Catalog struct and interface
+│   ├── catalog.go           # Main catalog struct and interface
 │   ├── builder.go           # Builds catalog from MPR data
-│   ├── tables.go            # Table definitions and schemas
-│   ├── query.go             # SQL query execution
+│   ├── tables.go            # table definitions and schemas
+│   ├── query.go             # sql query execution
 │   └── snapshot.go          # Snapshot management
 │
 ├── executor/
-│   ├── cmd_catalog.go       # SHOW CATALOG TABLES, SELECT handlers
+│   ├── cmd_catalog.go       # show catalog tables, select handlers
 │   └── ...
 │
 └── grammar/
-    └── MDLParser.g4         # Add SELECT statement grammar
+    └── MDLParser.g4         # add select statement grammar
 ```
 
 ### Catalog Interface
@@ -326,9 +326,9 @@ import (
     "time"
 )
 
-// Catalog provides SQL querying over Mendix project metadata.
-type Catalog struct {
-    db          *sql.DB        // In-memory SQLite
+// catalog provides sql querying over Mendix project metadata.
+type catalog struct {
+    db          *sql.DB        // in-memory SQLite
     projectID   string
     projectName string
     snapshots   map[string]*Snapshot
@@ -339,10 +339,10 @@ type Catalog struct {
 type Snapshot struct {
     ID         string
     Name       string
-    Date       time.Time
-    Source     SnapshotSource
+    date       time.Time
+    source     SnapshotSource
     SourceID   string
-    Branch     string
+    branch     string
     Revision   string
     ObjectCount int
 }
@@ -352,32 +352,32 @@ type SnapshotSource string
 const (
     SnapshotSourceLive    SnapshotSource = "LIVE"
     SnapshotSourceGit     SnapshotSource = "GIT"
-    SnapshotSourceImport  SnapshotSource = "IMPORT"
+    SnapshotSourceImport  SnapshotSource = "import"
 )
 
 // New creates a new catalog with an in-memory SQLite database.
-func New() (*Catalog, error)
+func New() (*catalog, error)
 
-// Build populates the catalog from MPR reader data.
-func (c *Catalog) Build(reader *mpr.Reader, progress func(table string, count int)) error
+// build populates the catalog from MPR reader data.
+func (c *catalog) build(reader *mpr.Reader, progress func(table string, count int)) error
 
-// Query executes a SQL query and returns results.
-func (c *Catalog) Query(sql string) (*QueryResult, error)
+// query executes a sql query and returns results.
+func (c *catalog) query(sql string) (*QueryResult, error)
 
-// Tables returns the list of available catalog tables.
-func (c *Catalog) Tables() []string
+// tables returns the list of available catalog tables.
+func (c *catalog) tables() []string
 
 // CreateSnapshot creates a named snapshot of current state.
-func (c *Catalog) CreateSnapshot(name string, source SnapshotSource) (*Snapshot, error)
+func (c *catalog) CreateSnapshot(name string, source SnapshotSource) (*Snapshot, error)
 
-// Close releases catalog resources.
-func (c *Catalog) Close() error
+// close releases catalog resources.
+func (c *catalog) close() error
 
 // QueryResult holds query results.
 type QueryResult struct {
-    Columns []string
+    columns []string
     Rows    [][]interface{}
-    Count   int
+    count   int
 }
 ```
 
@@ -388,13 +388,13 @@ package catalog
 
 // Builder populates catalog tables from MPR data.
 type Builder struct {
-    catalog *Catalog
+    catalog *catalog
     reader  *mpr.Reader
     snapshot *Snapshot
 }
 
-func (b *Builder) Build(progress func(table string, count int)) error {
-    // Build tables in dependency order
+func (b *Builder) build(progress func(table string, count int)) error {
+    // build tables in dependency order
     if err := b.buildModules(progress); err != nil {
         return err
     }
@@ -438,10 +438,10 @@ func (b *Builder) buildModules(progress func(string, int)) error {
     }
 
     stmt, err := b.catalog.db.Prepare(`
-        INSERT INTO modules (Id, Name, QualifiedName, Description,
+        insert into modules (Id, Name, QualifiedName, description,
             IsSystemModule, AppStoreVersion, AppStoreGuid,
             ProjectId, SnapshotId, SnapshotDate)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     if err != nil {
         return err
@@ -463,7 +463,7 @@ func (b *Builder) buildModules(progress func(string, int)) error {
         }
     }
 
-    progress("Modules", len(modules))
+    progress("modules", len(modules))
     return nil
 }
 
@@ -475,22 +475,22 @@ func (b *Builder) buildModules(progress func(string, int)) error {
 Add to MDLParser.g4:
 
 ```antlr
-// Catalog statements
+// catalog statements
 catalogStatement
-    : SHOW CATALOG TABLES
+    : show catalog tables
     | selectStatement
     ;
 
 selectStatement
-    : SELECT selectColumns FROM catalogTable
-      (WHERE whereClause)?
-      (GROUP BY groupByClause)?
-      (ORDER BY orderByClause)?
-      (LIMIT limitClause)?
+    : select selectColumns from catalogTable
+      (where whereClause)?
+      (GROUP by groupByClause)?
+      (ORDER by orderByClause)?
+      (limit limitClause)?
     ;
 
 catalogTable
-    : CATALOG DOT IDENTIFIER
+    : catalog DOT IDENTIFIER
     ;
 
 selectColumns
@@ -499,10 +499,10 @@ selectColumns
     ;
 
 selectColumn
-    : expression (AS? IDENTIFIER)?
+    : expression (as? IDENTIFIER)?
     ;
 
-// SQL expressions (subset)
+// sql expressions (subset)
 expression
     : IDENTIFIER
     | IDENTIFIER DOT IDENTIFIER
@@ -510,9 +510,9 @@ expression
     | NUMBER
     | expression (PLUS | MINUS | STAR | SLASH) expression
     | expression (EQ | NE | LT | GT | LE | GE) expression
-    | expression (AND | OR) expression
-    | expression LIKE expression
-    | expression IN LPAREN expressionList RPAREN
+    | expression (and | or) expression
+    | expression like expression
+    | expression in LPAREN expressionList RPAREN
     | functionCall
     | LPAREN expression RPAREN
     ;
@@ -529,7 +529,7 @@ functionCall
 package executor
 
 func (e *Executor) execShowCatalogTables() error {
-    // Build catalog if not already built
+    // build catalog if not already built
     if e.catalog == nil {
         cat, err := catalog.New()
         if err != nil {
@@ -550,27 +550,27 @@ func (e *Executor) execShowCatalogTables() error {
     fmt.Fprintf(e.output, "\nFound %d catalog table(s)\n", len(tables))
 
     // Output table list
-    e.outputTable([]string{"Table"}, tables)
+    e.outputTable([]string{"table"}, tables)
     return nil
 }
 
 func (e *Executor) execSelect(stmt *ast.SelectStmt) error {
     // Ensure catalog is built
     if e.catalog == nil {
-        return fmt.Errorf("catalog not built - run SHOW CATALOG TABLES first")
+        return fmt.Errorf("catalog not built - run show catalog tables first")
     }
 
-    // Convert AST to SQL string
+    // Convert AST to sql string
     sql := e.selectToSQL(stmt)
 
-    // Execute query
+    // execute query
     result, err := e.catalog.Query(sql)
     if err != nil {
         return fmt.Errorf("failed to execute catalog query: %w", err)
     }
 
     // Output results
-    fmt.Fprintf(e.output, "Found %d result(s)\n", result.Count)
+    fmt.Fprintf(e.output, "found %d result(s)\n", result.Count)
     if result.Count == 0 {
         fmt.Fprintln(e.output, "(no results)")
         return nil
@@ -586,7 +586,7 @@ func (e *Executor) execSelect(stmt *ast.SelectStmt) error {
 ### Phase 1: Core Infrastructure
 - Create `mdl/catalog/` package structure
 - Implement in-memory SQLite setup with table schemas
-- Add basic `SHOW CATALOG TABLES` command
+- Add basic `show catalog tables` command
 
 ### Phase 2: Table Builders
 - Implement builders for each table type
@@ -614,47 +614,47 @@ func (e *Executor) execSelect(stmt *ast.SelectStmt) error {
 
 ```sql
 -- Find all microflows that use Customer entity
-SELECT DISTINCT m.QualifiedName, a.ActivityType, a.Caption
-FROM CATALOG.MICROFLOWS m
-JOIN CATALOG.ACTIVITIES a ON m.Id = a.MicroflowId
-WHERE a.EntityRef LIKE '%Customer%'
-ORDER BY m.QualifiedName;
+select distinct m.QualifiedName, a.ActivityType, a.Caption
+from CATALOG.MICROFLOWS m
+join CATALOG.ACTIVITIES a on m.Id = a.MicroflowId
+where a.EntityRef like '%Customer%'
+ORDER by m.QualifiedName;
 
 -- Find all pages with Customer data
-SELECT p.QualifiedName, w.WidgetType, w.Name
-FROM CATALOG.PAGES p
-JOIN CATALOG.WIDGETS w ON p.Id = w.ContainerId
-WHERE w.EntityRef LIKE '%Customer%';
+select p.QualifiedName, w.WidgetType, w.Name
+from CATALOG.PAGES p
+join CATALOG.WIDGETS w on p.Id = w.ContainerId
+where w.EntityRef like '%Customer%';
 ```
 
 ### 2. Code Quality Analysis
 
 ```sql
 -- Find microflows with many activities (complexity)
-SELECT QualifiedName, ActivityCount
-FROM CATALOG.MICROFLOWS
-WHERE ActivityCount > 20
-ORDER BY ActivityCount DESC;
+select QualifiedName, ActivityCount
+from CATALOG.MICROFLOWS
+where ActivityCount > 20
+ORDER by ActivityCount desc;
 
 -- Find pages with many widgets
-SELECT QualifiedName, WidgetCount
-FROM CATALOG.PAGES
-WHERE WidgetCount > 50
-ORDER BY WidgetCount DESC;
+select QualifiedName, WidgetCount
+from CATALOG.PAGES
+where WidgetCount > 50
+ORDER by WidgetCount desc;
 ```
 
 ### 3. Documentation Coverage
 
 ```sql
 -- Find undocumented microflows
-SELECT QualifiedName
-FROM CATALOG.MICROFLOWS
-WHERE Description IS NULL OR Description = '';
+select QualifiedName
+from CATALOG.MICROFLOWS
+where description IS null or description = '';
 
 -- Find documented entities
-SELECT QualifiedName, Description
-FROM CATALOG.ENTITIES
-WHERE Description IS NOT NULL AND Description != '';
+select QualifiedName, description
+from CATALOG.ENTITIES
+where description IS not null and description != '';
 ```
 
 ### 4. Agentic Exploration
@@ -663,19 +663,19 @@ AI agents can use catalog queries to understand project structure:
 
 ```sql
 -- Get project overview
-SELECT ObjectType, COUNT(*) as Count
-FROM CATALOG.OBJECTS
-GROUP BY ObjectType;
+select ObjectType, count(*) as count
+from CATALOG.OBJECTS
+GROUP by ObjectType;
 
 -- Find entry points (pages without parameters)
-SELECT QualifiedName, Title, URL
-FROM CATALOG.PAGES
-WHERE ParameterCount = 0 AND URL IS NOT NULL;
+select QualifiedName, title, url
+from CATALOG.PAGES
+where ParameterCount = 0 and url IS not null;
 
 -- Find external integrations
-SELECT QualifiedName, ActivityType
-FROM CATALOG.ACTIVITIES
-WHERE ActivityType IN ('RestCallAction', 'WebServiceCallAction', 'JavaActionCallAction');
+select QualifiedName, ActivityType
+from CATALOG.ACTIVITIES
+where ActivityType in ('RestCallAction', 'WebServiceCallAction', 'JavaActionCallAction');
 ```
 
 ## Dependencies

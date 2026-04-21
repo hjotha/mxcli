@@ -19,7 +19,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 	}
 
 	if stmt.Name.Module == "" {
-		return mdlerrors.NewValidation("module name required: use CREATE DATABASE CONNECTION Module.ConnectionName")
+		return mdlerrors.NewValidation("module name required: use create database connection Module.ConnectionName")
 	}
 
 	module, err := findModule(ctx, stmt.Name.Module)
@@ -40,7 +40,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 					return mdlerrors.NewBackend("delete existing connection", err)
 				}
 			} else {
-				return mdlerrors.NewAlreadyExistsMsg("database connection", modName+"."+ex.Name, fmt.Sprintf("database connection already exists: %s.%s (use CREATE OR MODIFY to update)", modName, ex.Name))
+				return mdlerrors.NewAlreadyExistsMsg("database connection", modName+"."+ex.Name, fmt.Sprintf("database connection already exists: %s.%s (use create or modify to update)", modName, ex.Name))
 			}
 		}
 	}
@@ -199,51 +199,51 @@ func describeDatabaseConnection(ctx *ExecContext, name ast.QualifiedName) error 
 
 // outputDatabaseConnectionMDL outputs a database connection definition in MDL format.
 func outputDatabaseConnectionMDL(ctx *ExecContext, conn *model.DatabaseConnection, moduleName string) error {
-	fmt.Fprintf(ctx.Output, "CREATE DATABASE CONNECTION %s.%s\n", moduleName, conn.Name)
-	fmt.Fprintf(ctx.Output, "TYPE '%s'\n", conn.DatabaseType)
+	fmt.Fprintf(ctx.Output, "create database connection %s.%s\n", moduleName, conn.Name)
+	fmt.Fprintf(ctx.Output, "type '%s'\n", conn.DatabaseType)
 
 	// Connection string
-	fmt.Fprintf(ctx.Output, "CONNECTION STRING @%s\n", conn.ConnectionString)
+	fmt.Fprintf(ctx.Output, "connection string @%s\n", conn.ConnectionString)
 
 	// Username
-	fmt.Fprintf(ctx.Output, "USERNAME @%s\n", conn.UserName)
+	fmt.Fprintf(ctx.Output, "username @%s\n", conn.UserName)
 
 	// Password
-	fmt.Fprintf(ctx.Output, "PASSWORD @%s\n", conn.Password)
+	fmt.Fprintf(ctx.Output, "password @%s\n", conn.Password)
 
 	// Queries
 	if len(conn.Queries) > 0 {
-		fmt.Fprintln(ctx.Output, "BEGIN")
+		fmt.Fprintln(ctx.Output, "begin")
 		for _, q := range conn.Queries {
-			fmt.Fprintf(ctx.Output, "  QUERY %s\n", q.Name)
+			fmt.Fprintf(ctx.Output, "  query %s\n", q.Name)
 
 			// SQL string
 			if q.SQL != "" {
 				escaped := strings.ReplaceAll(q.SQL, "'", "''")
-				fmt.Fprintf(ctx.Output, "    SQL '%s'\n", escaped)
+				fmt.Fprintf(ctx.Output, "    sql '%s'\n", escaped)
 			}
 
 			// PARAMETER clauses
 			for _, p := range q.Parameters {
 				typeName := dbTypeToMDLType(p.DataType)
 				if p.EmptyValueBecomesNull {
-					fmt.Fprintf(ctx.Output, "    PARAMETER %s: %s NULL\n", p.ParameterName, typeName)
+					fmt.Fprintf(ctx.Output, "    parameter %s: %s null\n", p.ParameterName, typeName)
 				} else if p.DefaultValue != "" {
 					escaped := strings.ReplaceAll(p.DefaultValue, "'", "''")
-					fmt.Fprintf(ctx.Output, "    PARAMETER %s: %s DEFAULT '%s'\n", p.ParameterName, typeName, escaped)
+					fmt.Fprintf(ctx.Output, "    parameter %s: %s default '%s'\n", p.ParameterName, typeName, escaped)
 				} else {
-					fmt.Fprintf(ctx.Output, "    PARAMETER %s: %s\n", p.ParameterName, typeName)
+					fmt.Fprintf(ctx.Output, "    parameter %s: %s\n", p.ParameterName, typeName)
 				}
 			}
 
 			// RETURNS and MAP from table mapping
 			if len(q.TableMappings) > 0 {
 				tm := q.TableMappings[0]
-				fmt.Fprintf(ctx.Output, "    RETURNS %s\n", tm.Entity)
+				fmt.Fprintf(ctx.Output, "    returns %s\n", tm.Entity)
 
 				// MAP clause
 				if len(tm.Columns) > 0 {
-					fmt.Fprintln(ctx.Output, "    MAP (")
+					fmt.Fprintln(ctx.Output, "    map (")
 					for i, c := range tm.Columns {
 						// Extract attribute name from qualified ref (Module.Entity.Attr → Attr)
 						attrName := c.Attribute
@@ -254,14 +254,14 @@ func outputDatabaseConnectionMDL(ctx *ExecContext, conn *model.DatabaseConnectio
 						if i == len(tm.Columns)-1 {
 							sep = ""
 						}
-						fmt.Fprintf(ctx.Output, "      %s AS %s%s\n", c.ColumnName, attrName, sep)
+						fmt.Fprintf(ctx.Output, "      %s as %s%s\n", c.ColumnName, attrName, sep)
 					}
 					fmt.Fprintln(ctx.Output, "    )")
 				}
 			}
 			fmt.Fprintln(ctx.Output, "  ;")
 		}
-		fmt.Fprintln(ctx.Output, "END")
+		fmt.Fprintln(ctx.Output, "end")
 	}
 
 	fmt.Fprintln(ctx.Output, ";")

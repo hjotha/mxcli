@@ -121,7 +121,7 @@ func TestJsonStructureFieldPreservation(t *testing.T) {
 	js := &mpr.JsonStructure{
 		ContainerID:   model.ID("m1"),
 		Name:          "MyJson",
-		Documentation: "Test JSON structure",
+		Documentation: "Test json structure",
 		JsonSnippet:   `{"a":1}`,
 		Elements: []*mpr.JsonElement{
 			{

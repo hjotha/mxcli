@@ -407,17 +407,17 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 		if assocType == domainmodel.AssociationTypeReferenceSet {
 			typeName = "ReferenceSet"
 		}
-		fmt.Fprintf(ctx.Output, "TYPE %s\n", typeName)
+		fmt.Fprintf(ctx.Output, "type %s\n", typeName)
 
 		owner := "Default"
 		if assocOwner == domainmodel.AssociationOwnerBoth {
 			owner = "Both"
 		}
-		fmt.Fprintf(ctx.Output, "OWNER %s\n", owner)
+		fmt.Fprintf(ctx.Output, "owner %s\n", owner)
 
 		// Only output STORAGE when it's not the default (Table)
 		if storageFormat == domainmodel.StorageFormatColumn {
-			fmt.Fprintf(ctx.Output, "STORAGE COLUMN\n")
+			fmt.Fprintf(ctx.Output, "storage column\n")
 		}
 
 		deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
@@ -431,7 +431,7 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 				deleteBehavior = "DELETE_BUT_KEEP_REFERENCES"
 			}
 		}
-		fmt.Fprintf(ctx.Output, "DELETE_BEHAVIOR %s;\n", deleteBehavior)
+		fmt.Fprintf(ctx.Output, "delete_behavior %s;\n", deleteBehavior)
 	}
 
 	for _, assoc := range dm.Associations {
@@ -443,8 +443,8 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", assoc.Documentation)
 			}
 
-			fmt.Fprintf(ctx.Output, "CREATE ASSOCIATION %s.%s\n", module.Name, assoc.Name)
-			fmt.Fprintf(ctx.Output, "FROM %s TO %s\n", fromEntity, toEntity)
+			fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, assoc.Name)
+			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, toEntity)
 			formatAssocDetails(assoc.Type, assoc.Owner, assoc.StorageFormat, assoc.ChildDeleteBehavior)
 			fmt.Fprintln(ctx.Output, "/")
 			return nil
@@ -461,8 +461,8 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", ca.Documentation)
 			}
 
-			fmt.Fprintf(ctx.Output, "CREATE ASSOCIATION %s.%s\n", module.Name, ca.Name)
-			fmt.Fprintf(ctx.Output, "FROM %s TO %s\n", fromEntity, ca.ChildRef)
+			fmt.Fprintf(ctx.Output, "create association %s.%s\n", module.Name, ca.Name)
+			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromEntity, ca.ChildRef)
 			formatAssocDetails(ca.Type, ca.Owner, ca.StorageFormat, ca.ChildDeleteBehavior)
 			fmt.Fprintln(ctx.Output, "/")
 			return nil

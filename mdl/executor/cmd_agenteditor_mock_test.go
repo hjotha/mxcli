@@ -105,7 +105,7 @@ func TestCreateConsumedMCPService_Mock(t *testing.T) {
 		Version:         "1.0",
 	})
 	assertNoError(t, err)
-	assertContainsStr(t, buf.String(), "Created consumed MCP service: M.WebSearch")
+	assertContainsStr(t, buf.String(), "Created consumed mcp service: M.WebSearch")
 	if !called {
 		t.Fatal("CreateAgentEditorConsumedMCPServiceFunc was not called")
 	}
@@ -137,7 +137,7 @@ func TestDropConsumedMCPService_Mock(t *testing.T) {
 		Name: ast.QualifiedName{Module: "M", Name: "WebSearch"},
 	})
 	assertNoError(t, err)
-	assertContainsStr(t, buf.String(), "Dropped consumed MCP service: M.WebSearch")
+	assertContainsStr(t, buf.String(), "Dropped consumed mcp service: M.WebSearch")
 	if !called {
 		t.Fatal("DeleteAgentEditorConsumedMCPServiceFunc was not called")
 	}
@@ -343,7 +343,7 @@ func TestDescribeAgentEditorModel_Mock(t *testing.T) {
 	assertNoError(t, describeAgentEditorModel(ctx, ast.QualifiedName{Module: "M", Name: "GPT4"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE MODEL")
+	assertContainsStr(t, out, "create model")
 	assertContainsStr(t, out, "Provider")
 	assertContainsStr(t, out, "Key")
 }
@@ -404,7 +404,7 @@ func TestDescribeAgentEditorAgent_Mock(t *testing.T) {
 	assertNoError(t, describeAgentEditorAgent(ctx, ast.QualifiedName{Module: "M", Name: "MyAgent"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE AGENT")
+	assertContainsStr(t, out, "create agent")
 	assertContainsStr(t, out, "UsageType")
 	assertContainsStr(t, out, "Model")
 }
@@ -464,7 +464,7 @@ func TestDescribeAgentEditorKnowledgeBase_Mock(t *testing.T) {
 	assertNoError(t, describeAgentEditorKnowledgeBase(ctx, ast.QualifiedName{Module: "M", Name: "MyKB"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE KNOWLEDGE BASE")
+	assertContainsStr(t, out, "create knowledge base")
 	assertContainsStr(t, out, "Provider")
 }
 
@@ -523,6 +523,6 @@ func TestDescribeAgentEditorConsumedMCPService_Mock(t *testing.T) {
 	assertNoError(t, describeAgentEditorConsumedMCPService(ctx, ast.QualifiedName{Module: "M", Name: "MySvc"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE CONSUMED MCP SERVICE")
+	assertContainsStr(t, out, "create consumed mcp service")
 	assertContainsStr(t, out, "ProtocolVersion")
 }

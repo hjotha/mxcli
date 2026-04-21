@@ -24,207 +24,207 @@ func stmtSummary(stmt ast.Statement) string {
 	switch s := stmt.(type) {
 	// Connection
 	case *ast.ConnectStmt:
-		return fmt.Sprintf("CONNECT LOCAL '%s'", s.Path)
+		return fmt.Sprintf("connect local '%s'", s.Path)
 	case *ast.DisconnectStmt:
-		return "DISCONNECT"
+		return "disconnect"
 	case *ast.StatusStmt:
-		return "STATUS"
+		return "status"
 
 	// Module
 	case *ast.CreateModuleStmt:
-		return fmt.Sprintf("CREATE MODULE %s", s.Name)
+		return fmt.Sprintf("create module %s", s.Name)
 	case *ast.DropModuleStmt:
-		return fmt.Sprintf("DROP MODULE %s", s.Name)
+		return fmt.Sprintf("drop module %s", s.Name)
 
 	// Entity
 	case *ast.CreateEntityStmt:
-		return fmt.Sprintf("CREATE ENTITY %s", s.Name)
+		return fmt.Sprintf("create entity %s", s.Name)
 	case *ast.CreateViewEntityStmt:
-		return fmt.Sprintf("CREATE VIEW ENTITY %s", s.Name)
+		return fmt.Sprintf("create view entity %s", s.Name)
 	case *ast.DropEntityStmt:
-		return fmt.Sprintf("DROP ENTITY %s", s.Name)
+		return fmt.Sprintf("drop entity %s", s.Name)
 
 	// Association
 	case *ast.CreateAssociationStmt:
-		return fmt.Sprintf("CREATE ASSOCIATION %s", s.Name)
+		return fmt.Sprintf("create association %s", s.Name)
 	case *ast.DropAssociationStmt:
-		return fmt.Sprintf("DROP ASSOCIATION %s", s.Name)
+		return fmt.Sprintf("drop association %s", s.Name)
 
 	// Enumeration
 	case *ast.CreateEnumerationStmt:
-		return fmt.Sprintf("CREATE ENUMERATION %s", s.Name)
+		return fmt.Sprintf("create enumeration %s", s.Name)
 	case *ast.AlterEnumerationStmt:
-		return fmt.Sprintf("ALTER ENUMERATION %s", s.Name)
+		return fmt.Sprintf("alter enumeration %s", s.Name)
 	case *ast.DropEnumerationStmt:
-		return fmt.Sprintf("DROP ENUMERATION %s", s.Name)
+		return fmt.Sprintf("drop enumeration %s", s.Name)
 
 	// Microflow
 	case *ast.CreateMicroflowStmt:
-		return fmt.Sprintf("CREATE MICROFLOW %s", s.Name)
+		return fmt.Sprintf("create microflow %s", s.Name)
 	case *ast.DropMicroflowStmt:
-		return fmt.Sprintf("DROP MICROFLOW %s", s.Name)
+		return fmt.Sprintf("drop microflow %s", s.Name)
 
 	// Page
 	case *ast.CreatePageStmtV3:
-		return fmt.Sprintf("CREATE PAGE %s", s.Name)
+		return fmt.Sprintf("create page %s", s.Name)
 	case *ast.DropPageStmt:
-		return fmt.Sprintf("DROP PAGE %s", s.Name)
+		return fmt.Sprintf("drop page %s", s.Name)
 	case *ast.CreateSnippetStmtV3:
-		return fmt.Sprintf("CREATE SNIPPET %s", s.Name)
+		return fmt.Sprintf("create snippet %s", s.Name)
 	case *ast.DropSnippetStmt:
-		return fmt.Sprintf("DROP SNIPPET %s", s.Name)
+		return fmt.Sprintf("drop snippet %s", s.Name)
 
 	// Java actions
 	case *ast.CreateJavaActionStmt:
-		return fmt.Sprintf("CREATE JAVA ACTION %s", s.Name)
+		return fmt.Sprintf("create java action %s", s.Name)
 	case *ast.DropJavaActionStmt:
-		return fmt.Sprintf("DROP JAVA ACTION %s", s.Name)
+		return fmt.Sprintf("drop java action %s", s.Name)
 
 	// Move
 	case *ast.MoveStmt:
-		return fmt.Sprintf("MOVE %s %s", s.DocumentType, s.Name)
+		return fmt.Sprintf("move %s %s", s.DocumentType, s.Name)
 
 	// Security
 	case *ast.CreateModuleRoleStmt:
-		return fmt.Sprintf("CREATE MODULE ROLE %s", s.Name)
+		return fmt.Sprintf("create module role %s", s.Name)
 	case *ast.DropModuleRoleStmt:
-		return fmt.Sprintf("DROP MODULE ROLE %s", s.Name)
+		return fmt.Sprintf("drop module role %s", s.Name)
 	case *ast.CreateUserRoleStmt:
-		return fmt.Sprintf("CREATE USER ROLE %s", s.Name)
+		return fmt.Sprintf("create user role %s", s.Name)
 	case *ast.DropUserRoleStmt:
-		return fmt.Sprintf("DROP USER ROLE %s", s.Name)
+		return fmt.Sprintf("drop user role %s", s.Name)
 	case *ast.GrantMicroflowAccessStmt:
-		return fmt.Sprintf("GRANT EXECUTE ON MICROFLOW %s", s.Microflow)
+		return fmt.Sprintf("grant execute on microflow %s", s.Microflow)
 	case *ast.RevokeMicroflowAccessStmt:
-		return fmt.Sprintf("REVOKE EXECUTE ON MICROFLOW %s", s.Microflow)
+		return fmt.Sprintf("revoke execute on microflow %s", s.Microflow)
 	case *ast.GrantPageAccessStmt:
-		return fmt.Sprintf("GRANT VIEW ON PAGE %s", s.Page)
+		return fmt.Sprintf("grant view on page %s", s.Page)
 	case *ast.RevokePageAccessStmt:
-		return fmt.Sprintf("REVOKE VIEW ON PAGE %s", s.Page)
+		return fmt.Sprintf("revoke view on page %s", s.Page)
 	case *ast.GrantWorkflowAccessStmt:
-		return fmt.Sprintf("GRANT EXECUTE ON WORKFLOW %s", s.Workflow)
+		return fmt.Sprintf("grant execute on workflow %s", s.Workflow)
 	case *ast.RevokeWorkflowAccessStmt:
-		return fmt.Sprintf("REVOKE EXECUTE ON WORKFLOW %s", s.Workflow)
+		return fmt.Sprintf("revoke execute on workflow %s", s.Workflow)
 	case *ast.GrantEntityAccessStmt:
-		return fmt.Sprintf("GRANT ON ENTITY %s", s.Entity)
+		return fmt.Sprintf("grant on entity %s", s.Entity)
 	case *ast.RevokeEntityAccessStmt:
-		return fmt.Sprintf("REVOKE ON ENTITY %s", s.Entity)
+		return fmt.Sprintf("revoke on entity %s", s.Entity)
 	case *ast.AlterProjectSecurityStmt:
-		return "ALTER PROJECT SECURITY"
+		return "alter project security"
 	case *ast.CreateDemoUserStmt:
-		return fmt.Sprintf("CREATE DEMO USER %s", s.UserName)
+		return fmt.Sprintf("create demo user %s", s.UserName)
 	case *ast.DropDemoUserStmt:
-		return fmt.Sprintf("DROP DEMO USER %s", s.UserName)
+		return fmt.Sprintf("drop demo user %s", s.UserName)
 	case *ast.CreateExternalEntityStmt:
-		return fmt.Sprintf("CREATE EXTERNAL ENTITY %s", s.Name)
+		return fmt.Sprintf("create external entity %s", s.Name)
 	case *ast.GrantODataServiceAccessStmt:
-		return fmt.Sprintf("GRANT ACCESS ON ODATA SERVICE %s", s.Service)
+		return fmt.Sprintf("grant access on odata service %s", s.Service)
 	case *ast.RevokeODataServiceAccessStmt:
-		return fmt.Sprintf("REVOKE ACCESS ON ODATA SERVICE %s", s.Service)
+		return fmt.Sprintf("revoke access on odata service %s", s.Service)
 	case *ast.GrantPublishedRestServiceAccessStmt:
-		return fmt.Sprintf("GRANT ACCESS ON PUBLISHED REST SERVICE %s", s.Service)
+		return fmt.Sprintf("grant access on published rest service %s", s.Service)
 	case *ast.RevokePublishedRestServiceAccessStmt:
-		return fmt.Sprintf("REVOKE ACCESS ON PUBLISHED REST SERVICE %s", s.Service)
+		return fmt.Sprintf("revoke access on published rest service %s", s.Service)
 
 	// Image Collection
 	case *ast.CreateImageCollectionStmt:
-		return fmt.Sprintf("CREATE IMAGE COLLECTION %s", s.Name)
+		return fmt.Sprintf("create image collection %s", s.Name)
 	case *ast.DropImageCollectionStmt:
-		return fmt.Sprintf("DROP IMAGE COLLECTION %s", s.Name)
+		return fmt.Sprintf("drop image collection %s", s.Name)
 
 	// Database Connection
 	case *ast.CreateDatabaseConnectionStmt:
-		return fmt.Sprintf("CREATE DATABASE CONNECTION %s", s.Name)
+		return fmt.Sprintf("create database connection %s", s.Name)
 
 	// Business Events
 	case *ast.CreateBusinessEventServiceStmt:
-		return fmt.Sprintf("CREATE BUSINESS EVENT SERVICE %s", s.Name)
+		return fmt.Sprintf("create business event service %s", s.Name)
 	case *ast.DropBusinessEventServiceStmt:
-		return fmt.Sprintf("DROP BUSINESS EVENT SERVICE %s", s.Name)
+		return fmt.Sprintf("drop business event service %s", s.Name)
 
 	// Settings
 	case *ast.AlterSettingsStmt:
-		return fmt.Sprintf("ALTER SETTINGS %s", s.Section)
+		return fmt.Sprintf("alter settings %s", s.Section)
 
 	// Navigation
 	case *ast.AlterNavigationStmt:
-		return fmt.Sprintf("CREATE NAVIGATION %s", s.ProfileName)
+		return fmt.Sprintf("create navigation %s", s.ProfileName)
 
 	// Query
 	case *ast.ShowStmt:
-		summary := fmt.Sprintf("SHOW %s", s.ObjectType)
+		summary := fmt.Sprintf("show %s", s.ObjectType)
 		if s.Name != nil {
 			summary += " " + s.Name.String()
 		}
 		if s.InModule != "" {
-			summary += " IN " + s.InModule
+			summary += " in " + s.InModule
 		}
 		return summary
 	case *ast.DescribeStmt:
-		return fmt.Sprintf("DESCRIBE %v %s", s.ObjectType, s.Name)
+		return fmt.Sprintf("describe %v %s", s.ObjectType, s.Name)
 	case *ast.SelectStmt:
-		return "SELECT ..."
+		return "select ..."
 	case *ast.SearchStmt:
-		return fmt.Sprintf("SEARCH '%s'", s.Query)
+		return fmt.Sprintf("search '%s'", s.Query)
 	case *ast.ShowWidgetsStmt:
-		return "SHOW WIDGETS"
+		return "show widgets"
 	case *ast.UpdateWidgetsStmt:
-		return "UPDATE WIDGETS"
+		return "update widgets"
 	case *ast.ShowDesignPropertiesStmt:
 		if s.WidgetType != "" {
-			return fmt.Sprintf("SHOW DESIGN PROPERTIES FOR %s", s.WidgetType)
+			return fmt.Sprintf("show design properties for %s", s.WidgetType)
 		}
-		return "SHOW DESIGN PROPERTIES"
+		return "show design properties"
 	case *ast.DescribeStylingStmt:
-		summary := fmt.Sprintf("DESCRIBE STYLING ON %s %s", s.ContainerType, s.ContainerName)
+		summary := fmt.Sprintf("describe styling on %s %s", s.ContainerType, s.ContainerName)
 		if s.WidgetName != "" {
-			summary += " WIDGET " + s.WidgetName
+			summary += " widget " + s.WidgetName
 		}
 		return summary
 	case *ast.AlterStylingStmt:
-		return fmt.Sprintf("ALTER STYLING ON %s %s WIDGET %s", s.ContainerType, s.ContainerName, s.WidgetName)
+		return fmt.Sprintf("alter styling on %s %s widget %s", s.ContainerType, s.ContainerName, s.WidgetName)
 
 	// ALTER PAGE / ALTER SNIPPET
 	case *ast.AlterPageStmt:
 		ct := s.ContainerType
 		if ct == "" {
-			ct = "PAGE"
+			ct = "page"
 		}
-		return fmt.Sprintf("ALTER %s %s", ct, s.PageName)
+		return fmt.Sprintf("alter %s %s", ct, s.PageName)
 
 	// Fragments
 	case *ast.DefineFragmentStmt:
-		return fmt.Sprintf("DEFINE FRAGMENT %s", s.Name)
+		return fmt.Sprintf("define fragment %s", s.Name)
 	case *ast.DescribeFragmentFromStmt:
-		return fmt.Sprintf("DESCRIBE FRAGMENT FROM %s %s WIDGET %s", s.ContainerType, s.ContainerName, s.WidgetName)
+		return fmt.Sprintf("describe fragment from %s %s widget %s", s.ContainerType, s.ContainerName, s.WidgetName)
 
 	// SQL
 	case *ast.SQLConnectStmt:
-		return fmt.Sprintf("SQL CONNECT %s AS %s", s.Driver, s.Alias)
+		return fmt.Sprintf("sql connect %s as %s", s.Driver, s.Alias)
 	case *ast.SQLDisconnectStmt:
-		return fmt.Sprintf("SQL DISCONNECT %s", s.Alias)
+		return fmt.Sprintf("sql disconnect %s", s.Alias)
 	case *ast.SQLConnectionsStmt:
-		return "SQL CONNECTIONS"
+		return "sql connections"
 	case *ast.SQLQueryStmt:
 		q := s.Query
 		if len(q) > 40 {
 			q = q[:40] + "..."
 		}
-		return fmt.Sprintf("SQL %s %s", s.Alias, q)
+		return fmt.Sprintf("sql %s %s", s.Alias, q)
 	case *ast.SQLShowTablesStmt:
-		return fmt.Sprintf("SQL %s SHOW TABLES", s.Alias)
+		return fmt.Sprintf("sql %s show tables", s.Alias)
 	case *ast.SQLShowViewsStmt:
-		return fmt.Sprintf("SQL %s SHOW VIEWS", s.Alias)
+		return fmt.Sprintf("sql %s show views", s.Alias)
 	case *ast.SQLShowFunctionsStmt:
-		return fmt.Sprintf("SQL %s SHOW FUNCTIONS", s.Alias)
+		return fmt.Sprintf("sql %s show FUNCTIONS", s.Alias)
 	case *ast.SQLDescribeTableStmt:
-		return fmt.Sprintf("SQL %s DESCRIBE %s", s.Alias, s.Table)
+		return fmt.Sprintf("sql %s describe %s", s.Alias, s.Table)
 	case *ast.SQLGenerateConnectorStmt:
-		return fmt.Sprintf("SQL %s GENERATE CONNECTOR INTO %s", s.Alias, s.Module)
+		return fmt.Sprintf("sql %s generate connector into %s", s.Alias, s.Module)
 
 	// Import
 	case *ast.ImportStmt:
-		summary := fmt.Sprintf("IMPORT FROM %s INTO %s (%d mappings", s.SourceAlias, s.TargetEntity, len(s.Mappings))
+		summary := fmt.Sprintf("import from %s into %s (%d mappings", s.SourceAlias, s.TargetEntity, len(s.Mappings))
 		if len(s.Links) > 0 {
 			summary += fmt.Sprintf(", %d links", len(s.Links))
 		}
@@ -232,18 +232,18 @@ func stmtSummary(stmt ast.Statement) string {
 
 	// Repository
 	case *ast.RefreshCatalogStmt:
-		return "REFRESH CATALOG"
+		return "refresh catalog"
 	case *ast.RefreshStmt:
-		return "REFRESH"
+		return "refresh"
 	// Session
 	case *ast.ExitStmt:
 		return "EXIT"
 	case *ast.HelpStmt:
 		return "HELP"
 	case *ast.ExecuteScriptStmt:
-		return fmt.Sprintf("EXECUTE '%s'", s.Path)
+		return fmt.Sprintf("execute '%s'", s.Path)
 	case *ast.LintStmt:
-		return "LINT"
+		return "lint"
 
 	default:
 		return stmtTypeName(stmt)

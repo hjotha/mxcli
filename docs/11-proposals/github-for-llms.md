@@ -84,9 +84,9 @@ These tasks directly improve what an LLM learns from this repository.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   User Interface                     │
+│                   user Interface                     │
 │  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │  mxcli   │  │  Go API  │  │  VS Code Extension │  │
+│  │  mxcli   │  │  Go api  │  │  VS Code Extension │  │
 │  │  CLI     │  │  (api/)  │  │  (vscode-mdl/)     │  │
 │  └────┬─────┘  └────┬─────┘  └────────┬──────────┘  │
 │       │              │                 │              │
@@ -99,16 +99,16 @@ These tasks directly improve what an LLM learns from this repository.
 │  ┌──────────────────────────────────────────────┐    │
 │  │              MDL Layer (mdl/)                  │    │
 │  │  ANTLR4 Parser → AST → Executor              │    │
-│  │  Catalog (SQLite FTS5) · Linter (Starlark)   │    │
+│  │  catalog (SQLite FTS5) · Linter (Starlark)   │    │
 │  └──────────────────────┬───────────────────────┘    │
 │                         │                            │
 │  ┌──────────────────────▼───────────────────────┐    │
 │  │           SDK Layer (sdk/ + modelsdk.go)       │    │
-│  │  Domain Model · Microflows · Pages · Widgets  │    │
+│  │  Domain model · microflows · pages · widgets  │    │
 │  └──────────────────────┬───────────────────────┘    │
 │                         │                            │
 │  ┌──────────────────────▼───────────────────────┐    │
-│  │            Storage Layer (sdk/mpr/)            │    │
+│  │            storage Layer (sdk/mpr/)            │    │
 │  │  MPR Reader/Writer · BSON Parser              │    │
 │  └──────────┬───────────────────┬───────────────┘    │
 │             │                   │                    │
@@ -156,7 +156,7 @@ Wrong:
 -- code that looks plausible but is incorrect
 ```
 
-Right:
+right:
 ```sql
 -- correct version
 ```
@@ -167,10 +167,10 @@ Why: [Brief explanation of what breaks and how]
 **Categories and entries** (pull from existing scattered sources):
 
 1. **Domain Model Mistakes**
-   - Missing `PERSISTENT`/`NON-PERSISTENT` keyword
-   - `EXTENDS` after parenthesis instead of before
+   - Missing `persistent`/`non-persistent` keyword
+   - `extends` after parenthesis instead of before
    - Using Float for currency (must use Decimal)
-   - Missing string length `String` vs `String(200)`
+   - Missing string length `string` vs `string(200)`
 
 2. **Microflow Mistakes**
    - Empty list variable as loop source (CLAUDE.md idiom #1)
@@ -191,7 +191,7 @@ Why: [Brief explanation of what breaks and how]
 5. **General MDL Mistakes**
    - Unqualified names (missing `Module.` prefix)
    - Backslash escaping in strings (must use doubled single quotes)
-   - Using `DELETE` instead of `DROP` for DDL operations
+   - Using `delete` instead of `drop` for DDL operations
 
 **Length**: ~1,000-1,200 words.
 
@@ -208,39 +208,39 @@ Why: [Brief explanation of what breaks and how]
 **Content**: Organized by audience/task, pointing to actual existing files with correct paths:
 
 ```markdown
-# mxcli Documentation
+# mxcli documentation
 
 ## Quick Start
 - [README](../README.md) — What mxcli is, installation, screenshots
 - [Contributing](../CONTRIBUTING.md) — Development setup and workflow
 
-## Architecture & Design
+## Architecture & design
 - [Architecture](01-project/ARCHITECTURE.md) — System layers, data flow, design decisions
 - [Parser Architecture](03-development/MDL_PARSER_ARCHITECTURE.md) — ANTLR4 grammar design
-- [Page BSON Serialization](03-development/PAGE_BSON_SERIALIZATION.md) — Widget format internals
+- [page BSON Serialization](03-development/PAGE_BSON_SERIALIZATION.md) — widget format internals
 
 ## MDL Language
-- [Language Reference](05-mdl-specification/01-language-reference.md) — Complete syntax and semantics
-- [Data Types](05-mdl-specification/02-data-types.md) — Type system and mappings
-- [Domain Model](05-mdl-specification/03-domain-model.md) — Entity and association patterns
-- [Examples](05-mdl-specification/04-examples.md) — End-to-end MDL examples
+- [Language reference](05-mdl-specification/01-language-reference.md) — Complete syntax and semantics
+- [data Types](05-mdl-specification/02-data-types.md) — type system and mappings
+- [Domain model](05-mdl-specification/03-domain-model.md) — entity and association patterns
+- [Examples](05-mdl-specification/04-examples.md) — end-to-end MDL examples
 - [Common Mistakes](05-mdl-specification/05-common-mistakes.md) — Anti-patterns to avoid
-- [Quick Reference](01-project/MDL_QUICK_REFERENCE.md) — Syntax cheat sheet
+- [Quick reference](01-project/MDL_QUICK_REFERENCE.md) — Syntax cheat sheet
 
 ## Go Library
-- [API Reference](GO_LIBRARY.md) — modelsdk-go quick start and examples
+- [api reference](GO_LIBRARY.md) — modelsdk-go quick start and examples
 - [SDK Equivalence](11-proposals/SDK_EQUIVALENCE.md) — Comparison with TypeScript Mendix SDK
 
-## User Guides
-- [mxcli Overview](10-user-docs/mxcli-overview.md) — Comprehensive feature tour
-- [Migration Guide](10-user-docs/migration-guide.md) — Version upgrade instructions
+## user Guides
+- [mxcli overview](10-user-docs/mxcli-overview.md) — Comprehensive feature tour
+- [Migration Guide](10-user-docs/migration-guide.md) — version upgrade instructions
 
-## For AI Agent Integration
-- [CLAUDE.md](../CLAUDE.md) — Agent setup, key concepts, microflow idioms
+## for AI agent Integration
+- [CLAUDE.md](../CLAUDE.md) — agent setup, key concepts, microflow idioms
 - [Skills](../reference/mendix-repl/templates/.claude/skills/) — MDL generation skill files
 
-## Reference
-- [Grammar Reference](06-mdl-reference/grammar-reference.md) — Full ANTLR grammar
+## reference
+- [Grammar reference](06-mdl-reference/grammar-reference.md) — full ANTLR grammar
 - [Dependencies](DEPENDENCIES.md) — Go module dependencies
 ```
 
@@ -255,17 +255,17 @@ Why: [Brief explanation of what breaks and how]
 **Change**: Add after the Quick Start section:
 
 ```markdown
-## Documentation
+## documentation
 
 | Topic | Document |
 |-------|----------|
 | Architecture | [docs/01-project/ARCHITECTURE.md](docs/01-project/ARCHITECTURE.md) |
-| MDL Language Reference | [docs/05-mdl-specification/01-language-reference.md](docs/05-mdl-specification/01-language-reference.md) |
-| MDL Quick Reference | [docs/01-project/MDL_QUICK_REFERENCE.md](docs/01-project/MDL_QUICK_REFERENCE.md) |
-| End-to-End Examples | [docs/05-mdl-specification/04-examples.md](docs/05-mdl-specification/04-examples.md) |
+| MDL Language reference | [docs/05-mdl-specification/01-language-reference.md](docs/05-mdl-specification/01-language-reference.md) |
+| MDL Quick reference | [docs/01-project/MDL_QUICK_REFERENCE.md](docs/01-project/MDL_QUICK_REFERENCE.md) |
+| end-to-end Examples | [docs/05-mdl-specification/04-examples.md](docs/05-mdl-specification/04-examples.md) |
 | Common Mistakes | [docs/05-mdl-specification/05-common-mistakes.md](docs/05-mdl-specification/05-common-mistakes.md) |
-| Go Library API | [docs/GO_LIBRARY.md](docs/GO_LIBRARY.md) |
-| Full Documentation Index | [docs/INDEX.md](docs/INDEX.md) |
+| Go Library api | [docs/GO_LIBRARY.md](docs/GO_LIBRARY.md) |
+| full documentation index | [docs/INDEX.md](docs/INDEX.md) |
 
 This project is open source under the Apache License 2.0.
 ```
@@ -282,13 +282,13 @@ Keep it factual. No "for LLMs" branding — good documentation serves everyone.
 
 **Scope** (keep focused, don't over-document):
 
-1. **`modelsdk.go`** — Package-level comment explaining the three layers (SDK, Model, MDL). Use correct API examples matching the actual `Open()` / `OpenForWriting()` / fluent builder signatures.
+1. **`modelsdk.go`** — Package-level comment explaining the three layers (SDK, Model, MDL). Use correct API examples matching the actual `open()` / `OpenForWriting()` / fluent builder signatures.
 
-2. **Key exported types** — One-paragraph doc comment on: `Entity`, `Attribute`, `Association`, `Microflow`, `Page`, `DomainModel`. Explain what it represents in Mendix, not just what fields it has.
+2. **Key exported types** — One-paragraph doc comment on: `entity`, `attribute`, `association`, `microflow`, `page`, `DomainModel`. Explain what it represents in Mendix, not just what fields it has.
 
-3. **`api/api.go`** — Document `ModelAPI`, `New()`, and each namespace (`DomainModels`, `Microflows`, `Pages`, etc.) with a brief example of the fluent builder pattern.
+3. **`api/api.go`** — Document `ModelAPI`, `New()`, and each namespace (`DomainModels`, `microflows`, `pages`, etc.) with a brief example of the fluent builder pattern.
 
-**Style**: Match existing Go conventions. No `// Entity is an entity` tautologies. Explain the domain concept.
+**Style**: Match existing Go conventions. No `// entity is an entity` tautologies. Explain the domain concept.
 
 ---
 

@@ -11,7 +11,7 @@ import (
 )
 
 func TestShowJsonStructures_Mock(t *testing.T) {
-	mod := mkModule("API")
+	mod := mkModule("OrderMgmt")
 	js := &types.JsonStructure{
 		BaseElement: model.BaseElement{ID: nextID("js")},
 		ContainerID: mod.ID,
@@ -30,6 +30,6 @@ func TestShowJsonStructures_Mock(t *testing.T) {
 	assertNoError(t, listJsonStructures(ctx, ""))
 
 	out := buf.String()
-	assertContainsStr(t, out, "JSON Structure")
-	assertContainsStr(t, out, "API.OrderSchema")
+	assertContainsStr(t, out, "json Structure")
+	assertContainsStr(t, out, "OrderMgmt.OrderSchema")
 }

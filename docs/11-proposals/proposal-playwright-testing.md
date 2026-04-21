@@ -24,7 +24,7 @@ The following capabilities already exist and form the foundation for this propos
 | DB credentials with known defaults | Done | `mendix/mendix/mendix` in `.env` |
 | `postgresql-client` in devcontainer | Done | psql available for DB assertions |
 | Volume mounts (fast rebuild cycle) | Done | No Docker image rebuild needed |
-| OQL view entities in MDL grammar | Done | `CREATE VIEW ENTITY ... AS (SELECT ...)` |
+| OQL view entities in MDL grammar | Done | `create view entity ... as (select ...)` |
 | Widget names → `.mx-name-*` CSS classes | Done | Mendix renders these deterministically |
 
 **Gaps to close:**
@@ -46,7 +46,7 @@ Claude Code generates MDL
   → mxcli docker run --wait (builds + deploys + waits for ready)
     → Playwright UI tests run (Layer 1)
     → PostgreSQL assertions run (Layer 2)
-      → Results feed back to Claude Code (structured JSON)
+      → Results feed back to Claude Code (structured json)
         → Claude Code iterates on failures → rebuild → retest
 ```
 
@@ -76,7 +76,7 @@ Mendix apps are React single-page applications — the server returns a JavaScri
 
 **Decision**: Playwright. It has the best headless Linux support (critical for devcontainers), a built-in JSON reporter (critical for the feedback loop), and a high-level API that minimizes generation errors. Cypress is close but heavier and less ergonomic for headless CI-style loops. Puppeteer is too low-level for auto-generated tests.
 
-HTTP smoke checks (`curl -sf http://localhost:8080/p/Page`) are a useful lightweight complement — they catch 500 errors and missing pages before the heavier browser tests run — but they cannot replace browser-based widget assertions.
+HTTP smoke checks (`curl -sf http://localhost:8080/p/page`) are a useful lightweight complement — they catch 500 errors and missing pages before the heavier browser tests run — but they cannot replace browser-based widget assertions.
 
 ---
 
@@ -127,10 +127,10 @@ The smoke test runs first as a fast gate — if pages return 500 or the app can'
 Playwright must not start until the Mendix runtime is fully initialized. This is already handled:
 
 ```bash
-# Build, deploy, and wait for runtime — single command
+# build, deploy, and wait for runtime — single command
 mxcli docker run -p app.mpr --wait
 
-# Then run tests
+# then run tests
 npx playwright test --reporter=json > playwright-results.json
 ```
 
@@ -143,18 +143,18 @@ npx playwright test --reporter=json > playwright-results.json
 After a UI interaction, the test queries the underlying PostgreSQL database to confirm the correct data was persisted. This catches cases where the UI shows success but the microflow silently failed or committed partial data.
 
 ```typescript
-import { Client } from 'pg';
+import { client } from 'pg';
 
-const db = new Client({ connectionString: process.env.TEST_DB_URL });
+const db = new client({ connectionString: process.env.TEST_DB_URL });
 await db.connect();
 
 test('leave request persisted to database', async ({ page }) => {
   await submitLeaveRequestViaUI(page);
 
   const { rows } = await db.query(`
-    SELECT * FROM "leaverequest$leaverequest"
-    WHERE "status" = 'Pending'
-    ORDER BY "createddate" DESC LIMIT 1
+    select * from "leaverequest$leaverequest"
+    where "status" = 'Pending'
+    ORDER by "createddate" desc limit 1
   `);
 
   expect(rows).toHaveLength(1);
@@ -190,21 +190,21 @@ MDL already supports view entity creation with full OQL queries:
 
 ```sql
 -- Replace a complex retrieve-with-associations pattern
-CREATE VIEW ENTITY Dashboard.ActiveOrderSummary (
-  CustomerName: String(200),
-  OrderCount: Integer,
-  TotalValue: Decimal,
-  LastOrderDate: DateTime
-) AS (
-  SELECT
-    c.Name AS CustomerName,
-    COUNT(o.ID) AS OrderCount,
-    SUM(o.TotalAmount) AS TotalValue,
-    MAX(o.OrderDate) AS LastOrderDate
-  FROM Dashboard.Customer c
-  JOIN Dashboard.Order o ON c.Orders = o.ID
-  WHERE o.Status != 'Cancelled'
-  GROUP BY c.Name
+create view entity Dashboard.ActiveOrderSummary (
+  CustomerName: string(200),
+  OrderCount: integer,
+  TotalValue: decimal,
+  LastOrderDate: datetime
+) as (
+  select
+    c.Name as CustomerName,
+    count(o.ID) as OrderCount,
+    sum(o.TotalAmount) as TotalValue,
+    max(o.OrderDate) as LastOrderDate
+  from Dashboard.Customer c
+  join Dashboard.Order o on c.Orders = o.ID
+  where o.Status != 'Cancelled'
+  GROUP by c.Name
 );
 ```
 
@@ -218,9 +218,9 @@ When query performance issues are detected:
 1. pg_stat_statements captures slow queries during test run
 2. EXPLAIN ANALYZE provides execution plan for slow queries
 3. Claude Code analyzes the plan and source MDL to identify:
-   a. Missing indexes → add INDEX in ALTER ENTITY
+   a. Missing indexes → add index in alter entity
    b. N+1 association patterns → replace with OQL view entity
-   c. Full table scans on filtered lists → add WHERE-targeted index
+   c. full table scans on filtered lists → add where-targeted index
 4. Claude Code generates the fix in MDL, rebuilds, retests
 ```
 
@@ -229,9 +229,9 @@ When query performance issues are detected:
 ```typescript
 async function captureQueryStats(db) {
   const { rows } = await db.query(`
-    SELECT query, calls, mean_exec_time, rows
-    FROM pg_stat_statements
-    WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
+    select query, calls, mean_exec_time, rows
+    from pg_stat_statements
+    where dbid = (select oid from pg_database where datname = current_database())
   `);
   return rows;
 }
@@ -254,11 +254,11 @@ When a query exceeds the performance threshold, the test captures the execution 
 
 ```typescript
 async function explainQuery(db, query) {
-  const { rows } = await db.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${query}`);
+  const { rows } = await db.query(`EXPLAIN (ANALYZE, format json) ${query}`);
   return rows[0]['QUERY PLAN'];
 }
 
-// If slow query detected, attach plan to test output
+// if slow query detected, attach plan to test output
 if (slowQuery) {
   const plan = await explainQuery(db, slowQuery.query);
   fs.writeFileSync('explain-output.json', JSON.stringify(plan, null, 2));
@@ -297,12 +297,12 @@ Add the following block to the project `CLAUDE.md`:
 ```markdown
 ## Automated Testing
 
-After building and starting the app:
+after building and starting the app:
 
-1. Run: mxcli docker run -p app.mpr --wait
-2. Run: npx playwright test --reporter=json > playwright-results.json
-3. Read the result file.
-4. For each failure:
+1. run: mxcli docker run -p app.mpr --wait
+2. run: npx playwright test --reporter=json > playwright-results.json
+3. read the result file.
+4. for each failure:
    - Playwright failure on .mx-name-X  → fix widget X in MDL
    - DB assertion failure on Table.Column  → fix entity/attribute or microflow
    - Slow query with Seq Scan  → add index to entity attribute
@@ -312,10 +312,10 @@ After building and starting the app:
 
 ## Test Generation
 
-When generating a new app module, also generate:
+when generating a new app module, also generate:
 - tests/<module>.spec.ts using .mx-name-* selectors for all interactive widgets
 - DB assertion for each entity created or modified by the module's microflows
-- For DataGrids/Galleries with associations: consider an OQL view entity
+- for DataGrids/Galleries with associations: consider an OQL view entity
 ```
 
 ---
@@ -377,8 +377,8 @@ When generating a new app module, also generate:
 - EXPLAIN ANALYZE capture for queries exceeding threshold
 - Optimization guide in test output: "Add index on X" or "Replace with OQL view entity"
 - Claude Code uses MDL to apply the fix:
-  - `ALTER ENTITY Module.Entity ADD INDEX idx_name (AttributeName);`
-  - `CREATE VIEW ENTITY Module.OptimizedView (...) AS (SELECT ... JOIN ... GROUP BY ...);`
+  - `alter entity Module.Entity add index idx_name (attributename);`
+  - `create view entity Module.OptimizedView (...) as (select ... join ... GROUP by ...);`
   - Rebind DataGrid/Gallery datasource to the view entity
 
 **What this validates:**
@@ -413,8 +413,8 @@ When generating a new app module, also generate:
 
 - All interactive widgets must have a unique `name` property — treat unnamed interactive widgets as a lint error
 - Generated entity names follow `ModuleName$EntityName` convention in PostgreSQL (lowercase)
-- Index definitions are expressible in MDL: `ALTER ENTITY ... ADD INDEX ...`
-- OQL view entities are expressible in MDL: `CREATE VIEW ENTITY ... AS (SELECT ...)`
+- Index definitions are expressible in MDL: `alter entity ... add index ...`
+- OQL view entities are expressible in MDL: `create view entity ... as (select ...)`
 - For DataGrids/Galleries with 2+ association columns, prefer an OQL view entity over direct entity binding
 
 ---

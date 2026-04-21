@@ -7,11 +7,11 @@ Add a Unix socket-based agent communication channel to the mxcli TUI, allowing C
 ## Architecture
 
 ```
-Agent (Claude)  ──JSON──>  Unix Socket  ──tea.Msg──>  Bubbletea Event Loop
+agent (Claude)  ──json──>  Unix Socket  ──tea.Msg──>  Bubbletea event loop
                                                           │
                                                      ExecView / ConfirmView
                                                           │
-                <──JSON──  Response Channel  <──result──  App.Update
+                <──json──  response Channel  <──result──  App.Update
 ```
 
 - **Transport:** Unix domain socket at `/tmp/mxcli-agent.sock`
@@ -58,6 +58,6 @@ mxcli tui -p app.mpr --agent
 # Auto-proceed mode (no human confirmation)
 mxcli tui -p app.mpr --agent --agent-auto
 
-# Send command from another terminal
-printf '{"id":1,"action":"exec","mdl":"SHOW ENTITIES"}\n' | socat -t 120 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# send command from another terminal
+printf '{"id":1,"action":"exec","mdl":"SHOW ENTITIES"}\n' | socat -t 120 - UNIX-connect:/tmp/mxcli-agent.sock
 ```

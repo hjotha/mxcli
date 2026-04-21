@@ -60,10 +60,10 @@ func TestMxCheck_Entity(t *testing.T) {
 	env.registerCleanup("entity", entityName)
 
 	// Create entity
-	createMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
-		Code: String(50) NOT NULL,
+	createMDL := `create or modify persistent entity ` + entityName + ` (
+		Code: String(50) not null,
 		Description: String(500),
-		Count: Integer DEFAULT 0
+		Count: Integer default 0
 	);`
 
 	if err := env.executeMDL(createMDL); err != nil {
@@ -100,7 +100,7 @@ func TestMxCheck_Enumeration(t *testing.T) {
 	env.registerCleanup("enumeration", enumName)
 
 	// Create enumeration
-	createMDL := `CREATE ENUMERATION ` + enumName + ` (
+	createMDL := `create enumeration ` + enumName + ` (
 		Low 'Low Priority',
 		Medium 'Medium Priority',
 		High 'High Priority',
@@ -137,19 +137,19 @@ func TestMxCheck_RetrieveWithLimit(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".MxCheck_RetrieveLimit"
 	env.registerCleanup("microflow", mfName)
 
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Item FROM RoundtripTest.MxCheckItem
-    LIMIT 1;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Item from RoundtripTest.MxCheckItem
+    limit 1;
+  return true;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -180,20 +180,20 @@ func TestMxCheck_RetrieveWithLimitOffset(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".MxCheck_RetrieveLimOff"
 	env.registerCleanup("microflow", mfName)
 
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MxCheckItem
-    LIMIT 2
-    OFFSET 3;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MxCheckItem
+    limit 2
+    offset 3;
+  return true;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -224,19 +224,19 @@ func TestMxCheck_RetrieveWithSortBy(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".MxCheck_RetrieveSort"
 	env.registerCleanup("microflow", mfName)
 
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MxCheckItem
-    SORT BY RoundtripTest.MxCheckItem.Name ASC;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MxCheckItem
+    sort by RoundtripTest.MxCheckItem.Name asc;
+  return true;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -267,22 +267,22 @@ func TestMxCheck_RetrieveWithWhereSortLimitOffset(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MxCheckItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".MxCheck_RetrieveFull"
 	env.registerCleanup("microflow", mfName)
 
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MxCheckItem
-    WHERE (starts-with(Name, 'a'))
-    SORT BY RoundtripTest.MxCheckItem.Name ASC
-    LIMIT 2
-    OFFSET 3;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MxCheckItem
+    where (starts-with(Name, 'a'))
+    sort by RoundtripTest.MxCheckItem.Name asc
+    limit 2
+    offset 3;
+  return true;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -334,103 +334,103 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 		{
 			name: "S1_CreateEntity_Grant",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S1Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S1Entity (Name: String(100), Email: String(200));`,
-				`GRANT ` + mod + `.S1Admin ON ` + mod + `.S1Entity (CREATE, DELETE, READ *, WRITE *);`,
+				`create module role ` + mod + `.S1Admin;`,
+				`create or modify persistent entity ` + mod + `.S1Entity (Name: String(100), Email: String(200));`,
+				`grant ` + mod + `.S1Admin on ` + mod + `.S1Entity (create, delete, read *, write *);`,
 			},
 		},
 		{
 			name: "S2_Grant_ThenAddAttribute",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S2Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S2Entity (Name: String(100));`,
-				`GRANT ` + mod + `.S2Admin ON ` + mod + `.S2Entity (CREATE, DELETE, READ *, WRITE *);`,
-				`ALTER ENTITY ` + mod + `.S2Entity ADD ATTRIBUTE Email: String(200);`,
-				`ALTER ENTITY ` + mod + `.S2Entity ADD ATTRIBUTE Active: Boolean DEFAULT false;`,
+				`create module role ` + mod + `.S2Admin;`,
+				`create or modify persistent entity ` + mod + `.S2Entity (Name: String(100));`,
+				`grant ` + mod + `.S2Admin on ` + mod + `.S2Entity (create, delete, read *, write *);`,
+				`alter entity ` + mod + `.S2Entity add attribute Email: String(200);`,
+				`alter entity ` + mod + `.S2Entity add attribute Active: Boolean default false;`,
 			},
 		},
 		{
 			name: "S3_Grant_ThenAddAssociation",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S3Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S3Parent (Name: String(100));`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S3Child (Label: String(100));`,
-				`GRANT ` + mod + `.S3Admin ON ` + mod + `.S3Parent (CREATE, DELETE, READ *, WRITE *);`,
-				`GRANT ` + mod + `.S3Admin ON ` + mod + `.S3Child (CREATE, DELETE, READ *, WRITE *);`,
-				`CREATE ASSOCIATION ` + mod + `.S3Child_S3Parent FROM ` + mod + `.S3Child TO ` + mod + `.S3Parent;`,
+				`create module role ` + mod + `.S3Admin;`,
+				`create or modify persistent entity ` + mod + `.S3Parent (Name: String(100));`,
+				`create or modify persistent entity ` + mod + `.S3Child (Label: String(100));`,
+				`grant ` + mod + `.S3Admin on ` + mod + `.S3Parent (create, delete, read *, write *);`,
+				`grant ` + mod + `.S3Admin on ` + mod + `.S3Child (create, delete, read *, write *);`,
+				`create association ` + mod + `.S3Child_S3Parent from ` + mod + `.S3Child to ` + mod + `.S3Parent;`,
 			},
 		},
 		{
 			name: "S4_Grant_ThenDropAttribute",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S4Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S4Entity (Name: String(100), Temp: String(50));`,
-				`GRANT ` + mod + `.S4Admin ON ` + mod + `.S4Entity (CREATE, DELETE, READ *, WRITE *);`,
-				`ALTER ENTITY ` + mod + `.S4Entity DROP ATTRIBUTE Temp;`,
+				`create module role ` + mod + `.S4Admin;`,
+				`create or modify persistent entity ` + mod + `.S4Entity (Name: String(100), Temp: String(50));`,
+				`grant ` + mod + `.S4Admin on ` + mod + `.S4Entity (create, delete, read *, write *);`,
+				`alter entity ` + mod + `.S4Entity drop attribute Temp;`,
 			},
 		},
 		{
 			name: "S5_AddAttribute_ThenGrant",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S5Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S5Entity (Name: String(100));`,
-				`ALTER ENTITY ` + mod + `.S5Entity ADD ATTRIBUTE Email: String(200);`,
-				`GRANT ` + mod + `.S5Admin ON ` + mod + `.S5Entity (CREATE, DELETE, READ *, WRITE *);`,
+				`create module role ` + mod + `.S5Admin;`,
+				`create or modify persistent entity ` + mod + `.S5Entity (Name: String(100));`,
+				`alter entity ` + mod + `.S5Entity add attribute Email: String(200);`,
+				`grant ` + mod + `.S5Admin on ` + mod + `.S5Entity (create, delete, read *, write *);`,
 			},
 		},
 		{
 			name: "S6_Grant_Alter_Regrant",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S6Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S6Entity (Name: String(100));`,
-				`GRANT ` + mod + `.S6Admin ON ` + mod + `.S6Entity (READ *);`,
-				`ALTER ENTITY ` + mod + `.S6Entity ADD ATTRIBUTE Code: String(50);`,
-				`GRANT ` + mod + `.S6Admin ON ` + mod + `.S6Entity (CREATE, DELETE, READ *, WRITE *);`,
+				`create module role ` + mod + `.S6Admin;`,
+				`create or modify persistent entity ` + mod + `.S6Entity (Name: String(100));`,
+				`grant ` + mod + `.S6Admin on ` + mod + `.S6Entity (read *);`,
+				`alter entity ` + mod + `.S6Entity add attribute Code: String(50);`,
+				`grant ` + mod + `.S6Admin on ` + mod + `.S6Entity (create, delete, read *, write *);`,
 			},
 		},
 		{
 			name: "S7_SingleScript_CreateAndGrant",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S7Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S7Entity (
-					Code: String(50) NOT NULL,
+				`create module role ` + mod + `.S7Admin;`,
+				`create or modify persistent entity ` + mod + `.S7Entity (
+					Code: String(50) not null,
 					Description: String(500),
-					Count: Integer DEFAULT 0
+					Count: Integer default 0
 				);` + "\n" +
-					`GRANT ` + mod + `.S7Admin ON ` + mod + `.S7Entity (CREATE, DELETE, READ *, WRITE *);`,
+					`grant ` + mod + `.S7Admin on ` + mod + `.S7Entity (create, delete, read *, write *);`,
 			},
 		},
 		{
 			name: "S8_MultipleRoles_ThenAlter",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S8Admin;`,
-				`CREATE MODULE ROLE ` + mod + `.S8Viewer;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S8Entity (Name: String(100));`,
-				`GRANT ` + mod + `.S8Admin ON ` + mod + `.S8Entity (CREATE, DELETE, READ *, WRITE *);`,
-				`GRANT ` + mod + `.S8Viewer ON ` + mod + `.S8Entity (READ *);`,
-				`ALTER ENTITY ` + mod + `.S8Entity ADD ATTRIBUTE Status: String(50);`,
+				`create module role ` + mod + `.S8Admin;`,
+				`create module role ` + mod + `.S8Viewer;`,
+				`create or modify persistent entity ` + mod + `.S8Entity (Name: String(100));`,
+				`grant ` + mod + `.S8Admin on ` + mod + `.S8Entity (create, delete, read *, write *);`,
+				`grant ` + mod + `.S8Viewer on ` + mod + `.S8Entity (read *);`,
+				`alter entity ` + mod + `.S8Entity add attribute Status: String(50);`,
 			},
 		},
 		{
 			name: "S9_Grant_ThenAlterAndAssoc",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S9Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S9Main (Name: String(100));`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S9Related (Value: Integer);`,
-				`GRANT ` + mod + `.S9Admin ON ` + mod + `.S9Main (CREATE, DELETE, READ *, WRITE *);`,
-				`GRANT ` + mod + `.S9Admin ON ` + mod + `.S9Related (CREATE, DELETE, READ *, WRITE *);`,
-				`ALTER ENTITY ` + mod + `.S9Main ADD ATTRIBUTE Extra: String(200);`,
-				`CREATE ASSOCIATION ` + mod + `.S9Related_S9Main FROM ` + mod + `.S9Related TO ` + mod + `.S9Main;`,
+				`create module role ` + mod + `.S9Admin;`,
+				`create or modify persistent entity ` + mod + `.S9Main (Name: String(100));`,
+				`create or modify persistent entity ` + mod + `.S9Related (Value: Integer);`,
+				`grant ` + mod + `.S9Admin on ` + mod + `.S9Main (create, delete, read *, write *);`,
+				`grant ` + mod + `.S9Admin on ` + mod + `.S9Related (create, delete, read *, write *);`,
+				`alter entity ` + mod + `.S9Main add attribute Extra: String(200);`,
+				`create association ` + mod + `.S9Related_S9Main from ` + mod + `.S9Related to ` + mod + `.S9Main;`,
 			},
 		},
 		{
 			name: "S10_DropIndexedAttribute",
 			steps: []string{
-				`CREATE MODULE ROLE ` + mod + `.S10Admin;`,
-				`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.S10Entity (Name: String(100), Code: String(50));`,
-				`ALTER ENTITY ` + mod + `.S10Entity ADD INDEX (Code);`,
-				`GRANT ` + mod + `.S10Admin ON ` + mod + `.S10Entity (CREATE, DELETE, READ *, WRITE *);`,
-				`ALTER ENTITY ` + mod + `.S10Entity DROP ATTRIBUTE Code;`,
+				`create module role ` + mod + `.S10Admin;`,
+				`create or modify persistent entity ` + mod + `.S10Entity (Name: String(100), Code: String(50));`,
+				`alter entity ` + mod + `.S10Entity add index (Code);`,
+				`grant ` + mod + `.S10Admin on ` + mod + `.S10Entity (create, delete, read *, write *);`,
+				`alter entity ` + mod + `.S10Entity drop attribute Code;`,
 			},
 		},
 	}
@@ -487,10 +487,10 @@ func TestMxCheck_DropAddEnumAttribute(t *testing.T) {
 
 	// Step 1: Create an enumeration and an entity with an enumeration attribute
 	setupMDL := strings.Join([]string{
-		`CREATE ENUMERATION ` + mod + `.SubmissionStatus (StatusNew 'New', StatusInProgress 'In Progress', StatusDone 'Done');`,
-		`CREATE OR MODIFY PERSISTENT ENTITY ` + mod + `.Issue4Entity (
+		`create enumeration ` + mod + `.SubmissionStatus (StatusNew 'New', StatusInProgress 'In Progress', StatusDone 'Done');`,
+		`create or modify persistent entity ` + mod + `.Issue4Entity (
 			Name: String(100),
-			Status: Enumeration(` + mod + `.SubmissionStatus) DEFAULT ` + mod + `.SubmissionStatus.StatusNew
+			Status: Enumeration(` + mod + `.SubmissionStatus) default ` + mod + `.SubmissionStatus.StatusNew
 		);`,
 	}, "\n")
 
@@ -504,8 +504,8 @@ func TestMxCheck_DropAddEnumAttribute(t *testing.T) {
 
 	// Step 2: Drop the attribute and re-add it with a different default
 	alterMDL := strings.Join([]string{
-		`ALTER ENTITY ` + mod + `.Issue4Entity DROP ATTRIBUTE Status;`,
-		`ALTER ENTITY ` + mod + `.Issue4Entity ADD ATTRIBUTE Status: Enumeration(` + mod + `.SubmissionStatus) DEFAULT ` + mod + `.SubmissionStatus.StatusInProgress;`,
+		`alter entity ` + mod + `.Issue4Entity drop attribute Status;`,
+		`alter entity ` + mod + `.Issue4Entity add attribute Status: Enumeration(` + mod + `.SubmissionStatus) default ` + mod + `.SubmissionStatus.StatusInProgress;`,
 	}, "\n")
 
 	prog, errs = visitor.Build(alterMDL)
@@ -544,7 +544,7 @@ func TestMxCheck_RetrieveWithDateTimeToken(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MxCheckDated (
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MxCheckDated (
 		Name: String(100),
 		DueDate: DateTime
 	);`); err != nil {
@@ -554,12 +554,12 @@ func TestMxCheck_RetrieveWithDateTimeToken(t *testing.T) {
 	mfName := testModule + ".MxCheck_DateTimeToken"
 	env.registerCleanup("microflow", mfName)
 
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MxCheckDated
-    WHERE DueDate < [%CurrentDateTime%];
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MxCheckDated
+    where DueDate < [%CurrentDateTime%];
+  return true;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -592,10 +592,10 @@ func TestMxCheck_MicroflowWithCallParams(t *testing.T) {
 	helperName := testModule + ".MxCheckCallHelper"
 	env.registerCleanup("microflow", helperName)
 
-	createHelperMDL := `CREATE MICROFLOW ` + helperName + ` ($InputValue: String) RETURNS String
-	BEGIN
-		RETURN $InputValue;
-	END;`
+	createHelperMDL := `create microflow ` + helperName + ` ($InputValue: String) returns String
+	begin
+		return $InputValue;
+	end;`
 
 	if err := env.executeMDL(createHelperMDL); err != nil {
 		t.Fatalf("Failed to create helper microflow: %v", err)
@@ -605,11 +605,11 @@ func TestMxCheck_MicroflowWithCallParams(t *testing.T) {
 	callerName := testModule + ".MxCheckCallCaller"
 	env.registerCleanup("microflow", callerName)
 
-	createCallerMDL := `CREATE MICROFLOW ` + callerName + ` () RETURNS String
-	BEGIN
-		$Result = CALL MICROFLOW ` + helperName + ` (InputValue = 'TestValue');
-		RETURN $Result;
-	END;`
+	createCallerMDL := `create microflow ` + callerName + ` () returns String
+	begin
+		$Result = call microflow ` + helperName + ` (InputValue = 'TestValue');
+		return $Result;
+	end;`
 
 	if err := env.executeMDL(createCallerMDL); err != nil {
 		t.Fatalf("Failed to create caller microflow: %v", err)
@@ -647,7 +647,7 @@ func TestMxCheck_ViewEntitySimple(t *testing.T) {
 	entityName := mod + ".MxCheckProduct"
 	env.registerCleanup("entity", entityName)
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Price: Decimal
 	);`); err != nil {
@@ -657,12 +657,12 @@ func TestMxCheck_ViewEntitySimple(t *testing.T) {
 	viewName := mod + ".MxCheckProductView"
 	env.registerCleanup("entity", viewName)
 
-	viewMDL := `CREATE VIEW ENTITY ` + viewName + ` (
+	viewMDL := `create view entity ` + viewName + ` (
 		Name: String(100),
 		Price: Decimal
-	) AS (
-		SELECT p.Name AS Name, p.Price AS Price
-		FROM ` + entityName + ` AS p
+	) as (
+		select p.Name as Name, p.Price as Price
+		from ` + entityName + ` as p
 	);`
 
 	if err := env.executeMDL(viewMDL); err != nil {
@@ -703,7 +703,7 @@ func TestMxCheck_ViewEntityWithAggregates(t *testing.T) {
 	entityName := mod + ".MxCheckDeal"
 	env.registerCleanup("entity", entityName)
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
 		Stage: String(50),
 		Amount: Decimal
 	);`); err != nil {
@@ -715,19 +715,19 @@ func TestMxCheck_ViewEntityWithAggregates(t *testing.T) {
 	viewName := mod + ".MxCheckDealsByStage"
 	env.registerCleanup("entity", viewName)
 
-	viewMDL := `CREATE VIEW ENTITY ` + viewName + ` (
+	viewMDL := `create view entity ` + viewName + ` (
 		Stage: String(50),
 		DealCount: Integer,
 		TotalAmount: Decimal,
 		AvgAmount: Decimal
-	) AS (
-		SELECT
-			d.Stage AS Stage,
-			count(d.ID) AS DealCount,
-			sum(d.Amount) AS TotalAmount,
-			avg(d.Amount) AS AvgAmount
-		FROM ` + entityName + ` AS d
-		GROUP BY d.Stage
+	) as (
+		select
+			d.Stage as Stage,
+			count(d.ID) as DealCount,
+			sum(d.Amount) as TotalAmount,
+			avg(d.Amount) as AvgAmount
+		from ` + entityName + ` as d
+		GROUP by d.Stage
 	);`
 
 	if err := env.executeMDL(viewMDL); err != nil {
@@ -771,7 +771,7 @@ func TestMxCheck_ComboBoxWithAssociation(t *testing.T) {
 	companyEntity := mod + ".MxCheckCompany"
 	env.registerCleanup("entity", companyEntity)
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + companyEntity + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + companyEntity + ` (
 		Name: String(100)
 	);`); err != nil {
 		t.Fatalf("Failed to create Company entity: %v", err)
@@ -781,7 +781,7 @@ func TestMxCheck_ComboBoxWithAssociation(t *testing.T) {
 	contactEntity := mod + ".MxCheckContact"
 	env.registerCleanup("entity", contactEntity)
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + contactEntity + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + contactEntity + ` (
 		FullName: String(100),
 		Email: String(200)
 	);`); err != nil {
@@ -791,7 +791,7 @@ func TestMxCheck_ComboBoxWithAssociation(t *testing.T) {
 	// Create association
 	assocName := mod + ".MxCheckContact_MxCheckCompany"
 
-	if err := env.executeMDL(`CREATE ASSOCIATION ` + assocName + ` FROM ` + contactEntity + ` TO ` + companyEntity + `;`); err != nil {
+	if err := env.executeMDL(`create association ` + assocName + ` from ` + contactEntity + ` to ` + companyEntity + `;`); err != nil {
 		t.Fatalf("Failed to create association: %v", err)
 	}
 
@@ -799,11 +799,11 @@ func TestMxCheck_ComboBoxWithAssociation(t *testing.T) {
 	mfName := mod + ".MxCheckGetContact"
 	env.registerCleanup("microflow", mfName)
 
-	mfMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS ` + contactEntity + `
-BEGIN
-  RETRIEVE $Contact FROM ` + contactEntity + ` LIMIT 1;
-  RETURN $Contact;
-END;`
+	mfMDL := `create microflow ` + mfName + ` () returns ` + contactEntity + `
+begin
+  retrieve $Contact from ` + contactEntity + ` limit 1;
+  return $Contact;
+end;`
 
 	if err := env.executeMDL(mfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -813,19 +813,19 @@ END;`
 	pageName := mod + ".MxCheckContactEdit"
 	env.registerCleanup("page", pageName)
 
-	pageMDL := `CREATE PAGE ` + pageName + ` (
+	pageMDL := `create page ` + pageName + ` (
 		Title: 'Contact Edit',
 		Layout: Atlas_Core.Atlas_Default
 	) {
-		DATAVIEW dvContact (DataSource: MICROFLOW ` + mfName + `) {
-			LAYOUTGRID lgMain {
-				ROW r1 {
-					COLUMN c1 (DesktopWidth: 12) {
-						TEXTBOX txtName (Attribute: FullName, Label: 'Full Name')
-						COMBOBOX cmbCompany (
+		dataview dvContact (DataSource: microflow ` + mfName + `) {
+			layoutgrid lgMain {
+				row r1 {
+					column c1 (DesktopWidth: 12) {
+						textbox txtName (Attribute: FullName, Label: 'Full Name')
+						combobox cmbCompany (
 							Label: 'Company',
 							Attribute: MxCheckContact_MxCheckCompany,
-							DataSource: DATABASE ` + companyEntity + `,
+							DataSource: database ` + companyEntity + `,
 							CaptionAttribute: Name
 						)
 					}
@@ -877,20 +877,20 @@ func TestMxCheck_WhileLoop(t *testing.T) {
 	mfName := mod + ".MxCheck_WhileLoop"
 	env.registerCleanup("microflow", mfName)
 
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ($N: Integer) RETURNS Integer
-BEGIN
-  DECLARE $Counter Integer = 0;
-  DECLARE $Sum Integer = 0;
-  WHILE $Counter < $N
-  BEGIN
-    SET $Counter = $Counter + 1;
-    SET $Sum = $Sum + $Counter;
-  END WHILE;
-  RETURN $Sum;
-END;`
+	createMDL := `create microflow ` + mfName + ` ($N: Integer) returns Integer
+begin
+  declare $Counter Integer = 0;
+  declare $Sum Integer = 0;
+  while $Counter < $N
+  begin
+    set $Counter = $Counter + 1;
+    set $Sum = $Sum + $Counter;
+  end while;
+  return $Sum;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create microflow with WHILE loop: %v", err)
+		t.Fatalf("Failed to create microflow with while loop: %v", err)
 	}
 
 	env.executor.Execute(&ast.DisconnectStmt{})
@@ -921,8 +921,8 @@ func TestMxCheck_DropModuleCleansUserRoles(t *testing.T) {
 
 	// Create module role and user role referencing it
 	setupMDL := strings.Join([]string{
-		`CREATE MODULE ROLE ` + mod + `.TestAdmin;`,
-		`CREATE USER ROLE DropTestUser (System.User, ` + mod + `.TestAdmin);`,
+		`create module role ` + mod + `.TestAdmin;`,
+		`create user role DropTestUser (System.User, ` + mod + `.TestAdmin);`,
 	}, "\n")
 
 	prog, errs := visitor.Build(setupMDL)
@@ -934,7 +934,7 @@ func TestMxCheck_DropModuleCleansUserRoles(t *testing.T) {
 	}
 
 	// Drop the module — should cascade-remove module roles from user roles
-	dropMDL := `DROP MODULE ` + mod + `;`
+	dropMDL := `drop module ` + mod + `;`
 	if err := env.executeMDL(dropMDL); err != nil {
 		t.Fatalf("Drop module failed: %v", err)
 	}
@@ -945,7 +945,7 @@ func TestMxCheck_DropModuleCleansUserRoles(t *testing.T) {
 	output, err := runMxCheck(t, env.projectPath)
 	if err != nil {
 		if strings.Contains(output, "CE1613") {
-			t.Errorf("CE1613: dangling module role reference after DROP MODULE:\n%s", output)
+			t.Errorf("CE1613: dangling module role reference after drop module:\n%s", output)
 		} else if strings.Contains(output, "[error]") {
 			t.Errorf("mx check found errors:\n%s", output)
 		} else {

@@ -9,27 +9,27 @@
 --
 -- ############################################################################
 
-CREATE MODULE OdTest;
+create module OdTest;
 
 -- Create some entities that will be published via OData
-CREATE PERSISTENT ENTITY OdTest.Customer (
-  Name: String(200),
-  Email: String(200),
-  Phone: String(50),
-  IsActive: Boolean Default True
+create persistent entity OdTest.Customer (
+  Name: string(200),
+  Email: string(200),
+  Phone: string(50),
+  IsActive: boolean default true
 );
 
-CREATE PERSISTENT ENTITY OdTest.Order (
-  OrderNumber: String(50),
-  OrderDate: DateTime,
-  TotalAmount: Decimal,
-  Status: String(50)
+create persistent entity OdTest.Order (
+  OrderNumber: string(50),
+  OrderDate: datetime,
+  TotalAmount: decimal,
+  status: string(50)
 );
 
-CREATE ASSOCIATION OdTest.Order_Customer
-FROM OdTest.Order TO OdTest.Customer
-TYPE Reference
-OWNER Default;
+create association OdTest.Order_Customer
+from OdTest.Order to OdTest.Customer
+type reference
+owner default;
 
 -- ############################################################################
 -- MARK: - Show OData Clients
@@ -40,14 +40,14 @@ OWNER Default;
  * Lists all consumed OData services across all modules.
  * Output columns: Module, QualifiedName, Version, OData, MetadataUrl, Validated
  */
-SHOW ODATA CLIENTS;
+show odata clients;
 /
 
 /**
  * Level 1.2: Show OData clients in a specific module
  * Lists only consumed OData services in the specified module.
  */
-SHOW ODATA CLIENTS IN OdTest;
+show odata clients in OdTest;
 /
 
 -- ############################################################################
@@ -69,14 +69,14 @@ SHOW ODATA CLIENTS IN OdTest;
  * Lists all published OData services across all modules.
  * Output columns: Module, QualifiedName, Path, Version, OData, EntitySets, AuthTypes
  */
-SHOW ODATA SERVICES;
+show odata services;
 /
 
 /**
  * Level 3.2: Show OData services in a specific module
  * Lists only published OData services in the specified module.
  */
-SHOW ODATA SERVICES IN OdTest;
+show odata services in OdTest;
 /
 
 -- ############################################################################
@@ -100,14 +100,14 @@ SHOW ODATA SERVICES IN OdTest;
  * Lists all entities backed by OData remote sources across all modules.
  * Output columns: Module, QualifiedName, Service, EntitySet, RemoteName, Countable
  */
-SHOW EXTERNAL ENTITIES;
+show external entities;
 /
 
 /**
  * Level 5.2: Show external entities in a specific module
  * Lists only external entities in the specified module.
  */
-SHOW EXTERNAL ENTITIES IN OdTest;
+show external entities in OdTest;
 /
 
 -- ############################################################################
@@ -131,21 +131,21 @@ SHOW EXTERNAL ENTITIES IN OdTest;
  * Level 7.1: Query OData clients from the catalog
  * The CATALOG.ODATA_CLIENTS table contains all consumed OData services.
  */
-SELECT * FROM CATALOG.ODATA_CLIENTS;
+select * from catalog.ODATA_CLIENTS;
 /
 
 /**
  * Level 7.2: Query OData services from the catalog
  * The CATALOG.ODATA_SERVICES table contains all published OData services.
  */
-SELECT * FROM CATALOG.ODATA_SERVICES;
+select * from catalog.ODATA_SERVICES;
 /
 
 /**
  * Level 7.3: Find external entities via catalog
  * External entities have IsExternal = 1 in the CATALOG.ENTITIES table.
  */
-SELECT * FROM CATALOG.ENTITIES WHERE IsExternal = 1;
+select * from catalog.entities where IsExternal = 1;
 /
 
 -- ############################################################################
@@ -156,13 +156,13 @@ SELECT * FROM CATALOG.ENTITIES WHERE IsExternal = 1;
  * Level 8.1: Create a consumed OData service (client)
  * Registers an external OData API that the application can consume.
  */
-CREATE ODATA CLIENT OdTest.SalesforceAPI (
-  Version: '1.0',
+create odata client OdTest.SalesforceAPI (
+  version: '1.0',
   ODataVersion: OData4,
   MetadataUrl: 'https://api.salesforce.com/odata/v4/$metadata',
-  Timeout: 300,
+  timeout: 300,
   ProxyType: DefaultProxy,
-  Folder: 'Integration/Salesforce'
+  folder: 'Integration/Salesforce'
 );
 /
 
@@ -170,39 +170,39 @@ CREATE ODATA CLIENT OdTest.SalesforceAPI (
  * Level 8.2: Create a published OData service
  * Exposes domain model entities as OData endpoints with authentication and CRUD modes.
  */
-CREATE ODATA SERVICE OdTest.CustomerAPI (
-  Path: '/odata/customers',
-  Version: '1.0.0',
+create odata service OdTest.CustomerAPI (
+  path: '/odata/customers',
+  version: '1.0.0',
   ODataVersion: OData4,
-  Namespace: 'OdTest.Customers',
+  namespace: 'OdTest.Customers',
   ServiceName: 'Customer Service',
   Summary: 'API for managing customers',
   PublishAssociations: Yes,
-  Folder: 'Integration/APIs'
+  folder: 'Integration/APIs'
 )
-AUTHENTICATION Basic, Session
+authentication basic, session
 {
-  PUBLISH ENTITY OdTest.Customer AS 'Customers' (
-    ReadMode: SOURCE,
-    InsertMode: SOURCE,
-    UpdateMode: SOURCE,
-    DeleteMode: NOT_SUPPORTED,
+  publish entity OdTest.Customer as 'Customers' (
+    ReadMode: source,
+    InsertMode: source,
+    UpdateMode: source,
+    DeleteMode: not_supported,
     UsePaging: Yes,
     PageSize: 100
   )
-  EXPOSE (
-    Id AS 'customerId',
+  expose (
+    Id as 'customerId',
     Name (Filterable, Sortable),
     Email
   );
 
-  PUBLISH ENTITY OdTest.Order AS 'Orders' (
-    ReadMode: SOURCE,
-    InsertMode: NOT_SUPPORTED,
-    UpdateMode: NOT_SUPPORTED,
-    DeleteMode: NOT_SUPPORTED
+  publish entity OdTest.Order as 'Orders' (
+    ReadMode: source,
+    InsertMode: not_supported,
+    UpdateMode: not_supported,
+    DeleteMode: not_supported
   )
-  EXPOSE (*);
+  expose (*);
 };
 /
 
@@ -211,45 +211,45 @@ AUTHENTICATION Basic, Session
  * Includes authentication, custom service URL, microflow references, and headers.
  * Prerequisites: microflows and constants must exist before referencing them.
  */
-CREATE MICROFLOW OdTest.ConfigureRequest() RETURNS Boolean
-BEGIN
-  RETURN true;
-END;
+create microflow OdTest.ConfigureRequest() returns boolean
+begin
+  return true;
+end;
 
-CREATE MICROFLOW OdTest.HandleError() RETURNS Boolean
-BEGIN
-  RETURN true;
-END;
+create microflow OdTest.HandleError() returns boolean
+begin
+  return true;
+end;
 
-CREATE CONSTANT OdTest.ProxyHostConst
-TYPE String
-DEFAULT 'proxy.example.com';
+create constant OdTest.ProxyHostConst
+type string
+default 'proxy.example.com';
 
-CREATE CONSTANT OdTest.ProxyPortConst
-TYPE String
-DEFAULT '8080';
+create constant OdTest.ProxyPortConst
+type string
+default '8080';
 
-CREATE CONSTANT OdTest.FullConfigAPIServiceUrl
-TYPE String
-DEFAULT 'https://api.example.com/odata/v4';
+create constant OdTest.FullConfigAPIServiceUrl
+type string
+default 'https://api.example.com/odata/v4';
 /
 
-CREATE ODATA CLIENT OdTest.FullConfigAPI (
-  Version: '3.0',
+create odata client OdTest.FullConfigAPI (
+  version: '3.0',
   ODataVersion: OData4,
   MetadataUrl: 'https://api.example.com/odata/v4/$metadata',
-  Timeout: 300,
+  timeout: 300,
   ServiceUrl: @OdTest.FullConfigAPIServiceUrl,
   UseAuthentication: Yes,
   HttpUsername: 'admin',
   HttpPassword: 'secret',
   ClientCertificate: 'my-cert',
-  ConfigurationMicroflow: MICROFLOW OdTest.ConfigureRequest,
-  ErrorHandlingMicroflow: MICROFLOW OdTest.HandleError,
+  ConfigurationMicroflow: microflow OdTest.ConfigureRequest,
+  ErrorHandlingMicroflow: microflow OdTest.HandleError,
   ProxyHost: OdTest.ProxyHostConst,
   ProxyPort: OdTest.ProxyPortConst
 )
-HEADERS (
+headers (
   'X-Api-Key': 'abc123',
   'Accept': 'application/json'
 );
@@ -258,26 +258,26 @@ HEADERS (
 /**
  * Level 8.3: Create or modify (idempotent) - updates if it already exists
  */
-CREATE OR MODIFY ODATA CLIENT OdTest.SalesforceAPI (
-  Version: '2.0',
+create or modify odata client OdTest.SalesforceAPI (
+  version: '2.0',
   ODataVersion: OData4,
   MetadataUrl: 'https://api.salesforce.com/odata/v4/$metadata',
-  Timeout: 600
+  timeout: 600
 );
 /
 
 /**
  * Level 8.4: Alter an OData client property
  */
-ALTER ODATA CLIENT OdTest.SalesforceAPI
-  SET Timeout = 600;
+alter odata client OdTest.SalesforceAPI
+  set timeout = 600;
 /
 
 /**
  * Level 8.5: Alter an OData service property
  */
-ALTER ODATA SERVICE OdTest.CustomerAPI
-  SET Version = '2.0.0';
+alter odata service OdTest.CustomerAPI
+  set version = '2.0.0';
 /
 
 -- ############################################################################
@@ -288,8 +288,8 @@ ALTER ODATA SERVICE OdTest.CustomerAPI
  * Level 8.6a: Create an external entity from a consumed OData service
  * Maps a remote entity to a local entity with attributes.
  */
-CREATE EXTERNAL ENTITY OdTest.RemoteAccount
-FROM ODATA CLIENT OdTest.SalesforceAPI
+create external entity OdTest.RemoteAccount
+from odata client OdTest.SalesforceAPI
 (
   EntitySet: 'Accounts',
   RemoteName: 'Account',
@@ -299,18 +299,18 @@ FROM ODATA CLIENT OdTest.SalesforceAPI
   Updatable: No
 )
 (
-  AccountId: String(200),
-  AccountName: String(255),
-  Industry: String(100),
-  Revenue: Decimal
+  AccountId: string(200),
+  AccountName: string(255),
+  Industry: string(100),
+  Revenue: decimal
 );
 /
 
 /**
  * Level 8.6b: Create or modify (idempotent) external entity
  */
-CREATE OR MODIFY EXTERNAL ENTITY OdTest.RemoteAccount
-FROM ODATA CLIENT OdTest.SalesforceAPI
+create or modify external entity OdTest.RemoteAccount
+from odata client OdTest.SalesforceAPI
 (
   EntitySet: 'Accounts',
   RemoteName: 'Account',
@@ -320,11 +320,11 @@ FROM ODATA CLIENT OdTest.SalesforceAPI
   Updatable: Yes
 )
 (
-  AccountId: String(200),
-  AccountName: String(255),
-  Industry: String(100),
-  Revenue: Decimal,
-  Website: String(500)
+  AccountId: string(200),
+  AccountName: string(255),
+  Industry: string(100),
+  Revenue: decimal,
+  Website: string(500)
 );
 /
 
@@ -335,15 +335,15 @@ FROM ODATA CLIENT OdTest.SalesforceAPI
 /**
  * Level 8.7a: Grant access on a published OData service
  */
-CREATE MODULE ROLE OdTest.Admin;
-CREATE MODULE ROLE OdTest.User;
-GRANT ACCESS ON ODATA SERVICE OdTest.CustomerAPI TO OdTest.Admin, OdTest.User;
+create module role OdTest.Admin;
+create module role OdTest.user;
+grant access on odata service OdTest.CustomerAPI to OdTest.Admin, OdTest.user;
 /
 
 /**
  * Level 8.7b: Revoke access on a published OData service
  */
-REVOKE ACCESS ON ODATA SERVICE OdTest.CustomerAPI FROM OdTest.User;
+revoke access on odata service OdTest.CustomerAPI from OdTest.user;
 /
 
 -- ############################################################################
@@ -353,20 +353,20 @@ REVOKE ACCESS ON ODATA SERVICE OdTest.CustomerAPI FROM OdTest.User;
 /**
  * Level 9.1: Call an external action with parameters and result variable
  */
-CREATE MICROFLOW OdTest.ACT_CallExternalAction() RETURNS Boolean
-BEGIN
-    $Result = CALL EXTERNAL ACTION OdTest.SalesforceAPI.GetAccounts(Status = 'active', Region = $SelectedRegion);
-    CALL EXTERNAL ACTION OdTest.SalesforceAPI.NotifyUpdate(AccountId = $AccountId) ON ERROR CONTINUE;
-    RETURN true;
-END;
+create microflow OdTest.ACT_CallExternalAction() returns boolean
+begin
+    $Result = call external action OdTest.SalesforceAPI.GetAccounts(status = 'active', Region = $SelectedRegion);
+    call external action OdTest.SalesforceAPI.NotifyUpdate(AccountId = $AccountId) on error continue;
+    return true;
+end;
 /
 
 /**
  * Level 9.2: Show external actions discovered from microflow usage
  */
-SHOW EXTERNAL ACTIONS;
+show external actions;
 /
-SHOW EXTERNAL ACTIONS IN OdTest;
+show external actions in OdTest;
 /
 
 -- ############################################################################
@@ -385,16 +385,16 @@ SHOW EXTERNAL ACTIONS IN OdTest;
 /**
  * Level 10.0: Set up the TripPin module, role, and constant.
  */
-CREATE MODULE TripPinClient;
+create module TripPinClient;
 /
 
-CREATE MODULE ROLE TripPinClient."User"
-  DESCRIPTION 'Role for TripPin API access';
+create module role TripPinClient."user"
+  description 'Role for TripPin API access';
 /
 
-CREATE CONSTANT TripPinClient."TripPinServiceUrl"
-  TYPE String
-  DEFAULT 'https://services.odata.org/TripPinRESTierService/';
+create constant TripPinClient."TripPinServiceUrl"
+  type string
+  default 'https://services.odata.org/TripPinRESTierService/';
 /
 
 /**
@@ -402,10 +402,10 @@ CREATE CONSTANT TripPinClient."TripPinServiceUrl"
  * CREATE ODATA CLIENT fetches and caches $metadata from MetadataUrl.
  * ServiceUrl must reference a constant (CE6825).
  */
-CREATE ODATA CLIENT TripPinClient."TripPinApiClient" (
+create odata client TripPinClient."TripPinApiClient" (
   ODataVersion: OData4,
   MetadataUrl: 'https://services.odata.org/TripPinRESTierService/$metadata',
-  Timeout: 300,
+  timeout: 300,
   ServiceUrl: @TripPinClient.TripPinServiceUrl,
   UseAuthentication: No
 );
@@ -417,21 +417,21 @@ CREATE ODATA CLIENT TripPinClient."TripPinApiClient" (
  * sets (Airlines, Airports, People) use the set name; derived/contained
  * types (Flight, PlanItem, Trip, etc.) use the type name.
  */
-CREATE EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient";
+create external entities from TripPinClient."TripPinApiClient";
 /
 
 /**
  * Level 10.3: Import only specific entity types by name.
  */
-CREATE OR MODIFY EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient"
-  ENTITIES (Airline, Airport);
+create or modify external entities from TripPinClient."TripPinApiClient"
+  entities (Airline, Airport);
 /
 
 /**
  * Level 10.4: Import all entities into a different module.
  */
-CREATE OR MODIFY EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient"
-  INTO TripPinClient;
+create or modify external entities from TripPinClient."TripPinApiClient"
+  into TripPinClient;
 /
 
 -- ############################################################################
@@ -443,29 +443,29 @@ CREATE OR MODIFY EXTERNAL ENTITIES FROM TripPinClient."TripPinApiClient"
  * OdTest.ACT_CallExternalAction calls SalesforceAPI actions; OdTest.RemoteAccount
  * is an external entity backed by SalesforceAPI — both must be removed first.
  */
-DROP MICROFLOW OdTest.ACT_CallExternalAction;
+drop microflow OdTest.ACT_CallExternalAction;
 /
 
-DROP ENTITY OdTest.RemoteAccount;
+drop entity OdTest.RemoteAccount;
 /
 
 /**
  * Level 8.8b: Drop OData clients (FullConfigAPI references must be cleaned up too)
  */
-DROP ODATA CLIENT OdTest.FullConfigAPI;
-DROP ODATA CLIENT OdTest.SalesforceAPI;
+drop odata client OdTest.FullConfigAPI;
+drop odata client OdTest.SalesforceAPI;
 /
 
 /**
  * Level 8.8c: Drop the TripPin client (cascades to its external entities)
  */
-DROP ODATA CLIENT TripPinClient."TripPinApiClient";
+drop odata client TripPinClient."TripPinApiClient";
 /
 
 /**
  * Level 8.8d: Drop an OData service
  */
-DROP ODATA SERVICE OdTest.CustomerAPI;
+drop odata service OdTest.CustomerAPI;
 /
 
 -- ############################################################################

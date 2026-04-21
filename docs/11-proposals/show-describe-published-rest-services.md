@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Document type:** `Rest$PublishedRestService`
+**Document type:** `rest$PublishedRestService`
 **Prevalence:** 16 across test projects (1 Enquiries, 7 Evora, 8 Lato)
 **Priority:** High — REST APIs are critical for modern Mendix apps
 
@@ -22,32 +22,32 @@ Published REST Services expose HTTP endpoints backed by microflows. Each service
 ## BSON Structure (from test projects)
 
 ```
-Rest$PublishedRestService:
+rest$PublishedRestService:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
-  Path: string (e.g., "rest/customers/v1")
-  Version: string (e.g., "1.0.0")
+  path: string (e.g., "rest/customers/v1")
+  version: string (e.g., "1.0.0")
   ServiceName: string
   AllowedRoles: [] (qualified role names)
-  AuthenticationTypes: [] ("Basic", "Custom", "None")
+  AuthenticationTypes: [] ("basic", "Custom", "none")
   AuthenticationMicroflow: string (qualified name)
   CorsConfiguration: nullable
-  Parameters: []*RestOperationParameter (service-level params)
-  Resources: []*Rest$PublishedRestServiceResource
+  parameters: []*RestOperationParameter (service-level params)
+  Resources: []*rest$PublishedRestServiceResource
     - Name: string (e.g., "Customers")
-    - Documentation: string
-    - Operations: []*Rest$PublishedRestServiceOperation
-      - HttpMethod: string ("GET", "POST", "PUT", "DELETE", "PATCH")
-      - Path: string (e.g., "/{id}")
-      - Microflow: string (qualified name)
+    - documentation: string
+    - Operations: []*rest$PublishedRestServiceOperation
+      - HttpMethod: string ("get", "post", "put", "delete", "patch")
+      - path: string (e.g., "/{id}")
+      - microflow: string (qualified name)
       - Summary: string
-      - Deprecated: bool
-      - Commit: string ("Yes", "No")
+      - deprecated: bool
+      - commit: string ("Yes", "No")
       - ImportMapping: string (qualified name)
       - ExportMapping: string (qualified name)
-      - Parameters: []*RestOperationParameter
+      - parameters: []*RestOperationParameter
 ```
 
 ## Proposed MDL Syntax
@@ -55,7 +55,7 @@ Rest$PublishedRestService:
 ### SHOW REST SERVICES
 
 ```
-SHOW REST SERVICES [IN Module]
+show rest services [in module]
 ```
 
 | Qualified Name | Module | Name | Path | Version | Resources | Operations |
@@ -64,7 +64,7 @@ SHOW REST SERVICES [IN Module]
 ### DESCRIBE REST SERVICE
 
 ```
-DESCRIBE REST SERVICE Module.Name
+describe rest service Module.Name
 ```
 
 Output format:
@@ -73,37 +73,37 @@ Output format:
 /**
  * Customer management API
  */
-REST SERVICE MyModule.CustomerAPI
-  PATH 'rest/customers/v1'
-  VERSION '1.0.0'
-  AUTHENTICATION Basic
+rest service MyModule.CustomerAPI
+  path 'rest/customers/v1'
+  version '1.0.0'
+  authentication basic
 {
-  RESOURCE Customers
+  resource Customers
   {
-    GET /
-      MICROFLOW MyModule.GetAllCustomers
-      EXPORT MAPPING MyModule.ExportCustomerList
+    get /
+      microflow MyModule.GetAllCustomers
+      export mapping MyModule.ExportCustomerList
       SUMMARY 'List all customers';
 
-    GET /{id}
-      MICROFLOW MyModule.GetCustomerById
-      EXPORT MAPPING MyModule.ExportCustomer
+    get /{id}
+      microflow MyModule.GetCustomerById
+      export mapping MyModule.ExportCustomer
       SUMMARY 'Get customer by ID';
 
-    POST /
-      MICROFLOW MyModule.CreateCustomer
-      IMPORT MAPPING MyModule.ImportCustomer
-      COMMIT Yes
+    post /
+      microflow MyModule.CreateCustomer
+      import mapping MyModule.ImportCustomer
+      commit Yes
       SUMMARY 'Create a new customer';
 
-    PUT /{id}
-      MICROFLOW MyModule.UpdateCustomer
-      IMPORT MAPPING MyModule.ImportCustomer
-      COMMIT Yes
+    put /{id}
+      microflow MyModule.UpdateCustomer
+      import mapping MyModule.ImportCustomer
+      commit Yes
       SUMMARY 'Update an existing customer';
 
-    DELETE /{id}
-      MICROFLOW MyModule.DeleteCustomer
+    delete /{id}
+      microflow MyModule.DeleteCustomer
       SUMMARY 'Delete a customer';
   };
 };
@@ -115,10 +115,10 @@ REST SERVICE MyModule.CustomerAPI
 ### 1. Enhance Model Type (model/types.go)
 
 The existing `PublishedRestService` struct needs:
-- `Documentation`, `AllowedRoles`, `AuthenticationTypes`, `AuthenticationMicroflow`
+- `documentation`, `AllowedRoles`, `AuthenticationTypes`, `AuthenticationMicroflow`
 
 The existing `RestResource` and `RestOperation` structs need:
-- `Summary`, `Deprecated`, `Commit`, `ImportMapping`, `ExportMapping`
+- `Summary`, `deprecated`, `commit`, `ImportMapping`, `ExportMapping`
 
 ### 2. Enhance Parser (sdk/mpr/parser_rest.go)
 
@@ -134,12 +134,12 @@ DescribeRestService // in DescribeObjectType enum
 ### 4. Add Grammar Rules
 
 ```antlr
-REST: 'REST';
-SERVICE: 'SERVICE';   // may already exist for OData
-SERVICES: 'SERVICES'; // may already exist
+rest: 'REST';
+service: 'SERVICE';   // may already exist for odata
+services: 'SERVICES'; // may already exist
 
-// SHOW REST SERVICES [IN module]
-// DESCRIBE REST SERVICE qualifiedName
+// show rest services [in module]
+// describe rest service qualifiedName
 ```
 
 ### 5. Add Executor (mdl/executor/cmd_rest_services.go)

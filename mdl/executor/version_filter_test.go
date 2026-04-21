@@ -88,11 +88,11 @@ func TestVersionConstraintMatches(t *testing.T) {
 
 func TestFilterByVersion(t *testing.T) {
 	content := `-- setup
-CREATE MODULE Test;
+create module Test;
 -- @version: 11.0+
-CREATE VIEW ENTITY Test.MyView (...);
+create view entity Test.MyView (...);
 -- @version: any
-CREATE ENTITY Test.Universal (...);
+create entity Test.Universal (...);
 `
 
 	mx1024 := &version.ProjectVersion{MajorVersion: 10, MinorVersion: 24, ProductVersion: "10.24.0"}
@@ -103,14 +103,14 @@ CREATE ENTITY Test.Universal (...);
 	if skipped1024 == 0 {
 		t.Error("Expected skipped lines on 10.24")
 	}
-	if containsNonComment(filtered1024, "CREATE VIEW ENTITY") {
-		t.Error("VIEW ENTITY should be stripped on 10.24")
+	if containsNonComment(filtered1024, "create view entity") {
+		t.Error("view entity should be stripped on 10.24")
 	}
-	if !containsNonComment(filtered1024, "CREATE MODULE") {
-		t.Error("CREATE MODULE should be kept on 10.24")
+	if !containsNonComment(filtered1024, "create module") {
+		t.Error("create module should be kept on 10.24")
 	}
-	if !containsNonComment(filtered1024, "CREATE ENTITY") {
-		t.Error("CREATE ENTITY should be kept on 10.24 (after @version: any)")
+	if !containsNonComment(filtered1024, "create entity") {
+		t.Error("create entity should be kept on 10.24 (after @version: any)")
 	}
 
 	// On 11.6: everything should be kept
@@ -118,8 +118,8 @@ CREATE ENTITY Test.Universal (...);
 	if skipped116 != 0 {
 		t.Errorf("Expected 0 skipped lines on 11.6, got %d", skipped116)
 	}
-	if !containsNonComment(filtered116, "CREATE VIEW ENTITY") {
-		t.Error("VIEW ENTITY should be kept on 11.6")
+	if !containsNonComment(filtered116, "create view entity") {
+		t.Error("view entity should be kept on 11.6")
 	}
 }
 

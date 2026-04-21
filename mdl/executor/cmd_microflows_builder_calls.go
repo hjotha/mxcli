@@ -859,7 +859,7 @@ func shouldSetBodyVariable(op *model.RestClientOperation) bool {
 		return true // unknown operation — preserve caller intent
 	}
 	switch op.BodyType {
-	case "JSON", "TEMPLATE", "FILE":
+	case "json", "template", "file":
 		return false
 	default:
 		// EXPORT_MAPPING or empty (no body) — only set if EXPORT_MAPPING

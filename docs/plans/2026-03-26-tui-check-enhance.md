@@ -19,15 +19,15 @@ mx check Results
 ● 8 errors
 
 CE1613 — The selected association/attribute no longer exists
-  MyFirstModule.P_ComboBox_Enum (Page)
+  MyFirstModule.P_ComboBox_Enum (page)
     > Property 'Association' of combo box 'cmbPriority'
-  MyFirstModule.P_ComboBox_Assoc (Page) (x7)
+  MyFirstModule.P_ComboBox_Assoc (page) (x7)
     > Property 'Attribute' of combo box 'cmbCategory'
 ```
 
 ### Implementation
 
-- New types: `CheckGroup{Code, Severity, Message, Items}` and `CheckGroupItem{DocLocation, ElementName, Count}`
+- New types: `CheckGroup{Code, Severity, message, Items}` and `CheckGroupItem{DocLocation, ElementName, count}`
 - `groupCheckErrors([]CheckError) []CheckGroup`: groups by Code, deduplicates by element-id, counts occurrences
 - `renderCheckResults` renders grouped output instead of flat list
 - `formatCheckBadge` unchanged (counts raw errors by severity)
@@ -52,7 +52,7 @@ CE1613 — The selected association/attribute no longer exists
 ### Implementation
 
 - Add `checkNavActive bool`, `checkNavIndex int`, `checkNavLocations []CheckNavLocation` to App
-- `CheckNavLocation{ModuleName, DocumentName, Code, Message}` — unique documents extracted from grouped errors
+- `CheckNavLocation{ModuleName, DocumentName, Code, message}` — unique documents extracted from grouped errors
 - `NavigateToDocMsg{ModuleName, DocumentName}` — sent by overlay Enter, received by App
 - App handles NavigateToDocMsg: search tree for matching node (by module + document name), expand path, select node
 - `]e`/`[e` keys in browser mode (when checkNavActive): increment/decrement checkNavIndex, send NavigateToDocMsg
@@ -75,19 +75,19 @@ CE1613 — The selected association/attribute no longer exists
 Run `mx check -j -w -d` to capture all diagnostic types. Add Tab filtering in check overlay.
 
 ```
-mx check Results  [All: 8E 2W 1D]
+mx check Results  [all: 8E 2W 1D]
 
-Tab cycles: All → Errors → Warnings → Deprecations → All
+Tab cycles: all → Errors → Warnings → Deprecations → all
 ```
 
 ### Implementation
 
 - `runMxCheck`: add `-w`, `-d` flags to mx command
 - `mxCheckJSON`: add `Deprecations []mxCheckEntry` field
-- `CheckError.Severity`: extend to three values — `ERROR`, `WARNING`, `DEPRECATION`
+- `CheckError.Severity`: extend to three values — `error`, `warning`, `DEPRECATION`
 - Check overlay: `checkFilter` state (`all`/`error`/`warning`/`deprecation`), Tab key cycles filter
 - `renderCheckResults` accepts filter parameter, only renders matching groups
-- Filter indicator in overlay title bar: `[All: 8E 2W 1D]` or `[Errors: 8]`
+- Filter indicator in overlay title bar: `[all: 8E 2W 1D]` or `[Errors: 8]`
 - `formatCheckBadge`: update to show `✗ 8E 2W 1D`
 - When overlay is refreshable (not switchable), Tab is repurposed for filter cycling
 
@@ -105,9 +105,9 @@ Embed faint structured anchors in overlay rendering for LLM consumption via scre
 
 ```
 [mxcli:check] errors=8 warnings=2 deprecations=1
-[mxcli:check:CE1613] severity=ERROR count=6 doc=MyFirstModule.P_ComboBox_Assoc type=Page element=combo_box.cmbCategory
-[mxcli:check:CE1613] severity=ERROR count=1 doc=MyFirstModule.P_ComboBox_Enum type=Page element=combo_box.cmbPriority
-[mxcli:check:CW0001] severity=WARNING count=2 doc=MyFirstModule.DoSomething type=Microflow element=variable.$var
+[mxcli:check:CE1613] severity=error count=6 doc=MyFirstModule.P_ComboBox_Assoc type=page element=combo_box.cmbCategory
+[mxcli:check:CE1613] severity=error count=1 doc=MyFirstModule.P_ComboBox_Enum type=page element=combo_box.cmbPriority
+[mxcli:check:CW0001] severity=warning count=2 doc=MyFirstModule.DoSomething type=microflow element=variable.$var
 ```
 
 ### Implementation

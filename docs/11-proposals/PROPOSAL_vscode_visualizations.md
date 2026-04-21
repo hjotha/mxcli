@@ -34,7 +34,7 @@ A side-by-side panel that opens next to the MDL source document, similar to how 
 - **Domain models**: Entity-relationship diagrams (entities as boxes, associations as lines)
 - **Microflows**: Flowchart diagrams (activities as nodes, flows as arrows)
 - **Pages**: Wireframe-style layout preview (boxes representing widgets)
-- **Call graphs**: Dependency diagrams from `SHOW CONTEXT OF` / `SHOW CALLERS OF`
+- **Call graphs**: Dependency diagrams from `show context of` / `show callers of`
 
 **Rendering options:**
 
@@ -62,8 +62,8 @@ Add diagram nodes in the project tree (e.g., "Domain Model Diagram" under each m
 **How it works:**
 
 - Under each module in the tree, add virtual nodes like:
-  - `Domain Model Diagram`
-  - `Microflow Diagram: ACT_ProcessOrder`
+  - `Domain model Diagram`
+  - `microflow Diagram: ACT_ProcessOrder`
   - `Dependency Graph`
 - Clicking opens a webview (not a text document) with the visualization
 - Tree node `contextValue` distinguishes diagram nodes from element nodes
@@ -86,7 +86,7 @@ Add CodeLens annotations inline in MDL source that offer "Show Diagram" links, p
 
 **How it works:**
 
-- CodeLens appears above `CREATE ENTITY`, `CREATE MICROFLOW`, etc. statements in MDL files
+- CodeLens appears above `create entity`, `create microflow`, etc. statements in MDL files
 - Clicking "Show Diagram" opens the visualization in a side panel
 - Also available via command palette: "MDL: Preview Diagram"
 - Also available from tree context menu: "Open as Diagram"
@@ -162,14 +162,14 @@ WebviewPanel renders with mermaid.js
 ```mermaid
 erDiagram
     Customer {
-        String Name
-        String Email
-        Boolean IsActive
+        string Name
+        string Email
+        boolean IsActive
     }
     Order {
-        Integer OrderNumber
-        DateTime OrderDate
-        Decimal TotalAmount
+        integer OrderNumber
+        datetime OrderDate
+        decimal TotalAmount
     }
     Customer ||--o{ Order : "Customer_Order"
 ```
@@ -179,12 +179,12 @@ erDiagram
 ```mermaid
 flowchart TD
     Start([Start]) --> Retrieve[Retrieve Customer]
-    Retrieve --> Decision{Is Active?}
-    Decision -->|Yes| Create[Create Order]
-    Decision -->|No| Log[Log Warning]
-    Create --> Commit[Commit Order]
-    Commit --> End([End])
-    Log --> End
+    retrieve --> Decision{Is Active?}
+    decision -->|Yes| Create[Create Order]
+    decision -->|No| Log[Log Warning]
+    create --> Commit[Commit Order]
+    commit --> End([End])
+    log --> End
 ```
 
 **Page (Wireframe-like):**
@@ -194,17 +194,17 @@ block-beta
     columns 1
     block:page["Customer_Edit"]
         columns 1
-        block:dv["DataView: Customer"]
+        block:dv["dataview: Customer"]
             columns 2
-            txtName["TextBox: Name"]
-            txtEmail["TextBox: Email"]
-            cbStatus["ComboBox: Status"]
+            txtName["textbox: Name"]
+            txtEmail["textbox: Email"]
+            cbStatus["combobox: status"]
             space
         end
-        block:footer["Footer"]
+        block:footer["footer"]
             columns 2
-            btnSave["Button: Save"]
-            btnCancel["Button: Cancel"]
+            btnSave["button: Save"]
+            btnCancel["button: cancel"]
         end
     end
 ```

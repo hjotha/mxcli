@@ -49,7 +49,7 @@ func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (*pages.DataView, error)
 	// Build child widgets, separating FOOTER widgets into FooterWidgets
 	for _, child := range w.Children {
 		// Check if this is a FOOTER widget - its children go to FooterWidgets
-		if child.Type == "FOOTER" {
+		if child.Type == "footer" {
 			dv.ShowFooter = true
 			for _, fw := range child.Children {
 				widget, err := pb.buildWidgetV3(fw)
@@ -108,8 +108,8 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*pages.CustomWidget, er
 	var columns []backend.DataGridColumnSpec
 	var headerWidgets []pages.Widget
 	for _, child := range w.Children {
-		switch strings.ToUpper(child.Type) {
-		case "COLUMN":
+		switch strings.ToLower(child.Type) {
+		case "column":
 			attr := child.GetAttribute()
 			if attr == "" && child.Name != "" && len(child.Children) == 0 {
 				attr = child.Name
@@ -130,7 +130,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (*pages.CustomWidget, er
 				}
 			}
 			columns = append(columns, col)
-		case "CONTROLBAR":
+		case "controlbar":
 			for _, controlBarChild := range child.Children {
 				childWidget, err := pb.buildWidgetV3(controlBarChild)
 				if err != nil {
@@ -687,7 +687,7 @@ func (pb *pageBuilder) buildNavigationListV3(w *ast.WidgetV3) (*pages.Navigation
 
 	// Build items from children (ITEM widgets)
 	for _, child := range w.Children {
-		if strings.ToUpper(child.Type) == "ITEM" {
+		if strings.ToLower(child.Type) == "item" {
 			item, err := pb.buildNavigationListItemV3(child)
 			if err != nil {
 				return nil, err
@@ -706,7 +706,7 @@ func (pb *pageBuilder) buildNavigationListV3(w *ast.WidgetV3) (*pages.Navigation
 // buildNavigationListItemV3 creates a NavigationListItem from V3 syntax.
 func (pb *pageBuilder) buildNavigationListItemV3(w *ast.WidgetV3) (*pages.NavigationListItem, error) {
 	if w.Name == "" {
-		return nil, mdlerrors.NewValidation("ITEM inside NAVIGATIONLIST requires a name")
+		return nil, mdlerrors.NewValidation("item inside navigationlist requires a name")
 	}
 
 	item := &pages.NavigationListItem{

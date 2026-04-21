@@ -29,7 +29,7 @@ func TestFormatAction_JavaActionCall_EntityTypeParam(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$IsValid = CALL JAVA ACTION MyModule.Validate(InputObject = 'MyModule.Customer');"
+	want := "$IsValid = call java action MyModule.Validate(InputObject = 'MyModule.Customer');"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -56,7 +56,7 @@ func TestFormatAction_JavaActionCall_MixedParamTypes(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$Result = CALL JAVA ACTION MyModule.ProcessEntity(InputObject = 'MyModule.Order', Label = 'Process this');"
+	want := "$Result = call java action MyModule.ProcessEntity(InputObject = 'MyModule.Order', Label = 'Process this');"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -76,7 +76,7 @@ func TestFormatAction_JavaActionCall_EntityTypeParam_EmptyEntity(t *testing.T) {
 	}
 	got := e.formatAction(action, nil, nil)
 	// Empty entity renders as ...
-	want := "$IsValid = CALL JAVA ACTION MyModule.Validate(InputObject = ...);"
+	want := "$IsValid = call java action MyModule.Validate(InputObject = ...);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -91,16 +91,16 @@ func TestFormatJavaActionType_EntityTypeParameterType(t *testing.T) {
 		TypeParameterName: "pEntity",
 	}
 	got := formatJavaActionType(typ)
-	if got != "ENTITY <pEntity>" {
-		t.Errorf("got %q, want %q", got, "ENTITY <pEntity>")
+	if got != "entity <pEntity>" {
+		t.Errorf("got %q, want %q", got, "entity <pEntity>")
 	}
 }
 
 func TestFormatJavaActionType_EntityTypeParameterType_NoName(t *testing.T) {
 	typ := &javaactions.EntityTypeParameterType{}
 	got := formatJavaActionType(typ)
-	if got != "ENTITY <>" {
-		t.Errorf("got %q, want %q", got, "ENTITY <>")
+	if got != "entity <>" {
+		t.Errorf("got %q, want %q", got, "entity <>")
 	}
 }
 
@@ -154,7 +154,7 @@ func TestIsTypeParamRef_QualifiedName(t *testing.T) {
 		EnumRef: &ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 	}
 	if isTypeParamRef(dt, typeParamNames) {
-		t.Error("Expected qualified name to NOT be a type parameter reference")
+		t.Error("Expected qualified name to not be a type parameter reference")
 	}
 }
 
@@ -167,7 +167,7 @@ func TestIsTypeParamRef_NonMatchingName(t *testing.T) {
 		EnumRef: &ast.QualifiedName{Name: "SomeOtherName"},
 	}
 	if isTypeParamRef(dt, typeParamNames) {
-		t.Error("Expected non-matching bare name to NOT be a type parameter reference")
+		t.Error("Expected non-matching bare name to not be a type parameter reference")
 	}
 }
 
@@ -177,7 +177,7 @@ func TestIsTypeParamRef_PrimitiveType(t *testing.T) {
 	// Primitive type should not be a type parameter ref
 	dt := ast.DataType{Kind: ast.TypeString}
 	if isTypeParamRef(dt, typeParamNames) {
-		t.Error("Expected primitive type to NOT be a type parameter reference")
+		t.Error("Expected primitive type to not be a type parameter reference")
 	}
 }
 
@@ -308,7 +308,7 @@ func TestFormatAction_JavaActionCall_EntityTypeAndParameterizedParams(t *testing
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$Result = CALL JAVA ACTION MyModule.CopyAttributes(EntityType = 'MyModule.ProcessResult', Source = $Source, Target = $Target, AttributeNames = 'ProcessedCount,ResultMessage');"
+	want := "$Result = call java action MyModule.CopyAttributes(EntityType = 'MyModule.ProcessResult', Source = $Source, Target = $Target, AttributeNames = 'ProcessedCount,ResultMessage');"
 	if got != want {
 		t.Errorf("got  %q\nwant %q", got, want)
 	}

@@ -15,7 +15,7 @@ Use this skill when:
 ## Overview
 
 When the ModelSDK Go serializes objects to BSON, the output must exactly match what Mendix Studio Pro expects. Even small differences in:
-- Field names (e.g., `Caption` vs `CaptionTemplate`)
+- Field names (e.g., `caption` vs `CaptionTemplate`)
 - Object structures (e.g., string vs nested object)
 - Array version markers (e.g., `[2, items...]` vs `[3, items...]`)
 
@@ -26,7 +26,7 @@ When the ModelSDK Go serializes objects to BSON, the output must exactly match w
 ### Step 1: Identify the Problem
 
 Symptoms that indicate BSON serialization issues:
-- MDL `DESCRIBE` command shows correct data, but Studio Pro shows empty/default
+- MDL `describe` command shows correct data, but Studio Pro shows empty/default
 - Object is created but properties don't persist
 - Nested structures (templates, parameters) are missing
 - "(Empty caption)" or similar placeholder text in Studio Pro
@@ -64,8 +64,8 @@ Look for differences in:
 
 | Area | Common Issues |
 |------|---------------|
-| Field names | `Caption` vs `CaptionTemplate`, `Name` vs `InternalName` |
-| Object vs value | String `""` vs nested `{$Type: "..."}` object |
+| Field names | `caption` vs `CaptionTemplate`, `Name` vs `InternalName` |
+| Object vs value | String `""` vs nested `{$type: "..."}` object |
 | Array markers | `[2, ...]` vs `[3, ...]` for different contexts |
 | Missing fields | Required fields that SDK omits |
 | Type mismatches | `int32` vs `int64`, `string` vs `binary` |
@@ -84,11 +84,11 @@ The serialization code lives in `sdk/mpr/writer_*.go` files:
 Mendix uses version markers at the start of arrays:
 
 ```go
-// Empty array (version 3 marker)
+// empty array (version 3 marker)
 bson.A{int32(3)}
 
-// Non-empty array - context dependent!
-// Parameters arrays use version 2
+// non-empty array - context dependent!
+// parameters arrays use version 2
 bson.A{int32(2), item1, item2, ...}
 
 // Texts$Text.Items arrays use version 3
@@ -102,14 +102,14 @@ bson.A{int32(3), item1, item2, ...}
 Some fields expect nested objects, not simple values:
 
 ```go
-// WRONG: String value
-{Key: "FallbackValue", Value: ""}
+// WRONG: string value
+{key: "FallbackValue", value: ""}
 
-// CORRECT: Nested Texts$Text object
-{Key: "Fallback", Value: bson.D{
-    {Key: "$ID", Value: idToBsonBinary(generateUUID())},
-    {Key: "$Type", Value: "Texts$Text"},
-    {Key: "Items", Value: bson.A{int32(3)}},
+// CORRECT: Nested Texts$text object
+{key: "Fallback", value: bson.D{
+    {key: "$ID", value: idToBsonBinary(generateUUID())},
+    {key: "$type", value: "Texts$text"},
+    {key: "Items", value: bson.A{int32(3)}},
 }}
 ```
 
@@ -119,10 +119,10 @@ Always use exact field names from Studio Pro:
 
 ```go
 // WRONG: Simplified name
-{Key: "Caption", Value: caption}
+{key: "caption", value: caption}
 
-// CORRECT: Full field name
-{Key: "CaptionTemplate", Value: caption}
+// CORRECT: full field name
+{key: "CaptionTemplate", value: caption}
 ```
 
 ## Part 3: Key Structures Reference
@@ -138,35 +138,35 @@ func serializeClientTemplate(ct *pages.ClientTemplate) bson.D {
         captionID = generateUUID()
     }
 
-    // Build template text
+    // build template text
     template := bson.D{
-        {Key: "$ID", Value: idToBsonBinary(generateUUID())},
-        {Key: "$Type", Value: "Texts$Text"},
-        {Key: "Items", Value: bson.A{int32(3), /* TextItem objects */}},
+        {key: "$ID", value: idToBsonBinary(generateUUID())},
+        {key: "$type", value: "Texts$text"},
+        {key: "Items", value: bson.A{int32(3), /* TextItem objects */}},
     }
 
-    // Build fallback (required, even if empty)
+    // build fallback (required, even if empty)
     fallback := bson.D{
-        {Key: "$ID", Value: idToBsonBinary(generateUUID())},
-        {Key: "$Type", Value: "Texts$Text"},
-        {Key: "Items", Value: bson.A{int32(3)}}, // Empty fallback
+        {key: "$ID", value: idToBsonBinary(generateUUID())},
+        {key: "$type", value: "Texts$text"},
+        {key: "Items", value: bson.A{int32(3)}}, // empty fallback
     }
 
-    // Build parameters array
-    params := bson.A{int32(3)} // Empty by default
+    // build parameters array
+    params := bson.A{int32(3)} // empty by default
     if len(ct.Parameters) > 0 {
-        params = bson.A{int32(2)} // Non-empty uses version 2!
+        params = bson.A{int32(2)} // non-empty uses version 2!
         for _, param := range ct.Parameters {
             params = append(params, serializeClientTemplateParameter(param))
         }
     }
 
     return bson.D{
-        {Key: "$ID", Value: idToBsonBinary(captionID)},
-        {Key: "$Type", Value: "Forms$ClientTemplate"},
-        {Key: "Fallback", Value: fallback},    // Must be object, not string
-        {Key: "Parameters", Value: params},
-        {Key: "Template", Value: template},
+        {key: "$ID", value: idToBsonBinary(captionID)},
+        {key: "$type", value: "Forms$ClientTemplate"},
+        {key: "Fallback", value: fallback},    // Must be object, not string
+        {key: "parameters", value: params},
+        {key: "template", value: template},
     }
 }
 ```
@@ -174,8 +174,8 @@ func serializeClientTemplate(ct *pages.ClientTemplate) bson.D {
 ### ActionButton CaptionTemplate
 
 ```go
-// In serializeActionButton:
-{Key: "CaptionTemplate", Value: caption}, // NOT "Caption"!
+// in serializeActionButton:
+{key: "CaptionTemplate", value: caption}, // not "caption"!
 ```
 
 ## Part 4: Debugging Tools
@@ -212,19 +212,19 @@ func main() {
 ### Using mxcli dump-bson
 
 ```bash
-# List all pages in project
+# list all pages in project
 mxcli dump-bson -p app.mpr --type page --list
 
-# List all microflows
+# list all microflows
 mxcli dump-bson -p app.mpr --type microflow --list
 
-# Dump specific page as JSON
+# Dump specific page as json
 mxcli dump-bson -p app.mpr --type page --object "PgTest.MyPage"
 
 # Save dump to file for comparison
 mxcli dump-bson -p app.mpr --type page --object "PgTest.MyPage" > mypage.json
 
-# Compare two objects (outputs both as JSON)
+# Compare two objects (outputs both as json)
 mxcli dump-bson -p app.mpr --type page --compare "PgTest.Broken,PgTest.Fixed"
 
 # Supported types: page, microflow, nanoflow, enumeration, snippet, layout
@@ -247,7 +247,7 @@ Before considering a fix complete:
 
 | Symptom | Likely Cause | Solution |
 |---------|--------------|----------|
-| "(Empty caption)" in Studio Pro | Wrong field name or structure | Check `CaptionTemplate` vs `Caption`, verify nested object |
+| "(Empty caption)" in Studio Pro | Wrong field name or structure | Check `CaptionTemplate` vs `caption`, verify nested object |
 | Parameters not showing | Wrong array version marker | Use `[2, ...]` for non-empty Parameters |
 | Template text missing | Missing Texts$Text structure | Ensure proper TextItem serialization |
 | Fallback empty | Using string instead of object | Use `Fallback` with Texts$Text object |
@@ -280,13 +280,13 @@ When creating nested `WidgetObject` instances (e.g., DataGrid2 columns), creatin
 mxcli dump-bson -p app.mpr --compare "PgTest.MDLPage,PgTest.StudioProPage"
 
 # Look for property count differences:
-# ~ Properties: array length differs (first: 5, second: 22)
+# ~ properties: array length differs (first: 5, second: 22)
 ```
 
 **Solution**: The embedded templates at `sdk/widgets/templates/mendix-11.6/datagrid.json` contain all 21 column properties:
 
 ```
-showContentAs, attribute, content, dynamicText, exportValue, header, tooltip,
+showContentAs, attribute, content, dynamictext, exportValue, header, tooltip,
 filter, visible, sortable, resizable, draggable, hidable, allowEventPropagation,
 width, minWidth, minWidthLimit, size, alignment, columnClass, wrapText
 ```
@@ -320,8 +320,8 @@ Check the `ValueType.Type` field in the widget template JSON:
 {
   "PropertyKey": "visible",
   "ValueType": {
-    "Type": "Expression",
-    "ReturnType": "Boolean"
+    "type": "expression",
+    "ReturnType": "boolean"
   }
 }
 ```
@@ -330,27 +330,27 @@ Check the `ValueType.Type` field in the widget template JSON:
 
 | ValueType.Type | BSON Field | Example Value | Notes |
 |----------------|------------|---------------|-------|
-| `Expression` | `Expression` | `"true"`, `"$currentObject/Name"` | String expression, NOT evaluated |
-| `Boolean` | `PrimitiveValue` | `"true"`, `"false"` | String representation |
-| `Enumeration` | `PrimitiveValue` | `"left"`, `"autoFill"` | Enum value name |
-| `Integer` | `PrimitiveValue` | `"100"`, `"0"` | String representation |
-| `Decimal` | `PrimitiveValue` | `"10.5"` | String representation |
-| `String` | `PrimitiveValue` | `"text value"` | Direct string |
-| `Widgets` | `Widgets` | `bson.A{...}` | Array of widget objects |
-| `Object` | `Objects` | `bson.A{...}` | Array of WidgetObject |
+| `expression` | `expression` | `"true"`, `"$currentObject/Name"` | String expression, NOT evaluated |
+| `boolean` | `PrimitiveValue` | `"true"`, `"false"` | String representation |
+| `enumeration` | `PrimitiveValue` | `"left"`, `"autofill"` | Enum value name |
+| `integer` | `PrimitiveValue` | `"100"`, `"0"` | String representation |
+| `decimal` | `PrimitiveValue` | `"10.5"` | String representation |
+| `string` | `PrimitiveValue` | `"text value"` | Direct string |
+| `widgets` | `widgets` | `bson.A{...}` | Array of widget objects |
+| `object` | `objects` | `bson.A{...}` | Array of WidgetObject |
 
 ### Example: DataGrid2 Column Properties
 
 ```go
-// WRONG: Using Expression for Boolean-type property
+// WRONG: Using expression for boolean-type property
 // Causes: NullReferenceException in GetExpectedExpressionType
-{Key: "sortable", Value: bson.D{
-    {Key: "Expression", Value: "true"},  // WRONG!
+{key: "sortable", value: bson.D{
+    {key: "expression", value: "true"},  // WRONG!
 }}
 
-// CORRECT: Using PrimitiveValue for Boolean-type property
-{Key: "sortable", Value: bson.D{
-    {Key: "PrimitiveValue", Value: "true"},  // Correct!
+// CORRECT: Using PrimitiveValue for boolean-type property
+{key: "sortable", value: bson.D{
+    {key: "PrimitiveValue", value: "true"},  // Correct!
 }}
 ```
 
@@ -358,35 +358,35 @@ Check the `ValueType.Type` field in the widget template JSON:
 
 | Property | ValueType.Type | BSON Field | Default Value |
 |----------|---------------|------------|---------------|
-| `visible` | Expression | `Expression` | `"true"` |
+| `visible` | Expression | `expression` | `"true"` |
 | `sortable` | Boolean | `PrimitiveValue` | `"true"` |
 | `resizable` | Boolean | `PrimitiveValue` | `"true"` |
 | `draggable` | Boolean | `PrimitiveValue` | `"true"` |
 | `wrapText` | Boolean | `PrimitiveValue` | `"false"` |
 | `hidable` | Enumeration | `PrimitiveValue` | `"yes"` |
 | `alignment` | Enumeration | `PrimitiveValue` | `"left"` |
-| `width` | Enumeration | `PrimitiveValue` | `"autoFill"` |
+| `width` | Enumeration | `PrimitiveValue` | `"autofill"` |
 | `minWidth` | Enumeration | `PrimitiveValue` | `"auto"` |
 | `size` | Integer | `PrimitiveValue` | `"100"` |
-| `header` | Object | `Objects` | Empty translation |
-| `content` | Widgets | `Widgets` | Empty widget array |
-| `filter` | Widgets | `Widgets` | Empty widget array |
+| `header` | Object | `objects` | Empty translation |
+| `content` | Widgets | `widgets` | Empty widget array |
+| `filter` | Widgets | `widgets` | Empty widget array |
 
 ### Common Errors
 
 | Error | Cause | Solution |
 |-------|-------|----------|
 | CE0642 "Property 'X' is required" | Missing property or wrong value format | Check ValueType.Type, use correct BSON field |
-| NullReferenceException in GetExpectedExpressionType | Using `Expression` for non-Expression type | Use `PrimitiveValue` for Boolean/Enum/Integer |
+| NullReferenceException in GetExpectedExpressionType | Using `expression` for non-Expression type | Use `PrimitiveValue` for Boolean/Enum/Integer |
 | CE0463 "widget definition has changed" | Missing properties | Create ALL properties from template |
 
 ### How to Find ValueType.Type
 
 ```bash
-# Check the embedded widget template
+# check the embedded widget template
 grep -A5 '"PropertyKey": "visible"' sdk/widgets/templates/mendix-11.6/datagrid.json
 
-# Or use jq to extract all property types
+# or use jq to extract all property types
 jq '.PropertyTypes[] | {key: .PropertyKey, type: .ValueType.Type}' sdk/widgets/templates/mendix-11.6/datagrid.json
 ```
 
@@ -404,28 +404,28 @@ TypeCacheUnknownTypeException: The type cache does not contain a type with quali
 
 ```go
 // WRONG: Texts$TextItem does not exist
-{Key: "$Type", Value: "Texts$TextItem"}
+{key: "$type", value: "Texts$TextItem"}
 
-// CORRECT: Use Texts$Translation with LanguageCode
-{Key: "$Type", Value: "Texts$Translation"},
-{Key: "LanguageCode", Value: "en_US"},
-{Key: "Text", Value: "Your text here"},
+// CORRECT: use Texts$Translation with LanguageCode
+{key: "$type", value: "Texts$Translation"},
+{key: "LanguageCode", value: "en_US"},
+{key: "text", value: "Your text here"},
 ```
 
 ### Full Example: Building a Header Translation
 
 ```go
 headerTranslation := bson.D{
-    {Key: "$ID", Value: idToBsonBinary(generateUUID())},
-    {Key: "$Type", Value: "Texts$Translation"},
-    {Key: "LanguageCode", Value: "en_US"},
-    {Key: "Text", Value: columnHeader},
+    {key: "$ID", value: idToBsonBinary(generateUUID())},
+    {key: "$type", value: "Texts$Translation"},
+    {key: "LanguageCode", value: "en_US"},
+    {key: "text", value: columnHeader},
 }
 
 headerText := bson.D{
-    {Key: "$ID", Value: idToBsonBinary(generateUUID())},
-    {Key: "$Type", Value: "Texts$Text"},
-    {Key: "Items", Value: bson.A{int32(3), headerTranslation}},
+    {key: "$ID", value: idToBsonBinary(generateUUID())},
+    {key: "$type", value: "Texts$text"},
+    {key: "Items", value: bson.A{int32(3), headerTranslation}},
 }
 ```
 
@@ -435,14 +435,14 @@ headerText := bson.D{
 
 ### Identifying TextTemplate Properties
 
-1. **Check the Type section** for properties with `"Type": "TextTemplate"`:
+1. **Check the Type section** for properties with `"type": "TextTemplate"`:
    ```json
    {
      "PropertyKey": "placeholder",
      "ValueType": {
        "$ID": "abc123...",
-       "$Type": "CustomWidgets$WidgetValueType",
-       "Type": "TextTemplate"  // <-- This is a TextTemplate property
+       "$type": "CustomWidgets$WidgetValueType",
+       "type": "TextTemplate"  // <-- This is a TextTemplate property
      }
    }
    ```
@@ -451,7 +451,7 @@ headerText := bson.D{
    ```json
    {
      "TypePointer": "abc123...",  // Matches ValueType.$ID above
-     "Value": {
+     "value": {
        "TextTemplate": null  // <-- WRONG! Causes CE0463
      }
    }
@@ -464,16 +464,16 @@ Every TextTemplate property must have this structure (never null):
 ```json
 "TextTemplate": {
   "$ID": "<32-char-guid>",
-  "$Type": "Forms$ClientTemplate",
+  "$type": "Forms$ClientTemplate",
   "Fallback": {
     "$ID": "<32-char-guid>",
-    "$Type": "Texts$Text",
+    "$type": "Texts$text",
     "Items": []
   },
-  "Parameters": [],
-  "Template": {
+  "parameters": [],
+  "template": {
     "$ID": "<32-char-guid>",
-    "$Type": "Texts$Text",
+    "$type": "Texts$text",
     "Items": []
   }
 }
@@ -484,13 +484,13 @@ Every TextTemplate property must have this structure (never null):
 **WRONG** - `[2]` in JSON serializes as an array containing the integer 2:
 ```json
 "Items": [2]      // Creates array with one element: the number 2
-"Parameters": [2] // Creates array with one element: the number 2
+"parameters": [2] // Creates array with one element: the number 2
 ```
 
 **CORRECT** - Use truly empty arrays:
 ```json
 "Items": []       // Truly empty array
-"Parameters": []  // Truly empty array
+"parameters": []  // Truly empty array
 ```
 
 The version markers (like `[2]` or `[3]`) only exist in BSON wire format, not in JSON template files.
@@ -523,12 +523,12 @@ for prop_type in data['type']['ObjectType']['PropertyTypes']:
 
 print("TextTemplate properties:", text_template_ids)
 
-# Find matching Object properties with null TextTemplate
+# find matching object properties with null TextTemplate
 for prop in data['object']['Properties']:
     type_ptr = prop['Value'].get('TypePointer')
     if type_ptr in text_template_ids:
         text_template = prop['Value'].get('TextTemplate')
-        if text_template is None:
+        if text_template is none:
             print(f"NEEDS FIX: {text_template_ids[type_ptr]} (TypePointer: {type_ptr})")
 ```
 
@@ -552,21 +552,21 @@ After fixing templates:
 ### Debugging Command Sequence
 
 ```bash
-# 1. Find the broken object
-mxcli -p app.mpr -c "DESCRIBE PAGE PgTest.BrokenPage"
+# 1. find the broken object
+mxcli -p app.mpr -c "describe page PgTest.BrokenPage"
 
-# 2. Create fixed version in Studio Pro, save project
+# 2. create fixed version in Studio Pro, save project
 
-# 3. Dump both objects to JSON files
+# 3. Dump both objects to json files
 mxcli dump-bson -p app.mpr --type page --object "PgTest.BrokenPage" > broken.json
 mxcli dump-bson -p app.mpr --type page --object "PgTest.FixedPage" > fixed.json
 
-# 4. Compare the JSON files
+# 4. Compare the json files
 diff broken.json fixed.json
-# Or use a visual diff tool like VS Code:
+# or use a visual diff tool like VS Code:
 code --diff broken.json fixed.json
 
-# 5. After fixing code, verify
+# 5. after fixing code, verify
 go build ./... && mxcli exec test.mdl -p app.mpr
 
 # 6. Verify in Studio Pro (open project, check object)

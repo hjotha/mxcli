@@ -32,7 +32,7 @@ mxcli docker run -p app.mpr --wait
 ## Quick Start
 
 ```bash
-# Open browser session (headless by default)
+# open browser session (headless by default)
 playwright-cli open http://localhost:8080
 
 # Take a snapshot to see the page structure and element refs
@@ -42,13 +42,13 @@ playwright-cli snapshot
 playwright-cli click e12
 playwright-cli fill e15 "some text"
 
-# Verify widget presence via JavaScript
+# Verify widget presence via javascript
 playwright-cli run-code "document.querySelector('.mx-name-dgCustomers') !== null"
 
 # Take a screenshot for visual inspection
 playwright-cli screenshot
 
-# Close browser when done
+# close browser when done
 playwright-cli close
 ```
 
@@ -65,7 +65,7 @@ Mendix renders each widget's `name` property as a CSS class on the DOM element:
 This maps directly to MDL widget names. When you generate a widget in MDL:
 
 ```sql
-ACTIONBUTTON submitButton (Caption: 'Submit', Action: SAVE_CHANGES)
+actionbutton submitButton (caption: 'Submit', action: save_changes)
 ```
 
 The stable CSS selector is `.mx-name-submitButton`. Use this with `run-code` for reliable assertions:
@@ -89,7 +89,7 @@ playwright-cli run-code "document.querySelector('#usernameInput').value = 'MxAdm
 playwright-cli run-code "document.querySelector('#passwordInput').value = 'AdminPassword1!'"
 playwright-cli run-code "document.querySelector('#loginButton').click()"
 
-# Wait for home page to load
+# wait for home page to load
 playwright-cli run-code "await new Promise(r => setTimeout(r, 3000))"
 playwright-cli snapshot
 
@@ -113,7 +113,7 @@ After navigating to a page, verify that all expected widgets are present:
 ```bash
 playwright-cli goto http://localhost:8080/p/Customer_Overview
 
-# Check multiple widgets
+# check multiple widgets
 playwright-cli run-code "document.querySelector('.mx-name-dgCustomers') !== null"
 playwright-cli run-code "document.querySelector('.mx-name-btnNew') !== null"
 playwright-cli run-code "document.querySelector('.mx-name-btnEdit') !== null"
@@ -130,11 +130,11 @@ playwright-cli snapshot
 
 # Fill form fields using .mx-name-* selectors
 playwright-cli run-code "document.querySelector('.mx-name-txtName input').value = 'Test Customer'"
-playwright-cli run-code "document.querySelector('.mx-name-txtName input').dispatchEvent(new Event('input', {bubbles: true}))"
+playwright-cli run-code "document.querySelector('.mx-name-txtName input').dispatchEvent(new event('input', {bubbles: true}))"
 playwright-cli run-code "document.querySelector('.mx-name-txtEmail input').value = 'test@example.com'"
-playwright-cli run-code "document.querySelector('.mx-name-txtEmail input').dispatchEvent(new Event('input', {bubbles: true}))"
+playwright-cli run-code "document.querySelector('.mx-name-txtEmail input').dispatchEvent(new event('input', {bubbles: true}))"
 
-# Or use fill with snapshot refs (simpler when refs are known)
+# or use fill with snapshot refs (simpler when refs are known)
 playwright-cli fill e42 "Test Customer"
 playwright-cli fill e45 "test@example.com"
 
@@ -149,13 +149,13 @@ When security is OFF, direct `/p/PageName` URLs **do not work** — Mendix redir
 ```bash
 playwright-cli open http://localhost:8080
 
-# Wait for Mendix to load
+# wait for Mendix to load
 playwright-cli run-code "await new Promise(r => { const check = () => document.querySelector('.mx-page') ? r() : setTimeout(check, 500); check(); })"
 
 # Click navigation button (from your MDL-defined NavigationMenu snippet)
 playwright-cli run-code "document.querySelector('.mx-name-btnCustomers').click()"
 
-# Wait and verify target page
+# wait and verify target page
 playwright-cli run-code "await new Promise(r => setTimeout(r, 2000))"
 playwright-cli run-code "document.querySelector('.mx-name-dgCustomers') !== null"
 ```
@@ -175,7 +175,7 @@ playwright-cli run-code "document.querySelector('.mx-name-dgCustomers') !== null
 After a UI interaction, verify data persistence using `mxcli oql` (no `pg` package needed):
 
 ```bash
-# After creating a customer through the UI...
+# after creating a customer through the UI...
 mxcli oql -p app.mpr --json "SELECT Name, Email FROM MyModule.Customer WHERE Name = 'Test Customer'"
 ```
 
@@ -201,12 +201,12 @@ playwright-cli run-code "document.querySelector('#passwordInput').value = 'Admin
 playwright-cli run-code "document.querySelector('#loginButton').click()"
 playwright-cli run-code "await new Promise(r => setTimeout(r, 3000))"
 
-# Verify Customer Overview
+# Verify Customer overview
 playwright-cli goto http://localhost:8080/p/Customer_Overview
-playwright-cli run-code "if (!document.querySelector('.mx-name-dgCustomers')) throw new Error('dgCustomers not found')"
-playwright-cli run-code "if (!document.querySelector('.mx-name-btnNew')) throw new Error('btnNew not found')"
+playwright-cli run-code "if (!document.querySelector('.mx-name-dgCustomers')) throw new error('dgCustomers not found')"
+playwright-cli run-code "if (!document.querySelector('.mx-name-btnNew')) throw new error('btnNew not found')"
 
-# Create a customer
+# create a customer
 playwright-cli run-code "document.querySelector('.mx-name-btnNew').click()"
 playwright-cli run-code "await new Promise(r => setTimeout(r, 2000))"
 playwright-cli fill txtName "CI Test Customer"
@@ -226,10 +226,10 @@ echo "PASS: verify-customers"
 ### Running Scripts
 
 ```bash
-# Run directly
+# run directly
 bash tests/verify-customers.sh
 
-# Run all test scripts
+# run all test scripts
 for f in tests/verify-*.sh; do bash "$f" || exit 1; done
 
 # Future: mxcli playwright verify tests/ -p app.mpr
@@ -237,11 +237,11 @@ for f in tests/verify-*.sh; do bash "$f" || exit 1; done
 
 ### Assertion Pattern
 
-For `set -e` scripts, use `throw new Error()` to trigger non-zero exit:
+For `set -e` scripts, use `throw new error()` to trigger non-zero exit:
 
 ```bash
 # This exits non-zero if widget is missing
-playwright-cli run-code "if (!document.querySelector('.mx-name-widgetName')) throw new Error('missing widgetName')"
+playwright-cli run-code "if (!document.querySelector('.mx-name-widgetName')) throw new error('missing widgetName')"
 ```
 
 ---
@@ -251,16 +251,16 @@ playwright-cli run-code "if (!document.querySelector('.mx-name-widgetName')) thr
 playwright-cli maintains browser sessions across commands. The devcontainer sets `PLAYWRIGHT_CLI_SESSION=mendix-app` by default.
 
 ```bash
-# List active sessions
+# list active sessions
 playwright-cli list
 
-# Close current session
+# close current session
 playwright-cli close
 
-# Close all sessions
+# close all sessions
 playwright-cli close-all
 
-# Use a named session (for parallel testing)
+# use a named session (for parallel testing)
 playwright-cli -s=test2 open http://localhost:8080
 ```
 
@@ -275,13 +275,13 @@ playwright-cli screenshot
 # Take screenshot of specific element
 playwright-cli screenshot e42
 
-# Open headed browser (visible UI)
+# open headed browser (visible UI)
 playwright-cli open http://localhost:8080 --headed
 
-# Show console messages
+# show console messages
 playwright-cli console
 
-# Show network requests
+# show network requests
 playwright-cli network
 
 # Start/stop tracing
@@ -301,8 +301,8 @@ playwright-cli show
 
 ```sql
 -- MDL: names you define become test hooks
-ACTIONBUTTON btnDrivers (Caption: 'Drivers', Action: SHOW_PAGE Module.Drivers_Overview)
-DATAGRID dgOrders (DataSource: DATABASE Module.Order) { ... }
+actionbutton btnDrivers (caption: 'Drivers', action: show_page Module.Drivers_Overview)
+datagrid dgOrders (datasource: database Module.Order) { ... }
 ```
 
 ```bash
@@ -316,7 +316,7 @@ playwright-cli run-code "document.querySelector('.mx-name-dgOrders') !== null"
 **NavigationList items need `text_` prefix.** The `<li>` container does NOT get an `mx-name-*` class. The inner `<span>` gets `mx-name-text_<itemName>`:
 
 ```bash
-# Use text_ prefix for NavigationList items
+# use text_ prefix for navigationlist items
 playwright-cli run-code "document.querySelector('.mx-name-text_itemDrivers').click()"
 ```
 
@@ -337,7 +337,7 @@ Mendix maintains a permanent long-polling XHR connection. `networkidle` never fi
 Clicking top nav items may fail due to `div.mx-placeholder` overlay. Use `dispatchEvent('click')`:
 
 ```bash
-playwright-cli run-code "document.querySelector('.mx-name-navigationTree1-1').dispatchEvent(new Event('click', {bubbles: true}))"
+playwright-cli run-code "document.querySelector('.mx-name-navigationTree1-1').dispatchEvent(new event('click', {bubbles: true}))"
 ```
 
 ### Login page selectors are stable
@@ -350,13 +350,13 @@ The Mendix login page (`/login.html`) uses fixed IDs: `#usernameInput`, `#passwo
 The key workflow: generate MDL → build → verify → fix → repeat.
 
 ```bash
-# 1. Generate and apply MDL
+# 1. generate and apply MDL
 mxcli exec changes.mdl -p app.mpr
 
-# 2. Build and start
+# 2. build and start
 mxcli docker run -p app.mpr --fresh --wait
 
-# 3. Open browser and verify
+# 3. open browser and verify
 playwright-cli open http://localhost:8080
 playwright-cli snapshot
 # ... verify widgets, fill forms, check data ...

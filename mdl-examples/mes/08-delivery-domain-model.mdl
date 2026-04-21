@@ -17,7 +17,7 @@
  *
  * @since 1.0.0
  */
-CREATE MODULE Delivery;
+create module Delivery;
 
 -- MARK: ENUMERATIONS
 
@@ -28,7 +28,7 @@ CREATE MODULE Delivery;
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION Delivery.DeliveryStatus (
+create enumeration Delivery.DeliveryStatus (
   Scheduled 'Scheduled',
   InTransit 'In Transit',
   Delivered 'Delivered',
@@ -43,7 +43,7 @@ CREATE ENUMERATION Delivery.DeliveryStatus (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION Delivery.InstallationStatus (
+create enumeration Delivery.InstallationStatus (
   Scheduled 'Scheduled',
   InProgress 'In Progress',
   Completed 'Completed',
@@ -64,33 +64,33 @@ CREATE ENUMERATION Delivery.InstallationStatus (
  * @see SalesOrder.CustomerOrder
  * @see CRM.CustomerAddress
  */
-@Position(50, 50)
-CREATE PERSISTENT ENTITY Delivery.DeliveryOrder (
+@position(50, 50)
+create persistent entity Delivery.DeliveryOrder (
   /** Auto-generated delivery number */
-  DeliveryNumber: AutoNumber DEFAULT 1,
+  DeliveryNumber: autonumber default 1,
   /** Current delivery status */
-  DeliveryStatus: Enumeration(Delivery.DeliveryStatus) NOT NULL ERROR 'Delivery status is required',
+  DeliveryStatus: enumeration(Delivery.DeliveryStatus) not null error 'Delivery status is required',
   /** Scheduled delivery date */
-  ScheduledDate: DateTime,
+  ScheduledDate: datetime,
   /** Actual delivery date */
-  ActualDeliveryDate: DateTime,
+  ActualDeliveryDate: datetime,
   /** Delivery time window start */
-  TimeWindowStart: DateTime,
+  TimeWindowStart: datetime,
   /** Delivery time window end */
-  TimeWindowEnd: DateTime,
+  TimeWindowEnd: datetime,
   /** Delivery driver or carrier name */
-  CarrierName: String(200),
+  CarrierName: string(200),
   /** Tracking number (if applicable) */
-  TrackingNumber: String(100),
+  TrackingNumber: string(100),
   /** Delivery instructions */
-  DeliveryInstructions: String(2000),
+  DeliveryInstructions: string(2000),
   /** Customer signature confirmation */
-  IsSignedOff: Boolean DEFAULT false,
+  IsSignedOff: boolean default false,
   /** Notes from the delivery */
-  DeliveryNotes: String(2000)
+  DeliveryNotes: string(2000)
 )
-INDEX (DeliveryStatus)
-INDEX (ScheduledDate);
+index (DeliveryStatus)
+index (ScheduledDate);
 
 /**
  * Delivery line entity
@@ -102,18 +102,18 @@ INDEX (ScheduledDate);
  * @see Delivery.DeliveryOrder
  * @see SalesOrder.OrderLine
  */
-@Position(350, 50)
-CREATE PERSISTENT ENTITY Delivery.DeliveryLine (
+@position(350, 50)
+create persistent entity Delivery.DeliveryLine (
   /** Line number */
-  LineNumber: Integer NOT NULL ERROR 'Line number is required',
+  LineNumber: integer not null error 'Line number is required',
   /** Item description */
-  ItemDescription: String(500) NOT NULL ERROR 'Item description is required',
+  ItemDescription: string(500) not null error 'Item description is required',
   /** Quantity being delivered */
-  QuantityDelivered: Integer NOT NULL ERROR 'Quantity is required' DEFAULT 1,
+  QuantityDelivered: integer not null error 'Quantity is required' default 1,
   /** Condition on delivery (for damage tracking) */
-  DeliveryCondition: String(500),
+  DeliveryCondition: string(500),
   /** Whether the item was accepted by customer */
-  IsAccepted: Boolean DEFAULT true
+  IsAccepted: boolean default true
 );
 
 /**
@@ -126,33 +126,33 @@ CREATE PERSISTENT ENTITY Delivery.DeliveryLine (
  * @since 1.0.0
  * @see Delivery.DeliveryOrder
  */
-@Position(50, 250)
-CREATE PERSISTENT ENTITY Delivery.InstallationAppointment (
+@position(50, 250)
+create persistent entity Delivery.InstallationAppointment (
   /** Auto-generated appointment number */
-  AppointmentNumber: AutoNumber DEFAULT 1,
+  AppointmentNumber: autonumber default 1,
   /** Current appointment status */
-  AppointmentStatus: Enumeration(Delivery.InstallationStatus) NOT NULL ERROR 'Status is required',
+  AppointmentStatus: enumeration(Delivery.InstallationStatus) not null error 'Status is required',
   /** Scheduled date and start time */
-  ScheduledDateTime: DateTime NOT NULL ERROR 'Scheduled date is required',
+  ScheduledDateTime: datetime not null error 'Scheduled date is required',
   /** Estimated duration in hours */
-  EstimatedDurationHours: Decimal DEFAULT 2,
+  EstimatedDurationHours: decimal default 2,
   /** Actual duration in hours */
-  ActualDurationHours: Decimal,
+  ActualDurationHours: decimal,
   /** Assigned installer name */
-  InstallerName: String(200),
+  InstallerName: string(200),
   /** Customer contact for appointment */
-  CustomerContactName: String(200),
+  CustomerContactName: string(200),
   /** Customer contact phone */
-  CustomerContactPhone: String(50),
+  CustomerContactPhone: string(50),
   /** Installation instructions */
-  InstallationInstructions: String(2000),
+  InstallationInstructions: string(2000),
   /** Notes from the installation */
-  InstallationNotes: String(2000),
+  InstallationNotes: string(2000),
   /** Whether the customer signed off on installation */
-  IsSignedOff: Boolean DEFAULT false
+  IsSignedOff: boolean default false
 )
-INDEX (AppointmentStatus)
-INDEX (ScheduledDateTime);
+index (AppointmentStatus)
+index (ScheduledDateTime);
 
 -- MARK: ASSOCIATIONS
 
@@ -163,11 +163,11 @@ INDEX (ScheduledDateTime);
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Delivery.DeliveryOrder_CustomerOrder
-  FROM Delivery.DeliveryOrder TO SalesOrder.CustomerOrder
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Delivery.DeliveryOrder_CustomerOrder
+  from Delivery.DeliveryOrder to SalesOrder.CustomerOrder
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links delivery order to the delivery address
@@ -176,11 +176,11 @@ CREATE ASSOCIATION Delivery.DeliveryOrder_CustomerOrder
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Delivery.DeliveryOrder_CustomerAddress
-  FROM Delivery.DeliveryOrder TO CRM.CustomerAddress
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Delivery.DeliveryOrder_CustomerAddress
+  from Delivery.DeliveryOrder to CRM.CustomerAddress
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links delivery line to its delivery order
@@ -189,11 +189,11 @@ CREATE ASSOCIATION Delivery.DeliveryOrder_CustomerAddress
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Delivery.DeliveryLine_DeliveryOrder
-  FROM Delivery.DeliveryLine TO Delivery.DeliveryOrder
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association Delivery.DeliveryLine_DeliveryOrder
+  from Delivery.DeliveryLine to Delivery.DeliveryOrder
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links delivery line to the order line
@@ -202,11 +202,11 @@ CREATE ASSOCIATION Delivery.DeliveryLine_DeliveryOrder
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Delivery.DeliveryLine_OrderLine
-  FROM Delivery.DeliveryLine TO SalesOrder.OrderLine
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Delivery.DeliveryLine_OrderLine
+  from Delivery.DeliveryLine to SalesOrder.OrderLine
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links installation to its delivery order
@@ -215,8 +215,8 @@ CREATE ASSOCIATION Delivery.DeliveryLine_OrderLine
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION Delivery.InstallationAppointment_DeliveryOrder
-  FROM Delivery.InstallationAppointment TO Delivery.DeliveryOrder
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Delivery.InstallationAppointment_DeliveryOrder
+  from Delivery.InstallationAppointment to Delivery.DeliveryOrder
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;

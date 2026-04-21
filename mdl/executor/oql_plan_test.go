@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseOQLString_SimpleQuery(t *testing.T) {
-	oql := "FROM CRM.Account AS a SELECT a.Name, a.Email"
+	oql := "from CRM.Account as a select a.Name, a.Email"
 	parsed := ParseOQLString(oql)
 	if parsed == nil {
 		t.Fatal("Expected non-nil parsed result")
@@ -28,7 +28,7 @@ func TestParseOQLString_SimpleQuery(t *testing.T) {
 }
 
 func TestParseOQLString_SubqueryInFROM(t *testing.T) {
-	oql := "FROM (FROM MultipleAggregate.Policy AS p2 SELECT count(p2.PolicyNumber) AS TotalPolicies) AS p SELECT p.TotalPolicies"
+	oql := "from (from MultipleAggregate.Policy as p2 select count(p2.PolicyNumber) as TotalPolicies) as p select p.TotalPolicies"
 	parsed := ParseOQLString(oql)
 	if parsed == nil {
 		t.Fatal("Expected non-nil parsed result")
@@ -75,7 +75,7 @@ func TestParseOQLString_SubqueryInFROM(t *testing.T) {
 }
 
 func TestParseOQLString_SubqueryInJOIN(t *testing.T) {
-	oql := `FROM MultipleAggregate.Policy AS p LEFT JOIN (FROM MultipleAggregate.Claim AS c2 SELECT c2.PolicyNumber AS PN, count(c2.ClaimID) AS ClaimCount) AS c ON p.PolicyNumber = c.PN SELECT p.PolicyNumber, c.ClaimCount`
+	oql := `from MultipleAggregate.Policy as p left join (from MultipleAggregate.Claim as c2 select c2.PolicyNumber as PN, count(c2.ClaimID) as ClaimCount) as c on p.PolicyNumber = c.PN select p.PolicyNumber, c.ClaimCount`
 	parsed := ParseOQLString(oql)
 	if parsed == nil {
 		t.Fatal("Expected non-nil parsed result")
@@ -88,13 +88,13 @@ func TestParseOQLString_SubqueryInJOIN(t *testing.T) {
 	// First table: direct entity reference
 	from := parsed.Tables[0]
 	if from.Entity != "MultipleAggregate.Policy" {
-		t.Errorf("Expected FROM entity 'MultipleAggregate.Policy', got %q", from.Entity)
+		t.Errorf("Expected from entity 'MultipleAggregate.Policy', got %q", from.Entity)
 	}
 	if from.Alias != "p" {
-		t.Errorf("Expected FROM alias 'p', got %q", from.Alias)
+		t.Errorf("Expected from alias 'p', got %q", from.Alias)
 	}
 	if from.Subquery != nil {
-		t.Error("Expected FROM table to have no subquery")
+		t.Error("Expected from table to have no subquery")
 	}
 
 	// Second table: subquery in LEFT JOIN
@@ -109,10 +109,10 @@ func TestParseOQLString_SubqueryInJOIN(t *testing.T) {
 		t.Errorf("Expected entity from inner query 'MultipleAggregate.Claim', got %q", join.Entity)
 	}
 	if join.OnExpr != "p.PolicyNumber = c.PN" {
-		t.Errorf("Expected ON expr 'p.PolicyNumber = c.PN', got %q", join.OnExpr)
+		t.Errorf("Expected on expr 'p.PolicyNumber = c.PN', got %q", join.OnExpr)
 	}
 	if join.Subquery == nil {
-		t.Fatal("Expected Subquery to be set on JOIN table")
+		t.Fatal("Expected Subquery to be set on join table")
 	}
 
 	sub := join.Subquery
@@ -125,7 +125,7 @@ func TestParseOQLString_SubqueryInJOIN(t *testing.T) {
 }
 
 func TestParseOQLString_MultipleSubqueries(t *testing.T) {
-	oql := `FROM (FROM MyMod.A AS a1 SELECT a1.X AS AX) AS a LEFT JOIN (FROM MyMod.B AS b1 SELECT b1.Y AS BY) AS b ON a.AX = b.BY SELECT a.AX, b.BY`
+	oql := `from (from MyMod.A as a1 select a1.X as AX) as a left join (from MyMod.B as b1 select b1.Y as by) as b on a.AX = b.BY select a.AX, b.BY`
 	parsed := ParseOQLString(oql)
 	if parsed == nil {
 		t.Fatal("Expected non-nil parsed result")
@@ -137,21 +137,21 @@ func TestParseOQLString_MultipleSubqueries(t *testing.T) {
 
 	// Both tables should have subqueries
 	if parsed.Tables[0].Subquery == nil {
-		t.Error("Expected FROM table to have subquery")
+		t.Error("Expected from table to have subquery")
 	}
 	if parsed.Tables[1].Subquery == nil {
-		t.Error("Expected JOIN table to have subquery")
+		t.Error("Expected join table to have subquery")
 	}
 	if parsed.Tables[0].Entity != "MyMod.A" {
-		t.Errorf("Expected FROM entity 'MyMod.A', got %q", parsed.Tables[0].Entity)
+		t.Errorf("Expected from entity 'MyMod.A', got %q", parsed.Tables[0].Entity)
 	}
 	if parsed.Tables[1].Entity != "MyMod.B" {
-		t.Errorf("Expected JOIN entity 'MyMod.B', got %q", parsed.Tables[1].Entity)
+		t.Errorf("Expected join entity 'MyMod.B', got %q", parsed.Tables[1].Entity)
 	}
 }
 
 func TestQueryPlan_SubqueryInFROM(t *testing.T) {
-	oql := "FROM (FROM Insurance.Policy AS p2 SELECT count(p2.Number) AS Total) AS p SELECT p.Total"
+	oql := "from (from Insurance.Policy as p2 select count(p2.Number) as Total) as p select p.Total"
 	plan := parseOqlPlan("Insurance.MyView", oql)
 
 	if len(plan.Tables) != 1 {
@@ -167,12 +167,12 @@ func TestQueryPlan_SubqueryInFROM(t *testing.T) {
 	}
 	// Subquery SELECT items should populate attributes
 	if len(table.Attributes) < 1 {
-		t.Errorf("Expected at least 1 attribute from subquery SELECT, got %d", len(table.Attributes))
+		t.Errorf("Expected at least 1 attribute from subquery select, got %d", len(table.Attributes))
 	}
 }
 
 func TestQueryPlan_SubqueryInJOIN(t *testing.T) {
-	oql := `FROM Insurance.Policy AS p LEFT JOIN (FROM Insurance.Claim AS c2 WHERE c2.Active = true SELECT c2.PolicyNum AS PN, count(c2.ID) AS Cnt) AS c ON p.Num = c.PN SELECT p.Num, c.Cnt`
+	oql := `from Insurance.Policy as p left join (from Insurance.Claim as c2 where c2.Active = true select c2.PolicyNum as PN, count(c2.ID) as Cnt) as c on p.Num = c.PN select p.Num, c.Cnt`
 	plan := parseOqlPlan("Insurance.MyView", oql)
 
 	if len(plan.Tables) != 2 {
@@ -195,12 +195,12 @@ func TestQueryPlan_SubqueryInJOIN(t *testing.T) {
 
 	// Subquery attributes from inner SELECT
 	if len(joinTable.Attributes) < 2 {
-		t.Errorf("Expected at least 2 attributes from subquery SELECT, got %d", len(joinTable.Attributes))
+		t.Errorf("Expected at least 2 attributes from subquery select, got %d", len(joinTable.Attributes))
 	}
 
 	// Subquery filters from inner WHERE
 	if len(joinTable.Filters) < 1 {
-		t.Errorf("Expected at least 1 filter from subquery WHERE, got %d", len(joinTable.Filters))
+		t.Errorf("Expected at least 1 filter from subquery where, got %d", len(joinTable.Filters))
 	}
 
 	// Join edges should be created
@@ -216,7 +216,7 @@ func TestQueryPlan_SubqueryInJOIN(t *testing.T) {
 }
 
 func TestParseOQLString_ScalarSubqueryInSELECT(t *testing.T) {
-	oql := `FROM Shop.TagValue AS tv SELECT tv.Tag, (FROM Shop.TagValue AS tv2 WHERE tv2.Tag = tv.Tag SELECT COUNT(tv2.Value)) AS ValueCount`
+	oql := `from Shop.TagValue as tv select tv.Tag, (from Shop.TagValue as tv2 where tv2.Tag = tv.Tag select count(tv2.Value)) as ValueCount`
 	parsed := ParseOQLString(oql)
 	if parsed == nil {
 		t.Fatal("Expected non-nil parsed result")
@@ -228,7 +228,7 @@ func TestParseOQLString_ScalarSubqueryInSELECT(t *testing.T) {
 
 	// First item: simple column reference
 	if parsed.Select[0].Subquery != nil {
-		t.Error("Expected first SELECT item to have no subquery")
+		t.Error("Expected first select item to have no subquery")
 	}
 
 	// Second item: scalar subquery
@@ -237,7 +237,7 @@ func TestParseOQLString_ScalarSubqueryInSELECT(t *testing.T) {
 		t.Errorf("Expected alias 'ValueCount', got %q", sel.Alias)
 	}
 	if sel.Subquery == nil {
-		t.Fatal("Expected second SELECT item to have a subquery")
+		t.Fatal("Expected second select item to have a subquery")
 	}
 	if len(sel.Subquery.Tables) != 1 {
 		t.Fatalf("Expected 1 inner table, got %d", len(sel.Subquery.Tables))
@@ -246,12 +246,12 @@ func TestParseOQLString_ScalarSubqueryInSELECT(t *testing.T) {
 		t.Errorf("Expected inner entity 'Shop.TagValue', got %q", sel.Subquery.Tables[0].Entity)
 	}
 	if sel.Subquery.Where == "" {
-		t.Error("Expected inner WHERE clause to be non-empty")
+		t.Error("Expected inner where clause to be non-empty")
 	}
 }
 
 func TestQueryPlan_ScalarSubqueryInSELECT(t *testing.T) {
-	oql := `FROM Shop.TagValue AS tv SELECT tv.Tag, (FROM Shop.TagValue AS tv2 WHERE tv2.Tag = tv.Tag SELECT COUNT(tv2.Value)) AS ValueCount`
+	oql := `from Shop.TagValue as tv select tv.Tag, (from Shop.TagValue as tv2 where tv2.Tag = tv.Tag select count(tv2.Value)) as ValueCount`
 	plan := parseOqlPlan("Shop.MyView", oql)
 
 	// Should have 2 tables: the FROM table + the scalar subquery table
@@ -277,17 +277,17 @@ func TestQueryPlan_ScalarSubqueryInSELECT(t *testing.T) {
 	}
 	// Should have the inner SELECT as attributes
 	if len(subTable.Attributes) < 1 {
-		t.Errorf("Expected at least 1 attribute from inner SELECT, got %d", len(subTable.Attributes))
+		t.Errorf("Expected at least 1 attribute from inner select, got %d", len(subTable.Attributes))
 	}
 	// Should have the inner WHERE as a filter
 	if len(subTable.Filters) < 1 {
-		t.Errorf("Expected at least 1 filter from inner WHERE, got %d", len(subTable.Filters))
+		t.Errorf("Expected at least 1 filter from inner where, got %d", len(subTable.Filters))
 	}
 }
 
 func TestQueryPlan_NoSubquery(t *testing.T) {
 	// Ensure regular queries still work unchanged
-	oql := "FROM CRM.Account AS a JOIN CRM.Contact AS c ON a.ID = c.AccountID SELECT a.Name, c.Email"
+	oql := "from CRM.Account as a join CRM.Contact as c on a.ID = c.AccountID select a.Name, c.Email"
 	plan := parseOqlPlan("CRM.MyView", oql)
 
 	if len(plan.Tables) != 2 {

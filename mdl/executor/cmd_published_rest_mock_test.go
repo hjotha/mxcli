@@ -39,7 +39,7 @@ func TestShowPublishedRestServices_Mock(t *testing.T) {
 	out := buf.String()
 	assertContainsStr(t, out, "QualifiedName")
 	assertContainsStr(t, out, "MyModule.OrderAPI")
-	assertContainsStr(t, out, "(1 published REST services)")
+	assertContainsStr(t, out, "(1 published rest services)")
 }
 
 func TestDescribePublishedRestService_Mock(t *testing.T) {
@@ -65,6 +65,6 @@ func TestDescribePublishedRestService_Mock(t *testing.T) {
 	assertNoError(t, describePublishedRestService(ctx, ast.QualifiedName{Module: "MyModule", Name: "OrderAPI"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE PUBLISHED REST SERVICE")
+	assertContainsStr(t, out, "create published rest service")
 	assertContainsStr(t, out, "MyModule.OrderAPI")
 }

@@ -103,12 +103,12 @@ func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 	modID := h.FindModuleID(im.ContainerID)
 	moduleName := h.GetModuleName(modID)
 
-	fmt.Fprintf(ctx.Output, "CREATE IMPORT MAPPING %s.%s\n", moduleName, im.Name)
+	fmt.Fprintf(ctx.Output, "create import mapping %s.%s\n", moduleName, im.Name)
 
 	if im.JsonStructure != "" {
-		fmt.Fprintf(ctx.Output, "  WITH JSON STRUCTURE %s\n", im.JsonStructure)
+		fmt.Fprintf(ctx.Output, "  with json structure %s\n", im.JsonStructure)
 	} else if im.XmlSchema != "" {
-		fmt.Fprintf(ctx.Output, "  WITH XML SCHEMA %s\n", im.XmlSchema)
+		fmt.Fprintf(ctx.Output, "  with xml schema %s\n", im.XmlSchema)
 	}
 
 	if len(im.Elements) > 0 {
@@ -126,11 +126,11 @@ func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 func handlingKeyword(handling string) string {
 	switch handling {
 	case "Find":
-		return "FIND"
+		return "find"
 	case "FindOrCreate":
-		return "FIND OR CREATE"
+		return "find or create"
 	default:
-		return "CREATE"
+		return "create"
 	}
 }
 
@@ -183,7 +183,7 @@ func printImportMappingElement(w io.Writer, elem *model.ImportMappingElement, de
 		}
 		keyStr := ""
 		if elem.IsKey {
-			keyStr = " KEY"
+			keyStr = " key"
 		}
 		fmt.Fprintf(w, "%s%s = %s%s", indent, attrName, elem.ExposedName, keyStr)
 	}

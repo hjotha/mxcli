@@ -17,7 +17,7 @@ Use when the user asks to:
 - **Navigation Profiles** — Every Mendix project has navigation profiles: Responsive, Phone, Tablet, and optionally Native. Each profile has its own home page, menu, and login page.
 - **Home Page** — The default page shown after login. Can be a PAGE or MICROFLOW.
 - **Role-Based Home Pages** — Override the default home page per user role (e.g., admins see a dashboard, users see a task list).
-- **Menu Items** — Hierarchical menu tree. Each item has a caption and optionally targets a PAGE or MICROFLOW. Sub-menus nest with `MENU 'Caption' (...)`.
+- **Menu Items** — Hierarchical menu tree. Each item has a caption and optionally targets a PAGE or MICROFLOW. Sub-menus nest with `menu 'caption' (...)`.
 - **Login Page** — Custom login page (optional; Mendix provides a default).
 - **Not-Found Page** — Custom 404 page (optional).
 
@@ -25,90 +25,90 @@ Use when the user asks to:
 
 ```sql
 -- Summary of all navigation profiles (home pages, menu counts)
-SHOW NAVIGATION;
+show navigation;
 
 -- Full MDL description of a profile (round-trippable output)
-DESCRIBE NAVIGATION Responsive;
-DESCRIBE NAVIGATION;              -- all profiles
+describe navigation Responsive;
+describe navigation;              -- all profiles
 
 -- Menu tree for a specific profile
-SHOW NAVIGATION MENU Responsive;
-SHOW NAVIGATION MENU;             -- all profiles
+show navigation menu Responsive;
+show navigation menu;             -- all profiles
 
 -- Home page assignments across all profiles and roles
-SHOW NAVIGATION HOMES;
+show navigation homes;
 ```
 
 ## CREATE OR REPLACE NAVIGATION (Full Replacement)
 
-This command fully replaces a navigation profile's configuration. All clauses are optional — omitted clauses clear that section. The output from `DESCRIBE NAVIGATION` can be pasted back directly.
+This command fully replaces a navigation profile's configuration. All clauses are optional — omitted clauses clear that section. The output from `describe navigation` can be pasted back directly.
 
 ### Basic: Set Home and Login Page
 
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  LOGIN PAGE Administration.Login;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  login page Administration.Login;
 ```
 
 ### Role-Based Home Pages
 
-Add `FOR Module.Role` to override the home page for specific user roles:
+Add `for Module.Role` to override the home page for specific user roles:
 
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  HOME PAGE MyModule.AdminDashboard FOR Administration.Administrator
-  HOME PAGE MyModule.CustomerPortal FOR MyModule.Customer
-  LOGIN PAGE Administration.Login;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  home page MyModule.AdminDashboard for Administration.Administrator
+  home page MyModule.CustomerPortal for MyModule.Customer
+  login page Administration.Login;
 ```
 
 ### Full Menu Tree
 
-The `MENU (...)` block replaces the entire menu. Use `MENU ITEM` for leaf items and `MENU 'Caption' (...)` for sub-menus:
+The `menu (...)` block replaces the entire menu. Use `menu item` for leaf items and `menu 'caption' (...)` for sub-menus:
 
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  LOGIN PAGE Administration.Login
-  MENU (
-    MENU ITEM 'Home' PAGE MyModule.Home_Web;
-    MENU 'Orders' (
-      MENU ITEM 'All Orders' PAGE Orders.Order_Overview;
-      MENU ITEM 'New Order' PAGE Orders.Order_New;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  login page Administration.Login
+  menu (
+    menu item 'Home' page MyModule.Home_Web;
+    menu 'Orders' (
+      menu item 'All Orders' page Orders.Order_Overview;
+      menu item 'New Order' page Orders.Order_New;
     );
-    MENU 'Admin' (
-      MENU ITEM 'Users' PAGE Administration.Account_Overview;
-      MENU ITEM 'Run Report' MICROFLOW Reports.ACT_GenerateReport;
+    menu 'Admin' (
+      menu item 'Users' page Administration.Account_Overview;
+      menu item 'Run Report' microflow Reports.ACT_GenerateReport;
     );
   );
 ```
 
 ### Clear the Menu
 
-An empty `MENU ()` block removes all menu items:
+An empty `menu ()` block removes all menu items:
 
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  MENU ();
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  menu ();
 ```
 
 ### Not-Found Page
 
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  NOT FOUND PAGE MyModule.Custom404;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  not found page MyModule.Custom404;
 ```
 
 ### Microflow as Home Page
 
-Use `HOME MICROFLOW` instead of `HOME PAGE` to run a microflow on login:
+Use `home microflow` instead of `home page` to run a microflow on login:
 
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME MICROFLOW MyModule.ACT_ShowHome;
+create or replace navigation Responsive
+  home microflow MyModule.ACT_ShowHome;
 ```
 
 ## Round-Trip Workflow
@@ -117,41 +117,41 @@ The DESCRIBE output is directly executable. Use this pattern to inspect, modify,
 
 ```sql
 -- Step 1: Inspect current state
-DESCRIBE NAVIGATION Responsive;
+describe navigation Responsive;
 
 -- Step 2: Copy the output, modify as needed, paste back
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  LOGIN PAGE Administration.Login
-  MENU (
-    MENU ITEM 'Home' PAGE MyModule.Home_Web;
-    MENU ITEM 'New Feature' PAGE MyModule.NewFeature;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  login page Administration.Login
+  menu (
+    menu item 'Home' page MyModule.Home_Web;
+    menu item 'New Feature' page MyModule.NewFeature;
   );
 
 -- Step 3: Verify
-DESCRIBE NAVIGATION Responsive;
+describe navigation Responsive;
 ```
 
 ## Catalog Queries
 
-After `REFRESH CATALOG FULL`, navigation references appear in the `REFS` table:
+After `refresh catalog full`, navigation references appear in the `REFS` table:
 
 ```sql
-REFRESH CATALOG FULL;
+refresh catalog full;
 
 -- Find all pages that are navigation entry points
-SELECT SourceName, TargetName, RefKind
-FROM CATALOG.REFS
-WHERE RefKind IN ('home_page', 'menu_item', 'login_page');
+select SourceName, TargetName, RefKind
+from CATALOG.REFS
+where RefKind in ('home_page', 'menu_item', 'login_page');
 
 -- What references point to a specific page?
-SHOW REFERENCES TO MyModule.Home_Web;
+show references to MyModule.Home_Web;
 
 -- Impact analysis: what breaks if I change this page?
-SHOW IMPACT OF MyModule.Home_Web;
+show impact of MyModule.Home_Web;
 
 -- Full context for a page (includes navigation references)
-SHOW CONTEXT OF MyModule.Home_Web;
+show context of MyModule.Home_Web;
 ```
 
 ## Common Patterns
@@ -162,22 +162,22 @@ Set up navigation for a freshly created project:
 
 ```sql
 -- Create home page
-CREATE PAGE MyModule.Home_Web
+create page MyModule.Home_Web
 (
-  Title: 'Home',
-  Layout: Atlas_Core.Atlas_Default
+  title: 'Home',
+  layout: Atlas_Core.Atlas_Default
 )
 {
-  CONTAINER ctnMain {
-    DYNAMICTEXT txtWelcome (Content: 'Welcome!')
+  container ctnMain {
+    dynamictext txtWelcome (content: 'Welcome!')
   }
 }
 
 -- Configure navigation
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  MENU (
-    MENU ITEM 'Home' PAGE MyModule.Home_Web;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  menu (
+    menu item 'Home' page MyModule.Home_Web;
   );
 ```
 
@@ -187,17 +187,17 @@ After creating a new page, add it to the menu:
 
 ```sql
 -- First inspect current menu
-DESCRIBE NAVIGATION Responsive;
+describe navigation Responsive;
 
 -- Then re-apply with the new item added (copy existing + add new)
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  LOGIN PAGE Administration.Login
-  MENU (
-    MENU ITEM 'Home' PAGE MyModule.Home_Web;
-    MENU ITEM 'Customers' PAGE MyModule.Customer_Overview;  -- new
-    MENU 'Admin' (
-      MENU ITEM 'Users' PAGE Administration.Account_Overview;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  login page Administration.Login
+  menu (
+    menu item 'Home' page MyModule.Home_Web;
+    menu item 'Customers' page MyModule.Customer_Overview;  -- new
+    menu 'Admin' (
+      menu item 'Users' page Administration.Account_Overview;
     );
   );
 ```
@@ -206,7 +206,7 @@ CREATE OR REPLACE NAVIGATION Responsive
 
 - [ ] Profile name matches an existing profile (Responsive, Phone, Tablet, or a native profile)
 - [ ] All PAGE/MICROFLOW targets are fully qualified (`Module.Name`)
-- [ ] Role references in `FOR` clauses are fully qualified (`Module.Role`)
-- [ ] Every `MENU ITEM` and `MENU 'caption' (...)` ends with `;`
-- [ ] Sub-menu items are wrapped in `MENU 'Caption' ( ... );`
-- [ ] Use `DESCRIBE NAVIGATION` to verify changes after applying
+- [ ] Role references in `for` clauses are fully qualified (`Module.Role`)
+- [ ] Every `menu item` and `menu 'caption' (...)` ends with `;`
+- [ ] Sub-menu items are wrapped in `menu 'caption' ( ... );`
+- [ ] Use `describe navigation` to verify changes after applying

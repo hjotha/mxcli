@@ -88,5 +88,5 @@ func TestDescribeNavigation_Mock(t *testing.T) {
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
 	assertNoError(t, describeNavigation(ctx, ast.QualifiedName{Name: "Responsive"}))
-	assertContainsStr(t, buf.String(), "CREATE OR REPLACE NAVIGATION")
+	assertContainsStr(t, buf.String(), "create or replace navigation")
 }

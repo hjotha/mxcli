@@ -57,5 +57,5 @@ func TestDescribeImageCollection_Mock(t *testing.T) {
 	assertNoError(t, describeImageCollection(ctx, ast.QualifiedName{Module: "Icons", Name: "AppIcons"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE OR REPLACE IMAGE COLLECTION")
+	assertContainsStr(t, out, "create or replace image collection")
 }

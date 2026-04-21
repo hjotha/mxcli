@@ -21,17 +21,17 @@ func TestDropCreateMicroflowReplacesContent(t *testing.T) {
 	name := testModule + ".MF_DropCreateTest"
 
 	// Create original microflow with a LOG statement
-	err := env.executeMDL(`CREATE MICROFLOW ` + name + ` ()
-BEGIN
-  LOG INFO 'original content';
-END;
+	err := env.executeMDL(`create microflow ` + name + ` ()
+begin
+  log info 'original content';
+end;
 /`)
 	if err != nil {
 		t.Fatalf("Failed to create original microflow: %v", err)
 	}
 
 	// Verify original content
-	output, err := env.describeMDL("DESCRIBE MICROFLOW " + name + ";")
+	output, err := env.describeMDL("describe microflow " + name + ";")
 	if err != nil {
 		t.Fatalf("Failed to describe original: %v", err)
 	}
@@ -40,30 +40,30 @@ END;
 	}
 
 	// DROP and recreate with different content
-	err = env.executeMDL("DROP MICROFLOW " + name + ";")
+	err = env.executeMDL("drop microflow " + name + ";")
 	if err != nil {
 		t.Fatalf("Failed to drop microflow: %v", err)
 	}
 
-	err = env.executeMDL(`CREATE MICROFLOW ` + name + ` ()
-BEGIN
-  LOG WARNING 'replacement content';
-END;
+	err = env.executeMDL(`create microflow ` + name + ` ()
+begin
+  log warning 'replacement content';
+end;
 /`)
 	if err != nil {
 		t.Fatalf("Failed to create replacement microflow: %v", err)
 	}
 
 	// DESCRIBE should show the NEW content
-	output, err = env.describeMDL("DESCRIBE MICROFLOW " + name + ";")
+	output, err = env.describeMDL("describe microflow " + name + ";")
 	if err != nil {
 		t.Fatalf("Failed to describe replacement: %v", err)
 	}
 	if !strings.Contains(output, "replacement content") {
-		t.Errorf("DROP+CREATE did not replace content. Got:\n%s", output)
+		t.Errorf("drop+create did not replace content. Got:\n%s", output)
 	}
 	if strings.Contains(output, "original content") {
-		t.Errorf("DROP+CREATE still shows original content. Got:\n%s", output)
+		t.Errorf("drop+create still shows original content. Got:\n%s", output)
 	}
 }
 
@@ -78,7 +78,7 @@ func TestDescribeEnumerationInSubfolder(t *testing.T) {
 	enumName := testModule + ".SubfolderTestStatus"
 
 	// Create an enumeration
-	err := env.executeMDL(`CREATE ENUMERATION ` + enumName + ` (
+	err := env.executeMDL(`create enumeration ` + enumName + ` (
 		Active 'Active',
 		Inactive 'Inactive'
 	);`)
@@ -87,18 +87,18 @@ func TestDescribeEnumerationInSubfolder(t *testing.T) {
 	}
 
 	// Move it to a subfolder
-	err = env.executeMDL(`MOVE ENUMERATION ` + enumName + ` TO FOLDER 'Enums';`)
+	err = env.executeMDL(`move enumeration ` + enumName + ` to folder 'Enums';`)
 	if err != nil {
 		t.Fatalf("Failed to move enumeration to folder: %v", err)
 	}
 
 	// DESCRIBE should still find it
-	output, err := env.describeMDL("DESCRIBE ENUMERATION " + enumName + ";")
+	output, err := env.describeMDL("describe enumeration " + enumName + ";")
 	if err != nil {
-		t.Errorf("DESCRIBE ENUMERATION failed for subfoldered enum: %v", err)
+		t.Errorf("describe enumeration failed for subfoldered enum: %v", err)
 		return
 	}
 	if !strings.Contains(output, "Active") || !strings.Contains(output, "Inactive") {
-		t.Errorf("DESCRIBE output missing enum values:\n%s", output)
+		t.Errorf("describe output missing enum values:\n%s", output)
 	}
 }

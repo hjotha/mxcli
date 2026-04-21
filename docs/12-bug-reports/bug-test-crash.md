@@ -2,7 +2,7 @@
 
 ## Summary
 
-The `mxcli test` runner crashes the Mendix runtime when a test calls a microflow that uses `VALIDATION FEEDBACK`. After the first test that triggers validation feedback passes its assertion, the runtime crashes before the next test can execute. This makes it impossible to test validation microflows that use `VALIDATION FEEDBACK` beyond a single negative test case.
+The `mxcli test` runner crashes the Mendix runtime when a test calls a microflow that uses `validation feedback`. After the first test that triggers validation feedback passes its assertion, the runtime crashes before the next test can execute. This makes it impossible to test validation microflows that use `validation feedback` beyond a single negative test case.
 
 ## Environment
 
@@ -15,26 +15,26 @@ The `mxcli test` runner crashes the Mendix runtime when a test calls a microflow
 ### 1. Create a validation microflow that uses VALIDATION FEEDBACK
 
 ```mdl
-CREATE MICROFLOW Formula1.VAL_Driver_NewEdit (
+create microflow Formula1.VAL_Driver_NewEdit (
   $Driver: Formula1.Driver
 )
-RETURNS Boolean AS $IsValid
-FOLDER 'Validation'
-BEGIN
-  DECLARE $IsValid Boolean = true;
+returns boolean as $IsValid
+folder 'Validation'
+begin
+  declare $IsValid boolean = true;
 
-  IF trim($Driver/Forename) = '' THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Driver/Forename MESSAGE 'Forename is required';
-  END IF;
+  if trim($Driver/Forename) = '' then
+    set $IsValid = false;
+    validation feedback $Driver/Forename message 'Forename is required';
+  end if;
 
-  IF trim($Driver/Surname) = '' THEN
-    SET $IsValid = false;
-    VALIDATION FEEDBACK $Driver/Surname MESSAGE 'Surname is required';
-  END IF;
+  if trim($Driver/Surname) = '' then
+    set $IsValid = false;
+    validation feedback $Driver/Surname message 'Surname is required';
+  end if;
 
-  RETURN $IsValid;
-END;
+  return $IsValid;
+end;
 /
 ```
 
@@ -46,9 +46,9 @@ END;
  * @expect $result1 = false
  * @cleanup none
  */
-$driver1 = CREATE Formula1.Driver (Forename = '', Surname = 'Hamilton');
-$result1 = CALL MICROFLOW Formula1.VAL_Driver_NewEdit($Driver = $driver1);
-DELETE $driver1;
+$driver1 = create Formula1.Driver (Forename = '', Surname = 'Hamilton');
+$result1 = call microflow Formula1.VAL_Driver_NewEdit($Driver = $driver1);
+delete $driver1;
 /
 
 /**
@@ -56,9 +56,9 @@ DELETE $driver1;
  * @expect $result2 = false
  * @cleanup none
  */
-$driver2 = CREATE Formula1.Driver (Forename = 'Lewis', Surname = '');
-$result2 = CALL MICROFLOW Formula1.VAL_Driver_NewEdit($Driver = $driver2);
-DELETE $driver2;
+$driver2 = create Formula1.Driver (Forename = 'Lewis', Surname = '');
+$result2 = call microflow Formula1.VAL_Driver_NewEdit($Driver = $driver2);
+delete $driver2;
 /
 ```
 
@@ -77,9 +77,9 @@ Both tests should pass: the validation microflow correctly returns `false` for i
 - **Test 1** (Empty forename): **PASS** - The assertion is captured correctly.
 - **Test 2** (Empty surname): **ERROR** - "Test was not executed (runtime may have crashed before reaching it)"
 
-The Mendix runtime crashes after the first test that triggers `VALIDATION FEEDBACK`. The crash occurs because `VALIDATION FEEDBACK` is a UI-oriented action that does not work correctly in the headless after-startup context used by the test runner.
+The Mendix runtime crashes after the first test that triggers `validation feedback`. The crash occurs because `validation feedback` is a UI-oriented action that does not work correctly in the headless after-startup context used by the test runner.
 
-The pending validation feedback on the entity object causes the runtime to throw an exception (e.g., `Object id: X, validation errors: (member: Forename, message: )`) before subsequent test activities can execute.
+The pending validation feedback on the entity object causes the runtime to throw an exception (e.g., `object id: X, validation errors: (member: Forename, message: )`) before subsequent test activities can execute.
 
 ## Workaround
 
@@ -95,8 +95,8 @@ This allows the final negative test's assertion to be captured before the crash,
 
 | Approach | Result |
 |----------|--------|
-| `DELETE $entity` after validation call | Still crashes |
-| `ROLLBACK $entity` after validation call | ROLLBACK itself triggers the crash |
+| `delete $entity` after validation call | Still crashes |
+| `rollback $entity` after validation call | ROLLBACK itself triggers the crash |
 | `@cleanup none` annotation | No effect |
 | Unique variable names per test | Fixed a separate issue, but didn't fix this crash |
 
@@ -114,12 +114,12 @@ The test runner should isolate VALIDATION FEEDBACK side effects between tests. P
 After tests complete, `mxcli test` attempts to restore the after-startup setting. This consistently crashes with a nil pointer dereference:
 
 ```
-Warning: could not restore after-startup: exit status 2: panic: runtime error: invalid memory address or nil pointer dereference
+warning: could not restore after-startup: exit status 2: panic: runtime error: invalid memory address or nil pointer dereference
 [signal SIGSEGV: segmentation violation code=0x1 addr=0x58 pc=0x83a134]
 
 goroutine 1 [running]:
 github.com/mendixlabs/mxcli/mdl/visitor.(*Builder).ExitAlterSettingsClause(...)
-  /Users/andrej.koelewijn/GitHub/ModelSDKGo/mdl/visitor/visitor_settings.go:48 +0x9f4
+  /users/andrej.koelewijn/GitHub/ModelSDKGo/mdl/visitor/visitor_settings.go:48 +0x9f4
 ```
 
 This appears to be a nil pointer in `visitor_settings.go:48` when there was no previous after-startup microflow to restore.
@@ -131,15 +131,15 @@ Test Results: driver-validation
 ============================================================
   PASS  Valid driver passes validation (0s)
   PASS  Valid 3-char code passes validation (0s)
-  PASS  Empty code is acceptable (optional field) (0s)
-  PASS  Empty forename fails validation
-  ERROR  Empty surname fails validation
+  PASS  empty code is acceptable (optional field) (0s)
+  PASS  empty forename fails validation
+  error  empty surname fails validation
          Test was not executed (runtime may have crashed before reaching it)
-  ERROR  Whitespace-only forename fails validation
+  error  Whitespace-only forename fails validation
          Test was not executed (runtime may have crashed before reaching it)
-  ERROR  Invalid code length (2 chars) fails validation
+  error  Invalid code length (2 chars) fails validation
          Test was not executed (runtime may have crashed before reaching it)
-  ERROR  Both names empty fails validation
+  error  both names empty fails validation
          Test was not executed (runtime may have crashed before reaching it)
 ------------------------------------------------------------
 Total: 8  Passed: 4  Failed: 4  Skipped: 0

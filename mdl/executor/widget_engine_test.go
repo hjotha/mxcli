@@ -13,7 +13,7 @@ import (
 func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 	original := WidgetDefinition{
 		WidgetID:        "com.mendix.widget.web.combobox.Combobox",
-		MDLName:         "COMBOBOX",
+		MDLName:         "combobox",
 		TemplateFile:    "combobox.json",
 		DefaultEditable: "Always",
 		PropertyMappings: []PropertyMapping{
@@ -21,7 +21,7 @@ func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 			{PropertyKey: "optionsSourceType", Value: "enumeration", Operation: "primitive"},
 		},
 		ChildSlots: []ChildSlotMapping{
-			{PropertyKey: "content", MDLContainer: "TEMPLATE", Operation: "widgets"},
+			{PropertyKey: "content", MDLContainer: "template", Operation: "widgets"},
 		},
 		Modes: []WidgetMode{
 			{
@@ -33,7 +33,7 @@ func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 					{PropertyKey: "optionsSourceType", Value: "association", Operation: "primitive"},
 				},
 				ChildSlots: []ChildSlotMapping{
-					{PropertyKey: "menuContent", MDLContainer: "MENU", Operation: "widgets"},
+					{PropertyKey: "menuContent", MDLContainer: "menu", Operation: "widgets"},
 				},
 			},
 		},
@@ -72,8 +72,8 @@ func TestWidgetDefinitionJSONRoundTrip(t *testing.T) {
 	if len(decoded.ChildSlots) != 1 {
 		t.Fatalf("ChildSlots count: got %d, want 1", len(decoded.ChildSlots))
 	}
-	if decoded.ChildSlots[0].MDLContainer != "TEMPLATE" {
-		t.Errorf("ChildSlots[0].MDLContainer: got %q, want %q", decoded.ChildSlots[0].MDLContainer, "TEMPLATE")
+	if decoded.ChildSlots[0].MDLContainer != "template" {
+		t.Errorf("ChildSlots[0].MDLContainer: got %q, want %q", decoded.ChildSlots[0].MDLContainer, "template")
 	}
 
 	// Verify modes
@@ -226,7 +226,7 @@ func TestSelectMappings_NoModes(t *testing.T) {
 			{PropertyKey: "attr", Source: "Attribute", Operation: "attribute"},
 		},
 		ChildSlots: []ChildSlotMapping{
-			{PropertyKey: "content", MDLContainer: "TEMPLATE", Operation: "widgets"},
+			{PropertyKey: "content", MDLContainer: "template", Operation: "widgets"},
 		},
 	}
 	w := &ast.WidgetV3{Properties: map[string]any{}}

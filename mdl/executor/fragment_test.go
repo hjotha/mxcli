@@ -19,12 +19,12 @@ func TestExecDefineFragment(t *testing.T) {
 		Name: "Footer",
 		Widgets: []*ast.WidgetV3{
 			{
-				Type:       "FOOTER",
+				Type:       "footer",
 				Name:       "f1",
 				Properties: map[string]interface{}{},
 				Children: []*ast.WidgetV3{
 					{
-						Type:       "ACTIONBUTTON",
+						Type:       "actionbutton",
 						Name:       "btnSave",
 						Properties: map[string]interface{}{"Caption": "Save"},
 						Children:   []*ast.WidgetV3{},
@@ -96,14 +96,14 @@ func TestExecShowFragmentsWithDefined(t *testing.T) {
 	exec.Execute(&ast.DefineFragmentStmt{
 		Name: "Alpha",
 		Widgets: []*ast.WidgetV3{
-			{Type: "TEXTBOX", Name: "t1", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
+			{Type: "textbox", Name: "t1", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
 		},
 	})
 	exec.Execute(&ast.DefineFragmentStmt{
 		Name: "Beta",
 		Widgets: []*ast.WidgetV3{
-			{Type: "CHECKBOX", Name: "c1", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
-			{Type: "CHECKBOX", Name: "c2", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
+			{Type: "checkbox", Name: "c1", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
+			{Type: "checkbox", Name: "c2", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
 		},
 	})
 
@@ -130,12 +130,12 @@ func TestExecDescribeFragment(t *testing.T) {
 		Name: "Footer",
 		Widgets: []*ast.WidgetV3{
 			{
-				Type:       "FOOTER",
+				Type:       "footer",
 				Name:       "f1",
 				Properties: map[string]interface{}{},
 				Children: []*ast.WidgetV3{
 					{
-						Type:       "ACTIONBUTTON",
+						Type:       "actionbutton",
 						Name:       "btnSave",
 						Properties: map[string]interface{}{"Caption": "Save", "ButtonStyle": "Primary"},
 						Children:   []*ast.WidgetV3{},
@@ -155,14 +155,14 @@ func TestExecDescribeFragment(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "DEFINE FRAGMENT Footer") {
-		t.Errorf("Expected 'DEFINE FRAGMENT Footer' in output, got: %s", output)
+	if !strings.Contains(output, "define fragment Footer") {
+		t.Errorf("Expected 'define fragment Footer' in output, got: %s", output)
 	}
-	if !strings.Contains(output, "FOOTER f1") {
-		t.Errorf("Expected 'FOOTER f1' in output, got: %s", output)
+	if !strings.Contains(output, "footer f1") {
+		t.Errorf("Expected 'footer f1' in output, got: %s", output)
 	}
-	if !strings.Contains(output, "ACTIONBUTTON btnSave") {
-		t.Errorf("Expected 'ACTIONBUTTON btnSave' in output, got: %s", output)
+	if !strings.Contains(output, "actionbutton btnSave") {
+		t.Errorf("Expected 'actionbutton btnSave' in output, got: %s", output)
 	}
 }
 
@@ -189,7 +189,7 @@ func TestShowFragmentsNoProjectRequired(t *testing.T) {
 
 	err := exec.Execute(&ast.ShowStmt{ObjectType: ast.ShowFragments})
 	if err != nil {
-		t.Fatalf("SHOW FRAGMENTS should work without project connection, got: %v", err)
+		t.Fatalf("show fragments should work without project connection, got: %v", err)
 	}
 }
 
@@ -208,21 +208,21 @@ func TestDescribeFragmentNoProjectRequired(t *testing.T) {
 		Name:       ast.QualifiedName{Name: "Test"},
 	})
 	if err != nil {
-		t.Fatalf("DESCRIBE FRAGMENT should work without project connection, got: %v", err)
+		t.Fatalf("describe fragment should work without project connection, got: %v", err)
 	}
 }
 
 func TestCloneWidgets(t *testing.T) {
 	original := []*ast.WidgetV3{
 		{
-			Type: "FOOTER",
+			Type: "footer",
 			Name: "f1",
 			Properties: map[string]interface{}{
 				"Label": "test",
 			},
 			Children: []*ast.WidgetV3{
 				{
-					Type:       "ACTIONBUTTON",
+					Type:       "actionbutton",
 					Name:       "btn1",
 					Properties: map[string]interface{}{"Caption": "Save"},
 					Children:   []*ast.WidgetV3{},
@@ -262,18 +262,18 @@ func TestCloneWidgets(t *testing.T) {
 func TestPrefixWidgetNames(t *testing.T) {
 	widgets := []*ast.WidgetV3{
 		{
-			Type:       "FOOTER",
+			Type:       "footer",
 			Name:       "f1",
 			Properties: map[string]interface{}{},
 			Children: []*ast.WidgetV3{
 				{
-					Type:       "ACTIONBUTTON",
+					Type:       "actionbutton",
 					Name:       "btnSave",
 					Properties: map[string]interface{}{},
 					Children:   []*ast.WidgetV3{},
 				},
 				{
-					Type:       "ACTIONBUTTON",
+					Type:       "actionbutton",
 					Name:       "btnCancel",
 					Properties: map[string]interface{}{},
 					Children:   []*ast.WidgetV3{},
@@ -300,7 +300,7 @@ func TestExpandIfFragmentPassthrough(t *testing.T) {
 		fragments: nil,
 	}
 
-	w := &ast.WidgetV3{Type: "TEXTBOX", Name: "txt1", Properties: map[string]interface{}{}}
+	w := &ast.WidgetV3{Type: "textbox", Name: "txt1", Properties: map[string]interface{}{}}
 	result, err := pb.expandIfFragment(w)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -329,8 +329,8 @@ func TestExpandIfFragmentExpands(t *testing.T) {
 	frag := &ast.DefineFragmentStmt{
 		Name: "Footer",
 		Widgets: []*ast.WidgetV3{
-			{Type: "ACTIONBUTTON", Name: "btnSave", Properties: map[string]interface{}{"Caption": "Save"}, Children: []*ast.WidgetV3{}},
-			{Type: "ACTIONBUTTON", Name: "btnCancel", Properties: map[string]interface{}{"Caption": "Cancel"}, Children: []*ast.WidgetV3{}},
+			{Type: "actionbutton", Name: "btnSave", Properties: map[string]interface{}{"Caption": "Save"}, Children: []*ast.WidgetV3{}},
+			{Type: "actionbutton", Name: "btnCancel", Properties: map[string]interface{}{"Caption": "Cancel"}, Children: []*ast.WidgetV3{}},
 		},
 	}
 
@@ -363,7 +363,7 @@ func TestExpandIfFragmentWithPrefix(t *testing.T) {
 	frag := &ast.DefineFragmentStmt{
 		Name: "Footer",
 		Widgets: []*ast.WidgetV3{
-			{Type: "ACTIONBUTTON", Name: "btnSave", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
+			{Type: "actionbutton", Name: "btnSave", Properties: map[string]interface{}{}, Children: []*ast.WidgetV3{}},
 		},
 	}
 
@@ -386,12 +386,12 @@ func TestExpandIfFragmentWithPrefix(t *testing.T) {
 }
 
 func TestRoundtripDefineAndDescribe(t *testing.T) {
-	input := `DEFINE FRAGMENT Footer AS {
-		FOOTER f1 {
-			ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
+	input := `define fragment Footer as {
+		footer f1 {
+			actionbutton btnSave (Caption: 'Save', Action: save_changes, ButtonStyle: Primary)
 		}
 	};
-	DESCRIBE FRAGMENT Footer;`
+	describe fragment Footer;`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {
@@ -408,11 +408,11 @@ func TestRoundtripDefineAndDescribe(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "DEFINE FRAGMENT Footer") {
-		t.Errorf("Expected DEFINE FRAGMENT in output, got: %s", output)
+	if !strings.Contains(output, "define fragment Footer") {
+		t.Errorf("Expected define fragment in output, got: %s", output)
 	}
-	if !strings.Contains(output, "FOOTER f1") {
-		t.Errorf("Expected FOOTER f1 in output, got: %s", output)
+	if !strings.Contains(output, "footer f1") {
+		t.Errorf("Expected footer f1 in output, got: %s", output)
 	}
 }
 
@@ -528,9 +528,9 @@ func TestFindRawWidgetByNameInFilterAndControlBar(t *testing.T) {
 }
 
 func TestRoundtripShowFragments(t *testing.T) {
-	input := `DEFINE FRAGMENT Alpha AS { TEXTBOX t1 (Label: 'A') };
-	DEFINE FRAGMENT Beta AS { CHECKBOX c1 (Label: 'B') };
-	SHOW FRAGMENTS;`
+	input := `define fragment Alpha as { textbox t1 (Label: 'A') };
+	define fragment Beta as { checkbox c1 (Label: 'B') };
+	show fragments;`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {
@@ -548,6 +548,6 @@ func TestRoundtripShowFragments(t *testing.T) {
 
 	output := buf.String()
 	if !strings.Contains(output, "Alpha") || !strings.Contains(output, "Beta") {
-		t.Errorf("Expected both fragment names in SHOW output, got: %s", output)
+		t.Errorf("Expected both fragment names in show output, got: %s", output)
 	}
 }

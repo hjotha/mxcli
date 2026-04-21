@@ -6,20 +6,20 @@
 
 ## Problem
 
-The current `IMPORT FROM` command maps source columns to entity attributes only. Associations — the foreign key relationships between Mendix entities — must be set up manually with raw SQL after import. This is error-prone: the user must know the storage mode (column vs junction table), the exact database column names, and the Mendix ID of each referenced object.
+The current `import from` command maps source columns to entity attributes only. Associations — the foreign key relationships between Mendix entities — must be set up manually with raw SQL after import. This is error-prone: the user must know the storage mode (column vs junction table), the exact database column names, and the Mendix ID of each referenced object.
 
 A typical workaround today:
 
 ```sql
 -- Step 1: Import employees without department link
-IMPORT FROM source QUERY 'SELECT name, email FROM employees'
-  INTO HR.Employee MAP (name AS Name, email AS Email);
+import from source query 'SELECT name, email FROM employees'
+  into HR.Employee map (name as Name, email as Email);
 
 -- Step 2: Manually figure out FK column name and run raw SQL
-SQL _mendix UPDATE "hr$employee" e
-  SET "hr$employee_department" = d.id
-  FROM "hr$department" d
-  WHERE d.name = e.department_name;
+sql _mendix update "hr$employee" e
+  set "hr$employee_department" = d.id
+  from "hr$department" d
+  where d.name = e.department_name;
 -- ^^^ Requires knowing column name, storage mode, table names
 ```
 
@@ -27,49 +27,49 @@ This should be a single command.
 
 ## Proposed Syntax
 
-Extend `IMPORT FROM` with an optional `LINK` clause that maps source columns to associations:
+Extend `import from` with an optional `link` clause that maps source columns to associations:
 
 ```sql
 -- Lookup by natural key on the child entity
-IMPORT FROM source QUERY 'SELECT name, email, dept_name FROM employees'
-  INTO HR.Employee
-  MAP (name AS Name, email AS Email)
-  LINK (dept_name TO Employee_Department ON Name)
-  BATCH 500;
+import from source query 'SELECT name, email, dept_name FROM employees'
+  into HR.Employee
+  map (name as Name, email as Email)
+  link (dept_name to Employee_Department on Name)
+  batch 500;
 
 -- Multiple associations
-IMPORT FROM source QUERY $$
-    SELECT e.name, e.email, d.name AS dept, m.email AS mgr_email
-    FROM employees e
-    JOIN departments d ON e.dept_id = d.id
-    LEFT JOIN employees m ON e.manager_id = m.id
+import from source query $$
+    select e.name, e.email, d.name as dept, m.email as mgr_email
+    from employees e
+    join departments d on e.dept_id = d.id
+    left join employees m on e.manager_id = m.id
 $$
-  INTO HR.Employee
-  MAP (name AS Name, email AS Email)
-  LINK (dept TO Employee_Department ON Name,
-        mgr_email TO Employee_Manager ON Email);
+  into HR.Employee
+  map (name as Name, email as Email)
+  link (dept to Employee_Department on Name,
+        mgr_email to Employee_Manager on Email);
 
 -- Direct ID mapping (source already has Mendix IDs — rare)
-IMPORT FROM source QUERY 'SELECT name, dept_mx_id FROM migrated_employees'
-  INTO HR.Employee
-  MAP (name AS Name)
-  LINK (dept_mx_id TO Employee_Department);
+import from source query 'SELECT name, dept_mx_id FROM migrated_employees'
+  into HR.Employee
+  map (name as Name)
+  link (dept_mx_id to Employee_Department);
 ```
 
 ### LINK Clause Grammar
 
 ```
-LINK ( linkMapping (, linkMapping)* )
+link ( linkMapping (, linkMapping)* )
 
 linkMapping:
-    sourceColumn TO associationName ON childAttribute   -- lookup mode
-  | sourceColumn TO associationName                     -- direct ID mode
+    sourceColumn to associationName on childAttribute   -- lookup mode
+  | sourceColumn to associationName                     -- direct ID mode
 ```
 
 - **sourceColumn**: Column name from the source query result set
 - **associationName**: Unqualified association name (module inferred from target entity)
 - **ON childAttribute**: Attribute on the *child* entity to match against the source value
-- Without `ON`: the source value is treated as a raw Mendix object ID
+- Without `on`: the source value is treated as a raw Mendix object ID
 
 ## Design
 
@@ -80,18 +80,18 @@ linkMapping:
 1. For each LINK mapping, resolve association metadata:
    - Query `mendixsystem$association` in the Mendix app DB:
      ```sql
-     SELECT association_name, table_name, child_column_name, storage_format
-     FROM mendixsystem$association
-     WHERE association_name = $1
+     select association_name, table_name, child_column_name, storage_format
+     from mendixsystem$association
+     where association_name = $1
      ```
    - Determines: column storage (FK inline) vs table storage (junction table)
    - Gets exact database column/table names (no guessing conventions)
 
-2. For each LINK with `ON` clause, build a lookup cache:
+2. For each LINK with `on` clause, build a lookup cache:
    - Identify child entity from the association (MPR reader or system tables)
    - Query child entity table:
      ```sql
-     SELECT id, <lookup_column> FROM <child_table>
+     select id, <lookup_column> from <child_table>
      ```
    - Build `map[any]int64` (lookup value → Mendix object ID)
    - For large tables (>100K rows), fall back to per-row queries with a bounded LRU cache
@@ -99,7 +99,7 @@ linkMapping:
 **During import** (per row):
 
 3. For each LINK mapping, resolve the source value to a Mendix ID:
-   - `ON` mode: look up in cache → get child entity's `id`
+   - `on` mode: look up in cache → get child entity's `id`
    - Direct mode: use source value as-is (cast to int64)
    - NULL source value → NULL FK (no association)
 
@@ -111,8 +111,8 @@ linkMapping:
 
 5. For table-storage associations, batch-insert junction table rows:
    ```sql
-   INSERT INTO "module$assoc_name" ("module$parentid", "module$childid")
-   VALUES ($1, $2), ($3, $4), ...
+   insert into "module$assoc_name" ("module$parentid", "module$childid")
+   values ($1, $2), ($3, $4), ...
    ```
 
 ### How Association Metadata Is Resolved
@@ -163,23 +163,23 @@ Two sources are available; we use both for robustness:
 
 ```antlr
 importStatement
-    : IMPORT FROM identifierOrKeyword QUERY (STRING_LITERAL | DOLLAR_STRING)
-      INTO qualifiedName
-      MAP LPAREN importMapping (COMMA importMapping)* RPAREN
-      (LINK LPAREN linkMapping (COMMA linkMapping)* RPAREN)?    // ← NEW
-      (BATCH NUMBER_LITERAL)?
-      (LIMIT NUMBER_LITERAL)?                                    # importFromQuery
+    : import from identifierOrKeyword query (STRING_LITERAL | DOLLAR_STRING)
+      into qualifiedName
+      map LPAREN importMapping (COMMA importMapping)* RPAREN
+      (link LPAREN linkMapping (COMMA linkMapping)* RPAREN)?    // ← NEW
+      (batch NUMBER_LITERAL)?
+      (limit NUMBER_LITERAL)?                                    # importFromQuery
     ;
 
 linkMapping
-    : identifierOrKeyword TO identifierOrKeyword ON identifierOrKeyword   # linkLookup
-    | identifierOrKeyword TO identifierOrKeyword                          # linkDirect
+    : identifierOrKeyword to identifierOrKeyword on identifierOrKeyword   # linkLookup
+    | identifierOrKeyword to identifierOrKeyword                          # linkDirect
     ;
 ```
 
 **Modify** `mdl/grammar/MDLLexer.g4`:
-- Add `LINK: L I N K;` token (if not already present)
-- Add `LINK` to `keyword` rule in parser
+- Add `link: L I N K;` token (if not already present)
+- Add `link` to `keyword` rule in parser
 
 ### Step 2: Extend AST
 
@@ -194,12 +194,12 @@ type LinkMapping struct {
 
 type ImportStmt struct {
     SourceAlias  string
-    Query        string
+    query        string
     TargetEntity string
-    Mappings     []ImportMapping
+    mappings     []ImportMapping
     Links        []LinkMapping     // ← NEW
     BatchSize    int
-    Limit        int
+    limit        int
 }
 ```
 
@@ -218,17 +218,17 @@ Association resolution and lookup logic:
 type AssocInfo struct {
     AssociationName string
     ChildEntity     string  // qualified name
-    StorageFormat   string  // "Column" or "Table"
-    FKColumnName    string  // for Column storage: column in parent table
-    JunctionTable   string  // for Table storage: junction table name
-    ParentColName   string  // for Table storage: parent ID column in junction
-    ChildColName    string  // for Table storage: child ID column in junction
+    StorageFormat   string  // "column" or "table"
+    FKColumnName    string  // for column storage: column in parent table
+    JunctionTable   string  // for table storage: junction table name
+    ParentColName   string  // for table storage: parent ID column in junction
+    ChildColName    string  // for table storage: child ID column in junction
     LookupAttr     string  // attribute on child entity for lookup (empty = direct)
     LookupCache    map[any]int64 // value → Mendix ID
 }
 
 // ResolveAssociations looks up association metadata and builds lookup caches.
-func ResolveAssociations(ctx context.Context, mendixConn *Connection,
+func ResolveAssociations(ctx context.Context, mendixConn *connection,
     reader AssociationReader, entityName string, links []LinkMapping) ([]*AssocInfo, error)
 
 // LookupAssociation resolves a single source value to a Mendix ID.
@@ -263,7 +263,7 @@ Modify `ExecuteImport` and `insertBatch`:
 
 | Action | File |
 |--------|------|
-| MODIFY | `mdl/grammar/MDLLexer.g4` (add `LINK` token if needed) |
+| MODIFY | `mdl/grammar/MDLLexer.g4` (add `link` token if needed) |
 | MODIFY | `mdl/grammar/MDLParser.g4` (add `linkMapping` rule, extend `importStatement`) |
 | MODIFY | `mdl/ast/ast_sql.go` (add `LinkMapping`, extend `ImportStmt`) |
 | MODIFY | `mdl/visitor/visitor_sql.go` (parse LINK clause) |
@@ -278,18 +278,18 @@ Modify `ExecuteImport` and `insertBatch`:
 ### Basic: Import employees with department association
 
 ```sql
-SQL CONNECT postgres 'postgres://...' AS legacy;
+sql connect postgres 'postgres://...' as legacy;
 
 -- Check what's available
-SQL legacy DESCRIBE employees;
+sql legacy describe employees;
 -- id | name | email | department_name
 
 -- Import with department lookup
-IMPORT FROM legacy QUERY 'SELECT name, email, department_name FROM employees'
-  INTO HR.Employee
-  MAP (name AS Name, email AS Email)
-  LINK (department_name TO Employee_Department ON Name)
-  BATCH 500;
+import from legacy query 'SELECT name, email, department_name FROM employees'
+  into HR.Employee
+  map (name as Name, email as Email)
+  link (department_name to Employee_Department on Name)
+  batch 500;
 
 -- Output:
 -- Resolving associations...
@@ -305,25 +305,25 @@ IMPORT FROM legacy QUERY 'SELECT name, email, department_name FROM employees'
 ### Multiple associations with mixed storage modes
 
 ```sql
-IMPORT FROM legacy QUERY $$
-    SELECT e.name, d.name AS dept, m.email AS mgr
-    FROM employees e
-    JOIN departments d ON e.dept_id = d.id
-    LEFT JOIN employees m ON e.manager_id = m.id
+import from legacy query $$
+    select e.name, d.name as dept, m.email as mgr
+    from employees e
+    join departments d on e.dept_id = d.id
+    left join employees m on e.manager_id = m.id
 $$
-  INTO HR.Employee
-  MAP (name AS Name)
-  LINK (dept TO Employee_Department ON Name,
-        mgr TO Employee_Manager ON Email);
+  into HR.Employee
+  map (name as Name)
+  link (dept to Employee_Department on Name,
+        mgr to Employee_Manager on Email);
 ```
 
 ### Direct ID mapping (migration from another Mendix app)
 
 ```sql
-IMPORT FROM oldapp QUERY 'SELECT name, email, department_id FROM hr$employee'
-  INTO HR.Employee
-  MAP (name AS Name, email AS Email)
-  LINK (department_id TO Employee_Department);
+import from oldapp query 'SELECT name, email, department_id FROM hr$employee'
+  into HR.Employee
+  map (name as Name, email as Email)
+  link (department_id to Employee_Department);
 ```
 
 ## Future Extensions (not in scope)

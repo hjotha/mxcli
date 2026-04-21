@@ -17,7 +17,7 @@ func (b *Builder) ExitAlterSettingsClause(ctx *parser.AlterSettingsClauseContext
 
 	if ctx.DROP() != nil && ctx.CONSTANT() != nil {
 		// ALTER SETTINGS DROP CONSTANT 'name' [IN CONFIGURATION 'cfg']
-		stmt.Section = "CONSTANT"
+		stmt.Section = "constant"
 		stmt.DropConstant = true
 		allStrings := ctx.AllSTRING_LITERAL()
 		if len(allStrings) > 0 {
@@ -28,7 +28,7 @@ func (b *Builder) ExitAlterSettingsClause(ctx *parser.AlterSettingsClauseContext
 		}
 	} else if ctx.CONSTANT() != nil {
 		// ALTER SETTINGS CONSTANT 'name' (VALUE 'value' | DROP) [IN CONFIGURATION 'cfg']
-		stmt.Section = "CONSTANT"
+		stmt.Section = "constant"
 		allStrings := ctx.AllSTRING_LITERAL()
 		if len(allStrings) > 0 {
 			stmt.ConstantId = unquoteString(allStrings[0].GetText())
@@ -44,7 +44,7 @@ func (b *Builder) ExitAlterSettingsClause(ctx *parser.AlterSettingsClauseContext
 		}
 	} else if ctx.CONFIGURATION() != nil {
 		// ALTER SETTINGS CONFIGURATION 'name' Key = Value, ...
-		stmt.Section = "CONFIGURATION"
+		stmt.Section = "configuration"
 		allStrings := ctx.AllSTRING_LITERAL()
 		if len(allStrings) > 0 {
 			stmt.ConfigName = unquoteString(allStrings[0].GetText())

@@ -24,15 +24,15 @@ func TestRoundtripEntity_Simple(t *testing.T) {
 	entityName := testModule + ".TestEntitySimple"
 
 	// Create entity (Boolean auto-defaults to false if no DEFAULT specified)
-	createMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100),
 		Age: Integer,
-		Active: Boolean DEFAULT false
+		Active: Boolean default false
 	);`
 
 	// Use diff-based helper to verify roundtrip
 	env.assertContains(createMDL, []string{
-		"PERSISTENT ENTITY",
+		"persistent entity",
 		"Name:",
 		"String(100)",
 		"Age:",
@@ -49,19 +49,19 @@ func TestRoundtripEntity_WithConstraints(t *testing.T) {
 	entityName := testModule + ".TestEntityConstraints"
 
 	// Create entity with constraints
-	createMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
-		Code: String(50) NOT NULL,
-		Email: String(200) UNIQUE
+	createMDL := `create or modify persistent entity ` + entityName + ` (
+		Code: String(50) not null,
+		Email: String(200) unique
 	);`
 
 	// Use diff-based helper - NOT NULL may be output as REQUIRED
 	env.assertContains(createMDL, []string{
-		"PERSISTENT ENTITY",
+		"persistent entity",
 		"Code:",
 		"String(50)",
 		"Email:",
 		"String(200)",
-		"UNIQUE",
+		"unique",
 	})
 }
 
@@ -72,20 +72,20 @@ func TestRoundtripEntity_WithIndex(t *testing.T) {
 	entityName := testModule + ".TestEntityIndex"
 
 	// Create entity with index
-	createMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createMDL := `create or modify persistent entity ` + entityName + ` (
 		Code: String(50),
 		Name: String(100)
 	)
-	INDEX (Code);`
+	index (Code);`
 
 	// Use diff-based helper to verify roundtrip
 	env.assertContains(createMDL, []string{
-		"PERSISTENT ENTITY",
+		"persistent entity",
 		"Code:",
 		"String(50)",
 		"Name:",
 		"String(100)",
-		"INDEX",
+		"index",
 	})
 }
 
@@ -97,27 +97,27 @@ func TestRoundtripEntity_WithEventHandler(t *testing.T) {
 	mfName := testModule + ".ACT_ValidateTestEntity"
 
 	// Create a microflow first (event handler references it)
-	if err := env.executeMDL(`CREATE OR MODIFY MICROFLOW ` + mfName + ` ()
-BEGIN
-  LOG INFO 'validating';
-END;`); err != nil {
+	if err := env.executeMDL(`create or modify microflow ` + mfName + ` ()
+begin
+  log info 'validating';
+end;`); err != nil {
 		t.Fatalf("failed to create microflow: %v", err)
 	}
 
 	// Create entity with event handler
-	createMDL := `CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	createMDL := `create or modify persistent entity ` + entityName + ` (
 		Name: String(100)
 	)
-	ON BEFORE COMMIT CALL ` + mfName + ` RAISE ERROR;`
+	on before commit call ` + mfName + ` raise error;`
 
 	// Verify roundtrip preserves the event handler
 	env.assertContains(createMDL, []string{
-		"PERSISTENT ENTITY",
+		"persistent entity",
 		"Name:",
 		"String(100)",
-		"ON BEFORE COMMIT CALL",
+		"on before commit call",
 		mfName,
-		"RAISE ERROR",
+		"raise error",
 	})
 }
 
@@ -129,51 +129,51 @@ func TestRoundtripEntity_AlterAddDropEventHandler(t *testing.T) {
 	mfName := testModule + ".ACT_AlterEventTest"
 
 	// Create microflow
-	if err := env.executeMDL(`CREATE OR MODIFY MICROFLOW ` + mfName + ` ()
-BEGIN
-  LOG INFO 'test';
-END;`); err != nil {
+	if err := env.executeMDL(`create or modify microflow ` + mfName + ` ()
+begin
+  log info 'test';
+end;`); err != nil {
 		t.Fatalf("failed to create microflow: %v", err)
 	}
 
 	// Create entity without handlers
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY ` + entityName + ` (
+	if err := env.executeMDL(`create or modify persistent entity ` + entityName + ` (
 		Code: String(50)
 	);`); err != nil {
 		t.Fatalf("failed to create entity: %v", err)
 	}
 
 	// Add event handler via ALTER
-	if err := env.executeMDL(`ALTER ENTITY ` + entityName + `
-		ADD EVENT HANDLER ON AFTER CREATE CALL ` + mfName + `;`); err != nil {
+	if err := env.executeMDL(`alter entity ` + entityName + `
+		add event handler on after create call ` + mfName + `;`); err != nil {
 		t.Fatalf("failed to add event handler: %v", err)
 	}
 
 	// Verify handler appears in DESCRIBE
-	out, err := env.describeMDL(`DESCRIBE ENTITY ` + entityName + `;`)
+	out, err := env.describeMDL(`describe entity ` + entityName + `;`)
 	if err != nil {
 		t.Fatalf("describe failed: %v", err)
 	}
-	if !strings.Contains(out, "ON AFTER CREATE CALL") {
-		t.Errorf("expected ON AFTER CREATE CALL in DESCRIBE output, got:\n%s", out)
+	if !strings.Contains(out, "on after create call") {
+		t.Errorf("expected on after create call in describe output, got:\n%s", out)
 	}
 	if !strings.Contains(out, mfName) {
-		t.Errorf("expected microflow name %q in DESCRIBE output, got:\n%s", mfName, out)
+		t.Errorf("expected microflow name %q in describe output, got:\n%s", mfName, out)
 	}
 
 	// Drop the event handler
-	if err := env.executeMDL(`ALTER ENTITY ` + entityName + `
-		DROP EVENT HANDLER ON AFTER CREATE;`); err != nil {
+	if err := env.executeMDL(`alter entity ` + entityName + `
+		drop event handler on after create;`); err != nil {
 		t.Fatalf("failed to drop event handler: %v", err)
 	}
 
 	// Verify handler is gone
-	out, err = env.describeMDL(`DESCRIBE ENTITY ` + entityName + `;`)
+	out, err = env.describeMDL(`describe entity ` + entityName + `;`)
 	if err != nil {
 		t.Fatalf("describe after drop failed: %v", err)
 	}
-	if strings.Contains(out, "ON AFTER CREATE CALL") {
-		t.Errorf("event handler should be removed but still in DESCRIBE output:\n%s", out)
+	if strings.Contains(out, "on after create call") {
+		t.Errorf("event handler should be removed but still in describe output:\n%s", out)
 	}
 }
 
@@ -184,7 +184,7 @@ func TestRoundtripEnumeration(t *testing.T) {
 	enumName := testModule + ".TestStatus"
 
 	// Create enumeration
-	createMDL := `CREATE ENUMERATION ` + enumName + ` (
+	createMDL := `create enumeration ` + enumName + ` (
 		Active 'Active',
 		Inactive 'Inactive',
 		Pending 'Pending Review'
@@ -192,7 +192,7 @@ func TestRoundtripEnumeration(t *testing.T) {
 
 	// Use diff-based helper to verify roundtrip
 	env.assertContains(createMDL, []string{
-		"ENUMERATION",
+		"enumeration",
 		"Active",
 		"Inactive",
 		"Pending",
@@ -238,7 +238,7 @@ func BenchmarkRoundtripEntity(b *testing.B) {
 		output.Reset()
 
 		// Create and describe entity
-		prog, _ := visitor.Build(`DESCRIBE ENTITY MyFirstModule.MyEntity;`)
+		prog, _ := visitor.Build(`describe entity MyFirstModule.MyEntity;`)
 		for _, stmt := range prog.Statements {
 			exec.Execute(stmt)
 		}

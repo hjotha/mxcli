@@ -114,7 +114,7 @@ func describeSettings(ctx *ExecContext) error {
 		if ms.ScheduledEventTimeZoneCode != "" {
 			parts = append(parts, fmt.Sprintf("  ScheduledEventTimeZoneCode = '%s'", ms.ScheduledEventTimeZoneCode))
 		}
-		fmt.Fprintf(ctx.Output, "ALTER SETTINGS MODEL\n%s;\n\n", strings.Join(parts, ",\n"))
+		fmt.Fprintf(ctx.Output, "alter settings model\n%s;\n\n", strings.Join(parts, ",\n"))
 	}
 
 	// Configuration settings
@@ -131,11 +131,11 @@ func describeSettings(ctx *ExecContext) error {
 			if cfg.ApplicationRootUrl != "" {
 				parts = append(parts, fmt.Sprintf("  ApplicationRootUrl = '%s'", cfg.ApplicationRootUrl))
 			}
-			fmt.Fprintf(ctx.Output, "ALTER SETTINGS CONFIGURATION '%s'\n%s;\n\n", cfg.Name, strings.Join(parts, ",\n"))
+			fmt.Fprintf(ctx.Output, "alter settings configuration '%s'\n%s;\n\n", cfg.Name, strings.Join(parts, ",\n"))
 
 			// Output constant overrides
 			for _, cv := range cfg.ConstantValues {
-				fmt.Fprintf(ctx.Output, "ALTER SETTINGS CONSTANT '%s' VALUE '%s'\n  IN CONFIGURATION '%s';\n\n",
+				fmt.Fprintf(ctx.Output, "alter settings constant '%s' value '%s'\n  in configuration '%s';\n\n",
 					cv.ConstantId, cv.Value, cfg.Name)
 			}
 		}
@@ -143,7 +143,7 @@ func describeSettings(ctx *ExecContext) error {
 
 	// Language settings
 	if ps.Language != nil {
-		fmt.Fprintf(ctx.Output, "ALTER SETTINGS LANGUAGE\n  DefaultLanguageCode = '%s';\n\n", ps.Language.DefaultLanguageCode)
+		fmt.Fprintf(ctx.Output, "alter settings LANGUAGE\n  DefaultLanguageCode = '%s';\n\n", ps.Language.DefaultLanguageCode)
 	}
 
 	// Workflow settings
@@ -160,7 +160,7 @@ func describeSettings(ctx *ExecContext) error {
 			parts = append(parts, fmt.Sprintf("  WorkflowEngineParallelism = %d", ws.WorkflowEngineParallelism))
 		}
 		if len(parts) > 0 {
-			fmt.Fprintf(ctx.Output, "ALTER SETTINGS WORKFLOWS\n%s;\n\n", strings.Join(parts, ",\n"))
+			fmt.Fprintf(ctx.Output, "alter settings workflows\n%s;\n\n", strings.Join(parts, ",\n"))
 		}
 	}
 
@@ -178,9 +178,9 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
 
-	section := strings.ToUpper(stmt.Section)
+	section := strings.ToLower(stmt.Section)
 	switch section {
-	case "MODEL":
+	case "model":
 		if ps.Model == nil {
 			return mdlerrors.NewNotFound("settings section", "model")
 		}
@@ -212,7 +212,7 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 			}
 		}
 
-	case "LANGUAGE":
+	case "language":
 		if ps.Language == nil {
 			return mdlerrors.NewNotFound("settings section", "language")
 		}
@@ -226,7 +226,7 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 			}
 		}
 
-	case "WORKFLOWS":
+	case "workflows":
 		if ps.Workflows == nil {
 			return mdlerrors.NewNotFound("settings section", "workflows")
 		}
@@ -248,14 +248,14 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 			}
 		}
 
-	case "CONFIGURATION":
+	case "configuration":
 		return alterSettingsConfiguration(ctx, ps, stmt)
 
-	case "CONSTANT":
+	case "constant":
 		return alterSettingsConstant(ctx, ps, stmt)
 
 	default:
-		return mdlerrors.NewUnsupported(fmt.Sprintf("unknown settings section: %s (expected MODEL, CONFIGURATION, CONSTANT, LANGUAGE, or WORKFLOWS)", section))
+		return mdlerrors.NewUnsupported(fmt.Sprintf("unknown settings section: %s (expected model, configuration, constant, LANGUAGE, or workflows)", section))
 	}
 
 	// Write updated settings

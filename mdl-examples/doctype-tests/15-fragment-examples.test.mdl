@@ -24,26 +24,26 @@
 -- Setup: Ensure FragTest Entities Exist
 -- ============================================================================
 
-CREATE MODULE FragTest;
+create module FragTest;
 
-@Position(100,100)
-CREATE PERSISTENT ENTITY FragTest.Customer (
-  Name: String(200) NOT NULL,
-  Email: String(200),
-  Phone: String(50)
+@position(100,100)
+create persistent entity FragTest.Customer (
+  Name: string(200) not null,
+  Email: string(200),
+  Phone: string(50)
 );
 
-@Position(300,100)
-CREATE PERSISTENT ENTITY FragTest.Order (
-  OrderNumber: String(50) NOT NULL,
-  TotalAmount: Decimal,
-  OrderDate: DateTime
+@position(300,100)
+create persistent entity FragTest.Order (
+  OrderNumber: string(50) not null,
+  TotalAmount: decimal,
+  OrderDate: datetime
 );
 
-CREATE ASSOCIATION FragTest.Order_Customer
-FROM FragTest.Order TO FragTest.Customer
-TYPE Reference
-OWNER Both;
+create association FragTest.Order_Customer
+from FragTest.Order to FragTest.Customer
+type reference
+owner both;
 
 -- MARK: Basic Fragments
 
@@ -54,20 +54,20 @@ OWNER Both;
 /**
  * Simple save/cancel footer — the most common reusable pattern.
  */
-DEFINE FRAGMENT SaveCancelFooter AS {
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+define fragment SaveCancelFooter as {
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 };
 
 /**
  * Fragment with multiple top-level widgets.
  */
-DEFINE FRAGMENT CustomerFields AS {
-  TEXTBOX txtName (Label: 'Name', Attribute: Name)
-  TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-  TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
+define fragment CustomerFields as {
+  textbox txtName (label: 'Name', attribute: Name)
+  textbox txtEmail (label: 'Email', attribute: Email)
+  textbox txtPhone (label: 'Phone', attribute: Phone)
 };
 
 -- MARK: Show & Describe
@@ -77,11 +77,11 @@ DEFINE FRAGMENT CustomerFields AS {
 -- ============================================================================
 
 -- List all defined fragments (works without project connection)
-SHOW FRAGMENTS;
+show fragments;
 
 -- Show the full MDL definition of a fragment
-DESCRIBE FRAGMENT SaveCancelFooter;
-DESCRIBE FRAGMENT CustomerFields;
+describe fragment SaveCancelFooter;
+describe fragment CustomerFields;
 
 -- MARK: Use in Pages
 
@@ -93,21 +93,21 @@ DESCRIBE FRAGMENT CustomerFields;
  * Edit page using a fragment for the footer.
  * The SaveCancelFooter widgets are cloned and inserted inline.
  */
-CREATE PAGE FragTest.P001_Customer_Edit
+create page FragTest.P001_Customer_Edit
 (
-  Params: { $Customer: FragTest.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: FragTest.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    USE FRAGMENT CustomerFields
-    USE FRAGMENT SaveCancelFooter
+  dataview dvCustomer (datasource: $Customer) {
+    use fragment CustomerFields
+    use fragment SaveCancelFooter
   }
 };
 
 -- Verify the page was created with expanded widgets
-DESCRIBE PAGE FragTest.P001_Customer_Edit;
+describe page FragTest.P001_Customer_Edit;
 
 -- MARK: Prefix
 
@@ -119,9 +119,9 @@ DESCRIBE PAGE FragTest.P001_Customer_Edit;
  * When using the same fragment multiple times on one page,
  * use AS prefix_ to create unique widget names.
  */
-DEFINE FRAGMENT StatusButtons AS {
-  ACTIONBUTTON btnApprove (Caption: 'Approve', Action: SAVE_CHANGES, ButtonStyle: Success)
-  ACTIONBUTTON btnReject (Caption: 'Reject', Action: CANCEL_CHANGES, ButtonStyle: Danger)
+define fragment StatusButtons as {
+  actionbutton btnApprove (caption: 'Approve', action: save_changes, buttonstyle: success)
+  actionbutton btnReject (caption: 'Reject', action: cancel_changes, buttonstyle: danger)
 };
 
 /**
@@ -129,22 +129,22 @@ DEFINE FRAGMENT StatusButtons AS {
  * The first instance creates cust_btnApprove, cust_btnReject.
  * The second creates order_btnApprove, order_btnReject.
  */
-CREATE PAGE FragTest.P002_Dual_Fragment
+create page FragTest.P002_Dual_Fragment
 (
-  Title: 'Dual Fragment Example',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'frag_002_dual'
+  title: 'Dual Fragment Example',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'frag_002_dual'
 )
 {
-  LAYOUTGRID lgMain {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 6) {
-        DYNAMICTEXT txtCustHeader (Content: 'Customer Actions', RenderMode: H4)
-        USE FRAGMENT StatusButtons AS cust_
+  layoutgrid lgMain {
+    row row1 {
+      column col1 (desktopwidth: 6) {
+        dynamictext txtCustHeader (content: 'Customer Actions', rendermode: H4)
+        use fragment StatusButtons as cust_
       }
-      COLUMN col2 (DesktopWidth: 6) {
-        DYNAMICTEXT txtOrderHeader (Content: 'Order Actions', RenderMode: H4)
-        USE FRAGMENT StatusButtons AS order_
+      column col2 (desktopwidth: 6) {
+        dynamictext txtOrderHeader (content: 'Order Actions', rendermode: H4)
+        use fragment StatusButtons as order_
       }
     }
   }
@@ -160,28 +160,28 @@ CREATE PAGE FragTest.P002_Dual_Fragment
  * Fragments can be used inside any container widget — DATAVIEW,
  * LAYOUTGRID columns, CONTAINER, etc.
  */
-DEFINE FRAGMENT OrderFields AS {
-  TEXTBOX txtOrderNumber (Label: 'Order #', Attribute: OrderNumber)
-  DATEPICKER dpOrderDate (Label: 'Order Date', Attribute: OrderDate)
-  TEXTBOX txtTotal (Label: 'Total', Attribute: TotalAmount)
+define fragment OrderFields as {
+  textbox txtOrderNumber (label: 'Order #', attribute: OrderNumber)
+  datepicker dpOrderDate (label: 'Order Date', attribute: OrderDate)
+  textbox txtTotal (label: 'Total', attribute: TotalAmount)
 };
 
-CREATE PAGE FragTest.P003_Order_Form
+create page FragTest.P003_Order_Form
 (
-  Params: { $Order: FragTest.Order },
-  Title: 'Edit Order',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Order: FragTest.Order },
+  title: 'Edit Order',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvOrder (DataSource: $Order) {
-    LAYOUTGRID lgForm {
-      ROW row1 {
-        COLUMN col1 (DesktopWidth: 12) {
-          USE FRAGMENT OrderFields
+  dataview dvOrder (datasource: $Order) {
+    layoutgrid lgForm {
+      row row1 {
+        column col1 (desktopwidth: 12) {
+          use fragment OrderFields
         }
       }
     }
-    USE FRAGMENT SaveCancelFooter
+    use fragment SaveCancelFooter
   }
 };
 
@@ -195,31 +195,31 @@ CREATE PAGE FragTest.P003_Order_Form
  * The main benefit of fragments: define once, use in many pages.
  * Here we create two different pages reusing the same footer.
  */
-CREATE PAGE FragTest.P004_Customer_New
+create page FragTest.P004_Customer_New
 (
-  Title: 'New Customer',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'frag_004_customer_new'
+  title: 'New Customer',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'frag_004_customer_new'
 )
 {
-  DATAVIEW dvCustomer (DataSource: DATABASE FragTest.Customer) {
-    USE FRAGMENT CustomerFields
-    USE FRAGMENT SaveCancelFooter
+  dataview dvCustomer (datasource: database FragTest.Customer) {
+    use fragment CustomerFields
+    use fragment SaveCancelFooter
   }
 };
 
-CREATE PAGE FragTest.P005_Quick_View
+create page FragTest.P005_Quick_View
 (
-  Params: { $Customer: FragTest.Customer },
-  Title: 'Customer Details',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: FragTest.Customer },
+  title: 'Customer Details',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    DYNAMICTEXT txtHeader (Content: 'Customer Details', RenderMode: H3)
-    USE FRAGMENT CustomerFields
-    FOOTER footer1 {
-      ACTIONBUTTON btnClose (Caption: 'Close', Action: CLOSE_PAGE)
+  dataview dvCustomer (datasource: $Customer) {
+    dynamictext txtHeader (content: 'Customer Details', rendermode: H3)
+    use fragment CustomerFields
+    footer footer1 {
+      actionbutton btnClose (caption: 'Close', action: close_page)
     }
   }
 };
@@ -233,15 +233,15 @@ CREATE PAGE FragTest.P005_Quick_View
 /**
  * Fragments also work inside snippets, not just pages.
  */
-CREATE SNIPPET FragTest.CustomerCard
+create snippet FragTest.CustomerCard
 (
-  Params: { $Customer: FragTest.Customer }
+  params: { $Customer: FragTest.Customer }
 )
 {
-  CONTAINER ctnCard (Class: 'card') {
-    DYNAMICTEXT txtCardTitle (Content: 'Customer', RenderMode: H4)
-    DATAVIEW dvCustomer (DataSource: $Customer) {
-      USE FRAGMENT CustomerFields
+  container ctnCard (class: 'card') {
+    dynamictext txtCardTitle (content: 'Customer', rendermode: H4)
+    dataview dvCustomer (datasource: $Customer) {
+      use fragment CustomerFields
     }
   }
 };

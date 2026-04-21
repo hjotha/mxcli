@@ -25,7 +25,7 @@ The architecture exhibits a strong separation of concerns:
 
 ```mermaid
 graph TD
-    subgraph User Interface
+    subgraph user Interface
         A[mxcli]
     end
 
@@ -36,8 +36,8 @@ graph TD
 
     subgraph Core SDK
         D[MPR Reader/Writer]
-        E[Go Model SDK (domainmodel, microflows, etc.)]
-        F[Mendix Project (.mpr)]
+        E[Go model SDK (domainmodel, microflows, etc.)]
+        F[Mendix project (.mpr)]
     end
 
     A --> B
@@ -54,7 +54,7 @@ graph TD
 The foundation of the `mxcli` tool is its ability to understand MDL. This is handled by a parser generated from ANTLR v4 grammar files, which is a robust and standard approach for language implementation.
 
 *   **Grammar Files:** The grammar is split into two well-defined files:
-    *   `mdl/grammar/MDLLexer.g4`: Defines the tokens (keywords, identifiers, literals, operators) of the language. It's comprehensive, covering everything from DDL keywords like `CREATE ENTITY` to microflow actions and page widget names.
+    *   `mdl/grammar/MDLLexer.g4`: Defines the tokens (keywords, identifiers, literals, operators) of the language. It's comprehensive, covering everything from DDL keywords like `create entity` to microflow actions and page widget names.
     *   `mdl/grammar/MDLParser.g4`: Defines the syntactic structure of the language, specifying how tokens combine to form valid statements. The parser rules are detailed and cover a wide range of Mendix concepts.
 *   **Code Quality:** The grammar is exceptionally well-documented with embedded Javadoc-style comments and examples directly within the `.g4` file. This practice is excellent for maintainability, making it much easier for new developers to understand the language structure. The grammar is organized logically by feature (DDL, DQL, Microflows, etc.).
 

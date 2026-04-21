@@ -365,7 +365,7 @@ func updatePropertyInArray(arr bson.A, propertyTypeID string, updateFn func(bson
 	}
 	if !matched {
 		// TODO(shared-types): propagate warning instead of logging — requires interface change.
-		log.Printf("WARNING: updatePropertyInArray: no match for TypePointer %s in %d properties", propertyTypeID, len(arr)-1)
+		log.Printf("warning: updatePropertyInArray: no match for TypePointer %s in %d properties", propertyTypeID, len(arr)-1)
 	}
 	return result
 }

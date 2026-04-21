@@ -24,7 +24,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	// Version pre-check: page parameters require 11.0+
 	if len(s.Parameters) > 0 {
 		if err := checkFeature(ctx, "pages", "page_parameters",
-			"CREATE PAGE with parameters",
+			"create page with parameters",
 			"pass data via a non-persistent entity or microflow parameter instead"); err != nil {
 			return err
 		}

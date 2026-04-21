@@ -278,28 +278,28 @@ func buildWorkflowSetPropertyOp(ctx *parser.WorkflowSetPropertyContext) *ast.Set
 	op := &ast.SetWorkflowPropertyOp{}
 
 	if ctx.DISPLAY() != nil {
-		op.Property = "DISPLAY"
+		op.Property = "display"
 		op.Value = unquoteString(ctx.STRING_LITERAL().GetText())
 	} else if ctx.DESCRIPTION() != nil {
-		op.Property = "DESCRIPTION"
+		op.Property = "description"
 		op.Value = unquoteString(ctx.STRING_LITERAL().GetText())
 	} else if ctx.EXPORT() != nil {
-		op.Property = "EXPORT_LEVEL"
+		op.Property = "export_level"
 		if ctx.API() != nil {
 			op.Value = "API"
 		} else if ctx.IDENTIFIER() != nil {
 			op.Value = ctx.IDENTIFIER().GetText()
 		}
 	} else if ctx.DUE() != nil {
-		op.Property = "DUE_DATE"
+		op.Property = "due_date"
 		op.Value = unquoteString(ctx.STRING_LITERAL().GetText())
 	} else if ctx.OVERVIEW() != nil {
-		op.Property = "OVERVIEW_PAGE"
+		op.Property = "overview_page"
 		if qn := ctx.QualifiedName(); qn != nil {
 			op.Entity = buildQualifiedName(qn)
 		}
 	} else if ctx.PARAMETER() != nil {
-		op.Property = "PARAMETER"
+		op.Property = "parameter"
 		op.Value = ctx.VARIABLE().GetText()
 		if qn := ctx.QualifiedName(); qn != nil {
 			op.Entity = buildQualifiedName(qn)
@@ -317,23 +317,23 @@ func buildActivitySetPropertyOp(ctx *parser.ActivitySetPropertyContext, ref stri
 	}
 
 	if ctx.PAGE() != nil {
-		op.Property = "PAGE"
+		op.Property = "page"
 		if qn := ctx.QualifiedName(); qn != nil {
 			op.PageName = buildQualifiedName(qn)
 		}
 	} else if ctx.DESCRIPTION() != nil {
-		op.Property = "DESCRIPTION"
+		op.Property = "description"
 		op.Value = unquoteString(ctx.STRING_LITERAL().GetText())
 	} else if ctx.TARGETING() != nil && ctx.MICROFLOW() != nil {
-		op.Property = "TARGETING_MICROFLOW"
+		op.Property = "targeting_microflow"
 		if qn := ctx.QualifiedName(); qn != nil {
 			op.Microflow = buildQualifiedName(qn)
 		}
 	} else if ctx.TARGETING() != nil && ctx.XPATH() != nil {
-		op.Property = "TARGETING_XPATH"
+		op.Property = "targeting_xpath"
 		op.Value = unquoteString(ctx.STRING_LITERAL().GetText())
 	} else if ctx.DUE() != nil {
-		op.Property = "DUE_DATE"
+		op.Property = "due_date"
 		op.Value = unquoteString(ctx.STRING_LITERAL().GetText())
 	}
 

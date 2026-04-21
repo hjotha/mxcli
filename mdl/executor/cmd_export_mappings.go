@@ -103,16 +103,16 @@ func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 	modID := h.FindModuleID(em.ContainerID)
 	moduleName := h.GetModuleName(modID)
 
-	fmt.Fprintf(ctx.Output, "CREATE EXPORT MAPPING %s.%s\n", moduleName, em.Name)
+	fmt.Fprintf(ctx.Output, "create export mapping %s.%s\n", moduleName, em.Name)
 
 	if em.JsonStructure != "" {
-		fmt.Fprintf(ctx.Output, "  WITH JSON STRUCTURE %s\n", em.JsonStructure)
+		fmt.Fprintf(ctx.Output, "  with json structure %s\n", em.JsonStructure)
 	} else if em.XmlSchema != "" {
-		fmt.Fprintf(ctx.Output, "  WITH XML SCHEMA %s\n", em.XmlSchema)
+		fmt.Fprintf(ctx.Output, "  with xml schema %s\n", em.XmlSchema)
 	}
 
 	if em.NullValueOption != "" && em.NullValueOption != "LeaveOutElement" {
-		fmt.Fprintf(ctx.Output, "  NULL VALUES %s\n", em.NullValueOption)
+		fmt.Fprintf(ctx.Output, "  null values %s\n", em.NullValueOption)
 	}
 
 	if len(em.Elements) > 0 {
@@ -144,11 +144,11 @@ func printExportMappingElement(w io.Writer, elem *model.ExportMappingElement, de
 			assoc := elem.Association
 			entity := elem.Entity
 			if assoc == "" && entity == "" {
-				fmt.Fprintf(w, "%s. AS %s", indent, elem.ExposedName)
+				fmt.Fprintf(w, "%s. as %s", indent, elem.ExposedName)
 			} else if assoc == "" {
-				fmt.Fprintf(w, "%s./%s AS %s", indent, entity, elem.ExposedName)
+				fmt.Fprintf(w, "%s./%s as %s", indent, entity, elem.ExposedName)
 			} else {
-				fmt.Fprintf(w, "%s%s/%s AS %s", indent, assoc, entity, elem.ExposedName)
+				fmt.Fprintf(w, "%s%s/%s as %s", indent, assoc, entity, elem.ExposedName)
 			}
 			if len(elem.Children) > 0 {
 				fmt.Fprintln(w, " {")

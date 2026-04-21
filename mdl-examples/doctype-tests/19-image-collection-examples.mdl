@@ -17,7 +17,7 @@
 --
 -- ============================================================================
 
-CREATE MODULE ImgTest;
+create module ImgTest;
 
 -- MARK: Create
 
@@ -31,7 +31,7 @@ CREATE MODULE ImgTest;
  * The simplest image collection — just a name.
  * Images can be added later via Studio Pro.
  */
-CREATE IMAGE COLLECTION ImgTest.AppIcons;
+create image collection ImgTest.AppIcons;
 /
 
 /**
@@ -41,7 +41,7 @@ CREATE IMAGE COLLECTION ImgTest.AppIcons;
  *   'Hidden' (default) - internal to the module
  *   'Public'           - accessible from other modules
  */
-CREATE IMAGE COLLECTION ImgTest.SharedIcons EXPORT LEVEL 'Public';
+create image collection ImgTest.SharedIcons export level 'Public';
 /
 
 /**
@@ -49,15 +49,15 @@ CREATE IMAGE COLLECTION ImgTest.SharedIcons EXPORT LEVEL 'Public';
  *
  * COMMENT documents the purpose of the collection.
  */
-CREATE IMAGE COLLECTION ImgTest.StatusIcons COMMENT 'Icons for order and task status indicators';
+create image collection ImgTest.StatusIcons comment 'Icons for order and task status indicators';
 /
 
 /**
  * Level 1.4: Create with both export level and comment
  */
-CREATE IMAGE COLLECTION ImgTest.BrandAssets
-  EXPORT LEVEL 'Public'
-  COMMENT 'Company branding assets: logos, favicons, and splash screens';
+create image collection ImgTest.BrandAssets
+  export level 'Public'
+  comment 'Company branding assets: logos, favicons, and splash screens';
 /
 
 -- ============================================================================
@@ -73,20 +73,20 @@ CREATE IMAGE COLLECTION ImgTest.BrandAssets
  *
  * Supported formats: PNG, SVG, GIF, JPEG, BMP, WebP
  */
-CREATE IMAGE COLLECTION ImgTest.NavigationIcons (
-  IMAGE cli_screenshot FROM FILE '../../docs/images/mxcli-cli.png',
-  IMAGE repl_screenshot FROM FILE '../../docs/images/mxcli-repl.png'
+create image collection ImgTest.NavigationIcons (
+  image cli_screenshot from file '../../docs/images/mxcli-cli.png',
+  image repl_screenshot from file '../../docs/images/mxcli-repl.png'
 );
 /
 
 /**
  * Level 2.2: Create with both options and images
  */
-CREATE IMAGE COLLECTION ImgTest.AppLogos
-  EXPORT LEVEL 'Public'
-  COMMENT 'Application logos for branding' (
-  IMAGE vscode_ext FROM FILE '../../docs/images/mxcli-vscode-ext.png',
-  IMAGE catalog_view FROM FILE '../../docs/images/mxcli-catalog.png'
+create image collection ImgTest.AppLogos
+  export level 'Public'
+  comment 'Application logos for branding' (
+  image vscode_ext from file '../../docs/images/mxcli-vscode-ext.png',
+  image catalog_view from file '../../docs/images/mxcli-catalog.png'
 );
 /
 
@@ -97,11 +97,11 @@ CREATE IMAGE COLLECTION ImgTest.AppLogos
 -- ============================================================================
 
 -- Show all image collections across all modules
-SHOW IMAGE COLLECTION;
+show image collection;
 /
 
 -- Show image collections in a specific module
-SHOW IMAGE COLLECTION IN ImgTest;
+show image collection in ImgTest;
 /
 
 -- MARK: Describe
@@ -111,9 +111,9 @@ SHOW IMAGE COLLECTION IN ImgTest;
 -- ============================================================================
 
 -- Describe shows the full MDL definition including any embedded images
-DESCRIBE IMAGE COLLECTION ImgTest.AppIcons;
-DESCRIBE IMAGE COLLECTION ImgTest.SharedIcons;
-DESCRIBE IMAGE COLLECTION ImgTest.BrandAssets;
+describe image collection ImgTest.AppIcons;
+describe image collection ImgTest.SharedIcons;
+describe image collection ImgTest.BrandAssets;
 
 -- MARK: Drop
 
@@ -126,11 +126,11 @@ DESCRIBE IMAGE COLLECTION ImgTest.BrandAssets;
  *
  * Removes the collection and all its embedded images.
  */
-DROP IMAGE COLLECTION ImgTest.StatusIcons;
+drop image collection ImgTest.StatusIcons;
 /
 
 -- Verify it's gone
-SHOW IMAGE COLLECTION IN ImgTest;
+show image collection in ImgTest;
 /
 
 -- ============================================================================

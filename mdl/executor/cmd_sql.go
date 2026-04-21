@@ -65,7 +65,7 @@ func execSQLConnect(ctx *ExecContext, s *ast.SQLConnectStmt) error {
 func autoConnect(ctx *ExecContext, alias string) error {
 	rc, err := sqllib.ResolveConnection(sqllib.ResolveOptions{Alias: alias})
 	if err != nil {
-		return fmt.Errorf("cannot resolve connection '%s': %w\nAdd it to .mxcli/connections.yaml or use: SQL CONNECT <driver> '<dsn>' AS %s", alias, err, alias)
+		return fmt.Errorf("cannot resolve connection '%s': %w\nAdd it to .mxcli/connections.yaml or use: sql connect <driver> '<dsn>' as %s", alias, err, alias)
 	}
 
 	mgr := ensureSQLManager(ctx)
@@ -94,7 +94,7 @@ func execSQLConnections(ctx *ExecContext) error {
 	infos := mgr.List()
 
 	if len(infos) == 0 {
-		fmt.Fprintln(ctx.Output, "No active SQL connections")
+		fmt.Fprintln(ctx.Output, "No active sql connections")
 		return nil
 	}
 
@@ -218,7 +218,7 @@ func execSQLGenerateConnector(ctx *ExecContext, s *ast.SQLGenerateConnectorStmt)
 
 	// Report skipped columns
 	for _, skip := range result.SkippedCols {
-		fmt.Fprintf(ctx.Output, "-- WARNING: skipped unmappable column: %s\n", skip)
+		fmt.Fprintf(ctx.Output, "-- warning: skipped unmappable column: %s\n", skip)
 	}
 
 	if s.Exec {

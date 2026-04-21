@@ -17,7 +17,7 @@ func TestLookupRestOperation_Found(t *testing.T) {
 		BaseElement: model.BaseElement{ID: "svc-1"},
 		Name:        "MyAPI",
 		Operations: []*model.RestClientOperation{
-			{Name: "PostData", BodyType: "JSON"},
+			{Name: "PostData", BodyType: "json"},
 		},
 	}
 	op := lookupRestOperation([]*model.ConsumedRestService{svc}, "MyAPI", "PostData")
@@ -110,17 +110,17 @@ func TestBuildRestParameterMappings_NilOp_FallbackToQuery(t *testing.T) {
 
 // Test: JSON body → should NOT set BodyVariable.
 func TestShouldSetBodyVariable_JsonBody_False(t *testing.T) {
-	op := &model.RestClientOperation{BodyType: "JSON"}
+	op := &model.RestClientOperation{BodyType: "json"}
 	if shouldSetBodyVariable(op) {
-		t.Error("expected shouldSetBodyVariable=false for JSON body, got true")
+		t.Error("expected shouldSetBodyVariable=false for json body, got true")
 	}
 }
 
 // Test: TEMPLATE/STRING body → should NOT set BodyVariable.
 func TestShouldSetBodyVariable_TemplateBody_False(t *testing.T) {
-	op := &model.RestClientOperation{BodyType: "TEMPLATE"}
+	op := &model.RestClientOperation{BodyType: "template"}
 	if shouldSetBodyVariable(op) {
-		t.Error("expected shouldSetBodyVariable=false for TEMPLATE body, got true")
+		t.Error("expected shouldSetBodyVariable=false for template body, got true")
 	}
 }
 
@@ -153,7 +153,7 @@ func TestShouldSetBodyVariable_NoBody_False(t *testing.T) {
 func TestAddSendRestRequest_JsonBody_NoBodyVariable(t *testing.T) {
 	op := &model.RestClientOperation{
 		Name:     "PostJsonTemplate",
-		BodyType: "JSON",
+		BodyType: "json",
 		Parameters: []*model.RestClientParameter{
 			{Name: "Name", DataType: "String"},
 			{Name: "Email", DataType: "String"},
@@ -203,7 +203,7 @@ func TestAddSendRestRequest_JsonBody_NoBodyVariable(t *testing.T) {
 
 	// For JSON body, BodyVariable must be nil
 	if action.BodyVariable != nil {
-		t.Errorf("expected BodyVariable=nil for JSON body, got %+v", action.BodyVariable)
+		t.Errorf("expected BodyVariable=nil for json body, got %+v", action.BodyVariable)
 	}
 
 	// Both params should be classified as path params (both are in op.Parameters)

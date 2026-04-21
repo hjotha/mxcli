@@ -21,11 +21,11 @@ Module Settings contain metadata about a module: its version, whether it came fr
 
 ```
 Projects$ModuleSettings:
-  Version: string (e.g., "2.3.0")
+  version: string (e.g., "2.3.0")
   BasedOnVersion: string
-  ExportLevel: string ("Source")
+  ExportLevel: string ("source")
   ExtensionName: string
-  ProtectedModuleType: string ("AddOn", "None", etc.)
+  ProtectedModuleType: string ("AddOn", "none", etc.)
   SolutionIdentifier: string
   JarDependencies: [] (array of JAR refs)
 ```
@@ -37,7 +37,7 @@ Note: There is one `ModuleSettings` per module, stored as a separate unit. The `
 ### SHOW MODULE SETTINGS
 
 ```
-SHOW MODULE SETTINGS [IN Module]
+show module settings [in module]
 ```
 
 | Module | Version | Based On | From App Store | App Store Version | Protected | Theme Module |
@@ -48,21 +48,21 @@ This combines data from both `ModuleSettings` and `ModuleImpl` to give a complet
 ### DESCRIBE MODULE SETTINGS
 
 ```
-DESCRIBE MODULE SETTINGS Module
+describe module settings module
 ```
 
 Output format:
 
 ```
 -- Module Settings: Atlas_Core
-MODULE SETTINGS Atlas_Core
-  VERSION '3.0.9'
-  BASED ON VERSION '3.0.8'
-  FROM APP STORE
+module settings Atlas_Core
+  version '3.0.9'
+  BASED on version '3.0.8'
+  from APP store
     GUID 'abc-123'
-    APP STORE VERSION '3.0.9'
-  PROTECTED TYPE AddOn
-  THEME MODULE;
+    APP store version '3.0.9'
+  PROTECTED type AddOn
+  THEME module;
 /
 ```
 
@@ -70,9 +70,9 @@ For user-created modules with minimal settings:
 
 ```
 -- Module Settings: MyFirstModule
-MODULE SETTINGS MyFirstModule
-  VERSION ''
-  PROTECTED TYPE None;
+module settings MyFirstModule
+  version ''
+  PROTECTED type none;
 /
 ```
 
@@ -84,13 +84,13 @@ MODULE SETTINGS MyFirstModule
 type ModuleSettings struct {
     ContainerID       model.ID
     ModuleName        string
-    Version           string
+    version           string
     BasedOnVersion    string
     ExportLevel       string
     ProtectedModuleType string
     SolutionIdentifier  string
     ExtensionName     string
-    // From ModuleImpl:
+    // from ModuleImpl:
     FromAppStore      bool
     AppStoreGuid      string
     AppStoreVersion   string
@@ -110,9 +110,9 @@ func (r *Reader) ListModuleSettings() ([]*model.ModuleSettings, error)
 
 ### 4. Add AST, Grammar, Visitor, Executor
 
-Standard pattern. Reuse existing `MODULE` token; add `SETTINGS` context for `SHOW MODULE SETTINGS`.
+Standard pattern. Reuse existing `module` token; add `settings` context for `show module settings`.
 
-Note: `SHOW SETTINGS` already exists for Project Settings. Use `SHOW MODULE SETTINGS` to disambiguate.
+Note: `show settings` already exists for Project Settings. Use `show module settings` to disambiguate.
 
 ## Testing
 

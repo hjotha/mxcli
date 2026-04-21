@@ -12,22 +12,22 @@ import (
 // Requires REFRESH CATALOG FULL to populate the strings table.
 func listLanguages(ctx *ExecContext) error {
 	if ctx.Catalog == nil {
-		return mdlerrors.NewValidation("no catalog available — run REFRESH CATALOG FULL first")
+		return mdlerrors.NewValidation("no catalog available — run refresh catalog full first")
 	}
 
 	result, err := ctx.Catalog.Query(`
-		SELECT Language, COUNT(*) as StringCount
-		FROM strings
-		WHERE Language != ''
-		GROUP BY Language
-		ORDER BY StringCount DESC
+		select Language, count(*) as StringCount
+		from strings
+		where Language != ''
+		GROUP by Language
+		ORDER by StringCount desc
 	`)
 	if err != nil {
 		return mdlerrors.NewBackend("query languages", err)
 	}
 
 	if len(result.Rows) == 0 && ctx.Format != FormatJSON {
-		fmt.Fprintln(ctx.Output, "No translatable strings found. Run REFRESH CATALOG FULL to populate the strings table.")
+		fmt.Fprintln(ctx.Output, "No translatable strings found. Run refresh catalog full to populate the strings table.")
 		return nil
 	}
 

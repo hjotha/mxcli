@@ -29,12 +29,12 @@ These proposals form a dependency chain for multi-version Mendix support.
 | [Update Built-in Widget Properties](PROPOSAL_update_builtin_widget_properties.md) | Draft | Bulk property updates on built-in widgets using reflection-data schema metadata | BSON Schema Registry |
 
 ```
-BSON Schema Registry ◄──── Multi-Version Support
+BSON schema Registry ◄──── multi-version Support
         ▲                          ▲
         │                          │
-        ├── Version-Aware MDL ─────┘
+        ├── version-Aware MDL ─────┘
         │
-        └── Update Built-in Widget Properties
+        └── update Built-in widget properties
 ```
 
 ### MDL Language Evolution
@@ -115,11 +115,11 @@ Add read-only SHOW and DESCRIBE commands for Mendix document types that lack MDL
 | [JavaScript Actions](show-describe-javascript-actions.md) | Proposed | SHOW/DESCRIBE for `JavaScriptActions$JavaScriptAction` (283 across 3 projects) | Yes |
 | [Building Blocks](show-describe-building-blocks.md) | Proposed | SHOW/DESCRIBE for `Forms$BuildingBlock` (233) | Yes |
 | [Page Templates](show-describe-page-templates.md) | Proposed | SHOW/DESCRIBE for `Forms$PageTemplate` (215) | Yes |
-| [Nanoflow DESCRIBE](show-describe-nanoflows.md) | Proposed | Enhanced DESCRIBE for `Microflows$Nanoflow` (227). Very low complexity — pure wiring | Yes (full) |
+| [Nanoflow DESCRIBE](show-describe-nanoflows.md) | Proposed | Enhanced DESCRIBE for `microflows$nanoflow` (227). Very low complexity — pure wiring | Yes (full) |
 | [JSON Structures](show-describe-json-structures.md) | Proposed | SHOW/DESCRIBE for `JsonStructures$JsonStructure` (96). Recursive element tree | No |
 | [Import Mappings](show-describe-import-mappings.md) | Proposed | SHOW/DESCRIBE for `ImportMappings$ImportMapping` (83). High complexity | No |
 | [Export Mappings](show-describe-export-mappings.md) | Proposed | SHOW/DESCRIBE for `ExportMappings$ExportMapping` (67). Shares impl with Import Mappings | No |
-| [Published REST Services](show-describe-published-rest-services.md) | Proposed | SHOW/DESCRIBE for `Rest$PublishedRestService` (16) | Yes |
+| [Published REST Services](show-describe-published-rest-services.md) | Proposed | SHOW/DESCRIBE for `rest$PublishedRestService` (16) | Yes |
 
 **Tier 2 — Medium Priority** (common, useful for project understanding):
 
@@ -127,10 +127,10 @@ Add read-only SHOW and DESCRIBE commands for Mendix document types that lack MDL
 |----------|--------|---------|---------------|
 | [Module Settings](show-describe-module-settings.md) | Proposed | SHOW/DESCRIBE for `Projects$ModuleSettings` (97). Low complexity | No |
 | [Image Collections](show-describe-image-collections.md) | Proposed | SHOW/DESCRIBE for `Images$ImageCollection` (65) | Yes |
-| [Rules](show-describe-rules.md) | Proposed | SHOW/DESCRIBE for `Microflows$Rule` (49). Reuses microflow parsing | No |
+| [Rules](show-describe-rules.md) | Proposed | SHOW/DESCRIBE for `microflows$rule` (49). Reuses microflow parsing | No |
 | [Message Definitions](show-describe-message-definitions.md) | Proposed | SHOW/DESCRIBE for `MessageDefinitions$MessageDefinitionCollection` (28) | No |
 | [Scheduled Events](show-describe-scheduled-events.md) | Proposed | SHOW/DESCRIBE for `ScheduledEvents$ScheduledEvent` (19) | Yes |
-| [Consumed REST Services](show-describe-consumed-rest-services.md) | Proposed | SHOW/DESCRIBE for `Rest$ConsumedRestService` (2) | No |
+| [Consumed REST Services](show-describe-consumed-rest-services.md) | Proposed | SHOW/DESCRIBE for `rest$ConsumedRestService` (2) | No |
 
 **Tier 3 — Low Priority** (small counts, simple types):
 

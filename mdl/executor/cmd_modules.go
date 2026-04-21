@@ -593,7 +593,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output basic CREATE MODULE statement
-	fmt.Fprintf(ctx.Output, "CREATE MODULE %s;\n", targetModule.Name)
+	fmt.Fprintf(ctx.Output, "create module %s;\n", targetModule.Name)
 
 	if !withAll {
 		fmt.Fprintln(ctx.Output, "/")

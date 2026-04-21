@@ -28,7 +28,7 @@ This report documents: security findings, what catalog queries worked, what fail
 
 **How queried:**
 ```sql
-SHOW PROJECT SECURITY;
+show project security;
 ```
 
 ---
@@ -36,15 +36,15 @@ SHOW PROJECT SECURITY;
 ### 2.2 Weak Password Policy (High Risk)
 
 ```
-Minimum Length : 1
+minimum length : 1
 Require Digit  : false
-Require Mixed Case : false
+Require Mixed case : false
 Require Symbol : false
 ```
 
 A one-character password satisfies the policy. This effectively eliminates any protection from brute-force or credential stuffing attacks on all accounts, including `MxAdmin`.
 
-**How queried:** `SHOW PROJECT SECURITY;`
+**How queried:** `show project security;`
 
 ---
 
@@ -52,12 +52,12 @@ A one-character password satisfies the policy. This effectively eliminates any p
 
 ```
 demo_administrator  → Administrator role (full account management)
-demo_user           → User + Api roles
+demo_user           → user + api roles
 ```
 
 Demo users with predictable or default credentials are active. The `demo_administrator` account has the `Administration.Administrator` role, which grants access to account management, active sessions, scheduled events, and runtime configuration.
 
-**How queried:** `SHOW DEMO USERS;`
+**How queried:** `show demo users;`
 
 ---
 
@@ -74,8 +74,8 @@ OQL queries bypass entity-level access rules by operating directly on the databa
 
 **How queried:**
 ```sql
-SELECT SourceName, TargetName, RefKind FROM CATALOG.REFS WHERE RefKind = 'menu_item';
-SELECT ElementName FROM CATALOG.PERMISSIONS WHERE ModuleRoleName = 'OqlPad.OqlPadUser' AND ElementType = 'MICROFLOW';
+select SourceName, TargetName, RefKind from CATALOG.REFS where RefKind = 'menu_item';
+select ElementName from CATALOG.PERMISSIONS where ModuleRoleName = 'OqlPad.OqlPadUser' and ElementType = 'MICROFLOW';
 ```
 
 ---
@@ -98,9 +98,9 @@ In Production mode Mendix blocks access to entities with no access rules, so the
 | `MultipleAggregate.Policy` | 2 | |
 | `ShopViews.Entity` | 0 | Unnamed entity — likely leftover |
 
-`SHOW SECURITY MATRIX IN DPP;` returned: *"No module roles found in DPP"* — the entire module has no roles defined at all.
+`show security matrix in DPP;` returned: *"No module roles found in DPP"* — the entire module has no roles defined at all.
 
-**How queried:** `SHOW ENTITIES IN <Module>;` (AccessRules column in output), `SHOW SECURITY MATRIX IN DPP;`
+**How queried:** `show entities in <module>;` (AccessRules column in output), `show security matrix in DPP;`
 
 ---
 
@@ -146,52 +146,52 @@ comm -23 all_module_roles.txt roles_in_permissions.txt
 | `CATALOG.MICROFLOWS` | 159 | Microflows and nanoflows |
 | `CATALOG.PAGES` | 252 | All pages |
 | `CATALOG.PERMISSIONS` | 299 | Pages, microflows, OData only — **not entities** |
-| `CATALOG.REFS` | 257 | Cross-references (requires `REFRESH CATALOG FULL`) |
+| `CATALOG.REFS` | 257 | Cross-references (requires `refresh catalog full`) |
 
 ### 3.2 What Worked
 
 | Query Pattern | Result |
 |--------------|--------|
-| `SELECT col FROM TABLE WHERE col = 'value'` | ✅ Works |
-| `SELECT COUNT(col) FROM TABLE` | ✅ Works |
-| `SELECT ... GROUP BY ... HAVING COUNT(col) > n` | ✅ Works |
-| `LEFT JOIN ... ON ... WHERE right.Id IS NULL` | ✅ Works (null pattern for anti-join) |
-| `REFRESH CATALOG FULL` | ✅ Populates `CATALOG.REFS` |
-| `SHOW PROJECT SECURITY` | ✅ Returns security level, guest access, password policy |
-| `SHOW SECURITY MATRIX IN Module` | ✅ Returns entity + microflow + page access per role |
-| `DESCRIBE ENTITY Module.Entity` | ✅ Returns full GRANT statements |
+| `select col from table where col = 'value'` | ✅ Works |
+| `select count(col) from table` | ✅ Works |
+| `select ... GROUP by ... having count(col) > n` | ✅ Works |
+| `left join ... on ... where right.Id IS null` | ✅ Works (null pattern for anti-join) |
+| `refresh catalog full` | ✅ Populates `CATALOG.REFS` |
+| `show project security` | ✅ Returns security level, guest access, password policy |
+| `show security matrix in module` | ✅ Returns entity + microflow + page access per role |
+| `describe entity Module.Entity` | ✅ Returns full GRANT statements |
 
 ### 3.3 Broken: Column Aliases Not Usable in ORDER BY
 
 **Attempted:**
 ```sql
-SELECT ModuleRoleName, COUNT(ElementName) AS RoleCount
-FROM CATALOG.PERMISSIONS
-WHERE ElementType = 'PAGE'
-GROUP BY ModuleRoleName
-ORDER BY RoleCount DESC;
+select ModuleRoleName, count(ElementName) as RoleCount
+from CATALOG.PERMISSIONS
+where ElementType = 'PAGE'
+GROUP by ModuleRoleName
+ORDER by RoleCount desc;
 ```
 
 **Error:**
 ```
-SQL logic error: no such column: RoleCount (1)
+sql logic error: no such column: RoleCount (1)
 ```
 
-Standard SQL allows referencing a `SELECT` alias in `ORDER BY`. The underlying SQLite engine supports this, but mxcli's query layer does not pass the alias through. **Workaround:** repeat the expression — `ORDER BY COUNT(ElementName) DESC` — but this is not supported either; `ORDER BY` on aggregates without aliases also fails.
+Standard SQL allows referencing a `select` alias in `ORDER by`. The underlying SQLite engine supports this, but mxcli's query layer does not pass the alias through. **Workaround:** repeat the expression — `ORDER by count(ElementName) desc` — but this is not supported either; `ORDER by` on aggregates without aliases also fails.
 
-**Impact:** Sorting aggregate results is not possible. Results from `GROUP BY` queries come back in arbitrary order.
+**Impact:** Sorting aggregate results is not possible. Results from `GROUP by` queries come back in arbitrary order.
 
 ---
 
-### 3.4 Broken: `NOT EXISTS` Subqueries
+### 3.4 Broken: `not exists` Subqueries
 
 **Attempted:**
 ```sql
-SELECT QualifiedName FROM CATALOG.ENTITIES e
-WHERE EntityType = 'PERSISTENT'
-  AND NOT EXISTS (
-    SELECT 1 FROM CATALOG.PERMISSIONS p
-    WHERE p.ElementName = e.QualifiedName
+select QualifiedName from CATALOG.ENTITIES e
+where EntityType = 'PERSISTENT'
+  and not exists (
+    select 1 from CATALOG.PERMISSIONS p
+    where p.ElementName = e.QualifiedName
   );
 ```
 
@@ -200,7 +200,7 @@ WHERE EntityType = 'PERSISTENT'
 Parse error: line 7:10 extraneous input 'EXISTS' expecting ...
 ```
 
-`NOT EXISTS` (and by extension `EXISTS`) is not supported by mxcli's SQL parser. This is the natural way to find entities/pages/microflows with no corresponding permissions. **Workaround:** LEFT JOIN with `WHERE right.Id IS NULL`, but this requires table alias support which is also partially broken (see 3.5).
+`not exists` (and by extension `exists`) is not supported by mxcli's SQL parser. This is the natural way to find entities/pages/microflows with no corresponding permissions. **Workaround:** LEFT JOIN with `where right.Id IS null`, but this requires table alias support which is also partially broken (see 3.5).
 
 ---
 
@@ -208,9 +208,9 @@ Parse error: line 7:10 extraneous input 'EXISTS' expecting ...
 
 **Attempted (as single `-c` string):**
 ```sql
-SELECT p.ModuleName, COUNT(p.Name) FROM CATALOG.PAGES p
-LEFT JOIN CATALOG.PERMISSIONS perm ON perm.ElementName = p.QualifiedName
-WHERE perm.Id IS NULL GROUP BY p.ModuleName ORDER BY COUNT(p.Name) DESC;
+select p.ModuleName, count(p.Name) from CATALOG.PAGES p
+left join CATALOG.PERMISSIONS perm on perm.ElementName = p.QualifiedName
+where perm.Id IS null GROUP by p.ModuleName ORDER by count(p.Name) desc;
 ```
 
 **Error:**
@@ -226,15 +226,15 @@ Table aliases with dot-notation (`p.ColumnName`) are parsed correctly in multi-l
 
 **Attempted:**
 ```sql
-SELECT QualifiedName FROM CATALOG.ENTITIES WHERE AccessRules = 0;
+select QualifiedName from CATALOG.ENTITIES where AccessRules = 0;
 ```
 
 **Error:**
 ```
-SQL logic error: no such column: AccessRules (1)
+sql logic error: no such column: AccessRules (1)
 ```
 
-The `SHOW ENTITIES IN Module` command displays an `AccessRules` count column in its output, but this column **does not exist** in the underlying `CATALOG.ENTITIES` table. A natural query like "find all persistent entities with no access rules" is therefore impossible via catalog SQL. It requires iterating `SHOW ENTITIES IN Module` for every module separately and parsing the output.
+The `show entities in module` command displays an `AccessRules` count column in its output, but this column **does not exist** in the underlying `CATALOG.ENTITIES` table. A natural query like "find all persistent entities with no access rules" is therefore impossible via catalog SQL. It requires iterating `show entities in module` for every module separately and parsing the output.
 
 ---
 
@@ -243,23 +243,23 @@ The `SHOW ENTITIES IN Module` command displays an `AccessRules` count column in 
 This is the most significant gap for security auditing. `CATALOG.PERMISSIONS` records only three element types:
 
 ```
-MICROFLOW    → execute permissions
-PAGE         → view permissions
+microflow    → execute permissions
+page         → view permissions
 ODATA_SERVICE → access permissions
 ```
 
 ### 4.1 Entity Access Rules Are Absent
 
-Entity-level `GRANT` statements — the core of all Mendix data security — are completely absent from the catalog. You cannot write a query like:
+Entity-level `grant` statements — the core of all Mendix data security — are completely absent from the catalog. You cannot write a query like:
 
 ```sql
 -- Does not work — ENTITY type does not exist in CATALOG.PERMISSIONS
-SELECT EntityName, ModuleRoleName, AccessType, XPathConstraint
-FROM CATALOG.PERMISSIONS
-WHERE ElementType = 'ENTITY';
+select EntityName, ModuleRoleName, AccessType, XPathConstraint
+from CATALOG.PERMISSIONS
+where ElementType = 'ENTITY';
 ```
 
-To audit entity access you must call `DESCRIBE ENTITY` or `SHOW SECURITY MATRIX` individually per module, then parse free-text output. For a project with 204 entities across 52 modules, this is not scalable.
+To audit entity access you must call `describe entity` or `show security matrix` individually per module, then parse free-text output. For a project with 204 entities across 52 modules, this is not scalable.
 
 ### 4.2 XPath Constraints Are Not Recorded Anywhere
 
@@ -271,7 +271,7 @@ Even if entity records were added to `CATALOG.PERMISSIONS`, the XPath constraint
 
 ### 4.3 OData Service Authentication Mode Is Not Recorded
 
-`CATALOG.PERMISSIONS` shows which roles can access an OData service, but not whether the service **requires authentication** in the first place. A service set to authentication mode `None` is publicly accessible regardless of role assignments. This is queryable in Studio Pro but has no catalog equivalent.
+`CATALOG.PERMISSIONS` shows which roles can access an OData service, but not whether the service **requires authentication** in the first place. A service set to authentication mode `none` is publicly accessible regardless of role assignments. This is queryable in Studio Pro but has no catalog equivalent.
 
 ### 4.4 Published REST Services Are Invisible
 
@@ -285,13 +285,13 @@ The project has no dedicated `CATALOG.REST_SERVICES` table (only `CATALOG.MICROF
 
 **FR-01: Add entity access rules to `CATALOG.PERMISSIONS`**
 
-Extend `CATALOG.PERMISSIONS` with `ElementType = 'ENTITY'` records:
+Extend `CATALOG.PERMISSIONS` with `ElementType = 'entity'` records:
 
 ```
 ModuleRoleName   | ElementType | ElementName       | MemberName | AccessType              | XPathConstraint
 -----------------+-------------+-------------------+------------+-------------------------+-----------------
-Shop.ShopUser    | ENTITY      | Shop.Customer     |            | READ,WRITE,DELETE       | [%CurrentUser%]...
-Shop.ShopUser    | ENTITY      | Shop.Customer     | Email      | READ                    |
+Shop.ShopUser    | entity      | Shop.Customer     |            | read,write,delete       | [%CurrentUser%]...
+Shop.ShopUser    | entity      | Shop.Customer     | Email      | read                    |
 ```
 
 This single change unlocks:
@@ -302,11 +302,11 @@ This single change unlocks:
 
 **FR-02: Add `AccessRuleCount` column to `CATALOG.ENTITIES`**
 
-The `SHOW ENTITIES` command already computes this value. Expose it in the catalog table so persistent entities with zero rules can be found via SQL:
+The `show entities` command already computes this value. Expose it in the catalog table so persistent entities with zero rules can be found via SQL:
 
 ```sql
-SELECT QualifiedName FROM CATALOG.ENTITIES
-WHERE EntityType = 'PERSISTENT' AND AccessRuleCount = 0 AND IsExternal = 0;
+select QualifiedName from CATALOG.ENTITIES
+where EntityType = 'PERSISTENT' and AccessRuleCount = 0 and IsExternal = 0;
 ```
 
 **FR-03: Add OData/REST service authentication mode to catalog**
@@ -317,23 +317,23 @@ Extend `CATALOG.MICROFLOWS` or add `CATALOG.PUBLISHED_SERVICES` with an `Authent
 
 ### Priority 2 — Important for Practical Queries
 
-**FR-04: Fix `ORDER BY` on column aliases from `SELECT`**
+**FR-04: Fix `ORDER by` on column aliases from `select`**
 
-Standard SQL behaviour: `SELECT COUNT(x) AS n ... ORDER BY n` must work. Currently `n` is not recognised in the `ORDER BY` clause, making sorted aggregate results impossible. This forces awkward workarounds or produces unsorted output.
+Standard SQL behaviour: `select count(x) as n ... ORDER by n` must work. Currently `n` is not recognised in the `ORDER by` clause, making sorted aggregate results impossible. This forces awkward workarounds or produces unsorted output.
 
-**FR-05: Support `NOT EXISTS` / `EXISTS` subqueries**
+**FR-05: Support `not exists` / `exists` subqueries**
 
-The anti-join pattern (`NOT EXISTS`) is the most readable way to find "things with no matching permission". Currently only `LEFT JOIN ... WHERE id IS NULL` works, and that form has its own alias parsing fragility. Both should be supported.
+The anti-join pattern (`not exists`) is the most readable way to find "things with no matching permission". Currently only `left join ... where id IS null` works, and that form has its own alias parsing fragility. Both should be supported.
 
 **FR-06: Fix table alias dot-notation in `-c` single-line commands**
 
-Multi-table `JOIN` queries using `table_alias.column` notation parse correctly in `.mdl` script files but fail intermittently when passed via the `-c` flag. The lexer appears to interpret the dot as a statement separator in some token sequences. Consistent alias support across both execution paths is needed.
+Multi-table `join` queries using `table_alias.column` notation parse correctly in `.mdl` script files but fail intermittently when passed via the `-c` flag. The lexer appears to interpret the dot as a statement separator in some token sequences. Consistent alias support across both execution paths is needed.
 
 ---
 
 ### Priority 3 — Useful Additions
 
-**FR-07: `AUDIT SECURITY` command**
+**FR-07: `AUDIT security` command**
 
 A dedicated command that runs a complete security check and returns structured findings:
 
@@ -350,12 +350,12 @@ Output should include:
 - Navigation items pointing to admin/debug modules
 - Orphaned module roles (exist but assigned to no user role)
 
-**FR-08: `SHOW ANONYMOUS GRANTS` command**
+**FR-08: `show ANONYMOUS GRANTS` command**
 
 When an anonymous user role is configured, provide a direct query for all entity/page/microflow permissions granted to it:
 
 ```sql
-SHOW ANONYMOUS GRANTS;
+show ANONYMOUS GRANTS;
 -- Returns all permissions where role maps to the anonymous user role
 ```
 
@@ -363,7 +363,7 @@ This directly surfaces the DIVD-2022-00019 pattern.
 
 **FR-09: Add `CATALOG.NAVIGATION` table**
 
-Currently, discovering what is in the navigation menu requires querying `CATALOG.REFS WHERE RefKind = 'menu_item'`, which is non-obvious. A dedicated `CATALOG.NAVIGATION` table (NavigationProfile, TargetPage, AllowedRoles) would make it straightforward to audit what is reachable without login and which roles see which nav items.
+Currently, discovering what is in the navigation menu requires querying `CATALOG.REFS where RefKind = 'menu_item'`, which is non-obvious. A dedicated `CATALOG.NAVIGATION` table (NavigationProfile, TargetPage, AllowedRoles) would make it straightforward to audit what is reachable without login and which roles see which nav items.
 
 **FR-10: Add lint rule: Persistent entity with zero access rules**
 
@@ -375,7 +375,7 @@ A lint rule (`SEC002`) that warns when `MinimumLength < 8` or all complexity req
 
 **FR-12: Add lint rule: Demo users active**
 
-A lint rule (`SEC003`) that warns when `Demo Users = true` at Production security level. Demo users should never be active in a deployed application.
+A lint rule (`SEC003`) that warns when `demo users = true` at Production security level. Demo users should never be active in a deployed application.
 
 ---
 
@@ -383,16 +383,16 @@ A lint rule (`SEC003`) that warns when `Demo Users = true` at Production securit
 
 | Finding | Severity | Status | Detectable via Catalog? |
 |---------|----------|--------|------------------------|
-| No anonymous user role (DIVD-2022-00019) | N/A | ✅ Not vulnerable | `SHOW PROJECT SECURITY` |
-| Weak password policy (min length 1) | High | ⚠️ Active | `SHOW PROJECT SECURITY` |
-| Demo users enabled (`demo_administrator`) | High | ⚠️ Active | `SHOW DEMO USERS` |
+| No anonymous user role (DIVD-2022-00019) | N/A | ✅ Not vulnerable | `show project security` |
+| Weak password policy (min length 1) | High | ⚠️ Active | `show project security` |
+| Demo users enabled (`demo_administrator`) | High | ⚠️ Active | `show demo users` |
 | OqlPad in production navigation | High | ⚠️ Active | `CATALOG.REFS` (RefKind = menu_item) |
-| 9 persistent entities, zero access rules (DPP) | Medium | ⚠️ Active | `SHOW ENTITIES` output only — **not via SQL** |
-| Strict mode disabled | Low | ⚠️ Active | `SHOW PROJECT SECURITY` |
-| 25 module roles with no permissions | Low | 🔍 Review needed | Diff of `SHOW MODULE ROLES` vs `CATALOG.PERMISSIONS` |
-| `ORDER BY` on aliases fails | Bug | ❌ Broken | — |
-| `NOT EXISTS` not supported | Bug | ❌ Broken | — |
-| Entity grants absent from `CATALOG.PERMISSIONS` | Gap | ✅ Already implemented | `REFRESH CATALOG FULL` required — see Section 7 |
+| 9 persistent entities, zero access rules (DPP) | Medium | ⚠️ Active | `show entities` output only — **not via SQL** |
+| Strict mode disabled | Low | ⚠️ Active | `show project security` |
+| 25 module roles with no permissions | Low | 🔍 Review needed | Diff of `show module roles` vs `CATALOG.PERMISSIONS` |
+| `ORDER by` on aliases fails | Bug | ❌ Broken | — |
+| `not exists` not supported | Bug | ❌ Broken | — |
+| Entity grants absent from `CATALOG.PERMISSIONS` | Gap | ✅ Already implemented | `refresh catalog full` required — see Section 7 |
 | XPath constraints not queryable | Gap | ✅ Already implemented | Included in PERMISSIONS table (XPathConstraint column) |
 | OData auth mode not queryable | Gap | ⚠️ Partial | Schema has `AuthenticationTypes` column |
 | Published REST services not in catalog | Gap | ❌ Missing | — |
@@ -406,15 +406,15 @@ Investigation of the mxcli source code revealed that several items reported as m
 
 ### 7.1 FR-01 — Entity Access Rules: Already Implemented
 
-**Status: Already implemented — requires `REFRESH CATALOG FULL`**
+**Status: Already implemented — requires `refresh catalog full`**
 
 Entity permissions (including XPath constraints and member-level access) are fully implemented in `mdl/catalog/builder_permissions.go:39-94`. The `buildEntityPermissions()` function populates `CATALOG.PERMISSIONS` with:
 
-- Entity-level: `CREATE`, `READ`, `WRITE`, `DELETE` rows per role
+- Entity-level: `create`, `read`, `write`, `delete` rows per role
 - Member-level: `MEMBER_READ`, `MEMBER_WRITE` rows per attribute/association
 - `XPathConstraint` column populated from access rule XPath
 
-**Why the auditor didn't see it:** Permissions only build in full mode (`builder_permissions.go:12`). The auditor ran `REFRESH CATALOG` (fast mode) instead of `REFRESH CATALOG FULL`. The tool gave no warning that the permissions table was empty due to mode.
+**Why the auditor didn't see it:** Permissions only build in full mode (`builder_permissions.go:12`). The auditor ran `refresh catalog` (fast mode) instead of `refresh catalog full`. The tool gave no warning that the permissions table was empty due to mode.
 
 **Fix planned:** Add `"permissions"` to `fullOnlyTables` in `cmd_catalog.go` so a warning is shown when querying permissions in fast mode.
 
@@ -427,7 +427,7 @@ In `mdl/visitor/visitor_query.go:413`:
 query.WriteString(sel.GetText())  // BUG
 ```
 
-ANTLR's `GetText()` concatenates all child tokens **without whitespace**. So the SELECT list `COUNT(ElementName) AS RoleCount` is reconstructed as `COUNT(ElementName)ASRoleCount`. SQLite never sees the alias definition, so `ORDER BY RoleCount` fails with "no such column".
+ANTLR's `GetText()` concatenates all child tokens **without whitespace**. So the SELECT list `count(ElementName) as RoleCount` is reconstructed as `count(ElementName)ASRoleCount`. SQLite never sees the alias definition, so `ORDER by RoleCount` fails with "no such column".
 
 The same file already uses `getSpacedText()` (which preserves spaces) for WHERE (line 421) and HAVING (line 434) clauses, but not for the SELECT list.
 
@@ -435,11 +435,11 @@ The same file already uses `getSpacedText()` (which preserves spaces) for WHERE 
 
 ### 7.3 FR-05 — NOT EXISTS: Grammar Limitation Confirmed
 
-The `EXISTS` token is defined in `MDLLexer.g4:395` but **never referenced in any parser rule**. The `expression` rule (`MDLParser.g4:2512-2537`) does not include `EXISTS (subquery)` or `NOT EXISTS (subquery)`. This requires a grammar extension.
+The `exists` token is defined in `MDLLexer.g4:395` but **never referenced in any parser rule**. The `expression` rule (`MDLParser.g4:2512-2537`) does not include `exists (subquery)` or `not exists (subquery)`. This requires a grammar extension.
 
 ### 7.4 FR-06 — JOIN in Catalog Queries: Grammar Limitation Confirmed
 
-The `catalogSelectQuery` rule (`MDLParser.g4:2228-2236`) only supports `FROM CATALOG.xxx` — no JOIN clause is defined. Multi-table catalog queries (e.g., LEFT JOIN between ENTITIES and PERMISSIONS) require extending the grammar rule with optional join clauses.
+The `catalogSelectQuery` rule (`MDLParser.g4:2228-2236`) only supports `from CATALOG.xxx` — no JOIN clause is defined. Multi-table catalog queries (e.g., LEFT JOIN between ENTITIES and PERMISSIONS) require extending the grammar rule with optional join clauses.
 
 ### 7.5 FR-03 — OData Auth Mode: Schema Exists
 
@@ -455,5 +455,5 @@ The `CATALOG.ODATA_SERVICES` table already has an `AuthenticationTypes` column (
 | **P1** | Add `AccessRuleCount` to CATALOG.ENTITIES | `mdl/catalog/tables.go`, `mdl/catalog/builder_modules.go` | ~20 lines |
 | **P1** | Warn on PERMISSIONS query in fast mode | `mdl/executor/cmd_catalog.go` | ~2 lines |
 | **P2** | Add JOIN to `catalogSelectQuery` grammar | `mdl/grammar/MDLParser.g4`, visitor, regenerate | Medium |
-| **P2** | Add `NOT EXISTS` to expression grammar | `mdl/grammar/MDLParser.g4`, visitor, regenerate | Medium |
+| **P2** | Add `not exists` to expression grammar | `mdl/grammar/MDLParser.g4`, visitor, regenerate | Medium |
 | **P2** | Add SEC001/SEC002/SEC003 lint rules | `mdl/linter/rules/` | ~150 lines each |

@@ -403,45 +403,45 @@ func (e *testEnv) assertRoundtrip(createMDL string, opts ...RoundtripOption) Rou
 	case *ast.CreateEntityStmt:
 		qualifiedName = s.Name.String()
 		e.registerCleanup("entity", qualifiedName)
-		describeCmd = "DESCRIBE ENTITY " + qualifiedName + ";"
+		describeCmd = "describe entity " + qualifiedName + ";"
 	case *ast.CreateViewEntityStmt:
 		qualifiedName = s.Name.String()
 		e.registerCleanup("entity", qualifiedName)
-		describeCmd = "DESCRIBE ENTITY " + qualifiedName + ";"
+		describeCmd = "describe entity " + qualifiedName + ";"
 	case *ast.CreateEnumerationStmt:
 		qualifiedName = s.Name.String()
 		e.registerCleanup("enumeration", qualifiedName)
-		describeCmd = "DESCRIBE ENUMERATION " + qualifiedName + ";"
+		describeCmd = "describe enumeration " + qualifiedName + ";"
 	case *ast.CreatePageStmtV3:
 		qualifiedName = s.Name.String()
 		e.registerCleanup("page", qualifiedName)
-		describeCmd = "DESCRIBE PAGE " + qualifiedName + ";"
+		describeCmd = "describe page " + qualifiedName + ";"
 	case *ast.CreateSnippetStmtV3:
 		qualifiedName = s.Name.String()
 		e.registerCleanup("snippet", qualifiedName)
-		describeCmd = "DESCRIBE SNIPPET " + qualifiedName + ";"
+		describeCmd = "describe snippet " + qualifiedName + ";"
 	case *ast.CreateMicroflowStmt:
 		qualifiedName = s.Name.String()
 		e.registerCleanup("microflow", qualifiedName)
-		describeCmd = "DESCRIBE MICROFLOW " + qualifiedName + ";"
+		describeCmd = "describe microflow " + qualifiedName + ";"
 	case *ast.CreateAssociationStmt:
 		qualifiedName = s.Name.String()
-		describeCmd = "DESCRIBE ASSOCIATION " + qualifiedName + ";"
+		describeCmd = "describe association " + qualifiedName + ";"
 	case *ast.CreateDatabaseConnectionStmt:
 		qualifiedName = s.Name.String()
-		describeCmd = "DESCRIBE DATABASE CONNECTION " + qualifiedName + ";"
+		describeCmd = "describe database connection " + qualifiedName + ";"
 	case *ast.CreateRestClientStmt:
 		qualifiedName = s.Name.String()
-		describeCmd = "DESCRIBE REST CLIENT " + qualifiedName + ";"
+		describeCmd = "describe rest client " + qualifiedName + ";"
 	case *ast.CreateJsonStructureStmt:
 		qualifiedName = s.Name.String()
-		describeCmd = "DESCRIBE JSON STRUCTURE " + qualifiedName + ";"
+		describeCmd = "describe json structure " + qualifiedName + ";"
 	case *ast.CreateImportMappingStmt:
 		qualifiedName = s.Name.String()
-		describeCmd = "DESCRIBE IMPORT MAPPING " + qualifiedName + ";"
+		describeCmd = "describe import mapping " + qualifiedName + ";"
 	case *ast.CreateExportMappingStmt:
 		qualifiedName = s.Name.String()
-		describeCmd = "DESCRIBE EXPORT MAPPING " + qualifiedName + ";"
+		describeCmd = "describe export mapping " + qualifiedName + ";"
 	default:
 		e.t.Fatalf("Unsupported statement type for roundtrip: %T", prog.Statements[0])
 		return result

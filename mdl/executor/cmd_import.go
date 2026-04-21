@@ -86,7 +86,7 @@ func execImport(ctx *ExecContext, s *ast.ImportStmt) error {
 		linked := result.LinksCreated[a.AssociationName]
 		missed := result.LinksMissed[a.AssociationName]
 		if missed > 0 {
-			fmt.Fprintf(ctx.Output, "  %s: linked %d/%d rows (%d NULL — lookup value not found)\n",
+			fmt.Fprintf(ctx.Output, "  %s: linked %d/%d rows (%d null — lookup value not found)\n",
 				a.AssociationName, linked, linked+missed, missed)
 		} else if linked > 0 {
 			fmt.Fprintf(ctx.Output, "  %s: linked %d rows\n", a.AssociationName, linked)
@@ -224,7 +224,7 @@ func resolveOneLink(
 
 	// Reject ReferenceSet associations (not supported in MVP)
 	if assocType == string(domainmodel.AssociationTypeReferenceSet) {
-		return nil, mdlerrors.NewUnsupported(fmt.Sprintf("association %q is ReferenceSet — not supported in IMPORT LINK (use manual SQL)", assocQualName))
+		return nil, mdlerrors.NewUnsupported(fmt.Sprintf("association %q is ReferenceSet — not supported in import link (use manual sql)", assocQualName))
 	}
 
 	if childEntity == "" {
@@ -289,7 +289,7 @@ func resolveOneLink(
 		}
 		info.LookupCache = cache
 		if len(cache) == 0 {
-			fmt.Fprintf(ctx.Output, "  WARNING: child table %q is empty; all %s associations will be NULL\n",
+			fmt.Fprintf(ctx.Output, "  warning: child table %q is empty; all %s associations will be null\n",
 				childTable, assocQualName)
 		}
 	}

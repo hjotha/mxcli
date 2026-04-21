@@ -22,27 +22,27 @@
 -- ============================================================================
 
 -- Create prerequisites used in settings examples below.
-CREATE MODULE MyModule;
-CREATE MICROFLOW MyModule.ASU_Startup() RETURNS Boolean
-BEGIN
-  RETURN true;
-END;
+create module MyModule;
+create microflow MyModule.ASU_Startup() returns boolean
+begin
+  return true;
+end;
 /
 
 /**
  * Example 1.1: Set after-startup microflow
  */
-ALTER SETTINGS MODEL AfterStartupMicroflow = 'MyModule.ASU_Startup';
+alter settings model AfterStartupMicroflow = 'MyModule.ASU_Startup';
 
 /**
  * Example 1.2: Configure hash algorithm and Java version
  */
-ALTER SETTINGS MODEL HashAlgorithm = 'BCrypt', JavaVersion = 'Java21';
+alter settings model HashAlgorithm = 'BCrypt', JavaVersion = 'Java21';
 
 /**
  * Example 1.3: Multiple model settings at once
  */
-ALTER SETTINGS MODEL
+alter settings model
   RoundingMode = 'HalfUp',
   BcryptCost = 12,
   AllowUserMultipleSessions = true;
@@ -56,7 +56,7 @@ ALTER SETTINGS MODEL
 /**
  * Example 2.1: Configure PostgreSQL database connection
  */
-ALTER SETTINGS CONFIGURATION 'Default'
+alter settings configuration 'Default'
   DatabaseType = 'PostgreSql',
   DatabaseUrl = 'localhost:5432',
   DatabaseName = 'myapp',
@@ -73,22 +73,22 @@ ALTER SETTINGS CONFIGURATION 'Default'
 /**
  * Example 3.1: Override a constant value in a specific configuration
  */
-CREATE CONSTANT MyModule.ServerUrl TYPE String DEFAULT 'localhost:9092';
-ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' VALUE 'kafka:9092'
-  IN CONFIGURATION 'Default';
+create constant MyModule.ServerUrl type string default 'localhost:9092';
+alter settings constant 'MyModule.ServerUrl' value 'kafka:9092'
+  in configuration 'Default';
 
 /**
  * Example 3.2: Remove a constant override (reset to default)
  */
-ALTER SETTINGS DROP CONSTANT 'MyModule.ServerUrl' IN CONFIGURATION 'Default';
+alter settings drop constant 'MyModule.ServerUrl' in configuration 'Default';
 
 /**
  * Example 3.3: Alternative syntax for removing a constant override
  * (Re-set the value first so there is something to drop)
  */
-ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' VALUE 'kafka:9092'
-  IN CONFIGURATION 'Default';
-ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' DROP IN CONFIGURATION 'Default';
+alter settings constant 'MyModule.ServerUrl' value 'kafka:9092'
+  in configuration 'Default';
+alter settings constant 'MyModule.ServerUrl' drop in configuration 'Default';
 
 -- MARK: Create / Drop Configuration
 
@@ -99,12 +99,12 @@ ALTER SETTINGS CONSTANT 'MyModule.ServerUrl' DROP IN CONFIGURATION 'Default';
 /**
  * Example 3B.1: Create a new configuration with defaults
  */
-CREATE CONFIGURATION 'Staging';
+create configuration 'Staging';
 
 /**
  * Example 3B.2: Create a configuration with properties
  */
-CREATE CONFIGURATION 'Production'
+create configuration 'Production'
   DatabaseType = 'POSTGRESQL',
   DatabaseUrl = 'prod-db:5432',
   DatabaseName = 'myapp_prod',
@@ -113,7 +113,7 @@ CREATE CONFIGURATION 'Production'
 /**
  * Example 3B.3: Drop a configuration
  */
-DROP CONFIGURATION 'Staging';
+drop configuration 'Staging';
 
 -- MARK: Language Settings
 
@@ -124,12 +124,12 @@ DROP CONFIGURATION 'Staging';
 /**
  * Example 4.1: Set default language
  */
-ALTER SETTINGS LANGUAGE DefaultLanguageCode = 'en_US';
+alter settings language DefaultLanguageCode = 'en_US';
 
 /**
  * Example 4.2: Configure workflow settings
  */
-ALTER SETTINGS WORKFLOWS UserEntity = 'System.User';
+alter settings workflows UserEntity = 'System.User';
 
 -- ============================================================================
 -- SUMMARY

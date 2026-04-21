@@ -6,14 +6,14 @@ Guide for writing CREATE PAGE statements in Mendix Definition Language (MDL).
 ## Syntax
 
 ```sql
-CREATE [OR REPLACE] PAGE Module.PageName
+create [or replace] page Module.PageName
 (
-  [Params: { $ParamName: Module.EntityType | PrimitiveType, ... },]
-  [Variables: { $varName: DataType = 'defaultExpression', ... },]
-  Title: 'Page Title',
-  Layout: Module.LayoutName,
-  [Url: 'page-url',]
-  [Folder: 'FolderPath']
+  [params: { $ParamName: Module.EntityType | PrimitiveType, ... },]
+  [variables: { $varName: DataType = 'defaultExpression', ... },]
+  title: 'Page Title',
+  layout: Module.LayoutName,
+  [url: 'page-url',]
+  [folder: 'FolderPath']
 )
 {
   -- Widget definitions using explicit properties
@@ -21,47 +21,47 @@ CREATE [OR REPLACE] PAGE Module.PageName
 ```
 
 **Page Variables**: Local variables at the page level for use in expressions (e.g., column visibility).
-- DataType: `Boolean`, `String`, `Integer`, `Decimal`, `DateTime`
+- DataType: `boolean`, `string`, `integer`, `decimal`, `datetime`
 - Default value: Mendix expression in single quotes
 - Referenced in expressions as `$varName`
-- Use for DataGrid2 column `Visible:` (which hides/shows entire column, NOT per-row)
+- Use for DataGrid2 column `visible:` (which hides/shows entire column, NOT per-row)
 
 ### Key Syntax Elements
 
 | Element | Syntax | Example |
 |---------|--------|---------|
-| Properties | `(Key: value, ...)` | `(Title: 'Edit', Layout: Atlas_Core.Atlas_Default)` |
-| Widget name | Required after type | `TEXTBOX txtName (...)` |
-| Attribute binding | `Attribute: AttrName` | `TEXTBOX txt (Label: 'Name', Attribute: Name)` |
-| Variable binding | `DataSource: $Var` | `DATAVIEW dv (DataSource: $Product) { ... }` |
-| Action binding | `Action: TYPE` | `ACTIONBUTTON btn (Caption: 'Save', Action: SAVE_CHANGES)` |
-| Database source | `DataSource: DATABASE Entity` | `DATAGRID dg (DataSource: DATABASE Module.Entity)` |
-| Selection binding | `DataSource: SELECTION widget` | `DATAVIEW dv (DataSource: SELECTION galleryList)` |
-| CSS class | `Class: 'classes'` | `CONTAINER c (Class: 'card mx-spacing-top-large')` |
-| Inline style | `Style: 'css'` | `CONTAINER c (Style: 'padding: 16px;')` |
-| Design properties | `DesignProperties: [...]` | `CONTAINER c (DesignProperties: ['Spacing top': 'Large', 'Full width': ON])` |
+| Properties | `(key: value, ...)` | `(title: 'Edit', layout: Atlas_Core.Atlas_Default)` |
+| Widget name | Required after type | `textbox txtName (...)` |
+| Attribute binding | `attribute: AttrName` | `textbox txt (label: 'Name', attribute: Name)` |
+| Variable binding | `datasource: $Var` | `dataview dv (datasource: $Product) { ... }` |
+| Action binding | `action: type` | `actionbutton btn (caption: 'Save', action: save_changes)` |
+| Database source | `datasource: database entity` | `datagrid dg (datasource: database Module.Entity)` |
+| Selection binding | `datasource: selection widget` | `dataview dv (datasource: selection galleryList)` |
+| CSS class | `class: 'classes'` | `container c (class: 'card mx-spacing-top-large')` |
+| Inline style | `style: 'css'` | `container c (style: 'padding: 16px;')` |
+| Design properties | `designproperties: [...]` | `container c (designproperties: ['Spacing top': 'Large', 'full width': on])` |
 
 ### FOLDER Option
 
 Place pages in folders for better organization:
 
 ```sql
-CREATE PAGE MyModule.CustomerEdit
+create page MyModule.CustomerEdit
 (
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout,
-  Folder: 'Customers'
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Customers'
 )
 {
   -- widgets
 }
 
 -- Nested folders (created automatically if they don't exist)
-CREATE PAGE MyModule.OrderDetail
+create page MyModule.OrderDetail
 (
-  Title: 'Order Details',
-  Layout: Atlas_Core.Atlas_Default,
-  Folder: 'Orders/Details'
+  title: 'Order Details',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Orders/Details'
 )
 {
   -- widgets
@@ -74,37 +74,37 @@ Three styling mechanisms can be applied to any widget:
 
 **CSS Class** — Atlas UI utility classes or custom CSS classes:
 ```sql
-CONTAINER c (Class: 'card mx-spacing-top-large') { ... }
-ACTIONBUTTON btn (Caption: 'Save', Class: 'btn-lg')
+container c (class: 'card mx-spacing-top-large') { ... }
+actionbutton btn (caption: 'Save', class: 'btn-lg')
 ```
 
 **Inline Style** — One-off CSS styles (use sparingly):
 ```sql
-CONTAINER c (Style: 'background-color: #f8f9fa; padding: 16px;') { ... }
+container c (style: 'background-color: #f8f9fa; padding: 16px;') { ... }
 ```
 
-> **Warning:** Do NOT use `Style` directly on DYNAMICTEXT widgets — it crashes MxBuild with a NullReferenceException. Wrap the DYNAMICTEXT in a styled CONTAINER instead.
+> **Warning:** Do NOT use `style` directly on DYNAMICTEXT widgets — it crashes MxBuild with a NullReferenceException. Wrap the DYNAMICTEXT in a styled CONTAINER instead.
 
 **Design Properties** — Atlas UI structured properties (spacing, colors, toggles):
 ```sql
 -- Option property: 'Key': 'Value'
-CONTAINER c (DesignProperties: ['Spacing top': 'Large', 'Background color': 'Brand Primary']) { ... }
+container c (designproperties: ['Spacing top': 'Large', 'Background color': 'Brand Primary']) { ... }
 
 -- Toggle property: 'Key': ON (enabled) or OFF (disabled/omitted)
-CONTAINER c (DesignProperties: ['Full width': ON]) { ... }
+container c (designproperties: ['Full width': on]) { ... }
 
 -- Multiple types combined
-ACTIONBUTTON btn (Caption: 'Save', DesignProperties: ['Size': 'Large', 'Full width': ON])
+actionbutton btn (caption: 'Save', designproperties: ['Size': 'Large', 'Full width': on])
 ```
 
 **All three can be combined on a single widget:**
 ```sql
-CONTAINER ctnHero (
-  Class: 'card',
-  Style: 'border-left: 4px solid #264AE5;',
-  DesignProperties: ['Spacing top': 'Large', 'Full width': ON]
+container ctnHero (
+  class: 'card',
+  style: 'border-left: 4px solid #264AE5;',
+  designproperties: ['Spacing top': 'Large', 'Full width': on]
 ) {
-  DYNAMICTEXT txtTitle (Content: 'Styled Container', RenderMode: H3)
+  dynamictext txtTitle (content: 'Styled Container', rendermode: H3)
 }
 ```
 
@@ -113,37 +113,37 @@ CONTAINER ctnHero (
 ### Simple Page with Title
 
 ```sql
-CREATE PAGE MyModule.HomePage
+create page MyModule.HomePage
 (
-  Title: 'Home Page',
-  Layout: Atlas_Core.Atlas_Default
+  title: 'Home Page',
+  layout: Atlas_Core.Atlas_Default
 )
 {
-  DYNAMICTEXT welcomeText (Content: 'Welcome to My App', RenderMode: H1)
+  dynamictext welcomeText (content: 'Welcome to My App', rendermode: H1)
 }
 ```
 
 ### Page with Multiple Widgets
 
 ```sql
-CREATE PAGE MyModule.CustomerPage
+create page MyModule.CustomerPage
 (
-  Title: 'Customer Details',
-  Layout: Atlas_Core.Atlas_Default
+  title: 'Customer Details',
+  layout: Atlas_Core.Atlas_Default
 )
 {
-  LAYOUTGRID mainGrid {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 12) {
-        DYNAMICTEXT heading (Content: 'Customer Information', RenderMode: H2)
+  layoutgrid mainGrid {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        dynamictext heading (content: 'Customer Information', rendermode: H2)
       }
     }
-    ROW row2 {
-      COLUMN col2a (DesktopWidth: 6) {
-        ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
+    row row2 {
+      column col2a (desktopwidth: 6) {
+        actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
       }
-      COLUMN col2b (DesktopWidth: 6) {
-        ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+      column col2b (desktopwidth: 6) {
+        actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
       }
     }
   }
@@ -158,17 +158,17 @@ Display dynamic or static text:
 
 ```sql
 -- Simple text
-DYNAMICTEXT heading (Content: 'Heading Text', RenderMode: H2)
+dynamictext heading (content: 'Heading Text', rendermode: H2)
 
 -- Text bound to page parameter attribute (use $ParamName.Attribute)
 -- This preserves the parameter reference for pages with multiple parameters of the same type
-DYNAMICTEXT productName (Content: '$Product.Name', RenderMode: H3)
+dynamictext productName (content: '$Product.Name', rendermode: H3)
 
 -- Explicit template with page parameter binding
-DYNAMICTEXT greeting (Content: 'Welcome, {1}!', ContentParams: [{1} = $Customer.Name])
+dynamictext greeting (content: 'Welcome, {1}!', contentparams: [{1} = $Customer.Name])
 
 -- Template with attribute from current DataView context (simple attribute name)
-DYNAMICTEXT email (Content: 'Email: {1}', ContentParams: [{1} = Email])
+dynamictext email (content: 'Email: {1}', contentparams: [{1} = Email])
 ```
 
 **ContentParams Reference Types:**
@@ -183,44 +183,44 @@ DYNAMICTEXT email (Content: 'Email: {1}', ContentParams: [{1} = Email])
 Create a button with action binding:
 
 ```sql
-ACTIONBUTTON widgetName (Caption: 'Caption', Action: ACTION_TYPE [, ButtonStyle: style])
+actionbutton widgetName (caption: 'Caption', action: ACTION_TYPE [, buttonstyle: style])
 ```
 
 **Action Bindings:**
-- `Action: SAVE_CHANGES` - Save changes to object
-- `Action: SAVE_CHANGES CLOSE_PAGE` - Save and close page
-- `Action: CANCEL_CHANGES` - Cancel changes
-- `Action: CLOSE_PAGE` - Close the page
-- `Action: DELETE` - Delete object
-- `Action: MICROFLOW Module.MicroflowName` - Call microflow
-- `Action: MICROFLOW Module.MicroflowName(Param: $value)` - Call microflow with parameters
-- `Action: SHOW_PAGE Module.PageName` - Navigate to page
-- `Action: SHOW_PAGE Module.PageName(Param: $value)` - Navigate with parameters
-- `Action: SHOW_PAGE Module.PageName($Param = $value)` - Also accepted (microflow-style)
-- `Action: CREATE_OBJECT Module.Entity THEN SHOW_PAGE Module.PageName` - Create and navigate
+- `action: save_changes` - Save changes to object
+- `action: save_changes close_page` - Save and close page
+- `action: cancel_changes` - Cancel changes
+- `action: close_page` - Close the page
+- `action: delete` - Delete object
+- `action: microflow Module.MicroflowName` - Call microflow
+- `action: microflow Module.MicroflowName(Param: $value)` - Call microflow with parameters
+- `action: show_page Module.PageName` - Navigate to page
+- `action: show_page Module.PageName(Param: $value)` - Navigate with parameters
+- `action: show_page Module.PageName($Param = $value)` - Also accepted (microflow-style)
+- `action: create_object Module.Entity then show_page Module.PageName` - Create and navigate
 
 **Button Styles:**
-- `Default`, `Primary`, `Success`, `Info`, `Warning`, `Danger`, `Inverse`
+- `default`, `primary`, `success`, `info`, `warning`, `danger`, `Inverse`
 
 **Examples:**
 ```sql
 -- Save with style
-ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
+actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
 
 -- Navigate with parameter (inside DATAVIEW)
-ACTIONBUTTON btnEdit (Caption: 'Edit', Action: SHOW_PAGE Module.EditPage(Product: $Product))
+actionbutton btnEdit (caption: 'Edit', action: show_page Module.EditPage(Product: $Product))
 
 -- Navigate with $currentObject (inside DATAGRID column)
-ACTIONBUTTON btnEdit (Caption: 'Edit', Action: SHOW_PAGE Module.EditPage(Product: $currentObject))
+actionbutton btnEdit (caption: 'Edit', action: show_page Module.EditPage(Product: $currentObject))
 
 -- Call microflow with page/dataview parameter
-ACTIONBUTTON btnProcess (Caption: 'Process', Action: MICROFLOW Module.ACT_Process(Order: $Order), ButtonStyle: Success)
+actionbutton btnProcess (caption: 'Process', action: microflow Module.ACT_Process(Order: $Order), buttonstyle: success)
 
 -- Call microflow with $currentObject (inside DATAGRID/LISTVIEW column)
-ACTIONBUTTON btnDelete (Caption: 'Delete', Action: MICROFLOW Module.ACT_Delete(Target: $currentObject), ButtonStyle: Danger)
+actionbutton btnDelete (caption: 'Delete', action: microflow Module.ACT_Delete(Target: $currentObject), buttonstyle: danger)
 
 -- Create object and show page
-ACTIONBUTTON btnNew (Caption: 'New', Action: CREATE_OBJECT Module.Product THEN SHOW_PAGE Module.Product_Edit, ButtonStyle: Primary)
+actionbutton btnNew (caption: 'New', action: create_object Module.Product then show_page Module.Product_Edit, buttonstyle: primary)
 ```
 
 **Using `$currentObject`:**
@@ -231,7 +231,7 @@ Use `$currentObject` inside DATAGRID, LISTVIEW, or GALLERY columns to reference 
 Similar to ActionButton but rendered as link:
 
 ```sql
-LINKBUTTON linkName (Caption: 'Caption', Action: ACTION_TYPE)
+linkbutton linkName (caption: 'Caption', action: ACTION_TYPE)
 ```
 
 ### LAYOUTGRID Widget
@@ -239,12 +239,12 @@ LINKBUTTON linkName (Caption: 'Caption', Action: ACTION_TYPE)
 Create responsive grid layout:
 
 ```sql
-LAYOUTGRID gridName {
-  ROW rowName {
-    COLUMN colName (DesktopWidth: 8) {
+layoutgrid gridName {
+  row rowName {
+    column colName (desktopwidth: 8) {
       -- Nested widgets
     }
-    COLUMN col2 (DesktopWidth: 4) {
+    column col2 (desktopwidth: 4) {
       -- Nested widgets
     }
   }
@@ -255,23 +255,23 @@ LAYOUTGRID gridName {
 
 | Property | Values | Default | Description |
 |----------|--------|---------|-------------|
-| `DesktopWidth` | 1-12 or `AutoFill` | `AutoFill` | Desktop column width |
-| `TabletWidth` | 1-12 or `AutoFill` | auto | Tablet column width |
-| `PhoneWidth` | 1-12 or `AutoFill` | auto | Phone column width |
+| `desktopwidth` | 1-12 or `autofill` | `autofill` | Desktop column width |
+| `tabletwidth` | 1-12 or `autofill` | auto | Tablet column width |
+| `phonewidth` | 1-12 or `autofill` | auto | Phone column width |
 
 ```sql
-COLUMN col1 (DesktopWidth: 8, TabletWidth: 6, PhoneWidth: 12) { ... }
+column col1 (desktopwidth: 8, tabletwidth: 6, phonewidth: 12) { ... }
 ```
 
 Example:
 ```sql
-LAYOUTGRID mainGrid {
-  ROW row1 {
-    COLUMN colMain (DesktopWidth: 8) {
-      DYNAMICTEXT heading (Content: 'Main Content', RenderMode: H3)
+layoutgrid mainGrid {
+  row row1 {
+    column colMain (desktopwidth: 8) {
+      dynamictext heading (content: 'Main Content', rendermode: H3)
     }
-    COLUMN colSide (DesktopWidth: 4) {
-      DYNAMICTEXT sideHeading (Content: 'Sidebar', RenderMode: H3)
+    column colSide (desktopwidth: 4) {
+      dynamictext sideHeading (content: 'Sidebar', rendermode: H3)
     }
   }
 }
@@ -282,11 +282,11 @@ LAYOUTGRID mainGrid {
 Display list of objects using DataGrid widget:
 
 ```sql
-DATAGRID gridName (
-  DataSource: DATABASE FROM Module.Entity WHERE [condition] SORT BY AttributeName ASC|DESC,
-  Selection: Single|Multiple|None
+datagrid gridName (
+  datasource: database from Module.Entity where [condition] sort by attributename asc|desc,
+  selection: single|multiple|none
 ) {
-  COLUMN colName (Attribute: AttributeName, Caption: 'Label')
+  column colName (attribute: attributename, caption: 'Label')
 }
 ```
 
@@ -294,31 +294,31 @@ DATAGRID gridName (
 
 | Property | Values | Default | Description |
 |----------|--------|---------|-------------|
-| `Attribute` | attribute name | (required) | Attribute binding |
-| `Caption` | string | attribute name | Column header text |
+| `attribute` | attribute name | (required) | Attribute binding |
+| `caption` | string | attribute name | Column header text |
 | `Alignment` | `left`, `center`, `right` | `left` | Text alignment |
 | `WrapText` | `true`, `false` | `false` | Wrap text in cell |
 | `Sortable` | `true`, `false` | `true` (if attribute), `false` (if not) | Can sort column |
 | `Resizable` | `true`, `false` | `true` | Can resize column |
 | `Draggable` | `true`, `false` | `true` | Can reorder column |
 | `Hidable` | `yes`, `hidden`, `no` | `yes` | Can hide column |
-| `ColumnWidth` | `autoFill`, `autoFit`, `manual` | `autoFill` | Column width mode |
+| `ColumnWidth` | `autofill`, `autoFit`, `manual` | `autofill` | Column width mode |
 | `Size` | integer (px) | `1` | Width in pixels (when `ColumnWidth: manual`) |
-| `Visible` | expression string | `true` | Conditional visibility (use page variables, NOT `$currentObject`) |
+| `visible` | expression string | `true` | Conditional visibility (use page variables, NOT `$currentObject`) |
 | `DynamicCellClass` | expression string | (empty) | Dynamic CSS class per cell |
-| `Tooltip` | text string | (empty) | Cell tooltip text |
+| `tooltip` | text string | (empty) | Cell tooltip text |
 
-Only non-default column properties appear in `DESCRIBE PAGE` output.
+Only non-default column properties appear in `describe page` output.
 
 ```sql
-COLUMN colPrice (
-  Attribute: Price, Caption: 'Unit Price',
+column colPrice (
+  attribute: Price, caption: 'Unit Price',
   Alignment: right, WrapText: true,
   Sortable: false, Resizable: false,
   Hidable: hidden,
   ColumnWidth: manual, Size: 150,
   DynamicCellClass: 'if($currentObject/Price > 100) then ''highlight'' else '''' ',
-  Tooltip: 'Price in USD'
+  tooltip: 'Price in USD'
 )
 ```
 
@@ -327,8 +327,8 @@ COLUMN colPrice (
 Columns can contain nested widgets instead of attribute bindings. This feature is experimental and may show CE0463 "widget definition changed" warnings in Studio Pro:
 
 ```sql
-COLUMN colActions (Caption: 'Actions') {
-  ACTIONBUTTON btnView (Caption: 'View', Action: CLOSE_PAGE)
+column colActions (caption: 'Actions') {
+  actionbutton btnView (caption: 'View', action: close_page)
 }
 ```
 
@@ -338,31 +338,31 @@ COLUMN colActions (Caption: 'Actions') {
 
 | Syntax | Description |
 |--------|-------------|
-| `DataSource: DATABASE FROM Module.Entity` | Direct database query |
-| `DataSource: $Variable` | Variable bound (requires DATAVIEW parent with entity) |
-| `DataSource: MICROFLOW Module.GetData()` | Microflow datasource |
-| `DataSource: SELECTION widgetName` | Listen to selection from another widget |
-| `DataSource: ASSOCIATION Path` | Retrieve by association from context (ByAssociation) |
-| `DataSource: $currentObject/Module.Assoc` | Sugar for `ASSOCIATION` — same semantics, reads more naturally |
+| `datasource: database from Module.Entity` | Direct database query |
+| `datasource: $Variable` | Variable bound (requires DATAVIEW parent with entity) |
+| `datasource: microflow Module.GetData()` | Microflow datasource |
+| `datasource: selection widgetName` | Listen to selection from another widget |
+| `datasource: association path` | Retrieve by association from context (ByAssociation) |
+| `datasource: $currentObject/Module.Assoc` | Sugar for `association` — same semantics, reads more naturally |
 
 **With WHERE and SORT BY (inline in DataSource):**
 ```sql
-DATAGRID dgActive (
-  DataSource: DATABASE FROM Module.Product WHERE [IsActive = true] SORT BY Name ASC
+datagrid dgActive (
+  datasource: database from Module.Product where [IsActive = true] sort by Name asc
 ) {
-  COLUMN colName (Attribute: Name, Caption: 'Name')
-  COLUMN colPrice (Attribute: Price, Caption: 'Price')
+  column colName (attribute: Name, caption: 'Name')
+  column colPrice (attribute: Price, caption: 'Price')
 }
 ```
 
 **Complex WHERE conditions:**
 ```sql
-DATAGRID dgFiltered (
-  DataSource: DATABASE FROM Module.Product
-    WHERE [IsActive = true AND contains(Code, 'a') AND Price > 10] OR [Stock < 2]
-    SORT BY Name ASC, Price DESC
+datagrid dgFiltered (
+  datasource: database from Module.Product
+    where [IsActive = true and contains(Code, 'a') and Price > 10] or [Stock < 2]
+    sort by Name asc, Price desc
 ) {
-  COLUMN colName (Attribute: Name, Caption: 'Name')
+  column colName (attribute: Name, caption: 'Name')
 }
 ```
 
@@ -377,95 +377,95 @@ DATAGRID dgFiltered (
 
 ```sql
 -- Paging buttons above and below, 25 rows per page
-DATAGRID dgProducts (
-  DataSource: DATABASE Module.Product,
+datagrid dgProducts (
+  datasource: database Module.Product,
   PageSize: 25,
   PagingPosition: both
 ) {
-  COLUMN colName (Attribute: Name, Caption: 'Name')
+  column colName (attribute: Name, caption: 'Name')
 }
 
 -- Virtual scrolling (no paging buttons)
-DATAGRID dgLargeList (
-  DataSource: DATABASE Module.Product,
+datagrid dgLargeList (
+  datasource: database Module.Product,
   PageSize: 50,
   Pagination: virtualScrolling
 ) {
-  COLUMN colName (Attribute: Name, Caption: 'Name')
+  column colName (attribute: Name, caption: 'Name')
 }
 ```
 
-Only non-default paging properties appear in `DESCRIBE PAGE` output.
+Only non-default paging properties appear in `describe page` output.
 
 ### DATAVIEW Widget
 
 Display single object with nested input widgets:
 
 ```sql
-DATAVIEW dvName (DataSource: $VariableName) {
+dataview dvName (datasource: $VariableName) {
   -- Nested input widgets
-  TEXTBOX txtName (Label: 'Name', Attribute: Name)
-  TEXTAREA txtDescription (Label: 'Description', Attribute: Description)
+  textbox txtName (label: 'Name', attribute: Name)
+  textarea txtDescription (label: 'Description', attribute: description)
 
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 }
 ```
 
 ### Input Widgets
 
-Input widgets must be inside a DATAVIEW context. Use `Attribute:` to bind to attributes:
+Input widgets must be inside a DATAVIEW context. Use `attribute:` to bind to attributes:
 
 **TEXTBOX** - Single-line text input:
 ```sql
-TEXTBOX txtName (Label: 'Label', Attribute: AttributeName)
+textbox txtName (label: 'Label', attribute: attributename)
 ```
 
 **TEXTAREA** - Multi-line text input:
 ```sql
-TEXTAREA txtDescription (Label: 'Description', Attribute: Description)
+textarea txtDescription (label: 'Description', attribute: description)
 ```
 
 **CHECKBOX** - Boolean checkbox:
 ```sql
-CHECKBOX cbActive (Label: 'Active', Attribute: IsActive)
+checkbox cbActive (label: 'Active', attribute: IsActive)
 ```
 
 **RADIOBUTTONS** - Boolean or enum selection:
 ```sql
-RADIOBUTTONS rbStatus (Label: 'Status', Attribute: Status)
+radiobuttons rbStatus (label: 'Status', attribute: status)
 ```
 
 **DATEPICKER** - Date/time selection:
 ```sql
-DATEPICKER dpCreated (Label: 'Created Date', Attribute: CreatedDate)
+datepicker dpCreated (label: 'Created Date', attribute: CreatedDate)
 ```
 
 **COMBOBOX** - Combo box (pluggable widget):
 ```sql
 -- Enumeration mode (attribute is an enum type):
-COMBOBOX cbCountry (Label: 'Country', Attribute: Country)
+combobox cbCountry (label: 'Country', attribute: Country)
 
 -- Association mode (Attribute = association, DataSource = target entity, CaptionAttribute = display attr):
-COMBOBOX cmbCustomer (Label: 'Customer', Attribute: Order_Customer, DataSource: DATABASE MyModule.Customer, CaptionAttribute: Name)
+combobox cmbCustomer (label: 'Customer', attribute: Order_Customer, datasource: database MyModule.Customer, CaptionAttribute: Name)
 ```
 
 ### DataView with Form Layout
 
 ```sql
-DATAVIEW dataView1 (DataSource: $Customer) {
-  TEXTBOX txtName (Label: 'Name', Attribute: Name)
-  TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-  TEXTAREA txtAddress (Label: 'Address', Attribute: Address)
-  COMBOBOX cbStatus (Label: 'Status', Attribute: Status)
-  CHECKBOX cbActive (Label: 'Active', Attribute: IsActive)
-  DATEPICKER dpCreated (Label: 'Created', Attribute: CreateDate)
+dataview dataView1 (datasource: $Customer) {
+  textbox txtName (label: 'Name', attribute: Name)
+  textbox txtEmail (label: 'Email', attribute: Email)
+  textarea txtAddress (label: 'Address', attribute: Address)
+  combobox cbStatus (label: 'Status', attribute: status)
+  checkbox cbActive (label: 'Active', attribute: IsActive)
+  datepicker dpCreated (label: 'Created', attribute: CreateDate)
 
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 }
 ```
@@ -475,29 +475,29 @@ DATAVIEW dataView1 (DataSource: $Customer) {
 Display items in card layout with selection and responsive columns:
 
 ```sql
-GALLERY galleryName (
-  DataSource: DATABASE FROM Module.Entity SORT BY Name ASC,
-  Selection: Single|Multiple|None,
+gallery galleryName (
+  datasource: database from Module.Entity sort by Name asc,
+  selection: single|multiple|none,
   DesktopColumns: 3,
   TabletColumns: 2,
   PhoneColumns: 1
 ) {
-  TEMPLATE template1 {
-    DYNAMICTEXT name (Content: '{1}', ContentParams: [{1} = Name], RenderMode: H4)
-    DYNAMICTEXT email (Content: '{1}', ContentParams: [{1} = Email])
+  template template1 {
+    dynamictext name (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
+    dynamictext email (content: '{1}', contentparams: [{1} = Email])
   }
 }
 ```
 
 **With Filter:**
 ```sql
-GALLERY productGallery (DataSource: DATABASE Module.Product, Selection: Single) {
-  FILTER filter1 {
-    TEXTFILTER searchName (Attribute: Name)
+gallery productGallery (datasource: database Module.Product, selection: single) {
+  filter filter1 {
+    textfilter searchName (attribute: Name)
   }
-  TEMPLATE template1 {
-    DYNAMICTEXT prodName (Content: '{1}', ContentParams: [{1} = Name], RenderMode: H4)
-    DYNAMICTEXT prodCode (Content: 'SKU: {1}', ContentParams: [{1} = Code])
+  template template1 {
+    dynamictext prodName (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
+    dynamictext prodCode (content: 'SKU: {1}', contentparams: [{1} = Code])
   }
 }
 ```
@@ -509,13 +509,13 @@ Filter widgets are used inside GALLERY FILTER containers to enable search/filter
 **TEXTFILTER** - Text search filter:
 ```sql
 -- Simple binding to single attribute
-TEXTFILTER searchName (Attribute: Name)
+textfilter searchName (attribute: Name)
 
 -- Multiple attributes with explicit list
-TEXTFILTER textFilter1 (Attributes: [Module.Entity.Name, Module.Entity.Code, Module.Entity.Description])
+textfilter textFilter1 (attributes: [Module.Entity.Name, Module.Entity.Code, Module.Entity.Description])
 
 -- With filter type
-TEXTFILTER textFilter1 (Attributes: [Module.Entity.Description], FilterType: startsWith)
+textfilter textFilter1 (attributes: [Module.Entity.Description], filtertype: startsWith)
 ```
 
 **FilterType Options:**
@@ -526,17 +526,17 @@ TEXTFILTER textFilter1 (Attributes: [Module.Entity.Description], FilterType: sta
 
 **NUMBERFILTER** - Numeric range filter:
 ```sql
-NUMBERFILTER priceFilter (Attributes: [Module.Entity.Price])
+numberfilter priceFilter (attributes: [Module.Entity.Price])
 ```
 
 **DATEFILTER** - Date range filter:
 ```sql
-DATEFILTER dateFilter (Attributes: [Module.Entity.CreateDate])
+datefilter datefilter (attributes: [Module.Entity.CreateDate])
 ```
 
 **DROPDOWNFILTER** - Dropdown selection filter:
 ```sql
-DROPDOWNFILTER statusFilter (Attributes: [Module.Entity.Status])
+dropdownfilter statusFilter (attributes: [Module.Entity.Status])
 ```
 
 ### NAVIGATIONLIST Widget
@@ -544,10 +544,10 @@ DROPDOWNFILTER statusFilter (Attributes: [Module.Entity.Status])
 Create a menu with action items:
 
 ```sql
-NAVIGATIONLIST navName {
-  ITEM itemEdit (Caption: 'Edit', Action: SHOW_PAGE Module.EditPage(Entity: $EntityParameter))
-  ITEM itemDelete (Caption: 'Delete', Action: DELETE)
-  ITEM itemBack (Caption: 'Back', Action: CLOSE_PAGE)
+navigationlist navName {
+  item itemEdit (caption: 'Edit', action: show_page Module.EditPage(entity: $EntityParameter))
+  item itemDelete (caption: 'Delete', action: delete)
+  item itemBack (caption: 'Back', action: close_page)
 }
 ```
 
@@ -557,10 +557,10 @@ Embed a reusable snippet:
 
 ```sql
 -- Simple snippet call
-SNIPPETCALL snippetName (Snippet: Module.SnippetName)
+snippetcall snippetName (snippet: Module.SnippetName)
 
 -- With parameters
-SNIPPETCALL actions (Snippet: Module.EntityActions, Params: {Entity: $currentObject})
+snippetcall actions (snippet: Module.EntityActions, params: {entity: $currentObject})
 ```
 
 ### IMAGE / STATICIMAGE / DYNAMICIMAGE Widgets
@@ -569,17 +569,17 @@ Display images on pages:
 
 ```sql
 -- Image with dimensions (responsive by default)
-IMAGE imgLogo (Width: 200, Height: 100)
-STATICIMAGE imgBanner (Width: 400, Height: 120)
+image imgLogo (width: 200, height: 100)
+staticimage imgBanner (width: 400, height: 120)
 
 -- Dynamic image (from entity data source, e.g. inside a DataView)
-DYNAMICIMAGE imgProduct (Width: 300, Height: 200)
+dynamicimage imgProduct (width: 300, height: 200)
 
 -- Image without explicit dimensions
-IMAGE imgIcon
+image imgIcon
 ```
 
-**Properties:** `Width: integer`, `Height: integer`, `AlternativeText: 'text'`, `WidthUnit: pixels | percentage | auto`, `HeightUnit: pixels | percentage | auto`, `Responsive: true | false`, `DisplayAs: fullImage | thumbnail | icon`, `Class: 'css'`, `Style: 'css'`
+**Properties:** `width: integer`, `height: integer`, `AlternativeText: 'text'`, `WidthUnit: pixels | percentage | auto`, `HeightUnit: pixels | percentage | auto`, `Responsive: true | false`, `DisplayAs: fullImage | thumbnail | icon`, `class: 'css'`, `style: 'css'`
 
 #### Setting Image Source (PLUGGABLEWIDGET syntax)
 
@@ -593,7 +593,7 @@ The IMAGE shorthand creates a pluggable Image widget. For advanced properties li
 
 ```sql
 -- Static image from file (logos, branding)
-PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' imgLogo (
+pluggablewidget 'com.mendix.widget.web.image.Image' imgLogo (
   datasource: imageUrl,
   imageUrl: 'img/logo.svg',
   widthUnit: pixels, width: 48,
@@ -601,9 +601,9 @@ PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' imgLogo (
 )
 
 -- Update existing IMAGE via ALTER PAGE
-ALTER PAGE Mod.Home {
-  REPLACE imgLogo WITH {
-    PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' imgLogo (
+alter page Mod.Home {
+  replace imgLogo with {
+    pluggablewidget 'com.mendix.widget.web.image.Image' imgLogo (
       datasource: imageUrl, imageUrl: 'img/logo_dark.svg',
       widthUnit: pixels, width: 48, heightUnit: pixels, height: 48
     )
@@ -615,24 +615,24 @@ For theme images, use paths relative to `theme/web/` (e.g., `img/logo.svg` → `
 
 ### CONTAINER / CUSTOMCONTAINER Widgets
 
-Generic container for grouping widgets. `CUSTOMCONTAINER` is an alias for `CONTAINER` (both map to `Forms$DivContainer`):
+Generic container for grouping widgets. `customcontainer` is an alias for `container` (both map to `Forms$DivContainer`):
 
 ```sql
 -- Basic container with CSS class
-CONTAINER card1 (Class: 'card', Style: 'padding: 16px;') {
-  DYNAMICTEXT title (Content: 'Card Title', RenderMode: H4)
-  DYNAMICTEXT body (Content: 'Card body content')
+container card1 (class: 'card', style: 'padding: 16px;') {
+  dynamictext title (content: 'Card Title', rendermode: H4)
+  dynamictext body (content: 'Card body content')
 }
 
 -- Container with design properties
-CONTAINER spaced1 (DesignProperties: ['Spacing top': 'Large', 'Full width': ON]) {
-  DYNAMICTEXT text1 (Content: 'Spaced full-width content')
+container spaced1 (designproperties: ['Spacing top': 'Large', 'Full width': on]) {
+  dynamictext text1 (content: 'Spaced full-width content')
 }
 
 -- Nested containers with combined styling
-CUSTOMCONTAINER outer1 (Class: 'section') {
-  CONTAINER inner1 (Class: 'card', DesignProperties: ['Spacing top': 'Medium']) {
-    DYNAMICTEXT text1 (Content: 'Nested content')
+customcontainer outer1 (class: 'section') {
+  container inner1 (class: 'card', designproperties: ['Spacing top': 'Medium']) {
+    dynamictext text1 (content: 'Nested content')
   }
 }
 ```
@@ -642,9 +642,9 @@ CUSTOMCONTAINER outer1 (Class: 'section') {
 Container for form action buttons:
 
 ```sql
-FOOTER footerName {
-  ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-  ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+footer footerName {
+  actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+  actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
 }
 ```
 
@@ -653,8 +653,8 @@ FOOTER footerName {
 Container for header content:
 
 ```sql
-HEADER headerName {
-  DYNAMICTEXT title (Content: 'Form Title', RenderMode: H3)
+header headerName {
+  dynamictext title (content: 'Form Title', rendermode: H3)
 }
 ```
 
@@ -663,8 +663,8 @@ HEADER headerName {
 Control bar for data widgets:
 
 ```sql
-CONTROLBAR controlBar1 {
-  ACTIONBUTTON btnNew (Caption: 'New', Action: CREATE_OBJECT Module.Entity THEN SHOW_PAGE Module.EditPage, ButtonStyle: Primary)
+controlbar controlBar1 {
+  actionbutton btnNew (caption: 'New', action: create_object Module.Entity then show_page Module.EditPage, buttonstyle: primary)
 }
 ```
 
@@ -673,22 +673,22 @@ CONTROLBAR controlBar1 {
 ### Customer Edit Page
 
 ```sql
-CREATE OR REPLACE PAGE CRM.CustomerEdit
+create or replace page CRM.CustomerEdit
 (
-  Params: { $Customer: CRM.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: CRM.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-    TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
-    CHECKBOX cbActive (Label: 'Active', Attribute: IsActive)
+  dataview dvCustomer (datasource: $Customer) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtEmail (label: 'Email', attribute: Email)
+    textbox txtPhone (label: 'Phone', attribute: Phone)
+    checkbox cbActive (label: 'Active', attribute: IsActive)
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
@@ -697,24 +697,24 @@ CREATE OR REPLACE PAGE CRM.CustomerEdit
 ### Order Overview Page
 
 ```sql
-CREATE PAGE Orders.OrderOverview
+create page Orders.OrderOverview
 (
-  Title: 'Orders',
-  Layout: Atlas_Core.Atlas_Default
+  title: 'Orders',
+  layout: Atlas_Core.Atlas_Default
 )
 {
-  LAYOUTGRID mainGrid {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 12) {
-        DYNAMICTEXT heading (Content: 'Order Overview', RenderMode: H2)
+  layoutgrid mainGrid {
+    row row1 {
+      column col1 (desktopwidth: 12) {
+        dynamictext heading (content: 'Order Overview', rendermode: H2)
       }
     }
-    ROW row2 {
-      COLUMN col2 (DesktopWidth: 12) {
-        DATAGRID dgOrders (DataSource: DATABASE FROM Orders.Order SORT BY OrderDate DESC) {
-          COLUMN colNumber (Attribute: OrderNumber, Caption: 'Order #')
-          COLUMN colDate (Attribute: OrderDate, Caption: 'Date')
-          COLUMN colTotal (Attribute: TotalAmount, Caption: 'Total')
+    row row2 {
+      column col2 (desktopwidth: 12) {
+        datagrid dgOrders (datasource: database from Orders.Order sort by OrderDate desc) {
+          column colNumber (attribute: OrderNumber, caption: 'Order #')
+          column colDate (attribute: OrderDate, caption: 'Date')
+          column colTotal (attribute: TotalAmount, caption: 'Total')
         }
       }
     }
@@ -725,36 +725,36 @@ CREATE PAGE Orders.OrderOverview
 ### Master-Detail Page
 
 ```sql
-CREATE PAGE CRM.Customer_MasterDetail
+create page CRM.Customer_MasterDetail
 (
-  Title: 'Customer Management',
-  Layout: Atlas_Core.Atlas_Default
+  title: 'Customer Management',
+  layout: Atlas_Core.Atlas_Default
 )
 {
-  LAYOUTGRID mainGrid {
-    ROW row1 {
+  layoutgrid mainGrid {
+    row row1 {
       -- Master list (left column)
-      COLUMN colMaster (DesktopWidth: 4) {
-        DYNAMICTEXT heading (Content: 'Customers', RenderMode: H3)
-        GALLERY customerList (DataSource: DATABASE FROM CRM.Customer SORT BY Name ASC, Selection: Single) {
-          TEMPLATE template1 {
-            DYNAMICTEXT name (Content: '{1}', ContentParams: [{1} = Name], RenderMode: H4)
-            DYNAMICTEXT email (Content: '{1}', ContentParams: [{1} = Email])
+      column colMaster (desktopwidth: 4) {
+        dynamictext heading (content: 'Customers', rendermode: H3)
+        gallery customerList (datasource: database from CRM.Customer sort by Name asc, selection: single) {
+          template template1 {
+            dynamictext name (content: '{1}', contentparams: [{1} = Name], rendermode: H4)
+            dynamictext email (content: '{1}', contentparams: [{1} = Email])
           }
         }
       }
 
       -- Detail form (right column)
-      COLUMN colDetail (DesktopWidth: 8) {
-        DATAVIEW customerDetail (DataSource: SELECTION customerList) {
-          DYNAMICTEXT detailHeading (Content: 'Customer Details', RenderMode: H3)
-          TEXTBOX txtName (Label: 'Name', Attribute: Name)
-          TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-          TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
+      column colDetail (desktopwidth: 8) {
+        dataview customerDetail (datasource: selection customerList) {
+          dynamictext detailHeading (content: 'Customer Details', rendermode: H3)
+          textbox txtName (label: 'Name', attribute: Name)
+          textbox txtEmail (label: 'Email', attribute: Email)
+          textbox txtPhone (label: 'Phone', attribute: Phone)
 
-          FOOTER footer1 {
-            ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-            ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+          footer footer1 {
+            actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
           }
         }
       }
@@ -765,14 +765,14 @@ CREATE PAGE CRM.Customer_MasterDetail
 
 ## Modifying Existing Pages
 
-To make targeted changes to an existing page (change a label, add a field, remove a widget), use `ALTER PAGE` instead of `CREATE OR REPLACE PAGE`. ALTER PAGE modifies the widget tree in-place, preserving properties that MDL doesn't model.
+To make targeted changes to an existing page (change a label, add a field, remove a widget), use `alter page` instead of `create or replace page`. ALTER PAGE modifies the widget tree in-place, preserving properties that MDL doesn't model.
 
 ```sql
 -- Change a button caption and add a field
-ALTER PAGE Module.Customer_Edit {
-  SET Caption = 'Save & Close' ON btnSave;
-  INSERT AFTER txtEmail {
-    TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
+alter page Module.Customer_Edit {
+  set caption = 'Save & Close' on btnSave;
+  insert after txtEmail {
+    textbox txtPhone (label: 'Phone', attribute: Phone)
   }
 };
 ```
@@ -785,19 +785,19 @@ Any widget can have conditional visibility. Input widgets can also have conditio
 
 ```sql
 -- Conditionally visible widget
-TEXTBOX txtName (Label: 'Name', Attribute: Name, Visible: [IsActive])
+textbox txtName (label: 'Name', attribute: Name, visible: [IsActive])
 
 -- Conditionally editable input
-TEXTBOX txtStatus (Label: 'Status', Attribute: Status, Editable: [Status != 'Closed'])
+textbox txtStatus (label: 'Status', attribute: status, editable: [status != 'Closed'])
 
 -- Combined
-TEXTBOX txtEmail (Label: 'Email', Attribute: Email,
-  Visible: [ShowEmail],
-  Editable: [CanEdit])
+textbox txtEmail (label: 'Email', attribute: Email,
+  visible: [ShowEmail],
+  editable: [CanEdit])
 
 -- Static values still work
-TEXTBOX txtReadOnly (Label: 'Read Only', Attribute: Name, Editable: Never)
-TEXTBOX txtHidden (Label: 'Hidden', Attribute: Name, Visible: false)
+textbox txtReadOnly (label: 'Read Only', attribute: Name, editable: Never)
+textbox txtHidden (label: 'Hidden', attribute: Name, visible: false)
 ```
 
 ## Known Limitations
@@ -823,7 +823,7 @@ The following features are NOT implemented in mxcli and require manual configura
 > }
 > ```
 
-> **`Content: ''` (empty string) fails MxBuild.** An empty Content on DYNAMICTEXT causes a misleading error: "Place holder index 1 is greater than 0, the number of parameter(s)." Use a single space instead:
+> **`content: ''` (empty string) fails MxBuild.** An empty Content on DYNAMICTEXT causes a misleading error: "Place holder index 1 is greater than 0, the number of parameter(s)." Use a single space instead:
 > ```sql
 > -- Wrong: MxBuild error
 > DYNAMICTEXT spacer (Content: '')
@@ -840,45 +840,45 @@ The following features are NOT implemented in mxcli and require manual configura
 2. **Widget Names**: Required - use descriptive camelCase names
 3. **Layout Requirement**: Layout must exist in the project
 4. **Nesting**: Use `{ }` blocks for all widget children
-5. **Properties**: Use `(Key: value)` syntax for all widget properties
-6. **Bindings**: Use `Attribute:` for attributes, `DataSource:` for data, `Action:` for buttons
+5. **Properties**: Use `(key: value)` syntax for all widget properties
+6. **Bindings**: Use `attribute:` for attributes, `datasource:` for data, `action:` for buttons
 
 ## Related Commands
 
-- `ALTER PAGE Module.PageName { ... }` - Modify page widgets in-place (SET, INSERT, DROP, REPLACE)
-- `ALTER SNIPPET Module.SnippetName { ... }` - Modify snippet widgets in-place
-- `DESCRIBE PAGE Module.PageName` - View page source in MDL format (shows Class, Style, DesignProperties)
-- `DESCRIBE SNIPPET Module.SnippetName` - View snippet source in MDL format
-- `SHOW PAGES [IN Module]` - List all pages
-- `SHOW WIDGETS [WHERE ...] [IN Module]` - Discover widgets across pages/snippets
-- `UPDATE WIDGETS SET ... WHERE ... [DRY RUN]` - Bulk update widget properties (see below)
-- `DROP PAGE Module.PageName` - Delete a page
+- `alter page Module.PageName { ... }` - Modify page widgets in-place (SET, INSERT, DROP, REPLACE)
+- `alter snippet Module.SnippetName { ... }` - Modify snippet widgets in-place
+- `describe page Module.PageName` - View page source in MDL format (shows Class, Style, DesignProperties)
+- `describe snippet Module.SnippetName` - View snippet source in MDL format
+- `show pages [in module]` - List all pages
+- `show widgets [where ...] [in module]` - Discover widgets across pages/snippets
+- `update widgets set ... where ... [dry run]` - Bulk update widget properties (see below)
+- `drop page Module.PageName` - Delete a page
 
 ### Bulk Widget Updates
 
-Use `UPDATE WIDGETS` to change properties across many widgets at once:
+Use `update widgets` to change properties across many widgets at once:
 
 ```sql
 -- Preview changes first (always use DRY RUN)
-UPDATE WIDGETS SET 'Class' = 'card' WHERE WidgetType LIKE '%Container%' IN MyModule DRY RUN;
+update widgets set 'Class' = 'card' where widgettype like '%Container%' in MyModule dry run;
 
 -- Apply changes
-UPDATE WIDGETS SET 'showLabel' = false WHERE WidgetType LIKE '%combobox%';
+update widgets set 'showLabel' = false where widgettype like '%combobox%';
 
 -- Multiple properties
-UPDATE WIDGETS SET 'Class' = 'btn-lg', 'Style' = 'margin-top: 8px;' WHERE WidgetType LIKE '%ActionButton%';
+update widgets set 'Class' = 'btn-lg', 'Style' = 'margin-top: 8px;' where widgettype like '%ActionButton%';
 ```
 
 ## PLUGGABLEWIDGET Escape Hatch
 
-All shorthand widgets (IMAGE, COMBOBOX, GALLERY, DATAGRID, etc.) are pluggable widgets under the hood. When the shorthand doesn't expose a property you need, use `PLUGGABLEWIDGET 'widget.id' name (properties)` for full access to all widget properties.
+All shorthand widgets (IMAGE, COMBOBOX, GALLERY, DATAGRID, etc.) are pluggable widgets under the hood. When the shorthand doesn't expose a property you need, use `pluggablewidget 'widget.id' name (properties)` for full access to all widget properties.
 
 ```sql
 -- Shorthand (common properties only)
-IMAGE imgLogo (Width: 48, Height: 48)
+image imgLogo (width: 48, height: 48)
 
 -- Full PLUGGABLEWIDGET syntax (all properties available)
-PLUGGABLEWIDGET 'com.mendix.widget.web.image.Image' imgLogo (
+pluggablewidget 'com.mendix.widget.web.image.Image' imgLogo (
   datasource: imageUrl, imageUrl: 'img/logo.svg',
   widthUnit: pixels, width: 48, heightUnit: pixels, height: 48
 )

@@ -377,14 +377,14 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						// Extract entity from attribute path (first two parts)
 						attrEntityQN := parts[0] + "." + parts[1]
 						if attrEntityQN != entityQN {
-							fb.addError("SORT BY attribute '%s' does not belong to entity '%s'", col.Attribute, entityQN)
+							fb.addError("sort by attribute '%s' does not belong to entity '%s'", col.Attribute, entityQN)
 							continue // Skip this sort column but continue processing others
 						}
 					}
 				}
 
 				direction := microflows.SortDirectionAscending
-				if col.Order == "DESC" {
+				if col.Order == "desc" {
 					direction = microflows.SortDirectionDescending
 				}
 

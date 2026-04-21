@@ -12,7 +12,7 @@ Page Templates provide the initial structure when creating new pages in Studio P
 
 | Layer | Status | Location |
 |-------|--------|----------|
-| **Go type** | Yes | `sdk/pages/pages.go` — `PageTemplate{Name, Documentation, DisplayName, LayoutID, PageTemplateType, Widget}` |
+| **Go type** | Yes | `sdk/pages/pages.go` — `PageTemplate{Name, documentation, DisplayName, LayoutID, PageTemplateType, widget}` |
 | **Parser** | Minimal | `sdk/mpr/parser_misc.go` line 192 — Name + Documentation only |
 | **Reader** | Yes | `ListPageTemplates()` in `sdk/mpr/reader_types.go` |
 | **AST** | No | — |
@@ -23,7 +23,7 @@ Page Templates provide the initial structure when creating new pages in Studio P
 ```
 Forms$PageTemplate:
   Name: string
-  Documentation: string
+  documentation: string
   DisplayName: string
   Excluded: bool
   ExportLevel: string
@@ -40,10 +40,10 @@ Forms$PageTemplate:
     Forms$RegularPageTemplateType (no extra fields)
     -- could also be other types
   Appearance: Forms$Appearance
-    Class: string
-    Style: string
-    DesignProperties: map
-  Widgets: []*Widget
+    class: string
+    style: string
+    designproperties: map
+  widgets: []*widget
 ```
 
 ## Proposed MDL Syntax
@@ -51,7 +51,7 @@ Forms$PageTemplate:
 ### SHOW PAGE TEMPLATES
 
 ```
-SHOW PAGE TEMPLATES [IN Module]
+show page TEMPLATES [in module]
 ```
 
 | Qualified Name | Module | Name | Display Name | Type | Layout | Category |
@@ -60,7 +60,7 @@ SHOW PAGE TEMPLATES [IN Module]
 ### DESCRIBE PAGE TEMPLATE
 
 ```
-DESCRIBE PAGE TEMPLATE Module.Name
+describe page template Module.Name
 ```
 
 Output format:
@@ -73,13 +73,13 @@ Output format:
 -- Display Name: Edit Form
 -- Type: Edit
 -- Category: Forms
-PAGE TEMPLATE MyModule.EditTemplate
-  LAYOUT Atlas_Core.Atlas_Default
+page template MyModule.EditTemplate
+  layout Atlas_Core.Atlas_Default
 {
-  DATAVIEW
+  dataview
   {
-    TEXTBOX $Name;
-    ACTIONBUTTON 'Save';
+    textbox $Name;
+    actionbutton 'Save';
   };
 };
 /
@@ -105,11 +105,11 @@ DescribePageTemplate // in DescribeObjectType enum
 ### 3. Add Grammar Rules
 
 ```antlr
-TEMPLATE: 'TEMPLATE';
+template: 'TEMPLATE';
 TEMPLATES: 'TEMPLATES';
 
-// SHOW PAGE TEMPLATES [IN module]
-// DESCRIBE PAGE TEMPLATE qualifiedName
+// show page TEMPLATES [in module]
+// describe page template qualifiedName
 ```
 
 ### 4. Add Executor (mdl/executor/cmd_page_templates.go)

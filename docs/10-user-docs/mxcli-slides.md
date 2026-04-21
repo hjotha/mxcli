@@ -58,10 +58,10 @@ A command-line interface that brings **AI-powered development** to Mendix
 
 ```
 ┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│   Developer     │     │    mxcli     │     │ Mendix Project  │
-│   or AI Agent   │────▶│  (MDL REPL)  │────▶│   (.mpr file)   │
+│   Developer     │     │    mxcli     │     │ Mendix project  │
+│   or AI agent   │────▶│  (MDL REPL)  │────▶│   (.mpr file)   │
 │                 │ MDL │              │     │                 │
-│ "Create a       │     │ Parses MDL   │     │ Creates actual  │
+│ "create a       │     │ Parses MDL   │     │ Creates actual  │
 │  Customer       │     │ Validates    │     │ entities,       │
 │  entity..."     │     │ Executes     │     │ microflows,     │
 └─────────────────┘     └──────────────┘     │ pages, etc.     │
@@ -110,8 +110,8 @@ A command-line interface that brings **AI-powered development** to Mendix
   "entity": {
     "name": "Customer",
     "attributes": [
-      {"name": "Name", "type": {"type": "String", "length": 200}},
-      {"name": "Email", "type": {"type": "String", "length": 200}}
+      {"name": "Name", "type": {"type": "string", "length": 200}},
+      {"name": "Email", "type": {"type": "string", "length": 200}}
     ]
   }
 }
@@ -120,9 +120,9 @@ A command-line interface that brings **AI-powered development** to Mendix
 **MDL (~35 tokens):**
 ```sql
 /** Customer master data */
-CREATE PERSISTENT ENTITY Sales.Customer (
-    Name: String(200),
-    Email: String(200)
+create persistent entity Sales.Customer (
+    Name: string(200),
+    Email: string(200)
 );
 ```
 
@@ -134,18 +134,18 @@ CREATE PERSISTENT ENTITY Sales.Customer (
 
 ```sql
 /** Order entity with audit support */
-@Position(100, 100)
-CREATE PERSISTENT ENTITY Sales.Order (
-    OrderNumber: String(50) NOT NULL UNIQUE,
-    OrderDate: DateTime DEFAULT '[%CurrentDateTime%]',
-    TotalAmount: Decimal NOT NULL DEFAULT 0,
-    Status: Enumeration(Sales.OrderStatus) DEFAULT 'Draft'
+@position(100, 100)
+create persistent entity Sales.Order (
+    OrderNumber: string(50) not null unique,
+    OrderDate: datetime default '[%CurrentDateTime%]',
+    TotalAmount: decimal not null default 0,
+    status: enumeration(Sales.OrderStatus) default 'Draft'
 );
 
-CREATE ASSOCIATION Sales.Order_Customer
-    FROM Sales.Order TO Sales.Customer
-    TYPE Reference
-    DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Sales.Order_Customer
+    from Sales.Order to Sales.Customer
+    type reference
+    delete_behavior DELETE_BUT_KEEP_REFERENCES;
 ```
 
 ---
@@ -159,18 +159,18 @@ CREATE ASSOCIATION Sales.Order_Customer
  * Process a new order submission.
  * Validates, updates inventory, sends confirmation.
  */
-CREATE MICROFLOW Sales.SubmitOrder($order: Sales.Order)
-RETURNS Boolean AS $success
-BEGIN
-    IF NOT CALL Sales.ValidateOrder($order) THEN
-        RETURN false;
-    END;
+create microflow Sales.SubmitOrder($order: Sales.Order)
+returns boolean as $success
+begin
+    if not call Sales.ValidateOrder($order) then
+        return false;
+    end;
 
-    CHANGE $order (Status = 'Submitted');
-    COMMIT $order;
-    CALL Sales.SendOrderConfirmation($order);
-    RETURN true;
-END;
+    change $order (status = 'Submitted');
+    commit $order;
+    call Sales.SendOrderConfirmation($order);
+    return true;
+end;
 ```
 
 ---
@@ -180,23 +180,23 @@ END;
 ### User Interface
 
 ```sql
-CREATE PAGE Sales.CustomerOverview
-TITLE 'Customer Management'
-LAYOUT 'Atlas_Core.Atlas_Default'
-BEGIN
-  LAYOUTGRID mainGrid
-    ROW
-      COLUMN (DESKTOP_WIDTH 12)
-        DATAGRID CustomerGrid
-          SOURCE DATABASE Sales.Customer
-          SORT BY Name ASC
-        BEGIN
-          HEADER
-            ACTIONBUTTON btnNew 'New' ACTION CREATE_OBJECT;
-          COLUMN Name AS 'Customer Name';
-          COLUMN Email AS 'Email';
-        END;
-END;
+create page Sales.CustomerOverview
+title 'Customer Management'
+layout 'Atlas_Core.Atlas_Default'
+begin
+  layoutgrid mainGrid
+    row
+      column (DESKTOP_WIDTH 12)
+        datagrid CustomerGrid
+          source database Sales.Customer
+          sort by Name asc
+        begin
+          header
+            actionbutton btnNew 'New' action create_object;
+          column Name as 'Customer Name';
+          column Email as 'Email';
+        end;
+end;
 ```
 
 ---
@@ -212,7 +212,7 @@ your-mendix-project/
 │       ├── create-entity.md
 │       ├── create-microflow.md
 │       └── create-page.md
-├── CLAUDE.md             # Project context
+├── CLAUDE.md             # project context
 └── mxcli                 # CLI executable
 ```
 
@@ -244,17 +244,17 @@ your-mendix-project/
 
 ```sql
 /** Query project metadata */
-SELECT Name, EntityType, AttributeCount
-FROM CATALOG.ENTITIES
-WHERE ModuleName = 'Sales';
+select Name, EntityType, AttributeCount
+from CATALOG.ENTITIES
+where ModuleName = 'Sales';
 
 /** Find duplicate entities */
-SELECT e1.Name, e2.Name, COUNT(*) AS MatchingAttrs
-FROM CATALOG.ATTRIBUTES a1
-JOIN CATALOG.ATTRIBUTES a2 ON a1.Name = a2.Name
-WHERE a1.EntityId != a2.EntityId
-GROUP BY e1.Name, e2.Name
-HAVING COUNT(*) >= 3;
+select e1.Name, e2.Name, count(*) as MatchingAttrs
+from CATALOG.ATTRIBUTES a1
+join CATALOG.ATTRIBUTES a2 on a1.Name = a2.Name
+where a1.EntityId != a2.EntityId
+GROUP by e1.Name, e2.Name
+having count(*) >= 3;
 ```
 
 ---
@@ -281,16 +281,16 @@ HAVING COUNT(*) >= 3;
  * Template: Standard Audit Fields.
  * All entities should include these fields.
  */
-@Position(${X}, ${Y})
-CREATE PERSISTENT ENTITY ${Module}.${EntityName} (
+@position(${X}, ${Y})
+create persistent entity ${module}.${EntityName} (
     ${BusinessFields}
 
     /** Standard audit fields */
-    CreatedAt: DateTime DEFAULT '[%CurrentDateTime%]',
-    CreatedBy: String(200),
-    ModifiedAt: DateTime,
-    ModifiedBy: String(200),
-    IsDeleted: Boolean DEFAULT false
+    CreatedAt: datetime default '[%CurrentDateTime%]',
+    CreatedBy: string(200),
+    ModifiedAt: datetime,
+    ModifiedBy: string(200),
+    IsDeleted: boolean default false
 );
 ```
 
@@ -351,10 +351,10 @@ cd /path/to/your-mendix-project
 # Start the REPL
 ./mxcli
 
-# Connect and explore
-mendix> CONNECT LOCAL 'MyProject.mpr';
-mendix> SHOW MODULES;
-mendix> DESCRIBE ENTITY Sales.Customer;
+# connect and explore
+mendix> connect local 'MyProject.mpr';
+mendix> show modules;
+mendix> describe entity Sales.Customer;
 ```
 
 ---

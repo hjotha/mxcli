@@ -194,7 +194,7 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
-		return mdlerrors.NewBackend("marshal wireframe JSON", err)
+		return mdlerrors.NewBackend("marshal wireframe json", err)
 	}
 
 	fmt.Fprint(ctx.Output, string(jsonBytes))
@@ -258,7 +258,7 @@ func SnippetWireframeJSON(ctx *ExecContext, name string) error {
 
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
-		return mdlerrors.NewBackend("marshal wireframe JSON", err)
+		return mdlerrors.NewBackend("marshal wireframe json", err)
 	}
 
 	fmt.Fprint(ctx.Output, string(jsonBytes))
@@ -276,7 +276,7 @@ func rawWidgetToWireframe(w rawWidget, counter *wireframeCounter) wireframeNode 
 	for _, dp := range w.DesignProperties {
 		val := dp.Option
 		if dp.ValueType == "toggle" {
-			val = "ON"
+			val = "on"
 		}
 		node.DesignProperties = append(node.DesignProperties, wireframeDesignProp{
 			Key:   dp.Key,
@@ -436,14 +436,14 @@ func formatDataSourceRef(ds *rawDataSource) string {
 	case "parameter":
 		return "$" + ds.Reference
 	case "microflow":
-		return "MICROFLOW " + ds.Reference
+		return "microflow " + ds.Reference
 	case "nanoflow":
-		return "NANOFLOW " + ds.Reference
+		return "nanoflow " + ds.Reference
 	case "database":
 		if ds.Reference != "" {
-			return "DATABASE " + ds.Reference
+			return "database " + ds.Reference
 		}
-		return "DATABASE"
+		return "database"
 	default:
 		return ds.Reference
 	}
@@ -452,19 +452,19 @@ func formatDataSourceRef(ds *rawDataSource) string {
 // mapCustomWidgetType maps RenderMode to wireframe widget type.
 func mapCustomWidgetType(renderMode string) string {
 	switch renderMode {
-	case "DATAGRID2":
+	case "datagrid2":
 		return "datagrid"
-	case "GALLERY":
+	case "gallery":
 		return "gallery"
-	case "COMBOBOX":
+	case "combobox":
 		return "combobox"
-	case "TEXTFILTER":
+	case "textfilter":
 		return "textfilter"
-	case "NUMBERFILTER":
+	case "numberfilter":
 		return "numberfilter"
-	case "DROPDOWNFILTER":
+	case "dropdownfilter":
 		return "dropdownfilter"
-	case "DATEFILTER":
+	case "datefilter":
 		return "datefilter"
 	default:
 		return strings.ToLower(renderMode)

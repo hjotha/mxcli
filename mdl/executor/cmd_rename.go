@@ -19,24 +19,24 @@ func execRename(ctx *ExecContext, s *ast.RenameStmt) error {
 	}
 
 	switch s.ObjectType {
-	case "ENTITY":
+	case "entity":
 		return execRenameEntity(ctx, s)
-	case "MICROFLOW":
+	case "microflow":
 		return execRenameDocument(ctx, s, "microflow")
-	case "NANOFLOW":
+	case "nanoflow":
 		return execRenameDocument(ctx, s, "nanoflow")
-	case "PAGE":
+	case "page":
 		return execRenameDocument(ctx, s, "page")
-	case "ENUMERATION":
+	case "enumeration":
 		return execRenameEnumeration(ctx, s)
-	case "ASSOCIATION":
+	case "association":
 		return execRenameAssociation(ctx, s)
-	case "CONSTANT":
+	case "constant":
 		return execRenameDocument(ctx, s, "constant")
-	case "MODULE":
+	case "module":
 		return execRenameModule(ctx, s)
 	default:
-		return mdlerrors.NewUnsupported(fmt.Sprintf("RENAME not supported for %s", s.ObjectType))
+		return mdlerrors.NewUnsupported(fmt.Sprintf("rename not supported for %s", s.ObjectType))
 	}
 }
 

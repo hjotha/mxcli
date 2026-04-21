@@ -43,10 +43,10 @@ A CLI tool from the Playwright team, designed specifically for coding agents. Ke
 ### Example: Verifying a Mendix Page
 
 ```bash
-# Open the app
+# open the app
 playwright-cli open http://localhost:8080 --headed
 
-# Login (if security enabled)
+# login (if security enabled)
 playwright-cli fill e12 "MxAdmin"          # username input
 playwright-cli fill e15 "AdminPassword1!"  # password input
 playwright-cli click e18                   # login button
@@ -77,7 +77,7 @@ Claude generates MDL
   → Claude generates .spec.ts files (tokens spent on boilerplate)
   → mxcli docker run --wait
   → npx playwright test --reporter=json
-  → Claude reads JSON results (more tokens parsing structured output)
+  → Claude reads json results (more tokens parsing structured output)
   → Claude maps failures back to MDL widgets
   → Fix → regenerate tests → rebuild → rerun
 ```
@@ -174,7 +174,7 @@ The current skill (506 lines) focuses on generating TypeScript test files. Repla
 ### Start the browser session
 playwright-cli open http://localhost:8080
 
-### Login (security enabled)
+### login (security enabled)
 playwright-cli snapshot                    # find login form refs
 playwright-cli fill <username-ref> "MxAdmin"
 playwright-cli fill <password-ref> "AdminPassword1!"
@@ -185,7 +185,7 @@ playwright-cli state-save mendix-auth      # reuse in future runs
 playwright-cli goto http://localhost:8080/p/Customer_Overview
 playwright-cli snapshot
 
-### Check widget presence via JavaScript
+### check widget presence via javascript
 playwright-cli run-code "document.querySelector('.mx-name-dgCustomers') !== null"
 
 ### Fill a form
@@ -195,7 +195,7 @@ playwright-cli fill <name-ref> "Test Customer"
 playwright-cli click <save-ref>
 
 ### Verify data persistence (via mxcli oql, not pg client)
-mxcli oql -p app.mpr "SELECT Name FROM MyModule.Customer WHERE Name = 'Test Customer'"
+mxcli oql -p app.mpr "select Name from MyModule.Customer where Name = 'Test Customer'"
 ```
 
 ### Changes to Commands
@@ -336,13 +336,13 @@ For Mendix apps, **Option A is recommended** — the `.mx-name-*` classes are st
 A thin Go wrapper that runs test scripts and collects results:
 
 ```bash
-# Run all test scripts
+# run all test scripts
 mxcli playwright verify tests/ -p app.mpr
 
-# Run a specific script
+# run a specific script
 mxcli playwright verify tests/verify-customers.sh -p app.mpr
 
-# Output JUnit XML for CI
+# Output JUnit xml for CI
 mxcli playwright verify tests/ -p app.mpr --junit results.xml
 ```
 
@@ -391,7 +391,7 @@ This follows the same pattern as `mxcli test` (the microflow test runner) — co
 Claude can generate `.test.sh` scripts from page definitions. Since the scripts are just shell commands, generation is simpler than TypeScript:
 
 ```bash
-# Auto-generated from: CREATE PAGE MyModule.Customer_Overview
+# Auto-generated from: create page MyModule.Customer_Overview
 playwright-cli goto http://localhost:8080/p/Customer_Overview
 playwright-cli run-code "document.querySelector('.mx-name-dgCustomers') !== null"
 playwright-cli run-code "document.querySelector('.mx-name-btnNew') !== null"
@@ -410,7 +410,7 @@ This could also be implemented as `mxcli playwright generate -p app.mpr` — wal
 3. **Snapshot format** — What does `playwright-cli snapshot` output look like? Can we reliably extract element refs from it in shell scripts?
 4. **Session lifecycle** — How does the browser session interact with Docker container restarts (`mxcli docker run --fresh`)?
 5. **Skills installation** — Does `playwright-cli install --skills` conflict with our custom skill files, or do they coexist?
-6. **`run-code` exit codes** — Does `playwright-cli run-code` return non-zero when the expression evaluates to `false`? This is critical for `set -e` scripts. If not, we need a wrapper: `playwright-cli run-code "if (!document.querySelector('.mx-name-X')) throw new Error('missing')"`.
+6. **`run-code` exit codes** — Does `playwright-cli run-code` return non-zero when the expression evaluates to `false`? This is critical for `set -e` scripts. If not, we need a wrapper: `playwright-cli run-code "if (!document.querySelector('.mx-name-X')) throw new error('missing')"`.
 7. **Login ref stability** — The Mendix login page (`/login.html`) is not generated from MDL, so its element refs may change across Mendix versions. Need a stable login approach (possibly `run-code` with `#usernameInput`/`#passwordInput` selectors).
 
 ---

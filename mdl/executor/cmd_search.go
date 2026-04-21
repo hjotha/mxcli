@@ -13,7 +13,7 @@ import (
 // execShowCallers handles SHOW CALLERS OF Module.Microflow [TRANSITIVE].
 func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
-		return mdlerrors.NewValidation("target name required for SHOW CALLERS")
+		return mdlerrors.NewValidation("target name required for show callers")
 	}
 
 	// Ensure catalog is available with full mode for refs
@@ -33,28 +33,28 @@ func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Transitive {
 		// Recursive CTE for transitive callers
 		query = `
-			WITH RECURSIVE callers_cte AS (
-				SELECT SourceName as Caller, 1 as Depth
-				FROM refs
-				WHERE TargetName = ? AND RefKind = 'call'
-				UNION ALL
-				SELECT r.SourceName, c.Depth + 1
-				FROM refs r
-				JOIN callers_cte c ON r.TargetName = c.Caller
-				WHERE r.RefKind = 'call' AND c.Depth < 10
+			with RECURSIVE callers_cte as (
+				select SourceName as Caller, 1 as Depth
+				from refs
+				where TargetName = ? and RefKind = 'call'
+				union all
+				select r.SourceName, c.Depth + 1
+				from refs r
+				join callers_cte c on r.TargetName = c.Caller
+				where r.RefKind = 'call' and c.Depth < 10
 			)
-			SELECT DISTINCT Caller, MIN(Depth) as Depth
-			FROM callers_cte
-			GROUP BY Caller
-			ORDER BY Depth, Caller
+			select distinct Caller, min(Depth) as Depth
+			from callers_cte
+			GROUP by Caller
+			ORDER by Depth, Caller
 		`
 	} else {
 		// Direct callers only
 		query = `
-			SELECT DISTINCT SourceName as Caller, 1 as Depth
-			FROM refs
-			WHERE TargetName = ? AND RefKind = 'call'
-			ORDER BY Caller
+			select distinct SourceName as Caller, 1 as Depth
+			from refs
+			where TargetName = ? and RefKind = 'call'
+			ORDER by Caller
 		`
 	}
 
@@ -76,7 +76,7 @@ func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 // execShowCallees handles SHOW CALLEES OF Module.Microflow [TRANSITIVE].
 func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
-		return mdlerrors.NewValidation("target name required for SHOW CALLEES")
+		return mdlerrors.NewValidation("target name required for show callees")
 	}
 
 	// Ensure catalog is available with full mode for refs
@@ -96,28 +96,28 @@ func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Transitive {
 		// Recursive CTE for transitive callees
 		query = `
-			WITH RECURSIVE callees_cte AS (
-				SELECT TargetName as Callee, 1 as Depth
-				FROM refs
-				WHERE SourceName = ? AND RefKind = 'call'
-				UNION ALL
-				SELECT r.TargetName, c.Depth + 1
-				FROM refs r
-				JOIN callees_cte c ON r.SourceName = c.Callee
-				WHERE r.RefKind = 'call' AND c.Depth < 10
+			with RECURSIVE callees_cte as (
+				select TargetName as Callee, 1 as Depth
+				from refs
+				where SourceName = ? and RefKind = 'call'
+				union all
+				select r.TargetName, c.Depth + 1
+				from refs r
+				join callees_cte c on r.SourceName = c.Callee
+				where r.RefKind = 'call' and c.Depth < 10
 			)
-			SELECT DISTINCT Callee, MIN(Depth) as Depth
-			FROM callees_cte
-			GROUP BY Callee
-			ORDER BY Depth, Callee
+			select distinct Callee, min(Depth) as Depth
+			from callees_cte
+			GROUP by Callee
+			ORDER by Depth, Callee
 		`
 	} else {
 		// Direct callees only
 		query = `
-			SELECT DISTINCT TargetName as Callee, 1 as Depth
-			FROM refs
-			WHERE SourceName = ? AND RefKind = 'call'
-			ORDER BY Callee
+			select distinct TargetName as Callee, 1 as Depth
+			from refs
+			where SourceName = ? and RefKind = 'call'
+			ORDER by Callee
 		`
 	}
 
@@ -139,7 +139,7 @@ func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 // execShowReferences handles SHOW REFERENCES TO Module.Entity.
 func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
-		return mdlerrors.NewValidation("target name required for SHOW REFERENCES")
+		return mdlerrors.NewValidation("target name required for show references")
 	}
 
 	// Ensure catalog is available with full mode for refs
@@ -152,10 +152,10 @@ func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
 
 	// Find all references to this target
 	query := `
-		SELECT SourceType, SourceName, RefKind
-		FROM refs
-		WHERE TargetName = ?
-		ORDER BY RefKind, SourceType, SourceName
+		select SourceType, SourceName, RefKind
+		from refs
+		where TargetName = ?
+		ORDER by RefKind, SourceType, SourceName
 	`
 
 	result, err := ctx.Catalog.Query(strings.Replace(query, "?", "'"+targetName+"'", 1))
@@ -177,7 +177,7 @@ func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
 // This shows all elements that would be affected by changing the target.
 func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
-		return mdlerrors.NewValidation("target name required for SHOW IMPACT")
+		return mdlerrors.NewValidation("target name required for show impact")
 	}
 
 	// Ensure catalog is available with full mode for refs
@@ -190,10 +190,10 @@ func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
 
 	// Find all direct references to this target
 	directQuery := `
-		SELECT SourceType, SourceName, RefKind
-		FROM refs
-		WHERE TargetName = ?
-		ORDER BY SourceType, SourceName
+		select SourceType, SourceName, RefKind
+		from refs
+		where TargetName = ?
+		ORDER by SourceType, SourceName
 	`
 
 	result, err := ctx.Catalog.Query(strings.Replace(directQuery, "?", "'"+targetName+"'", 1))

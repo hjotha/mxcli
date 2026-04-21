@@ -2,16 +2,16 @@
 
 ## Problem
 
-Issue [#143](https://github.com/mendixlabs/mxcli/issues/143) requests importing all entities **and actions** from a consumed OData service. `CREATE EXTERNAL ENTITIES FROM Module.Service` now handles bulk entity creation. This proposal covers the action side: generating the artifacts needed to call external OData actions.
+Issue [#143](https://github.com/mendixlabs/mxcli/issues/143) requests importing all entities **and actions** from a consumed OData service. `create external entities from Module.Service` now handles bulk entity creation. This proposal covers the action side: generating the artifacts needed to call external OData actions.
 
 ## Current State
 
 | Capability | Status |
 |------------|--------|
-| Browse contract actions | ✅ `SHOW CONTRACT ACTIONS FROM Module.Service` |
-| Describe contract action | ✅ `DESCRIBE CONTRACT ACTION Module.Service.Action` |
-| Call external action in microflow | ✅ `CALL EXTERNAL ACTION Module.Service.Action(...)` |
-| Bulk-create external entities | ✅ `CREATE EXTERNAL ENTITIES FROM Module.Service` |
+| Browse contract actions | ✅ `show contract actions from Module.Service` |
+| Describe contract action | ✅ `describe contract action Module.Service.Action` |
+| Call external action in microflow | ✅ `call external action Module.Service.Action(...)` |
+| Bulk-create external entities | ✅ `create external entities from Module.Service` |
 | Bulk-create action support artifacts | ❌ Not implemented |
 | Parse complex types from $metadata | ❌ Not implemented |
 | Response tree depth handling | ❌ Not modeled |
@@ -22,7 +22,7 @@ Issue [#143](https://github.com/mendixlabs/mxcli/issues/143) requests importing 
 
 1. **Parameter entities** — for each action parameter with a complex type (non-primitive), a non-persistent entity (NPE) or external entity must exist in the domain model
 2. **Return type entity** — if the action returns a complex type, the corresponding entity must exist
-3. **The microflow** — with `CALL EXTERNAL ACTION` wired up with parameter mappings
+3. **The microflow** — with `call external action` wired up with parameter mappings
 
 ### Type classification
 
@@ -30,10 +30,10 @@ OData `$metadata` defines several type kinds that map differently to Mendix:
 
 | OData type | Mendix equivalent | Example |
 |------------|-------------------|---------|
-| `Edm.String`, `Edm.Int32`, etc. | Primitive attribute types | `Edm.String` → `String(200)` |
+| `Edm.String`, `Edm.Int32`, etc. | Primitive attribute types | `Edm.String` → `string(200)` |
 | Entity type (has entity set) | External entity | `TripPin.Person` → external entity |
 | Complex type (no entity set) | Non-persistent entity | `TripPin.City` → NPE with `CityName`, `Region` |
-| `Collection(Namespace.Type)` | List of entity | `Collection(TripPin.Trip)` → list parameter |
+| `collection(Namespace.Type)` | List of entity | `collection(TripPin.Trip)` → list parameter |
 | Enum type | Enumeration | `TripPin.PersonGender` → enumeration |
 
 ### Response tree depth (key complexity)
@@ -71,7 +71,7 @@ This is controlled in the BSON by the `VariableDataType` field on `CallExternalA
 - A primitive (`Edm.String`) — no entity needed
 - A qualified entity type (`Namespace.Customer`) — needs external entity
 - A qualified complex type (`Namespace.Address`) — needs NPE
-- A collection (`Collection(Namespace.Item)`) — needs entity + list parameter type
+- A collection (`collection(Namespace.Item)`) — needs entity + list parameter type
 - An enum (`Namespace.Status`) — needs enumeration
 
 Resolution requires looking up whether a type name refers to an entity type (has entity set), complex type, or enum type in the schema.
@@ -88,8 +88,8 @@ Walk navigation properties of the return type, recursively create NPEs/external 
 
 **Option C: User-controlled depth**
 ```sql
-CREATE EXTERNAL ACTIONS FROM Module.Service DEPTH 1;  -- top-level only
-CREATE EXTERNAL ACTIONS FROM Module.Service DEPTH 2;  -- include direct associations
+create external actions from Module.Service depth 1;  -- top-level only
+create external actions from Module.Service depth 2;  -- include direct associations
 ```
 
 **Recommendation:** Start with Option A, document that users can add depth manually. Investigate Studio Pro's BSON to understand the exact storage before implementing deeper options.
@@ -107,16 +107,16 @@ Current parser/writer for `CallExternalAction` may be missing fields that Studio
 ```sql
 -- Create NPEs and enumerations for all action parameter/return types
 -- that don't already exist as entities in the project
-CREATE EXTERNAL ACTIONS FROM Module.Service;
+create external actions from Module.Service;
 
 -- Filter to specific actions
-CREATE EXTERNAL ACTIONS FROM Module.Service ACTIONS (GetTrips, CreateTrip);
+create external actions from Module.Service actions (GetTrips, CreateTrip);
 
 -- Into a different module
-CREATE EXTERNAL ACTIONS FROM Module.Service INTO Integration;
+create external actions from Module.Service into Integration;
 
 -- Idempotent
-CREATE OR MODIFY EXTERNAL ACTIONS FROM Module.Service;
+create or modify external actions from Module.Service;
 ```
 
 This would:
@@ -133,32 +133,32 @@ It would **not** generate microflows — that's the user's job (or a Phase 2 fea
 
 ```sql
 -- Generate stub microflows that call each action
-CREATE EXTERNAL ACTION MICROFLOWS FROM Module.Service;
+create external action microflows from Module.Service;
 ```
 
 ### Phase 3: DESCRIBE FORMAT mdl for actions (future)
 
 ```sql
 -- Generate a complete MDL script for calling an action
-DESCRIBE CONTRACT ACTION Module.Service.GetTrips FORMAT mdl;
+describe contract action Module.Service.GetTrips format mdl;
 ```
 
 Would output something like:
 
 ```sql
 -- Required NPE for return type
-CREATE NON-PERSISTENT ENTITY Module.Trip (
-    TripId: Long,
-    Name: String(200),
-    Description: String(500)
+create non-persistent entity Module.Trip (
+    TripId: long,
+    Name: string(200),
+    description: string(500)
 );
 
 -- Microflow to call the action
-CREATE MICROFLOW Module.ACT_GetTrips($PersonId: String) RETURNS List of Module.Trip
-BEGIN
-    $Result = CALL EXTERNAL ACTION Module.Service.GetTrips(personId = $PersonId);
-    RETURN $Result;
-END;
+create microflow Module.ACT_GetTrips($PersonId: string) returns list of Module.Trip
+begin
+    $Result = call external action Module.Service.GetTrips(personId = $PersonId);
+    return $Result;
+end;
 ```
 
 ## Investigation Required Before Implementation
@@ -172,19 +172,19 @@ Before coding, these questions need answers from Studio Pro reference examples:
    - How bound actions differ in storage
 3. **Inspect the NPEs** that Studio Pro creates for complex types:
    - Are they plain `DomainModels$EntityImpl` with `Persistable: false`?
-   - Do they have a special `Source` field (like external entities have `Rest$ODataRemoteEntitySource`)?
+   - Do they have a special `source` field (like external entities have `rest$ODataRemoteEntitySource`)?
    - How are associations between NPEs and external entities stored?
 4. **Inspect enumerations** from OData:
-   - Do they use `Rest$ODataRemoteEnumerationSource`?
+   - Do they use `rest$ODataRemoteEnumerationSource`?
    - How are they linked back to the consumed service?
 
 ## Implementation Order
 
 1. **Parse complex types** from `$metadata` (`sdk/mpr/edmx.go`)
 2. **Type resolver** — given a qualified type name, determine if it's entity/complex/enum/primitive
-3. **Phase 1 executor** — `CREATE EXTERNAL ACTIONS FROM` creates NPEs, enums, external entities
+3. **Phase 1 executor** — `create external actions from` creates NPEs, enums, external entities
 4. **BSON investigation** — Studio Pro reference project for CallExternalAction fields
-5. **Phase 2** — `DESCRIBE CONTRACT ACTION ... FORMAT mdl` generates complete MDL
+5. **Phase 2** — `describe contract action ... format mdl` generates complete MDL
 6. **Phase 3** — microflow generation
 
 ## Related Files

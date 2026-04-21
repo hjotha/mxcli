@@ -33,7 +33,7 @@ Output: names of all workflows in the project. Supported types: `page`, `microfl
 mxcli bson dump -p app.mpr --type workflow --object "Module.MyWorkflow"
 ```
 
-This shows the complete BSON tree with `$Type`, `$ID`, nested objects, and arrays. Use this output to understand which fields exist and how they're structured.
+This shows the complete BSON tree with `$type`, `$ID`, nested objects, and arrays. Use this output to understand which fields exist and how they're structured.
 
 **Dump as NDSL (normalized DSL) for a cleaner view:**
 
@@ -43,7 +43,7 @@ mxcli bson dump -p app.mpr --type workflow --object "Module.MyWorkflow" --format
 
 NDSL renders the BSON as a structured text format that's easier to scan: type headers, alphabetized fields, array markers. Useful for sharing with others or feeding to an LLM.
 
-**When to use Python instead:** Only if you need to scan across ALL documents in a project (e.g., collecting every `$Type` and its fields) or if the type isn't supported by `bson dump`. See the Python script in `.claude/skills/debug-bson.md`.
+**When to use Python instead:** Only if you need to scan across ALL documents in a project (e.g., collecting every `$type` and its fields) or if the type isn't supported by `bson dump`. See the Python script in `.claude/skills/debug-bson.md`.
 
 ### Stage 2 -- Compare against a known-good baseline
 
@@ -85,7 +85,7 @@ mxcli bson discover -p app.mpr --type workflow
 mxcli bson discover -p app.mpr --type workflow --object "Module.MyWorkflow"
 ```
 
-Output shows per-`$Type` coverage:
+Output shows per-`$type` coverage:
 - How many instances exist
 - Each field's status: covered (appears in MDL output), uncovered, or default value
 - Sample values for uncovered fields
@@ -117,10 +117,10 @@ The TUI is best for exploratory work -- when you're browsing multiple documents 
 After writing BSON, always validate:
 
 ```bash
-# If mx is cached from setup
+# if mx is cached from setup
 ~/.mxcli/mxbuild/*/modeler/mx check app.mpr
 
-# Or via mxcli
+# or via mxcli
 mxcli docker check -p app.mpr
 ```
 
@@ -132,7 +132,7 @@ mxcli docker check -p app.mpr
 
 **Error:** `System.InvalidOperationException: Sequence contains no matching element` at `MprProperty..ctor`
 
-**Cause:** Your BSON contains a field that doesn't exist on the `$Type`. Studio Pro's type cache crashes on unrecognized fields.
+**Cause:** Your BSON contains a field that doesn't exist on the `$type`. Studio Pro's type cache crashes on unrecognized fields.
 
 **Diagnosis with Python** (best tool for this case -- you need to diff ALL fields across all types):
 
@@ -144,10 +144,10 @@ type_props = defaultdict(set)
 
 def walk_bson(obj, tp):
     if isinstance(obj, dict):
-        t = obj.get("$Type", "")
+        t = obj.get("$type", "")
         if t:
             for k in obj.keys():
-                if k not in ("$Type", "$ID"):
+                if k not in ("$type", "$ID"):
                     tp[t].add(k)
         for v in obj.values():
             walk_bson(v, tp)
@@ -163,7 +163,7 @@ for root, dirs, files in os.walk("broken-project/mprcontents"):
                 walk_bson(bson.decode(fh.read()), type_props)
 
 # Collect from a known-good project the same way (baseline_props)
-# Then compare:
+# then compare:
 for t, props in type_props.items():
     if t in baseline_props:
         extra = props - baseline_props[t]
@@ -180,7 +180,7 @@ for t, props in type_props.items():
 **Use `bson compare` to find the difference:**
 
 ```bash
-# Create the same element in Studio Pro, then compare
+# create the same element in Studio Pro, then compare
 mxcli bson compare -p studio-pro.mpr -p2 mdl-generated.mpr --type page MyPage
 ```
 
@@ -239,11 +239,11 @@ What are you trying to do?
 ## Reflection data reference
 
 The Mendix type definitions live in `reference/mendixmodellib/reflection-data/`. Each JSON file defines one metamodel domain with:
-- Type names and their storage names (`$Type` values)
+- Type names and their storage names (`$type` values)
 - Properties with types, defaults, and whether they're required
 - Inheritance hierarchy
 
-Check these when you're unsure whether a field belongs on a type. For example, `DomainModels.json` shows that `ParentConnection` exists on `DomainModels$Association` but not on `DomainModels$CrossAssociation`.
+Check these when you're unsure whether a field belongs on a type. For example, `DomainModels.json` shows that `ParentConnection` exists on `DomainModels$association` but not on `DomainModels$CrossAssociation`.
 
 The generated Go metamodel in `generated/metamodel/types.go` mirrors these definitions and is used by `bson discover` for field coverage analysis.
 

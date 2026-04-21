@@ -86,7 +86,7 @@ func describeAgentEditorModel(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", m.Documentation)
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE MODEL %s (\n", qualifiedName)
+	fmt.Fprintf(ctx.Output, "create model %s (\n", qualifiedName)
 
 	// Emit properties in stable order. User-set properties (Provider, Key)
 	// come first; Portal-populated metadata comes last and only if non-empty.
@@ -149,7 +149,7 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 	if s.Key != nil {
 		keyRef, err = resolveConstantRef(ctx, *s.Key)
 		if err != nil {
-			return fmt.Errorf("CREATE MODEL %s: %w", s.Name, err)
+			return fmt.Errorf("create model %s: %w", s.Name, err)
 		}
 	}
 

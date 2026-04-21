@@ -85,7 +85,7 @@ func describeAgentEditorAgent(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", a.Documentation)
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE AGENT %s (\n", qualifiedName)
+	fmt.Fprintf(ctx.Output, "create agent %s (\n", qualifiedName)
 
 	// Build property lines. User-set properties are emitted in a stable
 	// order; empty values are omitted.
@@ -170,12 +170,12 @@ func describeAgentEditorAgent(ctx *ExecContext, name ast.QualifiedName) error {
 // emitToolBlock writes one TOOL or MCP SERVICE block for the agent body.
 func emitToolBlock(ctx *ExecContext, t agenteditor.AgentTool) {
 	switch t.ToolType {
-	case "MCP":
+	case "mcp":
 		if t.Document == nil {
 			// malformed — skip
 			return
 		}
-		fmt.Fprintf(ctx.Output, "  MCP SERVICE %s {\n", t.Document.QualifiedName)
+		fmt.Fprintf(ctx.Output, "  mcp service %s {\n", t.Document.QualifiedName)
 		fmt.Fprintf(ctx.Output, "    Enabled: %t\n", t.Enabled)
 		if t.Description != "" {
 			fmt.Fprintf(ctx.Output, "    Description: '%s'\n", escapeSQLString(t.Description))
@@ -187,7 +187,7 @@ func emitToolBlock(ctx *ExecContext, t agenteditor.AgentTool) {
 		if name == "" {
 			name = "Tool_" + strings.ReplaceAll(t.ID, "-", "")[:8]
 		}
-		fmt.Fprintf(ctx.Output, "  TOOL %s {\n", name)
+		fmt.Fprintf(ctx.Output, "  tool %s {\n", name)
 		if t.ToolType != "" {
 			fmt.Fprintf(ctx.Output, "    ToolType: %s,\n", t.ToolType)
 		}
@@ -211,7 +211,7 @@ func emitKBBlock(ctx *ExecContext, kb agenteditor.AgentKBTool) {
 	if name == "" {
 		name = "KB_" + strings.ReplaceAll(kb.ID, "-", "")[:8]
 	}
-	fmt.Fprintf(ctx.Output, "  KNOWLEDGE BASE %s {\n", name)
+	fmt.Fprintf(ctx.Output, "  knowledge base %s {\n", name)
 	if kb.Document != nil && kb.Document.QualifiedName != "" {
 		fmt.Fprintf(ctx.Output, "    Source: %s,\n", kb.Document.QualifiedName)
 	}

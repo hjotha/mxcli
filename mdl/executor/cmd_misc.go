@@ -55,201 +55,201 @@ func execHelp(ctx *ExecContext) error {
 	help := `MDL Commands:
 
 Connection:
-  CONNECT LOCAL '<path>'      Connect to local .mpr file
-  DISCONNECT                  Disconnect from project
-  STATUS                      Show connection status
+  connect local '<path>'      Connect to local .mpr file
+  disconnect                  Disconnect from project
+  status                      Show connection status
 
 Domain Model - Enumerations:
   /** Documentation */
-  CREATE ENUMERATION Module.Name (
+  create enumeration Module.Name (
     VALUE1 'Caption1',
     VALUE2 'Caption2'
   );
 
-  DROP ENUMERATION Module.Name;
-  SHOW ENUMERATIONS [IN Module];
-  DESCRIBE ENUMERATION Module.Name;
+  drop enumeration Module.Name;
+  show enumerations [in Module];
+  describe enumeration Module.Name;
 
 Domain Model - Entities:
   /** Entity documentation */
   @Position(x, y)
-  CREATE [OR MODIFY] PERSISTENT|NON-PERSISTENT ENTITY Module.Name (
+  create [or modify] persistent|non-persistent entity Module.Name (
     /** Attribute documentation */
-    AttrName: Type [NOT NULL [ERROR 'msg']] [UNIQUE [ERROR 'msg']] [DEFAULT value]
+    AttrName: Type [not null [error 'msg']] [unique [error 'msg']] [default value]
   )
-  [INDEX (col1, col2 DESC)];
+  [index (col1, col2 desc)];
   /
 
-  CREATE VIEW ENTITY Module.Name (
+  create view entity Module.Name (
     AttrName: Type
-  ) AS
-    SELECT ... FROM ... WHERE ...;
+  ) as
+    select ... from ... where ...;
   /
 
-  DROP ENTITY Module.Name;
-  SHOW ENTITIES [IN Module];
-  DESCRIBE ENTITY Module.Name;
+  drop entity Module.Name;
+  show entities [in Module];
+  describe entity Module.Name;
 
 Domain Model - Associations:
-  CREATE ASSOCIATION Module.Name
-    FROM Module.Parent
-    TO Module.Child
-    TYPE Reference|ReferenceSet
-    [OWNER Default|Both|Parent|Child]
-    [DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES|DELETE_CASCADE];
+  create association Module.Name
+    from Module.Parent
+    to Module.Child
+    type Reference|ReferenceSet
+    [owner Default|Both|Parent|Child]
+    [delete_behavior DELETE_BUT_KEEP_REFERENCES|DELETE_CASCADE];
   /
 
-  DROP ASSOCIATION Module.Name;
-  SHOW ASSOCIATIONS [IN Module];
-  DESCRIBE ASSOCIATION Module.Name;
+  drop association Module.Name;
+  show associations [in Module];
+  describe association Module.Name;
 
 Microflows:
   /** Documentation */
-  CREATE MICROFLOW Module.Name (
+  create microflow Module.Name (
     $Param1: Type,
     $Param2: Module.Entity
   )
-  RETURNS ReturnType AS $ReturnVar
-  [FOLDER 'folder/path']
-  BEGIN
-    DECLARE $Var Type = value;           -- Declare primitive variable
-    DECLARE $Entity AS Module.Entity;    -- Declare entity variable
-    SET $Var = expression;               -- Change variable (must be declared)
-    IF condition THEN ... END IF;        -- Conditional
-    LOOP $Item IN $List BEGIN ... END LOOP;
-    $Result = CREATE Module.Entity (attr = value);
-    CHANGE $Object (attr = value);
-    COMMIT $Object [WITH EVENTS] [REFRESH];
-    RETRIEVE $List FROM Module.Entity WHERE condition;
-    $Var = CALL MICROFLOW Module.Name($param = value);
-    $Var = CALL JAVA ACTION Module.Name($param = value);
-    VALIDATION FEEDBACK $Var/Attr MESSAGE 'Error';  -- Show validation error
-    CLOSE PAGE [n];                      -- Close page(s)
-    LOG INFO|WARNING|ERROR [NODE 'name'] 'message';
+  returns ReturnType as $ReturnVar
+  [folder 'folder/path']
+  begin
+    declare $Var Type = value;           -- Declare primitive variable
+    declare $Entity as Module.Entity;    -- Declare entity variable
+    set $Var = expression;               -- Change variable (must be declared)
+    if condition then ... end if;        -- Conditional
+    loop $Item in $List begin ... end loop;
+    $Result = create Module.Entity (attr = value);
+    change $Object (attr = value);
+    commit $Object [with events] [refresh];
+    retrieve $List from Module.Entity where condition;
+    $Var = call microflow Module.Name($param = value);
+    $Var = call java action Module.Name($param = value);
+    validation feedback $Var/Attr message 'Error';  -- Show validation error
+    close page [n];                      -- Close page(s)
+    log info|warning|error [node 'name'] 'message';
     @annotation 'text'                   -- Visual annotation on next activity
     @caption 'text'                      -- Custom caption for activity
     @color Green                         -- Background color for activity
     @position(100, 200)                  -- Canvas position for activity
-    RETURN $ReturnVar;
-  END;
+    return $ReturnVar;
+  end;
   /
 
-  DROP MICROFLOW Module.Name;
-  SHOW MICROFLOWS [IN Module];
-  SHOW NANOFLOWS [IN Module];
-  DESCRIBE MICROFLOW Module.Name;
+  drop microflow Module.Name;
+  show microflows [in Module];
+  show nanoflows [in Module];
+  describe microflow Module.Name;
 
 Pages, Snippets, Layouts, Java Actions:
-  CREATE [OR REPLACE] PAGE Module.Name (...) { ... };
-  DROP PAGE Module.Name;
-  CREATE [OR REPLACE] SNIPPET Module.Name (...) { ... };
-  DROP SNIPPET Module.Name;
-  SHOW PAGES [IN Module];
-  SHOW SNIPPETS [IN Module];
-  SHOW LAYOUTS [IN Module];
-  SHOW JAVA ACTIONS [IN Module];
-  DESCRIBE PAGE Module.Name;
-  DESCRIBE SNIPPET Module.Name;
+  create [or replace] page Module.Name (...) { ... };
+  drop page Module.Name;
+  create [or replace] snippet Module.Name (...) { ... };
+  drop snippet Module.Name;
+  show pages [in Module];
+  show snippets [in Module];
+  show layouts [in Module];
+  show java actions [in Module];
+  describe page Module.Name;
+  describe snippet Module.Name;
 
-Widget Discovery and Bulk Updates (requires REFRESH CATALOG FULL):
-  *** EXPERIMENTAL: Untested proof-of-concept. Use DRY RUN first! ***
+Widget Discovery and Bulk Updates (requires refresh catalog full):
+  *** EXPERIMENTAL: Untested proof-of-concept. Use dry run first! ***
 
-  SHOW WIDGETS [WHERE condition] [IN Module];
-    WHERE conditions: WidgetType LIKE '%pattern%', Name = 'value'
+  show widgets [where condition] [in Module];
+    where conditions: WidgetType like '%pattern%', Name = 'value'
 
-  UPDATE WIDGETS
-    SET 'property' = value [, 'property' = value]
-    WHERE condition [AND condition]
-    [IN Module]
-    [DRY RUN];
+  update widgets
+    set 'property' = value [, 'property' = value]
+    where condition [and condition]
+    [in Module]
+    [dry run];
 
   Examples:
-    SHOW WIDGETS WHERE WidgetType LIKE '%combobox%';
-    UPDATE WIDGETS SET 'showLabel' = false WHERE WidgetType LIKE '%DataGrid%' DRY RUN;
+    show widgets where WidgetType like '%combobox%';
+    update widgets set 'showLabel' = false where WidgetType like '%DataGrid%' dry run;
 
-  Always backup your project before applying changes without DRY RUN.
+  Always backup your project before applying changes without dry RUN.
 
 Catalog Queries:
-  SHOW CATALOG TABLES;
-  SHOW CATALOG STATUS;             Show cache information
-  DESCRIBE CATALOG.tablename;      Show table columns and required mode
-  REFRESH CATALOG;                 Rebuild catalog (uses cache if valid)
-  REFRESH CATALOG FULL;            Full mode with activities/widgets/refs
-  REFRESH CATALOG FULL SOURCE;     Full + MDL source for full-text search
-  REFRESH CATALOG [FULL] FORCE;    Force rebuild (ignore cache)
-  REFRESH CATALOG [FULL] BACKGROUND; Build in background
-  SELECT columns FROM CATALOG.tablename
-    [WHERE condition]
-    [GROUP BY column [HAVING condition]]
-    [ORDER BY column [ASC|DESC]]
-    [LIMIT n] [OFFSET n];
+  show catalog tables;
+  show catalog status;             Show cache information
+  describe CATALOG.tablename;      Show table columns and required mode
+  refresh catalog;                 Rebuild catalog (uses cache if valid)
+  refresh catalog full;            Full mode with activities/widgets/refs
+  refresh catalog full source;     Full + MDL source for full-text search
+  refresh catalog [full] force;    Force rebuild (ignore cache)
+  refresh catalog [full] background; Build in background
+  select columns from CATALOG.tablename
+    [where condition]
+    [GROUP by column [having condition]]
+    [ORDER by column [asc|desc]]
+    [limit n] [offset n];
 
-  Tables: MODULES, ENTITIES, ATTRIBUTES, MICROFLOWS, NANOFLOWS, PAGES,
-          SNIPPETS, LAYOUTS, ENUMERATIONS, JAVA_ACTIONS, ACTIVITIES*,
-          WIDGETS*, XPATH_EXPRESSIONS, REFS*, PROJECTS, SNAPSHOTS,
-          OBJECTS, ODATA_CLIENTS, ODATA_SERVICES,
-          BUSINESS_EVENT_SERVICES, STRINGS*, SOURCE**
-  (* only populated with REFRESH CATALOG FULL)
-  (** only populated with REFRESH CATALOG FULL SOURCE)
+  Tables: modules, entities, attributes, microflows, nanoflows, pages,
+          snippets, layouts, enumerations, JAVA_ACTIONS, ACTIVITIES*,
+          widgets*, XPATH_EXPRESSIONS, REFS*, PROJECTS, SNAPSHOTS,
+          objects, ODATA_CLIENTS, ODATA_SERVICES,
+          BUSINESS_EVENT_SERVICES, STRINGS*, source**
+  (* only populated with refresh catalog full)
+  (** only populated with refresh catalog full source)
 
   Cache is stored in .mxcli/catalog.db next to the .mpr file.
 
-Code Search (requires REFRESH CATALOG FULL):
-  SHOW CALLERS OF Module.Microflow [TRANSITIVE];
-  SHOW CALLEES OF Module.Microflow [TRANSITIVE];
-  SHOW REFERENCES TO Module.Element;
-  SHOW IMPACT OF Module.Element;
-  SHOW CONTEXT OF Module.Element [DEPTH n];  -- Assemble context for LLM
+Code Search (requires refresh catalog full):
+  show callers of Module.Microflow [transitive];
+  show callees of Module.Microflow [transitive];
+  show references to Module.Element;
+  show impact of Module.Element;
+  show context of Module.Element [depth n];  -- Assemble context for LLM
 
 Security - Roles:
-  CREATE MODULE ROLE Module.Role [DESCRIPTION 'text'];
-  DROP MODULE ROLE Module.Role;
-  CREATE USER ROLE Name (Module.Role [, ...]) [MANAGE ALL ROLES];
-  ALTER USER ROLE Name ADD MODULE ROLES (Module.Role [, ...]);
-  ALTER USER ROLE Name REMOVE MODULE ROLES (Module.Role [, ...]);
-  DROP USER ROLE Name;
+  create module role Module.Role [description 'text'];
+  drop module role Module.Role;
+  create user role Name (Module.Role [, ...]) [manage all roles];
+  alter user role Name add module roles (Module.Role [, ...]);
+  alter user role Name remove module roles (Module.Role [, ...]);
+  drop user role Name;
 
 Security - Access Control:
-  GRANT EXECUTE ON MICROFLOW Module.Name TO Role [, Role...];
-  REVOKE EXECUTE ON MICROFLOW Module.Name FROM Role [, Role...];
-  GRANT VIEW ON PAGE Module.Name TO Role [, Role...];
-  REVOKE VIEW ON PAGE Module.Name FROM Role [, Role...];
-  GRANT Role ON Module.Entity (CREATE, DELETE, READ *, WRITE *) [WHERE 'xpath'];
-  REVOKE Role ON Module.Entity;
+  grant execute on microflow Module.Name to Role [, Role...];
+  revoke execute on microflow Module.Name from Role [, Role...];
+  grant view on page Module.Name to Role [, Role...];
+  revoke view on page Module.Name from Role [, Role...];
+  grant Role on Module.Entity (create, delete, read *, write *) [where 'xpath'];
+  revoke Role on Module.Entity;
 
 Security - Project Settings:
-  ALTER PROJECT SECURITY LEVEL OFF|PROTOTYPE|PRODUCTION;
-  ALTER PROJECT SECURITY DEMO USERS ON|OFF;
-  CREATE DEMO USER 'name' PASSWORD 'pass' (UserRole [, ...]);
-  DROP DEMO USER 'name';
+  alter project security level off|prototype|production;
+  alter project security demo users on|off;
+  create demo user 'name' password 'pass' (UserRole [, ...]);
+  drop demo user 'name';
 
 Security - Queries:
-  SHOW PROJECT SECURITY;
-  SHOW MODULE ROLES [IN Module];
-  SHOW USER ROLES;
-  SHOW DEMO USERS;
-  SHOW ACCESS ON MICROFLOW Module.Name;
-  SHOW ACCESS ON PAGE Module.Name;
-  SHOW ACCESS ON Module.Entity;
-  SHOW SECURITY MATRIX [IN Module];
-  DESCRIBE MODULE ROLE Module.Role;
-  DESCRIBE USER ROLE Name;
-  DESCRIBE DEMO USER 'name';
+  show project security;
+  show module roles [in Module];
+  show user roles;
+  show demo users;
+  show access on microflow Module.Name;
+  show access on page Module.Name;
+  show access on Module.Entity;
+  show security matrix [in Module];
+  describe module role Module.Role;
+  describe user role Name;
+  describe demo user 'name';
 
 Navigation:
-  SHOW NAVIGATION;
-  SHOW NAVIGATION MENU [Profile];
-  SHOW NAVIGATION HOMES;
-  DESCRIBE NAVIGATION Profile;
-  CREATE OR REPLACE NAVIGATION Profile
-    HOME PAGE Module.Page
-    [HOME PAGE Module.Page FOR Module.Role]
-    [LOGIN PAGE Module.Page]
-    [NOT FOUND PAGE Module.Page]
-    [MENU (
-      MENU ITEM 'Caption' PAGE Module.Page;
-      MENU 'SubMenu' (
-        MENU ITEM 'Child' MICROFLOW Module.Flow;
+  show navigation;
+  show navigation menu [Profile];
+  show navigation homes;
+  describe navigation Profile;
+  create or replace navigation Profile
+    home page Module.Page
+    [home page Module.Page for Module.Role]
+    [login page Module.Page]
+    [not found page Module.Page]
+    [menu (
+      menu item 'Caption' page Module.Page;
+      menu 'SubMenu' (
+        menu item 'Child' microflow Module.Flow;
       );
     )];
 
@@ -259,23 +259,23 @@ Data Types:
   Enumeration(Module.EnumName)
 
 Scripts:
-  EXECUTE SCRIPT 'path/to/script.mdl';
+  execute script 'path/to/script.mdl';
 
 Modules:
-  CREATE MODULE Name;
-  DROP MODULE Name;                -- Cascade-deletes all contents
-  SHOW MODULES;
+  create module Name;
+  drop module Name;                -- Cascade-deletes all contents
+  show modules;
 
-External SQL:
-  SQL CONNECT <driver> '<dsn>' AS <alias>;
-  SQL DISCONNECT <alias>;
-  SQL CONNECTIONS;
-  SQL <alias> SHOW TABLES;
-  SQL <alias> SHOW VIEWS;
-  SQL <alias> SHOW FUNCTIONS;
-  SQL <alias> DESCRIBE <table>;
-  SQL <alias> SELECT * FROM users LIMIT 10;
-  SQL <alias> GENERATE CONNECTOR INTO <module> [TABLES (...)] [VIEWS (...)] [EXEC];
+External sql:
+  sql connect <driver> '<dsn>' as <alias>;
+  sql disconnect <alias>;
+  sql connections;
+  sql <alias> show tables;
+  sql <alias> show views;
+  sql <alias> show FUNCTIONS;
+  sql <alias> describe <table>;
+  sql <alias> select * from users limit 10;
+  sql <alias> generate connector into <module> [tables (...)] [views (...)] [exec];
 
   Supported drivers: postgres (pg), oracle (ora), sqlserver (mssql)
   DSN examples:
@@ -284,16 +284,16 @@ External SQL:
     'sqlserver://sa:pass@localhost:1433?database=mydb&encrypt=disable'
 
 Import from External DB into Mendix App DB:
-  IMPORT FROM <alias> QUERY '<sql>'
-    INTO Module.Entity
-    MAP (source_col AS TargetAttr [, ...])
-    [LINK (source_col TO AssocName ON ChildAttr [, ...])]
-    [BATCH n]
-    [LIMIT n];
+  import from <alias> query '<sql>'
+    into Module.Entity
+    map (source_col as TargetAttr [, ...])
+    [link (source_col to AssocName on ChildAttr [, ...])]
+    [batch n]
+    [limit n];
 
-  LINK maps source columns to associations (Reference type only):
-    ON ChildAttr  — lookup child entity by attribute value
-    (no ON)       — source value is a raw Mendix object ID
+  link maps source columns to associations (Reference type only):
+    on ChildAttr  — lookup child entity by attribute value
+    (no on)       — source value is a raw Mendix object ID
 
   Reads rows from an external database and inserts them into the
   Mendix app's PostgreSQL database. Auto-connects using project settings.
@@ -305,19 +305,19 @@ Import from External DB into Mendix App DB:
     MXCLI_DB_NAME, MXCLI_DB_USER, MXCLI_DB_PASSWORD
 
 Image Collections:
-  CREATE IMAGE COLLECTION Module.Name
-    [EXPORT LEVEL 'Hidden'|'Public']
-    [COMMENT 'description']
-    [(IMAGE Name FROM FILE 'path', ...)];
+  create image collection Module.Name
+    [export level 'Hidden'|'Public']
+    [comment 'description']
+    [(image Name from file 'path', ...)];
   /
 
-  DROP IMAGE COLLECTION Module.Name;
-  SHOW IMAGE COLLECTION [IN Module];
-  DESCRIBE IMAGE COLLECTION Module.Name;
+  drop image collection Module.Name;
+  show image collection [in Module];
+  describe image collection Module.Name;
 
 Other:
-  COMMIT [MESSAGE 'message'];
-  SET key = value;
+  commit [message 'message'];
+  set key = value;
   HELP or ?
   EXIT or QUIT
 

@@ -58,6 +58,6 @@ func TestDescribeRestClient_Mock(t *testing.T) {
 	assertNoError(t, describeRestClient(ctx, ast.QualifiedName{Module: "MyModule", Name: "WeatherAPI"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE REST CLIENT")
+	assertContainsStr(t, out, "create rest client")
 	assertContainsStr(t, out, "MyModule.WeatherAPI")
 }

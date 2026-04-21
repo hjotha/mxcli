@@ -380,7 +380,7 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 		// SHOW DESIGN PROPERTIES [FOR widgetType]
 		stmt := &ast.ShowDesignPropertiesStmt{}
 		if wtk := ctx.WidgetTypeKeyword(); wtk != nil {
-			stmt.WidgetType = strings.ToUpper(wtk.GetText())
+			stmt.WidgetType = strings.ToLower(wtk.GetText())
 		}
 		b.statements = append(b.statements, stmt)
 	} else if ctx.STRUCTURE() != nil {

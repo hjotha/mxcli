@@ -61,7 +61,7 @@ func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("fragment", name.Name)
 	}
 
-	fmt.Fprintf(ctx.Output, "DEFINE FRAGMENT %s AS {\n", frag.Name)
+	fmt.Fprintf(ctx.Output, "define fragment %s as {\n", frag.Name)
 	for _, w := range frag.Widgets {
 		outputASTWidgetMDL(ctx.Output, w, 1)
 	}
@@ -84,7 +84,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 	var rawWidgets []rawWidget
 
 	switch s.ContainerType {
-	case "PAGE":
+	case "page":
 		allPages, err := ctx.Backend.ListPages()
 		if err != nil {
 			return mdlerrors.NewBackend("list pages", err)
@@ -103,7 +103,7 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 		}
 		rawWidgets = getPageWidgetsFromRaw(ctx, foundPage.ID)
 
-	case "SNIPPET":
+	case "snippet":
 		allSnippets, err := ctx.Backend.ListSnippets()
 		if err != nil {
 			return mdlerrors.NewBackend("list snippets", err)
@@ -246,15 +246,15 @@ func formatDataSourceV3(ds *ast.DataSourceV3) string {
 	case "parameter":
 		return ds.Reference
 	case "database":
-		return "DATABASE " + ds.Reference
+		return "database " + ds.Reference
 	case "microflow":
-		return "MICROFLOW " + ds.Reference
+		return "microflow " + ds.Reference
 	case "nanoflow":
-		return "NANOFLOW " + ds.Reference
+		return "nanoflow " + ds.Reference
 	case "association":
-		return "ASSOCIATION " + ds.Reference
+		return "association " + ds.Reference
 	case "selection":
-		return "SELECTION " + ds.Reference
+		return "selection " + ds.Reference
 	default:
 		return ds.Reference
 	}
@@ -264,28 +264,28 @@ func formatActionV3(a *ast.ActionV3) string {
 	switch a.Type {
 	case "save":
 		if a.ClosePage {
-			return "SAVE_CHANGES CLOSE_PAGE"
+			return "save_changes close_page"
 		}
-		return "SAVE_CHANGES"
+		return "save_changes"
 	case "cancel":
 		if a.ClosePage {
-			return "CANCEL_CHANGES CLOSE_PAGE"
+			return "cancel_changes close_page"
 		}
-		return "CANCEL_CHANGES"
+		return "cancel_changes"
 	case "close":
-		return "CLOSE_PAGE"
+		return "close_page"
 	case "delete":
-		return "DELETE_OBJECT"
+		return "delete_object"
 	case "showPage":
-		return "SHOW_PAGE " + a.Target
+		return "show_page " + a.Target
 	case "microflow":
-		return "MICROFLOW " + a.Target
+		return "microflow " + a.Target
 	case "nanoflow":
-		return "NANOFLOW " + a.Target
+		return "nanoflow " + a.Target
 	case "signOut":
-		return "SIGN_OUT"
+		return "sign_out"
 	case "completeTask":
-		return "COMPLETE_TASK '" + strings.ReplaceAll(a.OutcomeValue, "'", "''") + "'"
+		return "complete_task '" + strings.ReplaceAll(a.OutcomeValue, "'", "''") + "'"
 	default:
 		return a.Type
 	}

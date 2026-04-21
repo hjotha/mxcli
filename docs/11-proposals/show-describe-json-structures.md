@@ -22,16 +22,16 @@ JSON Structures define the schema for JSON data used in integrations. They conta
 ```
 JsonStructures$JsonStructure:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
-  JsonSnippet: string (raw JSON example)
+  JsonSnippet: string (raw json example)
   Elements: []*JsonStructures$JsonElement
-    - Path: string (e.g., "root", "root/name", "root/items")
+    - path: string (e.g., "root", "root/name", "root/items")
     - ExposedName: string
     - ExposedItemName: string
-    - PrimitiveType: string ("String", "Integer", "Boolean", "Decimal", "DateTime", "Unknown")
-    - ElementType: string ("Object", "Array", "Value", "Choice")
+    - PrimitiveType: string ("string", "integer", "boolean", "decimal", "datetime", "Unknown")
+    - ElementType: string ("object", "Array", "value", "Choice")
     - MinOccurs: int
     - MaxOccurs: int
     - Nillable: bool
@@ -47,7 +47,7 @@ JsonStructures$JsonStructure:
 ### SHOW JSON STRUCTURES
 
 ```
-SHOW JSON STRUCTURES [IN Module]
+show json structures [in module]
 ```
 
 | Qualified Name | Module | Name | Elements | Source |
@@ -58,7 +58,7 @@ Where "Elements" is the count of top-level elements, and "Source" indicates if i
 ### DESCRIBE JSON STRUCTURE
 
 ```
-DESCRIBE JSON STRUCTURE Module.Name
+describe json structure Module.Name
 ```
 
 Output format:
@@ -67,17 +67,17 @@ Output format:
 /**
  * Customer API response schema
  */
-JSON STRUCTURE MyModule.CustomerResponse
+json structure MyModule.CustomerResponse
 {
-  root: Object
-    id: Integer
-    name: String
-    email: String
+  root: object
+    id: integer
+    name: string
+    email: string
     addresses: Array
-      street: String
-      city: String
-      zipCode: String
-    active: Boolean
+      street: string
+      city: string
+      zipCode: string
+    active: boolean
 };
 
 -- JSON Snippet:
@@ -101,7 +101,7 @@ The element tree is rendered with indentation to show nesting. The original JSON
 type JsonStructure struct {
     ContainerID model.ID
     Name        string
-    Documentation string
+    documentation string
     JsonSnippet string
     Elements    []*JsonElement
     Excluded    bool
@@ -109,10 +109,10 @@ type JsonStructure struct {
 }
 
 type JsonElement struct {
-    Path          string
+    path          string
     ExposedName   string
     PrimitiveType string
-    ElementType   string // "Object", "Array", "Value"
+    ElementType   string // "object", "Array", "value"
     MinOccurs     int
     MaxOccurs     int
     Children      []*JsonElement
@@ -133,7 +133,7 @@ func (r *Reader) ListJsonStructures() ([]*model.JsonStructure, error)
 
 Standard pattern: `ShowJsonStructures`, `DescribeJsonStructure`.
 
-Grammar tokens: `JSON`, `STRUCTURE`, `STRUCTURES`.
+Grammar tokens: `json`, `structure`, `structures`.
 
 ### 5. Add Autocomplete
 

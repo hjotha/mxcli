@@ -5,62 +5,62 @@
 -- PREREQUISITES
 -- ############################################################################
 
-CREATE PERSISTENT ENTITY TestModule.DeliveryContext (
-  OrderID: String(50),
-  Status: String(100)
+create persistent entity TestModule.DeliveryContext (
+  OrderID: string(50),
+  status: string(100)
 );
 
-CREATE MICROFLOW TestModule.ACT_Stub ($DeliveryContext: TestModule.DeliveryContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow TestModule.ACT_Stub ($DeliveryContext: TestModule.DeliveryContext)
+begin
+  @position(200,200) return;
+end;
 /
 
-CREATE WORKFLOW TestModule.WF_DeliveryDelay
-  PARAMETER $WorkflowContext: TestModule.DeliveryContext
-  DISPLAY 'Delivery Delay'
-BEGIN
-  CALL MICROFLOW TestModule.ACT_Stub;
-END WORKFLOW;
+create workflow TestModule.WF_DeliveryDelay
+  parameter $WorkflowContext: TestModule.DeliveryContext
+  display 'Delivery Delay'
+begin
+  call microflow TestModule.ACT_Stub;
+end workflow;
 /
 
 -- ############################################################################
 -- MICROFLOW WITH ALL WORKFLOW ACTION TYPES
 -- ############################################################################
 
-CREATE MICROFLOW TestModule.MF_WorkflowActions (
-  $Workflow: System.Workflow,
+create microflow TestModule.MF_WorkflowActions (
+  $workflow: System.Workflow,
   $ContextObj: TestModule.DeliveryContext,
   $UserTask: System.WorkflowUserTask
 )
-RETURNS Nothing
-BEGIN
+returns nothing
+begin
   -- Priority 1: Get workflow data
-  $Issue = GET WORKFLOW DATA $Workflow AS TestModule.WF_DeliveryDelay;
+  $Issue = get workflow data $workflow as TestModule.WF_DeliveryDelay;
 
   -- Priority 2: Call workflow
-  $WfInstance = CALL WORKFLOW TestModule.WF_DeliveryDelay (WorkflowContext = $ContextObj);
+  $WfInstance = call workflow TestModule.WF_DeliveryDelay (WorkflowContext = $ContextObj);
 
   -- Priority 3: Get workflows
-  $Workflows = GET WORKFLOWS FOR $ContextObj;
+  $workflows = get workflows for $ContextObj;
 
   -- Get activity records
-  $Records = GET WORKFLOW ACTIVITY RECORDS $Workflow;
+  $records = get workflow activity records $workflow;
 
   -- Set task outcome
-  SET TASK OUTCOME $UserTask 'Approve';
+  set task outcome $UserTask 'Approve';
 
   -- Open user task
-  OPEN USER TASK $UserTask;
+  open user task $UserTask;
 
   -- Workflow operations
-  WORKFLOW OPERATION PAUSE $Workflow;
-  WORKFLOW OPERATION CONTINUE $Workflow;
-  WORKFLOW OPERATION ABORT $Workflow REASON 'No longer needed';
-  WORKFLOW OPERATION RESTART $Workflow;
-  WORKFLOW OPERATION RETRY $Workflow;
-  WORKFLOW OPERATION UNPAUSE $Workflow;
+  workflow operation pause $workflow;
+  workflow operation continue $workflow;
+  workflow operation abort $workflow reason 'No longer needed';
+  workflow operation restart $workflow;
+  workflow operation retry $workflow;
+  workflow operation unpause $workflow;
 
   -- Open workflow admin page
-  OPEN WORKFLOW $Workflow;
-END;
+  open workflow $workflow;
+end;

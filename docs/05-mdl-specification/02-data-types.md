@@ -20,8 +20,8 @@ Variable-length text data.
 
 **Syntax:**
 ```sql
-String              -- Default length (200)
-String(n)           -- Specific length (1-unlimited)
+string              -- Default length (200)
+string(n)           -- Specific length (1-unlimited)
 ```
 
 **Parameters:**
@@ -29,15 +29,15 @@ String(n)           -- Specific length (1-unlimited)
 
 **Examples:**
 ```sql
-Name: String(200)
-Description: String(unlimited)
-Code: String(10)
+Name: string(200)
+description: string(unlimited)
+Code: string(10)
 ```
 
 **Default value format:**
 ```sql
-DEFAULT 'text value'
-DEFAULT ''
+default 'text value'
+default ''
 ```
 
 ---
@@ -48,16 +48,16 @@ DEFAULT ''
 
 **Syntax:**
 ```sql
-Integer
+integer
 ```
 
 **Range:** -2,147,483,648 to 2,147,483,647
 
 **Examples:**
 ```sql
-Quantity: Integer
-Age: Integer DEFAULT 0
-Priority: Integer NOT NULL DEFAULT 1
+Quantity: integer
+Age: integer default 0
+Priority: integer not null default 1
 ```
 
 ---
@@ -68,15 +68,15 @@ Priority: Integer NOT NULL DEFAULT 1
 
 **Syntax:**
 ```sql
-Long
+long
 ```
 
 **Range:** -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
 
 **Examples:**
 ```sql
-FileSize: Long
-TotalCount: Long DEFAULT 0
+FileSize: long
+TotalCount: long default 0
 ```
 
 ---
@@ -87,16 +87,16 @@ High-precision decimal number.
 
 **Syntax:**
 ```sql
-Decimal
+decimal
 ```
 
 **Precision:** Up to 20 digits total, with configurable decimal places.
 
 **Examples:**
 ```sql
-Price: Decimal
-Amount: Decimal DEFAULT 0
-TaxRate: Decimal DEFAULT 0.21
+Price: decimal
+Amount: decimal default 0
+TaxRate: decimal default 0.21
 ```
 
 ---
@@ -107,16 +107,16 @@ True/false value.
 
 **Syntax:**
 ```sql
-Boolean DEFAULT true|false
+boolean default true|false
 ```
 
 > **Required:** Boolean attributes must have a DEFAULT value. This is enforced by Mendix Studio Pro.
 
 **Examples:**
 ```sql
-IsActive: Boolean DEFAULT true
-Enabled: Boolean DEFAULT true
-Deleted: Boolean DEFAULT false
+IsActive: boolean default true
+Enabled: boolean default true
+Deleted: boolean default false
 ```
 
 ---
@@ -127,16 +127,16 @@ Date and time with timezone awareness.
 
 **Syntax:**
 ```sql
-DateTime
+datetime
 ```
 
 **Storage:** UTC timestamp with optional localization.
 
 **Examples:**
 ```sql
-CreatedAt: DateTime
-ModifiedAt: DateTime
-ScheduledFor: DateTime
+CreatedAt: datetime
+ModifiedAt: datetime
+ScheduledFor: datetime
 ```
 
 **Note:** DateTime values include both date and time components. For date-only values, still use DateTime but only populate the date portion.
@@ -149,15 +149,15 @@ Date only (no time component).
 
 **Syntax:**
 ```sql
-Date
+date
 ```
 
 **Note:** Internally stored as DateTime in Mendix, but UI only shows date.
 
 **Examples:**
 ```sql
-BirthDate: Date
-ExpiryDate: Date
+BirthDate: date
+ExpiryDate: date
 ```
 
 ---
@@ -168,13 +168,13 @@ Auto-incrementing integer, typically used for IDs.
 
 **Syntax:**
 ```sql
-AutoNumber
+autonumber
 ```
 
 **Examples:**
 ```sql
-OrderId: AutoNumber NOT NULL UNIQUE DEFAULT 1
-CustomerId: AutoNumber
+OrderId: autonumber not null unique default 1
+CustomerId: autonumber
 ```
 
 **Notes:**
@@ -190,14 +190,14 @@ Binary data (file contents, images, etc.).
 
 **Syntax:**
 ```sql
-Binary
+binary
 ```
 
 **Examples:**
 ```sql
-ProfileImage: Binary
-Document: Binary
-Thumbnail: Binary
+ProfileImage: binary
+Document: binary
+Thumbnail: binary
 ```
 
 **Notes:**
@@ -215,7 +215,7 @@ Reference to an enumeration type.
 
 **Syntax:**
 ```sql
-Enumeration(<qualified-name>)
+enumeration(<qualified-name>)
 ```
 
 **Parameters:**
@@ -223,16 +223,16 @@ Enumeration(<qualified-name>)
 
 **Examples:**
 ```sql
-Status: Enumeration(Sales.OrderStatus)
-Priority: Enumeration(Core.Priority) DEFAULT Core.Priority.Normal
-Type: Enumeration(MyModule.ItemType) NOT NULL
+status: enumeration(Sales.OrderStatus)
+Priority: enumeration(Core.Priority) default Core.Priority.Normal
+type: enumeration(MyModule.ItemType) not null
 ```
 
 **Default value format:**
 ```sql
-DEFAULT Module.EnumName.ValueName
+default Module.EnumName.ValueName
 -- or legacy string literal form:
-DEFAULT 'ValueName'
+default 'ValueName'
 ```
 
 The default value is the **name** of the enumeration value (not the caption). The fully qualified form `Module.EnumName.ValueName` is preferred as it is explicit and unambiguous.
@@ -245,12 +245,12 @@ Securely hashed string (for passwords).
 
 **Syntax:**
 ```sql
-HashedString
+hashedstring
 ```
 
 **Examples:**
 ```sql
-Password: HashedString
+password: hashedstring
 ```
 
 **Notes:**
@@ -266,37 +266,37 @@ Password: HashedString
 
 ```sql
 [/** documentation */]
-<name>: <type> [constraints] [DEFAULT <value>]
+<name>: <type> [constraints] [default <value>]
 ```
 
 ### Constraints
 
 | Constraint | Syntax | Description |
 |------------|--------|-------------|
-| Not Null | `NOT NULL` | Value is required |
-| Not Null with Error | `NOT NULL ERROR 'message'` | Required with custom error |
-| Unique | `UNIQUE` | Value must be unique |
-| Unique with Error | `UNIQUE ERROR 'message'` | Unique with custom error |
+| Not Null | `not null` | Value is required |
+| Not Null with Error | `not null error 'message'` | Required with custom error |
+| Unique | `unique` | Value must be unique |
+| Unique with Error | `unique error 'message'` | Unique with custom error |
 
 ### Constraint Order
 
 Constraints must appear in this order:
-1. `NOT NULL [ERROR '...']`
-2. `UNIQUE [ERROR '...']`
-3. `DEFAULT <value>`
+1. `not null [error '...']`
+2. `unique [error '...']`
+3. `default <value>`
 
 **Examples:**
 ```sql
 -- All constraints
-Email: String(200) NOT NULL ERROR 'Email is required' UNIQUE ERROR 'Email already exists' DEFAULT ''
+Email: string(200) not null error 'Email is required' unique error 'Email already exists' default ''
 
 -- Some constraints
-Name: String(200) NOT NULL
-Code: String(10) UNIQUE
-Count: Integer DEFAULT 0
+Name: string(200) not null
+Code: string(10) unique
+count: integer default 0
 
 -- No constraints
-Description: String(unlimited)
+description: string(unlimited)
 ```
 
 ---
@@ -307,19 +307,19 @@ Description: String(unlimited)
 
 | Type | Default Syntax | Examples |
 |------|----------------|----------|
-| String | `DEFAULT 'value'` | `DEFAULT ''`, `DEFAULT 'Unknown'` |
-| Integer | `DEFAULT n` | `DEFAULT 0`, `DEFAULT -1` |
-| Long | `DEFAULT n` | `DEFAULT 0` |
-| Decimal | `DEFAULT n.n` | `DEFAULT 0`, `DEFAULT 0.00`, `DEFAULT 99.99` |
-| Boolean | `DEFAULT TRUE/FALSE` | `DEFAULT TRUE`, `DEFAULT FALSE` |
-| AutoNumber | `DEFAULT n` | `DEFAULT 1` (starting value) |
-| Enumeration | `DEFAULT Module.Enum.Value` | `DEFAULT Shop.Status.Active`, `DEFAULT 'Pending'` |
+| String | `default 'value'` | `default ''`, `default 'Unknown'` |
+| Integer | `default n` | `default 0`, `default -1` |
+| Long | `default n` | `default 0` |
+| Decimal | `default n.n` | `default 0`, `default 0.00`, `default 99.99` |
+| Boolean | `default true/false` | `default true`, `default false` |
+| AutoNumber | `default n` | `default 1` (starting value) |
+| Enumeration | `default Module.Enum.Value` | `default Shop.Status.Active`, `default 'Pending'` |
 
 ### No Default
 
 Omit the DEFAULT clause for no default value:
 ```sql
-OptionalField: String(200)
+OptionalField: string(200)
 ```
 
 ---
@@ -331,7 +331,7 @@ OptionalField: String(200)
 | MDL Type | BSON $Type | Go Type (SDK) | Model API Type |
 |----------|------------|---------------|----------------|
 | String | `DomainModels$StringAttributeType` | `*StringAttributeType` | TBD |
-| String(n) | `DomainModels$StringAttributeType` + Length | `*StringAttributeType{Length: n}` | TBD |
+| String(n) | `DomainModels$StringAttributeType` + Length | `*StringAttributeType{length: n}` | TBD |
 | Integer | `DomainModels$IntegerAttributeType` | `*IntegerAttributeType` | TBD |
 | Long | `DomainModels$LongAttributeType` | `*LongAttributeType` | TBD |
 | Decimal | `DomainModels$DecimalAttributeType` | `*DecimalAttributeType` | TBD |
@@ -347,10 +347,10 @@ OptionalField: String(200)
 
 | MDL Default | BSON Structure | Go Structure |
 |-------------|----------------|--------------|
-| `DEFAULT 'text'` | `Value: {$Type: "DomainModels$StoredValue", DefaultValue: "text"}` | `Value: &AttributeValue{DefaultValue: "text"}` |
-| `DEFAULT 123` | `Value: {$Type: "DomainModels$StoredValue", DefaultValue: "123"}` | `Value: &AttributeValue{DefaultValue: "123"}` |
-| `DEFAULT TRUE` | `Value: {$Type: "DomainModels$StoredValue", DefaultValue: "true"}` | `Value: &AttributeValue{DefaultValue: "true"}` |
-| (calculated) | `Value: {$Type: "DomainModels$CalculatedValue", Microflow: <id>}` | `Value: &AttributeValue{Type: "CalculatedValue", MicroflowID: id}` |
+| `default 'text'` | `value: {$type: "DomainModels$StoredValue", DefaultValue: "text"}` | `value: &AttributeValue{DefaultValue: "text"}` |
+| `default 123` | `value: {$type: "DomainModels$StoredValue", DefaultValue: "123"}` | `value: &AttributeValue{DefaultValue: "123"}` |
+| `default true` | `value: {$type: "DomainModels$StoredValue", DefaultValue: "true"}` | `value: &AttributeValue{DefaultValue: "true"}` |
+| (calculated) | `value: {$type: "DomainModels$CalculatedValue", microflow: <id>}` | `value: &AttributeValue{type: "CalculatedValue", MicroflowID: id}` |
 
 ---
 
@@ -362,18 +362,18 @@ MDL does not perform implicit type conversions. Types must match exactly.
 
 ### Attribute Type Changes
 
-When modifying an entity with `CREATE OR MODIFY`, attribute types cannot be changed if:
+When modifying an entity with `create or modify`, attribute types cannot be changed if:
 - The attribute contains data
 - The new type is incompatible
 
 Compatible type changes:
-- `String(100)` to `String(200)` - Increasing length
-- `Integer` to `Long` - Widening numeric type
+- `string(100)` to `string(200)` - Increasing length
+- `integer` to `long` - Widening numeric type
 
 Incompatible type changes:
-- `String` to `Integer`
-- `Boolean` to `String`
-- Any type to `AutoNumber` (if not empty)
+- `string` to `integer`
+- `boolean` to `string`
+- Any type to `autonumber` (if not empty)
 
 ---
 
@@ -383,45 +383,45 @@ Incompatible type changes:
 
 ```sql
 /** Example entity demonstrating all data types */
-@Position(100, 100)
-CREATE PERSISTENT ENTITY Demo.AllTypes (
+@position(100, 100)
+create persistent entity Demo.AllTypes (
   /** Auto-generated ID */
-  Id: AutoNumber NOT NULL UNIQUE DEFAULT 1,
+  Id: autonumber not null unique default 1,
 
   /** Short text field */
-  Code: String(10) NOT NULL UNIQUE,
+  Code: string(10) not null unique,
 
   /** Standard text field */
-  Name: String(200) NOT NULL,
+  Name: string(200) not null,
 
   /** Long text field */
-  Description: String(unlimited),
+  description: string(unlimited),
 
   /** Integer counter */
-  Counter: Integer DEFAULT 0,
+  Counter: integer default 0,
 
   /** Large number */
-  BigNumber: Long,
+  BigNumber: long,
 
   /** Money amount */
-  Amount: Decimal DEFAULT 0.00,
+  Amount: decimal default 0.00,
 
   /** Flag field */
-  IsActive: Boolean DEFAULT TRUE,
+  IsActive: boolean default true,
 
   /** Timestamp */
-  CreatedAt: DateTime,
+  CreatedAt: datetime,
 
   /** Date only */
-  BirthDate: Date,
+  BirthDate: date,
 
   /** File attachment */
-  Attachment: Binary,
+  Attachment: binary,
 
   /** Status from enumeration */
-  Status: Enumeration(Demo.Status) DEFAULT 'Active'
+  status: enumeration(Demo.Status) default 'Active'
 )
-INDEX (Code)
-INDEX (Name, CreatedAt DESC);
+index (Code)
+index (Name, CreatedAt desc);
 /
 ```

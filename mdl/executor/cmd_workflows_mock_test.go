@@ -47,6 +47,6 @@ func TestDescribeWorkflow_Mock(t *testing.T) {
 	assertNoError(t, describeWorkflow(ctx, ast.QualifiedName{Module: "Sales", Name: "ApproveOrder"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "WORKFLOW")
+	assertContainsStr(t, out, "workflow")
 	assertContainsStr(t, out, "Sales.ApproveOrder")
 }

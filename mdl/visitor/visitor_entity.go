@@ -852,7 +852,7 @@ func (b *Builder) ExitRenameStatement(ctx *parser.RenameStatementContext) {
 
 	objectType := ""
 	if rt := ctx.RenameTarget(); rt != nil {
-		objectType = strings.ToUpper(rt.GetText())
+		objectType = strings.ToLower(rt.GetText())
 	}
 	if objectType == "" {
 		return

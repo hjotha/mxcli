@@ -14,57 +14,57 @@
 
 -- MARK: Setup
 
-CREATE MODULE XpathTest;
+create module XpathTest;
 
 -- ============================================================================
 -- Setup: Domain Model for XPath Examples
 -- ============================================================================
 
-CREATE PERSISTENT ENTITY XpathTest.Customer (
-  Name: String(200),
-  Email: String(200),
-  IsActive: Boolean,
-  RegistrationDate: DateTime,
-  Country: String(100)
+create persistent entity XpathTest.Customer (
+  Name: string(200),
+  Email: string(200),
+  IsActive: boolean,
+  RegistrationDate: datetime,
+  Country: string(100)
 );
 
-CREATE PERSISTENT ENTITY XpathTest.Order (
-  OrderNumber: String(50),
-  TotalAmount: Decimal,
-  State: String(20),
-  OrderDate: DateTime,
-  IsPaid: Boolean,
-  Notes: String(2000)
+create persistent entity XpathTest.Order (
+  OrderNumber: string(50),
+  TotalAmount: decimal,
+  State: string(20),
+  OrderDate: datetime,
+  IsPaid: boolean,
+  Notes: string(2000)
 );
 
 -- Enable System.owner so XPath can reference it
-ALTER ENTITY XpathTest.Order ADD ATTRIBUTE Owner: AutoOwner;
+alter entity XpathTest.Order add attribute owner: autoowner;
 
-CREATE PERSISTENT ENTITY XpathTest.OrderLine (
-  Quantity: Integer,
-  UnitPrice: Decimal,
-  ProductName: String(200)
+create persistent entity XpathTest.OrderLine (
+  Quantity: integer,
+  UnitPrice: decimal,
+  ProductName: string(200)
 );
 
-CREATE PERSISTENT ENTITY XpathTest.Category (
-  Name: String(100),
-  IsVisible: Boolean
+create persistent entity XpathTest.Category (
+  Name: string(100),
+  IsVisible: boolean
 );
 
-CREATE ASSOCIATION XpathTest.Order_Customer
-  FROM XpathTest.Order TO XpathTest.Customer
-  TYPE Reference
-  OWNER Default;
+create association XpathTest.Order_Customer
+  from XpathTest.Order to XpathTest.Customer
+  type reference
+  owner default;
 
-CREATE ASSOCIATION XpathTest.OrderLine_Order
-  FROM XpathTest.OrderLine TO XpathTest.Order
-  TYPE Reference
-  OWNER Default;
+create association XpathTest.OrderLine_Order
+  from XpathTest.OrderLine to XpathTest.Order
+  type reference
+  owner default;
 
-CREATE ASSOCIATION XpathTest.Order_Category
-  FROM XpathTest.Order TO XpathTest.Category
-  TYPE Reference
-  OWNER Default;
+create association XpathTest.Order_Category
+  from XpathTest.Order to XpathTest.Category
+  type reference
+  owner default;
 
 -- ============================================================================
 -- MARK: Simple Attribute Comparisons
@@ -73,51 +73,51 @@ CREATE ASSOCIATION XpathTest.Order_Category
 /**
  * Basic string equality: WHERE [Attr = 'value']
  */
-CREATE MICROFLOW XpathTest.Retrieve_StringEquality ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Orders FROM XpathTest.Order
-    WHERE [State = 'Completed'];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_StringEquality ()
+returns boolean
+begin
+  retrieve $Orders from XpathTest.Order
+    where [State = 'Completed'];
+  return true;
+end;
 
 /**
  * Not-equal comparison: WHERE [Attr != 'value']
  */
-CREATE MICROFLOW XpathTest.Retrieve_NotEqual ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Orders FROM XpathTest.Order
-    WHERE [State != 'Cancelled'];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_NotEqual ()
+returns boolean
+begin
+  retrieve $Orders from XpathTest.Order
+    where [State != 'Cancelled'];
+  return true;
+end;
 
 /**
  * Numeric comparisons: <, >, <=, >=
  */
-CREATE MICROFLOW XpathTest.Retrieve_NumericComparisons (
-  $MinAmount: Decimal,
-  $MaxAmount: Decimal
+create microflow XpathTest.Retrieve_NumericComparisons (
+  $MinAmount: decimal,
+  $MaxAmount: decimal
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $HighValue FROM XpathTest.Order
-    WHERE [TotalAmount >= $MinAmount and TotalAmount <= $MaxAmount];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $HighValue from XpathTest.Order
+    where [TotalAmount >= $MinAmount and TotalAmount <= $MaxAmount];
+  return true;
+end;
 
 /**
  * Variable comparison: WHERE [Attr = $variable]
  */
-CREATE MICROFLOW XpathTest.Retrieve_VariableComparison (
-  $SearchState: String
+create microflow XpathTest.Retrieve_VariableComparison (
+  $SearchState: string
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Orders FROM XpathTest.Order
-    WHERE [State = $SearchState];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Orders from XpathTest.Order
+    where [State = $SearchState];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Empty and Boolean Checks
@@ -126,39 +126,39 @@ END;
 /**
  * Empty comparison: WHERE [Attr = empty] and [Attr != empty]
  */
-CREATE MICROFLOW XpathTest.Retrieve_EmptyCheck ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $WithDate FROM XpathTest.Order
-    WHERE [OrderDate != empty];
-  RETRIEVE $WithoutDate FROM XpathTest.Order
-    WHERE [OrderDate = empty];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_EmptyCheck ()
+returns boolean
+begin
+  retrieve $WithDate from XpathTest.Order
+    where [OrderDate != empty];
+  retrieve $WithoutDate from XpathTest.Order
+    where [OrderDate = empty];
+  return true;
+end;
 
 /**
  * Boolean attribute comparison: WHERE [Attr = true]
  */
-CREATE MICROFLOW XpathTest.Retrieve_BooleanCheck ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Active FROM XpathTest.Customer
-    WHERE [IsActive = true];
-  RETRIEVE $Paid FROM XpathTest.Order
-    WHERE [IsPaid = false];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_BooleanCheck ()
+returns boolean
+begin
+  retrieve $Active from XpathTest.Customer
+    where [IsActive = true];
+  retrieve $Paid from XpathTest.Order
+    where [IsPaid = false];
+  return true;
+end;
 
 /**
  * Bare boolean attribute (existence check): WHERE [Attr]
  */
-CREATE MICROFLOW XpathTest.Retrieve_BareBoolean ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Active FROM XpathTest.Customer
-    WHERE [IsActive];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_BareBoolean ()
+returns boolean
+begin
+  retrieve $Active from XpathTest.Customer
+    where [IsActive];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Boolean Logic (and, or, not)
@@ -167,49 +167,49 @@ END;
 /**
  * AND operator: WHERE [A and B]
  */
-CREATE MICROFLOW XpathTest.Retrieve_And ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Order
-    WHERE [State = 'Completed' and IsPaid = true];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_And ()
+returns boolean
+begin
+  retrieve $Results from XpathTest.Order
+    where [State = 'Completed' and IsPaid = true];
+  return true;
+end;
 
 /**
  * OR operator: WHERE [A or B]
  */
-CREATE MICROFLOW XpathTest.Retrieve_Or ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Order
-    WHERE [State = 'Pending' or State = 'Processing'];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_Or ()
+returns boolean
+begin
+  retrieve $Results from XpathTest.Order
+    where [State = 'Pending' or State = 'Processing'];
+  return true;
+end;
 
 /**
  * Parenthesized grouping with mixed operators
  */
-CREATE MICROFLOW XpathTest.Retrieve_GroupedLogic (
-  $IgnorePaid: Boolean,
-  $MinAmount: Decimal
+create microflow XpathTest.Retrieve_GroupedLogic (
+  $IgnorePaid: boolean,
+  $MinAmount: decimal
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Order
-    WHERE [State = 'Completed' and ($IgnorePaid or IsPaid = true) and TotalAmount >= $MinAmount];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Results from XpathTest.Order
+    where [State = 'Completed' and ($IgnorePaid or IsPaid = true) and TotalAmount >= $MinAmount];
+  return true;
+end;
 
 /**
  * NOT operator: WHERE [not(expr)]
  */
-CREATE MICROFLOW XpathTest.Retrieve_Not ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $NotPaid FROM XpathTest.Order
-    WHERE [not(IsPaid)];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_Not ()
+returns boolean
+begin
+  retrieve $NotPaid from XpathTest.Order
+    where [not(IsPaid)];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Association Path Traversal (Bare Paths)
@@ -218,50 +218,50 @@ END;
 /**
  * Single-hop association: WHERE [Module.Assoc = $var]
  */
-CREATE MICROFLOW XpathTest.Retrieve_AssociationEquals (
+create microflow XpathTest.Retrieve_AssociationEquals (
   $Customer: XpathTest.Customer
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Orders FROM XpathTest.Order
-    WHERE [XpathTest.Order_Customer = $Customer];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Orders from XpathTest.Order
+    where [XpathTest.Order_Customer = $Customer];
+  return true;
+end;
 
 /**
  * Multi-hop path: WHERE [Module.Assoc/Module.Entity/Attr = $val]
  */
-CREATE MICROFLOW XpathTest.Retrieve_MultiHopPath (
-  $CustomerName: String
+create microflow XpathTest.Retrieve_MultiHopPath (
+  $CustomerName: string
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Orders FROM XpathTest.Order
-    WHERE [XpathTest.Order_Customer/XpathTest.Customer/Name = $CustomerName];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Orders from XpathTest.Order
+    where [XpathTest.Order_Customer/XpathTest.Customer/Name = $CustomerName];
+  return true;
+end;
 
 /**
  * Path existence check (no comparison): WHERE [Module.Assoc/Module.Entity]
  */
-CREATE MICROFLOW XpathTest.Retrieve_PathExistence ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $WithCustomer FROM XpathTest.Order
-    WHERE [XpathTest.Order_Customer/XpathTest.Customer];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_PathExistence ()
+returns boolean
+begin
+  retrieve $WithCustomer from XpathTest.Order
+    where [XpathTest.Order_Customer/XpathTest.Customer];
+  return true;
+end;
 
 /**
  * Negated path existence: WHERE [not(Module.Assoc/Module.Entity)]
  */
-CREATE MICROFLOW XpathTest.Retrieve_NegatedPathExistence ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Orphaned FROM XpathTest.Order
-    WHERE [not(XpathTest.Order_Customer/XpathTest.Customer)];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_NegatedPathExistence ()
+returns boolean
+begin
+  retrieve $Orphaned from XpathTest.Order
+    where [not(XpathTest.Order_Customer/XpathTest.Customer)];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Variable Paths
@@ -270,15 +270,15 @@ END;
 /**
  * Variable attribute path: $var/Attr
  */
-CREATE MICROFLOW XpathTest.Retrieve_VariablePath (
+create microflow XpathTest.Retrieve_VariablePath (
   $Customer: XpathTest.Customer
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Orders FROM XpathTest.Order
-    WHERE [XpathTest.Order_Customer/XpathTest.Customer/Name = $Customer/Name];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Orders from XpathTest.Order
+    where [XpathTest.Order_Customer/XpathTest.Customer/Name = $Customer/Name];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Nested Predicates
@@ -312,52 +312,52 @@ END;
 /**
  * contains() function: WHERE [contains(Attr, $search)]
  */
-CREATE MICROFLOW XpathTest.Retrieve_Contains (
-  $SearchStr: String
+create microflow XpathTest.Retrieve_Contains (
+  $SearchStr: string
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Customer
-    WHERE [contains(Name, $SearchStr)];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Results from XpathTest.Customer
+    where [contains(Name, $SearchStr)];
+  return true;
+end;
 
 /**
  * starts-with() function
  */
-CREATE MICROFLOW XpathTest.Retrieve_StartsWith (
-  $Prefix: String
+create microflow XpathTest.Retrieve_StartsWith (
+  $Prefix: string
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Customer
-    WHERE [starts-with(Name, $Prefix)];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Results from XpathTest.Customer
+    where [starts-with(Name, $Prefix)];
+  return true;
+end;
 
 /**
  * not() with contains(): WHERE [not(contains(Attr, 'val'))]
  */
-CREATE MICROFLOW XpathTest.Retrieve_NotContains ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Customer
-    WHERE [not(contains(Name, 'demo'))];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_NotContains ()
+returns boolean
+begin
+  retrieve $Results from XpathTest.Customer
+    where [not(contains(Name, 'demo'))];
+  return true;
+end;
 
 /**
  * true() and false() functions
  */
-CREATE MICROFLOW XpathTest.Retrieve_TrueFalseFunction ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Active FROM XpathTest.Customer
-    WHERE [IsActive = true()];
-  RETRIEVE $Inactive FROM XpathTest.Customer
-    WHERE [IsActive = false()];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_TrueFalseFunction ()
+returns boolean
+begin
+  retrieve $Active from XpathTest.Customer
+    where [IsActive = true()];
+  retrieve $Inactive from XpathTest.Customer
+    where [IsActive = false()];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Tokens ([%CurrentUser%], [%CurrentDateTime%])
@@ -366,25 +366,25 @@ END;
 /**
  * Token: [%CurrentDateTime%] for date comparisons
  */
-CREATE MICROFLOW XpathTest.Retrieve_DateTimeToken ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Recent FROM XpathTest.Order
-    WHERE [OrderDate >= [%CurrentDateTime%]];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_DateTimeToken ()
+returns boolean
+begin
+  retrieve $Recent from XpathTest.Order
+    where [OrderDate >= [%CurrentDateTime%]];
+  return true;
+end;
 
 /**
  * Token in string literal: system owner check
  * Note: In BSON, tokens inside XPath are quoted: '[%CurrentUser%]'
  */
-CREATE MICROFLOW XpathTest.Retrieve_CurrentUserToken ()
-RETURNS Boolean
-BEGIN
-  RETRIEVE $MyOrders FROM XpathTest.Order
-    WHERE [System.owner = '[%CurrentUser%]'];
-  RETURN true;
-END;
+create microflow XpathTest.Retrieve_CurrentUserToken ()
+returns boolean
+begin
+  retrieve $MyOrders from XpathTest.Order
+    where [System.owner = '[%CurrentUser%]'];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: ID Pseudo-Attribute
@@ -393,15 +393,15 @@ END;
 /**
  * id pseudo-attribute for object identity comparison
  */
-CREATE MICROFLOW XpathTest.Retrieve_IdComparison (
+create microflow XpathTest.Retrieve_IdComparison (
   $ExistingOrder: XpathTest.Order
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Others FROM XpathTest.Order
-    WHERE [id != $ExistingOrder];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Others from XpathTest.Order
+    where [id != $ExistingOrder];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Complex Real-World Patterns
@@ -411,35 +411,35 @@ END;
  * Complex filter: multiple conditions with empty checks and OR grouping
  * Pattern: state filter + optional date range + optional category
  */
-CREATE MICROFLOW XpathTest.Retrieve_ComplexFilter (
-  $IgnoreAfterDate: Boolean,
-  $AfterDate: DateTime,
-  $IgnoreBeforeDate: Boolean,
-  $BeforeDate: DateTime,
+create microflow XpathTest.Retrieve_ComplexFilter (
+  $IgnoreAfterDate: boolean,
+  $AfterDate: datetime,
+  $IgnoreBeforeDate: boolean,
+  $BeforeDate: datetime,
   $SelectedCategory: XpathTest.Category
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Order
-    WHERE [State = 'Completed'
+returns boolean
+begin
+  retrieve $Results from XpathTest.Order
+    where [State = 'Completed'
       and ($IgnoreAfterDate or OrderDate >= $AfterDate)
       and ($IgnoreBeforeDate or OrderDate <= $BeforeDate)
       and ($SelectedCategory = empty or XpathTest.Order_Category = $SelectedCategory)];
-  RETURN true;
-END;
+  return true;
+end;
 
 /**
  * Combined text search with active filter
  */
-CREATE MICROFLOW XpathTest.Retrieve_TextSearch (
-  $SearchStr: String
+create microflow XpathTest.Retrieve_TextSearch (
+  $SearchStr: string
 )
-RETURNS Boolean
-BEGIN
-  RETRIEVE $Results FROM XpathTest.Customer
-    WHERE [IsActive = true and (contains(Name, $SearchStr) or contains(Email, $SearchStr))];
-  RETURN true;
-END;
+returns boolean
+begin
+  retrieve $Results from XpathTest.Customer
+    where [IsActive = true and (contains(Name, $SearchStr) or contains(Email, $SearchStr))];
+  return true;
+end;
 
 -- ============================================================================
 -- MARK: Page Data Sources with XPath WHERE
@@ -448,31 +448,31 @@ END;
 /**
  * DataGrid with inline XPath WHERE and sorting
  */
-CREATE PAGE XpathTest.OrderOverviewPage (
-  Title: 'Order Overview',
-  Layout: Atlas_Core.Atlas_Default
+create page XpathTest.OrderOverviewPage (
+  title: 'Order Overview',
+  layout: Atlas_Core.Atlas_Default
 ) {
-  DATAGRID dgOrders (
-    DataSource: DATABASE FROM XpathTest.Order WHERE [State != 'Cancelled'] SORT BY OrderDate DESC
+  datagrid dgOrders (
+    datasource: database from XpathTest.Order where [State != 'Cancelled'] sort by OrderDate desc
   ) {
-    COLUMN colNumber (Attribute: OrderNumber, Caption: 'Order #')
-    COLUMN colAmount (Attribute: TotalAmount, Caption: 'Amount')
-    COLUMN colState (Attribute: State, Caption: 'Status')
+    column colNumber (attribute: OrderNumber, caption: 'Order #')
+    column colAmount (attribute: TotalAmount, caption: 'Amount')
+    column colState (attribute: State, caption: 'Status')
   }
 };
 
 /**
  * Page with chained XPath predicates using AND/OR between brackets
  */
-CREATE PAGE XpathTest.ActiveCustomerPage (
-  Title: 'Active Customers',
-  Layout: Atlas_Core.Atlas_Default
+create page XpathTest.ActiveCustomerPage (
+  title: 'Active Customers',
+  layout: Atlas_Core.Atlas_Default
 ) {
-  DATAGRID dgCustomers (
-    DataSource: DATABASE FROM XpathTest.Customer WHERE [IsActive = true] AND [Name != empty] SORT BY Name ASC
+  datagrid dgCustomers (
+    datasource: database from XpathTest.Customer where [IsActive = true] and [Name != empty] sort by Name asc
   ) {
-    COLUMN colName (Attribute: Name, Caption: 'Name')
-    COLUMN colEmail (Attribute: Email, Caption: 'Email')
+    column colName (attribute: Name, caption: 'Name')
+    column colEmail (attribute: Email, caption: 'Email')
   }
 };
 

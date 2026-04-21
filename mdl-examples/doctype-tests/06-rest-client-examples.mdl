@@ -40,7 +40,7 @@
 -- MARK: Module Setup
 
 -- Create module for our REST client examples
-CREATE MODULE RestTest;
+create module RestTest;
 
 -- ############################################################################
 -- PART 1: BASIC REST CLIENTS
@@ -54,16 +54,16 @@ CREATE MODULE RestTest;
 --
 -- The simplest possible REST client with a single GET operation.
 
-CREATE REST CLIENT RestTest.RC001_SimpleAPI (
+create rest client RestTest.RC001_SimpleAPI (
   BaseUrl: 'https://reqbin.com',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetStatus {
-    Method: GET,
-    Path: '/echo',
-    Headers: ('Accept' = '*/*'),
-    Response: NONE
+  operation GetStatus {
+    method: get,
+    path: '/echo',
+    headers: ('Accept' = '*/*'),
+    response: none
   }
 };
 
@@ -73,16 +73,16 @@ CREATE REST CLIENT RestTest.RC001_SimpleAPI (
 --
 -- A REST client that returns JSON data mapped to a variable.
 
-CREATE REST CLIENT RestTest.RC002_JsonAPI (
+create rest client RestTest.RC002_JsonAPI (
   BaseUrl: 'https://jsonplaceholder.typicode.com',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetPosts {
-    Method: GET,
-    Path: '/posts',
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Posts
+  operation GetPosts {
+    method: get,
+    path: '/posts',
+    headers: ('Accept' = 'application/json'),
+    response: json as $Posts
   }
 };
 
@@ -92,17 +92,17 @@ CREATE REST CLIENT RestTest.RC002_JsonAPI (
 --
 -- Demonstrates path parameters using {param} syntax in the path.
 
-CREATE REST CLIENT RestTest.RC003_UserAPI (
+create rest client RestTest.RC003_UserAPI (
   BaseUrl: 'https://jsonplaceholder.typicode.com',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetUser {
-    Method: GET,
-    Path: '/users/{userId}',
-    Parameters: ($userId: Integer),
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $User
+  operation GetUser {
+    method: get,
+    path: '/users/{userId}',
+    parameters: ($userId: integer),
+    headers: ('Accept' = 'application/json'),
+    response: json as $user
   }
 };
 
@@ -118,51 +118,51 @@ CREATE REST CLIENT RestTest.RC003_UserAPI (
 --
 -- Demonstrates all supported HTTP methods in a single client.
 
-CREATE REST CLIENT RestTest.RC004_CrudAPI (
+create rest client RestTest.RC004_CrudAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
   /** Retrieve all resources */
-  OPERATION GetAll {
-    Method: GET,
-    Path: '/get',
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Resources
+  operation GetAll {
+    method: get,
+    path: '/get',
+    headers: ('Accept' = 'application/json'),
+    response: json as $Resources
   }
 
   /** Create a new resource */
-  OPERATION CreateResource {
-    Method: POST,
-    Path: '/post',
-    Headers: ('Accept' = 'application/json'),
-    Body: JSON FROM $NewResource,
-    Response: JSON AS $CreatedResource
+  operation CreateResource {
+    method: post,
+    path: '/post',
+    headers: ('Accept' = 'application/json'),
+    body: json from $NewResource,
+    response: json as $CreatedResource
   }
 
   /** Fully update an existing resource */
-  OPERATION UpdateResource {
-    Method: PUT,
-    Path: '/put',
-    Headers: ('Accept' = 'application/json'),
-    Body: JSON FROM $UpdatedResource,
-    Response: JSON AS $Resource
+  operation UpdateResource {
+    method: put,
+    path: '/put',
+    headers: ('Accept' = 'application/json'),
+    body: json from $UpdatedResource,
+    response: json as $resource
   }
 
   /** Partially update an existing resource */
-  OPERATION "PatchResource" {
-    Method: PATCH,
-    Path: '/patch',
-    Headers: ('Accept' = 'application/json'),
-    Body: JSON FROM $PatchData,
-    Response: JSON AS $Resource
+  operation "PatchResource" {
+    method: patch,
+    path: '/patch',
+    headers: ('Accept' = 'application/json'),
+    body: json from $PatchData,
+    response: json as $resource
   }
 
   /** Delete a resource */
-  OPERATION "DeleteResource" {
-    Method: DELETE,
-    Path: '/delete',
-    Response: NONE
+  operation "DeleteResource" {
+    method: delete,
+    path: '/delete',
+    response: none
   }
 };
 
@@ -176,16 +176,16 @@ CREATE REST CLIENT RestTest.RC004_CrudAPI (
 -- Level 3.1: Single Query Parameter
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC005_SearchAPI (
+create rest client RestTest.RC005_SearchAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION Search {
-    Method: GET,
-    Path: '/anything/search',
-    Query: ($q: String),
-    Response: JSON AS $Results
+  operation search {
+    method: get,
+    path: '/anything/search',
+    query: ($q: string),
+    response: json as $Results
   }
 };
 
@@ -195,17 +195,17 @@ CREATE REST CLIENT RestTest.RC005_SearchAPI (
 --
 -- Demonstrates pagination and filtering with multiple query parameters.
 
-CREATE REST CLIENT RestTest.RC006_PaginatedAPI (
+create rest client RestTest.RC006_PaginatedAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
   /** Search with pagination */
-  OPERATION SearchPaginated {
-    Method: GET,
-    Path: '/anything/items',
-    Query: ($search: String, $page: Integer, $limit: Integer, $sortBy: String, $ascending: Boolean),
-    Response: JSON AS $Items
+  operation SearchPaginated {
+    method: get,
+    path: '/anything/items',
+    query: ($search: string, $page: integer, $limit: integer, $sortBy: string, $ascending: boolean),
+    response: json as $Items
   }
 };
 
@@ -213,18 +213,18 @@ CREATE REST CLIENT RestTest.RC006_PaginatedAPI (
 -- Level 3.3: Mixed Path and Query Parameters
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC007_FilteredAPI (
+create rest client RestTest.RC007_FilteredAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
   /** Get items in a category with filters */
-  OPERATION GetCategoryItems {
-    Method: GET,
-    Path: '/anything/categories/{categoryId}/items',
-    Parameters: ($categoryId: Integer),
-    Query: ($status: String, $minPrice: Decimal, $maxPrice: Decimal),
-    Response: JSON AS $Items
+  operation GetCategoryItems {
+    method: get,
+    path: '/anything/categories/{categoryId}/items',
+    parameters: ($categoryId: integer),
+    query: ($status: string, $minPrice: decimal, $maxPrice: decimal),
+    response: json as $Items
   }
 };
 
@@ -240,16 +240,16 @@ CREATE REST CLIENT RestTest.RC007_FilteredAPI (
 --
 -- Headers with literal string values.
 
-CREATE REST CLIENT RestTest.RC008_HeaderAPI (
+create rest client RestTest.RC008_HeaderAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetData {
-    Method: GET,
-    Path: '/headers',
-    Headers: ('Accept' = 'application/json', 'X-API-Version' = '2.0', 'X-Client-ID' = 'mendix-repl'),
-    Response: JSON AS $Data
+  operation GetData {
+    method: get,
+    path: '/headers',
+    headers: ('Accept' = 'application/json', 'X-API-Version' = '2.0', 'X-Client-ID' = 'mendix-repl'),
+    response: json as $data
   }
 };
 
@@ -259,16 +259,16 @@ CREATE REST CLIENT RestTest.RC008_HeaderAPI (
 --
 -- Headers that include parameter values using concatenation.
 
-CREATE REST CLIENT RestTest.RC009_AuthHeaderAPI (
+create rest client RestTest.RC009_AuthHeaderAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetSecureData {
-    Method: GET,
-    Path: '/headers',
-    Headers: ('Accept' = 'application/json', 'Authorization' = 'Bearer my-api-token', 'X-Request-ID' = 'request-001'),
-    Response: JSON AS $Data
+  operation GetSecureData {
+    method: get,
+    path: '/headers',
+    headers: ('Accept' = 'application/json', 'Authorization' = 'Bearer my-api-token', 'X-Request-ID' = 'request-001'),
+    response: json as $data
   }
 };
 
@@ -276,17 +276,17 @@ CREATE REST CLIENT RestTest.RC009_AuthHeaderAPI (
 -- Level 4.3: Content-Type Headers for POST/PUT
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC010_ContentTypeAPI (
+create rest client RestTest.RC010_ContentTypeAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION PostJson {
-    Method: POST,
-    Path: '/post',
-    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
-    Body: JSON FROM $Payload,
-    Response: JSON AS $Result
+  operation PostJson {
+    method: post,
+    path: '/post',
+    headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    body: json from $Payload,
+    response: json as $Result
   }
 };
 
@@ -300,15 +300,15 @@ CREATE REST CLIENT RestTest.RC010_ContentTypeAPI (
 -- Level 5.1: No Authentication (explicit)
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC011_PublicAPI (
+create rest client RestTest.RC011_PublicAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetPublicData {
-    Method: GET,
-    Path: '/get',
-    Response: JSON AS $Data
+  operation GetPublicData {
+    method: get,
+    path: '/get',
+    response: json as $data
   }
 };
 
@@ -316,15 +316,15 @@ CREATE REST CLIENT RestTest.RC011_PublicAPI (
 -- Level 5.2: Basic Authentication with Literals
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC012_BasicAuthAPI (
+create rest client RestTest.RC012_BasicAuthAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: BASIC (Username: 'api_user', Password: 'api_secret')
+  authentication: basic (username: 'api_user', password: 'api_secret')
 )
 {
-  OPERATION GetProtectedData {
-    Method: GET,
-    Path: '/basic-auth/api_user/api_secret',
-    Response: JSON AS $Data
+  operation GetProtectedData {
+    method: get,
+    path: '/basic-auth/api_user/api_secret',
+    response: json as $data
   }
 };
 
@@ -334,16 +334,16 @@ CREATE REST CLIENT RestTest.RC012_BasicAuthAPI (
 --
 -- For production use, credentials should come from constants.
 
-CREATE REST CLIENT RestTest.RC013_SecureAuthAPI (
+create rest client RestTest.RC013_SecureAuthAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: BASIC (Username: 'testuser', Password: 'testpass')
+  authentication: basic (username: 'testuser', password: 'testpass')
 )
 {
-  OPERATION GetSecureData {
-    Method: GET,
-    Path: '/hidden-basic-auth/testuser/testpass',
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Data
+  operation GetSecureData {
+    method: get,
+    path: '/hidden-basic-auth/testuser/testpass',
+    headers: ('Accept' = 'application/json'),
+    response: json as $data
   }
 };
 
@@ -357,17 +357,17 @@ CREATE REST CLIENT RestTest.RC013_SecureAuthAPI (
 -- Level 6.1: JSON Body
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC014_JsonBodyAPI (
+create rest client RestTest.RC014_JsonBodyAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION AddItem {
-    Method: POST,
-    Path: '/post',
-    Headers: ('Content-Type' = 'application/json'),
-    Body: JSON FROM $ItemData,
-    Response: JSON AS $CreatedItem
+  operation AddItem {
+    method: post,
+    path: '/post',
+    headers: ('Content-Type' = 'application/json'),
+    body: json from $ItemData,
+    response: json as $CreatedItem
   }
 };
 
@@ -375,16 +375,16 @@ CREATE REST CLIENT RestTest.RC014_JsonBodyAPI (
 -- Level 6.2: File Upload
 -- ============================================================================
 
-CREATE REST CLIENT RestTest.RC015_FileUploadAPI (
+create rest client RestTest.RC015_FileUploadAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION UploadFile {
-    Method: POST,
-    Path: '/post',
-    Body: FILE FROM $FileDocument,
-    Response: JSON AS $UploadResult
+  operation UploadFile {
+    method: post,
+    path: '/post',
+    body: file from $FileDocument,
+    response: json as $UploadResult
   }
 };
 
@@ -400,45 +400,45 @@ CREATE REST CLIENT RestTest.RC015_FileUploadAPI (
 --
 -- Demonstrates all supported response handling types.
 
-CREATE REST CLIENT RestTest.RC016_ResponseTypesAPI (
+create rest client RestTest.RC016_ResponseTypesAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
   /** JSON response mapped to entity */
-  OPERATION GetJson {
-    Method: GET,
-    Path: '/json',
-    Response: JSON AS $JsonData
+  operation GetJson {
+    method: get,
+    path: '/json',
+    response: json as $JsonData
   }
 
   /** Raw string response */
-  OPERATION GetString {
-    Method: GET,
-    Path: '/robots.txt',
-    Response: STRING AS $TextContent
+  operation GetString {
+    method: get,
+    path: '/robots.txt',
+    response: string as $TextContent
   }
 
   /** Binary file download */
-  OPERATION DownloadFile {
-    Method: GET,
-    Path: '/bytes/{fileId}',
-    Parameters: ($fileId: String),
-    Response: FILE AS $FileDocument
+  operation DownloadFile {
+    method: get,
+    path: '/bytes/{fileId}',
+    parameters: ($fileId: string),
+    response: file as $FileDocument
   }
 
   /** HTTP status code only */
-  OPERATION CheckStatus {
-    Method: GET,
-    Path: '/status/200',
-    Response: STATUS AS $StatusCode
+  operation CheckStatus {
+    method: get,
+    path: '/status/200',
+    response: status as $StatusCode
   }
 
   /** No response expected */
-  OPERATION Ping {
-    Method: GET,
-    Path: '/status/204',
-    Response: NONE
+  operation Ping {
+    method: get,
+    path: '/status/204',
+    response: none
   }
 };
 
@@ -454,26 +454,26 @@ CREATE REST CLIENT RestTest.RC016_ResponseTypesAPI (
 --
 -- Default timeout is 300 seconds. Override for long-running operations.
 
-CREATE REST CLIENT RestTest.RC017_LongRunningAPI (
+create rest client RestTest.RC017_LongRunningAPI (
   BaseUrl: 'https://httpbin.org',
-  Authentication: NONE
+  authentication: none
 )
 {
   /** Quick health check with short timeout */
-  OPERATION HealthCheck {
-    Method: GET,
-    Path: '/status/200',
-    Timeout: 5,
-    Response: STATUS AS $Status
+  operation HealthCheck {
+    method: get,
+    path: '/status/200',
+    timeout: 5,
+    response: status as $status
   }
 
   /** Report generation with extended timeout (delay/10 waits 10 seconds) */
-  OPERATION GenerateReport {
-    Method: POST,
-    Path: '/delay/10',
-    Body: JSON FROM $ReportParams,
-    Timeout: 600,
-    Response: JSON AS $ReportResult
+  operation GenerateReport {
+    method: post,
+    path: '/delay/10',
+    body: json from $ReportParams,
+    timeout: 600,
+    response: json as $ReportResult
   }
 };
 
@@ -492,9 +492,9 @@ CREATE REST CLIENT RestTest.RC017_LongRunningAPI (
  * A complete REST client for the classic Pet Store demo API.
  * Demonstrates full CRUD operations with various features.
  */
-CREATE REST CLIENT RestTest.RC018_PetStoreAPI (
+create rest client RestTest.RC018_PetStoreAPI (
   BaseUrl: 'https://petstore.swagger.io/v2',
-  Authentication: NONE
+  authentication: none
 )
 {
   /**
@@ -502,49 +502,49 @@ CREATE REST CLIENT RestTest.RC018_PetStoreAPI (
    * @param status Filter by pet status (available, pending, sold)
    * @param limit Maximum number of pets to return
    */
-  OPERATION ListPets {
-    Method: GET,
-    Path: '/pet/findByStatus',
-    Query: ($status: String),
-    Headers: ('Accept' = 'application/json'),
-    Timeout: 30,
-    Response: JSON AS $PetList
+  operation ListPets {
+    method: get,
+    path: '/pet/findByStatus',
+    query: ($status: string),
+    headers: ('Accept' = 'application/json'),
+    timeout: 30,
+    response: json as $PetList
   }
 
   /**
    * Get a single pet by ID
    * @param petId The unique identifier of the pet
    */
-  OPERATION GetPet {
-    Method: GET,
-    Path: '/pet/{petId}',
-    Parameters: ($petId: Integer),
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Pet
+  operation GetPet {
+    method: get,
+    path: '/pet/{petId}',
+    parameters: ($petId: integer),
+    headers: ('Accept' = 'application/json'),
+    response: json as $Pet
   }
 
   /**
    * Create a new pet
    * Adds a new pet to the store inventory.
    */
-  OPERATION AddPet {
-    Method: POST,
-    Path: '/pet',
-    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
-    Body: JSON FROM $NewPet,
-    Response: JSON AS $CreatedPet
+  operation AddPet {
+    method: post,
+    path: '/pet',
+    headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    body: json from $NewPet,
+    response: json as $CreatedPet
   }
 
   /**
    * Update an existing pet
    * Modifies all fields of an existing pet record.
    */
-  OPERATION ModifyPet {
-    Method: PUT,
-    Path: '/pet',
-    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
-    Body: JSON FROM $UpdatedPet,
-    Response: JSON AS $Pet
+  operation ModifyPet {
+    method: put,
+    path: '/pet',
+    headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    body: json from $UpdatedPet,
+    response: json as $Pet
   }
 
   /**
@@ -552,24 +552,24 @@ CREATE REST CLIENT RestTest.RC018_PetStoreAPI (
    * Removes a pet from the store inventory.
    * @param petId The unique identifier of the pet to delete
    */
-  OPERATION RemovePet {
-    Method: DELETE,
-    Path: '/pet/{petId}',
-    Parameters: ($petId: Integer),
-    Headers: ('api_key' = 'special-key'),
-    Response: NONE
+  operation RemovePet {
+    method: delete,
+    path: '/pet/{petId}',
+    parameters: ($petId: integer),
+    headers: ('api_key' = 'special-key'),
+    response: none
   }
 
   /**
    * Upload pet image
    * @param petId The pet to associate the image with
    */
-  OPERATION UploadImage {
-    Method: POST,
-    Path: '/pet/{petId}/uploadImage',
-    Parameters: ($petId: Integer),
-    Body: FILE FROM $ImageFile,
-    Response: JSON AS $UploadResult
+  operation UploadImage {
+    method: post,
+    path: '/pet/{petId}/uploadImage',
+    parameters: ($petId: integer),
+    body: file from $ImageFile,
+    response: json as $UploadResult
   }
 };
 
@@ -581,46 +581,46 @@ CREATE REST CLIENT RestTest.RC018_PetStoreAPI (
  * GitHub REST API Client
  * Demonstrates integration with GitHub's REST API v3.
  */
-CREATE REST CLIENT RestTest.RC019_GitHubAPI (
+create rest client RestTest.RC019_GitHubAPI (
   BaseUrl: 'https://api.github.com',
-  Authentication: NONE
+  authentication: none
 )
 {
   /** Get repository information */
-  OPERATION GetRepository {
-    Method: GET,
-    Path: '/repos/{owner}/{repo}',
-    Parameters: ($owner: String, $repo: String),
-    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL'),
-    Response: JSON AS $Repository
+  operation GetRepository {
+    method: get,
+    path: '/repos/{owner}/{repo}',
+    parameters: ($owner: string, $repo: string),
+    headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL'),
+    response: json as $Repository
   }
 
   /** List repository issues */
-  OPERATION ListIssues {
-    Method: GET,
-    Path: '/repos/{owner}/{repo}/issues',
-    Parameters: ($owner: String, $repo: String),
-    Query: ($state: String, $labels: String, $page: Integer, $per_page: Integer),
-    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL'),
-    Response: JSON AS $Issues
+  operation ListIssues {
+    method: get,
+    path: '/repos/{owner}/{repo}/issues',
+    parameters: ($owner: string, $repo: string),
+    query: ($state: string, $labels: string, $page: integer, $per_page: integer),
+    headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL'),
+    response: json as $Issues
   }
 
   /** Create an issue (requires authentication) */
-  OPERATION AddIssue {
-    Method: POST,
-    Path: '/repos/{owner}/{repo}/issues',
-    Parameters: ($owner: String, $repo: String),
-    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL', 'Authorization' = 'token ghp_exampletoken123'),
-    Body: JSON FROM $IssueData,
-    Response: JSON AS $CreatedIssue
+  operation AddIssue {
+    method: post,
+    path: '/repos/{owner}/{repo}/issues',
+    parameters: ($owner: string, $repo: string),
+    headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL', 'Authorization' = 'token ghp_exampletoken123'),
+    body: json from $IssueData,
+    response: json as $CreatedIssue
   }
 
   /** Get authenticated user */
-  OPERATION GetAuthenticatedUser {
-    Method: GET,
-    Path: '/user',
-    Headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL', 'Authorization' = 'token ghp_exampletoken123'),
-    Response: JSON AS $User
+  operation GetAuthenticatedUser {
+    method: get,
+    path: '/user',
+    headers: ('Accept' = 'application/vnd.github.v3+json', 'User-Agent' = 'Mendix-REPL', 'Authorization' = 'token ghp_exampletoken123'),
+    response: json as $user
   }
 };
 
@@ -632,36 +632,36 @@ CREATE REST CLIENT RestTest.RC019_GitHubAPI (
  * OpenWeatherMap API Client
  * Demonstrates API key authentication via query parameter.
  */
-CREATE REST CLIENT RestTest.RC020_WeatherAPI (
+create rest client RestTest.RC020_WeatherAPI (
   BaseUrl: 'https://api.openweathermap.org/data/2.5',
-  Authentication: NONE
+  authentication: none
 )
 {
   /** Get current weather for a city */
-  OPERATION GetCurrentWeather {
-    Method: GET,
-    Path: '/weather',
-    Query: ($q: String, $appid: String, $units: String),
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Weather
+  operation GetCurrentWeather {
+    method: get,
+    path: '/weather',
+    query: ($q: string, $appid: string, $units: string),
+    headers: ('Accept' = 'application/json'),
+    response: json as $Weather
   }
 
   /** Get 5-day forecast */
-  OPERATION GetForecast {
-    Method: GET,
-    Path: '/forecast',
-    Query: ($q: String, $appid: String, $units: String, $cnt: Integer),
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Forecast
+  operation GetForecast {
+    method: get,
+    path: '/forecast',
+    query: ($q: string, $appid: string, $units: string, $cnt: integer),
+    headers: ('Accept' = 'application/json'),
+    response: json as $Forecast
   }
 
   /** Get weather by coordinates */
-  OPERATION GetWeatherByCoords {
-    Method: GET,
-    Path: '/weather',
-    Query: ($lat: Decimal, $lon: Decimal, $appid: String, $units: String),
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Weather
+  operation GetWeatherByCoords {
+    method: get,
+    path: '/weather',
+    query: ($lat: decimal, $lon: decimal, $appid: string, $units: string),
+    headers: ('Accept' = 'application/json'),
+    response: json as $Weather
   }
 };
 
@@ -673,53 +673,53 @@ CREATE REST CLIENT RestTest.RC020_WeatherAPI (
  * Payment Processing API
  * Demonstrates secure API patterns for payment processing.
  */
-CREATE REST CLIENT RestTest.RC021_PaymentAPI (
+create rest client RestTest.RC021_PaymentAPI (
   BaseUrl: 'https://api.payments.example.com/v1',
-  Authentication: BASIC (Username: 'sk_test_placeholder', Password: '')
+  authentication: basic (username: 'sk_test_placeholder', password: '')
 )
 {
   /** Create a payment intent */
-  OPERATION InitiatePayment {
-    Method: POST,
-    Path: '/payment_intents',
-    Headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json', 'Idempotency-Key' = 'idem-key-001'),
-    Body: JSON FROM $PaymentData,
-    Timeout: 30,
-    Response: JSON AS $PaymentIntent
+  operation InitiatePayment {
+    method: post,
+    path: '/payment_intents',
+    headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json', 'Idempotency-Key' = 'idem-key-001'),
+    body: json from $PaymentData,
+    timeout: 30,
+    response: json as $PaymentIntent
   }
 
   /** Retrieve a payment intent */
-  OPERATION GetPaymentIntent {
-    Method: GET,
-    Path: '/payment_intents/{paymentIntentId}',
-    Parameters: ($paymentIntentId: String),
-    Response: JSON AS $PaymentIntent
+  operation GetPaymentIntent {
+    method: get,
+    path: '/payment_intents/{paymentIntentId}',
+    parameters: ($paymentIntentId: string),
+    response: json as $PaymentIntent
   }
 
   /** Confirm a payment */
-  OPERATION ConfirmPayment {
-    Method: POST,
-    Path: '/payment_intents/{paymentIntentId}/confirm',
-    Parameters: ($paymentIntentId: String),
-    Headers: ('Content-Type' = 'application/json'),
-    Body: JSON FROM $ConfirmData,
-    Response: JSON AS $PaymentIntent
+  operation ConfirmPayment {
+    method: post,
+    path: '/payment_intents/{paymentIntentId}/confirm',
+    parameters: ($paymentIntentId: string),
+    headers: ('Content-Type' = 'application/json'),
+    body: json from $ConfirmData,
+    response: json as $PaymentIntent
   }
 
   /** Cancel a payment */
-  OPERATION CancelPayment {
-    Method: POST,
-    Path: '/payment_intents/{paymentIntentId}/cancel',
-    Parameters: ($paymentIntentId: String),
-    Response: JSON AS $PaymentIntent
+  operation CancelPayment {
+    method: post,
+    path: '/payment_intents/{paymentIntentId}/cancel',
+    parameters: ($paymentIntentId: string),
+    response: json as $PaymentIntent
   }
 
   /** List all payments */
-  OPERATION ListPayments {
-    Method: GET,
-    Path: '/payment_intents',
-    Query: ($limit: Integer, $starting_after: String, $created: Integer),
-    Response: JSON AS $PaymentList
+  operation ListPayments {
+    method: get,
+    path: '/payment_intents',
+    query: ($limit: integer, $starting_after: string, $created: integer),
+    response: json as $PaymentList
   }
 };
 
@@ -759,17 +759,17 @@ CREATE REST CLIENT RestTest.RC021_PaymentAPI (
  * Calls the GetStatus operation defined in RC001_SimpleAPI.
  * No response variable — fire and forget.
  */
-CREATE MICROFLOW RestTest.ACT_TestSimpleGet ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestSimpleGet ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  SEND REST REQUEST RestTest.RC001_SimpleAPI.GetStatus;
+  send rest request RestTest.RC001_SimpleAPI.GetStatus;
 
-  SET $Success = true;
-  LOG INFO NODE 'RestTest' 'ACT_TestSimpleGet: passed';
-  RETURN $Success;
-END;
+  set $success = true;
+  log info node 'RestTest' 'ACT_TestSimpleGet: passed';
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -783,25 +783,25 @@ END;
  * The response is mapped to the $RootResult entity variable.
  * Use $latestHttpResponse (System.HttpResponse) to check call success.
  */
-CREATE MICROFLOW RestTest.ACT_TestHeaders ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestHeaders ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $RootResult = SEND REST REQUEST RestTest.RC008_HeaderAPI.GetData;
+  $RootResult = send rest request RestTest.RC008_HeaderAPI.GetData;
 
   -- $latestHttpResponse is a system variable (System.HttpResponse) that is
   -- automatically populated after SEND REST REQUEST. Check its Content
   -- attribute to determine if the call returned data.
-  IF $latestHttpResponse/Content != empty THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestHeaders: headers echoed';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestHeaders: empty response';
-  END IF;
+  if $latestHttpResponse/Content != empty then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestHeaders: headers echoed';
+  else
+    log warning node 'RestTest' 'ACT_TestHeaders: empty response';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ############################################################################
@@ -819,26 +819,26 @@ END;
  *
  * Fetches posts from jsonplaceholder via direct REST CALL.
  */
-CREATE MICROFLOW RestTest.ACT_TestJsonGet ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestJsonGet ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $Response = REST CALL GET 'https://jsonplaceholder.typicode.com/posts'
-    HEADER Accept = 'application/json'
-    TIMEOUT 15
-    RETURNS String
-    ON ERROR CONTINUE;
+  $response = rest call get 'https://jsonplaceholder.typicode.com/posts'
+    header Accept = 'application/json'
+    timeout 15
+    returns string
+    on error continue;
 
-  IF $Response != '' THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestJsonGet: received ' + toString(length($Response)) + ' chars';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestJsonGet: empty response';
-  END IF;
+  if $response != '' then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestJsonGet: received ' + toString(length($response)) + ' chars';
+  else
+    log warning node 'RestTest' 'ACT_TestJsonGet: empty response';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -850,28 +850,28 @@ END;
  *
  * Fetches user #1 from jsonplaceholder using {1} placeholder.
  */
-CREATE MICROFLOW RestTest.ACT_TestPathParams ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestPathParams ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $Response = REST CALL GET 'https://jsonplaceholder.typicode.com/users/{1}' WITH (
+  $response = rest call get 'https://jsonplaceholder.typicode.com/users/{1}' with (
     {1} = '1'
   )
-    HEADER Accept = 'application/json'
-    TIMEOUT 15
-    RETURNS String
-    ON ERROR CONTINUE;
+    header Accept = 'application/json'
+    timeout 15
+    returns string
+    on error continue;
 
-  IF $Response != '' THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestPathParams: received user data';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestPathParams: empty response';
-  END IF;
+  if $response != '' then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestPathParams: received user data';
+  else
+    log warning node 'RestTest' 'ACT_TestPathParams: empty response';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -881,28 +881,28 @@ END;
 /**
  * Test POST with inline JSON body
  */
-CREATE MICROFLOW RestTest.ACT_TestPost ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestPost ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $Response = REST CALL POST 'https://httpbin.org/post'
-    HEADER 'Content-Type' = 'application/json'
-    HEADER Accept = 'application/json'
-    BODY '{{"title": "test", "body": "hello from MDL", "userId": 1}'
-    TIMEOUT 15
-    RETURNS String
-    ON ERROR CONTINUE;
+  $response = rest call post 'https://httpbin.org/post'
+    header 'Content-Type' = 'application/json'
+    header Accept = 'application/json'
+    body '{{"title": "test", "body": "hello from MDL", "userId": 1}'
+    timeout 15
+    returns string
+    on error continue;
 
-  IF $Response != '' THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestPost: POST succeeded';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestPost: empty response';
-  END IF;
+  if $response != '' then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestPost: POST succeeded';
+  else
+    log warning node 'RestTest' 'ACT_TestPost: empty response';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -912,29 +912,29 @@ END;
 /**
  * Test GET with query string parameters via URL template
  */
-CREATE MICROFLOW RestTest.ACT_TestQueryParams ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestQueryParams ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $Response = REST CALL GET 'https://httpbin.org/anything/search?q={1}&page={2}' WITH (
+  $response = rest call get 'https://httpbin.org/anything/search?q={1}&page={2}' with (
     {1} = 'mendix',
     {2} = '1'
   )
-    HEADER Accept = 'application/json'
-    TIMEOUT 15
-    RETURNS String
-    ON ERROR CONTINUE;
+    header Accept = 'application/json'
+    timeout 15
+    returns string
+    on error continue;
 
-  IF $Response != '' THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestQueryParams: query echoed';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestQueryParams: empty response';
-  END IF;
+  if $response != '' then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestQueryParams: query echoed';
+  else
+    log warning node 'RestTest' 'ACT_TestQueryParams: empty response';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -944,28 +944,28 @@ END;
 /**
  * Test inline PUT request
  */
-CREATE MICROFLOW RestTest.ACT_TestPut ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestPut ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $Response = REST CALL PUT 'https://httpbin.org/put'
-    HEADER 'Content-Type' = 'application/json'
-    HEADER Accept = 'application/json'
-    BODY '{{"name": "updated", "value": 42}'
-    TIMEOUT 15
-    RETURNS String
-    ON ERROR CONTINUE;
+  $response = rest call put 'https://httpbin.org/put'
+    header 'Content-Type' = 'application/json'
+    header Accept = 'application/json'
+    body '{{"name": "updated", "value": 42}'
+    timeout 15
+    returns string
+    on error continue;
 
-  IF $Response != '' THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestPut: PUT succeeded';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestPut: empty response';
-  END IF;
+  if $response != '' then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestPut: PUT succeeded';
+  else
+    log warning node 'RestTest' 'ACT_TestPut: empty response';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -975,21 +975,21 @@ END;
 /**
  * Test inline DELETE request
  */
-CREATE MICROFLOW RestTest.ACT_TestDelete ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestDelete ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  REST CALL DELETE 'https://httpbin.org/delete'
-    HEADER Accept = '*/*'
-    TIMEOUT 15
-    RETURNS Nothing
-    ON ERROR CONTINUE;
+  rest call delete 'https://httpbin.org/delete'
+    header Accept = '*/*'
+    timeout 15
+    returns nothing
+    on error continue;
 
-  SET $Success = true;
-  LOG INFO NODE 'RestTest' 'ACT_TestDelete: DELETE succeeded';
-  RETURN $Success;
-END;
+  set $success = true;
+  log info node 'RestTest' 'ACT_TestDelete: DELETE succeeded';
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -999,27 +999,27 @@ END;
 /**
  * Test inline GET with basic auth
  */
-CREATE MICROFLOW RestTest.ACT_TestBasicAuth ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestBasicAuth ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $Response = REST CALL GET 'https://httpbin.org/basic-auth/api_user/api_secret'
-    HEADER Accept = 'application/json'
-    AUTH BASIC 'api_user' PASSWORD 'api_secret'
-    TIMEOUT 15
-    RETURNS String
-    ON ERROR CONTINUE;
+  $response = rest call get 'https://httpbin.org/basic-auth/api_user/api_secret'
+    header Accept = 'application/json'
+    auth basic 'api_user' password 'api_secret'
+    timeout 15
+    returns string
+    on error continue;
 
-  IF $Response != '' THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestBasicAuth: authenticated OK';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestBasicAuth: auth failed';
-  END IF;
+  if $response != '' then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestBasicAuth: authenticated OK';
+  else
+    log warning node 'RestTest' 'ACT_TestBasicAuth: auth failed';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ----------------------------------------------------------------------------
@@ -1029,21 +1029,21 @@ END;
 /**
  * Test timeout configuration
  */
-CREATE MICROFLOW RestTest.ACT_TestTimeout ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestTimeout ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  REST CALL GET 'https://httpbin.org/status/200'
-    HEADER Accept = '*/*'
-    TIMEOUT 5
-    RETURNS Nothing
-    ON ERROR CONTINUE;
+  rest call get 'https://httpbin.org/status/200'
+    header Accept = '*/*'
+    timeout 5
+    returns nothing
+    on error continue;
 
-  SET $Success = true;
-  LOG INFO NODE 'RestTest' 'ACT_TestTimeout: completed within timeout';
-  RETURN $Success;
-END;
+  set $success = true;
+  log info node 'RestTest' 'ACT_TestTimeout: completed within timeout';
+  return $success;
+end;
 /
 
 -- ############################################################################
@@ -1058,49 +1058,49 @@ END;
  * Calls each test microflow in sequence and logs a summary.
  * Includes both SEND REST REQUEST and REST CALL tests.
  */
-CREATE MICROFLOW RestTest.ACT_RunAllRestTests ()
-RETURNS Boolean AS $AllPassed
-BEGIN
-  DECLARE $AllPassed Boolean = true;
-  DECLARE $Passed Integer = 0;
-  DECLARE $Failed Integer = 0;
+create microflow RestTest.ACT_RunAllRestTests ()
+returns boolean as $AllPassed
+begin
+  declare $AllPassed boolean = true;
+  declare $Passed integer = 0;
+  declare $Failed integer = 0;
 
-  LOG INFO NODE 'RestTest' '=== Running all REST client tests ===';
+  log info node 'RestTest' '=== Running all REST client tests ===';
 
-  $R1 = CALL MICROFLOW RestTest.ACT_TestSimpleGet();
-  IF $R1 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R1 = call microflow RestTest.ACT_TestSimpleGet();
+  if $R1 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R2 = CALL MICROFLOW RestTest.ACT_TestJsonGet();
-  IF $R2 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R2 = call microflow RestTest.ACT_TestJsonGet();
+  if $R2 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R3 = CALL MICROFLOW RestTest.ACT_TestPathParams();
-  IF $R3 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R3 = call microflow RestTest.ACT_TestPathParams();
+  if $R3 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R4 = CALL MICROFLOW RestTest.ACT_TestPost();
-  IF $R4 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R4 = call microflow RestTest.ACT_TestPost();
+  if $R4 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R5 = CALL MICROFLOW RestTest.ACT_TestQueryParams();
-  IF $R5 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R5 = call microflow RestTest.ACT_TestQueryParams();
+  if $R5 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R6 = CALL MICROFLOW RestTest.ACT_TestPut();
-  IF $R6 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R6 = call microflow RestTest.ACT_TestPut();
+  if $R6 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R7 = CALL MICROFLOW RestTest.ACT_TestDelete();
-  IF $R7 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R7 = call microflow RestTest.ACT_TestDelete();
+  if $R7 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R8 = CALL MICROFLOW RestTest.ACT_TestBasicAuth();
-  IF $R8 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R8 = call microflow RestTest.ACT_TestBasicAuth();
+  if $R8 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R9 = CALL MICROFLOW RestTest.ACT_TestHeaders();
-  IF $R9 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R9 = call microflow RestTest.ACT_TestHeaders();
+  if $R9 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  $R10 = CALL MICROFLOW RestTest.ACT_TestTimeout();
-  IF $R10 THEN SET $Passed = $Passed + 1; ELSE SET $Failed = $Failed + 1; SET $AllPassed = false; END IF;
+  $R10 = call microflow RestTest.ACT_TestTimeout();
+  if $R10 then set $Passed = $Passed + 1; else set $Failed = $Failed + 1; set $AllPassed = false; end if;
 
-  LOG INFO NODE 'RestTest' '=== REST tests complete: ' + toString($Passed) + ' passed, ' + toString($Failed) + ' failed ===';
+  log info node 'RestTest' '=== REST tests complete: ' + toString($Passed) + ' passed, ' + toString($Failed) + ' failed ===';
 
-  RETURN $AllPassed;
-END;
+  return $AllPassed;
+end;
 /
 
 -- ############################################################################
@@ -1116,74 +1116,74 @@ END;
 -- A page with buttons to invoke each test microflow.
 -- Navigate to this page after executing the script.
 
-CREATE PAGE RestTest.RESTClientTestPage
+create page RestTest.RESTClientTestPage
 (
-  Title: 'REST Client Tests',
-  Layout: Atlas_Core.Atlas_Default,
-  Url: 'rest-client-tests'
+  title: 'REST Client Tests',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'rest-client-tests'
 )
 {
-  LAYOUTGRID mainGrid {
-    ROW rowTitle {
-      COLUMN colTitle (DesktopWidth: 12) {
-        DYNAMICTEXT txtTitle (Content: 'REST Client Test Runner', RenderMode: H2)
-        DYNAMICTEXT txtDesc (Content: 'Click a button to run the corresponding REST test microflow. Results are logged to the console.', RenderMode: Paragraph)
+  layoutgrid mainGrid {
+    row rowTitle {
+      column colTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'REST Client Test Runner', rendermode: H2)
+        dynamictext txtDesc (content: 'Click a button to run the corresponding REST test microflow. Results are logged to the console.', rendermode: paragraph)
       }
     }
-    ROW rowRunAll {
-      COLUMN colRunAll (DesktopWidth: 4) {
-        ACTIONBUTTON btnRunAll (Caption: 'Run All Tests', Action: MICROFLOW RestTest.ACT_RunAllRestTests, ButtonStyle: Primary)
+    row rowRunAll {
+      column colRunAll (desktopwidth: 4) {
+        actionbutton btnRunAll (caption: 'Run All Tests', action: microflow RestTest.ACT_RunAllRestTests, buttonstyle: primary)
       }
     }
-    ROW rowBasicHeader {
-      COLUMN colBasicHeader (DesktopWidth: 12) {
-        DYNAMICTEXT txtBasic (Content: 'Basic Operations', RenderMode: H4)
+    row rowBasicHeader {
+      column colBasicHeader (desktopwidth: 12) {
+        dynamictext txtBasic (content: 'Basic Operations', rendermode: H4)
       }
     }
-    ROW rowBasicTests {
-      COLUMN colGet (DesktopWidth: 3) {
-        ACTIONBUTTON btnSimpleGet (Caption: 'Simple GET', Action: MICROFLOW RestTest.ACT_TestSimpleGet, ButtonStyle: Default)
+    row rowBasicTests {
+      column colGet (desktopwidth: 3) {
+        actionbutton btnSimpleGet (caption: 'Simple GET', action: microflow RestTest.ACT_TestSimpleGet, buttonstyle: default)
       }
-      COLUMN colJson (DesktopWidth: 3) {
-        ACTIONBUTTON btnJsonGet (Caption: 'JSON GET', Action: MICROFLOW RestTest.ACT_TestJsonGet, ButtonStyle: Default)
+      column colJson (desktopwidth: 3) {
+        actionbutton btnJsonGet (caption: 'JSON GET', action: microflow RestTest.ACT_TestJsonGet, buttonstyle: default)
       }
-      COLUMN colPath (DesktopWidth: 3) {
-        ACTIONBUTTON btnPathParams (Caption: 'Path Params', Action: MICROFLOW RestTest.ACT_TestPathParams, ButtonStyle: Default)
+      column colPath (desktopwidth: 3) {
+        actionbutton btnPathParams (caption: 'Path Params', action: microflow RestTest.ACT_TestPathParams, buttonstyle: default)
       }
-      COLUMN colQuery (DesktopWidth: 3) {
-        ACTIONBUTTON btnQueryParams (Caption: 'Query Params', Action: MICROFLOW RestTest.ACT_TestQueryParams, ButtonStyle: Default)
-      }
-    }
-    ROW rowMethodHeader {
-      COLUMN colMethodHeader (DesktopWidth: 12) {
-        DYNAMICTEXT txtMethods (Content: 'HTTP Methods', RenderMode: H4)
+      column colQuery (desktopwidth: 3) {
+        actionbutton btnQueryParams (caption: 'Query Params', action: microflow RestTest.ACT_TestQueryParams, buttonstyle: default)
       }
     }
-    ROW rowMethodTests {
-      COLUMN colPost (DesktopWidth: 4) {
-        ACTIONBUTTON btnPost (Caption: 'POST', Action: MICROFLOW RestTest.ACT_TestPost, ButtonStyle: Success)
-      }
-      COLUMN colPut (DesktopWidth: 4) {
-        ACTIONBUTTON btnPut (Caption: 'PUT', Action: MICROFLOW RestTest.ACT_TestPut, ButtonStyle: Info)
-      }
-      COLUMN colDelete (DesktopWidth: 4) {
-        ACTIONBUTTON btnDelete (Caption: 'DELETE', Action: MICROFLOW RestTest.ACT_TestDelete, ButtonStyle: Danger)
+    row rowMethodHeader {
+      column colMethodHeader (desktopwidth: 12) {
+        dynamictext txtMethods (content: 'HTTP Methods', rendermode: H4)
       }
     }
-    ROW rowAdvHeader {
-      COLUMN colAdvHeader (DesktopWidth: 12) {
-        DYNAMICTEXT txtAdv (Content: 'Advanced Features', RenderMode: H4)
+    row rowMethodTests {
+      column colPost (desktopwidth: 4) {
+        actionbutton btnPost (caption: 'POST', action: microflow RestTest.ACT_TestPost, buttonstyle: success)
+      }
+      column colPut (desktopwidth: 4) {
+        actionbutton btnPut (caption: 'PUT', action: microflow RestTest.ACT_TestPut, buttonstyle: info)
+      }
+      column colDelete (desktopwidth: 4) {
+        actionbutton btnDelete (caption: 'DELETE', action: microflow RestTest.ACT_TestDelete, buttonstyle: danger)
       }
     }
-    ROW rowAdvTests {
-      COLUMN colAuth (DesktopWidth: 4) {
-        ACTIONBUTTON btnAuth (Caption: 'Basic Auth', Action: MICROFLOW RestTest.ACT_TestBasicAuth, ButtonStyle: Warning)
+    row rowAdvHeader {
+      column colAdvHeader (desktopwidth: 12) {
+        dynamictext txtAdv (content: 'Advanced Features', rendermode: H4)
       }
-      COLUMN colHeaders (DesktopWidth: 4) {
-        ACTIONBUTTON btnHeaders (Caption: 'Custom Headers', Action: MICROFLOW RestTest.ACT_TestHeaders, ButtonStyle: Default)
+    }
+    row rowAdvTests {
+      column colAuth (desktopwidth: 4) {
+        actionbutton btnAuth (caption: 'Basic Auth', action: microflow RestTest.ACT_TestBasicAuth, buttonstyle: warning)
       }
-      COLUMN colTimeout (DesktopWidth: 4) {
-        ACTIONBUTTON btnTimeout (Caption: 'Timeout', Action: MICROFLOW RestTest.ACT_TestTimeout, ButtonStyle: Default)
+      column colHeaders (desktopwidth: 4) {
+        actionbutton btnHeaders (caption: 'Custom Headers', action: microflow RestTest.ACT_TestHeaders, buttonstyle: default)
+      }
+      column colTimeout (desktopwidth: 4) {
+        actionbutton btnTimeout (caption: 'Timeout', action: microflow RestTest.ACT_TestTimeout, buttonstyle: default)
       }
     }
   }
@@ -1203,8 +1203,8 @@ CREATE PAGE RestTest.RESTClientTestPage
 -- Create a JSON structure from a raw JSON snippet. The element tree is
 -- automatically derived from the snippet.
 
-CREATE JSON STRUCTURE RestTest.JSON_Pet
-SNIPPET '{"id": 1, "name": "Fido", "status": "available"}';
+create json structure RestTest.JSON_Pet
+snippet '{"id": 1, "name": "Fido", "status": "available"}';
 
 -- ============================================================================
 -- Level 12.2: Nested JSON Structure
@@ -1212,8 +1212,8 @@ SNIPPET '{"id": 1, "name": "Fido", "status": "available"}';
 --
 -- Demonstrates a JSON structure with nested objects and arrays.
 
-CREATE JSON STRUCTURE RestTest.JSON_Order
-SNIPPET '{"orderId": 100, "customer": {"name": "Alice", "email": "alice@example.com"}, "items": [{"sku": "A1", "quantity": 2, "price": 9.99}]}';
+create json structure RestTest.JSON_Order
+snippet '{"orderId": 100, "customer": {"name": "Alice", "email": "alice@example.com"}, "items": [{"sku": "A1", "quantity": 2, "price": 9.99}]}';
 
 -- ############################################################################
 -- PART 13: IMPORT MAPPINGS
@@ -1227,20 +1227,20 @@ SNIPPET '{"orderId": 100, "customer": {"name": "Alice", "email": "alice@example.
 --
 -- Maps a flat JSON structure to a single non-persistent entity.
 
-CREATE NON-PERSISTENT ENTITY RestTest.PetResponse (
-  PetId: Integer,
-  Name: String,
-  Status: String
+create non-persistent entity RestTest.PetResponse (
+  PetId: integer,
+  Name: string,
+  status: string
 );
 /
 
-CREATE IMPORT MAPPING RestTest.IMM_Pet
-  WITH JSON STRUCTURE RestTest.JSON_Pet
+create import mapping RestTest.IMM_Pet
+  with json structure RestTest.JSON_Pet
 {
-  CREATE RestTest.PetResponse {
+  create RestTest.PetResponse {
     PetId = id,
     Name = name,
-    Status = status
+    status = status
   }
 };
 
@@ -1250,44 +1250,44 @@ CREATE IMPORT MAPPING RestTest.IMM_Pet
 --
 -- Maps a nested JSON structure to multiple entities linked by associations.
 
-CREATE NON-PERSISTENT ENTITY RestTest.OrderResponse (
-  OrderId: Integer
+create non-persistent entity RestTest.OrderResponse (
+  OrderId: integer
 );
 /
 
-CREATE NON-PERSISTENT ENTITY RestTest.CustomerInfo (
-  Name: String,
-  Email: String
+create non-persistent entity RestTest.CustomerInfo (
+  Name: string,
+  Email: string
 );
 /
 
-CREATE NON-PERSISTENT ENTITY RestTest.OrderItem (
-  Sku: String,
-  Quantity: Integer,
-  Price: Decimal
+create non-persistent entity RestTest.OrderItem (
+  Sku: string,
+  Quantity: integer,
+  Price: decimal
 );
 /
 
-CREATE ASSOCIATION RestTest.CustomerInfo_OrderResponse
-  FROM RestTest.CustomerInfo
-  TO RestTest.OrderResponse;
+create association RestTest.CustomerInfo_OrderResponse
+  from RestTest.CustomerInfo
+  to RestTest.OrderResponse;
 /
 
-CREATE ASSOCIATION RestTest.OrderItem_OrderResponse
-  FROM RestTest.OrderItem
-  TO RestTest.OrderResponse;
+create association RestTest.OrderItem_OrderResponse
+  from RestTest.OrderItem
+  to RestTest.OrderResponse;
 /
 
-CREATE IMPORT MAPPING RestTest.IMM_Order
-  WITH JSON STRUCTURE RestTest.JSON_Order
+create import mapping RestTest.IMM_Order
+  with json structure RestTest.JSON_Order
 {
-  CREATE RestTest.OrderResponse {
+  create RestTest.OrderResponse {
     OrderId = orderId,
-    CREATE RestTest.CustomerInfo_OrderResponse/RestTest.CustomerInfo = customer {
+    create RestTest.CustomerInfo_OrderResponse/RestTest.CustomerInfo = customer {
       Email = email,
       Name = name
     },
-    CREATE RestTest.OrderItem_OrderResponse/RestTest.OrderItem = items {
+    create RestTest.OrderItem_OrderResponse/RestTest.OrderItem = items {
       Sku = sku,
       Quantity = quantity,
       Price = price
@@ -1301,13 +1301,13 @@ CREATE IMPORT MAPPING RestTest.IMM_Order
 --
 -- Uses FIND OR CREATE to upsert: find existing by KEY, create if not found.
 
-CREATE IMPORT MAPPING RestTest.IMM_UpsertPet
-  WITH JSON STRUCTURE RestTest.JSON_Pet
+create import mapping RestTest.IMM_UpsertPet
+  with json structure RestTest.JSON_Pet
 {
-  FIND OR CREATE RestTest.PetResponse {
-    PetId = id KEY,
+  find or create RestTest.PetResponse {
+    PetId = id key,
     Name = name,
-    Status = status
+    status = status
   }
 };
 
@@ -1340,13 +1340,13 @@ CREATE IMPORT MAPPING RestTest.IMM_UpsertPet
 --
 -- Maps an entity back to JSON for outgoing REST calls.
 
-CREATE EXPORT MAPPING RestTest.EMM_Pet
-  WITH JSON STRUCTURE RestTest.JSON_Pet
+create export mapping RestTest.EMM_Pet
+  with json structure RestTest.JSON_Pet
 {
   RestTest.PetResponse {
     id = PetId,
     name = Name,
-    status = Status
+    status = status
   }
 };
 
@@ -1358,55 +1358,55 @@ CREATE EXPORT MAPPING RestTest.EMM_Pet
 -- Arrays require a container entity + item entity (two levels).
 -- This is different from import mappings which map arrays directly.
 
-CREATE NON-PERSISTENT ENTITY RestTest.ExRoot (
-  OrderId: Integer
+create non-persistent entity RestTest.ExRoot (
+  OrderId: integer
 );
 /
 
-CREATE NON-PERSISTENT ENTITY RestTest.ExCustomer (
-  Name: String,
-  Email: String
+create non-persistent entity RestTest.ExCustomer (
+  Name: string,
+  Email: string
 );
 /
 
-CREATE NON-PERSISTENT ENTITY RestTest.ExItems;
+create non-persistent entity RestTest.ExItems;
 /
 
-CREATE NON-PERSISTENT ENTITY RestTest.ExItemsItem (
-  Sku: String,
-  Quantity: Integer,
-  Price: Decimal
+create non-persistent entity RestTest.ExItemsItem (
+  Sku: string,
+  Quantity: integer,
+  Price: decimal
 );
 /
 
-CREATE ASSOCIATION RestTest.ExCustomer_ExRoot
-  FROM RestTest.ExCustomer
-  TO RestTest.ExRoot
-  OWNER Both;
+create association RestTest.ExCustomer_ExRoot
+  from RestTest.ExCustomer
+  to RestTest.ExRoot
+  owner both;
 /
 
-CREATE ASSOCIATION RestTest.ExItems_ExRoot
-  FROM RestTest.ExItems
-  TO RestTest.ExRoot;
+create association RestTest.ExItems_ExRoot
+  from RestTest.ExItems
+  to RestTest.ExRoot;
 /
 
-CREATE ASSOCIATION RestTest.ExItemsItem_ExItems
-  FROM RestTest.ExItemsItem
-  TO RestTest.ExItems;
+create association RestTest.ExItemsItem_ExItems
+  from RestTest.ExItemsItem
+  to RestTest.ExItems;
 /
 
-CREATE EXPORT MAPPING RestTest.EMM_Order
-  WITH JSON STRUCTURE RestTest.JSON_Order
-  NULL VALUES LeaveOutElement
+create export mapping RestTest.EMM_Order
+  with json structure RestTest.JSON_Order
+  null values LeaveOutElement
 {
   RestTest.ExRoot {
     orderId = OrderId,
-    RestTest.ExCustomer_ExRoot/RestTest.ExCustomer AS customer {
+    RestTest.ExCustomer_ExRoot/RestTest.ExCustomer as customer {
       email = Email,
       name = Name
     },
-    RestTest.ExItems_ExRoot/RestTest.ExItems AS items {
-      RestTest.ExItemsItem_ExItems/RestTest.ExItemsItem AS ItemsItem {
+    RestTest.ExItems_ExRoot/RestTest.ExItems as items {
+      RestTest.ExItemsItem_ExItems/RestTest.ExItemsItem as ItemsItem {
         sku = Sku,
         quantity = Quantity,
         price = Price
@@ -1428,26 +1428,26 @@ CREATE EXPORT MAPPING RestTest.EMM_Order
 -- Combines a consumed REST service with an import mapping to deserialize
 -- the JSON response into Mendix entities.
 
-CREATE MICROFLOW RestTest.ACT_TestImportMapping ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow RestTest.ACT_TestImportMapping ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
-  $Result = REST CALL GET 'https://jsonplaceholder.typicode.com/posts/1'
-    HEADER Accept = 'application/json'
-    TIMEOUT 15
-    RETURNS String
-    ON ERROR CONTINUE;
+  $Result = rest call get 'https://jsonplaceholder.typicode.com/posts/1'
+    header Accept = 'application/json'
+    timeout 15
+    returns string
+    on error continue;
 
-  IF $Result != '' THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'ACT_TestImportMapping: import mapping test passed';
-  ELSE
-    LOG WARNING NODE 'RestTest' 'ACT_TestImportMapping: empty response';
-  END IF;
+  if $Result != '' then
+    set $success = true;
+    log info node 'RestTest' 'ACT_TestImportMapping: import mapping test passed';
+  else
+    log warning node 'RestTest' 'ACT_TestImportMapping: empty response';
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ############################################################################
@@ -1463,21 +1463,21 @@ END;
 -- Applies an import mapping to a JSON string to produce entity objects.
 -- The result is stored in a variable for further processing.
 
-CREATE MICROFLOW RestTest.ACT_ImportFromMapping ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
-  DECLARE $JsonContent String = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
+create microflow RestTest.ACT_ImportFromMapping ()
+returns boolean as $success
+begin
+  declare $success boolean = false;
+  declare $JsonContent string = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
 
-  $PetResponse = IMPORT FROM MAPPING RestTest.IMM_Pet($JsonContent);
+  $PetResponse = import from mapping RestTest.IMM_Pet($JsonContent);
 
-  IF $PetResponse != empty THEN
-    SET $Success = true;
-    LOG INFO NODE 'RestTest' 'Import succeeded: ' + $PetResponse/Name;
-  END IF;
+  if $PetResponse != empty then
+    set $success = true;
+    log info node 'RestTest' 'Import succeeded: ' + $PetResponse/Name;
+  end if;
 
-  RETURN $Success;
-END;
+  return $success;
+end;
 /
 
 -- ============================================================================
@@ -1486,13 +1486,13 @@ END;
 --
 -- Applies an export mapping to an entity object to produce a JSON string.
 
-CREATE MICROFLOW RestTest.ACT_ExportToMapping ($PetResponse: RestTest.PetResponse)
-RETURNS String AS $JsonOutput
-BEGIN
-  $JsonOutput = EXPORT TO MAPPING RestTest.EMM_Pet($PetResponse);
-  LOG INFO NODE 'RestTest' 'Exported JSON: ' + $JsonOutput;
-  RETURN $JsonOutput;
-END;
+create microflow RestTest.ACT_ExportToMapping ($PetResponse: RestTest.PetResponse)
+returns string as $JsonOutput
+begin
+  $JsonOutput = export to mapping RestTest.EMM_Pet($PetResponse);
+  log info node 'RestTest' 'Exported JSON: ' + $JsonOutput;
+  return $JsonOutput;
+end;
 /
 
 -- ============================================================================
@@ -1501,13 +1501,13 @@ END;
 --
 -- Full pipeline: receive JSON, import to entities, process, export back to JSON.
 
-CREATE MICROFLOW RestTest.ACT_ImportProcessExport ()
-BEGIN
-  DECLARE $JsonContent String = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
-  $PetResponse = IMPORT FROM MAPPING RestTest.IMM_Pet($JsonContent);
-  $PetResponseJson = EXPORT TO MAPPING RestTest.EMM_Pet($PetResponse);
-  LOG INFO NODE 'RestTest' 'Round-tripped: ' + $PetResponseJson;
-END;
+create microflow RestTest.ACT_ImportProcessExport ()
+begin
+  declare $JsonContent string = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
+  $PetResponse = import from mapping RestTest.IMM_Pet($JsonContent);
+  $PetResponseJson = export to mapping RestTest.EMM_Pet($PetResponse);
+  log info node 'RestTest' 'Round-tripped: ' + $PetResponseJson;
+end;
 /
 
 -- ############################################################################
@@ -1517,20 +1517,20 @@ END;
 -- MARK: Verification
 
 -- List all created REST clients
-SHOW REST CLIENTS;
+show rest clients;
 
 -- Show details of the Pet Store API
-DESCRIBE REST CLIENT RestTest.RC018_PetStoreAPI;
+describe rest client RestTest.RC018_PetStoreAPI;
 
 -- Show JSON structures
-SHOW JSON STRUCTURES;
-DESCRIBE JSON STRUCTURE RestTest.JSON_Pet;
+show json structures;
+describe json structure RestTest.JSON_Pet;
 
 -- Show import and export mappings
-SHOW IMPORT MAPPINGS;
-DESCRIBE IMPORT MAPPING RestTest.IMM_Pet;
-SHOW EXPORT MAPPINGS;
-DESCRIBE EXPORT MAPPING RestTest.EMM_Pet;
+show import mappings;
+describe import mapping RestTest.IMM_Pet;
+show export mappings;
+describe export mapping RestTest.EMM_Pet;
 
 -- ============================================================================
 -- END OF REST CLIENT EXAMPLES

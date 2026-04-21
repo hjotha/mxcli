@@ -64,7 +64,7 @@ func TestFormatCallMicroflowTask_ParameterNameStripping(t *testing.T) {
 
 			// Ensure the full qualified prefix is NOT in the parameter position
 			if tc.paramName != tc.wantParamName && strings.Contains(output, tc.paramName+" = ") {
-				t.Errorf("output should NOT contain full qualified name %q as parameter, got:\n%s", tc.paramName, output)
+				t.Errorf("output should not contain full qualified name %q as parameter, got:\n%s", tc.paramName, output)
 			}
 		})
 	}
@@ -83,19 +83,19 @@ func TestFormatJumpTo_CaptionCommentFormat(t *testing.T) {
 			name:    "caption used over name",
 			caption: "Go Back to Review",
 			actName: "jumpAct1",
-			want:    "JUMP TO target1 COMMENT 'Go Back to Review'",
+			want:    "jump to target1 comment 'Go Back to Review'",
 		},
 		{
 			name:    "name fallback when caption empty",
 			caption: "",
 			actName: "jumpAct1",
-			want:    "JUMP TO target1 COMMENT 'jumpAct1'",
+			want:    "jump to target1 comment 'jumpAct1'",
 		},
 		{
 			name:    "caption with single quote escaped",
 			caption: "it's done",
 			actName: "jumpAct1",
-			want:    "JUMP TO target1 COMMENT 'it''s done'",
+			want:    "jump to target1 comment 'it''s done'",
 		},
 	}
 
@@ -130,14 +130,14 @@ func TestFormatWaitForTimer_CaptionCommentFormat(t *testing.T) {
 			caption: "Wait 2 Hours",
 			actName: "waitAct1",
 			delay:   "${PT2H}",
-			want:    "WAIT FOR TIMER '${PT2H}' COMMENT 'Wait 2 Hours'",
+			want:    "wait for timer '${PT2H}' comment 'Wait 2 Hours'",
 		},
 		{
 			name:    "name fallback no delay",
 			caption: "",
 			actName: "waitAct1",
 			delay:   "",
-			want:    "WAIT FOR TIMER COMMENT 'waitAct1'",
+			want:    "wait for timer comment 'waitAct1'",
 		},
 	}
 
@@ -170,13 +170,13 @@ func TestFormatCallWorkflowActivity_CaptionCommentFormat(t *testing.T) {
 			name:    "caption used",
 			caption: "Run Sub-Workflow",
 			actName: "callWf1",
-			want:    "CALL WORKFLOW Module.SubFlow COMMENT 'Run Sub-Workflow'",
+			want:    "call workflow Module.SubFlow comment 'Run Sub-Workflow'",
 		},
 		{
 			name:    "name fallback",
 			caption: "",
 			actName: "callWf1",
-			want:    "CALL WORKFLOW Module.SubFlow COMMENT 'callWf1'",
+			want:    "call workflow Module.SubFlow comment 'callWf1'",
 		},
 	}
 

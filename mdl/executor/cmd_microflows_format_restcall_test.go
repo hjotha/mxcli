@@ -25,10 +25,10 @@ func TestFormatRestCallAction_GET(t *testing.T) {
 	if got == "" {
 		t.Fatal("expected non-empty output")
 	}
-	assertContains(t, got, "REST CALL GET")
+	assertContains(t, got, "rest call get")
 	assertContains(t, got, "'https://api.example.com/orders'")
 	assertContains(t, got, "$Response = ")
-	assertContains(t, got, "RETURNS String")
+	assertContains(t, got, "returns String")
 }
 
 func TestFormatRestCallAction_POST_CustomBody(t *testing.T) {
@@ -44,9 +44,9 @@ func TestFormatRestCallAction_POST_CustomBody(t *testing.T) {
 		ResultHandling: &microflows.ResultHandlingNone{},
 	}
 	got := e.formatRestCallAction(action)
-	assertContains(t, got, "REST CALL POST")
-	assertContains(t, got, "BODY '{\"name\": \"test\"}'")
-	assertContains(t, got, "RETURNS Nothing")
+	assertContains(t, got, "rest call post")
+	assertContains(t, got, "body '{\"name\": \"test\"}'")
+	assertContains(t, got, "returns Nothing")
 }
 
 func TestFormatRestCallAction_WithHeaders(t *testing.T) {
@@ -62,7 +62,7 @@ func TestFormatRestCallAction_WithHeaders(t *testing.T) {
 		ResultHandling: &microflows.ResultHandlingString{VariableName: "Resp"},
 	}
 	got := e.formatRestCallAction(action)
-	assertContains(t, got, "HEADER 'Authorization' = 'Bearer ' + $Token")
+	assertContains(t, got, "header 'Authorization' = 'Bearer ' + $Token")
 }
 
 func TestFormatRestCallAction_WithAuth(t *testing.T) {
@@ -78,7 +78,7 @@ func TestFormatRestCallAction_WithAuth(t *testing.T) {
 		ResultHandling: &microflows.ResultHandlingString{},
 	}
 	got := e.formatRestCallAction(action)
-	assertContains(t, got, "AUTH BASIC 'admin' PASSWORD 'secret'")
+	assertContains(t, got, "auth basic 'admin' password 'secret'")
 }
 
 func TestFormatRestCallAction_WithTimeout(t *testing.T) {
@@ -92,5 +92,5 @@ func TestFormatRestCallAction_WithTimeout(t *testing.T) {
 		ResultHandling:    &microflows.ResultHandlingString{},
 	}
 	got := e.formatRestCallAction(action)
-	assertContains(t, got, "TIMEOUT 30")
+	assertContains(t, got, "timeout 30")
 }

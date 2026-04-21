@@ -64,30 +64,30 @@ func extractCustomWidgetType(ctx *ExecContext, w map[string]any) string {
 		// Return short name based on widget ID (uppercase for MDL keywords)
 		switch widgetID {
 		case "com.mendix.widget.web.combobox.Combobox":
-			return "COMBOBOX"
+			return "combobox"
 		case "com.mendix.widget.web.datagrid.Datagrid":
-			return "DATAGRID2"
+			return "datagrid2"
 		case "com.mendix.widget.web.gallery.Gallery":
-			return "GALLERY"
+			return "gallery"
 		case "com.mendix.widget.web.datagridtextfilter.DatagridTextFilter":
-			return "TEXTFILTER"
+			return "textfilter"
 		case "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter":
-			return "NUMBERFILTER"
+			return "numberfilter"
 		case "com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter":
-			return "DROPDOWNFILTER"
+			return "dropdownfilter"
 		case "com.mendix.widget.web.datagriddatefilter.DatagridDateFilter":
-			return "DATEFILTER"
+			return "datefilter"
 		case "com.mendix.widget.web.dropdownsort.DropdownSort":
-			return "DROPDOWNSORT"
+			return "dropdownsort"
 		case "com.mendix.widget.web.image.Image":
-			return "IMAGE"
+			return "image"
 		default:
 			// Extract last part of widget ID and uppercase it
 			parts := strings.Split(widgetID, ".")
 			if len(parts) > 0 {
-				return strings.ToUpper(parts[len(parts)-1])
+				return strings.ToLower(parts[len(parts)-1])
 			}
-			return strings.ToUpper(widgetID)
+			return strings.ToLower(widgetID)
 		}
 	}
 	return ""
@@ -188,7 +188,7 @@ func extractDataGrid2DataSource(ctx *ExecContext, w map[string]any) *rawDataSour
 					if !ok {
 						continue
 					}
-					col := rawSortColumn{Order: "ASC"}
+					col := rawSortColumn{Order: "asc"}
 					// Extract attribute from AttributeRef
 					if attrRef, ok := sortItem["AttributeRef"].(map[string]any); ok {
 						col.Attribute = shortAttributeName(extractString(attrRef["Attribute"]))
@@ -196,7 +196,7 @@ func extractDataGrid2DataSource(ctx *ExecContext, w map[string]any) *rawDataSour
 					// Extract sort order
 					sortOrder := extractString(sortItem["SortOrder"])
 					if sortOrder == "Descending" {
-						col.Order = "DESC"
+						col.Order = "desc"
 					}
 					if col.Attribute != "" {
 						result.SortColumns = append(result.SortColumns, col)
@@ -607,13 +607,13 @@ func extractGalleryDataSource(ctx *ExecContext, w map[string]any) *rawDataSource
 				if !ok {
 					continue
 				}
-				col := rawSortColumn{Order: "ASC"}
+				col := rawSortColumn{Order: "asc"}
 				if attrRef, ok := sortItem["AttributeRef"].(map[string]any); ok {
 					col.Attribute = shortAttributeName(extractString(attrRef["Attribute"]))
 				}
 				sortOrder := extractString(sortItem["SortOrder"])
 				if sortOrder == "Descending" {
-					col.Order = "DESC"
+					col.Order = "desc"
 				}
 				if col.Attribute != "" {
 					result.SortColumns = append(result.SortColumns, col)
@@ -656,13 +656,13 @@ func parseCustomWidgetDataSource(ctx *ExecContext, ds map[string]any) *rawDataSo
 				if !ok {
 					continue
 				}
-				col := rawSortColumn{Order: "ASC"}
+				col := rawSortColumn{Order: "asc"}
 				if attrRef, ok := sortItem["AttributeRef"].(map[string]any); ok {
 					col.Attribute = shortAttributeName(extractString(attrRef["Attribute"]))
 				}
 				sortOrder := extractString(sortItem["SortOrder"])
 				if sortOrder == "Descending" {
-					col.Order = "DESC"
+					col.Order = "desc"
 				}
 				if col.Attribute != "" {
 					result.SortColumns = append(result.SortColumns, col)
@@ -1032,9 +1032,9 @@ func extractCustomWidgetID(ctx *ExecContext, w map[string]any) string {
 // isKnownCustomWidgetType returns true for widget types that have dedicated DESCRIBE extractors.
 func isKnownCustomWidgetType(widgetType string) bool {
 	switch widgetType {
-	case "COMBOBOX", "DATAGRID2", "GALLERY", "IMAGE",
-		"TEXTFILTER", "NUMBERFILTER", "DROPDOWNFILTER", "DATEFILTER",
-		"DROPDOWNSORT":
+	case "combobox", "datagrid2", "gallery", "image",
+		"textfilter", "numberfilter", "dropdownfilter", "datefilter",
+		"dropdownsort":
 		return true
 	}
 	return false
@@ -1189,19 +1189,19 @@ func extractCustomWidgetPropertyAction(ctx *ExecContext, w map[string]any, prope
 		case "Forms$MicroflowAction", "Pages$MicroflowClientAction":
 			if settings, ok := action["MicroflowSettings"].(map[string]any); ok {
 				if mf := extractString(settings["Microflow"]); mf != "" {
-					return "CALL_MICROFLOW " + mf
+					return "call_microflow " + mf
 				}
 			}
 		case "Forms$CallNanoflowClientAction", "Pages$CallNanoflowClientAction":
 			if settings, ok := action["NanoflowSettings"].(map[string]any); ok {
 				if nf := extractString(settings["Nanoflow"]); nf != "" {
-					return "CALL_NANOFLOW " + nf
+					return "call_nanoflow " + nf
 				}
 			}
 		case "Forms$FormAction", "Pages$FormAction":
 			if settings, ok := action["PageSettings"].(map[string]any); ok {
 				if page := extractString(settings["Page"]); page != "" {
-					return "SHOW_PAGE " + page
+					return "show_page " + page
 				}
 			}
 		case "Forms$NoAction", "Pages$NoAction":

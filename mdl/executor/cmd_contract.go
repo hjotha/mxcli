@@ -17,7 +17,7 @@ import (
 // listContractEntities handles SHOW CONTRACT ENTITIES FROM Module.Service.
 func listContractEntities(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
-		return mdlerrors.NewValidation("service name required: SHOW CONTRACT ENTITIES FROM Module.Service")
+		return mdlerrors.NewValidation("service name required: show contract entities from Module.Service")
 	}
 
 	doc, svcQN, err := parseServiceContract(ctx, *name)
@@ -77,7 +77,7 @@ func listContractEntities(ctx *ExecContext, name *ast.QualifiedName) error {
 // listContractActions handles SHOW CONTRACT ACTIONS FROM Module.Service.
 func listContractActions(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
-		return mdlerrors.NewValidation("service name required: SHOW CONTRACT ACTIONS FROM Module.Service")
+		return mdlerrors.NewValidation("service name required: show contract actions from Module.Service")
 	}
 
 	doc, svcQN, err := parseServiceContract(ctx, *name)
@@ -247,7 +247,7 @@ func describeContractAction(ctx *ExecContext, name ast.QualifiedName, format str
 		for _, p := range action.Parameters {
 			nullable := ""
 			if p.Nullable != nil && !*p.Nullable {
-				nullable = " NOT NULL"
+				nullable = " not null"
 			}
 			fmt.Fprintf(ctx.Output, "    %-20s  %s%s\n", p.Name, shortenEdmType(p.Type), nullable)
 		}
@@ -279,8 +279,8 @@ func outputContractEntityMDL(ctx *ExecContext, et *types.EdmEntityType, svcQN st
 		module = svcQN[:idx]
 	}
 
-	fmt.Fprintf(ctx.Output, "CREATE EXTERNAL ENTITY %s.%s\n", module, et.Name)
-	fmt.Fprintf(ctx.Output, "FROM ODATA CLIENT %s (\n", svcQN)
+	fmt.Fprintf(ctx.Output, "create external entity %s.%s\n", module, et.Name)
+	fmt.Fprintf(ctx.Output, "from odata client %s (\n", svcQN)
 	fmt.Fprintf(ctx.Output, "    EntitySet: '%s',\n", entitySetName)
 	fmt.Fprintf(ctx.Output, "    RemoteName: '%s',\n", et.Name)
 	fmt.Fprintf(ctx.Output, "    Countable: Yes\n")
@@ -627,7 +627,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 
 			if existingEntity, ok := existing[mendixName]; ok {
 				if !s.CreateOrModify {
-					fmt.Fprintf(ctx.Output, "  SKIPPED: %s.%s (already exists; use CREATE OR MODIFY to update)\n", targetModule, mendixName)
+					fmt.Fprintf(ctx.Output, "  SKIPPED: %s.%s (already exists; use create or modify to update)\n", targetModule, mendixName)
 					skipped++
 					continue
 				}
@@ -1248,7 +1248,7 @@ func edmToAstDataType(p *types.EdmProperty) ast.DataType {
 // listContractChannels handles SHOW CONTRACT CHANNELS FROM Module.Service.
 func listContractChannels(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
-		return mdlerrors.NewValidation("service name required: SHOW CONTRACT CHANNELS FROM Module.Service")
+		return mdlerrors.NewValidation("service name required: show contract channels from Module.Service")
 	}
 
 	doc, svcQN, err := parseAsyncAPIContract(ctx, *name)
@@ -1287,7 +1287,7 @@ func listContractChannels(ctx *ExecContext, name *ast.QualifiedName) error {
 // listContractMessages handles SHOW CONTRACT MESSAGES FROM Module.Service.
 func listContractMessages(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
-		return mdlerrors.NewValidation("service name required: SHOW CONTRACT MESSAGES FROM Module.Service")
+		return mdlerrors.NewValidation("service name required: show contract messages from Module.Service")
 	}
 
 	doc, svcQN, err := parseAsyncAPIContract(ctx, *name)

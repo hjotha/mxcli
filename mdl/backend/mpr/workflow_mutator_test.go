@@ -81,8 +81,8 @@ func TestWorkflowMutator_SetProperty_Display(t *testing.T) {
 	doc := makeWorkflowDoc()
 	m := newMutator(doc)
 
-	if err := m.SetProperty("DISPLAY", "New Title"); err != nil {
-		t.Fatalf("SetProperty DISPLAY failed: %v", err)
+	if err := m.SetProperty("display", "New Title"); err != nil {
+		t.Fatalf("SetProperty display failed: %v", err)
 	}
 
 	if got := dGetString(m.rawData, "Title"); got != "New Title" {
@@ -108,8 +108,8 @@ func TestWorkflowMutator_SetProperty_Display_NilSubDoc(t *testing.T) {
 	}
 	m := newMutator(doc)
 
-	if err := m.SetProperty("DISPLAY", "Created Title"); err != nil {
-		t.Fatalf("SetProperty DISPLAY with nil sub-doc failed: %v", err)
+	if err := m.SetProperty("display", "Created Title"); err != nil {
+		t.Fatalf("SetProperty display with nil sub-doc failed: %v", err)
 	}
 
 	if got := dGetString(m.rawData, "Title"); got != "Created Title" {
@@ -128,8 +128,8 @@ func TestWorkflowMutator_SetProperty_Description(t *testing.T) {
 	doc := makeWorkflowDoc()
 	m := newMutator(doc)
 
-	if err := m.SetProperty("DESCRIPTION", "Updated desc"); err != nil {
-		t.Fatalf("SetProperty DESCRIPTION failed: %v", err)
+	if err := m.SetProperty("description", "Updated desc"); err != nil {
+		t.Fatalf("SetProperty description failed: %v", err)
 	}
 
 	wfDesc := dGetDoc(m.rawData, "WorkflowDescription")
@@ -152,8 +152,8 @@ func TestWorkflowMutator_SetProperty_Description_NilSubDoc(t *testing.T) {
 	}
 	m := newMutator(doc)
 
-	if err := m.SetProperty("DESCRIPTION", "New desc"); err != nil {
-		t.Fatalf("SetProperty DESCRIPTION with nil sub-doc failed: %v", err)
+	if err := m.SetProperty("description", "New desc"); err != nil {
+		t.Fatalf("SetProperty description with nil sub-doc failed: %v", err)
 	}
 
 	wfDesc := dGetDoc(m.rawData, "WorkflowDescription")
@@ -183,7 +183,7 @@ func TestWorkflowMutator_SetProperty_ExportLevel(t *testing.T) {
 	doc = append(doc, bson.E{Key: "ExportLevel", Value: "Usable"})
 	m := newMutator(doc)
 
-	if err := m.SetProperty("EXPORT_LEVEL", "Hidden"); err != nil {
+	if err := m.SetProperty("export_level", "Hidden"); err != nil {
 		t.Fatalf("SetProperty EXPORT_LEVEL failed: %v", err)
 	}
 	if got := dGetString(m.rawData, "ExportLevel"); got != "Hidden" {
@@ -436,7 +436,7 @@ func TestWorkflowMutator_SetActivityProperty_DueDate(t *testing.T) {
 	act = append(act, bson.E{Key: "DueDate", Value: ""})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.SetActivityProperty("Review", 0, "DUE_DATE", "${PT48H}"); err != nil {
+	if err := m.SetActivityProperty("Review", 0, "due_date", "${PT48H}"); err != nil {
 		t.Fatalf("SetActivityProperty DUE_DATE failed: %v", err)
 	}
 
@@ -1141,8 +1141,8 @@ func TestWorkflowMutator_SetActivityProperty_Page_New(t *testing.T) {
 	act = append(act, bson.E{Key: "TaskPage", Value: nil})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.SetActivityProperty("Review", 0, "PAGE", "MyModule.TaskPage"); err != nil {
-		t.Fatalf("SetActivityProperty PAGE failed: %v", err)
+	if err := m.SetActivityProperty("Review", 0, "page", "MyModule.TaskPage"); err != nil {
+		t.Fatalf("SetActivityProperty page failed: %v", err)
 	}
 
 	actDoc, _ := m.findActivityByCaption("Review", 0)
@@ -1162,8 +1162,9 @@ func TestWorkflowMutator_SetActivityProperty_Page_MissingKey(t *testing.T) {
 	// No TaskPage field at all
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.SetActivityProperty("Review", 0, "PAGE", "MyModule.TaskPage"); err != nil {
-		t.Fatalf("SetActivityProperty PAGE failed: %v", err)
+	// No error returned, but the set is silently lost
+	if err := m.SetActivityProperty("Review", 0, "page", "MyModule.TaskPage"); err != nil {
+		t.Fatalf("SetActivityProperty page failed: %v", err)
 	}
 
 	actDoc, _ := m.findActivityByCaption("Review", 0)
@@ -1241,8 +1242,8 @@ func TestWorkflowMutator_SetActivityProperty_Page_Existing(t *testing.T) {
 	}})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.SetActivityProperty("Review", 0, "PAGE", "NewModule.NewPage"); err != nil {
-		t.Fatalf("SetActivityProperty PAGE update failed: %v", err)
+	if err := m.SetActivityProperty("Review", 0, "page", "NewModule.NewPage"); err != nil {
+		t.Fatalf("SetActivityProperty page update failed: %v", err)
 	}
 
 	actDoc, _ := m.findActivityByCaption("Review", 0)
@@ -1261,8 +1262,8 @@ func TestWorkflowMutator_SetActivityProperty_Description(t *testing.T) {
 	}})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.SetActivityProperty("Review", 0, "DESCRIPTION", "new desc"); err != nil {
-		t.Fatalf("SetActivityProperty DESCRIPTION failed: %v", err)
+	if err := m.SetActivityProperty("Review", 0, "description", "new desc"); err != nil {
+		t.Fatalf("SetActivityProperty description failed: %v", err)
 	}
 
 	actDoc, _ := m.findActivityByCaption("Review", 0)
@@ -1277,7 +1278,7 @@ func TestWorkflowMutator_SetActivityProperty_TargetingMicroflow(t *testing.T) {
 	act = append(act, bson.E{Key: "UserTargeting", Value: nil})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.SetActivityProperty("Review", 0, "TARGETING_MICROFLOW", "MyModule.AssignReviewer"); err != nil {
+	if err := m.SetActivityProperty("Review", 0, "targeting_microflow", "MyModule.AssignReviewer"); err != nil {
 		t.Fatalf("SetActivityProperty TARGETING_MICROFLOW failed: %v", err)
 	}
 
@@ -1299,7 +1300,7 @@ func TestWorkflowMutator_SetActivityProperty_TargetingXPath(t *testing.T) {
 	act = append(act, bson.E{Key: "UserTargeting", Value: nil})
 	m := newMutator(makeWorkflowDoc(act))
 
-	if err := m.SetActivityProperty("Review", 0, "TARGETING_XPATH", "[Role = 'Admin']"); err != nil {
+	if err := m.SetActivityProperty("Review", 0, "targeting_xpath", "[Role = 'Admin']"); err != nil {
 		t.Fatalf("SetActivityProperty TARGETING_XPATH failed: %v", err)
 	}
 
@@ -1322,7 +1323,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage(t *testing.T) {
 	doc = append(doc, bson.E{Key: "AdminPage", Value: nil})
 	m := newMutator(doc)
 
-	if err := m.SetPropertyWithEntity("OVERVIEW_PAGE", "MyModule.OverviewPage", ""); err != nil {
+	if err := m.SetPropertyWithEntity("overview_page", "MyModule.OverviewPage", ""); err != nil {
 		t.Fatalf("SetPropertyWithEntity OVERVIEW_PAGE failed: %v", err)
 	}
 
@@ -1342,7 +1343,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage_Clear(t *testing.T) 
 	}})
 	m := newMutator(doc)
 
-	if err := m.SetPropertyWithEntity("OVERVIEW_PAGE", "", ""); err != nil {
+	if err := m.SetPropertyWithEntity("overview_page", "", ""); err != nil {
 		t.Fatalf("SetPropertyWithEntity clear failed: %v", err)
 	}
 
@@ -1356,8 +1357,8 @@ func TestWorkflowMutator_SetPropertyWithEntity_Parameter_New(t *testing.T) {
 	doc = append(doc, bson.E{Key: "Parameter", Value: nil})
 	m := newMutator(doc)
 
-	if err := m.SetPropertyWithEntity("PARAMETER", "WorkflowContext", "MyModule.Order"); err != nil {
-		t.Fatalf("SetPropertyWithEntity PARAMETER failed: %v", err)
+	if err := m.SetPropertyWithEntity("parameter", "WorkflowContext", "MyModule.Order"); err != nil {
+		t.Fatalf("SetPropertyWithEntity parameter failed: %v", err)
 	}
 
 	param := dGetDoc(m.rawData, "Parameter")
@@ -1379,8 +1380,8 @@ func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Update(t *testing.T) {
 	}})
 	m := newMutator(doc)
 
-	if err := m.SetPropertyWithEntity("PARAMETER", "WorkflowContext", "NewModule.NewEntity"); err != nil {
-		t.Fatalf("SetPropertyWithEntity PARAMETER update failed: %v", err)
+	if err := m.SetPropertyWithEntity("parameter", "WorkflowContext", "NewModule.NewEntity"); err != nil {
+		t.Fatalf("SetPropertyWithEntity parameter update failed: %v", err)
 	}
 
 	param := dGetDoc(m.rawData, "Parameter")
@@ -1396,8 +1397,8 @@ func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Clear(t *testing.T) {
 	}})
 	m := newMutator(doc)
 
-	if err := m.SetPropertyWithEntity("PARAMETER", "", ""); err != nil {
-		t.Fatalf("SetPropertyWithEntity PARAMETER clear failed: %v", err)
+	if err := m.SetPropertyWithEntity("parameter", "", ""); err != nil {
+		t.Fatalf("SetPropertyWithEntity parameter clear failed: %v", err)
 	}
 
 	if v := dGet(m.rawData, "Parameter"); v != nil {

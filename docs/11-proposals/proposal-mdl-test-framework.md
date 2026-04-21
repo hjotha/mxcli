@@ -40,7 +40,7 @@ Tests are written in MDL with javadoc annotations that describe expectations:
  * @test String concatenation
  * @expect $result = 'John Doe'
  */
-$result = CALL MICROFLOW MfTest.M003_StringOperations(
+$result = call microflow MfTest.M003_StringOperations(
   FirstName = 'John', LastName = 'Doe'
 );
 /
@@ -51,24 +51,24 @@ $result = CALL MICROFLOW MfTest.M003_StringOperations(
  * @expect $product/Code = 'TP-001'
  * @verify SELECT count(*) FROM MfTest.Product WHERE Code = 'TP-001' = 1
  */
-$product = CALL MICROFLOW MfTest.M012_CreateEntity(
+$product = call microflow MfTest.M012_CreateEntity(
   Name = 'TestProduct', Code = 'TP-001'
 );
-COMMIT $product;
+commit $product;
 /
 
 /**
  * @test Nested IF returns correct grade
  * @expect $result = 'B'
  */
-$result = CALL MICROFLOW MfTest.M008_NestedIf(Score = 85);
+$result = call microflow MfTest.M008_NestedIf(Score = 85);
 /
 
 /**
  * @test Error handling on invalid input
  * @throws 'Validation failed'
  */
-CALL MICROFLOW MfTest.M050_ValidateInput(Value = -1);
+call microflow MfTest.M050_ValidateInput(value = -1);
 /
 ```
 
@@ -80,13 +80,13 @@ used for microflows).
 
 | Tag | Purpose | Example |
 |-----|---------|---------|
-| `@test` | Test name (required) | `@test String concatenation` |
+| `@test` | Test name (required) | `@test string concatenation` |
 | `@expect` | Assert variable value | `@expect $result = 'John Doe'` |
 | `@expect` | Assert attribute on entity | `@expect $product/Name = 'TestProduct'` |
-| `@verify` | OQL post-condition | `@verify SELECT count(*) FROM Mod.E WHERE Code = 'X' = 1` |
+| `@verify` | OQL post-condition | `@verify select count(*) from Mod.E where Code = 'X' = 1` |
 | `@setup` | Reference to setup block | `@setup createTestData` |
 | `@cleanup` | Rollback strategy | `@cleanup rollback` (default) or `@cleanup none` |
-| `@throws` | Expect error message | `@throws 'Validation failed'` |
+| `@throws` | Expect error message | `@throws 'validation failed'` |
 
 ### Two File Formats
 
@@ -103,13 +103,13 @@ also serve as living documentation.
 ~~~markdown
 # MfTest Specification
 
-## String Operations
+## string Operations
 
 The M003 microflow concatenates first and last names with a space separator.
 
 ```mdl-test
 /** @expect $result = 'John Doe' */
-$result = CALL MICROFLOW MfTest.M003_StringOperations(
+$result = call microflow MfTest.M003_StringOperations(
   FirstName = 'John', LastName = 'Doe'
 );
 ```
@@ -120,8 +120,8 @@ Division should return a decimal result.
 
 ```mdl-test
 /** @expect $result = 25.0 */
-$result = CALL MICROFLOW MfTest.M010_ArithmeticOperations(
-  Total = 100.0, Count = 4
+$result = call microflow MfTest.M010_ArithmeticOperations(
+  Total = 100.0, count = 4
 );
 ```
 ~~~
@@ -130,14 +130,14 @@ $result = CALL MICROFLOW MfTest.M010_ArithmeticOperations(
 
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
-│  .test.mdl      │     │      mxcli test       │     │   Mendix Runtime    │
+│  .test.mdl      │     │      mxcli test       │     │   Mendix runtime    │
 │  .test.md       │────▶│                        │────▶│                     │
 │                 │     │  1. Parse test file    │     │  Phase 1:           │
-│  test specs     │     │  2. Extract test blocks│     │  After-startup MF   │
-│  with @expect   │     │  3. Generate runner MF │     │  (log-based)        │
-│                 │     │  4. Build & restart    │     │                     │
+│  test specs     │     │  2. Extract test blocks│     │  after-startup MF   │
+│  with @expect   │     │  3. generate runner MF │     │  (log-based)        │
+│                 │     │  4. build & restart    │     │                     │
 │                 │     │  5. Parse logs         │     │  Phase 2:           │
-│                 │     │  6. Output JUnit XML   │     │  /test/ endpoint    │
+│                 │     │  6. Output JUnit xml   │     │  /test/ endpoint    │
 │                 │     │                        │     │  (HTTP-based)       │
 └─────────────────┘     └──────────────────────┘     └─────────────────────┘
 ```
@@ -163,55 +163,55 @@ $result = CALL MICROFLOW MfTest.M010_ArithmeticOperations(
 For a test file with two test blocks, the generated MDL looks like:
 
 ```sql
-CREATE OR REPLACE MICROFLOW MxTest.TestRunner ()
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = true;
-  DECLARE $TestFailed Boolean = false;
+create or replace microflow MxTest.TestRunner ()
+returns boolean as $success
+begin
+  declare $success boolean = true;
+  declare $TestFailed boolean = false;
 
-  LOG INFO NODE 'MXTEST' 'MXTEST:START:suite';
+  log info node 'MXTEST' 'MXTEST:START:suite';
 
   -- Test 1: String concatenation
-  LOG INFO NODE 'MXTEST' 'MXTEST:RUN:test_1:String concatenation';
-  SET $TestFailed = false;
-  $result = CALL MICROFLOW MfTest.M003_StringOperations(
+  log info node 'MXTEST' 'MXTEST:RUN:test_1:String concatenation';
+  set $TestFailed = false;
+  $result = call microflow MfTest.M003_StringOperations(
     FirstName = 'John', LastName = 'Doe'
-  ) ON ERROR {
-    LOG ERROR NODE 'MXTEST' 'MXTEST:FAIL:test_1:Exception: ' + $latestError;
-    SET $TestFailed = true;
-    SET $Success = false;
+  ) on error {
+    log error node 'MXTEST' 'MXTEST:FAIL:test_1:Exception: ' + $latestError;
+    set $TestFailed = true;
+    set $success = false;
   };
-  IF NOT $TestFailed THEN
-    IF $result = 'John Doe' THEN
-      LOG INFO NODE 'MXTEST' 'MXTEST:PASS:test_1';
-    ELSE
-      LOG ERROR NODE 'MXTEST' 'MXTEST:FAIL:test_1:Expected $result = ''John Doe'' but got ' + $result;
-      SET $Success = false;
-    END IF;
-  END IF;
+  if not $TestFailed then
+    if $result = 'John Doe' then
+      log info node 'MXTEST' 'MXTEST:PASS:test_1';
+    else
+      log error node 'MXTEST' 'MXTEST:FAIL:test_1:Expected $result = ''John Doe'' but got ' + $result;
+      set $success = false;
+    end if;
+  end if;
 
   -- Test 2: Nested IF returns correct grade
-  LOG INFO NODE 'MXTEST' 'MXTEST:RUN:test_2:Nested IF returns correct grade';
-  SET $TestFailed = false;
-  $result2 = CALL MICROFLOW MfTest.M008_NestedIf(
+  log info node 'MXTEST' 'MXTEST:RUN:test_2:Nested IF returns correct grade';
+  set $TestFailed = false;
+  $result2 = call microflow MfTest.M008_NestedIf(
     Score = 85
-  ) ON ERROR {
-    LOG ERROR NODE 'MXTEST' 'MXTEST:FAIL:test_2:Exception: ' + $latestError;
-    SET $TestFailed = true;
-    SET $Success = false;
+  ) on error {
+    log error node 'MXTEST' 'MXTEST:FAIL:test_2:Exception: ' + $latestError;
+    set $TestFailed = true;
+    set $success = false;
   };
-  IF NOT $TestFailed THEN
-    IF $result2 = 'B' THEN
-      LOG INFO NODE 'MXTEST' 'MXTEST:PASS:test_2';
-    ELSE
-      LOG ERROR NODE 'MXTEST' 'MXTEST:FAIL:test_2:Expected $result2 = ''B'' but got ' + $result2;
-      SET $Success = false;
-    END IF;
-  END IF;
+  if not $TestFailed then
+    if $result2 = 'B' then
+      log info node 'MXTEST' 'MXTEST:PASS:test_2';
+    else
+      log error node 'MXTEST' 'MXTEST:FAIL:test_2:Expected $result2 = ''B'' but got ' + $result2;
+      set $success = false;
+    end if;
+  end if;
 
-  LOG INFO NODE 'MXTEST' 'MXTEST:END:suite';
-  RETURN $Success;
-END;
+  log info node 'MXTEST' 'MXTEST:END:suite';
+  return $success;
+end;
 /
 ```
 
@@ -222,11 +222,11 @@ The TestRunner outputs structured log lines that `mxcli test` parses:
 | Log Line | Meaning |
 |----------|---------|
 | `MXTEST:START:suite` | Test suite starting |
-| `MXTEST:RUN:id:name` | Test starting |
+| `MXTEST:run:id:name` | Test starting |
 | `MXTEST:PASS:id` | Test passed |
 | `MXTEST:FAIL:id:message` | Test failed with message |
 | `MXTEST:SKIP:id:reason` | Test skipped |
-| `MXTEST:END:suite` | Test suite complete |
+| `MXTEST:end:suite` | Test suite complete |
 
 ### JUnit XML Output
 
@@ -234,9 +234,9 @@ The TestRunner outputs structured log lines that `mxcli test` parses:
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
   <testsuite name="MfTest" tests="3" failures="1" errors="0" skipped="0" time="2.45">
-    <testcase name="String concatenation" classname="MfTest" time="0.12"/>
-    <testcase name="Nested IF returns correct grade" classname="MfTest" time="0.08"/>
-    <testcase name="Entity creation" classname="MfTest" time="0.25">
+    <testcase name="string concatenation" classname="MfTest" time="0.12"/>
+    <testcase name="Nested if returns correct grade" classname="MfTest" time="0.08"/>
+    <testcase name="entity creation" classname="MfTest" time="0.25">
       <failure message="Expected $product/Name = 'TestProduct' but got 'Other'">
         Expected $product/Name = 'TestProduct' but got 'Other'
       </failure>
@@ -248,19 +248,19 @@ The TestRunner outputs structured log lines that `mxcli test` parses:
 ### CLI Interface
 
 ```bash
-# Run tests from a .test.mdl file
+# run tests from a .test.mdl file
 mxcli test tests/microflows.test.mdl -p app.mpr
 
-# Run tests from a markdown spec
+# run tests from a markdown spec
 mxcli test specs/microflow-spec.test.md -p app.mpr
 
-# Run all test files in a directory
+# run all test files in a directory
 mxcli test tests/ -p app.mpr
 
-# Output JUnit XML for CI
+# Output JUnit xml for CI
 mxcli test tests/ -p app.mpr --junit results.xml
 
-# List tests without executing
+# list tests without executing
 mxcli test tests/ --list
 
 # Verbose output (show all log lines)
@@ -272,7 +272,7 @@ mxcli test tests/ -p app.mpr --skip-build
 # Custom timeout for runtime startup
 mxcli test tests/ -p app.mpr --timeout 10m
 
-# Run specific test(s) by name
+# run specific test(s) by name
 mxcli test tests/ -p app.mpr --run "String concatenation"
 mxcli test tests/ -p app.mpr --run "String concatenation" --run "Boolean logic"
 ```
@@ -296,11 +296,11 @@ The Java interpreter maps AST nodes to Core API calls:
 |----------|---------------|
 | `callMicroflow` | `Core.microflowCall(name).withParam(...).execute(ctx)` |
 | `createObject` | `Core.instantiate(ctx, "Module.Entity")` + `setValue()` |
-| `changeObject` | `obj.setValue(ctx, "Attr", value)` |
+| `changeObject` | `obj.setValue(ctx, "attr", value)` |
 | `commit` | `Core.commit(ctx, obj)` |
 | `delete` | `Core.delete(ctx, obj)` |
 | `retrieve` | `Core.retrieveXPathQuery(ctx, xpath)` |
-| `declareVariable` | Store in local `Map<String, Object>` |
+| `declareVariable` | Store in local `map<string, object>` |
 
 ### Wire Format (JSON AST)
 
@@ -311,15 +311,15 @@ mxcli parses the MDL test file and sends a JSON AST to the `/mxtest/` endpoint:
   "tests": [
     {
       "id": "test_1",
-      "name": "String concatenation",
+      "name": "string concatenation",
       "steps": [
         {
           "type": "callMicroflow",
           "target": "$result",
           "microflow": "MfTest.M003_StringOperations",
           "params": {
-            "FirstName": {"type": "String", "value": "John"},
-            "LastName": {"type": "String", "value": "Doe"}
+            "FirstName": {"type": "string", "value": "John"},
+            "LastName": {"type": "string", "value": "Doe"}
           }
         }
       ],
@@ -370,31 +370,31 @@ When opening a `.test.md` file in VS Code with the MDL extension installed:
   ┌─────────────────────────────────────────────────────────────┐
   │  microflow-spec.test.md                                     │
   ├─────────────────────────────────────────────────────────────┤
-  │  ▶ Run All Tests (15 tests)                                 │  ← CodeLens
+  │  ▶ run all Tests (15 tests)                                 │  ← CodeLens
   │                                                             │
   │  # MfTest Specification                                     │
   │                                                             │
-  │  ## String Operations                                       │
+  │  ## string Operations                                       │
   │                                                             │
   │  The M003 microflow concatenates first and last names.      │
   │                                                             │
-  │  ▶ Run Test: String concatenation                           │  ← CodeLens
+  │  ▶ run Test: string concatenation                           │  ← CodeLens
   │  ┌─────────────────────────────────────────────────────┐    │
-  │  │ /** @test String concatenation                      │    │
+  │  │ /** @test string concatenation                      │    │
   │  │  * @expect $result = 'John Doe' */                  │    │
-  │  │ $result = CALL MICROFLOW MfTest.M003(               │    │
+  │  │ $result = call microflow MfTest.M003(               │    │
   │  │   FirstName = 'John', LastName = 'Doe'              │    │
   │  │ );                                                  │    │
   │  └─────────────────────────────────────────────────────┘    │
   │                                                             │
   │  ## Arithmetic                                              │
   │                                                             │
-  │  ▶ Run Test: Division arithmetic                            │  ← CodeLens
+  │  ▶ run Test: Division arithmetic                            │  ← CodeLens
   │  ┌─────────────────────────────────────────────────────┐    │
   │  │ /** @test Division arithmetic                       │    │
   │  │  * @expect $result = 25.0 */                        │    │
-  │  │ $result = CALL MICROFLOW MfTest.M010(               │    │
-  │  │   Total = 100.0, Count = 4                          │    │
+  │  │ $result = call microflow MfTest.M010(               │    │
+  │  │   Total = 100.0, count = 4                          │    │
   │  │ );                                                  │    │
   │  └─────────────────────────────────────────────────────┘    │
   └─────────────────────────────────────────────────────────────┘
@@ -496,9 +496,9 @@ type TestAnnotation struct {
 }
 
 type Expect struct {
-    Variable string // $var or $var/Attr
+    Variable string // $var or $var/attr
     Operator string // = or <>
-    Value    string // Expected value (string representation)
+    value    string // Expected value (string representation)
 }
 ```
 

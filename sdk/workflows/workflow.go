@@ -270,9 +270,9 @@ type BooleanConditionOutcome struct {
 // GetName returns a display name for the outcome.
 func (o *BooleanConditionOutcome) GetName() string {
 	if o.Value {
-		return "TRUE"
+		return "true"
 	}
-	return "FALSE"
+	return "false"
 }
 
 // GetFlow returns the flow for this outcome.

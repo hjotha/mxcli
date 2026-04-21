@@ -79,7 +79,7 @@ func TestDescribeEnumeration_Mock(t *testing.T) {
 	assertNoError(t, describeEnumeration(ctx, ast.QualifiedName{Module: "MyModule", Name: "Status"}))
 
 	out := buf.String()
-	assertContainsStr(t, out, "CREATE OR MODIFY ENUMERATION MyModule.Status")
+	assertContainsStr(t, out, "create or modify enumeration MyModule.Status")
 	assertContainsStr(t, out, "Active")
 	assertContainsStr(t, out, "Inactive")
 }

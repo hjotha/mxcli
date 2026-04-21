@@ -22,10 +22,10 @@ func TestRoundtripMicroflow_CallWithUnifiedParams(t *testing.T) {
 	env.registerCleanup("microflow", microflowName)
 
 	// First create a simple microflow to call
-	createMfMDL := `CREATE MICROFLOW ` + microflowName + ` ($Input: String) RETURNS String
-	BEGIN
-		RETURN $Input;
-	END;`
+	createMfMDL := `create microflow ` + microflowName + ` ($Input: String) returns String
+	begin
+		return $Input;
+	end;`
 
 	if err := env.executeMDL(createMfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -35,34 +35,34 @@ func TestRoundtripMicroflow_CallWithUnifiedParams(t *testing.T) {
 	callerName := testModule + ".TestCallParamsCaller"
 	env.registerCleanup("microflow", callerName)
 
-	createCallerMDL := `CREATE MICROFLOW ` + callerName + ` () RETURNS String
-	BEGIN
-		$Result = CALL MICROFLOW ` + microflowName + ` (Input = 'Hello World');
-		RETURN $Result;
-	END;`
+	createCallerMDL := `create microflow ` + callerName + ` () returns String
+	begin
+		$Result = call microflow ` + microflowName + ` (Input = 'Hello World');
+		return $Result;
+	end;`
 
 	if err := env.executeMDL(createCallerMDL); err != nil {
 		t.Fatalf("Failed to create calling microflow with unified param syntax: %v", err)
 	}
 
 	// Describe the caller microflow to verify it was created
-	output, err := env.describeMDL(`DESCRIBE MICROFLOW ` + callerName + `;`)
+	output, err := env.describeMDL(`describe microflow ` + callerName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
 	// Verify microflow was created (DESCRIBE may not fully output all activities)
-	if !containsProperty(output, "MICROFLOW") {
-		t.Error("Expected MICROFLOW in output")
+	if !containsProperty(output, "microflow") {
+		t.Error("Expected microflow in output")
 	}
 	// Note: DESCRIBE may not output all activities, so we just verify creation succeeded
-	if containsProperty(output, "CALL") {
-		t.Log("CALL activity found in DESCRIBE output (good!)")
+	if containsProperty(output, "call") {
+		t.Log("call activity found in describe output (good!)")
 	} else {
-		t.Log("Note: CALL activity not shown in DESCRIBE output (known limitation)")
+		t.Log("Note: call activity not shown in describe output (known limitation)")
 	}
 
-	t.Logf("CALL with unified params roundtrip successful:\n%s", output)
+	t.Logf("call with unified params roundtrip successful:\n%s", output)
 }
 
 // TestRoundtripMicroflow_LogWithTemplate tests LOG statement with WITH template syntax.
@@ -74,31 +74,31 @@ func TestRoundtripMicroflow_LogWithTemplate(t *testing.T) {
 	env.registerCleanup("microflow", microflowName)
 
 	// Create microflow with LOG using WITH syntax
-	createMDL := `CREATE MICROFLOW ` + microflowName + ` ($OrderNumber: String, $CustomerName: String) RETURNS Boolean
-	BEGIN
-		LOG INFO NODE 'OrderService' 'Processing order {1} for customer {2}' WITH ({1} = $OrderNumber, {2} = $CustomerName);
-		RETURN true;
-	END;`
+	createMDL := `create microflow ` + microflowName + ` ($OrderNumber: String, $CustomerName: String) returns Boolean
+	begin
+		log info node 'OrderService' 'Processing order {1} for customer {2}' with ({1} = $OrderNumber, {2} = $CustomerName);
+		return true;
+	end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
-		t.Fatalf("Failed to create microflow with LOG template: %v", err)
+		t.Fatalf("Failed to create microflow with log template: %v", err)
 	}
 
 	// Describe the microflow
-	output, err := env.describeMDL(`DESCRIBE MICROFLOW ` + microflowName + `;`)
+	output, err := env.describeMDL(`describe microflow ` + microflowName + `;`)
 	if err != nil {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
 	// Verify LOG statement with WITH clause
-	if !containsProperty(output, "LOG INFO NODE") {
-		t.Error("Expected LOG INFO NODE in output")
+	if !containsProperty(output, "log info node") {
+		t.Error("Expected log info node in output")
 	}
 	if !containsProperty(output, "Processing order {1}") {
 		t.Error("Expected template text 'Processing order {1}' in output")
 	}
-	if !containsProperty(output, "WITH") {
-		t.Error("Expected WITH clause in output")
+	if !containsProperty(output, "with") {
+		t.Error("Expected with clause in output")
 	}
 	if !containsProperty(output, "$OrderNumber") {
 		t.Error("Expected $OrderNumber parameter in output")
@@ -107,7 +107,7 @@ func TestRoundtripMicroflow_LogWithTemplate(t *testing.T) {
 		t.Error("Expected $CustomerName parameter in output")
 	}
 
-	t.Logf("LOG with template roundtrip successful:\n%s", output)
+	t.Logf("log with template roundtrip successful:\n%s", output)
 }
 
 // --- DESCRIBE MICROFLOW Roundtrip Tests ---
@@ -124,7 +124,7 @@ func assertMicroflowContains(t *testing.T, env *testEnv, mfName, createMDL strin
 		t.Fatalf("Failed to create microflow %s: %v", mfName, err)
 	}
 
-	output, err := env.describeMDL(fmt.Sprintf("DESCRIBE MICROFLOW %s;", mfName))
+	output, err := env.describeMDL(fmt.Sprintf("describe microflow %s;", mfName))
 	if err != nil {
 		t.Fatalf("Failed to describe microflow %s: %v", mfName, err)
 	}
@@ -141,7 +141,7 @@ func assertMicroflowContains(t *testing.T, env *testEnv, mfName, createMDL strin
 		}
 	}
 
-	t.Logf("DESCRIBE output for %s:\n%s", mfName, output)
+	t.Logf("describe output for %s:\n%s", mfName, output)
 }
 
 // TestRoundtripMicroflow_IfElseWithBody is the primary regression test for the
@@ -152,19 +152,19 @@ func TestRoundtripMicroflow_IfElseWithBody(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_IfElseBody"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ($Count: Integer) RETURNS String
-BEGIN
-  DECLARE $Result String = 'unknown';
-  IF $Count > 10 THEN
-    SET $Result = 'high';
-  ELSE
-    SET $Result = 'low';
-  END IF;
-  RETURN $Result;
-END;`
+	createMDL := `create microflow ` + mfName + ` ($Count: Integer) returns String
+begin
+  declare $Result String = 'unknown';
+  if $Count > 10 then
+    set $Result = 'high';
+  else
+    set $Result = 'low';
+  end if;
+  return $Result;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"IF", "THEN", "ELSE", "END IF", "'high'", "'low'", "RETURN"},
+		[]string{"if", "then", "else", "end if", "'high'", "'low'", "return"},
 		nil,
 	)
 }
@@ -176,42 +176,42 @@ func TestRoundtripMicroflow_NestedIfElse(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_NestedIf"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ($X: Integer) RETURNS String
-BEGIN
-  DECLARE $Msg String = 'none';
-  IF $X > 0 THEN
-    IF $X > 100 THEN
-      SET $Msg = 'very high';
-    ELSE
-      SET $Msg = 'moderate';
-    END IF;
-  ELSE
-    SET $Msg = 'negative';
-  END IF;
-  RETURN $Msg;
-END;`
+	createMDL := `create microflow ` + mfName + ` ($X: Integer) returns String
+begin
+  declare $Msg String = 'none';
+  if $X > 0 then
+    if $X > 100 then
+      set $Msg = 'very high';
+    else
+      set $Msg = 'moderate';
+    end if;
+  else
+    set $Msg = 'negative';
+  end if;
+  return $Msg;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
-	output, err := env.describeMDL(fmt.Sprintf("DESCRIBE MICROFLOW %s;", mfName))
+	output, err := env.describeMDL(fmt.Sprintf("describe microflow %s;", mfName))
 	if err != nil {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
 	// Must have at least 2 END IF for the nested structure
-	if count := strings.Count(output, "END IF"); count < 2 {
-		t.Errorf("Expected at least 2 'END IF' occurrences, got %d in:\n%s", count, output)
+	if count := strings.Count(output, "end if"); count < 2 {
+		t.Errorf("Expected at least 2 'end if' occurrences, got %d in:\n%s", count, output)
 	}
 
-	for _, want := range []string{"'very high'", "'moderate'", "'negative'", "RETURN"} {
+	for _, want := range []string{"'very high'", "'moderate'", "'negative'", "return"} {
 		if !strings.Contains(output, want) {
 			t.Errorf("Expected %q in output, got:\n%s", want, output)
 		}
 	}
 
-	t.Logf("DESCRIBE output for %s:\n%s", mfName, output)
+	t.Logf("describe output for %s:\n%s", mfName, output)
 }
 
 // TestRoundtripMicroflow_IfWithoutElse tests TRUE-only branch (no ELSE).
@@ -222,16 +222,16 @@ func TestRoundtripMicroflow_IfWithoutElse(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_IfNoElse"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ($Active: Boolean) RETURNS Boolean
-BEGIN
-  IF $Active THEN
-    LOG INFO NODE 'Test' 'Item is active';
-  END IF;
-  RETURN $Active;
-END;`
+	createMDL := `create microflow ` + mfName + ` ($Active: Boolean) returns Boolean
+begin
+  if $Active then
+    log info node 'Test' 'Item is active';
+  end if;
+  return $Active;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"IF", "END IF", "LOG INFO", "RETURN"},
+		[]string{"if", "end if", "log info", "return"},
 		nil,
 	)
 }
@@ -242,15 +242,15 @@ func TestRoundtripMicroflow_LinearDeclareSetReturn(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_LinearFlow"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Integer
-BEGIN
-  DECLARE $Value Integer = 0;
-  SET $Value = 42;
-  RETURN $Value;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Integer
+begin
+  declare $Value Integer = 0;
+  set $Value = 42;
+  return $Value;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"DECLARE", "$Value", "Integer", "SET $Value = 42", "RETURN"},
+		[]string{"declare", "$Value", "Integer", "set $Value = 42", "return"},
 		nil,
 	)
 }
@@ -261,21 +261,21 @@ func TestRoundtripMicroflow_CreateChangeDelete(t *testing.T) {
 	defer env.teardown()
 
 	// Create prerequisite entity
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_CRUD"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  $Item = CREATE RoundtripTest.MfTestItem (Name = 'test');
-  CHANGE $Item (Name = 'updated');
-  DELETE $Item;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  $Item = create RoundtripTest.MfTestItem (Name = 'test');
+  change $Item (Name = 'updated');
+  delete $Item;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"CREATE RoundtripTest.MfTestItem", "CHANGE $Item", "DELETE $Item", "RETURN"},
+		[]string{"create RoundtripTest.MfTestItem", "change $Item", "delete $Item", "return"},
 		nil,
 	)
 }
@@ -286,19 +286,19 @@ func TestRoundtripMicroflow_Retrieve(t *testing.T) {
 	defer env.teardown()
 
 	// Create prerequisite entity
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_Retrieve"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MfTestItem;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MfTestItem;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"RETRIEVE", "RoundtripTest.MfTestItem", "RETURN"},
+		[]string{"retrieve", "RoundtripTest.MfTestItem", "return"},
 		nil,
 	)
 }
@@ -309,20 +309,20 @@ func TestRoundtripMicroflow_RetrieveWithLimit(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_RetrieveLimit"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Item FROM RoundtripTest.MfTestItem
-    LIMIT 1;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Item from RoundtripTest.MfTestItem
+    limit 1;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"RETRIEVE", "RoundtripTest.MfTestItem", "LIMIT 1", "RETURN"},
+		[]string{"retrieve", "RoundtripTest.MfTestItem", "limit 1", "return"},
 		nil,
 	)
 }
@@ -333,21 +333,21 @@ func TestRoundtripMicroflow_RetrieveWithLimitOffset(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_RetrieveLimitOffset"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MfTestItem
-    LIMIT 2
-    OFFSET 3;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MfTestItem
+    limit 2
+    offset 3;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"RETRIEVE", "RoundtripTest.MfTestItem", "LIMIT 2", "OFFSET 3", "RETURN"},
+		[]string{"retrieve", "RoundtripTest.MfTestItem", "limit 2", "offset 3", "return"},
 		nil,
 	)
 }
@@ -358,20 +358,20 @@ func TestRoundtripMicroflow_RetrieveWithSortBy(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_RetrieveSort"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MfTestItem
-    SORT BY RoundtripTest.MfTestItem.Name ASC;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MfTestItem
+    sort by RoundtripTest.MfTestItem.Name asc;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"RETRIEVE", "RoundtripTest.MfTestItem", "SORT BY", "Name ASC", "RETURN"},
+		[]string{"retrieve", "RoundtripTest.MfTestItem", "sort by", "Name asc", "return"},
 		nil,
 	)
 }
@@ -382,28 +382,28 @@ func TestRoundtripMicroflow_RetrieveWithWhereSortLimitOffset(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_RetrieveFull"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MfTestItem
-    WHERE (starts-with(Name, 'a'))
-    SORT BY RoundtripTest.MfTestItem.Name ASC
-    LIMIT 2
-    OFFSET 3;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MfTestItem
+    where (starts-with(Name, 'a'))
+    sort by RoundtripTest.MfTestItem.Name asc
+    limit 2
+    offset 3;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{
-			"RETRIEVE", "RoundtripTest.MfTestItem",
+			"retrieve", "RoundtripTest.MfTestItem",
 			"starts-with", "Name",
-			"SORT BY", "Name ASC",
-			"LIMIT 2", "OFFSET 3",
-			"RETURN",
+			"sort by", "Name asc",
+			"limit 2", "offset 3",
+			"return",
 		},
 		nil,
 	)
@@ -415,22 +415,22 @@ func TestRoundtripMicroflow_LoopWithBody(t *testing.T) {
 	defer env.teardown()
 
 	// Create prerequisite entity
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_Loop"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  RETRIEVE $Items FROM RoundtripTest.MfTestItem;
-  LOOP $Item IN $Items BEGIN
-    LOG INFO NODE 'Test' 'Processing item';
-  END LOOP;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  retrieve $Items from RoundtripTest.MfTestItem;
+  loop $Item in $Items begin
+    log info node 'Test' 'Processing item';
+  end loop;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"LOOP", "$Items", "LOG INFO", "END LOOP", "RETURN"},
+		[]string{"loop", "$Items", "log info", "end loop", "return"},
 		nil,
 	)
 }
@@ -441,26 +441,26 @@ func TestRoundtripMicroflow_LoopInsideBranch(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfTestItem (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_LoopInBranch"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ($Flag: Boolean) RETURNS Boolean
-BEGIN
-  IF $Flag THEN
-    RETRIEVE $Items FROM RoundtripTest.MfTestItem;
-    LOOP $Item IN $Items BEGIN
-      LOG INFO NODE 'Test' 'In loop';
-    END LOOP;
-  ELSE
-    LOG INFO NODE 'Test' 'No items';
-  END IF;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` ($Flag: Boolean) returns Boolean
+begin
+  if $Flag then
+    retrieve $Items from RoundtripTest.MfTestItem;
+    loop $Item in $Items begin
+      log info node 'Test' 'In loop';
+    end loop;
+  else
+    log info node 'Test' 'No items';
+  end if;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"IF", "RETRIEVE", "LOOP", "LOG INFO", "In loop", "END LOOP", "ELSE", "No items", "END IF", "RETURN"},
+		[]string{"if", "retrieve", "loop", "log info", "In loop", "end loop", "else", "No items", "end if", "return"},
 		nil,
 	)
 }
@@ -472,19 +472,19 @@ func TestRoundtripMicroflow_ValidationFeedback(t *testing.T) {
 	defer env.teardown()
 
 	// Create prerequisite entity
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfValItem (Email: String(200));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfValItem (Email: String(200));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_Validation"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ($ValItem: RoundtripTest.MfValItem) RETURNS Boolean
-BEGIN
-  VALIDATION FEEDBACK $ValItem/Email MESSAGE 'Email is required';
-  RETURN false;
-END;`
+	createMDL := `create microflow ` + mfName + ` ($ValItem: RoundtripTest.MfValItem) returns Boolean
+begin
+  validation feedback $ValItem/Email message 'Email is required';
+  return false;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"VALIDATION FEEDBACK", "Email", "Email is required", "RETURN"},
+		[]string{"validation feedback", "Email", "Email is required", "return"},
 		nil,
 	)
 }
@@ -495,35 +495,35 @@ func TestRoundtripMicroflow_MultipleReturnPaths(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_MultiReturn"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` ($Flag: Boolean) RETURNS String
-BEGIN
-  IF $Flag THEN
-    RETURN 'yes';
-  ELSE
-    RETURN 'no';
-  END IF;
-END;`
+	createMDL := `create microflow ` + mfName + ` ($Flag: Boolean) returns String
+begin
+  if $Flag then
+    return 'yes';
+  else
+    return 'no';
+  end if;
+end;`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
-	output, err := env.describeMDL(fmt.Sprintf("DESCRIBE MICROFLOW %s;", mfName))
+	output, err := env.describeMDL(fmt.Sprintf("describe microflow %s;", mfName))
 	if err != nil {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
-	if count := strings.Count(output, "RETURN"); count < 2 {
-		t.Errorf("Expected at least 2 'RETURN' occurrences, got %d in:\n%s", count, output)
+	if count := strings.Count(output, "return"); count < 2 {
+		t.Errorf("Expected at least 2 'return' occurrences, got %d in:\n%s", count, output)
 	}
 
-	for _, want := range []string{"ELSE", "END IF"} {
+	for _, want := range []string{"else", "end if"} {
 		if !strings.Contains(output, want) {
 			t.Errorf("Expected %q in output, got:\n%s", want, output)
 		}
 	}
 
-	t.Logf("DESCRIBE output for %s:\n%s", mfName, output)
+	t.Logf("describe output for %s:\n%s", mfName, output)
 }
 
 // TestRoundtripMicroflow_CommitWithEvents tests COMMIT with WITH EVENTS flag.
@@ -532,20 +532,20 @@ func TestRoundtripMicroflow_CommitWithEvents(t *testing.T) {
 	defer env.teardown()
 
 	// Create prerequisite entity
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfCommitItem (Status: String(50));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfCommitItem (Status: String(50));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_Commit"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  $Obj = CREATE RoundtripTest.MfCommitItem;
-  COMMIT $Obj WITH EVENTS;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  $Obj = create RoundtripTest.MfCommitItem;
+  commit $Obj with events;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"COMMIT", "WITH EVENTS", "RETURN"},
+		[]string{"commit", "with events", "return"},
 		nil,
 	)
 }
@@ -556,20 +556,20 @@ func TestRoundtripMicroflow_ErrorHandlingContinue(t *testing.T) {
 	defer env.teardown()
 
 	// Create prerequisite entity
-	if err := env.executeMDL(`CREATE OR MODIFY PERSISTENT ENTITY RoundtripTest.MfCommitItem (Status: String(50));`); err != nil {
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfCommitItem (Status: String(50));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
 	mfName := testModule + ".RT_ErrorHandling"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
-  $Obj = CREATE RoundtripTest.MfCommitItem;
-  COMMIT $Obj ON ERROR CONTINUE;
-  RETURN true;
-END;`
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
+  $Obj = create RoundtripTest.MfCommitItem;
+  commit $Obj on error continue;
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"COMMIT", "ON ERROR CONTINUE", "RETURN"},
+		[]string{"commit", "on error continue", "return"},
 		nil,
 	)
 }
@@ -580,15 +580,15 @@ func TestRoundtripMicroflow_Annotate(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_Annotate"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
   @annotation 'This is a test annotation'
-  LOG INFO NODE 'Test' 'Hello';
-  RETURN true;
-END;`
+  log info node 'Test' 'Hello';
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"@annotation", "test annotation", "LOG INFO", "RETURN"},
+		[]string{"@annotation", "test annotation", "log info", "return"},
 		nil,
 	)
 }
@@ -599,16 +599,16 @@ func TestRoundtripMicroflow_CaptionColor(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_CaptionColor"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
   @caption 'Custom Caption'
   @color Green
-  LOG INFO NODE 'Test' 'Hello';
-  RETURN true;
-END;`
+  log info node 'Test' 'Hello';
+  return true;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"@caption 'Custom Caption'", "@color Green", "LOG INFO", "RETURN"},
+		[]string{"@caption 'Custom Caption'", "@color Green", "log info", "return"},
 		nil,
 	)
 }
@@ -624,18 +624,18 @@ func TestRoundtripMicroflow_SystemEntityParameter(t *testing.T) {
 	mfName := testModule + ".RT_SystemEntityParam"
 	env.registerCleanup("microflow", mfName)
 
-	createMDL := `CREATE MICROFLOW ` + mfName + ` (
+	createMDL := `create microflow ` + mfName + ` (
   $Workflow: System.Workflow,
   $Count: Integer
-) RETURNS List of System.User
-BEGIN
-  RETURN empty;
-END;`
+) returns List of System.User
+begin
+  return empty;
+end;`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		// "empty" is a reserved keyword — must round-trip as "RETURN empty", not "$empty"
-		[]string{"System.Workflow", "System.User", "RETURN empty"},
-		[]string{"RETURN $empty"},
+		[]string{"System.Workflow", "System.User", "return empty"},
+		[]string{"return $empty"},
 	)
 }
 
@@ -645,17 +645,17 @@ func TestRoundtripMicroflow_Position(t *testing.T) {
 	defer env.teardown()
 
 	mfName := testModule + ".RT_Position"
-	createMDL := `CREATE MICROFLOW ` + mfName + ` () RETURNS Boolean
-BEGIN
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+begin
   @position(500, 300)
-  LOG INFO NODE 'Test' 'Hello';
-  RETURN true;
-END;`
+  log info node 'Test' 'Hello';
+  return true;
+end;`
 
 	// @position is always emitted but the exact coordinates depend on the BSON roundtrip
 	// (RelativeMiddle vs RelativeMiddlePoint key mismatch). Verify @position appears.
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"@position(", "LOG INFO", "RETURN"},
+		[]string{"@position(", "log info", "return"},
 		nil,
 	)
 }

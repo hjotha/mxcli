@@ -38,10 +38,10 @@ The codebase has strong infrastructure to build on:
 | ANTLR4 parser (150+ rules) | `mdl/grammar/MDLParser.g4` | Parse errors → diagnostics |
 | Typed AST (64+ node types) | `mdl/ast/` | Document symbols, outline |
 | `mxcli check` | `mdl/executor/validate_microflow.go` | Semantic diagnostics |
-| `DESCRIBE` commands | `cmd_pages_describe.go`, `cmd_microflows_show.go` | Hover documentation |
+| `describe` commands | `cmd_pages_describe.go`, `cmd_microflows_show.go` | Hover documentation |
 | Linter (4 rules) | `mdl/linter/` | Additional diagnostics |
 | Catalog queries | `mdl/catalog/` | Workspace symbols, references |
-| `SHOW REFERENCES TO` | `mdl/executor/cmd_codesearch.go` | Find references |
+| `show references to` | `mdl/executor/cmd_codesearch.go` | Find references |
 | Cobra CLI | `cmd/mxcli/main.go` | Add `lsp` subcommand |
 
 ## Proposed Phases
@@ -53,15 +53,15 @@ The codebase has strong infrastructure to build on:
 Derived from `MDLLexer.g4`. Maps tokens to TextMate scopes:
 
 ```
-Keywords (CREATE, ENTITY, BEGIN, IF, RETURN)   → keyword.control.mdl
-Types (String, Integer, Boolean)               → storage.type.mdl
-Widget names (TEXTBOX, DATAVIEW, ACTIONBUTTON)  → entity.name.tag.mdl
-String literals ('...')                         → string.quoted.single.mdl
+Keywords (create, entity, begin, if, return)   → keyword.control.mdl
+Types (string, integer, boolean)               → storage.type.mdl
+widget names (textbox, dataview, actionbutton)  → entity.name.tag.mdl
+string literals ('...')                         → string.quoted.single.mdl
 Numbers (42, 3.14)                             → constant.numeric.mdl
 Comments (// ... , /* ... */)                  → comment.mdl
-Variables ($Name)                              → variable.other.mdl
+variables ($Name)                              → variable.other.mdl
 Qualified names (Module.Entity)                → entity.name.type.mdl
-Operators (=, +, -, AND, OR)                   → keyword.operator.mdl
+Operators (=, +, -, and, or)                   → keyword.operator.mdl
 ```
 
 This gives immediate syntax coloring without the LSP server running.
@@ -78,28 +78,28 @@ This gives immediate syntax coloring without the LSP server running.
 **Document Symbols (Outline):**
 
 ```
-CREATE ENTITY Module.Customer       → SymbolKind.Class
-  Name : String(100)                → SymbolKind.Field
-  Email : String(200)               → SymbolKind.Field
+create entity Module.Customer       → SymbolKind.Class
+  Name : string(100)                → SymbolKind.Field
+  Email : string(200)               → SymbolKind.Field
 
-CREATE MICROFLOW Module.ACT_Save    → SymbolKind.Function
+create microflow Module.ACT_Save    → SymbolKind.Function
   $Customer parameter               → SymbolKind.Variable
-  IF condition                      → SymbolKind.Struct
-  RETURN                            → SymbolKind.Event
+  if condition                      → SymbolKind.Struct
+  return                            → SymbolKind.Event
 
-CREATE PAGE Module.Customer_Edit    → SymbolKind.File
-  DATAVIEW dvCustomer               → SymbolKind.Object
-    TEXTBOX txtName                  → SymbolKind.Field
-    ACTIONBUTTON btnSave            → SymbolKind.Event
+create page Module.Customer_Edit    → SymbolKind.File
+  dataview dvCustomer               → SymbolKind.Object
+    textbox txtName                  → SymbolKind.Field
+    actionbutton btnSave            → SymbolKind.Event
 ```
 
 **Diagnostics Example:**
 
 ```
-Line 5: Parse error: expected ';' after COMMIT statement          (Error)
-Line 12: All code paths must end with RETURN for non-void microflow (Error)
-Line 8: Microflow 'ACT_Process' has no activities                  (Warning, MDL002)
-Line 3: Entity name 'customer' should be PascalCase               (Info, MDL001)
+Line 5: Parse error: expected ';' after commit statement          (error)
+Line 12: all code paths must end with return for non-void microflow (error)
+Line 8: microflow 'ACT_Process' has no activities                  (warning, MDL002)
+Line 3: entity name 'customer' should be PascalCase               (info, MDL001)
 ```
 
 ### Phase 2 — Hover + Go-to-Definition (project-aware)
@@ -110,37 +110,37 @@ When an `.mpr` file is configured, the LSP server opens it read-only and provide
 
 | Method | Implementation |
 |--------|----------------|
-| `textDocument/hover` | Reuse `DESCRIBE` output for the element under cursor |
+| `textDocument/hover` | Reuse `describe` output for the element under cursor |
 | `textDocument/definition` | Resolve qualified name → file position or project element |
-| `textDocument/references` | Reuse `SHOW REFERENCES TO` via catalog |
+| `textDocument/references` | Reuse `show references to` via catalog |
 
 **Hover Examples:**
 
 Hovering over `MyModule.Customer` in a RETRIEVE statement:
 
 ```
-Entity: MyModule.Customer (persistent)
+entity: MyModule.Customer (persistent)
 ────────────────────────────
-Attributes:
-  Name : String(100)
-  Email : String(200)
-  Status : MyModule.CustomerStatus (enum)
+attributes:
+  Name : string(100)
+  Email : string(200)
+  status : MyModule.CustomerStatus (enum)
 
-Associations:
+associations:
   Customer_Order → MyModule.Order (1-*)
 ```
 
-Hovering over `CALL MICROFLOW MyModule.ACT_Validate`:
+Hovering over `call microflow MyModule.ACT_Validate`:
 
 ```
-Microflow: MyModule.ACT_Validate
+microflow: MyModule.ACT_Validate
 ────────────────────────────
-Parameters:
+parameters:
   $Customer : MyModule.Customer
-Return: Boolean
+return: boolean
 
 Activities: 3 | Complexity: 2
-Folder: ACT/Validation
+folder: ACT/validation
 ```
 
 **Go-to-Definition:**
@@ -160,24 +160,24 @@ For references within the same MDL file, jump to the definition. For references 
 
 | Context | Trigger | Suggestions |
 |---------|---------|-------------|
-| Top-level | `CREATE ` | `ENTITY`, `MICROFLOW`, `PAGE`, `ASSOCIATION`, ... |
-| After `CREATE ENTITY` | `Module.` | Existing module names |
-| Attribute type | `: ` | `String`, `Integer`, `Boolean`, `Decimal`, `DateTime`, `Module.Entity` |
-| Widget inside DATAVIEW | newline | `TEXTBOX`, `TEXTAREA`, `CHECKBOX`, `ACTIONBUTTON`, ... |
-| After `Attribute:` | `` | Attributes of the enclosing data source entity |
-| After `DataSource:` | `` | `DATABASE`, `$ParameterName`, `SELECTION`, `MICROFLOW` |
-| After `CALL MICROFLOW` | `Module.` | Microflow names from catalog |
-| After `RETRIEVE ... FROM` | `` | Entity names from catalog |
+| Top-level | `create ` | `entity`, `microflow`, `page`, `association`, ... |
+| After `create entity` | `Module.` | Existing module names |
+| Attribute type | `: ` | `string`, `integer`, `boolean`, `decimal`, `datetime`, `Module.Entity` |
+| Widget inside DATAVIEW | newline | `textbox`, `textarea`, `checkbox`, `actionbutton`, ... |
+| After `attribute:` | `` | Attributes of the enclosing data source entity |
+| After `datasource:` | `` | `DATABASE`, `$ParameterName`, `SELECTION`, `MICROFLOW` |
+| After `call microflow` | `Module.` | Microflow names from catalog |
+| After `retrieve ... from` | `` | Entity names from catalog |
 | Inside expression | `$` | Declared variables in scope |
 
 **Signature Help:**
 
 ```
-CALL MICROFLOW MyModule.ACT_Validate(
+call microflow MyModule.ACT_Validate(
                                      ▲
-  $Customer: MyModule.Customer, $Message: String
+  $Customer: MyModule.Customer, $message: string
   ─────────────────────────────
-  Parameter 1 of 2
+  parameter 1 of 2
 )
 ```
 
@@ -222,11 +222,11 @@ vscode-mdl/
         "mdl.mxcliPath": {
           "type": "string",
           "default": "mxcli",
-          "description": "Path to mxcli binary"
+          "description": "path to mxcli binary"
         },
         "mdl.projectPath": {
           "type": "string",
-          "description": "Path to .mpr file for project-aware features"
+          "description": "path to .mpr file for project-aware features"
         }
       }
     }
@@ -283,7 +283,7 @@ During `mxcli init`, each embedded filesystem is walked with `fs.WalkDir()` and 
 │   ├── skills/            # 23 skill files (304 KB)
 │   ├── commands/          # 9 command files (36 KB)
 │   └── lint-rules/        # 10 lint rule files (40 KB)
-└── CLAUDE.md              # Project instructions
+└── CLAUDE.md              # project instructions
 ```
 
 ### Proposed Extension: Embed and Auto-Install the VS Code Extension
@@ -314,7 +314,7 @@ sync-all: sync-skills sync-commands sync-lint-rules sync-extensions
 4. Attempt auto-install via `code --install-extension` (best-effort)
 
 ```go
-// In init.go (proposed addition)
+// in init.go (proposed addition)
 
 // 1. Extract .vsix to project
 vsixPath := filepath.Join(absDir, ".vscode", "mdl-extension.vsix")
@@ -322,14 +322,14 @@ os.MkdirAll(filepath.Join(absDir, ".vscode"), 0755)
 vsixContent, _ := extensionsFS.ReadFile("extensions/vscode-mdl.vsix")
 os.WriteFile(vsixPath, vsixContent, 0644)
 
-// 2. Write extensions.json (VS Code shows "install recommended" prompt)
+// 2. write extensions.json (VS Code shows "install recommended" prompt)
 extensionsJSON := `{
     "recommendations": ["mendix.mdl-language"]
 }`
 os.WriteFile(filepath.Join(absDir, ".vscode", "extensions.json"),
     []byte(extensionsJSON), 0644)
 
-// 3. Write VS Code settings for MDL
+// 3. write VS Code settings for MDL
 settingsPath := filepath.Join(absDir, ".vscode", "settings.json")
 vscodeSettings := fmt.Sprintf(`{
     "mdl.mxcliPath": "./mxcli",
@@ -396,7 +396,7 @@ cd vscode-mdl && npm install && npm run package
 # Copy to embed source
 cp vscode-mdl/vscode-mdl.vsix .claude/extensions/
 
-# Build mxcli (syncs and embeds everything)
+# build mxcli (syncs and embeds everything)
 make build
 ```
 
@@ -430,7 +430,7 @@ mdl/
 │   ├── server.go           # LSP server, method dispatch
 │   ├── diagnostics.go      # Parse errors + check + lint → diagnostics
 │   ├── symbols.go          # AST → document symbols
-│   ├── hover.go            # Describe commands → hover content
+│   ├── hover.go            # describe commands → hover content
 │   ├── completion.go       # Grammar + catalog → completions
 │   └── document.go         # Document state management (open/change/close)
 ```

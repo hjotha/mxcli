@@ -45,7 +45,7 @@ Admin console: **http://localhost:8090** (password: `AdminPassword1!`)
 **Model/page/security changes** (microflows, entities, pages, navigation):
 
 ```bash
-# 1. Apply MDL changes to the project
+# 1. apply MDL changes to the project
 ./mxcli exec changes.mdl -p MxCliDemoApp2.mpr
 
 # 2. Rebuild and hot reload (no restart, keeps database)
@@ -81,7 +81,7 @@ If you prefer more control over individual steps:
 ./mxcli setup mxruntime -p MxCliDemoApp2.mpr
 ./mxcli docker init -p MxCliDemoApp2.mpr
 
-# Build and start
+# build and start
 ./mxcli docker build -p MxCliDemoApp2.mpr
 ./mxcli docker up -p MxCliDemoApp2.mpr --detach --wait
 ```
@@ -93,10 +93,10 @@ If you prefer more control over individual steps:
 Once the app is running, test OQL queries against the live runtime:
 
 ```bash
-# Run OQL queries (read-only preview mode)
-./mxcli oql -p MxCliDemoApp2.mpr "SELECT Name FROM MyModule.Customer"
+# run OQL queries (read-only preview mode)
+./mxcli oql -p MxCliDemoApp2.mpr "select Name from MyModule.Customer"
 
-# JSON output for piping
+# json output for piping
 ./mxcli oql -p MxCliDemoApp2.mpr --json "SELECT count(c.ID) FROM MyModule.Order AS c"
 ```
 
@@ -109,19 +109,19 @@ Once the app is running, test OQL queries against the live runtime:
 ## Monitoring
 
 ```bash
-# View live logs
+# view live logs
 ./mxcli docker logs -p MxCliDemoApp2.mpr --follow
 
-# View last 50 lines
+# view last 50 lines
 ./mxcli docker logs -p MxCliDemoApp2.mpr --tail 50
 
-# Open a shell in the Mendix container
+# open a shell in the Mendix container
 ./mxcli docker shell -p MxCliDemoApp2.mpr
 ```
 
 Look for this line to confirm successful startup:
 ```
-Mendix Runtime successfully started, the application is now available.
+Mendix runtime successfully started, the application is now available.
 ```
 
 ---

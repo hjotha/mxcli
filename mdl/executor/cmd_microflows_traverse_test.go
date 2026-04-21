@@ -49,9 +49,9 @@ func TestTraverseFlow_LinearSequence(t *testing.T) {
 		t.Fatalf("expected 4 lines, got %d: %v", len(lines), lines)
 	}
 	assertContains(t, lines[0], "@position(0, 0)")
-	assertContains(t, lines[1], "$Obj = CREATE Mod.Entity;")
+	assertContains(t, lines[1], "$Obj = create Mod.Entity;")
 	assertContains(t, lines[2], "@position(0, 0)")
-	assertContains(t, lines[3], "COMMIT $Obj;")
+	assertContains(t, lines[3], "commit $Obj;")
 }
 
 // =============================================================================
@@ -103,24 +103,24 @@ func TestTraverseFlow_IfElse(t *testing.T) {
 	foundELSE := false
 	foundENDIF := false
 	for _, line := range lines {
-		if contains(line, "IF $x > 0 THEN") {
+		if contains(line, "if $x > 0 then") {
 			foundIF = true
 		}
-		if contains(line, "ELSE") {
+		if contains(line, "else") {
 			foundELSE = true
 		}
-		if contains(line, "END IF;") {
+		if contains(line, "end if;") {
 			foundENDIF = true
 		}
 	}
 	if !foundIF {
-		t.Errorf("expected IF statement in output: %v", lines)
+		t.Errorf("expected if statement in output: %v", lines)
 	}
 	if !foundELSE {
-		t.Errorf("expected ELSE in output: %v", lines)
+		t.Errorf("expected else in output: %v", lines)
 	}
 	if !foundENDIF {
-		t.Errorf("expected END IF in output: %v", lines)
+		t.Errorf("expected end if in output: %v", lines)
 	}
 }
 
@@ -153,7 +153,7 @@ func TestCollectErrorHandlerStatements_Simple(t *testing.T) {
 	if len(stmts) != 1 {
 		t.Fatalf("expected 1 statement, got %d: %v", len(stmts), stmts)
 	}
-	assertContains(t, stmts[0], "LOG ERROR")
+	assertContains(t, stmts[0], "log error")
 	assertContains(t, stmts[0], "Something failed")
 }
 

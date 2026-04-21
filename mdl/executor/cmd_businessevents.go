@@ -207,7 +207,7 @@ func describeBusinessEventService(ctx *ExecContext, name ast.QualifiedName) erro
 	if found.Documentation != "" {
 		outputJavadoc(ctx.Output, found.Documentation)
 	}
-	fmt.Fprintf(ctx.Output, "CREATE OR REPLACE BUSINESS EVENT SERVICE %s.%s\n", foundModule, found.Name)
+	fmt.Fprintf(ctx.Output, "create or replace business event service %s.%s\n", foundModule, found.Name)
 
 	if found.Definition != nil {
 		fmt.Fprintf(ctx.Output, "(\n")
@@ -237,18 +237,18 @@ func describeBusinessEventService(ctx *ExecContext, name ast.QualifiedName) erro
 				}
 
 				// Determine operation from OperationImplementations
-				opStr := "PUBLISH"
+				opStr := "publish"
 				entityStr := ""
 				if op, ok := opMap[msg.MessageName]; ok {
 					if op.Operation == "subscribe" {
-						opStr = "SUBSCRIBE"
+						opStr = "subscribe"
 					}
 					if op.Entity != "" {
-						entityStr = fmt.Sprintf("\n    ENTITY %s", op.Entity)
+						entityStr = fmt.Sprintf("\n    entity %s", op.Entity)
 					}
 				}
 
-				fmt.Fprintf(ctx.Output, "  MESSAGE %s (%s) %s%s;\n",
+				fmt.Fprintf(ctx.Output, "  message %s (%s) %s%s;\n",
 					msg.MessageName, strings.Join(attrs, ", "), opStr, entityStr)
 			}
 		}
@@ -288,7 +288,7 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 					return mdlerrors.NewBackend("delete existing service", err)
 				}
 			} else {
-				return mdlerrors.NewAlreadyExistsMsg("business event service", moduleName+"."+stmt.Name.Name, fmt.Sprintf("business event service already exists: %s.%s (use CREATE OR REPLACE to overwrite)", moduleName, stmt.Name.Name))
+				return mdlerrors.NewAlreadyExistsMsg("business event service", moduleName+"."+stmt.Name.Name, fmt.Sprintf("business event service already exists: %s.%s (use create or replace to overwrite)", moduleName, stmt.Name.Name))
 			}
 		}
 	}
@@ -331,10 +331,10 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 		msg.TypeName = "BusinessEvents$Message"
 
 		// Set publish/subscribe based on operation
-		switch strings.ToUpper(msgDef.Operation) {
-		case "PUBLISH":
+		switch strings.ToLower(msgDef.Operation) {
+		case "publish":
 			msg.CanSubscribe = true // Service publishes → others subscribe
-		case "SUBSCRIBE":
+		case "subscribe":
 			msg.CanPublish = true // Service subscribes → others publish
 		}
 

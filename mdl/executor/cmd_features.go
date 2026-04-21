@@ -77,7 +77,7 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 	default:
 		// SHOW FEATURES [IN area] — requires project connection
 		if !ctx.Connected() {
-			return mdlerrors.NewNotConnectedMsg("not connected to a project\n  hint: use SHOW FEATURES FOR VERSION x.y without a project connection")
+			return mdlerrors.NewNotConnectedMsg("not connected to a project\n  hint: use show features for version x.y without a project connection")
 		}
 		rpv := ctx.Backend.ProjectVersion()
 		pv = versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}

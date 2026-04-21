@@ -24,21 +24,21 @@ For the full workflow, read `CONTRIBUTING.md`. For the review checklist applied 
 ## Build & Test Commands
 
 ```bash
-# Build the CLI (preferred - uses Makefile)
+# build the CLI (preferred - uses Makefile)
 make build
 
-# Run tests
+# run tests
 make test
 
-# Format and vet code
+# format and vet code
 make fmt
 make vet
 
-# Run a specific example
+# run a specific example
 go run ./examples/read_project/main.go /path/to/project.mpr
 go run ./examples/modify_project/main.go /path/to/project.mpr
 
-# Run the code generator
+# run the code generator
 go run ./cmd/codegen/main.go -reflection-dir ./reference/mendixmodellib/reflection-data -version 10.0.0 -output ./generated/metamodel
 ```
 
@@ -59,10 +59,10 @@ The `mx` command-line tool validates and builds Mendix projects. Location depend
 # Auto-download mxbuild for the project's Mendix version
 mxcli setup mxbuild -p app.mpr
 
-# Check/validate a Mendix project
+# check/validate a Mendix project
 ~/.mxcli/mxbuild/*/modeler/mx check /path/to/app.mpr
 
-# Or use the integrated command (auto-downloads mxbuild)
+# or use the integrated command (auto-downloads mxbuild)
 mxcli docker check -p app.mpr
 ```
 
@@ -70,10 +70,10 @@ mxcli docker check -p app.mpr
 
 ```
 ModelSDKGo/
-├── modelsdk.go              # Main public API (Open, OpenForWriting, helpers)
-├── model/                   # Core types: ID, QualifiedName, Module, Element interface
+├── modelsdk.go              # Main public api (open, OpenForWriting, helpers)
+├── model/                   # Core types: ID, QualifiedName, module, Element interface
 │
-├── api/                     # High-level fluent API (inspired by Mendix Web Extensibility API)
+├── api/                     # High-level fluent api (inspired by Mendix Web Extensibility api)
 │   ├── api.go               # ModelAPI entry point with namespace access
 │   ├── domainmodels.go      # EntityBuilder, AssociationBuilder, AttributeBuilder
 │   ├── enumerations.go      # EnumerationBuilder
@@ -82,15 +82,15 @@ ModelSDKGo/
 │   └── modules.go           # ModulesAPI
 │
 ├── sdk/                     # SDK implementation packages
-│   ├── domainmodel/         # Entity, Attribute, Association, DomainModel
-│   ├── microflows/          # Microflow, Nanoflow, activities (60+ types)
-│   ├── pages/               # Page, Layout, Widget types (50+ widgets)
+│   ├── domainmodel/         # entity, attribute, association, DomainModel
+│   ├── microflows/          # microflow, nanoflow, activities (60+ types)
+│   ├── pages/               # page, layout, widget types (50+ widgets)
 │   ├── widgets/             # Embedded widget templates for pluggable widgets
-│   │   ├── loader.go        # Template loading with go:embed
-│   │   └── templates/       # JSON widget type definitions by Mendix version
+│   │   ├── loader.go        # template loading with go:embed
+│   │   └── templates/       # json widget type definitions by Mendix version
 │   └── mpr/                 # MPR file format handling
-│       ├── reader.go        # Read-only MPR access
-│       ├── writer.go        # Read-write MPR modification
+│       ├── reader.go        # read-only MPR access
+│       ├── writer.go        # read-write MPR modification
 │       ├── parser.go        # BSON parsing and deserialization
 │       └── utils.go         # UUID generation utilities
 │
@@ -107,15 +107,15 @@ ModelSDKGo/
 │   │   └── rules/           # Built-in lint rules (MPR001, MPR002, etc.)
 │   └── repl/                # Interactive REPL interface
 │
-├── sql/                     # External database connectivity (PostgreSQL, Oracle, SQL Server)
+├── sql/                     # external database connectivity (PostgreSQL, Oracle, sql Server)
 │   ├── driver.go            # DriverName type, ParseDriver()
-│   ├── connection.go        # Manager, Connection, credential isolation
+│   ├── connection.go        # Manager, connection, credential isolation
 │   ├── config.go            # DSN resolution (env vars, YAML config)
-│   ├── query.go             # Execute() — query via database/sql
+│   ├── query.go             # execute() — query via database/sql
 │   ├── meta.go              # ShowTables(), DescribeTable() via information_schema
-│   ├── format.go            # Table and JSON output formatters
+│   ├── format.go            # table and json output formatters
 │   ├── mendix.go            # Mendix DB DSN builder, table/column name helpers
-│   └── import.go            # IMPORT pipeline: batch insert, ID generation, sequence tracking
+│   └── import.go            # import pipeline: batch insert, ID generation, sequence tracking
 │
 ├── cmd/                     # Command-line tools
 │   ├── mxcli/               # CLI entry point (Cobra-based)
@@ -123,14 +123,14 @@ ModelSDKGo/
 │
 ├── internal/                # Internal packages (not exported)
 │   └── codegen/             # Metamodel code generation system
-│       ├── schema/          # JSON reflection data loading
-│       ├── transform/       # Transform to Go types
+│       ├── schema/          # json reflection data loading
+│       ├── transform/       # transform to Go types
 │       └── emit/            # Go source code generation
 │
 ├── generated/metamodel/     # Auto-generated type definitions
 ├── examples/                # Usage examples
 │
-└── reference/               # Reference materials (not Go code)
+└── reference/               # reference materials (not Go code)
     ├── mendixmodellib/      # TypeScript library + reflection data
     ├── mendixmodelsdk/      # TypeScript SDK reference
     └── mdl-grammar/         # Comprehensive MDL grammar reference
@@ -145,7 +145,7 @@ ModelSDKGo/
 
 ### BSON Storage Names vs Qualified Names
 
-**CRITICAL**: Mendix uses different "storage names" in BSON `$Type` fields than the "qualified names" shown in the TypeScript SDK documentation. Using the wrong name causes `TypeCacheUnknownTypeException` when opening in Studio Pro.
+**CRITICAL**: Mendix uses different "storage names" in BSON `$type` fields than the "qualified names" shown in the TypeScript SDK documentation. Using the wrong name causes `TypeCacheUnknownTypeException` when opening in Studio Pro.
 
 | Qualified Name (SDK/docs) | Storage Name (BSON $Type) | Note |
 |---------------------------|---------------------------|------|
@@ -188,10 +188,10 @@ When generating Mendix expression strings (e.g., in `expressionToString()`), sin
 
 | BSON Field | Points To | MDL Keyword |
 |------------|-----------|-------------|
-| `ParentPointer` | **FROM** entity (FK owner) | `FROM Module.Child` |
-| `ChildPointer` | **TO** entity (referenced) | `TO Module.Parent` |
+| `ParentPointer` | **FROM** entity (FK owner) | `from Module.Child` |
+| `ChildPointer` | **TO** entity (referenced) | `to Module.Parent` |
 
-`CREATE ASSOCIATION Mod.Child_Parent FROM Mod.Child TO Mod.Parent` stores:
+`create association Mod.Child_Parent from Mod.Child to Mod.Parent` stores:
 - `ParentPointer = Child.$ID` (the FROM entity owns the foreign key)
 - `ChildPointer = Parent.$ID` (the TO entity is being referenced)
 
@@ -201,11 +201,11 @@ The same convention applies in `domainmodel.Association`: `ParentID` = FROM enti
 
 ### Public API Pattern
 ```go
-// Read-only access
+// read-only access
 reader, err := modelsdk.Open("/path/to/project.mpr")
 defer reader.Close()
 
-// Read-write access
+// read-write access
 writer, err := modelsdk.OpenForWriting("/path/to/project.mpr")
 defer writer.Close()
 ```
@@ -219,13 +219,13 @@ module, _ := modelAPI.Modules.GetModule("MyModule")
 modelAPI.SetModule(module)
 
 entity, _ := modelAPI.DomainModels.CreateEntity("Customer").
-    Persistent().
+    persistent().
     WithStringAttribute("Name", 100).
     WithIntegerAttribute("Age").
-    Build()
+    build()
 ```
 
-Available namespaces: `DomainModels`, `Enumerations`, `Microflows`, `Pages`, `Modules`
+Available namespaces: `DomainModels`, `enumerations`, `microflows`, `pages`, `modules`
 
 ## Code Style Guidelines
 
@@ -253,10 +253,10 @@ When reviewing pull requests or validating work before commit, verify these item
 ### Syntax design for MDL features
 New or modified MDL syntax must follow the design guidelines:
 - [ ] **Design skill consulted** — read `.claude/skills/design-mdl-syntax.md` before designing syntax
-- [ ] **Follows standard patterns** — uses `CREATE`/`ALTER`/`DROP`/`SHOW`/`DESCRIBE`, not custom verbs
+- [ ] **Follows standard patterns** — uses `create`/`alter`/`drop`/`show`/`describe`, not custom verbs
 - [ ] **Reads as English** — a business analyst understands the statement on first reading
 - [ ] **Qualified names** — uses `Module.Element` everywhere, no implicit module context
-- [ ] **Property format** — uses `( Key: value, ... )` with colon separators, one per line
+- [ ] **Property format** — uses `( key: value, ... )` with colon separators, one per line
 - [ ] **LLM-friendly** — one example is sufficient for an LLM to generate correct variants
 - [ ] **Diff-friendly** — adding one property is a one-line diff
 
@@ -288,7 +288,7 @@ New MDL commands or language features must be wired through the full pipeline:
 - [ ] **Executor** — thin handler in `mdl/executor/` dispatches to `ctx.Backend.*`; no BSON in the handler
 - [ ] **Backend method** — data access or mutation wired through `mdl/backend/` interface and implemented in `mdl/backend/mpr/`
 - [ ] **LSP** — if the feature adds formatting, diagnostics, or navigation targets, wire it into `cmd/mxcli/lsp.go` and register the capability
-- [ ] **DESCRIBE roundtrip** — if the feature creates artifacts, `DESCRIBE` should output re-executable MDL
+- [ ] **DESCRIBE roundtrip** — if the feature creates artifacts, `describe` should output re-executable MDL
 - [ ] **VS Code extension** — if new LSP capabilities are added, update `vscode-mdl/package.json`
 
 ### Test coverage
@@ -313,7 +313,7 @@ New MDL commands or language features must be wired through the full pipeline:
 
 ### Documentation
 - [ ] **Skills** — new features documented in `.claude/skills/` (syntax, examples, gotchas)
-- [ ] **CLI help** — `mxcli` command help text updated (Cobra `Short`/`Long`/`Example` fields)
+- [ ] **CLI help** — `mxcli` command help text updated (Cobra `Short`/`long`/`Example` fields)
 - [ ] **Syntax reference** — `docs/01-project/MDL_QUICK_REFERENCE.md` updated with new statement syntax
 - [ ] **MDL examples** — working examples added to `mdl-examples/` for new commands
 - [ ] **Site docs** — `docs-site/src/` pages added or updated for user-facing features
@@ -338,22 +338,22 @@ New MDL commands or language features must be wired through the full pipeline:
 The `mxcli` command-line tool allows reading and modifying Mendix projects using MDL (Mendix Definition Language), a SQL-like syntax.
 
 ```bash
-# Build the CLI
+# build the CLI
 go build -o bin/mxcli ./cmd/mxcli
 
-# Run interactive REPL
+# run interactive REPL
 ./bin/mxcli
 
-# Execute commands directly
-./bin/mxcli -p /path/to/app.mpr -c "SHOW ENTITIES"
+# execute commands directly
+./bin/mxcli -p /path/to/app.mpr -c "show entities"
 
-# Execute MDL script file
+# execute MDL script file
 ./bin/mxcli exec script.mdl -p /path/to/app.mpr
 
-# Check MDL syntax (no project needed)
+# check MDL syntax (no project needed)
 ./bin/mxcli check script.mdl
 
-# Check syntax and validate references
+# check syntax and validate references
 ./bin/mxcli check script.mdl -p app.mpr --references
 ```
 
@@ -361,21 +361,21 @@ go build -o bin/mxcli ./cmd/mxcli
 
 | Feature | Commands | Details |
 |---------|----------|---------|
-| **Project structure** | `SHOW STRUCTURE [DEPTH 1\|2\|3] [IN Module] [ALL]` | Compact overview at 3 depth levels |
-| **Catalog queries** | `SHOW CATALOG TABLES`, `SELECT ... FROM CATALOG.table` | SQL querying of project metadata |
-| **Code search** | `SHOW CALLERS\|CALLEES\|REFERENCES\|IMPACT\|CONTEXT OF ...` | Cross-reference navigation (requires `REFRESH CATALOG FULL`) |
-| **Full-text search** | `SEARCH 'keyword'` | Search across all strings and source |
+| **Project structure** | `show structure [depth 1\|2\|3] [in module] [all]` | Compact overview at 3 depth levels |
+| **Catalog queries** | `show catalog tables`, `select ... from CATALOG.table` | SQL querying of project metadata |
+| **Code search** | `show callers\|callees\|references\|impact\|context of ...` | Cross-reference navigation (requires `refresh catalog full`) |
+| **Full-text search** | `search 'keyword'` | Search across all strings and source |
 | **Linting** | `mxcli lint -p app.mpr [--format json\|sarif]` | 14 built-in rules + 27 Starlark rules (MDL, SEC, QUAL, ARCH, DESIGN, CONV) |
 | **Report** | `mxcli report -p app.mpr [--format markdown\|json\|html]` | Scored best practices report with category breakdown |
 | **Testing** | `mxcli test tests/ -p app.mpr` | `.test.mdl` / `.test.md` files, requires Docker |
 | **Diff** | `mxcli diff -p app.mpr changes.mdl` | Compare script against project state |
-| **Diff local** | `mxcli diff-local -p app.mpr --ref HEAD` | Git diff for MPR v2 projects |
+| **Diff local** | `mxcli diff-local -p app.mpr --ref head` | Git diff for MPR v2 projects |
 | **Diff revisions** | `mxcli diff-local -p app.mpr --ref main..feature` | Compare two arbitrary git revisions |
-| **OQL** | `mxcli oql -p app.mpr "SELECT ..."` | Query running Mendix runtime |
-| **Widgets** | `SHOW WIDGETS`, `UPDATE WIDGETS SET ...` | Widget discovery and bulk updates (experimental) |
-| **External SQL** | `SQL CONNECT`, `SQL <alias> SELECT ...`, `mxcli sql` | Direct SQL queries against PostgreSQL, Oracle, SQL Server (credential isolation) |
-| **Data import** | `IMPORT FROM <alias> QUERY '...' INTO Module.Entity MAP (...)` | Import from external DB into Mendix app PostgreSQL (batch insert with ID generation) |
-| **Connector gen** | `SQL <alias> GENERATE CONNECTOR INTO <module> [TABLES (...)] [VIEWS (...)] [EXEC]` | Auto-generate Database Connector MDL from discovered schema |
+| **OQL** | `mxcli oql -p app.mpr "select ..."` | Query running Mendix runtime |
+| **Widgets** | `show widgets`, `update widgets set ...` | Widget discovery and bulk updates (experimental) |
+| **External SQL** | `sql connect`, `sql <alias> select ...`, `mxcli sql` | Direct SQL queries against PostgreSQL, Oracle, SQL Server (credential isolation) |
+| **Data import** | `import from <alias> query '...' into Module.Entity map (...)` | Import from external DB into Mendix app PostgreSQL (batch insert with ID generation) |
+| **Connector gen** | `sql <alias> generate connector into <module> [tables (...)] [views (...)] [exec]` | Auto-generate Database Connector MDL from discovered schema |
 | **Diagnostics** | `mxcli diag [--bundle]` | Session logs, version info, bug report bundles |
 | **New project** | `mxcli new <name> --version X.Y.Z [--output-dir dir]` | Downloads mxbuild, creates blank project, runs init, installs Linux mxcli for devcontainer |
 | **Setup mxcli** | `mxcli setup mxcli [--os linux] [--arch amd64] [--output ./mxcli]` | Download platform-specific mxcli binary from GitHub releases |
@@ -422,7 +422,7 @@ Regenerate after modifying `MDLLexer.g4` or `MDLParser.g4`: `make grammar`. See 
 ## IMPORTANT: Before Writing MDL Scripts or Working with Data
 
 **Read the relevant skill files FIRST before writing any MDL, seeding data, or doing database/import work:**
-- `.claude/skills/version-awareness.md` - **CHECK project version first** - Run `SHOW FEATURES` before using version-gated syntax
+- `.claude/skills/version-awareness.md` - **CHECK project version first** - Run `show features` before using version-gated syntax
 - `.claude/skills/design-mdl-syntax.md` - **READ before designing new MDL syntax** - Design principles, decision framework, anti-patterns, checklist
 - `.claude/skills/write-microflows.md` - Microflow syntax, common mistakes, validation checklist
 - `.claude/skills/create-page.md` - Page/widget syntax reference
@@ -443,9 +443,9 @@ Regenerate after modifying `MDLLexer.g4` or `MDLParser.g4`: `make grammar`. See 
 
 These rules apply whenever generating microflow MDL. Violations are caught by `mxcli check`.
 
-1. **NEVER create empty list variables as loop sources.** If processing imported data, accept the list as a microflow parameter — `DECLARE $Items List of ... = empty` followed by `LOOP $Item IN $Items` is always wrong.
-2. **NEVER use nested LOOPs for list matching.** Loop over the primary list and use `RETRIEVE $Match FROM $TargetList WHERE Key = $Item/Key LIMIT 1` for O(N) lookup. Nested loops are O(N^2).
-3. **Use append logic when merging**, not overwrite: `$Existing/Field + '\n' + $New/Field` inside an `IF $New/Field != empty` guard.
+1. **NEVER create empty list variables as loop sources.** If processing imported data, accept the list as a microflow parameter — `declare $Items list of ... = empty` followed by `loop $item in $Items` is always wrong.
+2. **NEVER use nested LOOPs for list matching.** Loop over the primary list and use `retrieve $match from $TargetList where key = $item/key limit 1` for O(N) lookup. Nested loops are O(N^2).
+3. **Use append logic when merging**, not overwrite: `$Existing/Field + '\n' + $New/Field` inside an `if $New/Field != empty` guard.
 4. **Read `.claude/skills/patterns-data-processing.md`** for delta merge, batch processing, and list operation patterns.
 
 **Always validate before presenting to user:**
@@ -479,9 +479,9 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - OQL query execution against running runtime (`mxcli oql`)
 - Business event services (SHOW/DESCRIBE/CREATE/DROP)
 - Project settings (SHOW/DESCRIBE/ALTER)
-- External SQL query execution against PostgreSQL, Oracle, SQL Server (`mxcli sql`, MDL `SQL CONNECT/QUERY`)
-- Data import from external databases into Mendix app DB (`IMPORT FROM ... INTO ... MAP ...`)
-- Database Connector generation from external schema (`SQL <alias> GENERATE CONNECTOR INTO <module>`)
+- External SQL query execution against PostgreSQL, Oracle, SQL Server (`mxcli sql`, MDL `sql connect/query`)
+- Data import from external databases into Mendix app DB (`import from ... into ... map ...`)
+- Database Connector generation from external schema (`sql <alias> generate connector into <module>`)
 - EXECUTE DATABASE QUERY microflow action (static, dynamic SQL, parameterized, runtime connection override)
 - CREATE/DROP WORKFLOW with user tasks, decisions, parallel splits, and other activity types
 - ALTER WORKFLOW (SET properties, INSERT/DROP/REPLACE activities, outcomes, paths, conditions, boundary events)

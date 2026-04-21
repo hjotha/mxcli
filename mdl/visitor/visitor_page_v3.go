@@ -319,13 +319,13 @@ func buildWidgetV3(ctx parser.IWidgetV3Context, b *Builder) *ast.WidgetV3 {
 
 	// Get widget type
 	if wCtx.PLUGGABLEWIDGET() != nil {
-		widget.Type = "PLUGGABLEWIDGET"
+		widget.Type = "pluggablewidget"
 		widget.Properties["WidgetType"] = unquoteString(wCtx.STRING_LITERAL().GetText())
 	} else if wCtx.CUSTOMWIDGET() != nil {
-		widget.Type = "CUSTOMWIDGET"
+		widget.Type = "customwidget"
 		widget.Properties["WidgetType"] = unquoteString(wCtx.STRING_LITERAL().GetText())
 	} else if typeCtx := wCtx.WidgetTypeV3(); typeCtx != nil {
-		widget.Type = strings.ToUpper(typeCtx.GetText())
+		widget.Type = strings.ToLower(typeCtx.GetText())
 	}
 
 	// Get required identifier
@@ -1088,10 +1088,10 @@ func buildDesignPropertyEntryV3(ctx parser.IDesignPropertyEntryV3Context) *ast.D
 
 	// Value: second STRING_LITERAL, ON, or OFF
 	if entryCtx.ON() != nil {
-		return &ast.DesignPropertyEntryV3{Key: key, Value: "ON"}
+		return &ast.DesignPropertyEntryV3{Key: key, Value: "on"}
 	}
 	if entryCtx.OFF() != nil {
-		return &ast.DesignPropertyEntryV3{Key: key, Value: "OFF"}
+		return &ast.DesignPropertyEntryV3{Key: key, Value: "off"}
 	}
 	if len(allStrings) >= 2 {
 		return &ast.DesignPropertyEntryV3{Key: key, Value: unquoteString(allStrings[1].GetText())}
