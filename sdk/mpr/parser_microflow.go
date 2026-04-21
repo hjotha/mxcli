@@ -157,9 +157,13 @@ func parseSequenceFlow(raw map[string]any) *microflows.SequenceFlow {
 		flow.IsErrorHandler = isErr
 	}
 
-	// Parse CaseValues if present (note: plural, stored as array [count, case_object, ...])
+	// Parse decision branch values. Newer Mendix versions store branch data
+	// in CaseValues ([marker, case]), while older projects use a single
+	// inline NewCaseValue document.
 	if caseVals := raw["CaseValues"]; caseVals != nil {
 		flow.CaseValue = parseCaseValues(caseVals)
+	} else if caseVal := raw["NewCaseValue"]; caseVal != nil {
+		flow.CaseValue = parseCaseValue(caseVal)
 	}
 
 	// Parse BezierCurve control vectors from Line
