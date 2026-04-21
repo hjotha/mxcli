@@ -156,7 +156,7 @@ func TestValidateID(t *testing.T) {
 		{"AABBCCDD-EEFF-1122-3344-556677889900", true},
 		{"", false},
 		{"too-short", false},
-		{"a1b2c3d4-e5f6-7890-abcd-ef123456789", false},  // 35 chars
+		{"a1b2c3d4-e5f6-7890-abcd-ef123456789", false},   // 35 chars
 		{"a1b2c3d4-e5f6-7890-abcd-ef12345678901", false}, // 37 chars
 		{"a1b2c3d4xe5f6-7890-abcd-ef1234567890", false},  // wrong separator
 		{"g1b2c3d4-e5f6-7890-abcd-ef1234567890", false},  // invalid hex

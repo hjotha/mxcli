@@ -1136,8 +1136,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_NoDelay(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_SetActivityProperty_Page_New(t *testing.T) {
-	// Note: When TaskPage key doesn't pre-exist in BSON, dSet silently fails.
-	// The key must be present (even as nil) for PAGE to work on a new activity.
+	// TaskPage key present with nil value — should be replaced with a new PageReference.
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "TaskPage", Value: nil})
 	m := newMutator(makeWorkflowDoc(act))
@@ -1157,7 +1156,8 @@ func TestWorkflowMutator_SetActivityProperty_Page_New(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetActivityProperty_Page_MissingKey(t *testing.T) {
-	// BUG: dSet silently fails when TaskPage key is absent — pageRef is lost.
+	// Regression test: dSet silently failed when TaskPage key was absent.
+	// Fixed by appending the key to the activity and replacing it in the BSON tree.
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	// No TaskPage field at all
 	m := newMutator(makeWorkflowDoc(act))
@@ -1169,9 +1169,67 @@ func TestWorkflowMutator_SetActivityProperty_Page_MissingKey(t *testing.T) {
 
 	actDoc, _ := m.findActivityByCaption("Review", 0)
 	taskPage := dGetDoc(actDoc, "TaskPage")
-	// This documents the bug: TaskPage is nil because dSet can't create new keys
-	if taskPage != nil {
-		t.Log("BUG FIXED: TaskPage is now set even when key was absent")
+	if taskPage == nil {
+		t.Fatal("TaskPage should be set even when key was absent")
+	}
+	if got := dGetString(taskPage, "Page"); got != "MyModule.TaskPage" {
+		t.Errorf("Page = %q, want MyModule.TaskPage", got)
+	}
+}
+
+func TestWorkflowMutator_SetActivityProperty_Page_MissingKey_NestedSubFlow(t *testing.T) {
+	// Exercises the recursive replaceActivity path: the target activity lives
+	// inside an outcome's sub-flow, not at the top level.
+	// Use distinct $IDs so replaceActivity cannot accidentally match the parent.
+	parentID := primitive.Binary{Subtype: 0x04, Data: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+	nestedID := primitive.Binary{Subtype: 0x04, Data: []byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+
+	nestedAct := bson.D{
+		{Key: "$ID", Value: nestedID},
+		{Key: "$Type", Value: "Workflows$UserTask"},
+		{Key: "Caption", Value: "NestedReview"},
+		{Key: "Name", Value: "nested1"},
+	}
+	// No TaskPage field at all on the nested activity.
+
+	outcome := bson.D{
+		{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+		{Key: "$Type", Value: "Workflows$BooleanOutcome"},
+		{Key: "Flow", Value: bson.D{
+			{Key: "$ID", Value: primitive.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
+			{Key: "$Type", Value: "Workflows$Flow"},
+			{Key: "Activities", Value: bson.A{int32(3), nestedAct}},
+		}},
+	}
+	parentAct := bson.D{
+		{Key: "$ID", Value: parentID},
+		{Key: "$Type", Value: "Workflows$Decision"},
+		{Key: "Caption", Value: "Check"},
+		{Key: "Name", Value: "decision1"},
+		{Key: "Outcomes", Value: bson.A{int32(3), outcome}},
+	}
+	m := newMutator(makeWorkflowDoc(parentAct))
+
+	if err := m.SetActivityProperty("NestedReview", 0, "PAGE", "MyModule.NestedPage"); err != nil {
+		t.Fatalf("SetActivityProperty PAGE on nested activity failed: %v", err)
+	}
+
+	actDoc, _ := m.findActivityByCaption("NestedReview", 0)
+	taskPage := dGetDoc(actDoc, "TaskPage")
+	if taskPage == nil {
+		t.Fatal("TaskPage should be set on nested activity even when key was absent")
+	}
+	if got := dGetString(taskPage, "Page"); got != "MyModule.NestedPage" {
+		t.Errorf("Page = %q, want MyModule.NestedPage", got)
+	}
+
+	// Verify parent decision still has its Outcomes intact.
+	parentDoc, _ := m.findActivityByCaption("Check", 0)
+	if parentDoc == nil {
+		t.Fatal("parent decision activity should still exist")
+	}
+	if outcomes := dGet(parentDoc, "Outcomes"); outcomes == nil {
+		t.Fatal("parent decision Outcomes should still be present")
 	}
 }
 

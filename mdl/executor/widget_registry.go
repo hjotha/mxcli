@@ -16,8 +16,8 @@ import (
 
 // WidgetRegistry holds loaded widget definitions keyed by uppercase MDL name.
 type WidgetRegistry struct {
-	byMDLName      map[string]*WidgetDefinition // keyed by uppercase MDLName
-	byWidgetID     map[string]*WidgetDefinition // keyed by widgetId
+	byMDLName       map[string]*WidgetDefinition // keyed by uppercase MDLName
+	byWidgetID      map[string]*WidgetDefinition // keyed by widgetId
 	knownOperations map[string]bool              // operations accepted during validation
 }
 

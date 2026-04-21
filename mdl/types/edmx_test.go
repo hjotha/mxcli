@@ -217,9 +217,9 @@ func TestFindEntityType(t *testing.T) {
 
 func TestResolveNavType(t *testing.T) {
 	tests := []struct {
-		input      string
-		typeName   string
-		isMany     bool
+		input    string
+		typeName string
+		isMany   bool
 	}{
 		{"Collection(NS.Order)", "Order", true},
 		{"NS.Customer", "Customer", false},

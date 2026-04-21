@@ -648,4 +648,3 @@ func TestFieldCountDrift(t *testing.T) {
 	assertFieldCount(t, "mpr.EntityAccessRevocation", mpr.EntityAccessRevocation{}, 6)
 	assertFieldCount(t, "types.EntityAccessRevocation", types.EntityAccessRevocation{}, 6)
 }
-
