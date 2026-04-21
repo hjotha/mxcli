@@ -131,6 +131,10 @@ func Run(opts RunOptions) (*SuiteResult, error) {
 
 	// Step 4: Build and restart
 	dockerDir := filepath.Join(filepath.Dir(opts.ProjectPath), ".docker")
+	if err := ensureDockerStack(opts.ProjectPath, dockerDir, w); err != nil {
+		cleanup(opts.ProjectPath, origAfterStartup, w)
+		return nil, fmt.Errorf("docker init: %w", err)
+	}
 
 	if !opts.SkipBuild {
 		fmt.Fprintln(w, "Building project...")
@@ -440,6 +444,18 @@ func findMxcli() (string, error) {
 	}
 
 	return "", fmt.Errorf("mxcli binary not found (ensure it's in PATH or current directory)")
+}
+
+func ensureDockerStack(projectPath, dockerDir string, w io.Writer) error {
+	composePath := filepath.Join(dockerDir, "docker-compose.yml")
+	if _, err := os.Stat(composePath); err == nil {
+		return nil
+	}
+	return docker.Init(docker.InitOptions{
+		ProjectPath: projectPath,
+		OutputDir:   dockerDir,
+		Stdout:      w,
+	})
 }
 
 // runCompose executes a docker compose command in the given directory.

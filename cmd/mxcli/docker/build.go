@@ -65,7 +65,7 @@ func Build(opts BuildOptions) error {
 
 	// Step 2: Resolve MxBuild
 	fmt.Fprintln(w, "Resolving MxBuild...")
-	mxbuildPath, err := resolveMxBuild(opts.MxBuildPath)
+	mxbuildPath, err := resolveMxBuild(opts.MxBuildPath, pv.ProductVersion)
 	if err != nil {
 		// Auto-download fallback
 		fmt.Fprintln(w, "  MxBuild not found locally, downloading from CDN...")
@@ -96,7 +96,7 @@ func Build(opts BuildOptions) error {
 	// Step 4: Pre-build check
 	if !opts.SkipCheck {
 		fmt.Fprintln(w, "Checking project for errors...")
-		mxPath, err := ResolveMx(opts.MxBuildPath)
+		mxPath, err := ResolveMxForVersion(opts.MxBuildPath, pv.ProductVersion)
 		if err != nil {
 			fmt.Fprintf(w, "  Skipping check: %v\n", err)
 		} else {
@@ -383,8 +383,10 @@ func Run(opts RunOptions) error {
 }
 
 // findPADDir searches for a PAD output in the output directory tree.
-// It looks for a Dockerfile first, then for docker_compose/Default.yaml as a fallback
-// (MxBuild 11.6.3+ generates docker_compose instead of a Dockerfile).
+// It recognizes:
+//   - classic PAD output with a Dockerfile
+//   - PAD output with docker_compose/Default.yaml
+//   - newer PAD output already extracted at the build root (app/bin/etc/lib)
 func findPADDir(outputDir string) (string, error) {
 	// Check output dir itself
 	if isPADDir(outputDir) {
@@ -405,11 +407,12 @@ func findPADDir(outputDir string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no PAD output found in %s (looked for Dockerfile or docker_compose/Default.yaml)", outputDir)
+	return "", fmt.Errorf("no PAD output found in %s (looked for Dockerfile, docker_compose/Default.yaml, or extracted app/bin/etc/lib layout)", outputDir)
 }
 
 // isPADDir checks if a directory contains PAD output.
-// Recognizes both Dockerfile-based PAD and docker_compose-based PAD.
+// Recognizes Dockerfile-based PAD, docker_compose-based PAD, and newer
+// already-extracted PAD layout at the build root.
 func isPADDir(dir string) bool {
 	if _, err := os.Stat(filepath.Join(dir, "Dockerfile")); err == nil {
 		return true
@@ -417,7 +420,35 @@ func isPADDir(dir string) bool {
 	if _, err := os.Stat(filepath.Join(dir, "docker_compose", "Default.yaml")); err == nil {
 		return true
 	}
-	return false
+	return hasExtractedPADLayout(dir)
+}
+
+func hasExtractedPADLayout(dir string) bool {
+	requiredDirs := []string{
+		filepath.Join(dir, "app"),
+		filepath.Join(dir, "bin"),
+		filepath.Join(dir, "etc"),
+		filepath.Join(dir, "lib"),
+	}
+	for _, path := range requiredDirs {
+		info, err := os.Stat(path)
+		if err != nil || !info.IsDir() {
+			return false
+		}
+	}
+
+	requiredFiles := []string{
+		filepath.Join(dir, "bin", "start"),
+		filepath.Join(dir, "lib", "runtime", "launcher", "runtimelauncher.jar"),
+	}
+	for _, path := range requiredFiles {
+		info, err := os.Stat(path)
+		if err != nil || info.IsDir() {
+			return false
+		}
+	}
+
+	return true
 }
 
 // flattenPADDir moves contents from a PAD subdirectory to the output root directory.
