@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // CheckOptions configures the mx check command.
@@ -44,7 +46,15 @@ func Check(opts CheckOptions) error {
 	}
 
 	// Resolve mx binary
-	mxPath, err := ResolveMx(opts.MxBuildPath)
+	projectVersion := ""
+	if opts.ProjectPath != "" {
+		if reader, err := mpr.Open(opts.ProjectPath); err == nil {
+			projectVersion = reader.ProjectVersion().ProductVersion
+			reader.Close()
+		}
+	}
+
+	mxPath, err := ResolveMxForVersion(opts.MxBuildPath, projectVersion)
 	if err != nil {
 		return err
 	}
@@ -88,12 +98,25 @@ func mxBinaryName() string {
 	return "mx"
 }
 
+func mxBinaryNames() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"mx.exe", "mx"}
+	}
+	return []string{"mx"}
+}
+
 // ResolveMx finds the mx executable.
 // Priority: derive from mxbuild path > PATH lookup.
 func ResolveMx(mxbuildPath string) (string, error) {
+	return ResolveMxForVersion(mxbuildPath, "")
+}
+
+// ResolveMxForVersion finds the mx executable, preferring the project's exact
+// Mendix version when multiple local installations or cached downloads exist.
+func ResolveMxForVersion(mxbuildPath, preferredVersion string) (string, error) {
 	if mxbuildPath != "" {
 		// Resolve mxbuild first to handle directory paths
-		resolvedMxBuild, err := resolveMxBuild(mxbuildPath)
+		resolvedMxBuild, err := resolveMxBuild(mxbuildPath, preferredVersion)
 		if err == nil {
 			// Look for mx in the same directory as mxbuild
 			mxDir := filepath.Dir(resolvedMxBuild)
@@ -123,24 +146,47 @@ func ResolveMx(mxbuildPath string) (string, error) {
 		return p, nil
 	}
 
-	// Try OS-specific known locations (Studio Pro on Windows) before cached downloads.
-	for _, pattern := range mendixSearchPaths(mxBinaryName()) {
-		matches, _ := filepath.Glob(pattern)
-		if len(matches) > 0 {
-			return matches[len(matches)-1], nil
+	if preferredVersion != "" {
+		if studioProDir := ResolveStudioProDir(preferredVersion); studioProDir != "" {
+			for _, name := range mxBinaryNames() {
+				candidate := filepath.Join(studioProDir, "modeler", name)
+				if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+					return candidate, nil
+				}
+			}
 		}
 	}
 
-	// Try cached mxbuild installations (~/.mxcli/mxbuild/*/modeler/mx).
-	// NOTE: lexicographic sort is imperfect for versions (e.g. "9.x" > "10.x"),
-	// but this is a fallback-of-last-resort — in practice users typically have
-	// only one mxbuild version installed.
-	if home, err := os.UserHomeDir(); err == nil {
-		matches, _ := filepath.Glob(filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", mxBinaryName()))
-		if len(matches) > 0 {
-			return matches[len(matches)-1], nil
+	// Try OS-specific known locations (Studio Pro on Windows) before cached downloads.
+	if matches := globVersionedMatches(mendixSearchPaths(mxBinaryName())); len(matches) > 0 {
+		if exact := exactVersionedPath(matches, preferredVersion); exact != "" {
+			return exact, nil
 		}
+		if newest := newestVersionedPath(matches); newest != "" {
+			return newest, nil
+		}
+	}
+
+	if preferredVersion != "" {
+		if p := CachedMxPath(preferredVersion); p != "" {
+			return p, nil
+		}
+	}
+	if p := AnyCachedMxPath(); p != "" {
+		return p, nil
 	}
 
 	return "", fmt.Errorf("mx not found; specify --mxbuild-path pointing to Mendix installation directory")
+}
+
+func CachedMxPath(version string) string {
+	cacheDir, err := MxBuildCacheDir(version)
+	if err != nil {
+		return ""
+	}
+	return cachedBinaryPath(cacheDir, mxBinaryNames())
+}
+
+func AnyCachedMxPath() string {
+	return anyCachedBinaryPath(mxBinaryNames())
 }

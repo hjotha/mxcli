@@ -151,7 +151,7 @@ test-integration:
 # Usage: make test-mdl MPR=path/to/app.mpr
 MPR ?= app.mpr
 test-mdl: build
-	$(BUILD_DIR)/$(BINARY_NAME) test mdl-examples/doctype-tests/microflow-spec.test.mdl -p $(MPR)
+	./scripts/run-mdl-tests.sh "$(abspath $(MPR))" "$(abspath $(BUILD_DIR)/$(BINARY_NAME))"
 
 # Lint all code (Go + TypeScript)
 lint: lint-go lint-ts

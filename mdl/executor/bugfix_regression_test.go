@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -421,5 +423,89 @@ func TestResolveMemberChange_FallbackWithoutReader(t *testing.T) {
 	}
 	if mc2.AttributeQualifiedName != "" {
 		t.Errorf("expected empty attribute, got %q", mc2.AttributeQualifiedName)
+	}
+}
+
+func TestCallMicroflowResultType_ResolvesSubsequentChangeMember(t *testing.T) {
+	moduleID := model.ID("module-1")
+	backend := &mock.MockBackend{
+		GetModuleByNameFunc: func(name string) (*model.Module, error) {
+			if name != "MfTest" {
+				return nil, nil
+			}
+			return &model.Module{
+				BaseElement: model.BaseElement{ID: moduleID},
+				Name:        "MfTest",
+			}, nil
+		},
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
+			return []*microflows.Microflow{
+				{
+					ContainerID: moduleID,
+					Name:        "M012_CreateEntity",
+					ReturnType: &microflows.ObjectType{
+						EntityQualifiedName: "MfTest.Product",
+					},
+				},
+			}, nil
+		},
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+			if id != moduleID {
+				return nil, nil
+			}
+			return &domainmodel.DomainModel{
+				ContainerID: moduleID,
+				Entities: []*domainmodel.Entity{
+					{
+						Name: "Product",
+						Attributes: []*domainmodel.Attribute{
+							{
+								Name: "Price",
+								Type: &domainmodel.DecimalAttributeType{},
+							},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	fb := &flowBuilder{
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		backend:      backend,
+	}
+
+	fb.addCallMicroflowAction(&ast.CallMicroflowStmt{
+		OutputVariable: "Product",
+		MicroflowName:  ast.QualifiedName{Module: "MfTest", Name: "M012_CreateEntity"},
+	})
+	fb.addChangeObjectAction(&ast.ChangeObjectStmt{
+		Variable: "Product",
+		Changes: []ast.ChangeItem{
+			{
+				Attribute: "Price",
+				Value:     &ast.LiteralExpr{Value: 10.0, Kind: ast.LiteralDecimal},
+			},
+		},
+	})
+
+	if got := fb.varTypes["Product"]; got != "MfTest.Product" {
+		t.Fatalf("expected call result type MfTest.Product, got %q", got)
+	}
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected last object to be ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+	changeAction, ok := activity.Action.(*microflows.ChangeObjectAction)
+	if !ok {
+		t.Fatalf("expected last action to be ChangeObjectAction, got %T", activity.Action)
+	}
+	if len(changeAction.Changes) != 1 {
+		t.Fatalf("expected one member change, got %d", len(changeAction.Changes))
+	}
+	if got := changeAction.Changes[0].AttributeQualifiedName; got != "MfTest.Product.Price" {
+		t.Fatalf("expected qualified attribute MfTest.Product.Price, got %q", got)
 	}
 }

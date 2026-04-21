@@ -434,6 +434,34 @@ func TestFindPADDir_DockerCompose_InSubdir(t *testing.T) {
 	}
 }
 
+func TestFindPADDir_ExtractedLayoutInRoot(t *testing.T) {
+	dir := t.TempDir()
+	for _, subdir := range []string{
+		filepath.Join(dir, "app"),
+		filepath.Join(dir, "etc"),
+		filepath.Join(dir, "bin"),
+		filepath.Join(dir, "lib", "runtime", "launcher"),
+	} {
+		if err := os.MkdirAll(subdir, 0755); err != nil {
+			t.Fatalf("mkdir %s: %v", subdir, err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "bin", "start"), []byte("#!/bin/sh\n"), 0755); err != nil {
+		t.Fatalf("write start script: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "lib", "runtime", "launcher", "runtimelauncher.jar"), []byte("fake"), 0644); err != nil {
+		t.Fatalf("write launcher: %v", err)
+	}
+
+	padDir, err := findPADDir(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if padDir != dir {
+		t.Errorf("expected %s, got %s", dir, padDir)
+	}
+}
+
 func TestFindPADDir_PrefersDockerfile(t *testing.T) {
 	dir := t.TempDir()
 	// Both Dockerfile and docker_compose exist — Dockerfile wins
