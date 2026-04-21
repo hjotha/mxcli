@@ -3,9 +3,7 @@
 package mpr
 
 import (
-	"crypto/sha256"
 	"database/sql"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -134,9 +132,7 @@ func (wt *WriteTransaction) WriteUnit(unitID string, contents []byte) error {
 			finalPath: finalPath,
 		})
 
-		// Update hash in DB
-		hash := sha256.Sum256(contents)
-		contentsHash := base64.StdEncoding.EncodeToString(hash[:])
+		contentsHash := contentHashBase64(contents)
 		_, err := wt.tx.Exec(`
 			UPDATE Unit SET ContentsHash = ? WHERE UnitID = ?
 		`, contentsHash, unitIDBlob)
@@ -144,9 +140,15 @@ func (wt *WriteTransaction) WriteUnit(unitID string, contents []byte) error {
 	}
 
 	// V1: Update in database directly
+	contentsHash := contentHashBase64(contents)
 	_, err := wt.tx.Exec(`
-		UPDATE Unit SET Contents = ? WHERE UnitID = ?
-	`, contents, unitIDBlob)
+		UPDATE Unit SET Contents = ?, ContentsHash = ? WHERE UnitID = ?
+	`, contents, contentsHash, unitIDBlob)
+	if err != nil {
+		_, err = wt.tx.Exec(`
+			UPDATE Unit SET Contents = ? WHERE UnitID = ?
+		`, contents, unitIDBlob)
+	}
 	return err
 }
 
