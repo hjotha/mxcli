@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -132,8 +133,8 @@ func copyTestProject(t *testing.T) string {
 }
 
 // findMxBinary searches for the mx command in known locations.
-// Search order: MX_BINARY env var, reference/mxbuild/modeler/mx (repo-local),
-// ~/.mxcli/mxbuild/*/modeler/mx (cached downloads), PATH lookup.
+// Search order: MX_BINARY env var, PATH lookup, reference/mxbuild/modeler/mx
+// (repo-local), ~/.mxcli/mxbuild/*/modeler/mx (cached downloads, newest numeric version).
 func findMxBinary() string {
 	// 0. Explicit override via environment variable
 	if p := os.Getenv("MX_BINARY"); p != "" {
@@ -142,7 +143,12 @@ func findMxBinary() string {
 		}
 	}
 
-	// 1. Repo-local reference path
+	// 1. PATH lookup
+	if p, err := exec.LookPath("mx"); err == nil {
+		return p
+	}
+
+	// 2. Repo-local reference path
 	repoPath, err := filepath.Abs("../../reference/mxbuild/modeler/mx")
 	if err == nil {
 		if _, err := os.Stat(repoPath); err == nil {
@@ -150,20 +156,91 @@ func findMxBinary() string {
 		}
 	}
 
-	// 2. Cached downloads (~/.mxcli/mxbuild/*/modeler/mx)
+	// 3. Cached downloads (~/.mxcli/mxbuild/*/modeler/mx)
 	if home, err := os.UserHomeDir(); err == nil {
 		pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx")
 		if matches, _ := filepath.Glob(pattern); len(matches) > 0 {
-			return matches[len(matches)-1]
+			return newestVersionedPath(matches)
 		}
 	}
 
-	// 3. PATH lookup
-	if p, err := exec.LookPath("mx"); err == nil {
-		return p
+	return ""
+}
+
+func newestVersionedPath(paths []string) string {
+	var best string
+	var bestVersion []int
+	bestValid := false
+
+	for _, path := range paths {
+		versionParts, ok := parseVersionParts(versionFromPath(path))
+		switch {
+		case best == "":
+			best = path
+			bestVersion = versionParts
+			bestValid = ok
+		case ok && !bestValid:
+			best = path
+			bestVersion = versionParts
+			bestValid = true
+		case ok && bestValid:
+			if cmp := compareVersionParts(versionParts, bestVersion); cmp > 0 || (cmp == 0 && path > best) {
+				best = path
+				bestVersion = versionParts
+			}
+		case !ok && !bestValid && path > best:
+			best = path
+		}
 	}
 
-	return ""
+	return best
+}
+
+func versionFromPath(path string) string {
+	versionDir := filepath.Dir(filepath.Dir(path))
+	return filepath.Base(versionDir)
+}
+
+func parseVersionParts(version string) ([]int, bool) {
+	if version == "" {
+		return nil, false
+	}
+	parts := strings.Split(version, ".")
+	values := make([]int, 0, len(parts))
+	for _, part := range parts {
+		if part == "" {
+			return nil, false
+		}
+		value, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, false
+		}
+		values = append(values, value)
+	}
+	return values, true
+}
+
+func compareVersionParts(left, right []int) int {
+	maxLen := len(left)
+	if len(right) > maxLen {
+		maxLen = len(right)
+	}
+	for i := 0; i < maxLen; i++ {
+		var l, r int
+		if i < len(left) {
+			l = left[i]
+		}
+		if i < len(right) {
+			r = right[i]
+		}
+		switch {
+		case l < r:
+			return -1
+		case l > r:
+			return 1
+		}
+	}
+	return 0
 }
 
 // copyFile copies a single file from src to dst.
