@@ -274,12 +274,6 @@ func TestRevokeEntityAccess_Partial(t *testing.T) {
 	}
 }
 
-type grantRevokeTest struct {
-	name     string
-	input    string
-	stmtType string
-}
-
 func TestGrantRevokeMicroflow(t *testing.T) {
 	t.Run("grant", func(t *testing.T) {
 		input := `GRANT EXECUTE ON MICROFLOW MyModule.ProcessOrder TO MyModule.Admin;`
