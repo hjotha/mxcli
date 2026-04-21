@@ -295,8 +295,9 @@ func TestNewRegistry_Completeness(t *testing.T) {
 	}
 }
 
-// TestNewRegistry_HandlerCountSnapshot validates the expected number of
-// registered handlers. Update the expected count when adding new handlers.
+// TestNewRegistry_HandlerCountSnapshot verifies that the number of registered
+// handlers matches allKnownStatements(). Keep allKnownStatements() in sync with
+// known statement types and handler registrations.
 func TestNewRegistry_HandlerCountSnapshot(t *testing.T) {
 	r := NewRegistry()
 	known := allKnownStatements()
