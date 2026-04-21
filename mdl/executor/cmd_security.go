@@ -20,6 +20,37 @@ func showProjectSecurity(ctx *ExecContext) error {
 		return mdlerrors.NewBackend("read project security", err)
 	}
 
+	if ctx.Format == FormatJSON {
+		result := &TableResult{
+			Columns: []string{"Property", "Value"},
+		}
+		result.Rows = append(result.Rows,
+			[]any{"SecurityLevel", security.SecurityLevelDisplay(ps.SecurityLevel)},
+			[]any{"CheckSecurity", fmt.Sprintf("%v", ps.CheckSecurity)},
+			[]any{"StrictMode", fmt.Sprintf("%v", ps.StrictMode)},
+			[]any{"DemoUsersEnabled", fmt.Sprintf("%v", ps.EnableDemoUsers)},
+			[]any{"GuestAccess", fmt.Sprintf("%v", ps.EnableGuestAccess)},
+			[]any{"UserRoles", fmt.Sprintf("%d", len(ps.UserRoles))},
+			[]any{"DemoUsers", fmt.Sprintf("%d", len(ps.DemoUsers))},
+		)
+		if ps.AdminUserName != "" {
+			result.Rows = append(result.Rows, []any{"AdminUser", ps.AdminUserName})
+		}
+		if ps.GuestUserRole != "" {
+			result.Rows = append(result.Rows, []any{"GuestUserRole", ps.GuestUserRole})
+		}
+		if ps.PasswordPolicy != nil {
+			pp := ps.PasswordPolicy
+			result.Rows = append(result.Rows,
+				[]any{"PasswordPolicy.MinimumLength", fmt.Sprintf("%d", pp.MinimumLength)},
+				[]any{"PasswordPolicy.RequireDigit", fmt.Sprintf("%v", pp.RequireDigit)},
+				[]any{"PasswordPolicy.RequireMixedCase", fmt.Sprintf("%v", pp.RequireMixedCase)},
+				[]any{"PasswordPolicy.RequireSymbol", fmt.Sprintf("%v", pp.RequireSymbol)},
+			)
+		}
+		return writeResult(ctx, result)
+	}
+
 	fmt.Fprintf(ctx.Output, "Security Level: %s\n", security.SecurityLevelDisplay(ps.SecurityLevel))
 	fmt.Fprintf(ctx.Output, "Check Security: %v\n", ps.CheckSecurity)
 	fmt.Fprintf(ctx.Output, "Strict Mode: %v\n", ps.StrictMode)
@@ -115,9 +146,12 @@ func showDemoUsers(ctx *ExecContext) error {
 	}
 
 	if !ps.EnableDemoUsers {
-		fmt.Fprintln(ctx.Output, "Demo users are disabled.")
-		fmt.Fprintln(ctx.Output, "Enable with: ALTER PROJECT SECURITY DEMO USERS ON;")
-		return nil
+		if ctx.Format != FormatJSON {
+			fmt.Fprintln(ctx.Output, "Demo users are disabled.")
+			fmt.Fprintln(ctx.Output, "Enable with: ALTER PROJECT SECURITY DEMO USERS ON;")
+			return nil
+		}
+		return writeResult(ctx, &TableResult{Columns: []string{"User Name", "User Roles"}})
 	}
 
 	result := &TableResult{
@@ -263,6 +297,18 @@ func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	for _, mf := range mfs {
 		modName := h.GetModuleName(h.FindModuleID(mf.ContainerID))
 		if modName == name.Module && mf.Name == name.Name {
+			if ctx.Format == FormatJSON {
+				result := &TableResult{Columns: []string{"Module", "Role"}}
+				for _, role := range mf.AllowedModuleRoles {
+					parts := strings.SplitN(string(role), ".", 2)
+					mod, r := "", string(role)
+					if len(parts) == 2 {
+						mod, r = parts[0], parts[1]
+					}
+					result.Rows = append(result.Rows, []any{mod, r})
+				}
+				return writeResult(ctx, result)
+			}
 			if len(mf.AllowedModuleRoles) == 0 {
 				fmt.Fprintf(ctx.Output, "No module roles granted execute access on %s.%s\n", modName, mf.Name)
 				return nil
@@ -297,6 +343,18 @@ func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 	for _, pg := range pages {
 		modName := h.GetModuleName(h.FindModuleID(pg.ContainerID))
 		if modName == name.Module && pg.Name == name.Name {
+			if ctx.Format == FormatJSON {
+				result := &TableResult{Columns: []string{"Module", "Role"}}
+				for _, role := range pg.AllowedRoles {
+					parts := strings.SplitN(string(role), ".", 2)
+					mod, r := "", string(role)
+					if len(parts) == 2 {
+						mod, r = parts[0], parts[1]
+					}
+					result.Rows = append(result.Rows, []any{mod, r})
+				}
+				return writeResult(ctx, result)
+			}
 			if len(pg.AllowedRoles) == 0 {
 				fmt.Fprintf(ctx.Output, "No module roles granted view access on %s.%s\n", modName, pg.Name)
 				return nil

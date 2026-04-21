@@ -57,7 +57,7 @@ func showPublishedRestServices(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, path, svc.Version, len(svc.Resources), opCount})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No published REST services found.")
 		return nil
 	}

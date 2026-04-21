@@ -55,7 +55,7 @@ func showContractEntities(ctx *ExecContext, name *ast.QualifiedName) error {
 		}
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No entity types found in contract for %s.\n", svcQN)
 		return nil
 	}
@@ -85,7 +85,7 @@ func showContractActions(ctx *ExecContext, name *ast.QualifiedName) error {
 		return err
 	}
 
-	if len(doc.Actions) == 0 {
+	if len(doc.Actions) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No actions/functions found in contract for %s.\n", svcQN)
 		return nil
 	}
@@ -1256,7 +1256,7 @@ func showContractChannels(ctx *ExecContext, name *ast.QualifiedName) error {
 		return err
 	}
 
-	if len(doc.Channels) == 0 {
+	if len(doc.Channels) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No channels found in contract for %s.\n", svcQN)
 		return nil
 	}
@@ -1295,7 +1295,7 @@ func showContractMessages(ctx *ExecContext, name *ast.QualifiedName) error {
 		return err
 	}
 
-	if len(doc.Messages) == 0 {
+	if len(doc.Messages) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No messages found in contract for %s.\n", svcQN)
 		return nil
 	}

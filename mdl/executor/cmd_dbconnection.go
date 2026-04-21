@@ -155,7 +155,7 @@ func showDatabaseConnections(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{qualifiedName, modName, conn.Name, folderPath, conn.DatabaseType, len(conn.Queries)})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No database connections found.")
 		return nil
 	}

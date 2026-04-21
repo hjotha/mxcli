@@ -64,7 +64,7 @@ func showRestClients(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, baseUrl, auth, len(svc.Operations)})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No consumed REST services found.")
 		return nil
 	}

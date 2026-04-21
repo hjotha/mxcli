@@ -60,7 +60,7 @@ func showConstants(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{qualifiedName, modName, c.Name, folderPath, typeStr, defaultStr, exposed})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No constants found.")
 		return nil
 	}
@@ -378,7 +378,7 @@ func showConstantValues(ctx *ExecContext, moduleName string) error {
 		})
 	}
 
-	if len(consts) == 0 {
+	if len(consts) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No constants found.")
 		return nil
 	}

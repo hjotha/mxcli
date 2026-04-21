@@ -26,7 +26,7 @@ func showLanguages(ctx *ExecContext) error {
 		return mdlerrors.NewBackend("query languages", err)
 	}
 
-	if len(result.Rows) == 0 {
+	if len(result.Rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No translatable strings found. Run REFRESH CATALOG FULL to populate the strings table.")
 		return nil
 	}

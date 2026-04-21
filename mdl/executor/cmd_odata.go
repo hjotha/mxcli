@@ -78,7 +78,7 @@ func showODataClients(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, svc.Version, svc.ODataVersion, url, validated})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No consumed OData services found.")
 		return nil
 	}
@@ -257,7 +257,7 @@ func showODataServices(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, svc.Path, svc.Version, svc.ODataVersion, esCount, authStr})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No published OData services found.")
 		return nil
 	}
@@ -499,7 +499,7 @@ func showExternalEntities(ctx *ExecContext, moduleName string) error {
 		}
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No external entities found.")
 		return nil
 	}
@@ -615,7 +615,7 @@ func showExternalActions(ctx *ExecContext, moduleName string) error {
 		extractActions(nf.ObjectCollection, modName, nf.Name)
 	}
 
-	if len(actionMap) == 0 {
+	if len(actionMap) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No external actions found.")
 		return nil
 	}

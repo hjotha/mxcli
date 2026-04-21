@@ -38,7 +38,7 @@ func showBusinessEventServices(ctx *ExecContext, inModule string) error {
 		filtered = append(filtered, svc)
 	}
 
-	if len(filtered) == 0 {
+	if len(filtered) == 0 && ctx.Format != FormatJSON {
 		if inModule != "" {
 			fmt.Fprintf(ctx.Output, "No business event services found in module %s\n", inModule)
 		} else {
@@ -150,7 +150,7 @@ func showBusinessEvents(ctx *ExecContext, inModule string) error {
 		}
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		if inModule != "" {
 			fmt.Fprintf(ctx.Output, "No business events found in module %s\n", inModule)
 		} else {
