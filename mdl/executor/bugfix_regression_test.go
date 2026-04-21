@@ -509,3 +509,25 @@ func TestCallMicroflowResultType_ResolvesSubsequentChangeMember(t *testing.T) {
 		t.Fatalf("expected qualified attribute MfTest.Product.Price, got %q", got)
 	}
 }
+
+func TestCallMicroflowUnknownResultTypeStillDeclaresVariable(t *testing.T) {
+	fb := &flowBuilder{
+		varTypes:     map[string]string{"Result": "Old.ModuleEntity"},
+		declaredVars: map[string]string{},
+	}
+
+	fb.addCallMicroflowAction(&ast.CallMicroflowStmt{
+		OutputVariable: "Result",
+		MicroflowName:  ast.QualifiedName{Module: "Missing", Name: "Unknown"},
+	})
+
+	if _, ok := fb.varTypes["Result"]; ok {
+		t.Fatalf("expected stale entity typing to be cleared, got %q", fb.varTypes["Result"])
+	}
+	if got := fb.declaredVars["Result"]; got != "Unknown" {
+		t.Fatalf("expected Result to remain declared as Unknown, got %q", got)
+	}
+	if !fb.isVariableDeclared("Result") {
+		t.Fatal("expected Result to remain declared after unresolved call return type")
+	}
+}
