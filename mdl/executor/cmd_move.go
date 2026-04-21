@@ -56,11 +56,11 @@ func execMove(ctx *ExecContext, s *ast.MoveStmt) error {
 	// Execute move based on document type
 	switch s.DocumentType {
 	case ast.DocumentTypePage:
-		if err := movePage(ctx, s.Name, targetContainerID); err != nil {
+		if err := movePage(ctx, s.Name, targetContainerID, targetModule, isCrossModuleMove); err != nil {
 			return err
 		}
 	case ast.DocumentTypeMicroflow:
-		if err := moveMicroflow(ctx, s.Name, targetContainerID); err != nil {
+		if err := moveMicroflow(ctx, s.Name, targetContainerID, targetModule, isCrossModuleMove); err != nil {
 			return err
 		}
 	case ast.DocumentTypeSnippet:
@@ -110,7 +110,7 @@ func updateQualifiedNameRefs(ctx *ExecContext, name ast.QualifiedName, newModule
 }
 
 // movePage moves a page to a new container.
-func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
+func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID, targetModule *model.Module, isCrossModuleMove bool) error {
 	// Find the page
 	pages, err := ctx.Backend.ListPages()
 	if err != nil {
@@ -131,6 +131,12 @@ func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.
 			if err := ctx.Backend.MovePage(p); err != nil {
 				return mdlerrors.NewBackend("move page", err)
 			}
+			if isCrossModuleMove {
+				p.AllowedRoles = remapDocumentAccessRoles(ctx, targetModule, p.AllowedRoles)
+				if err := ctx.Backend.UpdateAllowedRoles(p.ID, documentRoleStrings(p.AllowedRoles)); err != nil {
+					return mdlerrors.NewBackend("remap page access", err)
+				}
+			}
 			fmt.Fprintf(ctx.Output, "Moved page %s to new location\n", name.String())
 			return nil
 		}
@@ -140,7 +146,7 @@ func movePage(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.
 }
 
 // moveMicroflow moves a microflow to a new container.
-func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID) error {
+func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID model.ID, targetModule *model.Module, isCrossModuleMove bool) error {
 	// Find the microflow
 	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
@@ -160,6 +166,12 @@ func moveMicroflow(ctx *ExecContext, name ast.QualifiedName, targetContainerID m
 			mf.ContainerID = targetContainerID
 			if err := ctx.Backend.MoveMicroflow(mf); err != nil {
 				return mdlerrors.NewBackend("move microflow", err)
+			}
+			if isCrossModuleMove {
+				mf.AllowedModuleRoles = remapDocumentAccessRoles(ctx, targetModule, mf.AllowedModuleRoles)
+				if err := ctx.Backend.UpdateAllowedRoles(mf.ID, documentRoleStrings(mf.AllowedModuleRoles)); err != nil {
+					return mdlerrors.NewBackend("remap microflow access", err)
+				}
 			}
 			fmt.Fprintf(ctx.Output, "Moved microflow %s to new location\n", name.String())
 			return nil

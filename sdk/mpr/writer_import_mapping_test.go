@@ -181,6 +181,45 @@ func TestSerializeImportMapping_WithJsonStructureRef(t *testing.T) {
 	assertField(t, raw, "JsonStructure", "MyModule.PetJsonStructure")
 }
 
+func TestSerializeImportMapping_FindOrCreateUsesFindWithCreateBackup(t *testing.T) {
+	w := &Writer{}
+	im := &model.ImportMapping{
+		BaseElement: model.BaseElement{ID: "test-im-upsert"},
+		ContainerID: "test-module-id",
+		Name:        "UpsertMapping",
+		Elements: []*model.ImportMappingElement{
+			{
+				BaseElement:    model.BaseElement{ID: "root-id"},
+				Kind:           "Object",
+				Entity:         "MyModule.Pet",
+				ObjectHandling: "FindOrCreate",
+			},
+		},
+	}
+
+	data, err := w.serializeImportMapping(im)
+	if err != nil {
+		t.Fatalf("serializeImportMapping: %v", err)
+	}
+
+	var raw map[string]any
+	if err := bson.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("bson.Unmarshal: %v", err)
+	}
+
+	elems := extractBsonArray(raw["Elements"])
+	if len(elems) != 1 {
+		t.Fatalf("Elements: expected 1, got %d", len(elems))
+	}
+
+	objElem, ok := elems[0].(map[string]any)
+	if !ok {
+		t.Fatalf("Elements[0]: expected map, got %T", elems[0])
+	}
+	assertField(t, objElem, "ObjectHandling", "Find")
+	assertField(t, objElem, "ObjectHandlingBackup", "Create")
+}
+
 // TestSerializeImportValueDataType_AllTypes verifies that all supported data types
 // map to the correct DataTypes$* BSON $Type values.
 func TestSerializeImportValueDataType_AllTypes(t *testing.T) {

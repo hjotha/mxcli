@@ -115,6 +115,8 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 	}
 	if preserveAllowedRoles {
 		mf.AllowedModuleRoles = existingAllowedRoles
+	} else {
+		mf.AllowedModuleRoles = defaultDocumentAccessRoles(ctx, module)
 	}
 
 	// Build entity resolver function for parameter/return types
