@@ -26,7 +26,7 @@ func TestShowEnumerations_Mock_BackendError(t *testing.T) {
 		ListEnumerationsFunc: func() ([]*model.Enumeration, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showEnumerations(ctx, ""))
+	assertError(t, listEnumerations(ctx, ""))
 }
 
 func TestShowConstants_Mock_BackendError(t *testing.T) {
@@ -35,7 +35,7 @@ func TestShowConstants_Mock_BackendError(t *testing.T) {
 		ListConstantsFunc: func() ([]*model.Constant, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showConstants(ctx, ""))
+	assertError(t, listConstants(ctx, ""))
 }
 
 func TestShowMicroflows_Mock_BackendError(t *testing.T) {
@@ -44,7 +44,7 @@ func TestShowMicroflows_Mock_BackendError(t *testing.T) {
 		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showMicroflows(ctx, ""))
+	assertError(t, listMicroflows(ctx, ""))
 }
 
 func TestShowNanoflows_Mock_BackendError(t *testing.T) {
@@ -53,7 +53,7 @@ func TestShowNanoflows_Mock_BackendError(t *testing.T) {
 		ListNanoflowsFunc: func() ([]*microflows.Nanoflow, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showNanoflows(ctx, ""))
+	assertError(t, listNanoflows(ctx, ""))
 }
 
 func TestShowPages_Mock_BackendError(t *testing.T) {
@@ -62,7 +62,7 @@ func TestShowPages_Mock_BackendError(t *testing.T) {
 		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showPages(ctx, ""))
+	assertError(t, listPages(ctx, ""))
 }
 
 func TestShowSnippets_Mock_BackendError(t *testing.T) {
@@ -71,7 +71,7 @@ func TestShowSnippets_Mock_BackendError(t *testing.T) {
 		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showSnippets(ctx, ""))
+	assertError(t, listSnippets(ctx, ""))
 }
 
 func TestShowLayouts_Mock_BackendError(t *testing.T) {
@@ -80,7 +80,7 @@ func TestShowLayouts_Mock_BackendError(t *testing.T) {
 		ListLayoutsFunc: func() ([]*pages.Layout, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showLayouts(ctx, ""))
+	assertError(t, listLayouts(ctx, ""))
 }
 
 func TestShowWorkflows_Mock_BackendError(t *testing.T) {
@@ -89,7 +89,7 @@ func TestShowWorkflows_Mock_BackendError(t *testing.T) {
 		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showWorkflows(ctx, ""))
+	assertError(t, listWorkflows(ctx, ""))
 }
 
 func TestShowODataClients_Mock_BackendError(t *testing.T) {
@@ -98,7 +98,7 @@ func TestShowODataClients_Mock_BackendError(t *testing.T) {
 		ListConsumedODataServicesFunc: func() ([]*model.ConsumedODataService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showODataClients(ctx, ""))
+	assertError(t, listODataClients(ctx, ""))
 }
 
 func TestShowODataServices_Mock_BackendError(t *testing.T) {
@@ -107,7 +107,7 @@ func TestShowODataServices_Mock_BackendError(t *testing.T) {
 		ListPublishedODataServicesFunc: func() ([]*model.PublishedODataService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showODataServices(ctx, ""))
+	assertError(t, listODataServices(ctx, ""))
 }
 
 func TestShowRestClients_Mock_BackendError(t *testing.T) {
@@ -116,7 +116,7 @@ func TestShowRestClients_Mock_BackendError(t *testing.T) {
 		ListConsumedRestServicesFunc: func() ([]*model.ConsumedRestService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showRestClients(ctx, ""))
+	assertError(t, listRestClients(ctx, ""))
 }
 
 func TestShowPublishedRestServices_Mock_BackendError(t *testing.T) {
@@ -125,7 +125,7 @@ func TestShowPublishedRestServices_Mock_BackendError(t *testing.T) {
 		ListPublishedRestServicesFunc: func() ([]*model.PublishedRestService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showPublishedRestServices(ctx, ""))
+	assertError(t, listPublishedRestServices(ctx, ""))
 }
 
 func TestShowJavaActions_Mock_BackendError(t *testing.T) {
@@ -134,7 +134,7 @@ func TestShowJavaActions_Mock_BackendError(t *testing.T) {
 		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showJavaActions(ctx, ""))
+	assertError(t, listJavaActions(ctx, ""))
 }
 
 func TestShowJavaScriptActions_Mock_BackendError(t *testing.T) {
@@ -143,7 +143,7 @@ func TestShowJavaScriptActions_Mock_BackendError(t *testing.T) {
 		ListJavaScriptActionsFunc: func() ([]*types.JavaScriptAction, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showJavaScriptActions(ctx, ""))
+	assertError(t, listJavaScriptActions(ctx, ""))
 }
 
 func TestShowDatabaseConnections_Mock_BackendError(t *testing.T) {
@@ -152,7 +152,7 @@ func TestShowDatabaseConnections_Mock_BackendError(t *testing.T) {
 		ListDatabaseConnectionsFunc: func() ([]*model.DatabaseConnection, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showDatabaseConnections(ctx, ""))
+	assertError(t, listDatabaseConnections(ctx, ""))
 }
 
 func TestShowImageCollections_Mock_BackendError(t *testing.T) {
@@ -161,7 +161,7 @@ func TestShowImageCollections_Mock_BackendError(t *testing.T) {
 		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showImageCollections(ctx, ""))
+	assertError(t, listImageCollections(ctx, ""))
 }
 
 func TestShowJsonStructures_Mock_BackendError(t *testing.T) {
@@ -170,7 +170,7 @@ func TestShowJsonStructures_Mock_BackendError(t *testing.T) {
 		ListJsonStructuresFunc: func() ([]*types.JsonStructure, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showJsonStructures(ctx, ""))
+	assertError(t, listJsonStructures(ctx, ""))
 }
 
 func TestShowNavigation_Mock_BackendError(t *testing.T) {
@@ -179,7 +179,7 @@ func TestShowNavigation_Mock_BackendError(t *testing.T) {
 		GetNavigationFunc: func() (*types.NavigationDocument, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showNavigation(ctx))
+	assertError(t, listNavigation(ctx))
 }
 
 func TestShowProjectSecurity_Mock_BackendError(t *testing.T) {
@@ -188,7 +188,7 @@ func TestShowProjectSecurity_Mock_BackendError(t *testing.T) {
 		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showProjectSecurity(ctx))
+	assertError(t, listProjectSecurity(ctx))
 }
 
 func TestShowModuleRoles_Mock_BackendError(t *testing.T) {
@@ -197,7 +197,7 @@ func TestShowModuleRoles_Mock_BackendError(t *testing.T) {
 		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showModuleRoles(ctx, ""))
+	assertError(t, listModuleRoles(ctx, ""))
 }
 
 func TestShowUserRoles_Mock_BackendError(t *testing.T) {
@@ -206,7 +206,7 @@ func TestShowUserRoles_Mock_BackendError(t *testing.T) {
 		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showUserRoles(ctx))
+	assertError(t, listUserRoles(ctx))
 }
 
 func TestShowDemoUsers_Mock_BackendError(t *testing.T) {
@@ -215,7 +215,7 @@ func TestShowDemoUsers_Mock_BackendError(t *testing.T) {
 		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showDemoUsers(ctx))
+	assertError(t, listDemoUsers(ctx))
 }
 
 func TestShowBusinessEventServices_Mock_BackendError(t *testing.T) {
@@ -224,7 +224,7 @@ func TestShowBusinessEventServices_Mock_BackendError(t *testing.T) {
 		ListBusinessEventServicesFunc: func() ([]*model.BusinessEventService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showBusinessEventServices(ctx, ""))
+	assertError(t, listBusinessEventServices(ctx, ""))
 }
 
 func TestShowAgentEditorModels_Mock_BackendError(t *testing.T) {
@@ -233,7 +233,7 @@ func TestShowAgentEditorModels_Mock_BackendError(t *testing.T) {
 		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showAgentEditorModels(ctx, ""))
+	assertError(t, listAgentEditorModels(ctx, ""))
 }
 
 func TestShowAgentEditorAgents_Mock_BackendError(t *testing.T) {
@@ -242,7 +242,7 @@ func TestShowAgentEditorAgents_Mock_BackendError(t *testing.T) {
 		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showAgentEditorAgents(ctx, ""))
+	assertError(t, listAgentEditorAgents(ctx, ""))
 }
 
 func TestShowAgentEditorKnowledgeBases_Mock_BackendError(t *testing.T) {
@@ -251,7 +251,7 @@ func TestShowAgentEditorKnowledgeBases_Mock_BackendError(t *testing.T) {
 		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showAgentEditorKnowledgeBases(ctx, ""))
+	assertError(t, listAgentEditorKnowledgeBases(ctx, ""))
 }
 
 func TestShowAgentEditorMCPServices_Mock_BackendError(t *testing.T) {
@@ -260,7 +260,7 @@ func TestShowAgentEditorMCPServices_Mock_BackendError(t *testing.T) {
 		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showAgentEditorConsumedMCPServices(ctx, ""))
+	assertError(t, listAgentEditorConsumedMCPServices(ctx, ""))
 }
 
 func TestListDataTransformers_Mock_BackendError(t *testing.T) {
@@ -278,7 +278,7 @@ func TestShowExportMappings_Mock_BackendError(t *testing.T) {
 		ListExportMappingsFunc: func() ([]*model.ExportMapping, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showExportMappings(ctx, ""))
+	assertError(t, listExportMappings(ctx, ""))
 }
 
 func TestShowImportMappings_Mock_BackendError(t *testing.T) {
@@ -287,7 +287,7 @@ func TestShowImportMappings_Mock_BackendError(t *testing.T) {
 		ListImportMappingsFunc: func() ([]*model.ImportMapping, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showImportMappings(ctx, ""))
+	assertError(t, listImportMappings(ctx, ""))
 }
 
 func TestShowSettings_Mock_BackendError(t *testing.T) {
@@ -296,7 +296,7 @@ func TestShowSettings_Mock_BackendError(t *testing.T) {
 		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, showSettings(ctx))
+	assertError(t, listSettings(ctx))
 }
 
 // Describe handler backend errors

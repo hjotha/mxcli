@@ -15,8 +15,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 )
 
-// showJavaScriptActions handles SHOW JAVASCRIPT ACTIONS command.
-func showJavaScriptActions(ctx *ExecContext, moduleName string) error {
+// listJavaScriptActions handles SHOW JAVASCRIPT ACTIONS command.
+func listJavaScriptActions(ctx *ExecContext, moduleName string) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

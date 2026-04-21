@@ -25,7 +25,7 @@ func TestShowProjectSecurity_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showProjectSecurity(ctx))
+	assertNoError(t, listProjectSecurity(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Security Level:")
@@ -50,7 +50,7 @@ func TestShowModuleRoles_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showModuleRoles(ctx, ""))
+	assertNoError(t, listModuleRoles(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")
@@ -72,7 +72,7 @@ func TestShowUserRoles_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showUserRoles(ctx))
+	assertNoError(t, listUserRoles(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Name")
@@ -94,7 +94,7 @@ func TestShowDemoUsers_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showDemoUsers(ctx))
+	assertNoError(t, listDemoUsers(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "User Name")
@@ -111,7 +111,7 @@ func TestShowDemoUsers_Disabled_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showDemoUsers(ctx))
+	assertNoError(t, listDemoUsers(ctx))
 	assertContainsStr(t, buf.String(), "Demo users are disabled.")
 }
 

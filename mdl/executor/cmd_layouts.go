@@ -11,8 +11,8 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
-// showLayouts handles SHOW LAYOUTS command.
-func showLayouts(ctx *ExecContext, moduleName string) error {
+// listLayouts handles SHOW LAYOUTS command.
+func listLayouts(ctx *ExecContext, moduleName string) error {
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {

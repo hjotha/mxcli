@@ -15,8 +15,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showImportMappings prints a table of all import mapping documents.
-func showImportMappings(ctx *ExecContext, inModule string) error {
+// listImportMappings prints a table of all import mapping documents.
+func listImportMappings(ctx *ExecContext, inModule string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

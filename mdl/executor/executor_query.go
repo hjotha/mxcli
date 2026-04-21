@@ -14,37 +14,37 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 
 	switch s.ObjectType {
 	case ast.ShowModules:
-		return showModules(ctx)
+		return listModules(ctx)
 	case ast.ShowEnumerations:
-		return showEnumerations(ctx, s.InModule)
+		return listEnumerations(ctx, s.InModule)
 	case ast.ShowConstants:
-		return showConstants(ctx, s.InModule)
+		return listConstants(ctx, s.InModule)
 	case ast.ShowConstantValues:
-		return showConstantValues(ctx, s.InModule)
+		return listConstantValues(ctx, s.InModule)
 	case ast.ShowEntities:
-		return showEntities(ctx, s.InModule)
+		return listEntities(ctx, s.InModule)
 	case ast.ShowEntity:
-		return showEntity(ctx, s.Name)
+		return listEntity(ctx, s.Name)
 	case ast.ShowAssociations:
-		return showAssociations(ctx, s.InModule)
+		return listAssociations(ctx, s.InModule)
 	case ast.ShowAssociation:
-		return showAssociation(ctx, s.Name)
+		return listAssociation(ctx, s.Name)
 	case ast.ShowMicroflows:
-		return showMicroflows(ctx, s.InModule)
+		return listMicroflows(ctx, s.InModule)
 	case ast.ShowNanoflows:
-		return showNanoflows(ctx, s.InModule)
+		return listNanoflows(ctx, s.InModule)
 	case ast.ShowPages:
-		return showPages(ctx, s.InModule)
+		return listPages(ctx, s.InModule)
 	case ast.ShowSnippets:
-		return showSnippets(ctx, s.InModule)
+		return listSnippets(ctx, s.InModule)
 	case ast.ShowLayouts:
-		return showLayouts(ctx, s.InModule)
+		return listLayouts(ctx, s.InModule)
 	case ast.ShowJavaActions:
-		return showJavaActions(ctx, s.InModule)
+		return listJavaActions(ctx, s.InModule)
 	case ast.ShowJavaScriptActions:
-		return showJavaScriptActions(ctx, s.InModule)
+		return listJavaScriptActions(ctx, s.InModule)
 	case ast.ShowVersion:
-		return showVersion(ctx)
+		return listVersion(ctx)
 	case ast.ShowCatalogTables:
 		return execShowCatalogTables(ctx)
 	case ast.ShowCatalogStatus:
@@ -60,83 +60,83 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 	case ast.ShowContext:
 		return execShowContext(ctx, s)
 	case ast.ShowProjectSecurity:
-		return showProjectSecurity(ctx)
+		return listProjectSecurity(ctx)
 	case ast.ShowModuleRoles:
-		return showModuleRoles(ctx, s.InModule)
+		return listModuleRoles(ctx, s.InModule)
 	case ast.ShowUserRoles:
-		return showUserRoles(ctx)
+		return listUserRoles(ctx)
 	case ast.ShowDemoUsers:
-		return showDemoUsers(ctx)
+		return listDemoUsers(ctx)
 	case ast.ShowAccessOn:
-		return showAccessOnEntity(ctx, s.Name)
+		return listAccessOnEntity(ctx, s.Name)
 	case ast.ShowAccessOnMicroflow:
-		return showAccessOnMicroflow(ctx, s.Name)
+		return listAccessOnMicroflow(ctx, s.Name)
 	case ast.ShowAccessOnPage:
-		return showAccessOnPage(ctx, s.Name)
+		return listAccessOnPage(ctx, s.Name)
 	case ast.ShowAccessOnWorkflow:
-		return showAccessOnWorkflow(ctx, s.Name)
+		return listAccessOnWorkflow(ctx, s.Name)
 	case ast.ShowSecurityMatrix:
-		return showSecurityMatrix(ctx, s.InModule)
+		return listSecurityMatrix(ctx, s.InModule)
 	case ast.ShowODataClients:
-		return showODataClients(ctx, s.InModule)
+		return listODataClients(ctx, s.InModule)
 	case ast.ShowODataServices:
-		return showODataServices(ctx, s.InModule)
+		return listODataServices(ctx, s.InModule)
 	case ast.ShowExternalEntities:
-		return showExternalEntities(ctx, s.InModule)
+		return listExternalEntities(ctx, s.InModule)
 	case ast.ShowExternalActions:
-		return showExternalActions(ctx, s.InModule)
+		return listExternalActions(ctx, s.InModule)
 	case ast.ShowNavigation:
-		return showNavigation(ctx)
+		return listNavigation(ctx)
 	case ast.ShowNavigationMenu:
-		return showNavigationMenu(ctx, s.Name)
+		return listNavigationMenu(ctx, s.Name)
 	case ast.ShowNavigationHomes:
-		return showNavigationHomes(ctx)
+		return listNavigationHomes(ctx)
 	case ast.ShowStructure:
 		return execShowStructure(ctx, s)
 	case ast.ShowWorkflows:
-		return showWorkflows(ctx, s.InModule)
+		return listWorkflows(ctx, s.InModule)
 	case ast.ShowBusinessEventServices:
-		return showBusinessEventServices(ctx, s.InModule)
+		return listBusinessEventServices(ctx, s.InModule)
 	case ast.ShowBusinessEventClients:
-		return showBusinessEventClients(ctx, s.InModule)
+		return listBusinessEventClients(ctx, s.InModule)
 	case ast.ShowBusinessEvents:
-		return showBusinessEvents(ctx, s.InModule)
+		return listBusinessEvents(ctx, s.InModule)
 	case ast.ShowSettings:
-		return showSettings(ctx)
+		return listSettings(ctx)
 	case ast.ShowFragments:
-		return showFragments(ctx)
+		return listFragments(ctx)
 	case ast.ShowDatabaseConnections:
-		return showDatabaseConnections(ctx, s.InModule)
+		return listDatabaseConnections(ctx, s.InModule)
 	case ast.ShowImageCollections:
-		return showImageCollections(ctx, s.InModule)
+		return listImageCollections(ctx, s.InModule)
 	case ast.ShowModels:
-		return showAgentEditorModels(ctx, s.InModule)
+		return listAgentEditorModels(ctx, s.InModule)
 	case ast.ShowAgents:
-		return showAgentEditorAgents(ctx, s.InModule)
+		return listAgentEditorAgents(ctx, s.InModule)
 	case ast.ShowKnowledgeBases:
-		return showAgentEditorKnowledgeBases(ctx, s.InModule)
+		return listAgentEditorKnowledgeBases(ctx, s.InModule)
 	case ast.ShowConsumedMCPServices:
-		return showAgentEditorConsumedMCPServices(ctx, s.InModule)
+		return listAgentEditorConsumedMCPServices(ctx, s.InModule)
 	case ast.ShowRestClients:
-		return showRestClients(ctx, s.InModule)
+		return listRestClients(ctx, s.InModule)
 	case ast.ShowPublishedRestServices:
-		return showPublishedRestServices(ctx, s.InModule)
+		return listPublishedRestServices(ctx, s.InModule)
 	case ast.ShowDataTransformers:
 		return listDataTransformers(ctx, s.InModule)
 	case ast.ShowContractEntities:
-		return showContractEntities(ctx, s.Name)
+		return listContractEntities(ctx, s.Name)
 	case ast.ShowContractActions:
-		return showContractActions(ctx, s.Name)
+		return listContractActions(ctx, s.Name)
 	case ast.ShowContractChannels:
-		return showContractChannels(ctx, s.Name)
+		return listContractChannels(ctx, s.Name)
 	case ast.ShowContractMessages:
-		return showContractMessages(ctx, s.Name)
+		return listContractMessages(ctx, s.Name)
 	case ast.ShowJsonStructures:
-		return showJsonStructures(ctx, s.InModule)
+		return listJsonStructures(ctx, s.InModule)
 	case ast.ShowImportMappings:
-		return showImportMappings(ctx, s.InModule)
+		return listImportMappings(ctx, s.InModule)
 	case ast.ShowExportMappings:
-		return showExportMappings(ctx, s.InModule)
+		return listExportMappings(ctx, s.InModule)
 	default:
 		return mdlerrors.NewUnsupported("unknown show object type")
 	}

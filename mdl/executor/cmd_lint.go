@@ -22,7 +22,7 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 
 	// Handle SHOW LINT RULES
 	if s.ShowRules {
-		return showLintRules(ctx)
+		return listLintRules(ctx)
 	}
 
 	// Ensure catalog is built
@@ -113,8 +113,8 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 	return formatter.Format(violations, ctx.Output)
 }
 
-// showLintRules displays available lint rules.
-func showLintRules(ctx *ExecContext) error {
+// listLintRules displays available lint rules.
+func listLintRules(ctx *ExecContext) error {
 	fmt.Fprintln(ctx.Output, "Built-in rules:")
 	fmt.Fprintln(ctx.Output)
 

@@ -247,8 +247,8 @@ func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 	return mdlerrors.NewNotFound("association", s.Name.String())
 }
 
-// showAssociations handles SHOW ASSOCIATIONS command.
-func showAssociations(ctx *ExecContext, moduleName string) error {
+// listAssociations handles SHOW ASSOCIATIONS command.
+func listAssociations(ctx *ExecContext, moduleName string) error {
 	// Build module ID -> name map (single query)
 	modules, err := ctx.Backend.ListModules()
 	if err != nil {
@@ -333,8 +333,8 @@ func showAssociations(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showAssociation handles SHOW ASSOCIATION command.
-func showAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAssociation handles SHOW ASSOCIATION command.
+func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("association name required")
 	}

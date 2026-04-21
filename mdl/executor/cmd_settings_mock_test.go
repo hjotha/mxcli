@@ -22,7 +22,7 @@ func TestShowSettings_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showSettings(ctx))
+	assertNoError(t, listSettings(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Section")

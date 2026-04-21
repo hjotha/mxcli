@@ -29,7 +29,7 @@ func TestShowJavaScriptActions_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showJavaScriptActions(ctx, ""))
+	assertNoError(t, listJavaScriptActions(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")

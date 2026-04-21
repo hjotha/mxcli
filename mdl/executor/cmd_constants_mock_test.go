@@ -26,7 +26,7 @@ func TestShowConstants_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showConstants(ctx, ""))
+	assertNoError(t, listConstants(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.AppURL")
@@ -52,7 +52,7 @@ func TestShowConstants_Mock_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showConstants(ctx, "Beta"))
+	assertNoError(t, listConstants(ctx, "Beta"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Alpha.Key1")
@@ -67,7 +67,7 @@ func TestShowConstants_Mock_Empty(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy()))
-	assertNoError(t, showConstants(ctx, ""))
+	assertNoError(t, listConstants(ctx, ""))
 	assertContainsStr(t, buf.String(), "No constants found")
 }
 

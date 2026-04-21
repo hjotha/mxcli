@@ -16,8 +16,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
-// showAgentEditorConsumedMCPServices handles SHOW CONSUMED MCP SERVICES [IN module].
-func showAgentEditorConsumedMCPServices(ctx *ExecContext, moduleName string) error {
+// listAgentEditorConsumedMCPServices handles SHOW CONSUMED MCP SERVICES [IN module].
+func listAgentEditorConsumedMCPServices(ctx *ExecContext, moduleName string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

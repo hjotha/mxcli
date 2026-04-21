@@ -34,8 +34,8 @@ func outputJavadocIndented(w io.Writer, text string, indent string) {
 	fmt.Fprintf(w, "%s */\n", indent)
 }
 
-// showODataClients handles SHOW ODATA CLIENTS [IN module] command.
-func showODataClients(ctx *ExecContext, moduleName string) error {
+// listODataClients handles SHOW ODATA CLIENTS [IN module] command.
+func listODataClients(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListConsumedODataServices()
 	if err != nil {
@@ -78,7 +78,7 @@ func showODataClients(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, svc.Version, svc.ODataVersion, url, validated})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No consumed OData services found.")
 		return nil
 	}
@@ -216,8 +216,8 @@ func outputConsumedODataServiceMDL(ctx *ExecContext, svc *model.ConsumedODataSer
 	return nil
 }
 
-// showODataServices handles SHOW ODATA SERVICES [IN module] command.
-func showODataServices(ctx *ExecContext, moduleName string) error {
+// listODataServices handles SHOW ODATA SERVICES [IN module] command.
+func listODataServices(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListPublishedODataServices()
 	if err != nil {
@@ -257,7 +257,7 @@ func showODataServices(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, svc.Path, svc.Version, svc.ODataVersion, esCount, authStr})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No published OData services found.")
 		return nil
 	}
@@ -454,8 +454,8 @@ func outputPublishedODataServiceMDL(ctx *ExecContext, svc *model.PublishedODataS
 	return nil
 }
 
-// showExternalEntities handles SHOW EXTERNAL ENTITIES [IN module] command.
-func showExternalEntities(ctx *ExecContext, moduleName string) error {
+// listExternalEntities handles SHOW EXTERNAL ENTITIES [IN module] command.
+func listExternalEntities(ctx *ExecContext, moduleName string) error {
 
 	domainModels, err := ctx.Backend.ListDomainModels()
 	if err != nil {
@@ -499,7 +499,7 @@ func showExternalEntities(ctx *ExecContext, moduleName string) error {
 		}
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No external entities found.")
 		return nil
 	}
@@ -519,10 +519,10 @@ func showExternalEntities(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showExternalActions handles SHOW EXTERNAL ACTIONS [IN module] command.
+// listExternalActions handles SHOW EXTERNAL ACTIONS [IN module] command.
 // It scans all microflows and nanoflows for CallExternalAction activities
 // and displays the unique actions grouped by consumed OData service.
-func showExternalActions(ctx *ExecContext, moduleName string) error {
+func listExternalActions(ctx *ExecContext, moduleName string) error {
 
 	mfs, err := ctx.Backend.ListMicroflows()
 	if err != nil {
@@ -615,7 +615,7 @@ func showExternalActions(ctx *ExecContext, moduleName string) error {
 		extractActions(nf.ObjectCollection, modName, nf.Name)
 	}
 
-	if len(actionMap) == 0 {
+	if len(actionMap) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No external actions found.")
 		return nil
 	}

@@ -13,8 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showConstants handles SHOW CONSTANTS command.
-func showConstants(ctx *ExecContext, moduleName string) error {
+// listConstants handles SHOW CONSTANTS command.
+func listConstants(ctx *ExecContext, moduleName string) error {
 	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
@@ -60,7 +60,7 @@ func showConstants(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{qualifiedName, modName, c.Name, folderPath, typeStr, defaultStr, exposed})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No constants found.")
 		return nil
 	}
@@ -340,9 +340,9 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 	return nil
 }
 
-// showConstantValues handles SHOW CONSTANT VALUES command.
+// listConstantValues handles SHOW CONSTANT VALUES command.
 // Displays one row per constant per configuration for easy comparison.
-func showConstantValues(ctx *ExecContext, moduleName string) error {
+func listConstantValues(ctx *ExecContext, moduleName string) error {
 	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
@@ -378,7 +378,7 @@ func showConstantValues(ctx *ExecContext, moduleName string) error {
 		})
 	}
 
-	if len(consts) == 0 {
+	if len(consts) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No constants found.")
 		return nil
 	}

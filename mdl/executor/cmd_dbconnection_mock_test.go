@@ -28,7 +28,7 @@ func TestShowDatabaseConnections_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showDatabaseConnections(ctx, ""))
+	assertNoError(t, listDatabaseConnections(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")

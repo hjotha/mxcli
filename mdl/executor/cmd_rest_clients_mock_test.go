@@ -29,7 +29,7 @@ func TestShowRestClients_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showRestClients(ctx, ""))
+	assertNoError(t, listRestClients(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "QualifiedName")

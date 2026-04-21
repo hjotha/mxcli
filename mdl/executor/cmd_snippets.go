@@ -11,8 +11,8 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
-// showSnippets handles SHOW SNIPPETS command.
-func showSnippets(ctx *ExecContext, moduleName string) error {
+// listSnippets handles SHOW SNIPPETS command.
+func listSnippets(ctx *ExecContext, moduleName string) error {
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {

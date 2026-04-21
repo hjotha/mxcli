@@ -15,7 +15,7 @@ func TestShowModules_Mock(t *testing.T) {
 	mod1 := mkModule("MyModule")
 	mod2 := mkModule("System")
 
-	// showModules uses ListUnits to count documents per module.
+	// listModules uses ListUnits to count documents per module.
 	// Provide a unit belonging to mod1 so the count is non-zero.
 	unitID := nextID("unit")
 	units := []*types.UnitInfo{{ID: unitID, ContainerID: mod1.ID}}
@@ -37,7 +37,7 @@ func TestShowModules_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showModules(ctx))
+	assertNoError(t, listModules(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule")

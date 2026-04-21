@@ -28,7 +28,7 @@ func TestShowBusinessEventServices_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showBusinessEventServices(ctx, ""))
+	assertNoError(t, listBusinessEventServices(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "QualifiedName")
@@ -37,7 +37,7 @@ func TestShowBusinessEventServices_Mock(t *testing.T) {
 
 func TestShowBusinessEventClients_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t)
-	assertNoError(t, showBusinessEventClients(ctx, ""))
+	assertNoError(t, listBusinessEventClients(ctx, ""))
 	assertContainsStr(t, buf.String(), "not yet implemented")
 }
 

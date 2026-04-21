@@ -27,7 +27,7 @@ func TestShowJsonStructures_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showJsonStructures(ctx, ""))
+	assertNoError(t, listJsonStructures(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "JSON Structure")

@@ -328,8 +328,8 @@ Statement Terminator:
 	return nil
 }
 
-// showVersion displays Mendix project version information.
-func showVersion(ctx *ExecContext) error {
+// listVersion displays Mendix project version information.
+func listVersion(ctx *ExecContext) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

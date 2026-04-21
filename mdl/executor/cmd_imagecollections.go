@@ -196,8 +196,8 @@ func extToImageFormat(ext string) string {
 	}
 }
 
-// showImageCollections handles SHOW IMAGE COLLECTION [IN module].
-func showImageCollections(ctx *ExecContext, moduleName string) error {
+// listImageCollections handles SHOW IMAGE COLLECTION [IN module].
+func listImageCollections(ctx *ExecContext, moduleName string) error {
 	collections, err := ctx.Backend.ListImageCollections()
 	if err != nil {
 		return mdlerrors.NewBackend("list image collections", err)

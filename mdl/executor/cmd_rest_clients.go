@@ -21,8 +21,8 @@ func safeIdent(name string) string {
 	return `"` + name + `"`
 }
 
-// showRestClients handles SHOW REST CLIENTS [IN module] command.
-func showRestClients(ctx *ExecContext, moduleName string) error {
+// listRestClients handles SHOW REST CLIENTS [IN module] command.
+func listRestClients(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {
@@ -64,7 +64,7 @@ func showRestClients(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, baseUrl, auth, len(svc.Operations)})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No consumed REST services found.")
 		return nil
 	}

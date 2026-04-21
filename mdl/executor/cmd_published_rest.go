@@ -13,8 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showPublishedRestServices handles SHOW PUBLISHED REST SERVICES [IN module] command.
-func showPublishedRestServices(ctx *ExecContext, moduleName string) error {
+// listPublishedRestServices handles SHOW PUBLISHED REST SERVICES [IN module] command.
+func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {
@@ -57,7 +57,7 @@ func showPublishedRestServices(ctx *ExecContext, moduleName string) error {
 		rows = append(rows, row{modName, qn, path, svc.Version, len(svc.Resources), opCount})
 	}
 
-	if len(rows) == 0 {
+	if len(rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No published REST services found.")
 		return nil
 	}

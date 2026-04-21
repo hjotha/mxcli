@@ -8,9 +8,9 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
-// showLanguages lists all languages found in the project's translatable strings.
+// listLanguages lists all languages found in the project's translatable strings.
 // Requires REFRESH CATALOG FULL to populate the strings table.
-func showLanguages(ctx *ExecContext) error {
+func listLanguages(ctx *ExecContext) error {
 	if ctx.Catalog == nil {
 		return mdlerrors.NewValidation("no catalog available — run REFRESH CATALOG FULL first")
 	}
@@ -26,7 +26,7 @@ func showLanguages(ctx *ExecContext) error {
 		return mdlerrors.NewBackend("query languages", err)
 	}
 
-	if len(result.Rows) == 0 {
+	if len(result.Rows) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintln(ctx.Output, "No translatable strings found. Run REFRESH CATALOG FULL to populate the strings table.")
 		return nil
 	}

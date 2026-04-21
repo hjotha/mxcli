@@ -30,7 +30,7 @@ func TestShowAssociations_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showAssociations(ctx, ""))
+	assertNoError(t, listAssociations(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Order_Customer")
@@ -68,7 +68,7 @@ func TestShowAssociations_Mock_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showAssociations(ctx, "HR"))
+	assertNoError(t, listAssociations(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.Order_Product")

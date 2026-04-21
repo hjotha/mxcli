@@ -23,7 +23,7 @@ func TestShowWorkflows_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showWorkflows(ctx, ""))
+	assertNoError(t, listWorkflows(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")

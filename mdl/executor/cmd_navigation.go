@@ -98,9 +98,9 @@ func profileNames(nav *types.NavigationDocument) string {
 	return strings.Join(names, ", ")
 }
 
-// showNavigation handles SHOW NAVIGATION command.
+// listNavigation handles SHOW NAVIGATION command.
 // Displays an overview of all navigation profiles with their home pages and menu item counts.
-func showNavigation(ctx *ExecContext) error {
+func listNavigation(ctx *ExecContext) error {
 	nav, err := ctx.Backend.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)
@@ -156,9 +156,9 @@ func showNavigation(ctx *ExecContext) error {
 	return writeResult(ctx, result)
 }
 
-// showNavigationMenu handles SHOW NAVIGATION MENU [profile] command.
+// listNavigationMenu handles SHOW NAVIGATION MENU [profile] command.
 // Displays the menu tree for a specific profile, or all profiles if none specified.
-func showNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error {
+func listNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error {
 	nav, err := ctx.Backend.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)
@@ -181,9 +181,9 @@ func showNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error 
 	return nil
 }
 
-// showNavigationHomes handles SHOW NAVIGATION HOMES command.
+// listNavigationHomes handles SHOW NAVIGATION HOMES command.
 // Displays all home page configurations including role-based overrides.
-func showNavigationHomes(ctx *ExecContext) error {
+func listNavigationHomes(ctx *ExecContext) error {
 	nav, err := ctx.Backend.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)

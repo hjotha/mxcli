@@ -13,8 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
-// showWorkflows handles SHOW WORKFLOWS command.
-func showWorkflows(ctx *ExecContext, moduleName string) error {
+// listWorkflows handles SHOW WORKFLOWS command.
+func listWorkflows(ctx *ExecContext, moduleName string) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

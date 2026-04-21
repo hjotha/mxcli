@@ -16,8 +16,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
-// showAgentEditorAgents handles SHOW AGENTS [IN module].
-func showAgentEditorAgents(ctx *ExecContext, moduleName string) error {
+// listAgentEditorAgents handles SHOW AGENTS [IN module].
+func listAgentEditorAgents(ctx *ExecContext, moduleName string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

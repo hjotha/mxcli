@@ -13,11 +13,42 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
-// showProjectSecurity handles SHOW PROJECT SECURITY.
-func showProjectSecurity(ctx *ExecContext) error {
+// listProjectSecurity handles SHOW PROJECT SECURITY.
+func listProjectSecurity(ctx *ExecContext) error {
 	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
+	}
+
+	if ctx.Format == FormatJSON {
+		result := &TableResult{
+			Columns: []string{"Property", "Value"},
+		}
+		result.Rows = append(result.Rows,
+			[]any{"SecurityLevel", security.SecurityLevelDisplay(ps.SecurityLevel)},
+			[]any{"CheckSecurity", fmt.Sprintf("%v", ps.CheckSecurity)},
+			[]any{"StrictMode", fmt.Sprintf("%v", ps.StrictMode)},
+			[]any{"DemoUsersEnabled", fmt.Sprintf("%v", ps.EnableDemoUsers)},
+			[]any{"GuestAccess", fmt.Sprintf("%v", ps.EnableGuestAccess)},
+			[]any{"UserRoles", fmt.Sprintf("%d", len(ps.UserRoles))},
+			[]any{"DemoUsers", fmt.Sprintf("%d", len(ps.DemoUsers))},
+		)
+		if ps.AdminUserName != "" {
+			result.Rows = append(result.Rows, []any{"AdminUser", ps.AdminUserName})
+		}
+		if ps.GuestUserRole != "" {
+			result.Rows = append(result.Rows, []any{"GuestUserRole", ps.GuestUserRole})
+		}
+		if ps.PasswordPolicy != nil {
+			pp := ps.PasswordPolicy
+			result.Rows = append(result.Rows,
+				[]any{"PasswordPolicy.MinimumLength", fmt.Sprintf("%d", pp.MinimumLength)},
+				[]any{"PasswordPolicy.RequireDigit", fmt.Sprintf("%v", pp.RequireDigit)},
+				[]any{"PasswordPolicy.RequireMixedCase", fmt.Sprintf("%v", pp.RequireMixedCase)},
+				[]any{"PasswordPolicy.RequireSymbol", fmt.Sprintf("%v", pp.RequireSymbol)},
+			)
+		}
+		return writeResult(ctx, result)
 	}
 
 	fmt.Fprintf(ctx.Output, "Security Level: %s\n", security.SecurityLevelDisplay(ps.SecurityLevel))
@@ -46,8 +77,8 @@ func showProjectSecurity(ctx *ExecContext) error {
 	return nil
 }
 
-// showModuleRoles handles SHOW MODULE ROLES [IN module].
-func showModuleRoles(ctx *ExecContext, moduleName string) error {
+// listModuleRoles handles SHOW MODULE ROLES [IN module].
+func listModuleRoles(ctx *ExecContext, moduleName string) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -80,8 +111,8 @@ func showModuleRoles(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showUserRoles handles SHOW USER ROLES.
-func showUserRoles(ctx *ExecContext) error {
+// listUserRoles handles SHOW USER ROLES.
+func listUserRoles(ctx *ExecContext) error {
 	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -107,17 +138,20 @@ func showUserRoles(ctx *ExecContext) error {
 	return writeResult(ctx, result)
 }
 
-// showDemoUsers handles SHOW DEMO USERS.
-func showDemoUsers(ctx *ExecContext) error {
+// listDemoUsers handles SHOW DEMO USERS.
+func listDemoUsers(ctx *ExecContext) error {
 	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
 
 	if !ps.EnableDemoUsers {
-		fmt.Fprintln(ctx.Output, "Demo users are disabled.")
-		fmt.Fprintln(ctx.Output, "Enable with: ALTER PROJECT SECURITY DEMO USERS ON;")
-		return nil
+		if ctx.Format != FormatJSON {
+			fmt.Fprintln(ctx.Output, "Demo users are disabled.")
+			fmt.Fprintln(ctx.Output, "Enable with: ALTER PROJECT SECURITY DEMO USERS ON;")
+			return nil
+		}
+		return writeResult(ctx, &TableResult{Columns: []string{"User Name", "User Roles"}})
 	}
 
 	result := &TableResult{
@@ -133,8 +167,8 @@ func showDemoUsers(ctx *ExecContext) error {
 	return writeResult(ctx, result)
 }
 
-// showAccessOnEntity handles SHOW ACCESS ON Module.Entity.
-func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnEntity handles SHOW ACCESS ON Module.Entity.
+func listAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}
@@ -160,33 +194,26 @@ func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("entity", name.String())
 	}
 
-	if len(entity.AccessRules) == 0 {
-		fmt.Fprintf(ctx.Output, "No access rules on %s\n", name)
-		return nil
-	}
-
-	// Build attribute name map
+	// Build attribute name map (shared by both output paths)
 	attrNames := make(map[string]string)
 	for _, attr := range entity.Attributes {
 		attrNames[string(attr.ID)] = attr.Name
 	}
 
-	fmt.Fprintf(ctx.Output, "Access rules for %s.%s:\n\n", name.Module, name.Name)
-
-	for i, rule := range entity.AccessRules {
-		// Show roles
-		var roleStrs []string
-		for _, rn := range rule.ModuleRoleNames {
-			roleStrs = append(roleStrs, rn)
+	// ruleRoles returns the role name list for a rule.
+	ruleRoles := func(rule *domainmodel.AccessRule) []string {
+		if len(rule.ModuleRoleNames) > 0 {
+			return rule.ModuleRoleNames
 		}
-		if len(roleStrs) == 0 {
-			for _, rid := range rule.ModuleRoles {
-				roleStrs = append(roleStrs, string(rid))
-			}
+		var out []string
+		for _, rid := range rule.ModuleRoles {
+			out = append(out, string(rid))
 		}
-		fmt.Fprintf(ctx.Output, "Rule %d: %s\n", i+1, strings.Join(roleStrs, ", "))
+		return out
+	}
 
-		// Show CRUD rights (READ/WRITE inferred from DefaultMemberAccessRights + MemberAccesses)
+	// ruleRights computes CRUD rights for a rule.
+	ruleRights := func(rule *domainmodel.AccessRule) []string {
 		var rights []string
 		if rule.AllowCreate {
 			rights = append(rights, "CREATE")
@@ -211,30 +238,63 @@ func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 		if rule.AllowDelete {
 			rights = append(rights, "DELETE")
 		}
-		fmt.Fprintf(ctx.Output, "  Rights: %s\n", strings.Join(rights, ", "))
+		return rights
+	}
 
-		// Show default member access
+	// memberName resolves display name for a MemberAccess entry.
+	memberName := func(ma *domainmodel.MemberAccess) string {
+		if ma.AttributeName != "" {
+			return ma.AttributeName
+		}
+		if ma.AssociationName != "" {
+			return ma.AssociationName
+		}
+		if an, ok := attrNames[string(ma.AttributeID)]; ok {
+			return an
+		}
+		return string(ma.AttributeID)
+	}
+
+	if ctx.Format == FormatJSON {
+		result := &TableResult{
+			Columns: []string{"Rule", "Roles", "Rights", "DefaultMemberAccess", "MemberAccess", "XPath"},
+		}
+		for i, rule := range entity.AccessRules {
+			var memberParts []string
+			for _, ma := range rule.MemberAccesses {
+				memberParts = append(memberParts, memberName(ma)+":"+string(ma.AccessRights))
+			}
+			result.Rows = append(result.Rows, []any{
+				i + 1,
+				strings.Join(ruleRoles(rule), ", "),
+				strings.Join(ruleRights(rule), ", "),
+				string(rule.DefaultMemberAccessRights),
+				strings.Join(memberParts, ", "),
+				rule.XPathConstraint,
+			})
+		}
+		return writeResult(ctx, result)
+	}
+
+	if len(entity.AccessRules) == 0 {
+		fmt.Fprintf(ctx.Output, "No access rules on %s\n", name)
+		return nil
+	}
+
+	fmt.Fprintf(ctx.Output, "Access rules for %s.%s:\n\n", name.Module, name.Name)
+
+	for i, rule := range entity.AccessRules {
+		fmt.Fprintf(ctx.Output, "Rule %d: %s\n", i+1, strings.Join(ruleRoles(rule), ", "))
+		fmt.Fprintf(ctx.Output, "  Rights: %s\n", strings.Join(ruleRights(rule), ", "))
+
 		if rule.DefaultMemberAccessRights != "" {
 			fmt.Fprintf(ctx.Output, "  Default member access: %s\n", rule.DefaultMemberAccessRights)
 		}
 
-		// Show member-level access
 		for _, ma := range rule.MemberAccesses {
-			memberName := ma.AttributeName
-			if memberName == "" {
-				memberName = ma.AssociationName
-			}
-			if memberName == "" {
-				if an, ok := attrNames[string(ma.AttributeID)]; ok {
-					memberName = an
-				} else {
-					memberName = string(ma.AttributeID)
-				}
-			}
-			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberName, ma.AccessRights)
+			fmt.Fprintf(ctx.Output, "  %s: %s\n", memberName(ma), ma.AccessRights)
 		}
 
-		// Show XPath constraint
 		if rule.XPathConstraint != "" {
 			fmt.Fprintf(ctx.Output, "  WHERE '%s'\n", rule.XPathConstraint)
 		}
@@ -244,8 +304,8 @@ func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 	return nil
 }
 
-// showAccessOnMicroflow handles SHOW ACCESS ON MICROFLOW Module.MF.
-func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnMicroflow handles SHOW ACCESS ON MICROFLOW Module.MF.
+func listAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("microflow name required")
 	}
@@ -263,6 +323,18 @@ func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	for _, mf := range mfs {
 		modName := h.GetModuleName(h.FindModuleID(mf.ContainerID))
 		if modName == name.Module && mf.Name == name.Name {
+			if ctx.Format == FormatJSON {
+				result := &TableResult{Columns: []string{"Module", "Role"}}
+				for _, role := range mf.AllowedModuleRoles {
+					parts := strings.SplitN(string(role), ".", 2)
+					mod, r := "", string(role)
+					if len(parts) == 2 {
+						mod, r = parts[0], parts[1]
+					}
+					result.Rows = append(result.Rows, []any{mod, r})
+				}
+				return writeResult(ctx, result)
+			}
 			if len(mf.AllowedModuleRoles) == 0 {
 				fmt.Fprintf(ctx.Output, "No module roles granted execute access on %s.%s\n", modName, mf.Name)
 				return nil
@@ -278,8 +350,8 @@ func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("microflow", name.String())
 }
 
-// showAccessOnPage handles SHOW ACCESS ON PAGE Module.Page.
-func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnPage handles SHOW ACCESS ON PAGE Module.Page.
+func listAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("page name required")
 	}
@@ -297,6 +369,18 @@ func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 	for _, pg := range pages {
 		modName := h.GetModuleName(h.FindModuleID(pg.ContainerID))
 		if modName == name.Module && pg.Name == name.Name {
+			if ctx.Format == FormatJSON {
+				result := &TableResult{Columns: []string{"Module", "Role"}}
+				for _, role := range pg.AllowedRoles {
+					parts := strings.SplitN(string(role), ".", 2)
+					mod, r := "", string(role)
+					if len(parts) == 2 {
+						mod, r = parts[0], parts[1]
+					}
+					result.Rows = append(result.Rows, []any{mod, r})
+				}
+				return writeResult(ctx, result)
+			}
 			if len(pg.AllowedRoles) == 0 {
 				fmt.Fprintf(ctx.Output, "No module roles granted view access on %s.%s\n", modName, pg.Name)
 				return nil
@@ -312,15 +396,15 @@ func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("page", name.String())
 }
 
-// showAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW Module.WF.
-func showAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW Module.WF.
+func listAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewUnsupported("SHOW ACCESS ON WORKFLOW is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
-// showSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
-func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
+// listSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
+func listSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	if ctx.Format == FormatJSON {
-		return showSecurityMatrixJSON(ctx, moduleName)
+		return listSecurityMatrixJSON(ctx, moduleName)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -517,9 +601,9 @@ func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	return nil
 }
 
-// showSecurityMatrixJSON emits the security matrix as a JSON table
+// listSecurityMatrixJSON emits the security matrix as a JSON table
 // with one row per access rule across entities, microflows, pages, and workflows.
-func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
+func listSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

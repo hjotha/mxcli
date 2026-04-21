@@ -16,8 +16,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
 )
 
-// showAgentEditorKnowledgeBases handles SHOW KNOWLEDGE BASES [IN module].
-func showAgentEditorKnowledgeBases(ctx *ExecContext, moduleName string) error {
+// listAgentEditorKnowledgeBases handles SHOW KNOWLEDGE BASES [IN module].
+func listAgentEditorKnowledgeBases(ctx *ExecContext, moduleName string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

@@ -28,7 +28,7 @@ func TestShowNavigation_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showNavigation(ctx))
+	assertNoError(t, listNavigation(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Profile")
@@ -51,7 +51,7 @@ func TestShowNavigationMenu_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showNavigationMenu(ctx, nil))
+	assertNoError(t, listNavigationMenu(ctx, nil))
 	assertContainsStr(t, buf.String(), "Dashboard")
 }
 
@@ -69,7 +69,7 @@ func TestShowNavigationHomes_Mock(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showNavigationHomes(ctx))
+	assertNoError(t, listNavigationHomes(ctx))
 	assertContainsStr(t, buf.String(), "Default Home:")
 }
 
