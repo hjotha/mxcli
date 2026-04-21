@@ -117,6 +117,15 @@ CREATE PERSISTENT ENTITY DmTest.Cars (
 	t.Logf("Position: (%d, %d)", stmt.Position.X, stmt.Position.Y)
 }
 
+func TestUnquoteString_DecodesEscapes(t *testing.T) {
+	input := `'Line 1\nLine 2\tTabbed\\Path''s'`
+	got := unquoteString(input)
+	want := "Line 1\nLine 2\tTabbed\\Path's"
+	if got != want {
+		t.Fatalf("unquoteString(%q) = %q, want %q", input, got, want)
+	}
+}
+
 func TestIndexParsing(t *testing.T) {
 	input := `CREATE PERSISTENT ENTITY DmTest.Cars (
 	CarId: String NOT NULL,

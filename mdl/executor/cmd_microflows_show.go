@@ -267,7 +267,7 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Folder
 	if folderPath := h.BuildFolderPath(targetMf.ContainerID); folderPath != "" {
-		lines = append(lines, fmt.Sprintf("folder '%s'", folderPath))
+		lines = append(lines, fmt.Sprintf("folder %s", mdlQuote(folderPath)))
 	}
 
 	// BEGIN block
@@ -393,7 +393,7 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Folder
 	if folderPath := h.BuildFolderPath(targetNf.ContainerID); folderPath != "" {
-		lines = append(lines, fmt.Sprintf("folder '%s'", folderPath))
+		lines = append(lines, fmt.Sprintf("folder %s", mdlQuote(folderPath)))
 	}
 
 	// BEGIN block with activities
