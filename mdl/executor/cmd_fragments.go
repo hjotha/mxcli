@@ -28,8 +28,8 @@ func execDefineFragment(ctx *ExecContext, s *ast.DefineFragmentStmt) error {
 	return nil
 }
 
-// showFragments lists all defined fragments in the current session.
-func showFragments(ctx *ExecContext) error {
+// listFragments lists all defined fragments in the current session.
+func listFragments(ctx *ExecContext) error {
 	if len(ctx.Fragments) == 0 {
 		fmt.Fprintln(ctx.Output, "No fragments defined.")
 		return nil

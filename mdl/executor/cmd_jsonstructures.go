@@ -14,8 +14,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
-// showJsonStructures handles SHOW JSON STRUCTURES [IN module].
-func showJsonStructures(ctx *ExecContext, moduleName string) error {
+// listJsonStructures handles SHOW JSON STRUCTURES [IN module].
+func listJsonStructures(ctx *ExecContext, moduleName string) error {
 	structures, err := ctx.Backend.ListJsonStructures()
 	if err != nil {
 		return mdlerrors.NewBackend("list JSON structures", err)

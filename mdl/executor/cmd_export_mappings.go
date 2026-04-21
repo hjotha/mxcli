@@ -15,8 +15,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showExportMappings prints a table of all export mapping documents.
-func showExportMappings(ctx *ExecContext, inModule string) error {
+// listExportMappings prints a table of all export mapping documents.
+func listExportMappings(ctx *ExecContext, inModule string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

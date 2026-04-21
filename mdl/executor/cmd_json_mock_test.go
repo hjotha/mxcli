@@ -28,7 +28,7 @@ func TestShowEnumerations_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showEnumerations(ctx, ""))
+	assertNoError(t, listEnumerations(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Status")
 }
@@ -45,7 +45,7 @@ func TestShowConstants_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showConstants(ctx, ""))
+	assertNoError(t, listConstants(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Timeout")
 }
@@ -62,7 +62,7 @@ func TestShowMicroflows_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showMicroflows(ctx, ""))
+	assertNoError(t, listMicroflows(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "ACT_DoStuff")
 }
@@ -79,7 +79,7 @@ func TestShowNanoflows_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showNanoflows(ctx, ""))
+	assertNoError(t, listNanoflows(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "NF_Validate")
 }
@@ -96,7 +96,7 @@ func TestShowPages_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showPages(ctx, ""))
+	assertNoError(t, listPages(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Page_Home")
 }
@@ -113,7 +113,7 @@ func TestShowSnippets_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showSnippets(ctx, ""))
+	assertNoError(t, listSnippets(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Snippet_Header")
 }
@@ -130,7 +130,7 @@ func TestShowLayouts_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showLayouts(ctx, ""))
+	assertNoError(t, listLayouts(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Layout_Main")
 }
@@ -147,7 +147,7 @@ func TestShowWorkflows_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showWorkflows(ctx, ""))
+	assertNoError(t, listWorkflows(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "WF_Approve")
 }
@@ -168,7 +168,7 @@ func TestShowODataClients_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showODataClients(ctx, ""))
+	assertNoError(t, listODataClients(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "ExtService")
 }
@@ -189,7 +189,7 @@ func TestShowODataServices_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showODataServices(ctx, ""))
+	assertNoError(t, listODataServices(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "PubOData")
 }
@@ -210,7 +210,7 @@ func TestShowRestClients_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showRestClients(ctx, ""))
+	assertNoError(t, listRestClients(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "RestClient1")
 }
@@ -231,7 +231,7 @@ func TestShowPublishedRestServices_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showPublishedRestServices(ctx, ""))
+	assertNoError(t, listPublishedRestServices(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "PubRest1")
 }
@@ -252,7 +252,7 @@ func TestShowJavaActions_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showJavaActions(ctx, ""))
+	assertNoError(t, listJavaActions(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "MyJavaAction")
 }
@@ -273,7 +273,7 @@ func TestShowJavaScriptActions_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showJavaScriptActions(ctx, ""))
+	assertNoError(t, listJavaScriptActions(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "MyJSAction")
 }
@@ -294,7 +294,7 @@ func TestShowDatabaseConnections_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showDatabaseConnections(ctx, ""))
+	assertNoError(t, listDatabaseConnections(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "MyDB")
 }
@@ -315,7 +315,7 @@ func TestShowImageCollections_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showImageCollections(ctx, ""))
+	assertNoError(t, listImageCollections(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Icons")
 }
@@ -336,7 +336,7 @@ func TestShowJsonStructures_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showJsonStructures(ctx, ""))
+	assertNoError(t, listJsonStructures(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "OrderSchema")
 }
@@ -355,7 +355,7 @@ func TestShowUserRoles_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
-	assertNoError(t, showUserRoles(ctx))
+	assertNoError(t, listUserRoles(ctx))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Administrator")
 }
@@ -377,7 +377,7 @@ func TestShowModuleRoles_Mock_JSON(t *testing.T) {
 
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showModuleRoles(ctx, ""))
+	assertNoError(t, listModuleRoles(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "User")
 }
@@ -397,7 +397,7 @@ func TestShowDemoUsers_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
-	assertNoError(t, showDemoUsers(ctx))
+	assertNoError(t, listDemoUsers(ctx))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "demo_admin")
 }
@@ -418,7 +418,7 @@ func TestShowBusinessEventServices_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showBusinessEventServices(ctx, ""))
+	assertNoError(t, listBusinessEventServices(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "OrderEvents")
 }
@@ -439,7 +439,7 @@ func TestShowAgentEditorModels_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showAgentEditorModels(ctx, ""))
+	assertNoError(t, listAgentEditorModels(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "GPT4o")
 }
@@ -460,7 +460,7 @@ func TestShowAgentEditorAgents_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showAgentEditorAgents(ctx, ""))
+	assertNoError(t, listAgentEditorAgents(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Helper")
 }
@@ -481,7 +481,7 @@ func TestShowAgentEditorKnowledgeBases_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showAgentEditorKnowledgeBases(ctx, ""))
+	assertNoError(t, listAgentEditorKnowledgeBases(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "FAQ")
 }
@@ -502,7 +502,7 @@ func TestShowAgentEditorMCPServices_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showAgentEditorConsumedMCPServices(ctx, ""))
+	assertNoError(t, listAgentEditorConsumedMCPServices(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "ToolSvc")
 }
@@ -542,7 +542,7 @@ func TestShowAccessOnMicroflow_Mock_JSON(t *testing.T) {
 
 	name := &ast.QualifiedName{Module: "MyModule", Name: "ACT_DoStuff"}
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showAccessOnMicroflow(ctx, name))
+	assertNoError(t, listAccessOnMicroflow(ctx, name))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "User")
 }
@@ -561,7 +561,7 @@ func TestShowAccessOnPage_Mock_JSON(t *testing.T) {
 
 	name := &ast.QualifiedName{Module: "MyModule", Name: "Page_Home"}
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showAccessOnPage(ctx, name))
+	assertNoError(t, listAccessOnPage(ctx, name))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "User")
 }
@@ -578,7 +578,7 @@ func TestShowConstants_Mock_JSON_EmptyResult(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showConstants(ctx, ""))
+	assertNoError(t, listConstants(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertNotContainsStr(t, buf.String(), "No constants found")
 }
@@ -595,7 +595,7 @@ func TestShowPublishedRestServices_Mock_JSON_EmptyResult(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, showPublishedRestServices(ctx, ""))
+	assertNoError(t, listPublishedRestServices(ctx, ""))
 	assertValidJSON(t, buf.String())
 	assertNotContainsStr(t, buf.String(), "No published REST services found")
 }

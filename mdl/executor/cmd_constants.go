@@ -13,8 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showConstants handles SHOW CONSTANTS command.
-func showConstants(ctx *ExecContext, moduleName string) error {
+// listConstants handles SHOW CONSTANTS command.
+func listConstants(ctx *ExecContext, moduleName string) error {
 	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
@@ -340,9 +340,9 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 	return nil
 }
 
-// showConstantValues handles SHOW CONSTANT VALUES command.
+// listConstantValues handles SHOW CONSTANT VALUES command.
 // Displays one row per constant per configuration for easy comparison.
-func showConstantValues(ctx *ExecContext, moduleName string) error {
+func listConstantValues(ctx *ExecContext, moduleName string) error {
 	constants, err := ctx.Backend.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)

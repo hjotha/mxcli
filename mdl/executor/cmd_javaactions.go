@@ -17,8 +17,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 )
 
-// showJavaActions handles SHOW JAVA ACTIONS command.
-func showJavaActions(ctx *ExecContext, moduleName string) error {
+// listJavaActions handles SHOW JAVA ACTIONS command.
+func listJavaActions(ctx *ExecContext, moduleName string) error {
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {

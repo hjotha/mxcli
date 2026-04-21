@@ -13,8 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
-// showProjectSecurity handles SHOW PROJECT SECURITY.
-func showProjectSecurity(ctx *ExecContext) error {
+// listProjectSecurity handles SHOW PROJECT SECURITY.
+func listProjectSecurity(ctx *ExecContext) error {
 	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -77,8 +77,8 @@ func showProjectSecurity(ctx *ExecContext) error {
 	return nil
 }
 
-// showModuleRoles handles SHOW MODULE ROLES [IN module].
-func showModuleRoles(ctx *ExecContext, moduleName string) error {
+// listModuleRoles handles SHOW MODULE ROLES [IN module].
+func listModuleRoles(ctx *ExecContext, moduleName string) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -111,8 +111,8 @@ func showModuleRoles(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showUserRoles handles SHOW USER ROLES.
-func showUserRoles(ctx *ExecContext) error {
+// listUserRoles handles SHOW USER ROLES.
+func listUserRoles(ctx *ExecContext) error {
 	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -138,8 +138,8 @@ func showUserRoles(ctx *ExecContext) error {
 	return writeResult(ctx, result)
 }
 
-// showDemoUsers handles SHOW DEMO USERS.
-func showDemoUsers(ctx *ExecContext) error {
+// listDemoUsers handles SHOW DEMO USERS.
+func listDemoUsers(ctx *ExecContext) error {
 	ps, err := ctx.Backend.GetProjectSecurity()
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -167,8 +167,8 @@ func showDemoUsers(ctx *ExecContext) error {
 	return writeResult(ctx, result)
 }
 
-// showAccessOnEntity handles SHOW ACCESS ON Module.Entity.
-func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnEntity handles SHOW ACCESS ON Module.Entity.
+func listAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}
@@ -304,8 +304,8 @@ func showAccessOnEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 	return nil
 }
 
-// showAccessOnMicroflow handles SHOW ACCESS ON MICROFLOW Module.MF.
-func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnMicroflow handles SHOW ACCESS ON MICROFLOW Module.MF.
+func listAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("microflow name required")
 	}
@@ -350,8 +350,8 @@ func showAccessOnMicroflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("microflow", name.String())
 }
 
-// showAccessOnPage handles SHOW ACCESS ON PAGE Module.Page.
-func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnPage handles SHOW ACCESS ON PAGE Module.Page.
+func listAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("page name required")
 	}
@@ -396,15 +396,15 @@ func showAccessOnPage(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("page", name.String())
 }
 
-// showAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW Module.WF.
-func showAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
+// listAccessOnWorkflow handles SHOW ACCESS ON WORKFLOW Module.WF.
+func listAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewUnsupported("SHOW ACCESS ON WORKFLOW is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
-// showSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
-func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
+// listSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
+func listSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	if ctx.Format == FormatJSON {
-		return showSecurityMatrixJSON(ctx, moduleName)
+		return listSecurityMatrixJSON(ctx, moduleName)
 	}
 
 	h, err := getHierarchy(ctx)
@@ -601,9 +601,9 @@ func showSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	return nil
 }
 
-// showSecurityMatrixJSON emits the security matrix as a JSON table
+// listSecurityMatrixJSON emits the security matrix as a JSON table
 // with one row per access rule across entities, microflows, pages, and workflows.
-func showSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
+func listSecurityMatrixJSON(ctx *ExecContext, moduleName string) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

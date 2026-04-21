@@ -29,7 +29,7 @@ func TestShowJavaActions_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showJavaActions(ctx, ""))
+	assertNoError(t, listJavaActions(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")

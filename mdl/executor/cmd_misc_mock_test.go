@@ -23,7 +23,7 @@ func TestShowVersion_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showVersion(ctx))
+	assertNoError(t, listVersion(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Mendix Version")

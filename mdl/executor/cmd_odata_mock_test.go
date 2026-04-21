@@ -31,7 +31,7 @@ func TestShowODataClients_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showODataClients(ctx, ""))
+	assertNoError(t, listODataClients(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "QualifiedName")
@@ -59,7 +59,7 @@ func TestShowODataServices_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showODataServices(ctx, ""))
+	assertNoError(t, listODataServices(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "QualifiedName")

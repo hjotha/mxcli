@@ -120,8 +120,8 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 	return nil
 }
 
-// showDatabaseConnections handles SHOW DATABASE CONNECTIONS command.
-func showDatabaseConnections(ctx *ExecContext, moduleName string) error {
+// listDatabaseConnections handles SHOW DATABASE CONNECTIONS command.
+func listDatabaseConnections(ctx *ExecContext, moduleName string) error {
 	connections, err := ctx.Backend.ListDatabaseConnections()
 	if err != nil {
 		return mdlerrors.NewBackend("list database connections", err)

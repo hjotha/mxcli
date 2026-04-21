@@ -24,7 +24,7 @@ func TestShowEntities_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showEntities(ctx, ""))
+	assertNoError(t, listEntities(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Customer")
@@ -49,7 +49,7 @@ func TestShowEntities_Mock_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	assertNoError(t, showEntities(ctx, "HR"))
+	assertNoError(t, listEntities(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.Product")

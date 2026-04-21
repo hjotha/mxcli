@@ -12,8 +12,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showSettings displays an overview table of all settings parts.
-func showSettings(ctx *ExecContext) error {
+// listSettings displays an overview table of all settings parts.
+func listSettings(ctx *ExecContext) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

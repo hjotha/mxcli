@@ -34,7 +34,7 @@ func TestShowPublishedRestServices_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showPublishedRestServices(ctx, ""))
+	assertNoError(t, listPublishedRestServices(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "QualifiedName")

@@ -14,8 +14,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
-// showContractEntities handles SHOW CONTRACT ENTITIES FROM Module.Service.
-func showContractEntities(ctx *ExecContext, name *ast.QualifiedName) error {
+// listContractEntities handles SHOW CONTRACT ENTITIES FROM Module.Service.
+func listContractEntities(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("service name required: SHOW CONTRACT ENTITIES FROM Module.Service")
 	}
@@ -74,8 +74,8 @@ func showContractEntities(ctx *ExecContext, name *ast.QualifiedName) error {
 	return writeResult(ctx, result)
 }
 
-// showContractActions handles SHOW CONTRACT ACTIONS FROM Module.Service.
-func showContractActions(ctx *ExecContext, name *ast.QualifiedName) error {
+// listContractActions handles SHOW CONTRACT ACTIONS FROM Module.Service.
+func listContractActions(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("service name required: SHOW CONTRACT ACTIONS FROM Module.Service")
 	}
@@ -1245,8 +1245,8 @@ func edmToAstDataType(p *types.EdmProperty) ast.DataType {
 // AsyncAPI Contract Commands
 // ============================================================================
 
-// showContractChannels handles SHOW CONTRACT CHANNELS FROM Module.Service.
-func showContractChannels(ctx *ExecContext, name *ast.QualifiedName) error {
+// listContractChannels handles SHOW CONTRACT CHANNELS FROM Module.Service.
+func listContractChannels(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("service name required: SHOW CONTRACT CHANNELS FROM Module.Service")
 	}
@@ -1284,8 +1284,8 @@ func showContractChannels(ctx *ExecContext, name *ast.QualifiedName) error {
 	return writeResult(ctx, result)
 }
 
-// showContractMessages handles SHOW CONTRACT MESSAGES FROM Module.Service.
-func showContractMessages(ctx *ExecContext, name *ast.QualifiedName) error {
+// listContractMessages handles SHOW CONTRACT MESSAGES FROM Module.Service.
+func listContractMessages(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("service name required: SHOW CONTRACT MESSAGES FROM Module.Service")
 	}

@@ -25,7 +25,7 @@ func TestShowMicroflows_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showMicroflows(ctx, ""))
+	assertNoError(t, listMicroflows(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.ACT_CreateOrder")
@@ -48,7 +48,7 @@ func TestShowMicroflows_Mock_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showMicroflows(ctx, "HR"))
+	assertNoError(t, listMicroflows(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.ACT_Sell")
@@ -68,7 +68,7 @@ func TestShowNanoflows_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showNanoflows(ctx, ""))
+	assertNoError(t, listNanoflows(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.NF_Validate")

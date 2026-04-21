@@ -139,8 +139,8 @@ func execDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
 	return mdlerrors.NewNotFound("enumeration", s.Name.String())
 }
 
-// showEnumerations handles SHOW ENUMERATIONS command.
-func showEnumerations(ctx *ExecContext, moduleName string) error {
+// listEnumerations handles SHOW ENUMERATIONS command.
+func listEnumerations(ctx *ExecContext, moduleName string) error {
 
 	enums, err := ctx.Backend.ListEnumerations()
 	if err != nil {

@@ -23,7 +23,7 @@ func TestShowEnumerations_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showEnumerations(ctx, ""))
+	assertNoError(t, listEnumerations(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Color")
@@ -47,7 +47,7 @@ func TestShowEnumerations_Mock_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showEnumerations(ctx, "Beta"))
+	assertNoError(t, listEnumerations(ctx, "Beta"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Alpha.Color")

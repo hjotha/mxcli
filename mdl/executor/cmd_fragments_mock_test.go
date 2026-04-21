@@ -14,7 +14,7 @@ func TestShowFragments_Mock(t *testing.T) {
 		"myFrag": {Name: "myFrag"},
 	}
 
-	assertNoError(t, showFragments(ctx))
+	assertNoError(t, listFragments(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "myFrag")
@@ -24,7 +24,7 @@ func TestShowFragments_Empty_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t)
 	ctx.Fragments = map[string]*ast.DefineFragmentStmt{}
 
-	assertNoError(t, showFragments(ctx))
+	assertNoError(t, listFragments(ctx))
 
 	out := buf.String()
 	assertContainsStr(t, out, "No fragments defined.")

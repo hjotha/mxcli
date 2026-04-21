@@ -375,8 +375,8 @@ func getModuleContainers(ctx *ExecContext, moduleID model.ID) map[model.ID]bool 
 	return containers
 }
 
-// showModules handles SHOW MODULES command.
-func showModules(ctx *ExecContext) error {
+// listModules handles SHOW MODULES command.
+func listModules(ctx *ExecContext) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

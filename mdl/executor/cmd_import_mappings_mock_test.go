@@ -26,7 +26,7 @@ func TestShowImportMappings_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showImportMappings(ctx, ""))
+	assertNoError(t, listImportMappings(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Import Mapping")

@@ -65,7 +65,7 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 		if err != nil {
 			return mdlerrors.NewValidationf("invalid version %q: %v", s.AddedSince, err)
 		}
-		return showFeaturesAddedSince(ctx, reg, sinceV)
+		return listFeaturesAddedSince(ctx, reg, sinceV)
 
 	case s.ForVersion != "":
 		// SHOW FEATURES FOR VERSION x.y — no project connection needed
@@ -84,12 +84,12 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 	}
 
 	if s.InArea != "" {
-		return showFeaturesInArea(ctx, reg, pv, s.InArea)
+		return listFeaturesInArea(ctx, reg, pv, s.InArea)
 	}
-	return showFeaturesAll(ctx, reg, pv)
+	return listFeaturesAll(ctx, reg, pv)
 }
 
-func showFeaturesAll(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer) error {
+func listFeaturesAll(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer) error {
 	features := reg.FeaturesForVersion(pv)
 	if len(features) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No features found for version %s\n", pv)
@@ -125,7 +125,7 @@ func showFeaturesAll(ctx *ExecContext, reg *versions.Registry, pv versions.SemVe
 	return writeResult(ctx, tr)
 }
 
-func showFeaturesInArea(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer, area string) error {
+func listFeaturesInArea(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer, area string) error {
 	features := reg.FeaturesInArea(area, pv)
 	if len(features) == 0 && ctx.Format != FormatJSON {
 		// Check if the area exists at all.
@@ -159,7 +159,7 @@ func showFeaturesInArea(ctx *ExecContext, reg *versions.Registry, pv versions.Se
 	return writeResult(ctx, tr)
 }
 
-func showFeaturesAddedSince(ctx *ExecContext, reg *versions.Registry, sinceV versions.SemVer) error {
+func listFeaturesAddedSince(ctx *ExecContext, reg *versions.Registry, sinceV versions.SemVer) error {
 	added := reg.FeaturesAddedSince(sinceV)
 	if len(added) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No new features found since %s\n", sinceV)

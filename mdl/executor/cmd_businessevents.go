@@ -12,8 +12,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showBusinessEventServices displays a table of all business event service documents.
-func showBusinessEventServices(ctx *ExecContext, inModule string) error {
+// listBusinessEventServices displays a table of all business event service documents.
+func listBusinessEventServices(ctx *ExecContext, inModule string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -86,14 +86,14 @@ func showBusinessEventServices(ctx *ExecContext, inModule string) error {
 	return writeResult(ctx, result)
 }
 
-// showBusinessEventClients displays a table of all business event client documents.
-func showBusinessEventClients(ctx *ExecContext, inModule string) error {
+// listBusinessEventClients displays a table of all business event client documents.
+func listBusinessEventClients(ctx *ExecContext, inModule string) error {
 	fmt.Fprintln(ctx.Output, "Business event clients are not yet implemented.")
 	return nil
 }
 
-// showBusinessEvents displays a table of individual messages across all business event services.
-func showBusinessEvents(ctx *ExecContext, inModule string) error {
+// listBusinessEvents displays a table of individual messages across all business event services.
+func listBusinessEvents(ctx *ExecContext, inModule string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

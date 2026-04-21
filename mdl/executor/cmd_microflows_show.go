@@ -14,8 +14,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
-// showMicroflows handles SHOW MICROFLOWS command.
-func showMicroflows(ctx *ExecContext, moduleName string) error {
+// listMicroflows handles SHOW MICROFLOWS command.
+func listMicroflows(ctx *ExecContext, moduleName string) error {
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {
@@ -78,8 +78,8 @@ func showMicroflows(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showNanoflows handles SHOW NANOFLOWS command.
-func showNanoflows(ctx *ExecContext, moduleName string) error {
+// listNanoflows handles SHOW NANOFLOWS command.
+func listNanoflows(ctx *ExecContext, moduleName string) error {
 	// Get hierarchy for module/folder resolution
 	h, err := getHierarchy(ctx)
 	if err != nil {

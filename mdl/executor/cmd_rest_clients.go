@@ -21,8 +21,8 @@ func safeIdent(name string) string {
 	return `"` + name + `"`
 }
 
-// showRestClients handles SHOW REST CLIENTS [IN module] command.
-func showRestClients(ctx *ExecContext, moduleName string) error {
+// listRestClients handles SHOW REST CLIENTS [IN module] command.
+func listRestClients(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListConsumedRestServices()
 	if err != nil {

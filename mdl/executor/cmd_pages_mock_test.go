@@ -22,7 +22,7 @@ func TestShowPages_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showPages(ctx, ""))
+	assertNoError(t, listPages(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Home")
@@ -45,7 +45,7 @@ func TestShowPages_Mock_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showPages(ctx, "HR"))
+	assertNoError(t, listPages(ctx, "HR"))
 
 	out := buf.String()
 	assertNotContainsStr(t, out, "Sales.OrderList")
@@ -65,7 +65,7 @@ func TestShowSnippets_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showSnippets(ctx, ""))
+	assertNoError(t, listSnippets(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Header")
@@ -85,7 +85,7 @@ func TestShowLayouts_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showLayouts(ctx, ""))
+	assertNoError(t, listLayouts(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MyModule.Atlas_Default")

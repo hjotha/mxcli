@@ -29,7 +29,7 @@ func TestShowImageCollections_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showImageCollections(ctx, ""))
+	assertNoError(t, listImageCollections(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Image Collection")

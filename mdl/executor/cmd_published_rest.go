@@ -13,8 +13,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// showPublishedRestServices handles SHOW PUBLISHED REST SERVICES [IN module] command.
-func showPublishedRestServices(ctx *ExecContext, moduleName string) error {
+// listPublishedRestServices handles SHOW PUBLISHED REST SERVICES [IN module] command.
+func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 
 	services, err := ctx.Backend.ListPublishedRestServices()
 	if err != nil {

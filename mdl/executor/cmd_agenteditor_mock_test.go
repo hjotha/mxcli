@@ -307,7 +307,7 @@ func TestShowAgentEditorModels_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showAgentEditorModels(ctx, ""))
+	assertNoError(t, listAgentEditorModels(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")
@@ -369,7 +369,7 @@ func TestShowAgentEditorAgents_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showAgentEditorAgents(ctx, ""))
+	assertNoError(t, listAgentEditorAgents(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")
@@ -429,7 +429,7 @@ func TestShowAgentEditorKnowledgeBases_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showAgentEditorKnowledgeBases(ctx, ""))
+	assertNoError(t, listAgentEditorKnowledgeBases(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")
@@ -488,7 +488,7 @@ func TestShowAgentEditorConsumedMCPServices_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, showAgentEditorConsumedMCPServices(ctx, ""))
+	assertNoError(t, listAgentEditorConsumedMCPServices(ctx, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Qualified Name")

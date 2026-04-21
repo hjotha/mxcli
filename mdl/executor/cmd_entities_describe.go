@@ -14,8 +14,8 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
-// showEntities handles SHOW ENTITIES command.
-func showEntities(ctx *ExecContext, moduleName string) error {
+// listEntities handles SHOW ENTITIES command.
+func listEntities(ctx *ExecContext, moduleName string) error {
 	// Build module ID -> name map (single query)
 	modules, err := ctx.Backend.ListModules()
 	if err != nil {
@@ -156,8 +156,8 @@ func showEntities(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// showEntity handles SHOW ENTITY command.
-func showEntity(ctx *ExecContext, name *ast.QualifiedName) error {
+// listEntity handles SHOW ENTITY command.
+func listEntity(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
 		return mdlerrors.NewValidation("entity name required")
 	}

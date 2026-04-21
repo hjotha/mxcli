@@ -18,52 +18,52 @@ func disconnectedBackend() *mock.MockBackend {
 
 func TestShowModules_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showModules(ctx))
+	assertError(t, listModules(ctx))
 }
 
 func TestShowSettings_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showSettings(ctx))
+	assertError(t, listSettings(ctx))
 }
 
 func TestShowVersion_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showVersion(ctx))
+	assertError(t, listVersion(ctx))
 }
 
 func TestShowExportMappings_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showExportMappings(ctx, ""))
+	assertError(t, listExportMappings(ctx, ""))
 }
 
 func TestShowImportMappings_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showImportMappings(ctx, ""))
+	assertError(t, listImportMappings(ctx, ""))
 }
 
 func TestShowBusinessEventServices_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showBusinessEventServices(ctx, ""))
+	assertError(t, listBusinessEventServices(ctx, ""))
 }
 
 func TestShowAgentEditorModels_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showAgentEditorModels(ctx, ""))
+	assertError(t, listAgentEditorModels(ctx, ""))
 }
 
 func TestShowAgentEditorAgents_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showAgentEditorAgents(ctx, ""))
+	assertError(t, listAgentEditorAgents(ctx, ""))
 }
 
 func TestShowAgentEditorKnowledgeBases_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showAgentEditorKnowledgeBases(ctx, ""))
+	assertError(t, listAgentEditorKnowledgeBases(ctx, ""))
 }
 
 func TestShowAgentEditorMCPServices_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, showAgentEditorConsumedMCPServices(ctx, ""))
+	assertError(t, listAgentEditorConsumedMCPServices(ctx, ""))
 }
 
 func TestDescribeAgentEditorModel_Mock_NotConnected(t *testing.T) {
