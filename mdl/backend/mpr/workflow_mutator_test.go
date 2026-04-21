@@ -1179,7 +1179,16 @@ func TestWorkflowMutator_SetActivityProperty_Page_MissingKey(t *testing.T) {
 func TestWorkflowMutator_SetActivityProperty_Page_MissingKey_NestedSubFlow(t *testing.T) {
 	// Exercises the recursive replaceActivity path: the target activity lives
 	// inside an outcome's sub-flow, not at the top level.
-	nestedAct := makeWfActivity("Workflows$UserTask", "NestedReview", "nested1")
+	// Use distinct $IDs so replaceActivity cannot accidentally match the parent.
+	parentID := primitive.Binary{Subtype: 0x04, Data: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+	nestedID := primitive.Binary{Subtype: 0x04, Data: []byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+
+	nestedAct := bson.D{
+		{Key: "$ID", Value: nestedID},
+		{Key: "$Type", Value: "Workflows$UserTask"},
+		{Key: "Caption", Value: "NestedReview"},
+		{Key: "Name", Value: "nested1"},
+	}
 	// No TaskPage field at all on the nested activity.
 
 	outcome := bson.D{
@@ -1191,8 +1200,13 @@ func TestWorkflowMutator_SetActivityProperty_Page_MissingKey_NestedSubFlow(t *te
 			{Key: "Activities", Value: bson.A{int32(3), nestedAct}},
 		}},
 	}
-	parentAct := makeWfActivity("Workflows$Decision", "Check", "decision1")
-	parentAct = append(parentAct, bson.E{Key: "Outcomes", Value: bson.A{int32(3), outcome}})
+	parentAct := bson.D{
+		{Key: "$ID", Value: parentID},
+		{Key: "$Type", Value: "Workflows$Decision"},
+		{Key: "Caption", Value: "Check"},
+		{Key: "Name", Value: "decision1"},
+		{Key: "Outcomes", Value: bson.A{int32(3), outcome}},
+	}
 	m := newMutator(makeWorkflowDoc(parentAct))
 
 	if err := m.SetActivityProperty("NestedReview", 0, "PAGE", "MyModule.NestedPage"); err != nil {
@@ -1206,6 +1220,15 @@ func TestWorkflowMutator_SetActivityProperty_Page_MissingKey_NestedSubFlow(t *te
 	}
 	if got := dGetString(taskPage, "Page"); got != "MyModule.NestedPage" {
 		t.Errorf("Page = %q, want MyModule.NestedPage", got)
+	}
+
+	// Verify parent decision still has its Outcomes intact.
+	parentDoc, _ := m.findActivityByCaption("Check", 0)
+	if parentDoc == nil {
+		t.Fatal("parent decision activity should still exist")
+	}
+	if outcomes := dGet(parentDoc, "Outcomes"); outcomes == nil {
+		t.Fatal("parent decision Outcomes should still be present")
 	}
 }
 
