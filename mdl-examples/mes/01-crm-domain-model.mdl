@@ -15,7 +15,7 @@
  *
  * @since 1.0.0
  */
-CREATE MODULE CRM;
+create module CRM;
 
 -- MARK: ENUMERATIONS
 
@@ -27,7 +27,7 @@ CREATE MODULE CRM;
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION CRM.CustomerType (
+create enumeration CRM.CustomerType (
   Company 'Company',
   Individual 'Individual'
 );
@@ -39,7 +39,7 @@ CREATE ENUMERATION CRM.CustomerType (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION CRM.AddressType (
+create enumeration CRM.AddressType (
   Billing 'Billing',
   Delivery 'Delivery',
   BillingAndDelivery 'Billing and Delivery'
@@ -57,25 +57,25 @@ CREATE ENUMERATION CRM.AddressType (
  * @see CRM.CustomerContact
  * @see CRM.CustomerAddress
  */
-@Position(50, 50)
-CREATE PERSISTENT ENTITY CRM.Customer (
+@position(50, 50)
+create persistent entity CRM.Customer (
   /** Unique customer number for reference */
-  CustomerNumber: AutoNumber DEFAULT 1,
+  CustomerNumber: autonumber default 1,
   /** Display name (company name or full name) */
-  CustomerName: String(200) NOT NULL ERROR 'Customer name is required',
+  CustomerName: string(200) not null error 'Customer name is required',
   /** Company or individual */
-  CustomerType: Enumeration(CRM.CustomerType) NOT NULL ERROR 'Customer type is required',
+  CustomerType: enumeration(CRM.CustomerType) not null error 'Customer type is required',
   /** Primary email address */
-  Email: String(200),
+  Email: string(200),
   /** Primary phone number */
-  Phone: String(50),
+  Phone: string(50),
   /** General notes about this customer */
-  Notes: String(2000),
+  Notes: string(2000),
   /** Whether this customer is currently active */
-  IsActive: Boolean DEFAULT true
+  IsActive: boolean default true
 )
-INDEX (CustomerType)
-INDEX (IsActive);
+index (CustomerType)
+index (IsActive);
 
 /**
  * Customer contact entity
@@ -86,22 +86,22 @@ INDEX (IsActive);
  * @since 1.0.0
  * @see CRM.Customer
  */
-@Position(350, 50)
-CREATE PERSISTENT ENTITY CRM.CustomerContact (
+@position(350, 50)
+create persistent entity CRM.CustomerContact (
   /** Contact's first name */
-  FirstName: String(100) NOT NULL ERROR 'First name is required',
+  FirstName: string(100) not null error 'First name is required',
   /** Contact's last name */
-  LastName: String(100) NOT NULL ERROR 'Last name is required',
+  LastName: string(100) not null error 'Last name is required',
   /** Job title or role at the company */
-  JobTitle: String(100),
+  JobTitle: string(100),
   /** Direct email address */
-  Email: String(200),
+  Email: string(200),
   /** Direct phone number */
-  Phone: String(50),
+  Phone: string(50),
   /** Mobile phone number */
-  MobilePhone: String(50),
+  MobilePhone: string(50),
   /** Whether this is the primary contact */
-  IsPrimaryContact: Boolean DEFAULT false
+  IsPrimaryContact: boolean default false
 );
 
 /**
@@ -113,24 +113,24 @@ CREATE PERSISTENT ENTITY CRM.CustomerContact (
  * @since 1.0.0
  * @see CRM.Customer
  */
-@Position(350, 250)
-CREATE PERSISTENT ENTITY CRM.CustomerAddress (
+@position(350, 250)
+create persistent entity CRM.CustomerAddress (
   /** Address label (e.g. 'Main Office', 'Warehouse') */
-  AddressLabel: String(100),
+  AddressLabel: string(100),
   /** Street and house number */
-  Street: String(200) NOT NULL ERROR 'Street is required',
+  Street: string(200) not null error 'Street is required',
   /** City */
-  City: String(100) NOT NULL ERROR 'City is required',
+  City: string(100) not null error 'City is required',
   /** State or province */
-  StateProvince: String(100),
+  StateProvince: string(100),
   /** Postal or zip code */
-  PostalCode: String(20),
+  PostalCode: string(20),
   /** Country */
-  Country: String(100) NOT NULL ERROR 'Country is required',
+  Country: string(100) not null error 'Country is required',
   /** Type of address */
-  AddressType: Enumeration(CRM.AddressType) NOT NULL ERROR 'Address type is required',
+  AddressType: enumeration(CRM.AddressType) not null error 'Address type is required',
   /** Whether this is the default address for its type */
-  IsDefault: Boolean DEFAULT false
+  IsDefault: boolean default false
 );
 
 -- MARK: ASSOCIATIONS
@@ -143,11 +143,11 @@ CREATE PERSISTENT ENTITY CRM.CustomerAddress (
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION CRM.CustomerContact_Customer
-  FROM CRM.CustomerContact TO CRM.Customer
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association CRM.CustomerContact_Customer
+  from CRM.CustomerContact to CRM.Customer
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links addresses to their customer
@@ -157,8 +157,8 @@ CREATE ASSOCIATION CRM.CustomerContact_Customer
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION CRM.CustomerAddress_Customer
-  FROM CRM.CustomerAddress TO CRM.Customer
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association CRM.CustomerAddress_Customer
+  from CRM.CustomerAddress to CRM.Customer
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;

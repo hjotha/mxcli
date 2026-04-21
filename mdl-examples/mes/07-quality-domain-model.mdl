@@ -16,7 +16,7 @@
  *
  * @since 1.0.0
  */
-CREATE MODULE QualityControl;
+create module QualityControl;
 
 -- MARK: ENUMERATIONS
 
@@ -27,7 +27,7 @@ CREATE MODULE QualityControl;
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION QualityControl.InspectionOutcome (
+create enumeration QualityControl.InspectionOutcome (
   Pass 'Pass',
   Fail 'Fail',
   ConditionalPass 'Conditional Pass'
@@ -40,10 +40,10 @@ CREATE ENUMERATION QualityControl.InspectionOutcome (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION QualityControl.DefectSeverity (
+create enumeration QualityControl.DefectSeverity (
   Minor 'Minor',
   Major 'Major',
-  Critical 'Critical'
+  critical 'Critical'
 );
 
 /**
@@ -53,8 +53,8 @@ CREATE ENUMERATION QualityControl.DefectSeverity (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION QualityControl.DefectStatus (
-  Open 'Open',
+create enumeration QualityControl.DefectStatus (
+  open 'Open',
   InProgress 'In Progress',
   Resolved 'Resolved',
   Accepted 'Accepted as-is'
@@ -74,18 +74,18 @@ CREATE ENUMERATION QualityControl.DefectStatus (
  * @since 1.0.0
  * @see QualityControl.TemplateCheckpoint
  */
-@Position(50, 50)
-CREATE PERSISTENT ENTITY QualityControl.InspectionTemplate (
+@position(50, 50)
+create persistent entity QualityControl.InspectionTemplate (
   /** Template name */
-  TemplateName: String(200) NOT NULL ERROR 'Template name is required',
+  TemplateName: string(200) not null error 'Template name is required',
   /** Template description */
-  TemplateDescription: String(2000),
+  TemplateDescription: string(2000),
   /** Number of checkpoints in this template */
-  CheckpointCount: Integer DEFAULT 0,
+  CheckpointCount: integer default 0,
   /** Whether this template is active */
-  IsActive: Boolean DEFAULT true,
+  IsActive: boolean default true,
   /** Template version */
-  TemplateVersion: Integer DEFAULT 1
+  TemplateVersion: integer default 1
 );
 
 /**
@@ -97,22 +97,22 @@ CREATE PERSISTENT ENTITY QualityControl.InspectionTemplate (
  * @since 1.0.0
  * @see QualityControl.InspectionTemplate
  */
-@Position(50, 250)
-CREATE PERSISTENT ENTITY QualityControl.TemplateCheckpoint (
+@position(50, 250)
+create persistent entity QualityControl.TemplateCheckpoint (
   /** Sequence number within the template */
-  CheckpointSequence: Integer NOT NULL ERROR 'Sequence is required',
+  CheckpointSequence: integer not null error 'Sequence is required',
   /** Checkpoint description (what to check) */
-  CheckpointDescription: String(500) NOT NULL ERROR 'Description is required',
+  CheckpointDescription: string(500) not null error 'Description is required',
   /** Acceptance criteria */
-  AcceptanceCriteria: String(1000),
+  AcceptanceCriteria: string(1000),
   /** Whether this checkpoint is mandatory */
-  IsMandatory: Boolean DEFAULT true,
+  IsMandatory: boolean default true,
   /** Measurement unit (if measurable) */
-  MeasurementUnit: String(50),
+  MeasurementUnit: string(50),
   /** Minimum acceptable value (if measurable) */
-  MinAcceptableValue: Decimal,
+  MinAcceptableValue: decimal,
   /** Maximum acceptable value (if measurable) */
-  MaxAcceptableValue: Decimal
+  MaxAcceptableValue: decimal
 );
 
 -- MARK: - Inspection Execution
@@ -127,20 +127,20 @@ CREATE PERSISTENT ENTITY QualityControl.TemplateCheckpoint (
  * @see Manufacturing.WorkOrderLine
  * @see QualityControl.InspectionTemplate
  */
-@Position(350, 50)
-CREATE PERSISTENT ENTITY QualityControl.QualityInspection (
+@position(350, 50)
+create persistent entity QualityControl.QualityInspection (
   /** Auto-generated inspection number */
-  InspectionNumber: AutoNumber DEFAULT 1,
+  InspectionNumber: autonumber default 1,
   /** Date and time of the inspection */
-  InspectionDate: DateTime NOT NULL ERROR 'Inspection date is required',
+  InspectionDate: datetime not null error 'Inspection date is required',
   /** Overall outcome */
-  InspectionOutcome: Enumeration(QualityControl.InspectionOutcome),
+  InspectionOutcome: enumeration(QualityControl.InspectionOutcome),
   /** Inspector's overall comments */
-  InspectorComments: String(2000),
+  InspectorComments: string(2000),
   /** Whether this is a final inspection */
-  IsFinalInspection: Boolean DEFAULT false
+  IsFinalInspection: boolean default false
 )
-INDEX (InspectionDate DESC);
+index (InspectionDate desc);
 
 /**
  * Inspection result entity
@@ -152,16 +152,16 @@ INDEX (InspectionDate DESC);
  * @see QualityControl.QualityInspection
  * @see QualityControl.TemplateCheckpoint
  */
-@Position(350, 250)
-CREATE PERSISTENT ENTITY QualityControl.InspectionResult (
+@position(350, 250)
+create persistent entity QualityControl.InspectionResult (
   /** Whether this checkpoint passed */
-  IsPassed: Boolean DEFAULT false,
+  IsPassed: boolean default false,
   /** Measured value (if applicable) */
-  MeasuredValue: Decimal,
+  MeasuredValue: decimal,
   /** Observations or comments */
-  ResultComments: String(1000),
+  ResultComments: string(1000),
   /** Photo reference (description of attached evidence) */
-  EvidenceReference: String(200)
+  EvidenceReference: string(200)
 );
 
 -- MARK: - Defect Reporting
@@ -176,31 +176,31 @@ CREATE PERSISTENT ENTITY QualityControl.InspectionResult (
  * @see QualityControl.QualityInspection
  * @see Manufacturing.ProductionStep
  */
-@Position(650, 50)
-CREATE PERSISTENT ENTITY QualityControl.DefectReport (
+@position(650, 50)
+create persistent entity QualityControl.DefectReport (
   /** Auto-generated defect number */
-  DefectNumber: AutoNumber DEFAULT 1,
+  DefectNumber: autonumber default 1,
   /** Brief defect title */
-  DefectTitle: String(200) NOT NULL ERROR 'Defect title is required',
+  DefectTitle: string(200) not null error 'Defect title is required',
   /** Detailed defect description */
-  DefectDescription: String(4000) NOT NULL ERROR 'Defect description is required',
+  DefectDescription: string(4000) not null error 'Defect description is required',
   /** Severity classification */
-  Severity: Enumeration(QualityControl.DefectSeverity) NOT NULL ERROR 'Severity is required',
+  Severity: enumeration(QualityControl.DefectSeverity) not null error 'Severity is required',
   /** Current resolution status */
-  DefectStatus: Enumeration(QualityControl.DefectStatus) NOT NULL ERROR 'Defect status is required',
+  DefectStatus: enumeration(QualityControl.DefectStatus) not null error 'Defect status is required',
   /** Date the defect was reported */
-  ReportedDate: DateTime,
+  ReportedDate: datetime,
   /** Date the defect was resolved */
-  ResolvedDate: DateTime,
+  ResolvedDate: datetime,
   /** Root cause analysis */
-  RootCause: String(2000),
+  RootCause: string(2000),
   /** Corrective action taken */
-  CorrectiveAction: String(2000),
+  CorrectiveAction: string(2000),
   /** Cost impact of this defect */
-  CostImpact: Decimal DEFAULT 0
+  CostImpact: decimal default 0
 )
-INDEX (DefectStatus)
-INDEX (Severity);
+index (DefectStatus)
+index (Severity);
 
 -- MARK: ASSOCIATIONS
 
@@ -213,11 +213,11 @@ INDEX (Severity);
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.TemplateCheckpoint_InspectionTemplate
-  FROM QualityControl.TemplateCheckpoint TO QualityControl.InspectionTemplate
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association QualityControl.TemplateCheckpoint_InspectionTemplate
+  from QualityControl.TemplateCheckpoint to QualityControl.InspectionTemplate
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 -- MARK: - Inspection Associations
 
@@ -228,11 +228,11 @@ CREATE ASSOCIATION QualityControl.TemplateCheckpoint_InspectionTemplate
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.QualityInspection_WorkOrderLine
-  FROM QualityControl.QualityInspection TO Manufacturing.WorkOrderLine
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association QualityControl.QualityInspection_WorkOrderLine
+  from QualityControl.QualityInspection to Manufacturing.WorkOrderLine
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links inspection to the template used
@@ -241,11 +241,11 @@ CREATE ASSOCIATION QualityControl.QualityInspection_WorkOrderLine
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.QualityInspection_InspectionTemplate
-  FROM QualityControl.QualityInspection TO QualityControl.InspectionTemplate
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association QualityControl.QualityInspection_InspectionTemplate
+  from QualityControl.QualityInspection to QualityControl.InspectionTemplate
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links inspection to the inspector
@@ -254,11 +254,11 @@ CREATE ASSOCIATION QualityControl.QualityInspection_InspectionTemplate
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.QualityInspection_Account
-  FROM QualityControl.QualityInspection TO Administration.Account
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association QualityControl.QualityInspection_Account
+  from QualityControl.QualityInspection to Administration.Account
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links inspection result to its inspection
@@ -267,11 +267,11 @@ CREATE ASSOCIATION QualityControl.QualityInspection_Account
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.InspectionResult_QualityInspection
-  FROM QualityControl.InspectionResult TO QualityControl.QualityInspection
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association QualityControl.InspectionResult_QualityInspection
+  from QualityControl.InspectionResult to QualityControl.QualityInspection
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links inspection result to the template checkpoint
@@ -280,11 +280,11 @@ CREATE ASSOCIATION QualityControl.InspectionResult_QualityInspection
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.InspectionResult_TemplateCheckpoint
-  FROM QualityControl.InspectionResult TO QualityControl.TemplateCheckpoint
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association QualityControl.InspectionResult_TemplateCheckpoint
+  from QualityControl.InspectionResult to QualityControl.TemplateCheckpoint
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 -- MARK: - Defect Associations
 
@@ -295,11 +295,11 @@ CREATE ASSOCIATION QualityControl.InspectionResult_TemplateCheckpoint
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.DefectReport_QualityInspection
-  FROM QualityControl.DefectReport TO QualityControl.QualityInspection
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association QualityControl.DefectReport_QualityInspection
+  from QualityControl.DefectReport to QualityControl.QualityInspection
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links defect to the production step where it occurred (optional)
@@ -308,11 +308,11 @@ CREATE ASSOCIATION QualityControl.DefectReport_QualityInspection
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.DefectReport_ProductionStep
-  FROM QualityControl.DefectReport TO Manufacturing.ProductionStep
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association QualityControl.DefectReport_ProductionStep
+  from QualityControl.DefectReport to Manufacturing.ProductionStep
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links defect to the person who reported it
@@ -321,8 +321,8 @@ CREATE ASSOCIATION QualityControl.DefectReport_ProductionStep
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION QualityControl.DefectReport_Account
-  FROM QualityControl.DefectReport TO Administration.Account
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association QualityControl.DefectReport_Account
+  from QualityControl.DefectReport to Administration.Account
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;

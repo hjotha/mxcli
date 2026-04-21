@@ -25,26 +25,26 @@
 -- ############################################################################
 
 -- Create module for our database examples
-CREATE MODULE DbTest;
+create module DbTest;
 
 -- ============================================================================
 -- Constants for F1 SQL Server Connection
 -- ============================================================================
 
 /** JDBC connection string for F1 database */
-CREATE CONSTANT DbTest.F1Database_DBSource TYPE String
-  DEFAULT 'jdbc:sqlserver://host.docker.internal:1433;databaseName=F1;encrypt=false'
-  COMMENT 'JDBC connection string for F1 database';
+create constant DbTest.F1Database_DBSource type string
+  default 'jdbc:sqlserver://host.docker.internal:1433;databaseName=F1;encrypt=false'
+  comment 'JDBC connection string for F1 database';
 
 /** Database username */
-CREATE CONSTANT DbTest.F1Database_DBUsername TYPE String
-  DEFAULT 'sa'
-  COMMENT 'Database username for F1 database';
+create constant DbTest.F1Database_DBUsername type string
+  default 'sa'
+  comment 'Database username for F1 database';
 
 /** Database password */
-CREATE CONSTANT DbTest.F1Database_DBPassword TYPE String
-  DEFAULT ''
-  COMMENT 'Database password for F1 database';
+create constant DbTest.F1Database_DBPassword type string
+  default ''
+  comment 'Database password for F1 database';
 
 -- ============================================================================
 -- Non-Persistent Entities for Query Results
@@ -54,58 +54,58 @@ CREATE CONSTANT DbTest.F1Database_DBPassword TYPE String
  * Entity to hold driver records from the F1 database.
  * Maps to the drivers table.
  */
-CREATE NON-PERSISTENT ENTITY DbTest.Driver (
-  DriverId: Integer,
-  DriverRef: String(200),
-  Forename: String(200),
-  Surname: String(200),
-  Nationality: String(200),
-  DateOfBirth: DateTime
+create non-persistent entity DbTest.Driver (
+  DriverId: integer,
+  DriverRef: string(200),
+  Forename: string(200),
+  Surname: string(200),
+  Nationality: string(200),
+  DateOfBirth: datetime
 );
 
 /**
  * Entity to hold circuit records from the F1 database.
  * Maps to the circuits table.
  */
-CREATE NON-PERSISTENT ENTITY DbTest.Circuit (
-  CircuitId: Integer,
-  CircuitRef: String(200),
-  CircuitName: String(200),
-  Location: String(200),
-  Country: String(200)
+create non-persistent entity DbTest.Circuit (
+  CircuitId: integer,
+  CircuitRef: string(200),
+  CircuitName: string(200),
+  Location: string(200),
+  Country: string(200)
 );
 
 /**
  * Entity to hold constructor (team) records.
  */
-CREATE NON-PERSISTENT ENTITY DbTest.Constructor (
-  ConstructorId: Integer,
-  ConstructorRef: String(200),
-  ConstructorName: String(200),
-  Nationality: String(200)
+create non-persistent entity DbTest.Constructor (
+  ConstructorId: integer,
+  ConstructorRef: string(200),
+  ConstructorName: string(200),
+  Nationality: string(200)
 );
 
 /**
  * Entity to hold race records.
  */
-CREATE NON-PERSISTENT ENTITY DbTest.Race (
-  RaceId: Integer,
-  RaceYear: Integer,
-  Round: Integer,
-  RaceName: String(200),
-  RaceDate: DateTime
+create non-persistent entity DbTest.Race (
+  RaceId: integer,
+  RaceYear: integer,
+  Round: integer,
+  RaceName: string(200),
+  RaceDate: datetime
 );
 
 /**
  * Entity for race result summary with custom attribute names.
  * Used to demonstrate column mapping.
  */
-CREATE NON-PERSISTENT ENTITY DbTest.RaceResult (
-  ResultId: Integer,
-  DriverName: String(200),
-  TeamName: String(200),
-  Position: Integer,
-  Points: Decimal DEFAULT 0
+create non-persistent entity DbTest.RaceResult (
+  ResultId: integer,
+  DriverName: string(200),
+  TeamName: string(200),
+  position: integer,
+  Points: decimal default 0
 );
 
 
@@ -121,13 +121,13 @@ CREATE NON-PERSISTENT ENTITY DbTest.RaceResult (
  * Minimal database connection - type, connection string, and credentials.
  * This is the simplest possible connection definition.
  */
-CREATE DATABASE CONNECTION DbTest.MinimalDB
-TYPE 'MSSQL'
-CONNECTION STRING @DbTest.F1Database_DBSource
-USERNAME @DbTest.F1Database_DBUsername
-PASSWORD @DbTest.F1Database_DBPassword
-BEGIN
-END;
+create database connection DbTest.MinimalDB
+type 'MSSQL'
+connection string @DbTest.F1Database_DBSource
+username @DbTest.F1Database_DBUsername
+password @DbTest.F1Database_DBPassword
+begin
+end;
 
 -- ============================================================================
 -- Level 1.2: Connection with Single Simple Query
@@ -137,24 +137,24 @@ END;
  * Basic connection with one simple SELECT query.
  * Returns all drivers mapped to the Driver entity.
  */
-CREATE DATABASE CONNECTION DbTest.SimpleQueryDB
-TYPE 'MSSQL'
-CONNECTION STRING @DbTest.F1Database_DBSource
-USERNAME @DbTest.F1Database_DBUsername
-PASSWORD @DbTest.F1Database_DBPassword
-BEGIN
-  QUERY GetAllDrivers
-    SQL 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
-    RETURNS DbTest.Driver
-    MAP (
-      driverId AS DriverId,
-      driverRef AS DriverRef,
-      forename AS Forename,
-      surname AS Surname,
-      nationality AS Nationality,
-      dob AS DateOfBirth
+create database connection DbTest.SimpleQueryDB
+type 'MSSQL'
+connection string @DbTest.F1Database_DBSource
+username @DbTest.F1Database_DBUsername
+password @DbTest.F1Database_DBPassword
+begin
+  query GetAllDrivers
+    sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
+    returns DbTest.Driver
+    map (
+      driverId as DriverId,
+      driverRef as DriverRef,
+      forename as Forename,
+      surname as Surname,
+      nationality as Nationality,
+      dob as DateOfBirth
     );
-END;
+end;
 
 
 -- ############################################################################
@@ -169,23 +169,23 @@ END;
  * Connection with query that returns circuits.
  * Demonstrates explicit column-to-attribute mapping.
  */
-CREATE DATABASE CONNECTION DbTest.CircuitQueryDB
-TYPE 'MSSQL'
-CONNECTION STRING @DbTest.F1Database_DBSource
-USERNAME @DbTest.F1Database_DBUsername
-PASSWORD @DbTest.F1Database_DBPassword
-BEGIN
-  QUERY GetAllCircuits
-    SQL 'SELECT circuitId, circuitRef, name, location, country FROM circuits ORDER BY name'
-    RETURNS DbTest.Circuit
-    MAP (
-      circuitId AS CircuitId,
-      circuitRef AS CircuitRef,
-      name AS CircuitName,
-      location AS Location,
-      country AS Country
+create database connection DbTest.CircuitQueryDB
+type 'MSSQL'
+connection string @DbTest.F1Database_DBSource
+username @DbTest.F1Database_DBUsername
+password @DbTest.F1Database_DBPassword
+begin
+  query GetAllCircuits
+    sql 'SELECT circuitId, circuitRef, name, location, country FROM circuits ORDER BY name'
+    returns DbTest.Circuit
+    map (
+      circuitId as CircuitId,
+      circuitRef as CircuitRef,
+      name as CircuitName,
+      location as Location,
+      country as Country
     );
-END;
+end;
 
 -- ============================================================================
 -- Level 2.2: Multiple Queries in One Connection
@@ -194,34 +194,34 @@ END;
 /**
  * Connection with multiple queries returning different entity types.
  */
-CREATE DATABASE CONNECTION DbTest.MultiQueryDB
-TYPE 'MSSQL'
-CONNECTION STRING @DbTest.F1Database_DBSource
-USERNAME @DbTest.F1Database_DBUsername
-PASSWORD @DbTest.F1Database_DBPassword
-BEGIN
-  QUERY GetDrivers
-    SQL 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
-    RETURNS DbTest.Driver
-    MAP (
-      driverId AS DriverId,
-      driverRef AS DriverRef,
-      forename AS Forename,
-      surname AS Surname,
-      nationality AS Nationality,
-      dob AS DateOfBirth
+create database connection DbTest.MultiQueryDB
+type 'MSSQL'
+connection string @DbTest.F1Database_DBSource
+username @DbTest.F1Database_DBUsername
+password @DbTest.F1Database_DBPassword
+begin
+  query GetDrivers
+    sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
+    returns DbTest.Driver
+    map (
+      driverId as DriverId,
+      driverRef as DriverRef,
+      forename as Forename,
+      surname as Surname,
+      nationality as Nationality,
+      dob as DateOfBirth
     );
 
-  QUERY GetConstructors
-    SQL 'SELECT constructorId, constructorRef, name, nationality FROM constructors ORDER BY name'
-    RETURNS DbTest.Constructor
-    MAP (
-      constructorId AS ConstructorId,
-      constructorRef AS ConstructorRef,
-      name AS ConstructorName,
-      nationality AS Nationality
+  query GetConstructors
+    sql 'SELECT constructorId, constructorRef, name, nationality FROM constructors ORDER BY name'
+    returns DbTest.Constructor
+    map (
+      constructorId as ConstructorId,
+      constructorRef as ConstructorRef,
+      name as ConstructorName,
+      nationality as Nationality
     );
-END;
+end;
 
 
 -- ############################################################################
@@ -236,25 +236,25 @@ END;
  * Connection with parameterized query.
  * Demonstrates safe parameter binding for filtering.
  */
-CREATE DATABASE CONNECTION DbTest.ParamQueryDB
-TYPE 'MSSQL'
-CONNECTION STRING @DbTest.F1Database_DBSource
-USERNAME @DbTest.F1Database_DBUsername
-PASSWORD @DbTest.F1Database_DBPassword
-BEGIN
-  QUERY GetDriversByNationality
-    SQL 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers WHERE nationality = {nation} ORDER BY surname'
-    PARAMETER nation: String DEFAULT 'British'
-    RETURNS DbTest.Driver
-    MAP (
-      driverId AS DriverId,
-      driverRef AS DriverRef,
-      forename AS Forename,
-      surname AS Surname,
-      nationality AS Nationality,
-      dob AS DateOfBirth
+create database connection DbTest.ParamQueryDB
+type 'MSSQL'
+connection string @DbTest.F1Database_DBSource
+username @DbTest.F1Database_DBUsername
+password @DbTest.F1Database_DBPassword
+begin
+  query GetDriversByNationality
+    sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers WHERE nationality = {nation} ORDER BY surname'
+    parameter nation: string default 'British'
+    returns DbTest.Driver
+    map (
+      driverId as DriverId,
+      driverRef as DriverRef,
+      forename as Forename,
+      surname as Surname,
+      nationality as Nationality,
+      dob as DateOfBirth
     );
-END;
+end;
 
 -- ============================================================================
 -- Level 3.2: Multiple Parameters and Multiple Queries
@@ -264,36 +264,36 @@ END;
  * Connection with multiple parameterized queries.
  * Demonstrates filtering by different criteria.
  */
-CREATE DATABASE CONNECTION DbTest.MultiParamDB
-TYPE 'MSSQL'
-CONNECTION STRING @DbTest.F1Database_DBSource
-USERNAME @DbTest.F1Database_DBUsername
-PASSWORD @DbTest.F1Database_DBPassword
-BEGIN
-  QUERY GetRacesByYear
-    SQL 'SELECT raceId, year, round, name, date FROM races WHERE year = {raceYear} ORDER BY round'
-    PARAMETER raceYear: Integer DEFAULT '2023'
-    RETURNS DbTest.Race
-    MAP (
-      raceId AS RaceId,
-      year AS RaceYear,
-      round AS Round,
-      name AS RaceName,
-      date AS RaceDate
+create database connection DbTest.MultiParamDB
+type 'MSSQL'
+connection string @DbTest.F1Database_DBSource
+username @DbTest.F1Database_DBUsername
+password @DbTest.F1Database_DBPassword
+begin
+  query GetRacesByYear
+    sql 'SELECT raceId, year, round, name, date FROM races WHERE year = {raceYear} ORDER BY round'
+    parameter raceYear: integer default '2023'
+    returns DbTest.Race
+    map (
+      raceId as RaceId,
+      year as RaceYear,
+      round as Round,
+      name as RaceName,
+      date as RaceDate
     );
 
-  QUERY GetCircuitsByCountry
-    SQL 'SELECT circuitId, circuitRef, name, location, country FROM circuits WHERE country = {searchCountry} ORDER BY name'
-    PARAMETER searchCountry: String NULL
-    RETURNS DbTest.Circuit
-    MAP (
-      circuitId AS CircuitId,
-      circuitRef AS CircuitRef,
-      name AS CircuitName,
-      location AS Location,
-      country AS Country
+  query GetCircuitsByCountry
+    sql 'SELECT circuitId, circuitRef, name, location, country FROM circuits WHERE country = {searchCountry} ORDER BY name'
+    parameter searchCountry: string null
+    returns DbTest.Circuit
+    map (
+      circuitId as CircuitId,
+      circuitRef as CircuitRef,
+      name as CircuitName,
+      location as Location,
+      country as Country
     );
-END;
+end;
 
 
 -- ############################################################################
@@ -313,108 +313,108 @@ END;
  * Connection: jdbc:sqlserver://host.docker.internal:1433;databaseName=F1
  * Tables: drivers, circuits, constructors, races, results
  */
-CREATE DATABASE CONNECTION DbTest.F1Database
-TYPE 'MSSQL'
-CONNECTION STRING @DbTest.F1Database_DBSource
-USERNAME @DbTest.F1Database_DBUsername
-PASSWORD @DbTest.F1Database_DBPassword
-BEGIN
-  QUERY GetAllDrivers
-    SQL 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
-    RETURNS DbTest.Driver
-    MAP (
-      driverId AS DriverId,
-      driverRef AS DriverRef,
-      forename AS Forename,
-      surname AS Surname,
-      nationality AS Nationality,
-      dob AS DateOfBirth
+create database connection DbTest.F1Database
+type 'MSSQL'
+connection string @DbTest.F1Database_DBSource
+username @DbTest.F1Database_DBUsername
+password @DbTest.F1Database_DBPassword
+begin
+  query GetAllDrivers
+    sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
+    returns DbTest.Driver
+    map (
+      driverId as DriverId,
+      driverRef as DriverRef,
+      forename as Forename,
+      surname as Surname,
+      nationality as Nationality,
+      dob as DateOfBirth
     );
 
-  QUERY GetDriverById
-    SQL 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers WHERE driverId = {id}'
-    PARAMETER id: Integer DEFAULT '1'
-    RETURNS DbTest.Driver
-    MAP (
-      driverId AS DriverId,
-      driverRef AS DriverRef,
-      forename AS Forename,
-      surname AS Surname,
-      nationality AS Nationality,
-      dob AS DateOfBirth
+  query GetDriverById
+    sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers WHERE driverId = {id}'
+    parameter id: integer default '1'
+    returns DbTest.Driver
+    map (
+      driverId as DriverId,
+      driverRef as DriverRef,
+      forename as Forename,
+      surname as Surname,
+      nationality as Nationality,
+      dob as DateOfBirth
     );
 
-  QUERY GetDriversByNationality
-    SQL 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers WHERE nationality = {nation} ORDER BY surname'
-    PARAMETER nation: String DEFAULT 'British'
-    RETURNS DbTest.Driver
-    MAP (
-      driverId AS DriverId,
-      driverRef AS DriverRef,
-      forename AS Forename,
-      surname AS Surname,
-      nationality AS Nationality,
-      dob AS DateOfBirth
+  query GetDriversByNationality
+    sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers WHERE nationality = {nation} ORDER BY surname'
+    parameter nation: string default 'British'
+    returns DbTest.Driver
+    map (
+      driverId as DriverId,
+      driverRef as DriverRef,
+      forename as Forename,
+      surname as Surname,
+      nationality as Nationality,
+      dob as DateOfBirth
     );
 
-  QUERY GetAllCircuits
-    SQL 'SELECT circuitId, circuitRef, name, location, country FROM circuits ORDER BY name'
-    RETURNS DbTest.Circuit
-    MAP (
-      circuitId AS CircuitId,
-      circuitRef AS CircuitRef,
-      name AS CircuitName,
-      location AS Location,
-      country AS Country
+  query GetAllCircuits
+    sql 'SELECT circuitId, circuitRef, name, location, country FROM circuits ORDER BY name'
+    returns DbTest.Circuit
+    map (
+      circuitId as CircuitId,
+      circuitRef as CircuitRef,
+      name as CircuitName,
+      location as Location,
+      country as Country
     );
 
-  QUERY GetCircuitsByCountry
-    SQL 'SELECT circuitId, circuitRef, name, location, country FROM circuits WHERE country = {searchCountry} ORDER BY name'
-    PARAMETER searchCountry: String DEFAULT 'United Kingdom'
-    RETURNS DbTest.Circuit
-    MAP (
-      circuitId AS CircuitId,
-      circuitRef AS CircuitRef,
-      name AS CircuitName,
-      location AS Location,
-      country AS Country
+  query GetCircuitsByCountry
+    sql 'SELECT circuitId, circuitRef, name, location, country FROM circuits WHERE country = {searchCountry} ORDER BY name'
+    parameter searchCountry: string default 'United Kingdom'
+    returns DbTest.Circuit
+    map (
+      circuitId as CircuitId,
+      circuitRef as CircuitRef,
+      name as CircuitName,
+      location as Location,
+      country as Country
     );
 
-  QUERY GetAllConstructors
-    SQL 'SELECT constructorId, constructorRef, name, nationality FROM constructors ORDER BY name'
-    RETURNS DbTest.Constructor
-    MAP (
-      constructorId AS ConstructorId,
-      constructorRef AS ConstructorRef,
-      name AS ConstructorName,
-      nationality AS Nationality
+  query GetAllConstructors
+    sql 'SELECT constructorId, constructorRef, name, nationality FROM constructors ORDER BY name'
+    returns DbTest.Constructor
+    map (
+      constructorId as ConstructorId,
+      constructorRef as ConstructorRef,
+      name as ConstructorName,
+      nationality as Nationality
     );
 
-  QUERY GetRacesByYear
-    SQL 'SELECT raceId, year, round, name, date FROM races WHERE year = {raceYear} ORDER BY round'
-    PARAMETER raceYear: Integer DEFAULT '2023'
-    RETURNS DbTest.Race
-    MAP (
-      raceId AS RaceId,
-      year AS RaceYear,
-      round AS Round,
-      name AS RaceName,
-      date AS RaceDate
+  query GetRacesByYear
+    sql 'SELECT raceId, year, round, name, date FROM races WHERE year = {raceYear} ORDER BY round'
+    parameter raceYear: integer default '2023'
+    returns DbTest.Race
+    map (
+      raceId as RaceId,
+      year as RaceYear,
+      round as Round,
+      name as RaceName,
+      date as RaceDate
     );
 
-  QUERY GetRacesBySeason
-    SQL 'SELECT raceId, year, round, name, date FROM races WHERE year BETWEEN {startYear} AND {endYear} ORDER BY year, round'
-    PARAMETER startYear: Integer DEFAULT '1900'
-    PARAMETER endYear: Integer NULL
-    RETURNS DbTest.Race
-    MAP (
-      raceId AS RaceId,
-      year AS RaceYear,
-      round AS Round,
-      name AS RaceName,
-      date AS RaceDate
+  query GetRacesBySeason
+    sql 'SELECT raceId, year, round, name, date FROM races WHERE year BETWEEN {startYear} AND {endYear} ORDER BY year, round'
+    parameter startYear: integer default '1900'
+    parameter endYear: integer null
+    returns DbTest.Race
+    map (
+      raceId as RaceId,
+      year as RaceYear,
+      round as Round,
+      name as RaceName,
+      date as RaceDate
     );
-END;
+end;
 
 
 -- ############################################################################
@@ -432,39 +432,39 @@ END;
 -- Example 1: Static query — executes the SQL defined in the query object
 -- ----------------------------------------------------------------------------
 
-CREATE MICROFLOW DbTest.GetAllDrivers()
-BEGIN
-  $DriverList = EXECUTE DATABASE QUERY DbTest.F1Database.GetAllDrivers;
-END;
+create microflow DbTest.GetAllDrivers()
+begin
+  $DriverList = execute database query DbTest.F1Database.GetAllDrivers;
+end;
 
 -- ----------------------------------------------------------------------------
 -- Example 2: Dynamic SQL — overrides the query's SQL at runtime
 -- ----------------------------------------------------------------------------
 
-CREATE MICROFLOW DbTest.GetDriversDynamic()
-BEGIN
-  $DriverList = EXECUTE DATABASE QUERY DbTest.F1Database.GetAllDrivers
-    DYNAMIC 'SELECT driverId, driverRef, forename, surname, nationality FROM drivers ORDER BY surname LIMIT 10';
-END;
+create microflow DbTest.GetDriversDynamic()
+begin
+  $DriverList = execute database query DbTest.F1Database.GetAllDrivers
+    dynamic 'SELECT driverId, driverRef, forename, surname, nationality FROM drivers ORDER BY surname LIMIT 10';
+end;
 
 -- ----------------------------------------------------------------------------
 -- Example 3: Parameterized query — passes values for query parameters
 -- ----------------------------------------------------------------------------
 
-CREATE MICROFLOW DbTest.GetDriversByNationality(Nationality: String)
-BEGIN
-  $DriverList = EXECUTE DATABASE QUERY DbTest.F1Database.GetDriversByNationality
+create microflow DbTest.GetDriversByNationality(Nationality: string)
+begin
+  $DriverList = execute database query DbTest.F1Database.GetDriversByNationality
     (nation = $Nationality);
-END;
+end;
 
 -- ----------------------------------------------------------------------------
 -- Example 4: Fire-and-forget (no output variable)
 -- ----------------------------------------------------------------------------
 
-CREATE MICROFLOW DbTest.RefreshDriverCache()
-BEGIN
-  EXECUTE DATABASE QUERY DbTest.F1Database.GetAllDrivers;
-END;
+create microflow DbTest.RefreshDriverCache()
+begin
+  execute database query DbTest.F1Database.GetAllDrivers;
+end;
 
 -- Note: EXECUTE DATABASE QUERY only supports ON ERROR ROLLBACK (default).
 -- ON ERROR CONTINUE is not supported for this action type.
@@ -492,16 +492,16 @@ END;
 -- ############################################################################
 
 -- Move a constant to a folder within the same module
-MOVE CONSTANT DbTest.F1Database_DBSource TO FOLDER 'Resources/Database';
+move constant DbTest.F1Database_DBSource to folder 'Resources/Database';
 
 -- Move another constant to the same folder
-MOVE CONSTANT DbTest.F1Database_DBUsername TO FOLDER 'Resources/Database';
+move constant DbTest.F1Database_DBUsername to folder 'Resources/Database';
 
 -- Move a database connection to a folder
-MOVE DATABASE CONNECTION DbTest.MinimalDB TO FOLDER 'Resources';
+move database connection DbTest.MinimalDB to folder 'Resources';
 
 -- Move another database connection to a folder
-MOVE DATABASE CONNECTION DbTest.SimpleQueryDB TO FOLDER 'Resources';
+move database connection DbTest.SimpleQueryDB to folder 'Resources';
 
 
 -- ############################################################################
@@ -510,15 +510,15 @@ MOVE DATABASE CONNECTION DbTest.SimpleQueryDB TO FOLDER 'Resources';
 
 -- After executing this script, verify with:
 --
-SHOW CONSTANTS IN DbTest;
+show constants in DbTest;
 show database connections;
 --
-DESCRIBE DATABASE CONNECTION DbTest.MinimalDB;
-DESCRIBE DATABASE CONNECTION DbTest.F1Database;
+describe database connection DbTest.MinimalDB;
+describe database connection DbTest.F1Database;
 --
-DESCRIBE MICROFLOW DbTest.GetAllDrivers;
-DESCRIBE MICROFLOW DbTest.GetDriversDynamic;
-DESCRIBE MICROFLOW DbTest.GetDriversByNationality;
+describe microflow DbTest.GetAllDrivers;
+describe microflow DbTest.GetDriversDynamic;
+describe microflow DbTest.GetDriversByNationality;
 --
 -- The DESCRIBE output should match the CREATE statements above.
 

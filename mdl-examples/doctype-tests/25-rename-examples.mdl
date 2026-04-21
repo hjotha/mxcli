@@ -2,29 +2,29 @@
 -- RENAME Examples
 -- =============================================================================
 
-CREATE MODULE RenameTest;
+create module RenameTest;
 
 -- Create test entities
-CREATE PERSISTENT ENTITY RenameTest.Customer (
-  Name: String(200),
-  Email: String(200)
+create persistent entity RenameTest.Customer (
+  Name: string(200),
+  Email: string(200)
 );
 
-CREATE PERSISTENT ENTITY RenameTest.Order (
-  OrderDate: DateTime
+create persistent entity RenameTest.Order (
+  OrderDate: datetime
 );
 
-CREATE ASSOCIATION RenameTest.Order_Customer
-  FROM RenameTest.Order TO RenameTest.Customer
-  TYPE Reference;
+create association RenameTest.Order_Customer
+  from RenameTest.Order to RenameTest.Customer
+  type reference;
 
 -- Rename entity
-RENAME ENTITY RenameTest.Customer TO Client;
+rename entity RenameTest.Customer to client;
 
 -- Rename association
-RENAME ASSOCIATION RenameTest.Order_Customer TO Order_Client;
+rename association RenameTest.Order_Customer to Order_Client;
 
 -- Clean up
-DROP ASSOCIATION RenameTest.Order_Client;
-DROP ENTITY RenameTest.Client;
-DROP ENTITY RenameTest.Order;
+drop association RenameTest.Order_Client;
+drop entity RenameTest.client;
+drop entity RenameTest.Order;

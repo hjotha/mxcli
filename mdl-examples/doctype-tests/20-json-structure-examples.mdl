@@ -8,10 +8,10 @@ create module JsonTest;
 -- MARK: Show (empty)
 
 -- List all JSON structures in the project (empty initially)
-SHOW JSON STRUCTURES;
+show json structures;
 
 -- List JSON structures in a specific module
-SHOW JSON STRUCTURES IN JsonTest;
+show json structures in JsonTest;
 
 -- MARK: Create
 
@@ -19,25 +19,25 @@ SHOW JSON STRUCTURES IN JsonTest;
 /**
  * Simple json snippet example
  */
-CREATE JSON STRUCTURE JsonTest.SimpleItem
+create json structure JsonTest.SimpleItem
 folder 'json-snippets'
-SNIPPET '{"id": 1, "name": "John", "active": true}'
+snippet '{"id": 1, "name": "John", "active": true}'
 ;
 
-DROP JSON STRUCTURE JsonTest.SimpleItem;
+drop json structure JsonTest.SimpleItem;
 
 /**
  * Simple json snippet example
  */
-CREATE JSON STRUCTURE JsonTest.SimpleItem
+create json structure JsonTest.SimpleItem
 folder 'json-snippets'
-SNIPPET '{"id": 1, "name": "John", "active": true}'
+snippet '{"id": 1, "name": "John", "active": true}'
 ;
 
 /**
  * Create a JSON structure in a folder
  */
-CREATE JSON STRUCTURE JsonTest.CustomerResponse FOLDER 'Resources' SNIPPET $${
+create json structure JsonTest.CustomerResponse folder 'Resources' snippet $${
   "id": 1,
   "name": "John Doe",
   "email": "john@example.com",
@@ -53,36 +53,36 @@ CREATE JSON STRUCTURE JsonTest.CustomerResponse FOLDER 'Resources' SNIPPET $${
 }$$;
 
 -- Describe a JSON structure (shows element tree + JSON snippet)
-DESCRIBE JSON STRUCTURE JsonTest.CustomerResponse;
+describe json structure JsonTest.CustomerResponse;
 
 /**
  * Create with a documentation comment
  */
-CREATE JSON STRUCTURE JsonTest.ApiError
-  COMMENT 'Standard API error response'
-  SNIPPET $${"code": 400, "message": "Bad Request", "details": [{"field": "email", "error": "Invalid email format"}]}$$;
+create json structure JsonTest.ApiError
+  comment 'Standard API error response'
+  snippet $${"code": 400, "message": "Bad request", "details": [{"field": "email", "error": "Invalid email format"}]}$$;
 
 /**
  * Create with custom name mappings (matches Studio Pro's "Custom name" column)
  */
-CREATE JSON STRUCTURE JsonTest.ExternalApi SNIPPET $${"kvkNummer": "68750110", "vestigingsnummer": "000037178598", "naam": "Acme Corp"}$$
-CUSTOM NAME MAP (
-  'kvkNummer' AS 'ChamberOfCommerceNumber',
-  'vestigingsnummer' AS 'BranchNumber',
-  'naam' AS 'CompanyName'
+create json structure JsonTest.ExternalApi snippet $${"kvkNummer": "68750110", "vestigingsnummer": "000037178598", "naam": "Acme Corp"}$$
+CUSTOM NAME map (
+  'kvkNummer' as 'ChamberOfCommerceNumber',
+  'vestigingsnummer' as 'BranchNumber',
+  'naam' as 'CompanyName'
 );
 
 -- MARK: Describe
 
 -- Describe a JSON structure (shows element tree + JSON snippet)
-DESCRIBE JSON STRUCTURE JsonTest.CustomerResponse;
+describe json structure JsonTest.CustomerResponse;
 
 -- MARK: Replace
 
 /**
  * Edit (replace) an existing JSON structure with an updated schema
  */
-CREATE OR REPLACE JSON STRUCTURE JsonTest.CustomerResponse SNIPPET $${
+create or replace json structure JsonTest.CustomerResponse snippet $${
   "id": 1,
   "name": "John Doe",
   "email": "john@example.com",

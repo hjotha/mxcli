@@ -12,32 +12,32 @@
 --
 -- ============================================================================
 
-CREATE MODULE BeTest;
+create module BeTest;
 
 -- MARK: Prerequisites
 -- Ensure BusinessEvents module exists with the parent entity required for EXTENDS.
 -- When the marketplace module is imported, this is a no-op (CREATE OR MODIFY).
 -- When running without the module, this creates the minimum stub.
-CREATE MODULE BusinessEvents;
-@Position(100,100)
-CREATE OR MODIFY PERSISTENT ENTITY BusinessEvents.PublishedBusinessEvent (
-  EventId: Long
+create module BusinessEvents;
+@position(100,100)
+create or modify persistent entity BusinessEvents.PublishedBusinessEvent (
+  EventId: long
 );
-CREATE OR MODIFY CONSTANT BusinessEvents.ServerUrl
-TYPE String
-DEFAULT 'localhost:9092';
+create or modify constant BusinessEvents.ServerUrl
+type string
+default 'localhost:9092';
 /
 
 -- MARK: Supporting Entities
 
-@Position(100,100)
-CREATE PERSISTENT ENTITY BeTest.PBE_CustomerChangedEvent EXTENDS BusinessEvents.PublishedBusinessEvent (
-  CustomerId: Long
+@position(100,100)
+create persistent entity BeTest.PBE_CustomerChangedEvent extends BusinessEvents.PublishedBusinessEvent (
+  CustomerId: long
 );
 
-@Position(300,100)
-CREATE PERSISTENT ENTITY BeTest.PBE_AddressChangedEvent EXTENDS BusinessEvents.PublishedBusinessEvent (
-  AddressId: Long
+@position(300,100)
+create persistent entity BeTest.PBE_AddressChangedEvent extends BusinessEvents.PublishedBusinessEvent (
+  AddressId: long
 );
 
 -- MARK: Business Event Services
@@ -49,14 +49,14 @@ CREATE PERSISTENT ENTITY BeTest.PBE_AddressChangedEvent EXTENDS BusinessEvents.P
 /**
  * Example 1.1: Simple service with single message
  */
-CREATE BUSINESS EVENT SERVICE BeTest.SimpleEvents
+create business event service BeTest.SimpleEvents
 (
   ServiceName: 'SimpleEvents',
   EventNamePrefix: ''
 )
 {
-  MESSAGE CustomerChangedEvent (CustomerId: Long) PUBLISH
-    ENTITY BeTest.PBE_CustomerChangedEvent;
+  message CustomerChangedEvent (CustomerId: long) publish
+    entity BeTest.PBE_CustomerChangedEvent;
 };
 
 -- ============================================================================
@@ -66,16 +66,16 @@ CREATE BUSINESS EVENT SERVICE BeTest.SimpleEvents
 /**
  * Example 2.1: Service with multiple messages and various attribute types
  */
-CREATE BUSINESS EVENT SERVICE BeTest.CustomerEventsApi
+create business event service BeTest.CustomerEventsApi
 (
   ServiceName: 'CustomerEventsApi',
   EventNamePrefix: 'com.example'
 )
 {
-  MESSAGE CustomerChangedEvent (CustomerId: Long) PUBLISH
-    ENTITY BeTest.PBE_CustomerChangedEvent;
-  MESSAGE AddressChangedEvent (AddressId: Long) PUBLISH
-    ENTITY BeTest.PBE_AddressChangedEvent;
+  message CustomerChangedEvent (CustomerId: long) publish
+    entity BeTest.PBE_CustomerChangedEvent;
+  message AddressChangedEvent (AddressId: long) publish
+    entity BeTest.PBE_AddressChangedEvent;
 };
 
 -- Verify: entity attributes must match message attributes exactly.
@@ -89,14 +89,14 @@ CREATE BUSINESS EVENT SERVICE BeTest.CustomerEventsApi
 /**
  * Example 3.1: Overwrite existing service
  */
-CREATE OR REPLACE BUSINESS EVENT SERVICE BeTest.SimpleEvents
+create or replace business event service BeTest.SimpleEvents
 (
   ServiceName: 'SimpleEventsUpdated',
   EventNamePrefix: 'v2'
 )
 {
-  MESSAGE CustomerChangedEvent (CustomerId: Long) PUBLISH
-    ENTITY BeTest.PBE_CustomerChangedEvent;
+  message CustomerChangedEvent (CustomerId: long) publish
+    entity BeTest.PBE_CustomerChangedEvent;
 };
 
 -- ============================================================================
@@ -104,8 +104,8 @@ CREATE OR REPLACE BUSINESS EVENT SERVICE BeTest.SimpleEvents
 -- ============================================================================
 
 
-Show BUSINESS EVENT SERVICEs;
-Show BUSINESS EVENT SERVICEs in BeTest;
+show business event services;
+show business event services in BeTest;
 describe business event service BeTest.SimpleEvents;
 show business events;
 
@@ -116,7 +116,7 @@ show business events;
 /**
  * Example 4.1: Delete a service
  */
-DROP BUSINESS EVENT SERVICE BeTest.SimpleEvents;
+drop business event service BeTest.SimpleEvents;
 
 -- ============================================================================
 -- SUMMARY

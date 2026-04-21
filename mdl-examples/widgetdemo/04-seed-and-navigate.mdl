@@ -5,23 +5,23 @@
  * Seeds DemoItem data and opens the showcase page.
  * Skips creation if data already exists.
  */
-CREATE OR REPLACE MICROFLOW WidgetDemo.SeedAndShowShowcase ()
-BEGIN
+create or replace microflow WidgetDemo.SeedAndShowShowcase ()
+begin
   @position(200, 200)
-  RETRIEVE $Existing FROM WidgetDemo.DemoItem LIMIT 1;
+  retrieve $Existing from WidgetDemo.DemoItem limit 1;
 
   @position(400, 200)
-  IF $Existing != empty THEN
+  if $Existing != empty then
     @position(600, 100)
-    SHOW PAGE WidgetDemo.WidgetDemo_Showcase(DemoItem: $Existing);
+    show page WidgetDemo.WidgetDemo_Showcase(DemoItem: $Existing);
     @position(800, 100)
-    RETURN;
-  END IF;
+    return;
+  end if;
 
   @position(400, 400)
-  $Item1 = CREATE WidgetDemo.DemoItem (
-    Title = 'Wireless Headphones',
-    Description = 'Noise-cancelling over-ear headphones with 30h battery',
+  $Item1 = create WidgetDemo.DemoItem (
+    title = 'Wireless Headphones',
+    description = 'Noise-cancelling over-ear headphones with 30h battery',
     Code = 'WH-001',
     IsActive = true,
     Score = 85,
@@ -33,9 +33,9 @@ BEGIN
     ImageUrl = 'https://placehold.co/200x200?text=Headphones');
 
   @position(400, 500)
-  $Item2 = CREATE WidgetDemo.DemoItem (
-    Title = 'Smart Watch Pro',
-    Description = 'Health tracking with ECG and blood oxygen monitoring',
+  $Item2 = create WidgetDemo.DemoItem (
+    title = 'Smart Watch Pro',
+    description = 'Health tracking with ECG and blood oxygen monitoring',
     Code = 'SW-002',
     IsActive = true,
     Score = 92,
@@ -47,9 +47,9 @@ BEGIN
     ImageUrl = 'https://placehold.co/200x200?text=Watch');
 
   @position(400, 600)
-  $Item3 = CREATE WidgetDemo.DemoItem (
-    Title = 'USB-C Hub',
-    Description = '7-in-1 hub with HDMI and SD card reader',
+  $Item3 = create WidgetDemo.DemoItem (
+    title = 'USB-C Hub',
+    description = '7-in-1 hub with HDMI and SD card reader',
     Code = 'UH-003',
     IsActive = false,
     Score = 45,
@@ -61,9 +61,9 @@ BEGIN
     ImageUrl = 'https://placehold.co/200x200?text=Hub');
 
   @position(400, 700)
-  $Item4 = CREATE WidgetDemo.DemoItem (
-    Title = 'Mechanical Keyboard',
-    Description = 'Cherry MX Blue switches, RGB backlight',
+  $Item4 = create WidgetDemo.DemoItem (
+    title = 'Mechanical Keyboard',
+    description = 'Cherry MX Blue switches, RGB backlight',
     Code = 'MK-004',
     IsActive = true,
     Score = 78,
@@ -75,9 +75,9 @@ BEGIN
     ImageUrl = 'https://placehold.co/200x200?text=Keyboard');
 
   @position(400, 800)
-  $Item5 = CREATE WidgetDemo.DemoItem (
-    Title = 'Portable Charger',
-    Description = '20000mAh power bank with fast charging',
+  $Item5 = create WidgetDemo.DemoItem (
+    title = 'Portable Charger',
+    description = '20000mAh power bank with fast charging',
     Code = 'PC-005',
     IsActive = false,
     Score = 30,
@@ -89,13 +89,13 @@ BEGIN
     ImageUrl = 'https://placehold.co/200x200?text=Charger');
 
   @position(600, 400)
-  SHOW PAGE WidgetDemo.WidgetDemo_Showcase(DemoItem: $Item1);
+  show page WidgetDemo.WidgetDemo_Showcase(DemoItem: $Item1);
   @position(800, 400)
-  RETURN;
-END;
+  return;
+end;
 /
 
-GRANT EXECUTE ON MICROFLOW WidgetDemo.SeedAndShowShowcase TO WidgetDemo.User;
+grant execute on microflow WidgetDemo.SeedAndShowShowcase to WidgetDemo.user;
 
-ALTER USER ROLE Administrator ADD MODULE ROLES (WidgetDemo.User);
-ALTER USER ROLE User ADD MODULE ROLES (WidgetDemo.User);
+alter user role Administrator add module roles (WidgetDemo.user);
+alter user role user add module roles (WidgetDemo.user);

@@ -20,23 +20,23 @@ create module FolderTest;
 /**
  * Level 1.1: Create a microflow in a folder (auto-creates the folder)
  */
-CREATE MICROFLOW FolderTest.ACT_Process()
-RETURNS Boolean
-FOLDER 'Processing'
-BEGIN
-  RETURN true;
-END;
+create microflow FolderTest.ACT_Process()
+returns boolean
+folder 'Processing'
+begin
+  return true;
+end;
 /
 
 /**
  * Level 1.2: Create another microflow in a nested folder
  */
-CREATE MICROFLOW FolderTest.ACT_Archive()
-RETURNS Boolean
-FOLDER 'Processing/Archive'
-BEGIN
-  RETURN true;
-END;
+create microflow FolderTest.ACT_Archive()
+returns boolean
+folder 'Processing/Archive'
+begin
+  return true;
+end;
 /
 
 -- MARK: - Move Documents Between Folders
@@ -44,13 +44,13 @@ END;
 /**
  * Level 2.1: Move a microflow to a different folder (auto-creates target)
  */
-MOVE MICROFLOW FolderTest.ACT_Process TO FOLDER 'Resources';
+move microflow FolderTest.ACT_Process to folder 'Resources';
 /
 
 /**
  * Level 2.2: Move a microflow to module root (out of folder)
  */
-MOVE MICROFLOW FolderTest.ACT_Archive TO FolderTest;
+move microflow FolderTest.ACT_Archive to FolderTest;
 /
 
 -- MARK: - Move Folders
@@ -58,13 +58,13 @@ MOVE MICROFLOW FolderTest.ACT_Archive TO FolderTest;
 /**
  * Level 2.3: Move a folder into another folder
  */
-MOVE FOLDER FolderTest.Resources TO FOLDER 'Processing';
+move folder FolderTest.Resources to folder 'Processing';
 /
 
 /**
  * Level 2.4: Move a nested folder to module root (use quotes for paths with /)
  */
-MOVE FOLDER FolderTest."Processing/Resources" TO FolderTest;
+move folder FolderTest."Processing/Resources" to FolderTest;
 /
 
 -- MARK: - Drop Folders
@@ -72,20 +72,20 @@ MOVE FOLDER FolderTest."Processing/Resources" TO FolderTest;
 /**
  * Level 3.1: Drop an empty nested folder
  */
-DROP FOLDER 'Processing/Archive' IN FolderTest;
+drop folder 'Processing/Archive' in FolderTest;
 /
 
 /**
  * Level 3.2: Drop the now-empty parent folder
  */
-DROP FOLDER 'Processing' IN FolderTest;
+drop folder 'Processing' in FolderTest;
 /
 
 /**
  * Level 3.3: Move contents out, then drop folder
  */
-MOVE MICROFLOW FolderTest.ACT_Process TO FolderTest;
-DROP FOLDER 'Resources' IN FolderTest;
+move microflow FolderTest.ACT_Process to FolderTest;
+drop folder 'Resources' in FolderTest;
 /
 
 -- cleanup

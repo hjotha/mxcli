@@ -15,7 +15,7 @@
 --
 -- ============================================================================
 
-CREATE MODULE SysAttrTest;
+create module SysAttrTest;
 
 -- ============================================================================
 -- Example 1: All four system attributes set during CREATE
@@ -24,72 +24,72 @@ CREATE MODULE SysAttrTest;
 /**
  * Audited entity that uses all four built-in system attributes.
  */
-CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.AuditedRecord (
-  Title: String(200) NOT NULL,
-  Amount: Decimal,
-  Owner: AutoOwner,
-  ChangedBy: AutoChangedBy,
-  CreatedDate: AutoCreatedDate,
-  ChangedDate: AutoChangedDate
+create or modify persistent entity SysAttrTest.AuditedRecord (
+  title: string(200) not null,
+  Amount: decimal,
+  owner: autoowner,
+  ChangedBy: autochangedby,
+  CreatedDate: autocreateddate,
+  ChangedDate: autochangeddate
 );
 
 -- ============================================================================
 -- Example 2: Subset of system attributes
 -- ============================================================================
 
-CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.LogEntry (
-  Message: String(500),
-  Level: String(20),
-  CreatedDate: AutoCreatedDate
+create or modify persistent entity SysAttrTest.LogEntry (
+  message: string(500),
+  level: string(20),
+  CreatedDate: autocreateddate
 );
 
 -- ============================================================================
 -- Example 3: ALTER ENTITY to enable flags after creation
 -- ============================================================================
 
-CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.Customer (
-  Name: String(100) NOT NULL,
-  Email: String(200)
+create or modify persistent entity SysAttrTest.Customer (
+  Name: string(100) not null,
+  Email: string(200)
 );
 
-ALTER ENTITY SysAttrTest.Customer ADD ATTRIBUTE Owner: AutoOwner;
-ALTER ENTITY SysAttrTest.Customer ADD ATTRIBUTE ChangedBy: AutoChangedBy;
-ALTER ENTITY SysAttrTest.Customer ADD ATTRIBUTE CreatedDate: AutoCreatedDate;
-ALTER ENTITY SysAttrTest.Customer ADD ATTRIBUTE ChangedDate: AutoChangedDate;
+alter entity SysAttrTest.Customer add attribute owner: autoowner;
+alter entity SysAttrTest.Customer add attribute ChangedBy: autochangedby;
+alter entity SysAttrTest.Customer add attribute CreatedDate: autocreateddate;
+alter entity SysAttrTest.Customer add attribute ChangedDate: autochangeddate;
 
 -- ============================================================================
 -- Example 4: ALTER ENTITY to disable previously enabled flags
 -- ============================================================================
 
-CREATE OR MODIFY PERSISTENT ENTITY SysAttrTest.TempRecord (
-  Payload: String(100),
-  Owner: AutoOwner,
-  CreatedDate: AutoCreatedDate
+create or modify persistent entity SysAttrTest.TempRecord (
+  Payload: string(100),
+  owner: autoowner,
+  CreatedDate: autocreateddate
 );
 
 -- Disable both flags (drop by system attribute name)
-ALTER ENTITY SysAttrTest.TempRecord DROP ATTRIBUTE Owner;
-ALTER ENTITY SysAttrTest.TempRecord DROP ATTRIBUTE CreatedDate;
+alter entity SysAttrTest.TempRecord drop attribute owner;
+alter entity SysAttrTest.TempRecord drop attribute CreatedDate;
 
 -- ============================================================================
 -- Example 5: Entity with event handlers
 -- ============================================================================
 
-CREATE MICROFLOW SysAttrTest.ACT_ValidateOrder ($Order: SysAttrTest.AuditedRecord)
-RETURNS Boolean
-BEGIN
-  RETURN true;
-END;
+create microflow SysAttrTest.ACT_ValidateOrder ($Order: SysAttrTest.AuditedRecord)
+returns boolean
+begin
+  return true;
+end;
 
-CREATE MICROFLOW SysAttrTest.ACT_AfterCommitOrder ($Order: SysAttrTest.AuditedRecord)
-BEGIN
-  RETURN empty;
-END;
+create microflow SysAttrTest.ACT_AfterCommitOrder ($Order: SysAttrTest.AuditedRecord)
+begin
+  return empty;
+end;
 
 -- RAISE ERROR: only valid on BEFORE handlers (microflow returns Boolean, false = abort)
-ALTER ENTITY SysAttrTest.AuditedRecord
-  ADD EVENT HANDLER ON BEFORE COMMIT CALL SysAttrTest.ACT_ValidateOrder RAISE ERROR;
+alter entity SysAttrTest.AuditedRecord
+  add event handler on before commit call SysAttrTest.ACT_ValidateOrder raise error;
 
 -- AFTER handlers cannot RAISE ERROR (microflow returns Void)
-ALTER ENTITY SysAttrTest.AuditedRecord
-  ADD EVENT HANDLER ON AFTER COMMIT CALL SysAttrTest.ACT_AfterCommitOrder;
+alter entity SysAttrTest.AuditedRecord
+  add event handler on after commit call SysAttrTest.ACT_AfterCommitOrder;

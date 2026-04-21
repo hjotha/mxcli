@@ -21,10 +21,10 @@ create module ViewPar;
  *
  * Groups products for reporting purposes.
  */
-@Position(100, 100)
-CREATE PERSISTENT ENTITY ViewPar.ProductCategory (
+@position(100, 100)
+create persistent entity ViewPar.ProductCategory (
   /** Category name (e.g., Electronics, Clothing) */
-  CategoryName: String(200) NOT NULL ERROR 'Category name is required'
+  CategoryName: string(200) not null error 'Category name is required'
 );
 
 /**
@@ -32,22 +32,22 @@ CREATE PERSISTENT ENTITY ViewPar.ProductCategory (
  *
  * Records individual sales with amount and associated category.
  */
-@Position(300, 100)
-CREATE PERSISTENT ENTITY ViewPar.SaleTransaction (
+@position(300, 100)
+create persistent entity ViewPar.SaleTransaction (
   /** Sale amount in euros */
-  Amount: Decimal NOT NULL ERROR 'Amount is required',
+  Amount: decimal not null error 'Amount is required',
   /** Date of the sale */
-  SaleDate: DateTime
+  SaleDate: datetime
 );
 
 /**
  * Links a sale to its product category
  */
-CREATE ASSOCIATION ViewPar.SaleTransaction_ProductCategory
-  FROM ViewPar.SaleTransaction TO ViewPar.ProductCategory
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association ViewPar.SaleTransaction_ProductCategory
+  from ViewPar.SaleTransaction to ViewPar.ProductCategory
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 -- -----------------------------------------------------------------------------
 -- Step 2: View Entity - Aggregates ALL data, no filtering
@@ -66,19 +66,19 @@ CREATE ASSOCIATION ViewPar.SaleTransaction_ProductCategory
  *
  * @since 1.0.0
  */
-@Position(100, 300)
-CREATE VIEW ENTITY ViewPar.SalesTotalByCategory (
-  CategoryName: String(200),
-  TotalAmount: Decimal,
-  TransactionCount: Integer
-) AS (
-  SELECT
-    c.CategoryName AS CategoryName,
-    sum(s.Amount) AS TotalAmount,
-    count(s.ID) AS TransactionCount
-  FROM ViewPar.SaleTransaction AS s
-  INNER JOIN s/ViewPar.SaleTransaction_ProductCategory/ViewPar.ProductCategory AS c
-  GROUP BY c.CategoryName
+@position(100, 300)
+create view entity ViewPar.SalesTotalByCategory (
+  CategoryName: string(200),
+  TotalAmount: decimal,
+  TransactionCount: integer
+) as (
+  select
+    c.CategoryName as CategoryName,
+    sum(s.Amount) as TotalAmount,
+    count(s.ID) as TransactionCount
+  from ViewPar.SaleTransaction as s
+  inner join s/ViewPar.SaleTransaction_ProductCategory/ViewPar.ProductCategory as c
+  GROUP by c.CategoryName
 );
 
 -- -----------------------------------------------------------------------------
@@ -101,25 +101,25 @@ CREATE VIEW ENTITY ViewPar.SalesTotalByCategory (
  * @param $Category The category to get the total for
  * @returns The total sales amount for the given category (0 if none)
  */
-CREATE MICROFLOW ViewPar.GetSalesTotalForCategory (
+create microflow ViewPar.GetSalesTotalForCategory (
   $Category: ViewPar.ProductCategory
 )
-RETURNS Decimal AS $TotalAmount
-BEGIN
-  DECLARE $TotalAmount Decimal = 0;
+returns decimal as $TotalAmount
+begin
+  declare $TotalAmount decimal = 0;
 
   -- Retrieve from the View Entity, filtering by category name.
   -- The WHERE clause acts as the "parameter" - no special View Entity
   -- parameter syntax is needed.
-  RETRIEVE $Summary FROM ViewPar.SalesTotalByCategory
-    WHERE CategoryName = $Category/CategoryName
-    LIMIT 1;
+  retrieve $Summary from ViewPar.SalesTotalByCategory
+    where CategoryName = $Category/CategoryName
+    limit 1;
 
   -- If a matching row was found, extract the total
-  IF $Summary != empty THEN
-    SET $TotalAmount = $Summary/TotalAmount;
-  END IF;
+  if $Summary != empty then
+    set $TotalAmount = $Summary/TotalAmount;
+  end if;
 
-  RETURN $TotalAmount;
-END;
+  return $TotalAmount;
+end;
 /

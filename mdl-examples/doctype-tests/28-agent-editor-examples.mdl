@@ -21,29 +21,29 @@
 --
 -- ============================================================================
 
-CREATE MODULE AgentTest;
+create module AgentTest;
 
 -- ============================================================================
 -- Setup: Constants for Model and KB key references
 -- ============================================================================
 
-CREATE CONSTANT AgentTest."ModelKey"
-  TYPE String
-  DEFAULT '';
+create constant AgentTest."ModelKey"
+  type string
+  default '';
 /
 
-CREATE CONSTANT AgentTest."KBKey"
-  TYPE String
-  DEFAULT '';
+create constant AgentTest."KBKey"
+  type string
+  default '';
 /
 
 -- ============================================================================
 -- LEVEL 1: Model (prerequisite for Agents)
 -- ============================================================================
 
-CREATE MODEL AgentTest."TestModel" (
+create model AgentTest."TestModel" (
   Provider: MxCloudGenAI,
-  Key: AgentTest.ModelKey
+  key: AgentTest.ModelKey
 );
 /
 
@@ -51,9 +51,9 @@ CREATE MODEL AgentTest."TestModel" (
 -- LEVEL 2: Knowledge Base
 -- ============================================================================
 
-CREATE KNOWLEDGE BASE AgentTest."ProductDocs" (
+create knowledge base AgentTest."ProductDocs" (
   Provider: MxCloudGenAI,
-  Key: AgentTest.KBKey
+  key: AgentTest.KBKey
 );
 /
 
@@ -61,11 +61,11 @@ CREATE KNOWLEDGE BASE AgentTest."ProductDocs" (
 -- LEVEL 3: Consumed MCP Service
 -- ============================================================================
 
-CREATE CONSUMED MCP SERVICE AgentTest."WebSearch" (
+create consumed mcp service AgentTest."WebSearch" (
   ProtocolVersion: v2025_03_26,
-  Version: '1.0',
+  version: '1.0',
   ConnectionTimeoutSeconds: 30,
-  Documentation: 'Web search MCP server for research tasks'
+  documentation: 'Web search MCP server for research tasks'
 );
 /
 
@@ -73,9 +73,9 @@ CREATE CONSUMED MCP SERVICE AgentTest."WebSearch" (
 -- LEVEL 4: Simple Agent (no tools, no body)
 -- ============================================================================
 
-CREATE AGENT AgentTest."Summarizer" (
-  UsageType: Task,
-  Model: AgentTest.TestModel,
+create agent AgentTest."Summarizer" (
+  UsageType: task,
+  model: AgentTest.TestModel,
   SystemPrompt: 'Summarize the given text in 3 sentences.',
   UserPrompt: 'Enter text to summarize.'
 );
@@ -85,10 +85,10 @@ CREATE AGENT AgentTest."Summarizer" (
 -- LEVEL 5: Agent with Variables
 -- ============================================================================
 
-CREATE AGENT AgentTest."Translator" (
-  UsageType: Task,
-  Model: AgentTest.TestModel,
-  Variables: ("Language": EntityAttribute),
+create agent AgentTest."Translator" (
+  UsageType: task,
+  model: AgentTest.TestModel,
+  variables: ("Language": EntityAttribute),
   SystemPrompt: 'Translate the text into {{Language}}.',
   UserPrompt: 'Hello world'
 );
@@ -98,13 +98,13 @@ CREATE AGENT AgentTest."Translator" (
 -- LEVEL 6: Agent with dollar-quoted multi-line prompts
 -- ============================================================================
 
-CREATE AGENT AgentTest."CodeReviewer" (
-  UsageType: Task,
-  Model: AgentTest.TestModel,
+create agent AgentTest."CodeReviewer" (
+  UsageType: task,
+  model: AgentTest.TestModel,
   SystemPrompt: $$You are a code review assistant.
 
 Review the provided code for:
-1. Security vulnerabilities
+1. security vulnerabilities
 2. Performance issues
 3. Code style and readability
 
@@ -119,25 +119,25 @@ Provide specific, actionable feedback.$$,
 -- LEVEL 7: Agent with body blocks (MCP SERVICE + KNOWLEDGE BASE)
 -- ============================================================================
 
-CREATE AGENT AgentTest."ResearchAssistant" (
+create agent AgentTest."ResearchAssistant" (
   UsageType: Conversational,
-  Description: 'Research assistant with web search and documentation',
-  Model: AgentTest.TestModel,
+  description: 'Research assistant with web search and documentation',
+  model: AgentTest.TestModel,
   MaxTokens: 16384,
   ToolChoice: Auto,
   SystemPrompt: 'You are a research assistant. Use available tools.',
   UserPrompt: 'Find information about quantum computing.'
 )
 {
-  MCP SERVICE AgentTest.WebSearch {
+  mcp service AgentTest.WebSearch {
     Enabled: true
   }
 
-  KNOWLEDGE BASE ProductKB {
-    Source: AgentTest.ProductDocs,
-    Collection: 'product-docs',
+  knowledge base ProductKB {
+    source: AgentTest.ProductDocs,
+    collection: 'product-docs',
     MaxResults: 5,
-    Description: 'Product documentation',
+    description: 'Product documentation',
     Enabled: true
   }
 };
@@ -147,25 +147,25 @@ CREATE AGENT AgentTest."ResearchAssistant" (
 -- LEVEL 8: List and Describe
 -- ============================================================================
 
-LIST AGENTS IN AgentTest;
-LIST MODELS IN AgentTest;
-LIST KNOWLEDGE BASES IN AgentTest;
-LIST CONSUMED MCP SERVICES IN AgentTest;
+list agents in AgentTest;
+list models in AgentTest;
+list knowledge bases in AgentTest;
+list consumed mcp services in AgentTest;
 
-DESCRIBE AGENT AgentTest.ResearchAssistant;
-DESCRIBE MODEL AgentTest.TestModel;
-DESCRIBE KNOWLEDGE BASE AgentTest.ProductDocs;
-DESCRIBE CONSUMED MCP SERVICE AgentTest.WebSearch;
+describe agent AgentTest.ResearchAssistant;
+describe model AgentTest.TestModel;
+describe knowledge base AgentTest.ProductDocs;
+describe consumed mcp service AgentTest.WebSearch;
 
 -- ============================================================================
 -- Cleanup (reverse dependency order: agents first, then their dependencies)
 -- ============================================================================
 
-DROP AGENT AgentTest.ResearchAssistant;
-DROP AGENT AgentTest.CodeReviewer;
-DROP AGENT AgentTest.Translator;
-DROP AGENT AgentTest.Summarizer;
-DROP CONSUMED MCP SERVICE AgentTest.WebSearch;
-DROP KNOWLEDGE BASE AgentTest.ProductDocs;
-DROP MODEL AgentTest.TestModel;
+drop agent AgentTest.ResearchAssistant;
+drop agent AgentTest.CodeReviewer;
+drop agent AgentTest.Translator;
+drop agent AgentTest.Summarizer;
+drop consumed mcp service AgentTest.WebSearch;
+drop knowledge base AgentTest.ProductDocs;
+drop model AgentTest.TestModel;
 /

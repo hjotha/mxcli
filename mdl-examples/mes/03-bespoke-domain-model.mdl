@@ -17,7 +17,7 @@
  *
  * @since 1.0.0
  */
-CREATE MODULE BespokeDesign;
+create module BespokeDesign;
 
 -- MARK: ENUMERATIONS
 
@@ -29,7 +29,7 @@ CREATE MODULE BespokeDesign;
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION BespokeDesign.DesignRequestStatus (
+create enumeration BespokeDesign.DesignRequestStatus (
   Submitted 'Submitted',
   UnderReview 'Under Review',
   DesignInProgress 'Design In Progress',
@@ -46,7 +46,7 @@ CREATE ENUMERATION BespokeDesign.DesignRequestStatus (
  *
  * @since 1.0.0
  */
-CREATE ENUMERATION BespokeDesign.FurnitureStyle (
+create enumeration BespokeDesign.FurnitureStyle (
   Modern 'Modern',
   Traditional 'Traditional',
   Rustic 'Rustic',
@@ -70,30 +70,30 @@ CREATE ENUMERATION BespokeDesign.FurnitureStyle (
  * @see CRM.Customer
  * @see BespokeDesign.DesignDraft
  */
-@Position(50, 50)
-CREATE PERSISTENT ENTITY BespokeDesign.DesignRequest (
+@position(50, 50)
+create persistent entity BespokeDesign.DesignRequest (
   /** Auto-generated request number */
-  RequestNumber: AutoNumber DEFAULT 1,
+  RequestNumber: autonumber default 1,
   /** Brief title for the request */
-  RequestTitle: String(200) NOT NULL ERROR 'Request title is required',
+  RequestTitle: string(200) not null error 'Request title is required',
   /** Detailed description of what the customer wants */
-  RequestDescription: String(4000),
+  RequestDescription: string(4000),
   /** Preferred furniture style */
-  PreferredStyle: Enumeration(BespokeDesign.FurnitureStyle),
+  PreferredStyle: enumeration(BespokeDesign.FurnitureStyle),
   /** Budget indication from the customer */
-  BudgetIndication: Decimal,
+  BudgetIndication: decimal,
   /** Customer's desired delivery date */
-  DesiredDeliveryDate: DateTime,
+  DesiredDeliveryDate: datetime,
   /** Current lifecycle status */
-  RequestStatus: Enumeration(BespokeDesign.DesignRequestStatus) NOT NULL ERROR 'Request status is required',
+  RequestStatus: enumeration(BespokeDesign.DesignRequestStatus) not null error 'Request status is required',
   /** Date when the request was submitted */
-  SubmittedDate: DateTime,
+  SubmittedDate: datetime,
   /** Date when the request was last updated */
-  LastUpdatedDate: DateTime,
+  LastUpdatedDate: datetime,
   /** Internal notes (not visible to customer) */
-  InternalNotes: String(4000)
+  InternalNotes: string(4000)
 )
-INDEX (RequestStatus);
+index (RequestStatus);
 
 /**
  * Design draft entity
@@ -106,24 +106,24 @@ INDEX (RequestStatus);
  * @see BespokeDesign.DesignRequest
  * @see BespokeDesign.DesignRevision
  */
-@Position(350, 50)
-CREATE PERSISTENT ENTITY BespokeDesign.DesignDraft (
+@position(350, 50)
+create persistent entity BespokeDesign.DesignDraft (
   /** Draft version number */
-  VersionNumber: Integer NOT NULL ERROR 'Version number is required' DEFAULT 1,
+  VersionNumber: integer not null error 'Version number is required' default 1,
   /** Draft title or summary */
-  DraftTitle: String(200) NOT NULL ERROR 'Draft title is required',
+  DraftTitle: string(200) not null error 'Draft title is required',
   /** Detailed design description */
-  DesignDescription: String(4000),
+  DesignDescription: string(4000),
   /** Proposed price for this design */
-  ProposedPrice: Decimal,
+  ProposedPrice: decimal,
   /** Estimated production time in days */
-  EstimatedProductionDays: Integer,
+  EstimatedProductionDays: integer,
   /** Whether this is the active/current draft */
-  IsCurrentDraft: Boolean DEFAULT true,
+  IsCurrentDraft: boolean default true,
   /** Date this draft was created */
-  CreatedDate: DateTime,
+  CreatedDate: datetime,
   /** Designer's notes */
-  DesignerNotes: String(4000)
+  DesignerNotes: string(4000)
 );
 
 /**
@@ -136,28 +136,28 @@ CREATE PERSISTENT ENTITY BespokeDesign.DesignDraft (
  * @since 1.0.0
  * @see BespokeDesign.DesignDraft
  */
-@Position(350, 250)
-CREATE PERSISTENT ENTITY BespokeDesign.DesignSpecification (
+@position(350, 250)
+create persistent entity BespokeDesign.DesignSpecification (
   /** Overall width in millimeters */
-  WidthMM: Integer,
+  WidthMM: integer,
   /** Overall height in millimeters */
-  HeightMM: Integer,
+  HeightMM: integer,
   /** Overall depth in millimeters */
-  DepthMM: Integer,
+  DepthMM: integer,
   /** Primary wood type */
-  PrimaryWoodType: String(100),
+  PrimaryWoodType: string(100),
   /** Secondary wood type (if applicable) */
-  SecondaryWoodType: String(100),
+  SecondaryWoodType: string(100),
   /** Finish specification */
-  FinishDescription: String(500),
+  FinishDescription: string(500),
   /** Upholstery fabric (if applicable) */
-  UpholsteryFabric: String(200),
+  UpholsteryFabric: string(200),
   /** Hardware specification (handles, hinges, etc.) */
-  HardwareDescription: String(500),
+  HardwareDescription: string(500),
   /** Additional technical notes */
-  TechnicalNotes: String(4000),
+  TechnicalNotes: string(4000),
   /** Estimated weight in kilograms */
-  EstimatedWeightKg: Decimal
+  EstimatedWeightKg: decimal
 );
 
 /**
@@ -170,18 +170,18 @@ CREATE PERSISTENT ENTITY BespokeDesign.DesignSpecification (
  * @since 1.0.0
  * @see BespokeDesign.DesignDraft
  */
-@Position(650, 50)
-CREATE PERSISTENT ENTITY BespokeDesign.DesignRevision (
+@position(650, 50)
+create persistent entity BespokeDesign.DesignRevision (
   /** Revision number within this draft */
-  RevisionNumber: Integer NOT NULL ERROR 'Revision number is required',
+  RevisionNumber: integer not null error 'Revision number is required',
   /** Summary of what changed */
-  ChangeDescription: String(2000) NOT NULL ERROR 'Change description is required',
+  ChangeDescription: string(2000) not null error 'Change description is required',
   /** Who requested this change */
-  RequestedBy: String(200),
+  RequestedBy: string(200),
   /** Date of this revision */
-  RevisionDate: DateTime,
+  RevisionDate: datetime,
   /** Whether this revision was accepted */
-  IsAccepted: Boolean DEFAULT false
+  IsAccepted: boolean default false
 );
 
 /**
@@ -194,15 +194,15 @@ CREATE PERSISTENT ENTITY BespokeDesign.DesignRevision (
  * @since 1.0.0
  * @see BespokeDesign.DesignDraft
  */
-@Position(650, 250)
-CREATE PERSISTENT ENTITY BespokeDesign.DesignDocument
-EXTENDS System.FileDocument (
+@position(650, 250)
+create persistent entity BespokeDesign.DesignDocument
+extends System.FileDocument (
   /** Document description */
-  DocumentDescription: String(500),
+  DocumentDescription: string(500),
   /** Document category (Sketch, Rendering, Technical Drawing, etc.) */
-  DocumentCategory: String(100),
+  DocumentCategory: string(100),
   /** Upload date */
-  UploadDate: DateTime
+  UploadDate: datetime
 );
 
 -- MARK: ASSOCIATIONS
@@ -214,11 +214,11 @@ EXTENDS System.FileDocument (
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION BespokeDesign.DesignRequest_Customer
-  FROM BespokeDesign.DesignRequest TO CRM.Customer
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association BespokeDesign.DesignRequest_Customer
+  from BespokeDesign.DesignRequest to CRM.Customer
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 
 /**
  * Links design draft to its request
@@ -228,11 +228,11 @@ CREATE ASSOCIATION BespokeDesign.DesignRequest_Customer
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION BespokeDesign.DesignDraft_DesignRequest
-  FROM BespokeDesign.DesignDraft TO BespokeDesign.DesignRequest
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association BespokeDesign.DesignDraft_DesignRequest
+  from BespokeDesign.DesignDraft to BespokeDesign.DesignRequest
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links specification to its draft
@@ -241,11 +241,11 @@ CREATE ASSOCIATION BespokeDesign.DesignDraft_DesignRequest
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION BespokeDesign.DesignSpecification_DesignDraft
-  FROM BespokeDesign.DesignSpecification TO BespokeDesign.DesignDraft
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association BespokeDesign.DesignSpecification_DesignDraft
+  from BespokeDesign.DesignSpecification to BespokeDesign.DesignDraft
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links revisions to their draft
@@ -254,11 +254,11 @@ CREATE ASSOCIATION BespokeDesign.DesignSpecification_DesignDraft
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION BespokeDesign.DesignRevision_DesignDraft
-  FROM BespokeDesign.DesignRevision TO BespokeDesign.DesignDraft
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association BespokeDesign.DesignRevision_DesignDraft
+  from BespokeDesign.DesignRevision to BespokeDesign.DesignDraft
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;
 
 /**
  * Links documents to their draft
@@ -267,8 +267,8 @@ CREATE ASSOCIATION BespokeDesign.DesignRevision_DesignDraft
  *
  * @since 1.0.0
  */
-CREATE ASSOCIATION BespokeDesign.DesignDocument_DesignDraft
-  FROM BespokeDesign.DesignDocument TO BespokeDesign.DesignDraft
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_AND_REFERENCES;
+create association BespokeDesign.DesignDocument_DesignDraft
+  from BespokeDesign.DesignDocument to BespokeDesign.DesignDraft
+  type reference
+  owner default
+  delete_behavior DELETE_AND_REFERENCES;

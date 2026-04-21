@@ -16,235 +16,235 @@
 -- PREREQUISITES
 -- ############################################################################
 
-CREATE PERSISTENT ENTITY WFTest.OrderContext (
-  Status: String(200),
-  Total: Decimal
+create persistent entity WFTest.OrderContext (
+  status: string(200),
+  Total: decimal
 );
 
-CREATE MICROFLOW WFTest.ACT_Validate ($OrderContext: WFTest.OrderContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow WFTest.ACT_Validate ($OrderContext: WFTest.OrderContext)
+begin
+  @position(200,200) return;
+end;
 /
 
-CREATE MICROFLOW WFTest.ACT_Process ($OrderContext: WFTest.OrderContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow WFTest.ACT_Process ($OrderContext: WFTest.OrderContext)
+begin
+  @position(200,200) return;
+end;
 /
 
-CREATE MICROFLOW WFTest.ACT_Escalate ($OrderContext: WFTest.OrderContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow WFTest.ACT_Escalate ($OrderContext: WFTest.OrderContext)
+begin
+  @position(200,200) return;
+end;
 /
 
-CREATE MICROFLOW WFTest.ACT_Notify ($OrderContext: WFTest.OrderContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow WFTest.ACT_Notify ($OrderContext: WFTest.OrderContext)
+begin
+  @position(200,200) return;
+end;
 /
 
-CREATE MICROFLOW WFTest.ACT_Review ($OrderContext: WFTest.OrderContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow WFTest.ACT_Review ($OrderContext: WFTest.OrderContext)
+begin
+  @position(200,200) return;
+end;
 /
 
-CREATE MICROFLOW WFTest.ACT_Finalize ($OrderContext: WFTest.OrderContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow WFTest.ACT_Finalize ($OrderContext: WFTest.OrderContext)
+begin
+  @position(200,200) return;
+end;
 /
 
-CREATE MICROFLOW WFTest.ACT_BoundaryHandler ($OrderContext: WFTest.OrderContext)
-BEGIN
-  @position(200,200) RETURN;
-END;
+create microflow WFTest.ACT_BoundaryHandler ($OrderContext: WFTest.OrderContext)
+begin
+  @position(200,200) return;
+end;
 /
 
 -- Targeting microflow: (System.Workflow, context) -> List of System.User
-CREATE MICROFLOW WFTest.ACT_TargetUsers (
-  $Workflow: System.Workflow,
-  $Context: WFTest.OrderContext
+create microflow WFTest.ACT_TargetUsers (
+  $workflow: System.workflow,
+  $context: WFTest.OrderContext
 )
-RETURNS List of System.User AS $Users
-BEGIN
+returns list of System.user as $users
+begin
   @position(200,200)
-  RETRIEVE $Users FROM System.User;
-  @position(400,200) RETURN $Users;
-END;
+  retrieve $users from System.user;
+  @position(400,200) return $users;
+end;
 /
 
 -- User task pages (System.WorkflowUserTask param)
-CREATE PAGE WFTest.TaskPage (
-  Title: 'Task Page',
-  Layout: Atlas_Core.Atlas_Default,
-  Params: { $WorkflowUserTask: System.WorkflowUserTask }
+create page WFTest.TaskPage (
+  title: 'Task Page',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
 ) {
-  LAYOUTGRID g1 {
-    ROW r1 {
-      COLUMN c1 (DesktopWidth: 12) {
-        DYNAMICTEXT txt1 (Content: 'Task Page', RenderMode: H2)
+  layoutgrid g1 {
+    row r1 {
+      column c1 (desktopwidth: 12) {
+        dynamictext txt1 (content: 'Task Page', rendermode: H2)
       }
     }
   }
 }
 
-CREATE PAGE WFTest.AlternateTaskPage (
-  Title: 'Alternate Task',
-  Layout: Atlas_Core.Atlas_Default,
-  Params: { $WorkflowUserTask: System.WorkflowUserTask }
+create page WFTest.AlternateTaskPage (
+  title: 'Alternate Task',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
 ) {
-  LAYOUTGRID g1 {
-    ROW r1 {
-      COLUMN c1 (DesktopWidth: 12) {
-        DYNAMICTEXT txt1 (Content: 'Alternate Task', RenderMode: H2)
+  layoutgrid g1 {
+    row r1 {
+      column c1 (desktopwidth: 12) {
+        dynamictext txt1 (content: 'Alternate Task', rendermode: H2)
       }
     }
   }
 }
 
 -- Overview page (System.Workflow param)
-CREATE PAGE WFTest.OverviewPage (
-  Title: 'Workflow Overview',
-  Layout: Atlas_Core.Atlas_Default,
-  Params: { $Workflow: System.Workflow }
+create page WFTest.OverviewPage (
+  title: 'Workflow Overview',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $workflow: System.workflow }
 ) {
-  LAYOUTGRID g1 {
-    ROW r1 {
-      COLUMN c1 (DesktopWidth: 12) {
-        DYNAMICTEXT txt1 (Content: 'Overview', RenderMode: H2)
+  layoutgrid g1 {
+    row r1 {
+      column c1 (desktopwidth: 12) {
+        dynamictext txt1 (content: 'Overview', rendermode: H2)
       }
     }
   }
 }
 
 -- Sub-workflow for CALL WORKFLOW demo
-CREATE WORKFLOW WFTest.SubProcess
-  PARAMETER $WorkflowContext: WFTest.OrderContext
-  DISPLAY 'Sub Process'
-BEGIN
-  CALL MICROFLOW WFTest.ACT_Finalize;
-END WORKFLOW;
+create workflow WFTest.SubProcess
+  parameter $WorkflowContext: WFTest.OrderContext
+  display 'Sub Process'
+begin
+  call microflow WFTest.ACT_Finalize;
+end workflow;
 /
 
 -- ############################################################################
 -- INITIAL WORKFLOW — simple starting point, all richness added via ALTER
 -- ############################################################################
 
-CREATE OR REPLACE WORKFLOW WFTest.OrderApproval
-  PARAMETER $WorkflowContext: WFTest.OrderContext
-  DISPLAY 'Order Approval'
-  DESCRIPTION 'Handles order approval process'
-BEGIN
-  USER TASK ReviewOrder 'Review the order'
-    PAGE WFTest.TaskPage
-    TARGETING XPATH '[Status = ''Draft'']'
-    DESCRIPTION 'Please review this order'
-    OUTCOMES
-      'Approve' { CALL MICROFLOW WFTest.ACT_Process; }
-      'Reject' { CALL MICROFLOW WFTest.ACT_Notify; }
+create or replace workflow WFTest.OrderApproval
+  parameter $WorkflowContext: WFTest.OrderContext
+  display 'Order Approval'
+  description 'Handles order approval process'
+begin
+  user task ReviewOrder 'Review the order'
+    page WFTest.TaskPage
+    targeting xpath '[Status = ''Draft'']'
+    description 'Please review this order'
+    outcomes
+      'Approve' { call microflow WFTest.ACT_Process; }
+      'Reject' { call microflow WFTest.ACT_Notify; }
       'Hold' { }
   ;
 
-  CALL MICROFLOW WFTest.ACT_Validate;
+  call microflow WFTest.ACT_Validate;
 
-  DECISION '$WorkflowContext/Total > 1000'
-    OUTCOMES
-      TRUE -> { CALL MICROFLOW WFTest.ACT_Process; }
-      FALSE -> { CALL MICROFLOW WFTest.ACT_Notify; }
+  decision '$WorkflowContext/Total > 1000'
+    outcomes
+      true -> { call microflow WFTest.ACT_Process; }
+      false -> { call microflow WFTest.ACT_Notify; }
   ;
 
-  PARALLEL SPLIT
-    PATH 1 { CALL MICROFLOW WFTest.ACT_Process; }
-    PATH 2 { CALL MICROFLOW WFTest.ACT_Notify; }
-    PATH 3 { }
+  parallel split
+    path 1 { call microflow WFTest.ACT_Process; }
+    path 2 { call microflow WFTest.ACT_Notify; }
+    path 3 { }
   ;
-END WORKFLOW;
+end workflow;
 /
 
 -- ############################################################################
 -- PART 1: SET WORKFLOW-LEVEL PROPERTIES (6 alternatives)
 -- ############################################################################
 
-ALTER WORKFLOW WFTest.OrderApproval SET DISPLAY 'Updated Order Approval';
-ALTER WORKFLOW WFTest.OrderApproval SET DESCRIPTION 'Updated workflow description';
-ALTER WORKFLOW WFTest.OrderApproval SET EXPORT LEVEL API;
-ALTER WORKFLOW WFTest.OrderApproval SET DUE DATE '';
-ALTER WORKFLOW WFTest.OrderApproval SET OVERVIEW PAGE WFTest.OverviewPage;
-ALTER WORKFLOW WFTest.OrderApproval SET PARAMETER $WorkflowContext: WFTest.OrderContext;
+alter workflow WFTest.OrderApproval set display 'Updated Order Approval';
+alter workflow WFTest.OrderApproval set description 'Updated workflow description';
+alter workflow WFTest.OrderApproval set export level api;
+alter workflow WFTest.OrderApproval set due date '';
+alter workflow WFTest.OrderApproval set overview page WFTest.OverviewPage;
+alter workflow WFTest.OrderApproval set parameter $WorkflowContext: WFTest.OrderContext;
 
 -- Bonus: multiple SET in one statement
-ALTER WORKFLOW WFTest.OrderApproval
-  SET DISPLAY 'Final Order Approval'
-  SET DESCRIPTION 'Final description';
+alter workflow WFTest.OrderApproval
+  set display 'Final Order Approval'
+  set description 'Final description';
 
 -- ############################################################################
 -- PART 2: SET ACTIVITY PROPERTIES (5 alternatives + string literal ref)
 -- ############################################################################
 
-ALTER WORKFLOW WFTest.OrderApproval SET ACTIVITY ReviewOrder PAGE WFTest.AlternateTaskPage;
-ALTER WORKFLOW WFTest.OrderApproval SET ACTIVITY ReviewOrder DESCRIPTION 'Updated instructions';
-ALTER WORKFLOW WFTest.OrderApproval SET ACTIVITY ReviewOrder TARGETING XPATH '[Status = ''Pending'']';
-ALTER WORKFLOW WFTest.OrderApproval SET ACTIVITY ReviewOrder TARGETING MICROFLOW WFTest.ACT_TargetUsers;
-ALTER WORKFLOW WFTest.OrderApproval SET ACTIVITY ReviewOrder DUE DATE '';
-ALTER WORKFLOW WFTest.OrderApproval SET ACTIVITY 'Review the order' DESCRIPTION 'Referenced by caption';
+alter workflow WFTest.OrderApproval set activity ReviewOrder page WFTest.AlternateTaskPage;
+alter workflow WFTest.OrderApproval set activity ReviewOrder description 'Updated instructions';
+alter workflow WFTest.OrderApproval set activity ReviewOrder targeting xpath '[Status = ''Pending'']';
+alter workflow WFTest.OrderApproval set activity ReviewOrder targeting microflow WFTest.ACT_TargetUsers;
+alter workflow WFTest.OrderApproval set activity ReviewOrder due date '';
+alter workflow WFTest.OrderApproval set activity 'Review the order' description 'Referenced by caption';
 
 -- ############################################################################
 -- PART 3: INSERT / DROP / REPLACE ACTIVITIES
 -- ############################################################################
 
 -- INSERT CALL MICROFLOW (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER ReviewOrder CALL MICROFLOW WFTest.ACT_Escalate;
+alter workflow WFTest.OrderApproval
+  insert after ReviewOrder call microflow WFTest.ACT_Escalate;
 
 -- INSERT + DROP to demo DROP
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER ACT_Escalate CALL MICROFLOW WFTest.ACT_Notify;
-ALTER WORKFLOW WFTest.OrderApproval
-  DROP ACTIVITY ACT_Notify@1;
+alter workflow WFTest.OrderApproval
+  insert after ACT_Escalate call microflow WFTest.ACT_Notify;
+alter workflow WFTest.OrderApproval
+  drop activity ACT_Notify@1;
 
 -- REPLACE (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  REPLACE ACTIVITY ACT_Validate WITH CALL MICROFLOW WFTest.ACT_Process;
+alter workflow WFTest.OrderApproval
+  replace activity ACT_Validate with call microflow WFTest.ACT_Process;
 
 -- ############################################################################
 -- PART 4: INSERT / DROP OUTCOME
 -- ############################################################################
 
 -- INSERT OUTCOME with sub-activities (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT OUTCOME 'Escalate' ON ReviewOrder {
-    CALL MICROFLOW WFTest.ACT_Review;
+alter workflow WFTest.OrderApproval
+  insert outcome 'Escalate' on ReviewOrder {
+    call microflow WFTest.ACT_Review;
   };
 
 -- DROP 'Hold' (the extra one)
-ALTER WORKFLOW WFTest.OrderApproval
-  DROP OUTCOME 'Hold' ON ReviewOrder;
+alter workflow WFTest.OrderApproval
+  drop outcome 'Hold' on ReviewOrder;
 
 -- ############################################################################
 -- PART 5: INSERT / DROP PATH
 -- ############################################################################
 
 -- INSERT PATH with sub-activities (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT PATH ON 'Parallel split' {
-    CALL MICROFLOW WFTest.ACT_Finalize;
+alter workflow WFTest.OrderApproval
+  insert path on 'Parallel split' {
+    call microflow WFTest.ACT_Finalize;
   };
 
 -- DROP empty PATH 3
-ALTER WORKFLOW WFTest.OrderApproval
-  DROP PATH 'Path 3' ON 'Parallel split';
+alter workflow WFTest.OrderApproval
+  drop path 'Path 3' on 'Parallel split';
 
 -- ############################################################################
 -- PART 6: INSERT / DROP CONDITION
 -- ############################################################################
 
 -- INSERT DEFAULT branch (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT CONDITION 'Default' ON 'Decision' {
-    CALL MICROFLOW WFTest.ACT_Review;
+alter workflow WFTest.OrderApproval
+  insert condition 'Default' on 'Decision' {
+    call microflow WFTest.ACT_Review;
   };
 
 -- ############################################################################
@@ -254,71 +254,71 @@ ALTER WORKFLOW WFTest.OrderApproval
 
 -- INSERT BOUNDARY EVENT with CALL MICROFLOW sub-flow (KEPT)
 -- Interrupting boundary event sub-flow must end with JUMP TO (CE6665)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT BOUNDARY EVENT ON ReviewOrder INTERRUPTING TIMER 'addHours([%CurrentDateTime%], 2)' {
-    CALL MICROFLOW WFTest.ACT_BoundaryHandler;
-    JUMP TO ReviewOrder;
+alter workflow WFTest.OrderApproval
+  insert boundary event on ReviewOrder interrupting timer 'addHours([%CurrentDateTime%], 2)' {
+    call microflow WFTest.ACT_BoundaryHandler;
+    jump to ReviewOrder;
   };
 
 -- INSERT + DROP on another activity to demo DROP
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT BOUNDARY EVENT ON ACT_Escalate@1 INTERRUPTING TIMER;
-ALTER WORKFLOW WFTest.OrderApproval
-  DROP BOUNDARY EVENT ON ACT_Escalate@1;
+alter workflow WFTest.OrderApproval
+  insert boundary event on ACT_Escalate@1 interrupting timer;
+alter workflow WFTest.OrderApproval
+  drop boundary event on ACT_Escalate@1;
 
 -- ############################################################################
 -- PART 8: INSERT INTO NESTED FLOWS
 -- ############################################################################
 
 -- INSERT inside Decision TRUE branch (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER ACT_Process@1 CALL MICROFLOW WFTest.ACT_Finalize;
+alter workflow WFTest.OrderApproval
+  insert after ACT_Process@1 call microflow WFTest.ACT_Finalize;
 
 -- INSERT inside ParallelSplit PATH 1 (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER ACT_Process@2 CALL MICROFLOW WFTest.ACT_Review;
+alter workflow WFTest.OrderApproval
+  insert after ACT_Process@2 call microflow WFTest.ACT_Review;
 
 -- ############################################################################
 -- PART 9: ALL REMAINING ACTIVITY TYPES (KEPT in final workflow)
 -- ############################################################################
 
 -- WAIT FOR TIMER (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER ACT_Escalate@1 WAIT FOR TIMER 'addHours([%CurrentDateTime%], 1)' COMMENT 'WaitOneHour';
+alter workflow WFTest.OrderApproval
+  insert after ACT_Escalate@1 wait for timer 'addHours([%CurrentDateTime%], 1)' comment 'WaitOneHour';
 
 -- WAIT FOR NOTIFICATION (KEPT)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER WaitOneHour WAIT FOR NOTIFICATION COMMENT 'WaitForApproval';
+alter workflow WFTest.OrderApproval
+  insert after WaitOneHour wait for notification comment 'WaitForApproval';
 
 -- CALL WORKFLOW (KEPT — calls WFTest.SubProcess)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER WaitForApproval CALL WORKFLOW WFTest.SubProcess;
+alter workflow WFTest.OrderApproval
+  insert after WaitForApproval call workflow WFTest.SubProcess;
 
 -- MULTI USER TASK (KEPT — full user task with page and outcomes)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT AFTER SubProcess MULTI USER TASK GroupApproval 'Group Approval'
-    PAGE WFTest.TaskPage
-    OUTCOMES
+alter workflow WFTest.OrderApproval
+  insert after SubProcess multi user task GroupApproval 'Group Approval'
+    page WFTest.TaskPage
+    outcomes
       'Approved' { }
       'Denied' { }
   ;
 
 -- JUMP TO inside Retry outcome (KEPT — at end of sub-flow)
-ALTER WORKFLOW WFTest.OrderApproval
-  INSERT OUTCOME 'Retry' ON ReviewOrder@1 {
-    JUMP TO ReviewOrder;
+alter workflow WFTest.OrderApproval
+  insert outcome 'Retry' on ReviewOrder@1 {
+    jump to ReviewOrder;
   };
 
 -- ############################################################################
 -- PART 10: POSITIONAL DISAMBIGUATION (@N syntax)
 -- ############################################################################
 
-ALTER WORKFLOW WFTest.OrderApproval
-  SET ACTIVITY ACT_Escalate@1 DESCRIPTION 'Disambiguated by @1';
+alter workflow WFTest.OrderApproval
+  set activity ACT_Escalate@1 description 'Disambiguated by @1';
 
 -- ############################################################################
 -- PART 11: STRING LITERAL activity reference
 -- ############################################################################
 
-ALTER WORKFLOW WFTest.OrderApproval
-  SET ACTIVITY 'Review the order' DESCRIPTION 'Final description via caption';
+alter workflow WFTest.OrderApproval
+  set activity 'Review the order' description 'Final description via caption';

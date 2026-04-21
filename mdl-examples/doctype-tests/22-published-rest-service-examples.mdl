@@ -9,119 +9,119 @@
 --
 -- ============================================================================
 
-CREATE MODULE PrsTest;
+create module PrsTest;
 
 -- ############################################################################
 -- PART 1: BACKING MICROFLOWS
 -- ############################################################################
 
-CREATE MICROFLOW PrsTest.PRS_GetAllOrders ($httpResponse: System.HttpResponse)
-RETURNS String AS $Result
-BEGIN
-  DECLARE $Result String = '[]';
-  RETURN $Result;
-END;
+create microflow PrsTest.PRS_GetAllOrders ($httpResponse: System.HttpResponse)
+returns string as $Result
+begin
+  declare $Result string = '[]';
+  return $Result;
+end;
 /
 
-CREATE MICROFLOW PrsTest.PRS_GetOrderById ($httpResponse: System.HttpResponse, $id: String)
-RETURNS String AS $Result
-BEGIN
-  DECLARE $Result String = '{}';
-  RETURN $Result;
-END;
+create microflow PrsTest.PRS_GetOrderById ($httpResponse: System.HttpResponse, $id: string)
+returns string as $Result
+begin
+  declare $Result string = '{}';
+  return $Result;
+end;
 /
 
-CREATE MICROFLOW PrsTest.PRS_CreateOrder ($httpResponse: System.HttpResponse)
-RETURNS String AS $Result
-BEGIN
-  DECLARE $Result String = '{"status": "created"}';
-  RETURN $Result;
-END;
+create microflow PrsTest.PRS_CreateOrder ($httpResponse: System.HttpResponse)
+returns string as $Result
+begin
+  declare $Result string = '{"status": "created"}';
+  return $Result;
+end;
 /
 
-CREATE MICROFLOW PrsTest.PRS_DeleteOrder ($httpResponse: System.HttpResponse, $id: String)
-RETURNS String AS $Result
-BEGIN
-  DECLARE $Result String = '{"status": "deleted"}';
-  RETURN $Result;
-END;
+create microflow PrsTest.PRS_DeleteOrder ($httpResponse: System.HttpResponse, $id: string)
+returns string as $Result
+begin
+  declare $Result string = '{"status": "deleted"}';
+  return $Result;
+end;
 /
 
-CREATE MICROFLOW PrsTest.PRS_GetCustomers ($httpResponse: System.HttpResponse)
-RETURNS String AS $Result
-BEGIN
-  DECLARE $Result String = '[]';
-  RETURN $Result;
-END;
+create microflow PrsTest.PRS_GetCustomers ($httpResponse: System.HttpResponse)
+returns string as $Result
+begin
+  declare $Result string = '[]';
+  return $Result;
+end;
 /
 
 -- ############################################################################
 -- PART 2: SIMPLE PUBLISHED REST SERVICE
 -- ############################################################################
 
-CREATE PUBLISHED REST SERVICE PrsTest.OrderAPI (
-  Path: 'rest/orders/v1',
-  Version: '1.0.0',
+create published rest service PrsTest.OrderAPI (
+  path: 'rest/orders/v1',
+  version: '1.0.0',
   ServiceName: 'Order API'
 )
 {
-  RESOURCE 'orders' {
-    GET '' MICROFLOW PrsTest.PRS_GetAllOrders;
-    GET '{id}' MICROFLOW PrsTest.PRS_GetOrderById;
-    POST '' MICROFLOW PrsTest.PRS_CreateOrder;
-    DELETE '{id}' MICROFLOW PrsTest.PRS_DeleteOrder;
+  resource 'orders' {
+    get '' microflow PrsTest.PRS_GetAllOrders;
+    get '{id}' microflow PrsTest.PRS_GetOrderById;
+    post '' microflow PrsTest.PRS_CreateOrder;
+    delete '{id}' microflow PrsTest.PRS_DeleteOrder;
   }
 };
 
-DESCRIBE PUBLISHED REST SERVICE PrsTest.OrderAPI;
+describe published rest service PrsTest.OrderAPI;
 
 -- ############################################################################
 -- PART 3: MULTI-RESOURCE SERVICE
 -- ############################################################################
 
-CREATE PUBLISHED REST SERVICE PrsTest.CrmAPI (
-  Path: 'rest/crm/v1',
-  Version: '1.0.0',
+create published rest service PrsTest.CrmAPI (
+  path: 'rest/crm/v1',
+  version: '1.0.0',
   ServiceName: 'CRM API'
 )
 {
-  RESOURCE 'orders' {
-    GET '' MICROFLOW PrsTest.PRS_GetAllOrders;
+  resource 'orders' {
+    get '' microflow PrsTest.PRS_GetAllOrders;
   }
-  RESOURCE 'customers' {
-    GET '' MICROFLOW PrsTest.PRS_GetCustomers;
+  resource 'customers' {
+    get '' microflow PrsTest.PRS_GetCustomers;
   }
 };
 
-DESCRIBE PUBLISHED REST SERVICE PrsTest.CrmAPI;
+describe published rest service PrsTest.CrmAPI;
 
 -- ############################################################################
 -- PART 4: CREATE OR REPLACE
 -- ############################################################################
 
-CREATE OR REPLACE PUBLISHED REST SERVICE PrsTest.CrmAPI (
-  Path: 'rest/crm/v2',
-  Version: '2.0.0',
+create or replace published rest service PrsTest.CrmAPI (
+  path: 'rest/crm/v2',
+  version: '2.0.0',
   ServiceName: 'CRM API v2'
 )
 {
-  RESOURCE 'orders' {
-    GET '' MICROFLOW PrsTest.PRS_GetAllOrders;
-    GET '{id}' MICROFLOW PrsTest.PRS_GetOrderById;
+  resource 'orders' {
+    get '' microflow PrsTest.PRS_GetAllOrders;
+    get '{id}' microflow PrsTest.PRS_GetOrderById;
   }
-  RESOURCE 'customers' {
-    GET '' MICROFLOW PrsTest.PRS_GetCustomers;
+  resource 'customers' {
+    get '' microflow PrsTest.PRS_GetCustomers;
   }
 };
 
-DESCRIBE PUBLISHED REST SERVICE PrsTest.CrmAPI;
+describe published rest service PrsTest.CrmAPI;
 
 -- ############################################################################
 -- PART 5: SHOW AND LIST
 -- ############################################################################
 
-SHOW PUBLISHED REST SERVICES;
-SHOW PUBLISHED REST SERVICES IN PrsTest;
+show published rest services;
+show published rest services in PrsTest;
 
 -- ############################################################################
 -- PART 6: GRANT / REVOKE ACCESS
@@ -130,14 +130,14 @@ SHOW PUBLISHED REST SERVICES IN PrsTest;
 -- Grant module roles access to a published REST service. The roles must
 -- already exist in the same module's security model.
 
-CREATE MODULE ROLE PrsTest.User;
-CREATE MODULE ROLE PrsTest.Admin;
+create module role PrsTest.user;
+create module role PrsTest.Admin;
 
-GRANT ACCESS ON PUBLISHED REST SERVICE PrsTest.OrderAPI TO PrsTest.User, PrsTest.Admin;
-DESCRIBE PUBLISHED REST SERVICE PrsTest.OrderAPI;
+grant access on published rest service PrsTest.OrderAPI to PrsTest.user, PrsTest.Admin;
+describe published rest service PrsTest.OrderAPI;
 
-REVOKE ACCESS ON PUBLISHED REST SERVICE PrsTest.OrderAPI FROM PrsTest.User;
-DESCRIBE PUBLISHED REST SERVICE PrsTest.OrderAPI;
+revoke access on published rest service PrsTest.OrderAPI from PrsTest.user;
+describe published rest service PrsTest.OrderAPI;
 
 -- ############################################################################
 -- PART 7: ALTER
@@ -145,25 +145,25 @@ DESCRIBE PUBLISHED REST SERVICE PrsTest.OrderAPI;
 --
 -- Modify properties or add/remove resources without recreating the service.
 
-ALTER PUBLISHED REST SERVICE PrsTest.OrderAPI SET Version = '1.1.0';
-ALTER PUBLISHED REST SERVICE PrsTest.OrderAPI
-  SET Path = 'rest/orders/v1', ServiceName = 'Order API';
+alter published rest service PrsTest.OrderAPI set version = '1.1.0';
+alter published rest service PrsTest.OrderAPI
+  set path = 'rest/orders/v1', ServiceName = 'Order API';
 
-ALTER PUBLISHED REST SERVICE PrsTest.OrderAPI ADD RESOURCE 'shipments' {
-  GET '' MICROFLOW PrsTest.PRS_GetAllOrders;
+alter published rest service PrsTest.OrderAPI add resource 'shipments' {
+  get '' microflow PrsTest.PRS_GetAllOrders;
 };
 
-DESCRIBE PUBLISHED REST SERVICE PrsTest.OrderAPI;
+describe published rest service PrsTest.OrderAPI;
 
-ALTER PUBLISHED REST SERVICE PrsTest.OrderAPI DROP RESOURCE 'shipments';
+alter published rest service PrsTest.OrderAPI drop resource 'shipments';
 
 -- ############################################################################
 -- PART 8: DROP
 -- ############################################################################
 
-DROP PUBLISHED REST SERVICE PrsTest.OrderAPI;
+drop published rest service PrsTest.OrderAPI;
 
-SHOW PUBLISHED REST SERVICES IN PrsTest;
+show published rest services in PrsTest;
 
 -- ============================================================================
 -- END OF PUBLISHED REST SERVICE EXAMPLES
