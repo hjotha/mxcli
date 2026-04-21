@@ -3,8 +3,10 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -126,6 +128,34 @@ func TestFindNormalFlows_AllErrors(t *testing.T) {
 	got := findNormalFlows(flows)
 	if len(got) != 0 {
 		t.Errorf("expected 0 normal flows, got %d", len(got))
+	}
+}
+
+func TestEmitObjectAnnotations_EscapesMultilineText(t *testing.T) {
+	obj := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: mkID("act")},
+				Position:    model.Point{X: 100, Y: 200},
+			},
+			Caption:             "Caption\nLine",
+			AutoGenerateCaption: false,
+		},
+	}
+
+	annotationsByTarget := map[model.ID][]string{
+		mkID("act"): {"Note\nLine\tTabbed"},
+	}
+
+	var lines []string
+	emitObjectAnnotations(obj, &lines, "", annotationsByTarget)
+
+	got := strings.Join(lines, "\n")
+	if !strings.Contains(got, "@caption 'Caption\\nLine'") {
+		t.Fatalf("expected escaped caption, got:\n%s", got)
+	}
+	if !strings.Contains(got, "@annotation 'Note\\nLine\\tTabbed'") {
+		t.Fatalf("expected escaped annotation, got:\n%s", got)
 	}
 }
 

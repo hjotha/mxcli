@@ -76,8 +76,7 @@ func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, inde
 			*lines = append(*lines, indentStr+"@excluded")
 		}
 		if !activity.AutoGenerateCaption && activity.Caption != "" {
-			escapedCaption := strings.ReplaceAll(activity.Caption, "'", "''")
-			*lines = append(*lines, indentStr+fmt.Sprintf("@caption '%s'", escapedCaption))
+			*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(activity.Caption)))
 		}
 		if activity.BackgroundColor != "" && activity.BackgroundColor != "Default" {
 			*lines = append(*lines, indentStr+fmt.Sprintf("@color %s", activity.BackgroundColor))
@@ -87,8 +86,7 @@ func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, inde
 	// @annotation (attached Annotation objects)
 	if annotationsByTarget != nil {
 		for _, caption := range annotationsByTarget[currentID] {
-			escapedCaption := strings.ReplaceAll(caption, "'", "''")
-			*lines = append(*lines, indentStr+fmt.Sprintf("@annotation '%s'", escapedCaption))
+			*lines = append(*lines, indentStr+fmt.Sprintf("@annotation %s", mdlQuote(caption)))
 		}
 	}
 }
