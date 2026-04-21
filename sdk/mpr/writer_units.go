@@ -96,21 +96,24 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 	contentsHash := contentHashBase64(contents)
 
 	// Try new schema first (without Type column - Mendix 11.6.2+)
-	_, err := w.reader.db.Exec(`
+	_, firstErr := w.reader.db.Exec(`
 		INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts, Contents)
 		VALUES (?, ?, ?, 0, ?, '', ?)
 	`, unitIDBlob, containerIDBlob, containmentName, contentsHash, contents)
-	if err != nil {
-		// Try old schema with Type column
-		_, err = w.reader.db.Exec(`
-			INSERT INTO Unit (UnitID, ContainerID, ContainmentName, Type, Contents)
-			VALUES (?, ?, ?, ?, ?)
-		`, unitIDBlob, containerIDBlob, containmentName, unitType, contents)
-	}
-	if err == nil {
+	if firstErr == nil {
 		w.reader.InvalidateCache()
+		return nil
 	}
-	return err
+	// Try old schema with Type column
+	_, secondErr := w.reader.db.Exec(`
+		INSERT INTO Unit (UnitID, ContainerID, ContainmentName, Type, Contents)
+		VALUES (?, ?, ?, ?, ?)
+	`, unitIDBlob, containerIDBlob, containmentName, unitType, contents)
+	if secondErr == nil {
+		w.reader.InvalidateCache()
+		return nil
+	}
+	return fmt.Errorf("insert unit: new schema: %w; old schema: %v", firstErr, secondErr)
 }
 
 func (w *Writer) updateUnit(unitID string, contents []byte) error {
@@ -151,16 +154,20 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 
 	// MPR v1: Update in database
 	contentsHash := contentHashBase64(contents)
-	_, err := w.reader.db.Exec(`
+	_, firstErr := w.reader.db.Exec(`
 		UPDATE Unit SET Contents = ?, ContentsHash = ? WHERE UnitID = ?
 	`, contents, contentsHash, unitIDBlob)
-	if err != nil {
-		// Older v1 schemas do not have ContentsHash.
-		_, err = w.reader.db.Exec(`
-			UPDATE Unit SET Contents = ? WHERE UnitID = ?
-		`, contents, unitIDBlob)
+	if firstErr == nil {
+		return nil
 	}
-	return err
+	// Older v1 schemas do not have ContentsHash.
+	_, secondErr := w.reader.db.Exec(`
+		UPDATE Unit SET Contents = ? WHERE UnitID = ?
+	`, contents, unitIDBlob)
+	if secondErr == nil {
+		return nil
+	}
+	return fmt.Errorf("update unit: new schema: %w; old schema: %v", firstErr, secondErr)
 }
 
 // UpdateRawUnit saves raw BSON bytes for a unit, bypassing deserialization.

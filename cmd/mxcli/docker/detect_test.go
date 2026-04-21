@@ -272,7 +272,9 @@ func TestResolveMxBuild_PrefersStudioProOverCache(t *testing.T) {
 func TestResolveMxBuild_PrefersExactCachedVersion(t *testing.T) {
 	dir := t.TempDir()
 	setTestHomeDir(t, dir)
-	t.Setenv("PATH", "")
+	// Point PATH at an empty temp dir (rather than clearing it) so exec.LookPath
+	// still works for any other testing infrastructure but can't find mxbuild.
+	t.Setenv("PATH", t.TempDir())
 
 	versions := []string{"9.24.40.80973", "11.6.3", "11.9.0"}
 	var expected string

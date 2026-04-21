@@ -133,7 +133,7 @@ func serializeExportObjectElement(id string, elem *model.ExportMappingElement, p
 		"JsonPath":                          jsonPath,
 		"XmlPath":                           "",
 		"ObjectHandling":                    objectHandling,
-		"ObjectHandlingBackup":              "Create",
+		"ObjectHandlingBackup":              objectHandling,
 		"ObjectHandlingBackupAllowOverride": false,
 		"Association":                       elem.Association,
 		"Children":                          children,

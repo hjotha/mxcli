@@ -141,15 +141,19 @@ func (wt *WriteTransaction) WriteUnit(unitID string, contents []byte) error {
 
 	// V1: Update in database directly
 	contentsHash := contentHashBase64(contents)
-	_, err := wt.tx.Exec(`
+	_, firstErr := wt.tx.Exec(`
 		UPDATE Unit SET Contents = ?, ContentsHash = ? WHERE UnitID = ?
 	`, contents, contentsHash, unitIDBlob)
-	if err != nil {
-		_, err = wt.tx.Exec(`
-			UPDATE Unit SET Contents = ? WHERE UnitID = ?
-		`, contents, unitIDBlob)
+	if firstErr == nil {
+		return nil
 	}
-	return err
+	_, secondErr := wt.tx.Exec(`
+		UPDATE Unit SET Contents = ? WHERE UnitID = ?
+	`, contents, unitIDBlob)
+	if secondErr == nil {
+		return nil
+	}
+	return fmt.Errorf("write unit: new schema: %w; old schema: %v", firstErr, secondErr)
 }
 
 // Commit commits the transaction.

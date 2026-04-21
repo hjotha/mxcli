@@ -34,6 +34,12 @@ func execCreateModuleRole(ctx *ExecContext, s *ast.CreateModuleRoleStmt) error {
 	// Check if role already exists
 	for _, mr := range ms.ModuleRoles {
 		if mr.Name == s.Name.Name {
+			if mr.Description == autoDocumentRoleDescription {
+				if !ctx.Quiet {
+					fmt.Fprintf(ctx.Output, "Module role %s.%s already exists (auto-provisioned)\n", s.Name.Module, s.Name.Name)
+				}
+				return nil
+			}
 			return mdlerrors.NewAlreadyExists("module role", s.Name.Module+"."+s.Name.Name)
 		}
 	}
@@ -148,6 +154,9 @@ func execDropModuleRole(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	if ps, err := ctx.Backend.GetProjectSecurity(); err == nil {
 		if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(ps.ID, qualifiedRole); err == nil && n > 0 {
 			fmt.Fprintf(ctx.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
+		}
+		if err := pruneInvalidUserRoles(ctx, ps); err != nil {
+			return mdlerrors.NewBackend("cleanup invalid user roles", err)
 		}
 	}
 
