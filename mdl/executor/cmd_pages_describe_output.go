@@ -13,10 +13,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// mdlQuote wraps a string in single quotes, escaping any embedded single quotes
-// by doubling them (MDL convention: 'it”s here').
+// mdlQuote wraps a string in single quotes and escapes MDL-sensitive characters.
 func mdlQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	escaped := strings.NewReplacer(
+		"\\", "\\\\",
+		"\n", "\\n",
+		"\r", "\\r",
+		"\t", "\\t",
+		"'", "''",
+	).Replace(s)
+	return "'" + escaped + "'"
 }
 
 // appendDataGridPagingProps appends non-default paging properties for DataGrid2.
