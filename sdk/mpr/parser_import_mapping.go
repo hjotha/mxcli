@@ -96,6 +96,11 @@ func parseImportObjectMappingElement(raw map[string]any) *model.ImportMappingEle
 	}
 	if v, ok := raw["ObjectHandling"].(string); ok {
 		elem.ObjectHandling = v
+		if v == "Find" {
+			if backup, ok := raw["ObjectHandlingBackup"].(string); ok && backup == "Create" {
+				elem.ObjectHandling = "FindOrCreate"
+			}
+		}
 	}
 	if v, ok := raw["Association"].(string); ok {
 		elem.Association = v

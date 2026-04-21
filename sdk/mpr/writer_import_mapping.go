@@ -119,6 +119,11 @@ func serializeImportObjectElement(id string, elem *model.ImportMappingElement, p
 	if objectHandling == "" {
 		objectHandling = "Create"
 	}
+	objectHandlingBackup := objectHandling
+	if objectHandling == "FindOrCreate" {
+		objectHandling = "Find"
+		objectHandlingBackup = "Create"
+	}
 
 	// IMPORTANT: The correct $Type is "ImportMappings$ObjectMappingElement" (no "Import" prefix in the element name).
 	// The generated metamodel (ImportMappingsImportObjectMappingElement) is misleading — Studio Pro will throw
@@ -132,7 +137,7 @@ func serializeImportObjectElement(id string, elem *model.ImportMappingElement, p
 		"JsonPath":                          jsonPath,
 		"XmlPath":                           "",
 		"ObjectHandling":                    objectHandling,
-		"ObjectHandlingBackup":              objectHandling,
+		"ObjectHandlingBackup":              objectHandlingBackup,
 		"ObjectHandlingBackupAllowOverride": false,
 		"Association":                       elem.Association,
 		"Children":                          children,

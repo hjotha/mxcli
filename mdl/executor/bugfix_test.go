@@ -559,3 +559,69 @@ func TestExprToStringNoSpaces(t *testing.T) {
 		})
 	}
 }
+
+// TestLogNodeExpressionValidation verifies semantic restrictions on LOG NODE.
+// The grammar accepts any expression (so that `NODE @Module.LogNode 'msg'`
+// parses), but Mendix stores the node as a log-node selection, so only a
+// literal, variable, or constant reference is meaningful. Anything else must
+// surface as a validation error rather than silently serializing to an empty
+// node.
+func TestLogNodeExpressionValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{
+			name: "literal_string_is_accepted",
+			input: `CREATE MICROFLOW Test.MF () BEGIN
+  LOG INFO NODE 'LogNode' 'hello';
+END;`,
+			wantErr: false,
+		},
+		{
+			name: "constant_ref_is_accepted",
+			input: `CREATE MICROFLOW Test.MF () BEGIN
+  LOG WARNING NODE @Test.LogNode 'hello';
+END;`,
+			wantErr: false,
+		},
+		{
+			name: "variable_ref_is_accepted",
+			input: `CREATE MICROFLOW Test.MF ($NodeName : String) BEGIN
+  LOG INFO NODE $NodeName 'hello';
+END;`,
+			wantErr: false,
+		},
+		{
+			name: "arithmetic_expression_is_rejected",
+			input: `CREATE MICROFLOW Test.MF () BEGIN
+  LOG INFO NODE 1 + 2 'hello';
+END;`,
+			wantErr: true,
+		},
+		{
+			name: "function_call_is_rejected",
+			input: `CREATE MICROFLOW Test.MF () BEGIN
+  LOG INFO NODE toString(42) 'hello';
+END;`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errs := validateMicroflowFromMDL(t, tt.input)
+			hasLogNodeErr := false
+			for _, msg := range errs {
+				if strings.Contains(msg, "LOG NODE") {
+					hasLogNodeErr = true
+					break
+				}
+			}
+			if hasLogNodeErr != tt.wantErr {
+				t.Errorf("LOG NODE validation: wantErr=%v, got errors=%v", tt.wantErr, errs)
+			}
+		})
+	}
+}

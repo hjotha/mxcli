@@ -79,8 +79,20 @@ func (fb *flowBuilder) isVariableDeclared(varName string) bool {
 
 // registerResultVariableType records the output type of an action so later
 // statements such as CHANGE, ADD TO, or attribute access can resolve members.
+// When dt is nil (e.g. backend lookup failed), any stale entity/list typing is
+// cleared but the variable remains declared as Unknown so downstream statements
+// don't report it as undeclared.
 func (fb *flowBuilder) registerResultVariableType(varName string, dt microflows.DataType) {
-	if varName == "" || dt == nil {
+	if varName == "" {
+		return
+	}
+	if dt == nil {
+		if fb.varTypes != nil {
+			delete(fb.varTypes, varName)
+		}
+		if fb.declaredVars != nil {
+			fb.declaredVars[varName] = "Unknown"
+		}
 		return
 	}
 

@@ -1301,10 +1301,17 @@ CREATE IMPORT MAPPING RestTest.IMM_Order
 --
 -- Uses FIND OR CREATE to upsert: find existing by KEY, create if not found.
 
+CREATE PERSISTENT ENTITY RestTest.PetRecord (
+  PetId: Integer,
+  Name: String,
+  Status: String
+);
+/
+
 CREATE IMPORT MAPPING RestTest.IMM_UpsertPet
   WITH JSON STRUCTURE RestTest.JSON_Pet
 {
-  FIND OR CREATE RestTest.PetResponse {
+  FIND OR CREATE RestTest.PetRecord {
     PetId = id KEY,
     Name = name,
     Status = status
