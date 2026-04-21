@@ -433,11 +433,45 @@ func unquoteString(s string) string {
 	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
 		s = s[1 : len(s)-1]
 	}
-	// Handle escaped single quotes (both \' and '')
-	s = strings.ReplaceAll(s, "''", "'")
-	s = strings.ReplaceAll(s, "\\'", "'")
-	s = strings.ReplaceAll(s, "\\\\", "\\")
-	return s
+	var b strings.Builder
+	b.Grow(len(s))
+
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '\'':
+			if i+1 < len(s) && s[i+1] == '\'' {
+				b.WriteByte('\'')
+				i++
+			} else {
+				b.WriteByte('\'')
+			}
+		case '\\':
+			if i+1 >= len(s) {
+				b.WriteByte('\\')
+				continue
+			}
+			i++
+			switch s[i] {
+			case 'n':
+				b.WriteByte('\n')
+			case 'r':
+				b.WriteByte('\r')
+			case 't':
+				b.WriteByte('\t')
+			case '\\':
+				b.WriteByte('\\')
+			case '\'':
+				b.WriteByte('\'')
+			default:
+				b.WriteByte('\\')
+				b.WriteByte(s[i])
+			}
+		default:
+			b.WriteByte(s[i])
+		}
+	}
+
+	return b.String()
 }
 
 func extractLiteralValue(ctx parser.ILiteralContext) any {
