@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
+	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/pmezard/go-difflib/difflib"
 )
@@ -220,6 +222,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	output := &bytes.Buffer{}
 	exec := New(output)
+	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
 
 	// Connect to project
 	connectStmt := &ast.ConnectStmt{
