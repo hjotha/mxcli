@@ -312,6 +312,11 @@ func TestLogWithTemplateSyntax(t *testing.T) {
 		t.Errorf("Expected log level INFO, got %s", logStmt.Level)
 	}
 
+	nodeLit, ok := logStmt.Node.(*ast.LiteralExpr)
+	if !ok || nodeLit.Kind != ast.LiteralString || nodeLit.Value != "OrderService" {
+		t.Fatalf("Expected node string literal 'OrderService', got %#v", logStmt.Node)
+	}
+
 	if len(logStmt.Template) != 1 {
 		t.Errorf("Expected 1 template parameter, got %d", len(logStmt.Template))
 	}
@@ -363,6 +368,40 @@ func TestLogWithMultipleParams(t *testing.T) {
 	}
 
 	t.Log("LOG with multiple template params parsed successfully")
+}
+
+func TestLogWithNodeExpressionConstant(t *testing.T) {
+	input := `CREATE MICROFLOW TestModule.LogNodeExprTest () RETURNS Boolean
+	BEGIN
+		LOG INFO NODE @TestModule.SecurityLogNode 'User added';
+		RETURN true;
+	END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt, ok := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	if !ok {
+		t.Fatalf("Expected CreateMicroflowStmt, got %T", prog.Statements[0])
+	}
+
+	logStmt, ok := stmt.Body[0].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[0])
+	}
+
+	node, ok := logStmt.Node.(*ast.ConstantRefExpr)
+	if !ok {
+		t.Fatalf("Expected ConstantRefExpr for node, got %T", logStmt.Node)
+	}
+	if node.QualifiedName.Module != "TestModule" || node.QualifiedName.Name != "SecurityLogNode" {
+		t.Fatalf("Unexpected node constant: %s.%s", node.QualifiedName.Module, node.QualifiedName.Name)
+	}
 }
 
 // =============================================================================

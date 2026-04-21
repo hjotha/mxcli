@@ -12,7 +12,7 @@ import (
 )
 
 // buildLogStatement converts LOG statement context to LogStmt.
-// Grammar: LOG logLevel? (NODE STRING_LITERAL)? expression logTemplateParams?
+// Grammar: LOG logLevel? (NODE expression)? expression logTemplateParams?
 func buildLogStatement(ctx parser.ILogStatementContext) *ast.LogStmt {
 	if ctx == nil {
 		return nil
@@ -41,16 +41,20 @@ func buildLogStatement(ctx parser.ILogStatementContext) *ast.LogStmt {
 		}
 	}
 
-	// Get optional node name
-	if logCtx.NODE() != nil {
-		if str := logCtx.STRING_LITERAL(); str != nil {
-			stmt.Node = unquoteString(str.GetText())
+	var exprs []parser.IExpressionContext
+	for _, child := range logCtx.GetChildren() {
+		if expr, ok := child.(parser.IExpressionContext); ok {
+			exprs = append(exprs, expr)
 		}
 	}
 
-	// Get message expression
-	if expr := logCtx.Expression(); expr != nil {
-		stmt.Message = buildExpression(expr)
+	// LOG always has a message expression; when NODE is present the first
+	// expression is the node and the second is the message.
+	if logCtx.NODE() != nil && len(exprs) > 1 {
+		stmt.Node = buildExpression(exprs[0])
+		stmt.Message = buildExpression(exprs[1])
+	} else if len(exprs) > 0 {
+		stmt.Message = buildExpression(exprs[0])
 	}
 
 	// Parse template parameters: WITH ({1} = expr, {2} = expr, ...)

@@ -107,7 +107,54 @@ func TestRoundtripMicroflow_LogWithTemplate(t *testing.T) {
 		t.Error("Expected $CustomerName parameter in output")
 	}
 
+	if err := env.executeMDL(output); err != nil {
+		t.Fatalf("Describe output should execute without syntax errors: %v\n%s", err, output)
+	}
+
+	output2, err := env.describeMDL(`DESCRIBE MICROFLOW ` + microflowName + `;`)
+	if err != nil {
+		t.Fatalf("Failed to describe microflow after re-exec: %v", err)
+	}
+	if strings.Contains(output2, "'''Processing order") {
+		t.Fatalf("Roundtrip should not double-quote log template text:\n%s", output2)
+	}
+
 	t.Logf("log with template roundtrip successful:\n%s", output)
+}
+
+func TestRoundtripMicroflow_LogWithNodeExpression(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	if err := env.executeMDL(`CREATE CONSTANT ` + testModule + `.SecurityLogNode TYPE String DEFAULT 'Security';`); err != nil {
+		t.Fatalf("Failed to create constant for log node: %v", err)
+	}
+
+	microflowName := testModule + ".TestLogNodeExpression"
+	env.registerCleanup("microflow", microflowName)
+
+	createMDL := `CREATE MICROFLOW ` + microflowName + ` () RETURNS Boolean
+	BEGIN
+		LOG INFO NODE @` + testModule + `.SecurityLogNode 'User added';
+		RETURN true;
+	END;`
+
+	if err := env.executeMDL(createMDL); err != nil {
+		t.Fatalf("Failed to create microflow with node expression: %v", err)
+	}
+
+	output, err := env.describeMDL(`DESCRIBE MICROFLOW ` + microflowName + `;`)
+	if err != nil {
+		t.Fatalf("Failed to describe microflow: %v", err)
+	}
+
+	if !containsProperty(output, "LOG INFO NODE @"+testModule+".SecurityLogNode") {
+		t.Fatalf("Expected constant node expression in output, got:\n%s", output)
+	}
+
+	if err := env.executeMDL(output); err != nil {
+		t.Fatalf("Describe output should execute without syntax errors: %v\n%s", err, output)
+	}
 }
 
 // --- DESCRIBE MICROFLOW Roundtrip Tests ---
