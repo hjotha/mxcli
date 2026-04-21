@@ -38,7 +38,11 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 
 	if len(s.Template) > 0 {
 		// Use provided template parameters
-		templateText = fb.exprToString(s.Message)
+		if lit, ok := s.Message.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralString {
+			templateText = fmt.Sprintf("%v", lit.Value)
+		} else {
+			templateText = fb.exprToString(s.Message)
+		}
 		// Sort parameters by index to ensure correct order
 		maxIndex := 0
 		for _, p := range s.Template {
@@ -61,10 +65,15 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 		templateParams = []string{fb.exprToString(s.Message)}
 	}
 
+	logNodeName := "'Application'"
+	if s.Node != nil {
+		logNodeName = fb.exprToString(s.Node)
+	}
+
 	action := &microflows.LogMessageAction{
 		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		LogLevel:    logLevel,
-		LogNodeName: "'" + s.Node + "'", // Store as expression (e.g., 'TEST')
+		LogNodeName: logNodeName,
 		MessageTemplate: &model.Text{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Translations: map[string]string{

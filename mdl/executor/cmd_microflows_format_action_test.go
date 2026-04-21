@@ -535,7 +535,23 @@ func TestFormatAction_LogMessage_EscapesMultiline(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "LOG INFO NODE 'App' 'Line 1\\nLine 2';"
+	want := "log info node 'App' 'Line 1\\nLine 2';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_LogMessage_NodeExpression(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.LogMessageAction{
+		LogLevel:    microflows.LogLevelInfo,
+		LogNodeName: "@MyModule.SecurityLogNode",
+		MessageTemplate: &model.Text{
+			Translations: map[string]string{"en_US": "User added"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "log info node @MyModule.SecurityLogNode 'User added';"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
