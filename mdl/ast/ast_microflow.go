@@ -261,10 +261,10 @@ func (p *TemplateParam) IsDataSourceRef() bool {
 	return p.DataSourceName != ""
 }
 
-// LogStmt represents: LOG LEVEL NODE 'node' 'message' [WITH params]
+// LogStmt represents: LOG LEVEL [NODE expr] message [WITH params]
 type LogStmt struct {
 	Level       LogLevel             // Log level (INFO, WARNING, etc.)
-	Node        string               // Log node name
+	Node        Expression           // Optional log node expression
 	Message     Expression           // Message expression
 	Template    []TemplateParam      // Optional WITH template params
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
