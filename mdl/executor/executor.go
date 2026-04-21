@@ -35,6 +35,15 @@ type executorCache struct {
 	createdPages      map[string]*createdPageInfo      // qualifiedName -> info
 	createdSnippets   map[string]*createdSnippetInfo   // qualifiedName -> info
 
+	// Track items dropped during this session so that a subsequent
+	// CREATE OR REPLACE/MODIFY with the same qualified name can reuse the
+	// original UnitID and ContainerID. Studio Pro treats Unit rows with a
+	// different UnitID (or the same UnitID under a different container) as
+	// unrelated documents, producing broken projects on delete+insert
+	// rewrites. Reusing both keeps the rewrite semantically equivalent to an
+	// in-place update.
+	droppedMicroflows map[string]*droppedUnitInfo // qualifiedName -> original IDs
+
 	// Track domain models modified during this session for finalization
 	modifiedDomainModels map[model.ID]string // domain model unit ID -> module name
 
@@ -67,6 +76,15 @@ type createdSnippetInfo struct {
 	Name        string
 	ModuleName  string
 	ContainerID model.ID
+}
+
+// droppedUnitInfo remembers the original UnitID and ContainerID of a document
+// dropped during this session so that a subsequent CREATE OR REPLACE/MODIFY
+// with the same qualified name can reuse them instead of generating new UUIDs.
+type droppedUnitInfo struct {
+	ID           model.ID
+	ContainerID  model.ID
+	AllowedRoles []model.ID
 }
 
 // getEntityNames returns the entity name lookup map, using the pre-warmed cache if available.
@@ -415,4 +433,54 @@ func (e *Executor) ensureCache() {
 	if e.cache == nil {
 		e.cache = &executorCache{}
 	}
+}
+
+// rememberDroppedMicroflow records the UnitID and ContainerID of a microflow
+// that is about to be deleted via DROP MICROFLOW. A follow-up CREATE OR
+// REPLACE/MODIFY for the same qualified name will reuse both instead of
+// generating a fresh UUID and defaulting to the module root, so Studio Pro
+// continues to see the unit as "updated in place" rather than a delete+insert
+// pair.
+func rememberDroppedMicroflow(ctx *ExecContext, qualifiedName string, id, containerID model.ID, allowedRoles []model.ID) {
+	if ctx == nil || qualifiedName == "" || id == "" {
+		return
+	}
+	if ctx.Cache == nil {
+		ctx.Cache = &executorCache{}
+		if ctx.executor != nil {
+			ctx.executor.cache = ctx.Cache
+		}
+	}
+	if ctx.Cache.droppedMicroflows == nil {
+		ctx.Cache.droppedMicroflows = make(map[string]*droppedUnitInfo)
+	}
+	ctx.Cache.droppedMicroflows[qualifiedName] = &droppedUnitInfo{
+		ID:           id,
+		ContainerID:  containerID,
+		AllowedRoles: cloneRoleIDs(allowedRoles),
+	}
+}
+
+func cloneRoleIDs(roles []model.ID) []model.ID {
+	if len(roles) == 0 {
+		return nil
+	}
+	cloned := make([]model.ID, len(roles))
+	copy(cloned, roles)
+	return cloned
+}
+
+// consumeDroppedMicroflow returns the original IDs of a microflow dropped
+// earlier in this session (if any) and removes the entry so repeated CREATEs
+// don't collide on the same ID. Returns nil when nothing was remembered.
+func consumeDroppedMicroflow(ctx *ExecContext, qualifiedName string) *droppedUnitInfo {
+	if ctx == nil || ctx.Cache == nil || ctx.Cache.droppedMicroflows == nil {
+		return nil
+	}
+	info, ok := ctx.Cache.droppedMicroflows[qualifiedName]
+	if !ok {
+		return nil
+	}
+	delete(ctx.Cache.droppedMicroflows, qualifiedName)
+	return info
 }
