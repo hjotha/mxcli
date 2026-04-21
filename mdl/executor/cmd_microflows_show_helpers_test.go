@@ -3,8 +3,10 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -126,6 +128,34 @@ func TestFindNormalFlows_AllErrors(t *testing.T) {
 	got := findNormalFlows(flows)
 	if len(got) != 0 {
 		t.Errorf("expected 0 normal flows, got %d", len(got))
+	}
+}
+
+func TestEmitObjectAnnotations_EscapesMultilineText(t *testing.T) {
+	obj := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: mkID("act")},
+				Position:    model.Point{X: 100, Y: 200},
+			},
+			Caption:             "Caption\nLine",
+			AutoGenerateCaption: false,
+		},
+	}
+
+	annotationsByTarget := map[model.ID][]string{
+		mkID("act"): {"Note\nLine\tTabbed"},
+	}
+
+	var lines []string
+	emitObjectAnnotations(obj, &lines, "", annotationsByTarget)
+
+	got := strings.Join(lines, "\n")
+	if !strings.Contains(got, "@caption 'Caption\\nLine'") {
+		t.Fatalf("expected escaped caption, got:\n%s", got)
+	}
+	if !strings.Contains(got, "@annotation 'Note\\nLine\\tTabbed'") {
+		t.Fatalf("expected escaped annotation, got:\n%s", got)
 	}
 }
 
@@ -360,8 +390,8 @@ func TestFormatActivity_LoopedActivity(t *testing.T) {
 		},
 	}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "LOOP $Order IN $OrderList" {
-		t.Errorf("got %q, want %q", got, "LOOP $Order IN $OrderList")
+	if got != "LOOP $Order IN $OrderList BEGIN" {
+		t.Errorf("got %q, want %q", got, "LOOP $Order IN $OrderList BEGIN")
 	}
 }
 
@@ -369,8 +399,8 @@ func TestFormatActivity_LoopedActivity_Defaults(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.LoopedActivity{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
-	if got != "LOOP $Item IN $List" {
-		t.Errorf("got %q, want %q", got, "LOOP $Item IN $List")
+	if got != "LOOP $Item IN $List BEGIN" {
+		t.Errorf("got %q, want %q", got, "LOOP $Item IN $List BEGIN")
 	}
 }
 
