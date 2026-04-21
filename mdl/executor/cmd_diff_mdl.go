@@ -345,9 +345,9 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 		lines = append(lines, indentStr+"END LOOP;")
 
 	case *ast.LogStmt:
-		nodeStr := s.Node
-		if !strings.HasPrefix(nodeStr, "'") {
-			nodeStr = "'" + nodeStr + "'"
+		nodeStr := "'Application'"
+		if s.Node != nil {
+			nodeStr = diffExpressionToString(ctx, s.Node)
 		}
 		msgStr := diffExpressionToString(ctx, s.Message)
 		stmt := fmt.Sprintf("%sLOG %s NODE %s %s", indentStr, strings.ToUpper(s.Level.String()), nodeStr, msgStr)

@@ -1400,7 +1400,7 @@ raiseErrorStatement
 
 // LOG INFO NODE 'TEST' 'Message'; or LOG INFO 'Message'; or LOG WARNING 'Message' WITH ({1} = $var);
 logStatement
-    : LOG logLevel? (NODE STRING_LITERAL)? expression logTemplateParams?
+    : LOG logLevel? (NODE expression)? expression logTemplateParams?
     ;
 
 logLevel

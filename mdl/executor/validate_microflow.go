@@ -400,6 +400,7 @@ func referencedVars(stmt ast.MicroflowStatement) []string {
 	case *ast.RemoveFromListStmt:
 		refs = append(refs, s.Item, s.List)
 	case *ast.LogStmt:
+		refs = append(refs, exprVarRefs(s.Node)...)
 		refs = append(refs, exprVarRefs(s.Message)...)
 	}
 	return refs

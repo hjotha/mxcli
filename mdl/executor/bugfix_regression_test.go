@@ -140,6 +140,82 @@ func TestAddWhileStatement_PreservesAnnotatedPosition(t *testing.T) {
 	}
 }
 
+func TestAddLogMessageAction_PreservesNodeExpression(t *testing.T) {
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     200,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+
+	stmt := &ast.LogStmt{
+		Level: ast.LogInfo,
+		Node: &ast.ConstantRefExpr{
+			QualifiedName: ast.QualifiedName{Module: "TestModule", Name: "SecurityLogNode"},
+		},
+		Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "User added"},
+	}
+
+	id := fb.addLogMessageAction(stmt)
+	if id == "" {
+		t.Fatal("expected log activity ID")
+	}
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+
+	action, ok := activity.Action.(*microflows.LogMessageAction)
+	if !ok {
+		t.Fatalf("expected LogMessageAction, got %T", activity.Action)
+	}
+
+	if action.LogNodeName != "@TestModule.SecurityLogNode" {
+		t.Fatalf("got log node %q, want %q", action.LogNodeName, "@TestModule.SecurityLogNode")
+	}
+}
+
+func TestAddLogMessageAction_TemplateLiteralDoesNotKeepQuotes(t *testing.T) {
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     200,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+
+	stmt := &ast.LogStmt{
+		Level: ast.LogInfo,
+		Node:  &ast.LiteralExpr{Kind: ast.LiteralString, Value: "App"},
+		Message: &ast.LiteralExpr{
+			Kind:  ast.LiteralString,
+			Value: "Order {1}",
+		},
+		Template: []ast.TemplateParam{
+			{Index: 1, Value: &ast.VariableExpr{Name: "OrderNumber"}},
+		},
+	}
+
+	id := fb.addLogMessageAction(stmt)
+	if id == "" {
+		t.Fatal("expected log activity ID")
+	}
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+
+	action, ok := activity.Action.(*microflows.LogMessageAction)
+	if !ok {
+		t.Fatalf("expected LogMessageAction, got %T", activity.Action)
+	}
+
+	if got := action.MessageTemplate.Translations["en_US"]; got != "Order {1}" {
+		t.Fatalf("got message template %q, want %q", got, "Order {1}")
+	}
+}
+
 // =============================================================================
 // Issue #19: Long type must not be downgraded to Integer
 // =============================================================================
