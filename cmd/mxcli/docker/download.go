@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -44,7 +45,18 @@ func CachedMxBuildPath(version string) string {
 	if err != nil {
 		return ""
 	}
-	for _, name := range mxbuildBinaryNames() {
+	return cachedBinaryPath(cacheDir, mxbuildBinaryNames())
+}
+
+// AnyCachedMxBuildPath searches for any cached mxbuild version.
+// Returns the path to the newest cached mxbuild binary found, or empty string.
+// On Windows, checks both "mxbuild.exe" and "mxbuild" (Linux binary cached for Docker).
+func AnyCachedMxBuildPath() string {
+	return anyCachedBinaryPath(mxbuildBinaryNames())
+}
+
+func cachedBinaryPath(cacheDir string, names []string) string {
+	for _, name := range names {
 		bin := filepath.Join(cacheDir, "modeler", name)
 		if info, err := os.Stat(bin); err == nil && !info.IsDir() {
 			return bin
@@ -53,22 +65,116 @@ func CachedMxBuildPath(version string) string {
 	return ""
 }
 
-// AnyCachedMxBuildPath searches for any cached mxbuild version.
-// Returns the path to the first mxbuild binary found, or empty string.
-// On Windows, checks both "mxbuild.exe" and "mxbuild" (Linux binary cached for Docker).
-func AnyCachedMxBuildPath() string {
+func anyCachedBinaryPath(names []string) string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
 	}
-	for _, name := range mxbuildBinaryNames() {
+	var matches []string
+	for _, name := range names {
 		pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", name)
-		matches, _ := filepath.Glob(pattern)
-		if len(matches) > 0 {
-			return matches[len(matches)-1]
+		found, _ := filepath.Glob(pattern)
+		matches = append(matches, found...)
+	}
+	return newestVersionedPath(matches)
+}
+
+func globVersionedMatches(patterns []string) []string {
+	var matches []string
+	for _, pattern := range patterns {
+		found, _ := filepath.Glob(pattern)
+		matches = append(matches, found...)
+	}
+	return matches
+}
+
+func exactVersionedPath(paths []string, version string) string {
+	if version == "" {
+		return ""
+	}
+	var exact []string
+	for _, path := range paths {
+		if versionFromPath(path) == version {
+			exact = append(exact, path)
 		}
 	}
-	return ""
+	return newestVersionedPath(exact)
+}
+
+func newestVersionedPath(paths []string) string {
+	var best string
+	var bestVersion []int
+	bestValid := false
+
+	for _, path := range paths {
+		versionParts, ok := parseVersionParts(versionFromPath(path))
+		switch {
+		case best == "":
+			best = path
+			bestVersion = versionParts
+			bestValid = ok
+		case ok && !bestValid:
+			best = path
+			bestVersion = versionParts
+			bestValid = true
+		case ok && bestValid:
+			if cmp := compareVersionParts(versionParts, bestVersion); cmp > 0 || (cmp == 0 && path > best) {
+				best = path
+				bestVersion = versionParts
+			}
+		case !ok && !bestValid && path > best:
+			best = path
+		}
+	}
+
+	return best
+}
+
+func versionFromPath(path string) string {
+	versionDir := filepath.Dir(filepath.Dir(path))
+	return filepath.Base(versionDir)
+}
+
+func parseVersionParts(version string) ([]int, bool) {
+	if version == "" {
+		return nil, false
+	}
+	parts := strings.Split(version, ".")
+	values := make([]int, 0, len(parts))
+	for _, part := range parts {
+		if part == "" {
+			return nil, false
+		}
+		value, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, false
+		}
+		values = append(values, value)
+	}
+	return values, true
+}
+
+func compareVersionParts(left, right []int) int {
+	maxLen := len(left)
+	if len(right) > maxLen {
+		maxLen = len(right)
+	}
+	for i := 0; i < maxLen; i++ {
+		var l, r int
+		if i < len(left) {
+			l = left[i]
+		}
+		if i < len(right) {
+			r = right[i]
+		}
+		switch {
+		case l < r:
+			return -1
+		case l > r:
+			return 1
+		}
+	}
+	return 0
 }
 
 // DownloadMxBuild downloads and extracts MxBuild for the given version.
