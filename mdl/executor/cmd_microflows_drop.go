@@ -32,11 +32,17 @@ func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
 		modID := h.FindModuleID(mf.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && mf.Name == s.Name.Name {
+			qualifiedName := s.Name.Module + "." + s.Name.Name
+			// Remember the UnitID and ContainerID *before* deletion so that a
+			// subsequent CREATE OR REPLACE/MODIFY for the same qualified name
+			// can reuse them. This keeps Studio Pro compatible by turning
+			// delete+insert into an in-place update from the file's
+			// perspective — same UnitID, same folder, just new bytes.
+			rememberDroppedMicroflow(ctx, qualifiedName, mf.ID, mf.ContainerID, mf.AllowedModuleRoles)
 			if err := ctx.Backend.DeleteMicroflow(mf.ID); err != nil {
 				return mdlerrors.NewBackend("delete microflow", err)
 			}
 			// Clear executor-level caches so subsequent CREATE sees fresh state
-			qualifiedName := s.Name.Module + "." + s.Name.Name
 			if ctx.Cache != nil && ctx.Cache.createdMicroflows != nil {
 				delete(ctx.Cache.createdMicroflows, qualifiedName)
 			}

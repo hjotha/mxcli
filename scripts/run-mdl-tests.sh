@@ -8,6 +8,13 @@ MXCLI_BIN="${2:-$ROOT_DIR/bin/mxcli}"
 TEST_SPEC="${3:-$ROOT_DIR/mdl-examples/doctype-tests/microflow-spec.test.mdl}"
 BOOTSTRAP_MDL="${4:-$ROOT_DIR/mdl-examples/doctype-tests/02-microflow-examples.mdl}"
 
+# Validate the inputs up front — `${VAR:?...}` only fires for *unset* variables,
+# so a typo'd path would otherwise get silently copied as an empty sandbox.
+[[ -f "$PROJECT_MPR" ]] || { echo "error: project MPR not found: $PROJECT_MPR" >&2; exit 1; }
+[[ -x "$MXCLI_BIN" ]] || { echo "error: mxcli binary not executable: $MXCLI_BIN" >&2; exit 1; }
+[[ -f "$TEST_SPEC" ]] || { echo "error: test spec not found: $TEST_SPEC" >&2; exit 1; }
+[[ -f "$BOOTSTRAP_MDL" ]] || { echo "error: bootstrap MDL not found: $BOOTSTRAP_MDL" >&2; exit 1; }
+
 SOURCE_DIR="$(cd "$(dirname "$PROJECT_MPR")" && pwd)"
 PROJECT_NAME="$(basename "$PROJECT_MPR")"
 TMP_DIR="$(mktemp -d)"

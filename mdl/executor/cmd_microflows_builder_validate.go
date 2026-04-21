@@ -215,6 +215,22 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 	case *ast.RollbackStmt:
 		// No error handling to validate
 
+	case *ast.LogStmt:
+		// LOG NODE accepts arbitrary expressions at the grammar level so that
+		// `LOG INFO NODE @Module.LogNode '...'` parses correctly, but only a
+		// constant reference, a string literal, or a variable reference carries
+		// meaning: Mendix stores NODE as a Log Node selection. Everything else
+		// (arithmetic, function calls, attribute paths) would silently serialize
+		// to an empty node, so reject it up front.
+		if s.Node != nil {
+			switch s.Node.(type) {
+			case *ast.ConstantRefExpr, *ast.LiteralExpr, *ast.VariableExpr:
+				// accepted
+			default:
+				fb.addError("LOG NODE must be a string literal, a variable ($Var), or a constant reference (@Module.Name)")
+			}
+		}
+
 	case *ast.RetrieveStmt:
 		// Check for duplicate variable — RETRIEVE implicitly declares the variable
 		if s.Variable != "" && fb.isVariableDeclared(s.Variable) {

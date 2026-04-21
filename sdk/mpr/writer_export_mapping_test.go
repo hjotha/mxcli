@@ -79,6 +79,8 @@ func TestSerializeExportMapping_TypeNames(t *testing.T) {
 	// CRITICAL: must NOT be "ExportMappings$ExportObjectMappingElement"
 	assertField(t, objElem, "$Type", "ExportMappings$ObjectMappingElement")
 	assertField(t, objElem, "Entity", "MyModule.Pet")
+	assertField(t, objElem, "ObjectHandling", "Parameter")
+	assertField(t, objElem, "ObjectHandlingBackup", "Parameter")
 
 	children := extractBsonArray(objElem["Children"])
 	if len(children) != 2 {

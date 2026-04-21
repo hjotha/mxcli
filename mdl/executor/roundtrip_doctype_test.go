@@ -39,7 +39,6 @@ var scriptKnownCEErrors = map[string][]string{
 	"06-rest-client-examples.mdl": {
 		"CE0061", // No entity selected (JSON response/body mapping without entity)
 		"CE6035", // RestOperationCallAction error handling not supported
-		"CE6702", // TODO: export mapping root ObjectHandling not persisted correctly
 		"CE7056", // Undefined parameter (dynamic header {1} placeholder)
 		"CE7062", // Missing Accept header
 		"CE7064", // POST/PUT must include body
