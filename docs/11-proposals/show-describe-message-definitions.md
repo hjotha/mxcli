@@ -22,23 +22,23 @@ Message Definition Collections define entity-based message schemas for integrati
 ```
 MessageDefinitions$MessageDefinitionCollection:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
   MessageDefinitions: []*MessageDefinitions$EntityMessageDefinition
     - Name: string
-    - Documentation: string
+    - documentation: string
     - ExposedEntity: MessageDefinitions$ExposedEntity
-      - Entity: string (qualified entity name)
+      - entity: string (qualified entity name)
       - ExposedName: string
       - Children: [] (recursive)
         - MessageDefinitions$ExposedAttribute:
-          - Attribute: string (qualified name)
+          - attribute: string (qualified name)
           - ExposedName: string
           - PrimitiveType: string
         - MessageDefinitions$ExposedAssociation:
-          - Association: string (qualified name)
-          - Entity: string (qualified entity name)
+          - association: string (qualified name)
+          - entity: string (qualified entity name)
           - ExposedName: string
           - Children: [] (recursive — nested entity exposure)
 ```
@@ -48,7 +48,7 @@ MessageDefinitions$MessageDefinitionCollection:
 ### SHOW MESSAGE DEFINITIONS
 
 ```
-SHOW MESSAGE DEFINITIONS [IN Module]
+show message DEFINITIONS [in module]
 ```
 
 | Qualified Name | Module | Name | Messages | Entities |
@@ -59,33 +59,33 @@ Where "Messages" is the count of message definitions in the collection, and "Ent
 ### DESCRIBE MESSAGE DEFINITION
 
 ```
-DESCRIBE MESSAGE DEFINITION Module.Name
+describe message DEFINITION Module.Name
 ```
 
 Output format:
 
 ```
-MESSAGE DEFINITION COLLECTION MyModule.CustomerMessages
+message DEFINITION collection MyModule.CustomerMessages
 {
-  MESSAGE CustomerMessage
-    ENTITY MyModule.Customer AS 'Customer'
+  message CustomerMessage
+    entity MyModule.Customer as 'Customer'
     {
-      Id AS 'id': Integer
-      Name AS 'name': String
-      Email AS 'email': String
-      ASSOCIATION MyModule.Customer_Address AS 'addresses'
-        ENTITY MyModule.Address AS 'Address'
+      Id as 'id': integer
+      Name as 'name': string
+      Email as 'email': string
+      association MyModule.Customer_Address as 'addresses'
+        entity MyModule.Address as 'Address'
         {
-          Street AS 'street': String
-          City AS 'city': String
+          Street as 'street': string
+          City as 'city': string
         }
     };
 
-  MESSAGE OrderMessage
-    ENTITY MyModule.Order AS 'Order'
+  message OrderMessage
+    entity MyModule.Order as 'Order'
     {
-      OrderNumber AS 'orderNumber': Integer
-      TotalAmount AS 'totalAmount': Decimal
+      OrderNumber as 'orderNumber': integer
+      TotalAmount as 'totalAmount': decimal
     };
 };
 /
@@ -99,7 +99,7 @@ MESSAGE DEFINITION COLLECTION MyModule.CustomerMessages
 type MessageDefinitionCollection struct {
     ContainerID model.ID
     Name        string
-    Documentation string
+    documentation string
     Excluded    bool
     ExportLevel string
     Definitions []*MessageDefinition
@@ -107,25 +107,25 @@ type MessageDefinitionCollection struct {
 
 type MessageDefinition struct {
     Name          string
-    Documentation string
-    Entity        string // qualified entity name
+    documentation string
+    entity        string // qualified entity name
     ExposedName   string
-    Attributes    []*ExposedAttribute
-    Associations  []*ExposedAssociation
+    attributes    []*ExposedAttribute
+    associations  []*ExposedAssociation
 }
 
 type ExposedAttribute struct {
-    Attribute   string // qualified name
+    attribute   string // qualified name
     ExposedName string
-    Type        string
+    type        string
 }
 
 type ExposedAssociation struct {
-    Association string
-    Entity      string
+    association string
+    entity      string
     ExposedName string
-    Attributes  []*ExposedAttribute
-    Associations []*ExposedAssociation // recursive
+    attributes  []*ExposedAttribute
+    associations []*ExposedAssociation // recursive
 }
 ```
 
@@ -141,7 +141,7 @@ func (r *Reader) ListMessageDefinitions() ([]*model.MessageDefinitionCollection,
 
 ### 4. Add AST, Grammar, Visitor, Executor
 
-Grammar tokens: `MESSAGE` (may already exist for business events), `DEFINITION`, `DEFINITIONS`.
+Grammar tokens: `message` (may already exist for business events), `DEFINITION`, `DEFINITIONS`.
 
 ### 5. Add Autocomplete
 

@@ -23,7 +23,7 @@ https://graphstudio.mendixdemo.com/sparql/graphmart/http%3A%2F%2Fcambridgesemant
 
 Two things to note:
 1. The graphmart URI is **URL-encoded and embedded in the path** (colons and slashes become `%3A` / `%2F`).
-2. SPARQL queries are sent as the **POST body** with `Content-Type: application/sparql-query`, and the response is JSON when `Accept: application/sparql-results+json`.
+2. SPARQL queries are sent as the **POST body** with `content-type: application/sparql-query`, and the response is JSON when `Accept: application/sparql-results+json`.
 
 Verify with curl first:
 
@@ -62,32 +62,32 @@ Each row in `bindings` is an object of `{var: {type, value}}`. A JSLT transforme
 
 ```
 ┌────────────────────┐   ┌────────────────────┐   ┌────────────────────┐   ┌────────────────┐
-│  Inline REST CALL  │─▶│ Data Transformer   │─▶│  Import Mapping    │─▶│ Mendix Entity  │
-│  POST + Basic Auth │   │ JSLT: flatten      │   │ JSON → entities    │   │ (persistent)   │
+│  Inline rest call  │─▶│ data transformer   │─▶│  import mapping    │─▶│ Mendix entity  │
+│  post + basic auth │   │ jslt: flatten      │   │ json → entities    │   │ (persistent)   │
 │  SPARQL as body    │   │ results.bindings   │   │                    │   │                │
 └────────────────────┘   └────────────────────┘   └────────────────────┘   └────────────────┘
 ```
 
-**Why inline `REST CALL` rather than `CREATE REST CLIENT` + `SEND REST REQUEST`?**
+**Why inline `rest call` rather than `create rest client` + `send rest request`?**
 
-- At the time of writing, REST Client `AUTHENTICATION: BASIC (Username: '...', Password: '...')` silently fails to attach the `Authorization` header when the password contains special characters (e.g. `!`). Result: `401 Unauthorized`.
-- Inline `REST CALL ... AUTH BASIC '<user>' PASSWORD '<pass>'` handles the same credentials correctly.
+- At the time of writing, REST Client `authentication: basic (username: '...', password: '...')` silently fails to attach the `Authorization` header when the password contains special characters (e.g. `!`). Result: `401 Unauthorized`.
+- Inline `rest call ... auth basic '<user>' password '<pass>'` handles the same credentials correctly.
 
 **Why persistent entities for the final list?**
 
-- Non-persistent `ReferenceSet` children can't be extracted as a `List` in MDL microflows (no documented `RETRIEVE ... BY ASSOCIATION` syntax), and `LOOP $c IN $Parent/Assoc` fails at build time.
-- Persistent entities work with `DataSource: DATABASE` on a DataGrid — the standard happy path.
+- Non-persistent `ReferenceSet` children can't be extracted as a `list` in MDL microflows (no documented `retrieve ... by association` syntax), and `loop $c in $Parent/Assoc` fails at build time.
+- Persistent entities work with `datasource: database` on a DataGrid — the standard happy path.
 
 ## Step-by-step template
 
 ### 1. Persistent target entity
 
 ```sql
-@Position(100, 100)
-CREATE PERSISTENT ENTITY MyModule.Customer (
-  CustomerUri:  String(500),
-  CustomerId:   String(50),
-  CustomerName: String(200)
+@position(100, 100)
+create persistent entity MyModule.Customer (
+  CustomerUri:  string(500),
+  CustomerId:   string(50),
+  CustomerName: string(200)
 );
 /
 ```
@@ -97,16 +97,16 @@ CREATE PERSISTENT ENTITY MyModule.Customer (
 Import mappings need a single root entity. A tiny non-persistent wrapper with one dummy attribute is enough:
 
 ```sql
-@Position(400, 100)
-CREATE NON-PERSISTENT ENTITY MyModule.CustomerImport (
-  DummyAttr: String(10)
+@position(400, 100)
+create non-persistent entity MyModule.CustomerImport (
+  DummyAttr: string(10)
 );
 /
 
-CREATE ASSOCIATION MyModule.CustomerImport_Customer
-  FROM MyModule.CustomerImport
-  TO   MyModule.Customer
-  TYPE ReferenceSet;
+create association MyModule.CustomerImport_Customer
+  from MyModule.CustomerImport
+  to   MyModule.Customer
+  type ReferenceSet;
 /
 ```
 
@@ -115,10 +115,10 @@ CREATE ASSOCIATION MyModule.CustomerImport_Customer
 Take the nested `results.bindings[].*.value` shape and emit a flat `customers[]` array:
 
 ```sql
-CREATE DATA TRANSFORMER MyModule.SimplifyCustomers
-SOURCE JSON '{"head":{"vars":["customer","customerId","customerName"]},"results":{"bindings":[{"customer":{"type":"uri","value":"http://.../Customer/0"},"customerId":{"type":"literal","value":"CUST001"},"customerName":{"type":"literal","value":"Global Tech Solutions Inc."}}]}}'
+create data transformer MyModule.SimplifyCustomers
+source json '{"head":{"vars":["customer","customerId","customerName"]},"results":{"bindings":[{"customer":{"type":"uri","value":"http://.../Customer/0"},"customerId":{"type":"literal","value":"CUST001"},"customerName":{"type":"literal","value":"Global Tech Solutions Inc."}}]}}'
 {
-  JSLT $$
+  jslt $$
 {
   "customers": [for (.results.bindings)
     {
@@ -146,14 +146,14 @@ SOURCE JSON '{"head":{"vars":["customer","customerId","customerName"]},"results"
 The JSON structure represents the **transformed** shape (after JSLT), not the raw SPARQL response:
 
 ```sql
-CREATE JSON STRUCTURE MyModule.JSON_Customers
-SNIPPET '{"customers":[{"customerUri":"http://example.com/Customer/0","customerId":"CUST001","customerName":"Global Tech Solutions Inc."}]}';
+create json structure MyModule.JSON_Customers
+snippet '{"customers":[{"customerUri":"http://example.com/Customer/0","customerId":"CUST001","customerName":"Global Tech Solutions Inc."}]}';
 
-CREATE IMPORT MAPPING MyModule.IMM_Customers
-  WITH JSON STRUCTURE MyModule.JSON_Customers
+create import mapping MyModule.IMM_Customers
+  with json structure MyModule.JSON_Customers
 {
-  CREATE MyModule.CustomerImport {
-    CREATE MyModule.CustomerImport_Customer/MyModule.Customer = customers {
+  create MyModule.CustomerImport {
+    create MyModule.CustomerImport_Customer/MyModule.Customer = customers {
       CustomerUri  = customerUri,
       CustomerId   = customerId,
       CustomerName = customerName
@@ -165,54 +165,54 @@ CREATE IMPORT MAPPING MyModule.IMM_Customers
 ### 5. Microflow — the actual API call
 
 ```sql
-CREATE MICROFLOW MyModule.ACT_RefreshCustomers ()
-RETURNS Boolean AS $Success
-BEGIN
-  LOG INFO NODE 'MyModule' '=== Refresh start ===';
+create microflow MyModule.ACT_RefreshCustomers ()
+returns boolean as $success
+begin
+  log info node 'MyModule' '=== Refresh start ===';
 
   -- Clear existing persistent records (full replace)
-  RETRIEVE $Existing FROM MyModule.Customer;
-  LOOP $C IN $Existing BEGIN
-    DELETE $C;
-  END LOOP;
+  retrieve $Existing from MyModule.Customer;
+  loop $C in $Existing begin
+    delete $C;
+  end loop;
 
   -- Inline REST CALL — NOT the REST Client (see notes)
-  $RawJson = REST CALL POST 'https://graphstudio.mendixdemo.com/sparql/graphmart/http%3A%2F%2Fcambridgesemantics.com%2FGraphmart%2F3617250aca6a40d88972c1c0de38f86a'
-    HEADER 'Accept'       = 'application/sparql-results+json'
-    HEADER 'Content-Type' = 'application/sparql-query'
-    AUTH BASIC '<username>' PASSWORD '<password>'
-    BODY 'PREFIX model: <http://cambridgesemantics.com/SourceLayer/c4ce0eca2e7241f2aee13b46fbdca3f8/Model#> SELECT ?customer ?customerId ?customerName FROM <http://cambridgesemantics.com/SourceLayer/c4ce0eca2e7241f2aee13b46fbdca3f8/Model> WHERE {1} ?customer a model:ExamplePlmBom.Customer; model:ExamplePlmBom.Customer.id ?customerId; model:ExamplePlmBom.Customer.name ?customerName; {2}'
-    WITH ({1} = '{', {2} = '}')
-    TIMEOUT 60
-    RETURNS String
-    ON ERROR CONTINUE;
+  $RawJson = rest call post 'https://graphstudio.mendixdemo.com/sparql/graphmart/http%3A%2F%2Fcambridgesemantics.com%2FGraphmart%2F3617250aca6a40d88972c1c0de38f86a'
+    header 'Accept'       = 'application/sparql-results+json'
+    header 'Content-Type' = 'application/sparql-query'
+    auth basic '<username>' password '<password>'
+    body 'PREFIX model: <http://cambridgesemantics.com/SourceLayer/c4ce0eca2e7241f2aee13b46fbdca3f8/Model#> SELECT ?customer ?customerId ?customerName FROM <http://cambridgesemantics.com/SourceLayer/c4ce0eca2e7241f2aee13b46fbdca3f8/Model> WHERE {1} ?customer a model:ExamplePlmBom.Customer; model:ExamplePlmBom.Customer.id ?customerId; model:ExamplePlmBom.Customer.name ?customerName; {2}'
+    with ({1} = '{', {2} = '}')
+    timeout 60
+    returns string
+    on error continue;
 
-  LOG INFO NODE 'MyModule' '{1}' WITH ({1} = 'HTTP status: ' + toString($latestHttpResponse/StatusCode));
+  log info node 'MyModule' '{1}' with ({1} = 'HTTP status: ' + toString($latestHttpResponse/StatusCode));
 
-  IF $latestHttpResponse/StatusCode = 200 THEN
-    $SimplifiedJson = TRANSFORM $RawJson WITH MyModule.SimplifyCustomers;
-    $ImportResult   = IMPORT FROM MAPPING MyModule.IMM_Customers($SimplifiedJson);
-    LOG INFO NODE 'MyModule' '=== Done ===';
-  END IF;
+  if $latestHttpResponse/StatusCode = 200 then
+    $SimplifiedJson = transform $RawJson with MyModule.SimplifyCustomers;
+    $ImportResult   = import from mapping MyModule.IMM_Customers($SimplifiedJson);
+    log info node 'MyModule' '=== Done ===';
+  end if;
 
-  RETURN true;
-END;
+  return true;
+end;
 /
 ```
 
 ### 6. Page
 
 ```sql
-CREATE PAGE MyModule.Customer_Overview (
-  Title:  'Customers (from Graph Mart)',
-  Layout: Atlas_Core.Atlas_Default
+create page MyModule.Customer_Overview (
+  title:  'Customers (from Graph Mart)',
+  layout: Atlas_Core.Atlas_Default
 ) {
-  DYNAMICTEXT heading (Content: 'Customers', RenderMode: H2)
-  ACTIONBUTTON btnRefresh (Caption: 'Refresh', Action: MICROFLOW MyModule.ACT_RefreshCustomers, ButtonStyle: Primary)
-  DATAGRID gridCustomers (DataSource: DATABASE MyModule.Customer SORT BY CustomerId ASC) {
-    COLUMN colId   (Attribute: CustomerId,   Caption: 'ID')
-    COLUMN colName (Attribute: CustomerName, Caption: 'Name')
-    COLUMN colUri  (Attribute: CustomerUri,  Caption: 'URI')
+  dynamictext heading (content: 'Customers', rendermode: H2)
+  actionbutton btnRefresh (caption: 'Refresh', action: microflow MyModule.ACT_RefreshCustomers, buttonstyle: primary)
+  datagrid gridCustomers (datasource: database MyModule.Customer sort by CustomerId asc) {
+    column colId   (attribute: CustomerId,   caption: 'ID')
+    column colName (attribute: CustomerName, caption: 'Name')
+    column colUri  (attribute: CustomerUri,  caption: 'URI')
   }
 }
 /
@@ -222,41 +222,41 @@ CREATE PAGE MyModule.Customer_Overview (
 
 ### `!` in Basic Auth password → 401
 
-REST Client `AUTHENTICATION: BASIC (...)` with a literal password containing `!` sends no auth header at runtime. Workaround: use inline `REST CALL ... AUTH BASIC '<user>' PASSWORD '<pass>'`. The inline form works with the same literal credentials.
+REST Client `authentication: basic (...)` with a literal password containing `!` sends no auth header at runtime. Workaround: use inline `rest call ... auth basic '<user>' password '<pass>'`. The inline form works with the same literal credentials.
 
-### SPARQL `{` braces in `BODY` templates are consumed as placeholder escapes
+### SPARQL `{` braces in `body` templates are consumed as placeholder escapes
 
-In `REST CALL ... BODY '...'`, the body is a template string where `{1}`, `{2}` are placeholders. A literal `{` must be escaped as `{{`, but in this runtime `{{` is sent **literally** rather than being converted to `{` → server returns `400 Bad Request`.
+In `rest call ... body '...'`, the body is a template string where `{1}`, `{2}` are placeholders. A literal `{` must be escaped as `{{`, but in this runtime `{{` is sent **literally** rather than being converted to `{` → server returns `400 Bad request`.
 
 **Solution:** pass literal braces as placeholder values:
 
 ```sql
-BODY '... WHERE {1} ... {2}'
-WITH ({1} = '{', {2} = '}')
+body '... WHERE {1} ... {2}'
+with ({1} = '{', {2} = '}')
 ```
 
 ### JSON structure auto-detects ISO strings as DateTime
 
-If your JSLT emits ISO 8601 timestamps (`"2026-04-13T14:00"`) and the target Mendix attribute is `String`, `CREATE JSON STRUCTURE ... SNIPPET '...'` will infer `DateTime` from the sample and mxbuild fails with `CE5015` ("schema type DateTime doesn't match attribute type String").
+If your JSLT emits ISO 8601 timestamps (`"2026-04-13T14:00"`) and the target Mendix attribute is `string`, `create json structure ... snippet '...'` will infer `datetime` from the sample and mxbuild fails with `CE5015` ("schema type DateTime doesn't match attribute type String").
 
 **Solutions:**
 - Use a non-ISO sample value in the snippet (e.g. `"2026-04-13 14:00 CET"`).
 - Or slice/format the timestamp in JSLT so it doesn't look like ISO 8601 (`$rawTime[11 : 16]` for `HH:MM`).
-- Or change the target attribute to `DateTime`.
+- Or change the target attribute to `datetime`.
 
 ### Non-persistent child lists can't be extracted in microflows
 
 The import mapping happily populates `CustomerImport` with a `ReferenceSet` of `Customer` children, but:
-- `RETURN $Root/MyModule.CustomerImport_Customer` → "Error(s) in expression" at build
-- `DECLARE $C List of MyModule.Customer = $Root/...` → "Error(s) in expression"
-- `LOOP $c IN $Root/MyModule.CustomerImport_Customer` → "The 'Iterate over' property is required"
-- DataGrid `DataSource: $currentObject/MyModule.CustomerImport_Customer` → BSON serializer drops the datasource
+- `return $Root/MyModule.CustomerImport_Customer` → "Error(s) in expression" at build
+- `declare $C list of MyModule.Customer = $Root/...` → "Error(s) in expression"
+- `loop $c in $Root/MyModule.CustomerImport_Customer` → "The 'Iterate over' property is required"
+- DataGrid `datasource: $currentObject/MyModule.CustomerImport_Customer` → BSON serializer drops the datasource
 
-**Solution:** Make the target entity **persistent**. The import mapping commits them automatically, and the page uses the standard `DataSource: DATABASE MyModule.Customer` for the grid. A full replace on each refresh (delete-all-then-import) keeps data consistent with the graph.
+**Solution:** Make the target entity **persistent**. The import mapping commits them automatically, and the page uses the standard `datasource: database MyModule.Customer` for the grid. A full replace on each refresh (delete-all-then-import) keeps data consistent with the graph.
 
 ### Rapid drop/create cycles on the same entity can corrupt the MPR
 
-If you `DROP ENTITY X` then `CREATE ENTITY X` repeatedly while associations referencing `X` exist, the associations may hold the **old** entity GUID → mxbuild fails with `KeyNotFoundException`. Fix by dropping/recreating the broken association after the entity change.
+If you `drop entity X` then `create entity X` repeatedly while associations referencing `X` exist, the associations may hold the **old** entity GUID → mxbuild fails with `KeyNotFoundException`. Fix by dropping/recreating the broken association after the entity change.
 
 ## Exploring the graph
 
@@ -264,33 +264,33 @@ Before building the pipeline, explore the graph to understand what's there. Usef
 
 **List all classes with counts:**
 ```sparql
-SELECT DISTINCT ?class (COUNT(?s) AS ?count)
-FROM <http://.../Model>
-WHERE { ?s a ?class }
-GROUP BY ?class
-ORDER BY DESC(?count)
+select distinct ?class (count(?s) as ?count)
+from <http://.../model>
+where { ?s a ?class }
+GROUP by ?class
+ORDER by desc(?count)
 ```
 
 **List properties used by a given class:**
 ```sparql
-PREFIX model: <http://.../Model#>
-SELECT DISTINCT ?property
-FROM <http://.../Model>
-WHERE {
+PREFIX model: <http://.../model#>
+select distinct ?property
+from <http://.../model>
+where {
   ?s a model:ExamplePlmBom.Customer ;
      ?property ?o .
 }
-ORDER BY ?property
+ORDER by ?property
 ```
 
 **Filter to a single namespace (skip rdf/owl noise):**
 ```sparql
-SELECT DISTINCT ?class ?property
-FROM <http://.../Model>
-WHERE {
+select distinct ?class ?property
+from <http://.../model>
+where {
   ?s a ?class ;
      ?property ?o .
-  FILTER(STRSTARTS(STR(?class), "http://.../Model#MyPrefix"))
+  filter(STRSTARTS(STR(?class), "http://.../model#MyPrefix"))
 }
 ```
 
@@ -298,7 +298,7 @@ WHERE {
 
 For demos, literal credentials inline in the microflow are the simplest and most reliable. For anything else, put them in a project constant and reference it from the microflow via `$ConstantName` (requires a non-trivial amount of setup — see the project settings skill).
 
-**Do not** use `$ConstantName` in `CREATE REST CLIENT ... AUTHENTICATION: BASIC (Username: $C, Password: $C)` — the MDL parser rejects the `$` prefix there, and the skill files' claim of `Rest$ConstantValue` serialization isn't reachable.
+**Do not** use `$ConstantName` in `create rest client ... authentication: basic (username: $C, password: $C)` — the MDL parser rejects the `$` prefix there, and the skill files' claim of `rest$ConstantValue` serialization isn't reachable.
 
 ## Related skills
 

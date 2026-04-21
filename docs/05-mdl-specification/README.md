@@ -16,38 +16,38 @@ For the comprehensive quick reference of all MDL statements, see [MDL Quick Refe
 
 ```sql
 -- Connection
-CONNECT LOCAL '/path/to/app.mpr';
-DISCONNECT;
-STATUS;
+connect local '/path/to/app.mpr';
+disconnect;
+status;
 
 -- Query
-SHOW MODULES;
-SHOW ENTITIES [IN ModuleName];
-SHOW STRUCTURE [DEPTH 1|2|3] [IN Module] [ALL];
-DESCRIBE ENTITY Module.EntityName;
+show modules;
+show entities [in ModuleName];
+show structure [depth 1|2|3] [in module] [all];
+describe entity Module.EntityName;
 
 -- Domain Model
-CREATE PERSISTENT ENTITY Module.Name (
-  AttrName: Type [NOT NULL] [UNIQUE] [DEFAULT value]
+create persistent entity Module.Name (
+  AttrName: type [not null] [unique] [default value]
 );
-ALTER ENTITY Module.Name ADD (NewAttr: String(200));
-DROP ENTITY Module.Name;
+alter entity Module.Name add (NewAttr: string(200));
+drop entity Module.Name;
 
 -- Microflows
-CREATE MICROFLOW Module.Name BEGIN ... END;
-DESCRIBE MICROFLOW Module.Name;
+create microflow Module.Name begin ... end;
+describe microflow Module.Name;
 
 -- Pages
-CREATE PAGE Module.Name (Title: 'Title', Layout: Module.Layout) { ... };
-ALTER PAGE Module.Name { SET Caption = 'New' ON btnSave; };
+create page Module.Name (title: 'Title', layout: Module.Layout) { ... };
+alter page Module.Name { set caption = 'New' on btnSave; };
 
 -- Security
-GRANT Module.Role ON Module.Entity (CREATE, DELETE, READ *, WRITE *);
-GRANT EXECUTE ON MICROFLOW Module.Name TO Module.Role;
+grant Module.Role on Module.Entity (create, delete, read *, write *);
+grant execute on microflow Module.Name to Module.Role;
 
 -- External SQL
-SQL CONNECT postgres 'dsn' AS alias;
-SQL alias SELECT * FROM table;
+sql connect postgres 'dsn' as alias;
+sql alias select * from table;
 
 -- Navigation, Settings, Business Events, Java Actions
 -- See MDL Quick Reference for full syntax
@@ -56,7 +56,7 @@ SQL alias SELECT * FROM table;
 ## Design Principles
 
 1. **SQL-like syntax** - Familiar to developers with database experience
-2. **Case-insensitive keywords** - `CREATE`, `create`, `Create` are equivalent
+2. **Case-insensitive keywords** - `create`, `create`, `create` are equivalent
 3. **Qualified names** - `Module.Element` format for cross-module references
 4. **Statement terminators** - `;` or `/` to end statements
 5. **Multi-line support** - Statements can span multiple lines

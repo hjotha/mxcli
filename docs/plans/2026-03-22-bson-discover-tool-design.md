@@ -8,7 +8,7 @@ MDL's DESCRIBE output is a lossy projection of BSON data. When implementing new 
 2. **Compare** reference BSON (Studio Pro) vs generated BSON (mxcli) field-by-field
 3. **Validate** round-trip fidelity: CREATE → mx check → DESCRIBE → compare original BSON
 
-Today this requires ad-hoc Go scripts, manual JSON diffing, and Python one-liners. The workflow baseline comparison (2026-03-22) revealed that `DESCRIBE WORKFLOW` drops ~50% of semantic fields (UserTargeting, DueDate, CompletionCriteria, TaskName, TaskDescription, OnCreatedEvent, etc.).
+Today this requires ad-hoc Go scripts, manual JSON diffing, and Python one-liners. The workflow baseline comparison (2026-03-22) revealed that `describe workflow` drops ~50% of semantic fields (UserTargeting, DueDate, CompletionCriteria, TaskName, TaskDescription, OnCreatedEvent, etc.).
 
 ## Solution
 
@@ -21,7 +21,7 @@ A unified `mxcli bson` subcommand suite for BSON discovery, comparison, and roun
 Analyzes field coverage: what BSON fields exist vs what MDL DESCRIBE outputs.
 
 ```bash
-# Scan all workflows, report field coverage per $Type
+# Scan all workflows, report field coverage per $type
 mxcli bson discover -p app.mpr --type workflow
 
 # Scan a specific object
@@ -35,11 +35,11 @@ mxcli bson discover -p app.mpr --type page
 **Output:**
 
 ```
-Workflows$Workflow (2 objects scanned)
+workflows$workflow (2 objects scanned)
   ✓ Name                          covered
-  ✓ Parameter                     covered (PARAMETER)
+  ✓ parameter                     covered (parameter)
   ✓ Flow                          covered (BEGIN...END)
-  ✗ Title                         UNCOVERED (string, ex: "Workflow")
+  ✗ title                         UNCOVERED (string, ex: "workflow")
   ✗ AdminPage                     UNCOVERED (null)
   ✗ DueDate                       UNCOVERED (string, ex: "")
   ✗ WorkflowName                  UNCOVERED (*MicroflowsStringTemplate)
@@ -50,9 +50,9 @@ Workflows$Workflow (2 objects scanned)
 
   Coverage: 8/15 semantic fields (53%)
 
-Workflows$SingleUserTaskActivity (5 instances)
-  ✓ Name, Caption, TaskPage       covered
-  ✓ Outcomes                      covered (OUTCOMES)
+workflows$SingleUserTaskActivity (5 instances)
+  ✓ Name, caption, TaskPage       covered
+  ✓ outcomes                      covered (outcomes)
   ✗ UserTargeting                 UNCOVERED (*WorkflowsUserTargeting)
   ✗ AutoAssignSingleTargetUser    UNCOVERED (bool, ex: false)
   ✗ DueDate                       UNCOVERED (string, ex: "")
@@ -67,15 +67,15 @@ Workflows$SingleUserTaskActivity (5 instances)
 **Algorithm:**
 
 1. Read all BSON objects of the given type from MPR
-2. For each unique `$Type` encountered, collect all field names and sample values
-3. Look up the `$Type` in the reflect-based TypeRegistry → get full field list from generated metamodel structs
+2. For each unique `$type` encountered, collect all field names and sample values
+3. Look up the `$type` in the reflect-based TypeRegistry → get full field list from generated metamodel structs
 4. Run DESCRIBE on the object → capture MDL text output
 5. For each semantic field, use heuristic matching to check if its value appears in MDL output:
    - String values: substring search in MDL text
    - Bool/int values: search stringified form
    - Object/null: mark as `unknown` (needs manual confirmation, or defaults to uncovered if null/default value)
 6. Fields in BSON but not in reflect metadata → flagged as `unknown-to-schema` (version mismatch)
-7. Report coverage per `$Type`
+7. Report coverage per `$type`
 
 ### `mxcli bson compare`
 
@@ -85,23 +85,23 @@ Diff two BSON objects, skipping structural/layout noise.
 # Same MPR, two objects
 mxcli bson compare -p app.mpr --type workflow "Module.WfA" "Module.WfB"
 
-# Cross-MPR comparison (reference vs generated)
+# cross-MPR comparison (reference vs generated)
 mxcli bson compare --type workflow -p ref.mpr "Module.Wf" -p2 test.mpr "Module.Wf"
 
-# Show all differences including structural
+# show all differences including structural
 mxcli bson compare --type workflow -p ref.mpr "Module.Wf" -p2 test.mpr "Module.Wf" --all
 ```
 
 **Output:**
 
 ```
-Workflows$Workflow
-  = Name: "Workflow"
-  ≠ Title: "Workflow" vs ""                          ← value mismatch
+workflows$workflow
+  = Name: "workflow"
+  ≠ title: "workflow" vs ""                          ← value mismatch
   ≠ WorkflowV2: false vs (missing)                   ← field absent
 
-Workflows$SingleUserTaskActivity [userTask1]
-  = Name, Caption, TaskPage
+workflows$SingleUserTaskActivity [userTask1]
+  = Name, caption, TaskPage
   + AutoAssignSingleTargetUser: false                 ← only in left
   + UserTargeting: XPathUserTargeting{...}            ← only in left
   + OnCreatedEvent: NoEvent                           ← only in left
@@ -114,18 +114,18 @@ Summary: 12 differences, 8 only-in-left, 0 only-in-right, 4 value-mismatches
 - Extends existing `dump-bson --compare` logic (currently in `cmd_dump_bson.go`)
 - Recursive diff on BSON `map[string]any` trees
 - Default skip set: `$ID`, `PersistentId`, `RelativeMiddlePoint`, `Size` (overridable with `--all`)
-- Activity matching: by `Name` field within the same `$Type` (not by array index)
-- Array diffing: match elements by `$Type` + identifying field (`Name`, `Value`, `Caption`)
+- Activity matching: by `Name` field within the same `$type` (not by array index)
+- Array diffing: match elements by `$type` + identifying field (`Name`, `value`, `caption`)
 
 ### `mxcli bson roundtrip`
 
 Automated CREATE → mx check → DESCRIBE → compare cycle.
 
 ```bash
-# Full round-trip validation
+# full round-trip validation
 mxcli bson roundtrip -p app.mpr --type workflow --object "Module.WfName"
 
-# All objects of a type
+# all objects of a type
 mxcli bson roundtrip -p app.mpr --type workflow --all
 
 # Skip mx check (fast mode)
@@ -135,17 +135,17 @@ mxcli bson roundtrip -p app.mpr --type workflow --object "Module.WfName" --skip-
 **Output:**
 
 ```
-Step 1: DESCRIBE → MDL .......................... OK (45 lines)
+Step 1: describe → MDL .......................... OK (45 lines)
 Step 2: Copy project ............................ OK (/tmp/mxcli-rt-xxxxx/)
-Step 3: DROP + CREATE ........................... OK
+Step 3: drop + create ........................... OK
 Step 4: mx check ................................ OK (0 errors)
 Step 5: BSON compare (ref vs generated) ......... 8 differences
   + UserTargeting (5 instances)              lost in round-trip
   + AutoAssignSingleTargetUser (5 instances) lost in round-trip
   + OnCreatedEvent (5 instances)             lost in round-trip
   = Flow structure                           identical
-  = Parameter mappings                       identical
-Step 6: MDL compare (DESCRIBE before vs after) .. 0 differences
+  = parameter mappings                       identical
+Step 6: MDL compare (describe before vs after) .. 0 differences
 
 Result: BSON round-trip has 8 field losses, MDL round-trip is lossless
 ```
@@ -196,7 +196,7 @@ bson/                      //go:build debug  — core logic package
 # Release (default) — no bson commands, no size impact
 make build
 
-# Debug — includes bson discover/compare/roundtrip/dump
+# debug — includes bson discover/compare/roundtrip/dump
 make build-debug
 # go build -tags debug -o bin/mxcli-debug ./cmd/mxcli
 ```
@@ -216,20 +216,20 @@ import (
     "github.com/mendixlabs/mxcli/generated/metamodel"
 )
 
-// TypeRegistry maps BSON $Type → Go reflect.Type
+// TypeRegistry maps BSON $type → Go reflect.Type
 // Populated at init time.
 var TypeRegistry = map[string]reflect.Type{
-    "Workflows$Workflow":                reflect.TypeOf(metamodel.WorkflowsWorkflow{}),
-    "Workflows$SingleUserTaskActivity":  reflect.TypeOf(metamodel.WorkflowsSingleUserTaskActivity{}),
-    "Workflows$MultiUserTaskActivity":   reflect.TypeOf(metamodel.WorkflowsMultiUserTaskActivity{}),
-    "Workflows$CallMicroflowTask":       reflect.TypeOf(metamodel.WorkflowsCallMicroflowTask{}),
-    "Workflows$CallWorkflowActivity":    reflect.TypeOf(metamodel.WorkflowsCallWorkflowActivity{}),
-    "Workflows$ExclusiveSplitActivity":  reflect.TypeOf(metamodel.WorkflowsExclusiveSplitActivity{}),
-    "Workflows$ParallelSplitActivity":   reflect.TypeOf(metamodel.WorkflowsParallelSplitActivity{}),
-    "Workflows$JumpToActivity":          reflect.TypeOf(metamodel.WorkflowsJumpToActivity{}),
-    "Workflows$WaitForTimerActivity":    reflect.TypeOf(metamodel.WorkflowsWaitForTimerActivity{}),
-    "Workflows$WaitForNotificationActivity": reflect.TypeOf(metamodel.WorkflowsWaitForNotificationActivity{}),
-    // ... extensible to other namespaces (Microflows$, Forms$, DomainModels$)
+    "workflows$workflow":                reflect.TypeOf(metamodel.WorkflowsWorkflow{}),
+    "workflows$SingleUserTaskActivity":  reflect.TypeOf(metamodel.WorkflowsSingleUserTaskActivity{}),
+    "workflows$MultiUserTaskActivity":   reflect.TypeOf(metamodel.WorkflowsMultiUserTaskActivity{}),
+    "workflows$CallMicroflowTask":       reflect.TypeOf(metamodel.WorkflowsCallMicroflowTask{}),
+    "workflows$CallWorkflowActivity":    reflect.TypeOf(metamodel.WorkflowsCallWorkflowActivity{}),
+    "workflows$ExclusiveSplitActivity":  reflect.TypeOf(metamodel.WorkflowsExclusiveSplitActivity{}),
+    "workflows$ParallelSplitActivity":   reflect.TypeOf(metamodel.WorkflowsParallelSplitActivity{}),
+    "workflows$JumpToActivity":          reflect.TypeOf(metamodel.WorkflowsJumpToActivity{}),
+    "workflows$WaitForTimerActivity":    reflect.TypeOf(metamodel.WorkflowsWaitForTimerActivity{}),
+    "workflows$WaitForNotificationActivity": reflect.TypeOf(metamodel.WorkflowsWaitForNotificationActivity{}),
+    // ... extensible to other namespaces (microflows$, Forms$, DomainModels$)
 }
 
 // PropertyMeta describes a single field's metadata derived from reflect.
@@ -246,13 +246,13 @@ type PropertyMeta struct {
 type FieldCategory int
 
 const (
-    Semantic   FieldCategory = iota // Business fields (Name, Entity, Expression)
-    Structural                      // Internal ($ID, $Type, PersistentId)
-    Layout                          // Visual only (RelativeMiddlePoint, Size)
+    Semantic   FieldCategory = iota // business fields (Name, entity, expression)
+    Structural                      // Internal ($ID, $type, PersistentId)
+    layout                          // Visual only (RelativeMiddlePoint, Size)
 )
 
 // GetFieldMeta returns all field metadata for a $Type.
-// Returns nil if the type is not in the registry.
+// returns nil if the type is not in the registry.
 func GetFieldMeta(bsonType string) []PropertyMeta {
     rt, ok := TypeRegistry[bsonType]
     if !ok {
@@ -288,7 +288,7 @@ Minimal hardcoded rules. Everything else defaults to Semantic.
 
 ```go
 var structuralFields = map[string]bool{
-    "$ID": true, "$Type": true, "PersistentId": true,
+    "$ID": true, "$type": true, "PersistentId": true,
 }
 
 var layoutFields = map[string]bool{
@@ -297,7 +297,7 @@ var layoutFields = map[string]bool{
 
 func classifyField(storageName string) FieldCategory {
     if structuralFields[storageName] { return Structural }
-    if layoutFields[storageName]     { return Layout }
+    if layoutFields[storageName]     { return layout }
     return Semantic
 }
 ```

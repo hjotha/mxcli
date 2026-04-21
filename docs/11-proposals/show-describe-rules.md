@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Document type:** `Microflows$Rule`
+**Document type:** `microflows$rule`
 **Prevalence:** 49 across test projects (9 Enquiries, 28 Evora, 12 Lato)
 **Priority:** Medium — decision logic used in microflow split conditions
 
@@ -20,28 +20,28 @@ Rules are structurally identical to Microflows but must return Boolean. They are
 ## BSON Structure (from test projects)
 
 ```
-Microflows$Rule:
+microflows$rule:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
   ApplyEntityAccess: bool
   MarkAsUsed: bool
-  MicroflowReturnType: DataTypes$BooleanType (always Boolean)
+  MicroflowReturnType: DataTypes$BooleanType (always boolean)
   ReturnVariableName: string
-  ObjectCollection: Microflows$MicroflowObjectCollection
-    Objects: []*MicroflowObject (activities, parameters, etc.)
-  Flows: []*Microflows$SequenceFlow
+  ObjectCollection: microflows$MicroflowObjectCollection
+    objects: []*MicroflowObject (activities, parameters, etc.)
+  Flows: []*microflows$SequenceFlow
 ```
 
-The internal structure (ObjectCollection, Flows) is identical to `Microflows$Microflow`.
+The internal structure (ObjectCollection, Flows) is identical to `microflows$microflow`.
 
 ## Proposed MDL Syntax
 
 ### SHOW RULES
 
 ```
-SHOW RULES [IN Module]
+show rules [in module]
 ```
 
 | Qualified Name | Module | Name | Parameters | Activities |
@@ -50,7 +50,7 @@ SHOW RULES [IN Module]
 ### DESCRIBE RULE
 
 ```
-DESCRIBE RULE Module.Name
+describe rule Module.Name
 ```
 
 Output format (mirrors DESCRIBE MICROFLOW but with RULE keyword):
@@ -59,18 +59,18 @@ Output format (mirrors DESCRIBE MICROFLOW but with RULE keyword):
 /**
  * Checks if the customer is eligible for a discount
  */
-RULE MyModule.IsEligibleForDiscount
-  PARAMETER $Customer: MyModule.Customer
-  RETURNS Boolean
-BEGIN
-  RETRIEVE $orders FROM DATABASE
-    WHERE MyModule.Customer_Order/MyModule.Order/Status = 'Completed';
-  IF $orders/length > 5 THEN
-    RETURN true;
-  ELSE
-    RETURN false;
-  END IF;
-END;
+rule MyModule.IsEligibleForDiscount
+  parameter $Customer: MyModule.Customer
+  returns boolean
+begin
+  retrieve $orders from database
+    where MyModule.Customer_Order/MyModule.Order/status = 'Completed';
+  if $orders/length > 5 then
+    return true;
+  else
+    return false;
+  end if;
+end;
 /
 ```
 
@@ -81,27 +81,27 @@ END;
 Since Rules share the same BSON structure as Microflows, the existing microflow parser (`parser_microflow.go`) can be reused with minimal changes:
 
 ```go
-type Rule struct {
-    // Same fields as Microflow
+type rule struct {
+    // Same fields as microflow
     microflows.Microflow // embed or duplicate
 }
 ```
 
-Alternatively, parse Rules as `Microflow` instances with a `Kind: "Rule"` marker.
+Alternatively, parse Rules as `microflow` instances with a `Kind: "rule"` marker.
 
 ### 2. Add Reader
 
 ```go
 func (r *Reader) ListRules() ([]*microflows.Microflow, error) {
-    return r.listUnitsByType("Microflows$Rule", parseMicroflow)
+    return r.listUnitsByType("microflows$rule", parseMicroflow)
 }
 ```
 
 ### 3. Add AST, Grammar, Visitor, Executor
 
-Grammar tokens: `RULE` (may already exist), `RULES`.
+Grammar tokens: `rule` (may already exist), `rules`.
 
-The DESCRIBE handler can delegate to `describeMicroflow()` internally, with the output keyword changed from `MICROFLOW` to `RULE`.
+The DESCRIBE handler can delegate to `describeMicroflow()` internally, with the output keyword changed from `microflow` to `rule`.
 
 ### 4. Add Autocomplete
 
@@ -111,9 +111,9 @@ func (e *Executor) GetRuleNames(moduleFilter string) []string
 
 ## Design Decision
 
-**Option A: Reuse Microflow infrastructure** — Parse rules as microflows with a `Kind` field. DESCRIBE outputs `RULE` keyword but reuses the microflow formatter. This is simpler but less explicit.
+**Option A: Reuse Microflow infrastructure** — Parse rules as microflows with a `Kind` field. DESCRIBE outputs `rule` keyword but reuses the microflow formatter. This is simpler but less explicit.
 
-**Option B: Separate type** — Dedicated `Rule` type and handlers. More code but cleaner separation.
+**Option B: Separate type** — Dedicated `rule` type and handlers. More code but cleaner separation.
 
 **Recommendation:** Option A — rules ARE microflows with a Boolean return constraint. Reusing the infrastructure minimizes code.
 

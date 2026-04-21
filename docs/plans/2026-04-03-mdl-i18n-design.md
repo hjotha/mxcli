@@ -9,11 +9,11 @@
 MDL currently handles all translatable text fields (page titles, widget captions, enumeration captions, microflow message templates) as single-language strings. When creating or describing model elements, only the default language is read or written. All other translations are silently dropped.
 
 This means:
-- `DESCRIBE PAGE` output loses translations — roundtripping a page strips non-default languages
-- `CREATE PAGE` can only set one language — multi-language projects require Studio Pro for translation
-- No way to see all translations in context (note: `SHOW LANGUAGES` and `QUAL005 MissingTranslations` linter rule already provide language inventory and gap detection via the catalog `strings` table)
+- `describe page` output loses translations — roundtripping a page strips non-default languages
+- `create page` can only set one language — multi-language projects require Studio Pro for translation
+- No way to see all translations in context (note: `show languages` and `QUAL005 MissingTranslations` linter rule already provide language inventory and gap detection via the catalog `strings` table)
 
-Mendix stores translations as `Texts$Text` objects containing an array of `Texts$Translation` entries (one per language). The mxcli internal model (`model.Text`) already represents translations as `map[string]string`, and the BSON reader/writer already handles multi-language serialization. The gap is purely at the MDL syntax and command layer.
+Mendix stores translations as `Texts$text` objects containing an array of `Texts$Translation` entries (one per language). The mxcli internal model (`model.Text`) already represents translations as `map[string]string`, and the BSON reader/writer already handles multi-language serialization. The gap is purely at the MDL syntax and command layer.
 
 ## Scope
 
@@ -35,10 +35,10 @@ Any MDL property that accepts a string literal `'text'` can alternatively accept
 
 ```sql
 -- Single language (backward compatible, unchanged)
-Title: 'Hello World'
+title: 'Hello World'
 
 -- Multi-language
-Title: {
+title: {
   en_US: 'Hello World',
   zh_CN: '你好世界',
   nl_NL: 'Hallo Wereld'
@@ -74,7 +74,7 @@ propertyValueV3
     ;
 ```
 
-**Disambiguation from widget body `{`**: `translationMap` only appears inside `propertyValueV3`, which follows `COLON` or `EQUALS` in property definitions. Widget bodies (`widgetBodyV3`) follow `)` at statement level, never after `:`. The parser sees `Caption: {` and enters `propertyValueV3 → translationMap` — there is no ambiguity because `widgetBodyV3` is a separate production in `widgetStatementV3` that requires `(...)` before `{`.
+**Disambiguation from widget body `{`**: `translationMap` only appears inside `propertyValueV3`, which follows `COLON` or `equals` in property definitions. Widget bodies (`widgetBodyV3`) follow `)` at statement level, never after `:`. The parser sees `caption: {` and enters `propertyValueV3 → translationMap` — there is no ambiguity because `widgetBodyV3` is a separate production in `widgetStatementV3` that requires `(...)` before `{`.
 
 **AST node:**
 
@@ -94,11 +94,11 @@ type TranslatedText struct {
 
 ```sql
 -- Default: single language output (backward compatible)
-DESCRIBE PAGE Module.MyPage;
+describe page Module.MyPage;
 -- Output: Title: 'Hello World'
 
 -- New: all translations
-DESCRIBE PAGE Module.MyPage WITH TRANSLATIONS;
+describe page Module.MyPage with TRANSLATIONS;
 -- Output:
 -- Title: {
 --   en_US: 'Hello World',
@@ -107,19 +107,19 @@ DESCRIBE PAGE Module.MyPage WITH TRANSLATIONS;
 ```
 
 **Rules:**
-- Without `WITH TRANSLATIONS`: outputs only the default language as a bare string (current behavior).
-- With `WITH TRANSLATIONS`: if only one language exists, still uses bare string; if ≥2 languages, uses map syntax.
+- Without `with TRANSLATIONS`: outputs only the default language as a bare string (current behavior).
+- With `with TRANSLATIONS`: if only one language exists, still uses bare string; if ≥2 languages, uses map syntax.
 - Output must be re-parseable by the MDL parser (roundtrip guarantee).
 
 **Grammar:**
 
 ```antlr
 describeStatement
-    : DESCRIBE objectType qualifiedName withTranslationsClause?
+    : describe objectType qualifiedName withTranslationsClause?
     ;
 
 withTranslationsClause
-    : WITH TRANSLATIONS
+    : with TRANSLATIONS
     ;
 ```
 
@@ -135,15 +135,15 @@ withTranslationsClause
 Translation maps work in ALTER PAGE SET, enabling in-place translation updates:
 
 ```sql
-ALTER PAGE Module.MyPage
-  SET WIDGET saveButton Caption: { en_US: 'Save', zh_CN: '保存' };
+alter page Module.MyPage
+  set widget saveButton caption: { en_US: 'Save', zh_CN: '保存' };
 ```
 
 This reuses the `translationMap` rule inside `propertyValueV3` — no additional grammar changes needed since ALTER PAGE SET already uses `propertyValueV3` for values.
 
 ### 4. Relationship to Existing Translation Features
 
-`SHOW LANGUAGES` (commit a060152) already lists project languages with string counts. `QUAL005 MissingTranslations` linter rule already detects missing translations. The catalog `strings` FTS5 table already stores per-language text with `SELECT * FROM CATALOG.strings WHERE Language = 'nl_NL'`.
+`show languages` (commit a060152) already lists project languages with string counts. `QUAL005 MissingTranslations` linter rule already detects missing translations. The catalog `strings` FTS5 table already stores per-language text with `select * from CATALOG.strings where Language = 'nl_NL'`.
 
 This proposal does **not** duplicate those features. It addresses the gap they cannot fill: **writing and round-tripping multi-language text in MDL syntax**.
 
@@ -155,30 +155,30 @@ When executing CREATE/ALTER with multi-language text, the writer serializes all 
 titleItems := bson.A{int32(2)} // marker for non-empty
 for langCode, text := range translatedText.Translations {
     titleItems = append(titleItems, bson.D{
-        {Key: "$ID", Value: generateUUID()},
-        {Key: "$Type", Value: "Texts$Translation"},
-        {Key: "LanguageCode", Value: langCode},
-        {Key: "Text", Value: text},
+        {key: "$ID", value: generateUUID()},
+        {key: "$type", value: "Texts$Translation"},
+        {key: "LanguageCode", value: langCode},
+        {key: "text", value: text},
     })
 }
 ```
 
 **Merge semantics for bare strings (architectural change):**
 
-Currently, all writer functions construct `Texts$Text` from scratch — e.g. `writer_pages.go:219-247` builds a new `Items` array every time. Bare-string merge semantics require a **read-modify-write cycle**:
+Currently, all writer functions construct `Texts$text` from scratch — e.g. `writer_pages.go:219-247` builds a new `Items` array every time. Bare-string merge semantics require a **read-modify-write cycle**:
 
-1. Read the existing `Texts$Text` BSON from the MPR via `GetRawUnit`
+1. Read the existing `Texts$text` BSON from the MPR via `GetRawUnit`
 2. Parse existing `Items` array to find the entry for `DefaultLanguageCode`
-3. Update that entry's `Text` field (or insert if missing)
+3. Update that entry's `text` field (or insert if missing)
 4. Preserve all other `Texts$Translation` entries unchanged
 5. Write back the modified `Items` array
 
 This is a significant change to writer architecture. A shared helper should be introduced:
 
 ```go
-// mergeTranslation reads existing Texts$Text, merges new translations, returns updated BSON.
-// For bare strings: translations = {defaultLang: text}
-// For maps: translations = the full map
+// mergeTranslation reads existing Texts$text, merges new translations, returns updated BSON.
+// for bare strings: translations = {defaultLang: text}
+// for maps: translations = the full map
 func mergeTranslation(existingBSON bson.D, translations map[string]string) bson.D
 ```
 
@@ -193,7 +193,7 @@ func mergeTranslation(existingBSON bson.D, translations map[string]string) bson.
 
 ## Translatable Fields Inventory
 
-The following fields use `Texts$Text` and are affected by this proposal:
+The following fields use `Texts$text` and are affected by this proposal:
 
 | Category | StringContext | Count | Examples |
 |----------|-------------|-------|---------|
@@ -217,13 +217,13 @@ The following fields use `Texts$Text` and are affected by this proposal:
 
 P1 first — highest user value, zero risk. P4 is the riskiest phase.
 
-**Dropped**: SHOW TRANSLATIONS command — `SHOW LANGUAGES` + `QUAL005` + `SELECT ... FROM CATALOG.strings` already cover translation auditing.
+**Dropped**: SHOW TRANSLATIONS command — `show languages` + `QUAL005` + `select ... from CATALOG.strings` already cover translation auditing.
 
 ## Compatibility
 
 - **Backward compatible**: existing MDL scripts with bare strings continue to work identically.
 - **Forward compatible**: MDL scripts using `{ lang: 'text' }` syntax will fail gracefully on older mxcli versions with a parse error pointing to the `{` token.
-- **DESCRIBE roundtrip**: `DESCRIBE ... WITH TRANSLATIONS` output can be fed back to `CREATE OR REPLACE` to reproduce the same translations.
+- **DESCRIBE roundtrip**: `describe ... with TRANSLATIONS` output can be fed back to `create or replace` to reproduce the same translations.
 
 ## Risks
 
@@ -231,4 +231,4 @@ P1 first — highest user value, zero risk. P4 is the riskiest phase.
 |------|-----------|
 | `{` ambiguity with widget body blocks | Grammar context: `translatedText` only appears in property value position, not statement position. Widget bodies follow `)` not `:`. |
 | Translation ordering in BSON | Mendix does not depend on translation order within `Items` array. Sort by language code for deterministic output. |
-| Large translation maps cluttering DESCRIBE output | `WITH TRANSLATIONS` is opt-in; default remains single-language. |
+| Large translation maps cluttering DESCRIBE output | `with TRANSLATIONS` is opt-in; default remains single-language. |

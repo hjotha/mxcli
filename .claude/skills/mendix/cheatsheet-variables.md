@@ -6,19 +6,19 @@ Quick reference for variable declarations in MDL microflows.
 
 | Type | Syntax | Example |
 |------|--------|---------|
-| String | `DECLARE $name String = 'value';` | `DECLARE $Message String = '';` |
-| Integer | `DECLARE $name Integer = 0;` | `DECLARE $Count Integer = 0;` |
-| Boolean | `DECLARE $name Boolean = true;` | `DECLARE $IsValid Boolean = true;` |
-| Decimal | `DECLARE $name Decimal = 0.0;` | `DECLARE $Amount Decimal = 0;` |
-| DateTime | `DECLARE $name DateTime = [%CurrentDateTime%];` | `DECLARE $Now DateTime = [%CurrentDateTime%];` |
-| Entity | `DECLARE $name AS Module.Entity;` | `DECLARE $Customer AS Sales.Customer;` |
-| List | `DECLARE $name List of Module.Entity = empty;` | `DECLARE $Orders List of Sales.Order = empty;` |
+| String | `declare $name string = 'value';` | `declare $message string = '';` |
+| Integer | `declare $name integer = 0;` | `declare $count integer = 0;` |
+| Boolean | `declare $name boolean = true;` | `declare $IsValid boolean = true;` |
+| Decimal | `declare $name decimal = 0.0;` | `declare $Amount decimal = 0;` |
+| DateTime | `declare $name datetime = [%CurrentDateTime%];` | `declare $Now datetime = [%CurrentDateTime%];` |
+| Entity | `declare $name as Module.Entity;` | `declare $Customer as Sales.Customer;` |
+| List | `declare $name list of Module.Entity = empty;` | `declare $Orders list of Sales.Order = empty;` |
 
 ## Key Rules
 
-1. **Primitives**: Use `DECLARE $var Type = value;` (initialization required)
-2. **Entities**: Use `DECLARE $var AS Module.Entity;` (use AS keyword, no initialization)
-3. **Lists**: Use `DECLARE $var List of Module.Entity = empty;`
+1. **Primitives**: Use `declare $var type = value;` (initialization required)
+2. **Entities**: Use `declare $var as Module.Entity;` (use AS keyword, no initialization)
+3. **Lists**: Use `declare $var list of Module.Entity = empty;`
 4. **SET requires DECLARE**: Always declare variables before using SET
 5. **Parameters are pre-declared**: Microflow parameters don't need DECLARE
 
@@ -28,35 +28,35 @@ Quick reference for variable declarations in MDL microflows.
 
 ```mdl
 -- WRONG: Missing AS keyword
-DECLARE $Product Module.Product = empty;
+declare $Product Module.Product = empty;
 
 -- CORRECT: Use AS for entity types
-DECLARE $Product AS Module.Product;
+declare $Product as Module.Product;
 ```
 
 ### SET Without DECLARE
 
 ```mdl
 -- WRONG: Variable not declared
-IF $Value > 10 THEN
-  SET $Message = 'High';  -- ERROR!
-END IF;
+if $value > 10 then
+  set $message = 'High';  -- ERROR!
+end if;
 
 -- CORRECT: Declare first
-DECLARE $Message String = '';
-IF $Value > 10 THEN
-  SET $Message = 'High';
-END IF;
+declare $message string = '';
+if $value > 10 then
+  set $message = 'High';
+end if;
 ```
 
 ### List Declaration
 
 ```mdl
 -- WRONG: Missing 'of' keyword
-DECLARE $Items List Module.Item = empty;
+declare $Items list Module.Item = empty;
 
 -- CORRECT: Use 'List of'
-DECLARE $Items List of Module.Item = empty;
+declare $Items list of Module.Item = empty;
 ```
 
 ## Special Values
@@ -71,19 +71,19 @@ DECLARE $Items List of Module.Item = empty;
 ## Parameter vs Variable
 
 ```mdl
-CREATE MICROFLOW Module.Example (
-  $Input: String,              -- Parameter: auto-declared
-  $Entity: Module.Customer     -- Parameter: auto-declared
+create microflow Module.Example (
+  $Input: string,              -- Parameter: auto-declared
+  $entity: Module.Customer     -- Parameter: auto-declared
 )
-RETURNS Boolean
-BEGIN
+returns boolean
+begin
   -- Parameters $Input and $Entity are already available
 
-  DECLARE $Result Boolean = true;  -- Local variable: must declare
-  DECLARE $Temp AS Module.Order;   -- Local entity: must declare
+  declare $Result boolean = true;  -- Local variable: must declare
+  declare $Temp as Module.Order;   -- Local entity: must declare
 
-  RETURN $Result;
-END;
+  return $Result;
+end;
 /
 ```
 
@@ -94,10 +94,10 @@ END;
 - Loop variables: Only available inside the loop body
 
 ```mdl
-LOOP $Item IN $ItemList
-BEGIN
+loop $item in $ItemList
+begin
   -- $Item is available here (derived from list type)
-  SET $Count = $Count + 1;
-END LOOP;
+  set $count = $count + 1;
+end loop;
 -- $Item is NOT available here
 ```

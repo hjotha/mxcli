@@ -22,26 +22,26 @@ Define the API once as a REST client document, then call its operations from mic
 ### Step 1 — Create the REST Client
 
 ```sql
-CREATE REST CLIENT Module.OpenMeteoAPI (
+create rest client Module.OpenMeteoAPI (
   BaseUrl: 'https://api.open-meteo.com/v1',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetForecast {
-    Method: GET,
-    Path: '/forecast',
-    Query: ($latitude: Decimal, $longitude: Decimal, $current: String),
-    Headers: ('Accept' = 'application/json'),
-    Timeout: 30,
-    Response: JSON AS $WeatherJson
+  operation GetForecast {
+    method: get,
+    path: '/forecast',
+    query: ($latitude: decimal, $longitude: decimal, $current: string),
+    headers: ('Accept' = 'application/json'),
+    timeout: 30,
+    response: json as $WeatherJson
   }
 
-  OPERATION PostData {
-    Method: POST,
-    Path: '/submit',
-    Headers: ('Content-Type' = 'application/json'),
-    Body: JSON FROM $JsonPayload,
-    Response: NONE
+  operation PostData {
+    method: post,
+    path: '/submit',
+    headers: ('Content-Type' = 'application/json'),
+    body: json from $JsonPayload,
+    response: none
   }
 };
 ```
@@ -50,23 +50,23 @@ CREATE REST CLIENT Module.OpenMeteoAPI (
 
 ```sql
 -- No authentication
-Authentication: NONE
+authentication: none
 
 -- Basic auth
-Authentication: BASIC (Username: 'user', Password: 'secret')
+authentication: basic (username: 'user', password: 'secret')
 ```
 
 ### Body Types
 
 ```sql
 -- JSON variable (Mendix expression stored on the operation)
-Body: JSON FROM $JsonPayload
+body: json from $JsonPayload
 
 -- String template with parameter placeholders
-Body: TEMPLATE '{ "name": "{name}", "value": {value} }'
+body: template '{ "name": "{name}", "value": {value} }'
 
 -- Export mapping (entity → JSON, aligned with export mapping syntax)
-Body: MAPPING Module.RequestEntity {
+body: mapping Module.RequestEntity {
   name = Name,
   email = Email,
 }
@@ -76,17 +76,17 @@ Body: MAPPING Module.RequestEntity {
 
 ```sql
 -- Simple types (variable binding is at the call site, not stored on the operation)
-Response: JSON AS $Result
-Response: STRING AS $Text
-Response: FILE AS $Document
-Response: STATUS AS $Code
-Response: NONE
+response: json as $Result
+response: string as $text
+response: file as $Document
+response: status as $Code
+response: none
 
 -- Import mapping (JSON → entity, aligned with import mapping syntax)
-Response: MAPPING Module.ResponseEntity {
+response: mapping Module.ResponseEntity {
   "Id" = "id",
-  "Status" = "status",
-  CREATE Module.Items_Response/Module.Item = items {
+  "status" = "status",
+  create Module.Items_Response/Module.Item = items {
     "Sku" = "sku",
     "Quantity" = "quantity",
   }
@@ -96,37 +96,37 @@ Response: MAPPING Module.ResponseEntity {
 ### Step 2 — Call from a Microflow
 
 ```sql
-CREATE MICROFLOW Module.ACT_GetWeather ()
-RETURNS Module.WeatherInfo AS $Weather
-BEGIN
+create microflow Module.ACT_GetWeather ()
+returns Module.WeatherInfo as $Weather
+begin
   -- Call the REST client operation
-  SEND REST REQUEST Module.OpenMeteoAPI.GetForecast;
+  send rest request Module.OpenMeteoAPI.GetForecast;
 
   -- Extract response body from system variable
-  DECLARE $RawJson String = $latestHttpResponse/Content;
+  declare $RawJson string = $latestHttpResponse/content;
 
   -- (Optional) Transform with JSLT
-  $SimplifiedJson = TRANSFORM $RawJson WITH Module.SimplifyWeather;
+  $SimplifiedJson = transform $RawJson with Module.SimplifyWeather;
 
   -- Import into entity
-  $Weather = IMPORT FROM MAPPING Module.IMM_Weather($SimplifiedJson);
+  $Weather = import from mapping Module.IMM_Weather($SimplifiedJson);
 
-  RETURN $Weather;
-END;
+  return $Weather;
+end;
 /
 ```
 
-**CRITICAL**: After `SEND REST REQUEST`, the response is in `$latestHttpResponse` (System.HttpResponse):
-- `$latestHttpResponse/Content` — response body (String)
+**CRITICAL**: After `send rest request`, the response is in `$latestHttpResponse` (System.HttpResponse):
+- `$latestHttpResponse/content` — response body (String)
 - `$latestHttpResponse/StatusCode` — HTTP status (Integer)
 
 ### Show / Describe / Drop
 
 ```sql
-SHOW REST CLIENTS [IN Module];
-DESCRIBE REST CLIENT Module.ClientName;
-DROP REST CLIENT Module.ClientName;
-CREATE OR MODIFY REST CLIENT Module.ClientName ...  -- idempotent
+show rest clients [in module];
+describe rest client Module.ClientName;
+drop rest client Module.ClientName;
+create or modify rest client Module.ClientName ...  -- idempotent
 ```
 
 ---
@@ -137,42 +137,42 @@ Call an HTTP endpoint directly from a microflow — no REST client document need
 
 ```sql
 -- Simple GET returning a string
-$Response = REST CALL GET 'https://api.example.com/data'
-  HEADER Accept = 'application/json'
-  TIMEOUT 30
-  RETURNS String;
+$response = rest call get 'https://api.example.com/data'
+  header Accept = 'application/json'
+  timeout 30
+  returns string;
 
 -- GET with URL template parameters
-$Response = REST CALL GET 'https://api.example.com/users/{1}' WITH (
+$response = rest call get 'https://api.example.com/users/{1}' with (
   {1} = toString($UserId)
 )
-  HEADER Accept = 'application/json'
-  RETURNS String;
+  header Accept = 'application/json'
+  returns string;
 
 -- POST with body
-$Response = REST CALL POST 'https://api.example.com/items'
-  HEADER 'Content-Type' = 'application/json'
-  BODY '{"name": "test"}'
-  RETURNS String;
+$response = rest call post 'https://api.example.com/items'
+  header 'Content-Type' = 'application/json'
+  body '{"name": "test"}'
+  returns string;
 
 -- With basic auth
-$Response = REST CALL GET 'https://api.example.com/secure'
-  AUTH BASIC 'username' PASSWORD 'password'
-  RETURNS String;
+$response = rest call get 'https://api.example.com/secure'
+  auth basic 'username' password 'password'
+  returns string;
 
 -- With import mapping (JSON → entity)
-$Item = REST CALL GET 'https://api.example.com/item/1'
-  HEADER Accept = 'application/json'
-  RETURNS MAPPING Module.IMM_Item AS Module.Item;
+$item = rest call get 'https://api.example.com/item/1'
+  header Accept = 'application/json'
+  returns mapping Module.IMM_Item as Module.Item;
 
 -- Fire and forget
-REST CALL DELETE 'https://api.example.com/item/1'
-  RETURNS Nothing;
+rest call delete 'https://api.example.com/item/1'
+  returns nothing;
 
 -- Error handling
-$Response = REST CALL GET 'https://api.example.com/data'
-  RETURNS String
-  ON ERROR CONTINUE;
+$response = rest call get 'https://api.example.com/data'
+  returns string
+  on error continue;
 ```
 
 ---
@@ -183,10 +183,10 @@ Transform complex JSON responses into simpler structures before import mapping.
 
 ```sql
 -- Define the transformer
-CREATE DATA TRANSFORMER Module.SimplifyWeather
-SOURCE JSON '{"latitude": 52.52, "current": {"temperature_2m": 12.8, "wind_speed_10m": 18.3}}'
+create data transformer Module.SimplifyWeather
+source json '{"latitude": 52.52, "current": {"temperature_2m": 12.8, "wind_speed_10m": 18.3}}'
 {
-  JSLT $$
+  jslt $$
 {
   "temp": .current.temperature_2m,
   "wind": .current.wind_speed_10m,
@@ -196,16 +196,16 @@ SOURCE JSON '{"latitude": 52.52, "current": {"temperature_2m": 12.8, "wind_speed
 };
 
 -- Use in a microflow
-$SimplifiedJson = TRANSFORM $RawJson WITH Module.SimplifyWeather;
+$SimplifiedJson = transform $RawJson with Module.SimplifyWeather;
 ```
 
-Single-line JSLT: `JSLT '{ "temp": .current.temperature_2m }';`
-Multi-line JSLT: `JSLT $$ { ... } $$;` (dollar-quoting, same as Java actions)
+Single-line JSLT: `jslt '{ "temp": .current.temperature_2m }';`
+Multi-line JSLT: `jslt $$ { ... } $$;` (dollar-quoting, same as Java actions)
 
 ```sql
-LIST DATA TRANSFORMERS [IN Module];
-DESCRIBE DATA TRANSFORMER Module.Name;
-DROP DATA TRANSFORMER Module.Name;
+list data transformers [in module];
+describe data transformer Module.Name;
+drop data transformer Module.Name;
 ```
 
 ---
@@ -216,22 +216,22 @@ See [json-structures-and-mappings.md](json-structures-and-mappings.md) for full 
 
 ```sql
 -- JSON structure from snippet
-CREATE JSON STRUCTURE Module.JSON_Weather
-SNIPPET '{"temp": 12.8, "wind": 18.3, "lat": 52.52}';
+create json structure Module.JSON_Weather
+snippet '{"temp": 12.8, "wind": 18.3, "lat": 52.52}';
 
 -- Non-persistent entity
-CREATE NON-PERSISTENT ENTITY Module.WeatherInfo (
-  Temperature: Decimal,
-  WindSpeed: Decimal,
-  Latitude: Decimal
+create non-persistent entity Module.WeatherInfo (
+  Temperature: decimal,
+  WindSpeed: decimal,
+  Latitude: decimal
 );
 /
 
 -- Import mapping (JSON → entity)
-CREATE IMPORT MAPPING Module.IMM_Weather
-  WITH JSON STRUCTURE Module.JSON_Weather
+create import mapping Module.IMM_Weather
+  with json structure Module.JSON_Weather
 {
-  CREATE Module.WeatherInfo {
+  create Module.WeatherInfo {
     Temperature = temp,
     WindSpeed = wind,
     Latitude = lat
@@ -239,8 +239,8 @@ CREATE IMPORT MAPPING Module.IMM_Weather
 };
 
 -- Use in microflow
-$Weather = IMPORT FROM MAPPING Module.IMM_Weather($JsonString);
-$JsonOutput = EXPORT TO MAPPING Module.EMM_Weather($WeatherEntity);
+$Weather = import from mapping Module.IMM_Weather($JsonString);
+$JsonOutput = export to mapping Module.EMM_Weather($WeatherEntity);
 ```
 
 ---
@@ -251,19 +251,19 @@ Full example: call weather API → transform → import → show on page.
 
 ```sql
 -- 1. Entity
-CREATE NON-PERSISTENT ENTITY Module.CurrentWeather (
-  Temperature: Decimal,
-  WindSpeed: Decimal,
-  Latitude: Decimal,
-  ObservationTime: DateTime
+create non-persistent entity Module.CurrentWeather (
+  Temperature: decimal,
+  WindSpeed: decimal,
+  Latitude: decimal,
+  ObservationTime: datetime
 );
 /
 
 -- 2. Data Transformer (simplify API response)
-CREATE DATA TRANSFORMER Module.SimplifyWeather
-SOURCE JSON '{"latitude":52.52,"current":{"time":"2024-01-15T14:00","temperature_2m":12.8,"wind_speed_10m":18.3}}'
+create data transformer Module.SimplifyWeather
+source json '{"latitude":52.52,"current":{"time":"2024-01-15T14:00","temperature_2m":12.8,"wind_speed_10m":18.3}}'
 {
-  JSLT $$
+  jslt $$
 {
   "temperature": .current.temperature_2m,
   "windSpeed": .current.wind_speed_10m,
@@ -274,13 +274,13 @@ SOURCE JSON '{"latitude":52.52,"current":{"time":"2024-01-15T14:00","temperature
 };
 
 -- 3. JSON Structure + Import Mapping (for transformed output)
-CREATE JSON STRUCTURE Module.JSON_Weather
-SNIPPET '{"temperature":12.8,"windSpeed":18.3,"latitude":52.52,"observationTime":"2024-01-15T14:00"}';
+create json structure Module.JSON_Weather
+snippet '{"temperature":12.8,"windSpeed":18.3,"latitude":52.52,"observationTime":"2024-01-15T14:00"}';
 
-CREATE IMPORT MAPPING Module.IMM_Weather
-  WITH JSON STRUCTURE Module.JSON_Weather
+create import mapping Module.IMM_Weather
+  with json structure Module.JSON_Weather
 {
-  CREATE Module.CurrentWeather {
+  create Module.CurrentWeather {
     Temperature = temperature,
     WindSpeed = windSpeed,
     Latitude = latitude,
@@ -289,30 +289,30 @@ CREATE IMPORT MAPPING Module.IMM_Weather
 };
 
 -- 4. REST Client
-CREATE REST CLIENT Module.WeatherAPI (
+create rest client Module.WeatherAPI (
   BaseUrl: 'https://api.open-meteo.com/v1',
-  Authentication: NONE
+  authentication: none
 )
 {
-  OPERATION GetCurrent {
-    Method: GET,
-    Path: '/forecast',
-    Query: ($latitude: Decimal, $longitude: Decimal, $current: String),
-    Headers: ('Accept' = 'application/json'),
-    Response: JSON AS $Result
+  operation GetCurrent {
+    method: get,
+    path: '/forecast',
+    query: ($latitude: decimal, $longitude: decimal, $current: string),
+    headers: ('Accept' = 'application/json'),
+    response: json as $Result
   }
 };
 
 -- 5. Microflow (REST Client → Transform → Import)
-CREATE MICROFLOW Module.ACT_GetWeather ()
-RETURNS Module.CurrentWeather AS $Weather
-BEGIN
-  SEND REST REQUEST Module.WeatherAPI.GetCurrent;
-  DECLARE $RawJson String = $latestHttpResponse/Content;
-  $SimplifiedJson = TRANSFORM $RawJson WITH Module.SimplifyWeather;
-  $Weather = IMPORT FROM MAPPING Module.IMM_Weather($SimplifiedJson);
-  RETURN $Weather;
-END;
+create microflow Module.ACT_GetWeather ()
+returns Module.CurrentWeather as $Weather
+begin
+  send rest request Module.WeatherAPI.GetCurrent;
+  declare $RawJson string = $latestHttpResponse/content;
+  $SimplifiedJson = transform $RawJson with Module.SimplifyWeather;
+  $Weather = import from mapping Module.IMM_Weather($SimplifiedJson);
+  return $Weather;
+end;
 /
 ```
 
@@ -332,20 +332,20 @@ END;
 
 | MDL Concept | BSON Type |
 |-------------|-----------|
-| REST client document | `Rest$ConsumedRestService` |
-| Operation | `Rest$RestOperation` |
-| GET/DELETE method | `Rest$RestOperationMethodWithoutBody` |
-| POST/PUT/PATCH method | `Rest$RestOperationMethodWithBody` |
-| JSON body | `Rest$JsonBody` |
-| Template body | `Rest$StringBody` |
-| Export mapping body | `Rest$ImplicitMappingBody` |
-| No response | `Rest$NoResponseHandling` |
-| Import mapping response | `Rest$ImplicitMappingResponseHandling` |
-| Header | `Rest$HeaderWithValueTemplate` |
-| Path parameter | `Rest$OperationParameter` |
-| Query parameter | `Rest$QueryParameter` |
+| REST client document | `rest$ConsumedRestService` |
+| Operation | `rest$RestOperation` |
+| GET/DELETE method | `rest$RestOperationMethodWithoutBody` |
+| POST/PUT/PATCH method | `rest$RestOperationMethodWithBody` |
+| JSON body | `rest$JsonBody` |
+| Template body | `rest$StringBody` |
+| Export mapping body | `rest$ImplicitMappingBody` |
+| No response | `rest$NoResponseHandling` |
+| Import mapping response | `rest$ImplicitMappingResponseHandling` |
+| Header | `rest$HeaderWithValueTemplate` |
+| Path parameter | `rest$OperationParameter` |
+| Query parameter | `rest$QueryParameter` |
 | Data transformer | `DataTransformers$DataTransformer` |
 | JSLT step | `DataTransformers$JsltAction` |
-| Transform action | `Microflows$TransformJsonAction` |
-| Send request action | `Microflows$RestOperationCallAction` |
-| Inline HTTP action | `Microflows$RestCallAction` |
+| Transform action | `microflows$TransformJsonAction` |
+| Send request action | `microflows$RestOperationCallAction` |
+| Inline HTTP action | `microflows$RestCallAction` |

@@ -24,11 +24,11 @@ Scheduled Events trigger microflow execution on a timer. They specify which micr
 ```
 ScheduledEvents$ScheduledEvent:
   Name: string
-  Documentation: string
+  documentation: string
   Enabled: bool
   Excluded: bool
-  ExportLevel: string ("Hidden", "API")
-  Microflow: string (qualified name, e.g., "MyModule.CleanupOldRecords")
+  ExportLevel: string ("Hidden", "api")
+  microflow: string (qualified name, e.g., "MyModule.CleanupOldRecords")
   Interval: int32
   IntervalType: string ("Second", "Minute", "Hour", "Day", "Week", "Month", "Year")
   OnOverlap: string ("SkipNext", "DelayNext")
@@ -55,7 +55,7 @@ ScheduledEvents$ScheduledEvent:
 ### SHOW SCHEDULED EVENTS
 
 ```
-SHOW SCHEDULED EVENTS [IN Module]
+show SCHEDULED events [in module]
 ```
 
 | Qualified Name | Module | Name | Enabled | Microflow | Interval | On Overlap |
@@ -64,7 +64,7 @@ SHOW SCHEDULED EVENTS [IN Module]
 ### DESCRIBE SCHEDULED EVENT
 
 ```
-DESCRIBE SCHEDULED EVENT Module.Name
+describe SCHEDULED event Module.Name
 ```
 
 Output format:
@@ -73,11 +73,11 @@ Output format:
 /**
  * Cleans up expired sessions every hour
  */
-SCHEDULED EVENT MyModule.CleanupSessions
-  MICROFLOW MyModule.CleanupExpiredSessions
+SCHEDULED event MyModule.CleanupSessions
+  microflow MyModule.CleanupExpiredSessions
   ENABLED
   INTERVAL 1 HOUR
-  ON OVERLAP SkipNext
+  on OVERLAP SkipNext
   TIMEZONE UTC
   START '2024-01-01T00:00:00';
 /
@@ -86,11 +86,11 @@ SCHEDULED EVENT MyModule.CleanupSessions
 For a disabled event with a weekly schedule:
 
 ```
-SCHEDULED EVENT MyModule.WeeklyReport
-  MICROFLOW MyModule.GenerateWeeklyReport
+SCHEDULED event MyModule.WeeklyReport
+  microflow MyModule.GenerateWeeklyReport
   DISABLED
-  SCHEDULE WEEKLY ON Monday, Wednesday, Friday AT 08:30
-  ON OVERLAP DelayNext
+  SCHEDULE WEEKLY on Monday, Wednesday, Friday AT 08:30
+  on OVERLAP DelayNext
   TIMEZONE Server;
 /
 ```
@@ -118,11 +118,11 @@ DescribeScheduledEvent // in DescribeObjectType enum
 
 ```antlr
 SCHEDULED: 'SCHEDULED';
-EVENT: 'EVENT';
-EVENTS: 'EVENTS';
+event: 'EVENT';
+events: 'EVENTS';
 
-// SHOW SCHEDULED EVENTS [IN module]
-// DESCRIBE SCHEDULED EVENT qualifiedName
+// show SCHEDULED events [in module]
+// describe SCHEDULED event qualifiedName
 ```
 
 ### 5. Add Executor (mdl/executor/cmd_scheduled_events.go)

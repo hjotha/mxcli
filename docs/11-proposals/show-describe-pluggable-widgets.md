@@ -11,19 +11,19 @@
 
 | MDL Keyword | Widget ID | Properties Extracted |
 |-------------|-----------|---------------------|
-| `COMBOBOX` | `com.mendix.widget.web.combobox.Combobox` | Attribute, DataSource (association mode), CaptionAttribute |
+| `combobox` | `com.mendix.widget.web.combobox.Combobox` | Attribute, DataSource (association mode), CaptionAttribute |
 | `DATAGRID2` | `com.mendix.widget.web.datagrid.Datagrid` | DataSource, XPath, Sort, Columns (attribute, alignment, sortable, resizable), ControlBar, Selection, Paging |
-| `GALLERY` | `com.mendix.widget.web.gallery.Gallery` | DataSource, Selection, Filter widgets, Content template |
-| `TEXTFILTER` | `...datagridtextfilter.DatagridTextFilter` | Attributes, FilterType |
-| `NUMBERFILTER` | `...datagridnumberfilter.DatagridNumberFilter` | Attributes, FilterType |
-| `DROPDOWNFILTER` | `...datagriddropdownfilter.DatagridDropdownFilter` | Attributes, FilterType |
-| `DATEFILTER` | `...datagriddatefilter.DatagridDateFilter` | Attributes, FilterType |
+| `gallery` | `com.mendix.widget.web.gallery.Gallery` | DataSource, Selection, Filter widgets, Content template |
+| `textfilter` | `...datagridtextfilter.DatagridTextFilter` | Attributes, FilterType |
+| `numberfilter` | `...datagridnumberfilter.DatagridNumberFilter` | Attributes, FilterType |
+| `dropdownfilter` | `...datagriddropdownfilter.DatagridDropdownFilter` | Attributes, FilterType |
+| `datefilter` | `...datagriddatefilter.DatagridDateFilter` | Attributes, FilterType |
 
 ### What falls through to generic formatting
 
 The `else` branch in `cmd_pages_describe_output.go` (line 424) handles all other CustomWidgets. It extracts the last segment of the widget ID, uppercases it, and shows only:
-- `Label` (from Caption)
-- `Attribute` (from Content)
+- `label` (from Caption)
+- `attribute` (from Content)
 - Appearance (Class/Style)
 
 This means widgets like Image, Tooltip, Charts, Badge, etc. appear in DESCRIBE output but lose all their meaningful properties.
@@ -87,35 +87,35 @@ Native-only widgets (FloatingActionButton, BottomSheet, SafeAreaView, ListViewSw
 
 Current output:
 ```
-IMAGE image1;
+image image1;
 ```
 
 Proposed output:
 ```
-IMAGE image1 DataSource: DYNAMIC FROM MyModule.Product/Image, Width: 200, Height: 150,
-  AlternativeText: $currentObject/Name, OnClick: CALL_NANOFLOW MyModule.ShowImageFull;
+image image1 datasource: dynamic from MyModule.Product/image, width: 200, height: 150,
+  AlternativeText: $currentObject/Name, onclick: call_nanoflow MyModule.ShowImageFull;
 ```
 
 For static image:
 ```
-IMAGE image1 ImageUrl: 'https://example.com/logo.png', Width: 100;
+image image1 ImageUrl: 'https://example.com/logo.png', width: 100;
 ```
 
 ### Tooltip (172 instances)
 
 Current output:
 ```
-TOOLTIP tooltip1;
+tooltip tooltip1;
 ```
 
 Proposed output:
 ```
-TOOLTIP tooltip1 Position: top, TriggerOn: hover {
+tooltip tooltip1 position: top, TriggerOn: hover {
   TRIGGER {
-    ACTIONBUTTON button1 Caption: 'Info';
+    actionbutton button1 caption: 'Info';
   }
-  CONTENT {
-    TEXT text1 Content: 'This field is required';
+  content {
+    text text1 content: 'This field is required';
   }
 };
 ```
@@ -129,7 +129,7 @@ BADGE badge1;
 
 Proposed output:
 ```
-BADGE badge1 Value: $currentObject/Count, Type: badge, OnClick: SHOW_PAGE MyModule.Detail;
+BADGE badge1 value: $currentObject/count, type: badge, onclick: show_page MyModule.Detail;
 ```
 
 ### Chart widgets (shared pattern)
@@ -142,10 +142,10 @@ LINECHART lineChart1;
 Proposed output:
 ```
 LINECHART lineChart1
-  DataSource: DATABASE FROM MyModule.SalesData
+  datasource: database from MyModule.SalesData
   XAxis: Month
   YAxis: Revenue
-  SERIES series1 Attribute: Revenue, Color: '#3498db', LineStyle: straight;
+  SERIES series1 attribute: Revenue, Color: '#3498db', LineStyle: straight;
 ```
 
 ### Accordion (13 instances)
@@ -159,12 +159,12 @@ Proposed output:
 ```
 ACCORDION accordion1 Collapsible: Yes {
   GROUP 'General Information' {
-    TEXTBOX name1 Attribute: $currentObject/Name;
-    TEXTBOX email1 Attribute: $currentObject/Email;
+    textbox name1 attribute: $currentObject/Name;
+    textbox email1 attribute: $currentObject/Email;
   }
   GROUP 'Address' Expanded: Yes {
-    TEXTBOX street1 Attribute: $currentObject/Street;
-    TEXTBOX city1 Attribute: $currentObject/City;
+    textbox street1 attribute: $currentObject/Street;
+    textbox city1 attribute: $currentObject/City;
   }
 };
 ```
@@ -178,8 +178,8 @@ HTMLELEMENT htmlElement1;
 
 Proposed output:
 ```
-HTMLELEMENT htmlElement1 Tag: 'div', Attributes: [data-testid='container', role='alert'] {
-  TEXT text1 Content: $currentObject/Message;
+HTMLELEMENT htmlElement1 Tag: 'div', attributes: [data-testid='container', role='alert'] {
+  text text1 content: $currentObject/message;
 };
 ```
 
@@ -192,7 +192,7 @@ SWITCH switch1;
 
 Proposed output:
 ```
-SWITCH switch1 Attribute: $currentObject/IsActive, Editable: Yes;
+SWITCH switch1 attribute: $currentObject/IsActive, editable: Yes;
 ```
 
 ### ProgressBar (8 instances)
@@ -204,7 +204,7 @@ PROGRESSBAR progressBar1;
 
 Proposed output:
 ```
-PROGRESSBAR progressBar1 Value: $currentObject/Progress, MaxValue: 100, Label: '%{value}%';
+PROGRESSBAR progressBar1 value: $currentObject/Progress, MaxValue: 100, label: '%{value}%';
 ```
 
 ## Implementation Approach
@@ -215,14 +215,14 @@ Rather than writing ad-hoc extraction code for each widget, introduce a lightwei
 
 ```go
 // extractPluggableWidgetProperties extracts known properties from any CustomWidget.
-// Returns a list of key=value strings for MDL output, plus child widget groups.
-func (e *Executor) extractPluggableWidgetProperties(w map[string]any, widgetType string) (
+// returns a list of key=value strings for MDL output, plus child widget groups.
+func (e *Executor) extractPluggableWidgetProperties(w map[string]any, widgettype string) (
     props []string, childGroups []namedWidgetGroup) {
 
-    switch widgetType {
-    case "IMAGE":
+    switch widgettype {
+    case "image":
         return e.extractImageProperties(w)
-    case "TOOLTIP":
+    case "tooltip":
         return e.extractTooltipProperties(w)
     case "BADGE":
         return e.extractBadgeProperties(w)
@@ -295,9 +295,9 @@ To:
 ```go
 } else {
     // Try widget-specific extraction first
-    extraProps, childGroups := e.extractPluggableWidgetProperties(rawWidget, widgetType)
+    extraProps, childGroups := e.extractPluggableWidgetProperties(rawWidget, widgettype)
     if len(extraProps) > 0 || len(childGroups) > 0 {
-        // Use extracted properties
+        // use extracted properties
         props = append(props, extraProps...)
         // ... format with child groups if present
     }
@@ -311,19 +311,19 @@ This is purely a DESCRIBE output improvement. The DESCRIBE PAGE command already 
 
 ## SHOW WIDGETS Enhancement (optional)
 
-The existing `SHOW WIDGETS` command already lists all widget instances including pluggable ones. A useful enhancement would be filtering by widget category:
+The existing `show widgets` command already lists all widget instances including pluggable ones. A useful enhancement would be filtering by widget category:
 
 ```
-SHOW WIDGETS WHERE WidgetType LIKE '%chart%'     -- all chart widgets
-SHOW WIDGETS WHERE WidgetType = 'IMAGE'           -- all Image widgets
-SHOW WIDGETS WHERE WidgetType LIKE '%filter%'     -- all filter widgets
+show widgets where widgettype like '%chart%'     -- all chart widgets
+show widgets where widgettype = 'IMAGE'           -- all Image widgets
+show widgets where widgettype like '%filter%'     -- all filter widgets
 ```
 
-This already works via the existing `LIKE` filtering since `extractCustomWidgetType()` provides the uppercased type name for catalog storage.
+This already works via the existing `like` filtering since `extractCustomWidgetType()` provides the uppercased type name for catalog storage.
 
 ## Testing Strategy
 
-1. Run `DESCRIBE PAGE` against pages in all 3 test projects containing each widget type
+1. Run `describe page` against pages in all 3 test projects containing each widget type
 2. Verify output is valid MDL that captures the widget's essential configuration
 3. Compare output against Studio Pro's property panel to ensure completeness
 4. Ensure generic fallback still works for unknown/third-party widgets

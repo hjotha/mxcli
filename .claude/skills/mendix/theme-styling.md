@@ -7,7 +7,7 @@ Use this skill when working with:
 - CSS hot-reload during Docker development
 - Debugging styling crashes or design property issues
 
-For **MDL styling commands** (`SHOW DESIGN PROPERTIES`, `DESCRIBE STYLING`, `ALTER STYLING`, inline `DesignProperties:`, `UPDATE WIDGETS`), see:
+For **MDL styling commands** (`show design properties`, `describe styling`, `alter styling`, inline `designproperties:`, `update widgets`), see:
 - Existing proposal: `docs/11-proposals/page-styling-support.md`
 - Working examples: `mdl-examples/doctype-tests/12-styling-examples.mdl` (595 lines)
 - Implementation: `mdl/executor/cmd_styling.go`, `mdl/executor/theme_reader.go`
@@ -18,20 +18,20 @@ For **MDL styling commands** (`SHOW DESIGN PROPERTIES`, `DESCRIBE STYLING`, `ALT
 
 ```
 MyProject/
-├── theme/                          # Project-level overrides
+├── theme/                          # project-level overrides
 │   └── web/
 │       ├── main.scss               # SCSS entry point (import chain)
-│       ├── custom-variables.scss   # Project variable overrides
+│       ├── custom-variables.scss   # project variable overrides
 │       ├── exclusion-variables.scss # Exclude unwanted Atlas components
 │       └── settings.json           # Theme settings
 │
-├── themesource/                    # Module-level theme definitions
-│   ├── atlas_core/                 # Base framework (always present)
+├── themesource/                    # module-level theme definitions
+│   ├── atlas_core/                 # base framework (always present)
 │   │   └── web/
-│   │       ├── design-properties.json  # Widget design properties
+│   │       ├── design-properties.json  # widget design properties
 │   │       ├── variables.scss          # Color/spacing/font variables
 │   │       └── ...                     # Component SCSS files
-│   ├── datawidgets/                # DataGrid2, Gallery, etc.
+│   ├── datawidgets/                # DataGrid2, gallery, etc.
 │   ├── atlas_web_content/          # Web content styles
 │   └── <module_name>/              # Each module can contribute styles
 │       └── web/design-properties.json
@@ -76,39 +76,39 @@ mxcli docker reload -p app.mpr
 
 ### DYNAMICTEXT + Style Crash
 
-**Never** apply `Style` directly to a DYNAMICTEXT widget — it crashes MxBuild with a NullReferenceException. Wrap in a CONTAINER:
+**Never** apply `style` directly to a DYNAMICTEXT widget — it crashes MxBuild with a NullReferenceException. Wrap in a CONTAINER:
 
 ```sql
 -- WRONG: crashes MxBuild
-DYNAMICTEXT txt (Content: 'Hello', Style: 'color: red;')
+dynamictext txt (content: 'Hello', style: 'color: red;')
 
 -- CORRECT: style the container
-CONTAINER ctn (Style: 'color: red;') {
-  DYNAMICTEXT txt (Content: 'Hello')
+container ctn (style: 'color: red;') {
+  dynamictext txt (content: 'Hello')
 }
 ```
 
-This also applies to `ALTER STYLING` and `ALTER PAGE SET Style` — never target a DYNAMICTEXT widget with Style.
+This also applies to `alter styling` and `alter page set style` — never target a DYNAMICTEXT widget with Style.
 
 ### Design Property Keys Are Case-Sensitive
 
 Keys must match the `name` field in `design-properties.json` exactly:
 ```sql
 -- CORRECT
-DesignProperties: ['Spacing top': 'Large']
+designproperties: ['Spacing top': 'Large']
 
 -- WRONG (case mismatch — silently ignored)
-DesignProperties: ['spacing top': 'Large']
+designproperties: ['spacing top': 'Large']
 ```
 
 ### ALTER STYLING Limitation with Builder-Created Pages
 
-`ALTER STYLING` cannot find widgets in pages created by the MDL page builder because `walkPageWidgets` traverses `LayoutCall.Arguments` but the page parser doesn't fully reconstruct the widget tree when re-reading builder-created pages. These commands work on pages originally created in Studio Pro.
+`alter styling` cannot find widgets in pages created by the MDL page builder because `walkPageWidgets` traverses `LayoutCall.Arguments` but the page parser doesn't fully reconstruct the widget tree when re-reading builder-created pages. These commands work on pages originally created in Studio Pro.
 
 ## Checklist
 
-- [ ] Never apply `Style` directly to DYNAMICTEXT — wrap in a CONTAINER
+- [ ] Never apply `style` directly to DYNAMICTEXT — wrap in a CONTAINER
 - [ ] Design property keys are case-sensitive — match `design-properties.json` exactly
 - [ ] For CSS changes, run `docker build` then `docker reload --css`
-- [ ] Use `DESCRIBE STYLING` to verify changes after modification
+- [ ] Use `describe styling` to verify changes after modification
 - [ ] Check `docs/11-proposals/page-styling-support.md` for BSON format details

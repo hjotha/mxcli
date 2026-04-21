@@ -21,17 +21,17 @@ This document describes how MDL represents Mendix domain model concepts: entitie
 
 | Type | MDL Keyword | Description |
 |------|-------------|-------------|
-| Persistent | `PERSISTENT` | Stored in database, has table |
-| Non-Persistent | `NON-PERSISTENT` | In-memory only, session-scoped |
-| View | `VIEW` | Based on OQL query, read-only |
-| External | `EXTERNAL` | From external data source (OData, etc.) |
+| Persistent | `persistent` | Stored in database, has table |
+| Non-Persistent | `non-persistent` | In-memory only, session-scoped |
+| View | `view` | Based on OQL query, read-only |
+| External | `external` | From external data source (OData, etc.) |
 
 ### Entity Syntax
 
 ```sql
 [/** <documentation> */]
-[@Position(<x>, <y>)]
-CREATE [OR MODIFY] <entity-type> ENTITY <Module>.<Name> (
+[@position(<x>, <y>)]
+create [or modify] <entity-type> entity <module>.<Name> (
   <attribute-definitions>
 )
 [<index-definitions>]
@@ -44,38 +44,38 @@ CREATE [OR MODIFY] <entity-type> ENTITY <Module>.<Name> (
 |----------|-------------------|-------------|
 | Name | `Module.EntityName` | Qualified name |
 | Documentation | `/** ... */` | Documentation comment before CREATE |
-| Position | `@Position(x, y)` | Location in domain model diagram |
+| Position | `@position(x, y)` | Location in domain model diagram |
 | Persistable | Entity type keyword | Whether stored in database |
 
 ### Examples
 
 ```sql
 /** Persistent entity with all features */
-@Position(100, 200)
-CREATE PERSISTENT ENTITY Sales.Customer (
-  CustomerId: AutoNumber NOT NULL UNIQUE DEFAULT 1,
-  Name: String(200) NOT NULL,
-  Email: String(200) UNIQUE
+@position(100, 200)
+create persistent entity Sales.Customer (
+  CustomerId: autonumber not null unique default 1,
+  Name: string(200) not null,
+  Email: string(200) unique
 )
-INDEX (Name);
+index (Name);
 /
 
 /** Non-persistent entity for filtering */
-CREATE NON-PERSISTENT ENTITY Sales.CustomerFilter (
-  SearchName: String(200),
-  IncludeInactive: Boolean DEFAULT FALSE
+create non-persistent entity Sales.CustomerFilter (
+  SearchName: string(200),
+  IncludeInactive: boolean default false
 );
 /
 
 /** View entity with OQL */
-CREATE VIEW ENTITY Reports.CustomerStats (
-  CustomerName: String,
-  OrderCount: Integer
-) AS
-  SELECT c.Name, COUNT(o.Id)
-  FROM Sales.Customer c
-  JOIN Sales.Order o ON o.Customer = c
-  GROUP BY c.Name;
+create view entity Reports.CustomerStats (
+  CustomerName: string,
+  OrderCount: integer
+) as
+  select c.Name, count(o.Id)
+  from Sales.Customer c
+  join Sales.Order o on o.Customer = c
+  GROUP by c.Name;
 /
 ```
 
@@ -87,29 +87,29 @@ CREATE VIEW ENTITY Reports.CustomerStats (
 
 ```sql
 [/** <documentation> */]
-<name>: <type> [<constraints>] [DEFAULT <value>]
+<name>: <type> [<constraints>] [default <value>]
 ```
 
 ### Attribute Properties
 
 | Property | MDL Representation | Description |
 |----------|-------------------|-------------|
-| Name | `AttributeName:` | Attribute identifier |
+| Name | `attributename:` | Attribute identifier |
 | Documentation | `/** ... */` | Doc comment before attribute |
 | Type | See [Data Types](./02-data-types.md) | Attribute data type |
-| Required | `NOT NULL` | Value cannot be empty |
-| Unique | `UNIQUE` | Value must be unique |
-| Default | `DEFAULT value` | Default value on create |
+| Required | `not null` | Value cannot be empty |
+| Unique | `unique` | Value must be unique |
+| Default | `default value` | Default value on create |
 
 ### Attribute Ordering
 
 Attributes are defined in order, separated by commas. The last attribute has no trailing comma:
 
 ```sql
-CREATE PERSISTENT ENTITY Module.Entity (
-  FirstAttr: String(200),      -- comma after
-  SecondAttr: Integer,         -- comma after
-  LastAttr: Boolean            -- no comma
+create persistent entity Module.Entity (
+  FirstAttr: string(200),      -- comma after
+  SecondAttr: integer,         -- comma after
+  LastAttr: boolean            -- no comma
 );
 ```
 
@@ -123,36 +123,36 @@ Validation rules are expressed as attribute constraints in MDL.
 
 | Validation | MDL Syntax | Description |
 |------------|------------|-------------|
-| Required | `NOT NULL` | Attribute must have a value |
-| Required with message | `NOT NULL ERROR 'message'` | Custom error message |
-| Unique | `UNIQUE` | Value must be unique across all objects |
-| Unique with message | `UNIQUE ERROR 'message'` | Custom error message |
+| Required | `not null` | Attribute must have a value |
+| Required with message | `not null error 'message'` | Custom error message |
+| Unique | `unique` | Value must be unique across all objects |
+| Unique with message | `unique error 'message'` | Custom error message |
 
 ### Validation Syntax
 
 ```sql
-AttrName: Type NOT NULL [ERROR '<message>'] [UNIQUE [ERROR '<message>']]
+AttrName: type not null [error '<message>'] [unique [error '<message>']]
 ```
 
 ### Examples
 
 ```sql
-CREATE PERSISTENT ENTITY Sales.Product (
+create persistent entity Sales.Product (
   -- Required only
-  Name: String(200) NOT NULL,
+  Name: string(200) not null,
 
   -- Required with custom error
-  SKU: String(50) NOT NULL ERROR 'SKU is required for all products',
+  SKU: string(50) not null error 'SKU is required for all products',
 
   -- Unique only
-  Barcode: String(50) UNIQUE,
+  Barcode: string(50) unique,
 
   -- Required and unique with custom errors
-  ProductCode: String(20) NOT NULL ERROR 'Product code required'
-                          UNIQUE ERROR 'Product code must be unique',
+  ProductCode: string(20) not null error 'Product code required'
+                          unique error 'Product code must be unique',
 
   -- Optional field (no validation)
-  Description: String(unlimited)
+  description: string(unlimited)
 );
 ```
 
@@ -160,10 +160,10 @@ CREATE PERSISTENT ENTITY Sales.Product (
 
 | MDL | BSON RuleInfo.$Type | Description |
 |-----|---------------------|-------------|
-| `NOT NULL` | `DomainModels$RequiredRuleInfo` | Required validation |
-| `UNIQUE` | `DomainModels$UniqueRuleInfo` | Uniqueness validation |
-| (future) `RANGE(min, max)` | `DomainModels$RangeRuleInfo` | Range validation |
-| (future) `REGEX(pattern)` | `DomainModels$RegexRuleInfo` | Pattern validation |
+| `not null` | `DomainModels$RequiredRuleInfo` | Required validation |
+| `unique` | `DomainModels$UniqueRuleInfo` | Uniqueness validation |
+| (future) `range(min, max)` | `DomainModels$RangeRuleInfo` | Range validation |
+| (future) `regex(pattern)` | `DomainModels$RegexRuleInfo` | Pattern validation |
 
 ---
 
@@ -174,7 +174,7 @@ Indexes improve query performance for frequently searched attributes.
 ### Index Syntax
 
 ```sql
-INDEX (<column> [ASC|DESC] [, <column> [ASC|DESC] ...])
+index (<column> [asc|desc] [, <column> [asc|desc] ...])
 ```
 
 ### Index Properties
@@ -182,26 +182,26 @@ INDEX (<column> [ASC|DESC] [, <column> [ASC|DESC] ...])
 | Property | MDL Syntax | Description |
 |----------|------------|-------------|
 | Columns | `(col1, col2, ...)` | Indexed columns in order |
-| Sort Order | `ASC` / `DESC` | Sort direction (default: ASC) |
+| Sort Order | `asc` / `desc` | Sort direction (default: ASC) |
 
 ### Examples
 
 ```sql
-CREATE PERSISTENT ENTITY Sales.Order (
-  OrderId: AutoNumber NOT NULL UNIQUE,
-  OrderNumber: String(50) NOT NULL,
-  CustomerId: Long,
-  OrderDate: DateTime,
-  Status: Enumeration(Sales.OrderStatus)
+create persistent entity Sales.Order (
+  OrderId: autonumber not null unique,
+  OrderNumber: string(50) not null,
+  CustomerId: long,
+  OrderDate: datetime,
+  status: enumeration(Sales.OrderStatus)
 )
 -- Single column index
-INDEX (OrderNumber)
+index (OrderNumber)
 
 -- Composite index
-INDEX (CustomerId, OrderDate DESC)
+index (CustomerId, OrderDate desc)
 
 -- Multiple indexes
-INDEX (Status);
+index (status);
 /
 ```
 
@@ -222,19 +222,19 @@ Associations define relationships between entities.
 
 | Type | MDL Keyword | Cardinality | Description |
 |------|-------------|-------------|-------------|
-| Reference | `Reference` | Many-to-One | Child references one parent |
+| Reference | `reference` | Many-to-One | Child references one parent |
 | ReferenceSet | `ReferenceSet` | Many-to-Many | Both can have multiple |
 
 ### Association Syntax
 
 ```sql
 [/** <documentation> */]
-CREATE ASSOCIATION <Module>.<AssociationName>
-  FROM <ParentEntity>
-  TO <ChildEntity>
-  TYPE <Reference|ReferenceSet>
-  [OWNER <Default|Both|Parent|Child>]
-  [DELETE_BEHAVIOR <behavior>]
+create association <module>.<AssociationName>
+  from <ParentEntity>
+  to <ChildEntity>
+  type <reference|ReferenceSet>
+  [owner <default|both|Parent|Child>]
+  [delete_behavior <behavior>]
 [;|/]
 ```
 
@@ -243,18 +243,18 @@ CREATE ASSOCIATION <Module>.<AssociationName>
 | Property | MDL Clause | Description |
 |----------|------------|-------------|
 | Name | `Module.Name` | Association identifier |
-| Parent | `FROM Entity` | Parent (owner/many) side of relationship |
-| Child | `TO Entity` | Child (referenced/one) side of relationship |
-| Type | `TYPE Reference/ReferenceSet` | Cardinality type |
-| Owner | `OWNER` | Which side can modify |
-| Delete Behavior | `DELETE_BEHAVIOR` | What happens on delete |
+| Parent | `from entity` | Parent (owner/many) side of relationship |
+| Child | `to entity` | Child (referenced/one) side of relationship |
+| Type | `type reference/ReferenceSet` | Cardinality type |
+| Owner | `owner` | Which side can modify |
+| Delete Behavior | `delete_behavior` | What happens on delete |
 
 ### Owner Options
 
 | Owner | Description |
 |-------|-------------|
-| `Default` | Child owns (can set/clear reference) |
-| `Both` | Both sides can modify the association |
+| `default` | Child owns (can set/clear reference) |
+| `both` | Both sides can modify the association |
 | `Parent` | Only parent can modify |
 | `Child` | Only child can modify |
 
@@ -269,28 +269,28 @@ CREATE ASSOCIATION <Module>.<AssociationName>
 
 ```sql
 /** Order belongs to Customer (many-to-one) */
-CREATE ASSOCIATION Sales.Order_Customer
-  FROM Sales.Customer
-  TO Sales.Order
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Sales.Order_Customer
+  from Sales.Customer
+  to Sales.Order
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 /** Order has many Products (many-to-many) */
-CREATE ASSOCIATION Sales.Order_Product
-  FROM Sales.Order
-  TO Sales.Product
-  TYPE ReferenceSet
-  OWNER Both;
+create association Sales.Order_Product
+  from Sales.Order
+  to Sales.Product
+  type ReferenceSet
+  owner both;
 /
 
 /** Invoice must be deleted with Order */
-CREATE ASSOCIATION Sales.Order_Invoice
-  FROM Sales.Order
-  TO Sales.Invoice
-  TYPE Reference
-  DELETE_BEHAVIOR DELETE_CASCADE;
+create association Sales.Order_Invoice
+  from Sales.Order
+  to Sales.Invoice
+  type reference
+  delete_behavior DELETE_CASCADE;
 /
 ```
 
@@ -303,14 +303,14 @@ Generalization (inheritance) allows entities to extend other entities.
 ### Generalization Syntax
 
 ```sql
-CREATE PERSISTENT ENTITY <Module>.<Name>
-  EXTENDS <ParentEntity>
+create persistent entity <module>.<Name>
+  extends <ParentEntity>
 (
   <additional-attributes>
 );
 ```
 
-Both `EXTENDS` (preferred) and `GENERALIZATION` (legacy) keywords are supported. The `EXTENDS` keyword can appear before the attribute list or as an entity option after it.
+Both `extends` (preferred) and `generalization` (legacy) keywords are supported. The `extends` keyword can appear before the attribute list or as an entity option after it.
 
 ### System Generalizations
 
@@ -326,21 +326,21 @@ Common system entity generalizations:
 
 ```sql
 /** Employee extends User with additional fields */
-CREATE PERSISTENT ENTITY HR.Employee EXTENDS System.User (
-  EmployeeNumber: String(20) NOT NULL UNIQUE,
-  Department: String(100),
-  HireDate: Date
+create persistent entity HR.Employee extends System.User (
+  EmployeeNumber: string(20) not null unique,
+  Department: string(100),
+  HireDate: date
 );
 
 /** Image entity for product photos */
-CREATE PERSISTENT ENTITY Catalog.ProductPhoto EXTENDS System.Image (
-  Caption: String(200),
-  SortOrder: Integer DEFAULT 0
+create persistent entity Catalog.ProductPhoto extends System.Image (
+  caption: string(200),
+  SortOrder: integer default 0
 );
 
 /** File attachment entity */
-CREATE PERSISTENT ENTITY Docs.Attachment EXTENDS System.FileDocument (
-  Description: String(500)
+create persistent entity Docs.Attachment extends System.FileDocument (
+  description: string(500)
 );
 ```
 
@@ -348,47 +348,47 @@ CREATE PERSISTENT ENTITY Docs.Attachment EXTENDS System.FileDocument (
 
 ## Access Rules
 
-Access rules control entity-level security. They are managed via `GRANT` and `REVOKE` statements.
+Access rules control entity-level security. They are managed via `grant` and `revoke` statements.
 
 ### Syntax
 
 ```sql
 -- Grant entity access to a module role
-GRANT <module>.<role> ON <module>.<entity> (<rights>) [WHERE '<xpath>'];
+grant <module>.<role> on <module>.<entity> (<rights>) [where '<xpath>'];
 
 -- Revoke entity access
-REVOKE <module>.<role> ON <module>.<entity>;
+revoke <module>.<role> on <module>.<entity>;
 
 -- Show access on an entity
-SHOW ACCESS ON <module>.<entity>;
+show access on <module>.<entity>;
 
 -- Show security matrix
-SHOW SECURITY MATRIX [IN <module>];
+show security matrix [in <module>];
 ```
 
 Where `<rights>` is a comma-separated list of:
-- `CREATE` — allow creating instances
-- `DELETE` — allow deleting instances
-- `READ *` — read all members, or `READ (<attr>, ...)` for specific attributes
-- `WRITE *` — write all members, or `WRITE (<attr>, ...)` for specific attributes
+- `create` — allow creating instances
+- `delete` — allow deleting instances
+- `read *` — read all members, or `read (<attr>, ...)` for specific attributes
+- `write *` — write all members, or `write (<attr>, ...)` for specific attributes
 
 ### Examples
 
 ```sql
 -- Full access
-GRANT Sales.Admin ON Sales.Customer (CREATE, DELETE, READ *, WRITE *);
+grant Sales.Admin on Sales.Customer (create, delete, read *, write *);
 
 -- Read-only
-GRANT Sales.Viewer ON Sales.Customer (READ *);
+grant Sales.Viewer on Sales.Customer (read *);
 
 -- Selective member access
-GRANT Sales.User ON Sales.Customer (READ (Name, Email), WRITE (Email));
+grant Sales.User on Sales.Customer (read (Name, Email), write (Email));
 
 -- With XPath constraint
-GRANT Sales.User ON Sales.Order (READ *, WRITE *) WHERE '[Status = ''Open'']';
+grant Sales.User on Sales.Order (read *, write *) where '[Status = ''Open'']';
 
 -- Revoke
-REVOKE Sales.User ON Sales.Order;
+revoke Sales.User on Sales.Order;
 ```
 
 ### Access Rule Properties
@@ -413,13 +413,13 @@ Event handlers trigger microflows on entity lifecycle events.
 ### Planned Syntax
 
 ```sql
-CREATE PERSISTENT ENTITY Sales.Order (
+create persistent entity Sales.Order (
   ...
 )
-EVENTS (
-  ON CREATE CALL Sales.Order_OnCreate,
-  ON COMMIT CALL Sales.Order_Validate RAISE_ERROR,
-  ON DELETE CALL Sales.Order_OnDelete
+events (
+  on create call Sales.Order_OnCreate,
+  on commit call Sales.Order_Validate RAISE_ERROR,
+  on delete call Sales.Order_OnDelete
 );
 ```
 
@@ -438,10 +438,10 @@ EVENTS (
 
 ```sql
 -- Connect to project
-CONNECT LOCAL './MyApp.mpr';
+connect local './MyApp.mpr';
 
 -- Create enumeration
-CREATE ENUMERATION Sales.OrderStatus (
+create enumeration Sales.OrderStatus (
   Draft 'Draft',
   Pending 'Pending',
   Confirmed 'Confirmed',
@@ -452,48 +452,48 @@ CREATE ENUMERATION Sales.OrderStatus (
 
 -- Create Customer entity
 /** Customer master data */
-@Position(100, 100)
-CREATE PERSISTENT ENTITY Sales.Customer (
-  CustomerId: AutoNumber NOT NULL UNIQUE DEFAULT 1,
-  Name: String(200) NOT NULL ERROR 'Customer name is required',
-  Email: String(200) UNIQUE ERROR 'Email already registered',
-  Phone: String(50),
-  IsActive: Boolean DEFAULT TRUE,
-  CreatedAt: DateTime
+@position(100, 100)
+create persistent entity Sales.Customer (
+  CustomerId: autonumber not null unique default 1,
+  Name: string(200) not null error 'Customer name is required',
+  Email: string(200) unique error 'Email already registered',
+  Phone: string(50),
+  IsActive: boolean default true,
+  CreatedAt: datetime
 )
-INDEX (Name)
-INDEX (Email);
+index (Name)
+index (Email);
 /
 
 -- Create Order entity
 /** Sales order */
-@Position(300, 100)
-CREATE PERSISTENT ENTITY Sales.Order (
-  OrderId: AutoNumber NOT NULL UNIQUE DEFAULT 1,
-  OrderNumber: String(50) NOT NULL UNIQUE,
-  OrderDate: DateTime NOT NULL,
-  TotalAmount: Decimal DEFAULT 0,
-  Status: Enumeration(Sales.OrderStatus) DEFAULT 'Draft',
-  Notes: String(unlimited)
+@position(300, 100)
+create persistent entity Sales.Order (
+  OrderId: autonumber not null unique default 1,
+  OrderNumber: string(50) not null unique,
+  OrderDate: datetime not null,
+  TotalAmount: decimal default 0,
+  status: enumeration(Sales.OrderStatus) default 'Draft',
+  Notes: string(unlimited)
 )
-INDEX (OrderNumber)
-INDEX (OrderDate DESC);
+index (OrderNumber)
+index (OrderDate desc);
 /
 
 -- Create association
-CREATE ASSOCIATION Sales.Order_Customer
-  FROM Sales.Customer
-  TO Sales.Order
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Sales.Order_Customer
+  from Sales.Customer
+  to Sales.Order
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 
 -- Show result
-SHOW ENTITIES IN Sales;
-DESCRIBE ENTITY Sales.Customer;
-DESCRIBE ENTITY Sales.Order;
-DESCRIBE ASSOCIATION Sales.Order_Customer;
+show entities in Sales;
+describe entity Sales.Customer;
+describe entity Sales.Order;
+describe association Sales.Order_Customer;
 
-COMMIT MESSAGE 'Created Sales domain model';
+commit message 'Created Sales domain model';
 ```

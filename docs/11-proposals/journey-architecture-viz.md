@@ -16,24 +16,24 @@ The output should be an SVG diagram with a hand-drawn/sketchy aesthetic (wobbly 
 Mendix projects are stored as JSON files following the Mendix Definition Language (MDL). The relevant structures to extract are:
 
 ### 1. User Roles
-- Location: `Security$ProjectSecurity` → `userRoles`
+- Location: `security$ProjectSecurity` → `userRoles`
 - Each role has a `name` and is associated with module roles
 
 ### 2. Navigation
-- Location: `Navigation$NavigationDocument`
+- Location: `navigation$NavigationDocument`
 - Contains navigation profiles (Responsive, NativePhone, etc.)
 - Each profile has a `homePage` and menu items with `page` references
 - Navigation items are linked to specific user roles
 
 ### 3. Pages
-- Location: `Pages$Page` files within each module
+- Location: `pages$page` files within each module
 - Pages contain widgets, some of which trigger microflows (`on-click → call microflow`)
 - Pages have `allowedRoles` defining which user roles can see them
 - Pages contain data views, list views, etc. that reference entities
 - Buttons and actions on pages link to other pages (showing navigation flow)
 
 ### 4. Microflows
-- Location: `Microflows$Microflow` files within each module
+- Location: `microflows$microflow` files within each module
 - Contain activities: `RetrieveAction`, `CreateObjectAction`, `ChangeObjectAction`, `DeleteAction`, `CommitAction`, `ShowPageAction`, `RestCallAction`, `WebServiceCallAction`, `JavaActionCallAction`
 - `ShowPageAction` links to target pages (enabling flow tracing)
 - Entity access can be extracted from retrieve/create/change/delete activities
@@ -56,13 +56,13 @@ Mendix projects are stored as JSON files following the Mendix Definition Languag
 Build an in-memory graph from the Mendix project:
 
 ```
-Role -[can access]-> Page
-Page -[triggers]-> Microflow
-Page -[navigates to]-> Page (via buttons/ShowPageAction)
-Microflow -[accesses]-> Entity (via retrieve/create/change/delete)
-Microflow -[calls]-> Microflow (sub-microflow calls)
-Microflow -[calls]-> ExternalService (via REST/SOAP actions)
-Microflow -[shows]-> Page (via ShowPageAction)
+role -[can access]-> page
+page -[triggers]-> microflow
+page -[navigates to]-> page (via buttons/ShowPageAction)
+microflow -[accesses]-> entity (via retrieve/create/change/delete)
+microflow -[calls]-> microflow (sub-microflow calls)
+microflow -[calls]-> ExternalService (via rest/SOAP actions)
+microflow -[shows]-> page (via ShowPageAction)
 ```
 
 ### Phase 2: Identify Journeys
@@ -128,10 +128,10 @@ cmd/journey/
 
 internal/journey/
   extractor.go        # Phase 1-3: walk Mendix project, build journey model
-  model.go            # Data types: Journey, Step, ScreenNode, LogicNode, DataNode, ExternalNode
+  model.go            # data types: Journey, Step, ScreenNode, LogicNode, DataNode, ExternalNode
   renderer.go         # Phase 4: SVG generation with sketchy style
   sketch.go           # Sketchy drawing primitives (rough lines, marker fills, etc.)
-  layout.go           # Layout engine: compute positions, widths, vertical spacing
+  layout.go           # layout engine: compute positions, widths, vertical spacing
 
 internal/mendix/
   # Reuse existing MDL parsing infrastructure from mxcli
@@ -144,10 +144,10 @@ internal/mendix/
 # Auto-detect journeys from the project
 mxcli journey generate --project ./my-app.mpr --output journey.svg
 
-# Use a config file for step ordering
+# use a config file for step ordering
 mxcli journey generate --project ./my-app.mpr --config journey.yaml --output journey.svg
 
-# Generate for a specific role
+# generate for a specific role
 mxcli journey generate --project ./my-app.mpr --role "Customer" --output journey.svg
 
 # Output as HTML (SVG embedded, with hover interactions)

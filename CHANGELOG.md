@@ -181,7 +181,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Bumped dependencies: pgx v5.9.1, zap v1.27.1, go-runewidth v0.0.21, cobra v1.10.2, mongo-driver v1.17.9, sqlite v1.48.0
-- Refactored Visible/Editable syntax to `Visible: [xpath]` and `Editable: [xpath]`
+- Refactored Visible/Editable syntax to `visible: [xpath]` and `editable: [xpath]`
 - Used dedicated CWTest module in custom widget examples
 - Always-quoted identifiers in MDL to prevent reserved keyword conflicts
 - Added scope & atomicity and documentation sections to PR review checklist
@@ -274,7 +274,7 @@ First public release.
 - **Domain Model** — CREATE/ALTER/DROP ENTITY, CREATE ASSOCIATION, attribute types, indexes, validation rules
 - **Microflows & Nanoflows** — 60+ activity types, loops, error handling, expressions, parameters
 - **Pages** — 50+ widget types, CREATE/ALTER PAGE/SNIPPET, DataGrid, DataView, ListView, pluggable widgets
-- **Page Variables** — `Variables: { $name: Type = 'expression' }` in page/snippet headers for column visibility and conditional logic
+- **Page Variables** — `variables: { $name: type = 'expression' }` in page/snippet headers for column visibility and conditional logic
 - **Security** — Module roles, entity access rules, GRANT/REVOKE, UPDATE SECURITY reconciliation
 - **Navigation** — Navigation profiles, menu items, home pages, login pages
 - **Enumerations** — CREATE/ALTER/DROP ENUMERATION with localized values

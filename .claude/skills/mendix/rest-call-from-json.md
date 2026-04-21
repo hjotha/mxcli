@@ -5,8 +5,8 @@ JSON Structure → Non-persistent entities → Import Mapping → microflow.
 
 > **Two approaches**: This skill uses the **inline REST CALL** approach (good for one-off calls
 > and quick prototyping). For structured APIs with reusable operations, use the **REST Client**
-> approach instead — see [rest-client.md](rest-client.md) for `CREATE REST CLIENT` + `SEND REST REQUEST`
-> + optional `TRANSFORM` with JSLT data transformers.
+> approach instead — see [rest-client.md](rest-client.md) for `create rest client` + `send rest request`
+> + optional `transform` with JSLT data transformers.
 
 ## Overview — Four Steps
 
@@ -20,8 +20,8 @@ JSON Structure → Non-persistent entities → Import Mapping → microflow.
 ## Step 1 — JSON Structure
 
 ```sql
-CREATE JSON STRUCTURE Module.JSON_MyStructure
-  SNIPPET '{"key": "value", "count": 1}';
+create json structure Module.JSON_MyStructure
+  snippet '{"key": "value", "count": 1}';
 ```
 
 - The executor **formats** the snippet (pretty-print) then **refreshes** (derives element tree) automatically.
@@ -31,7 +31,7 @@ CREATE JSON STRUCTURE Module.JSON_MyStructure
 
 **Verify** after creation:
 ```sql
-DESCRIBE JSON STRUCTURE Module.JSON_MyStructure;
+describe json structure Module.JSON_MyStructure;
 -- Should show: element tree under "-- Element tree:" comment
 ```
 
@@ -42,25 +42,25 @@ DESCRIBE JSON STRUCTURE Module.JSON_MyStructure;
 Derive one entity per JSON object type. Name them after what they represent (not after JSON keys).
 
 ```sql
-CREATE ENTITY Module.MyRootObject (NON_PERSISTENT)
-  stringField   : String
-  intField      : Integer
-  decimalField  : Decimal
-  boolField     : Boolean DEFAULT false;
+create entity Module.MyRootObject (NON_PERSISTENT)
+  stringField   : string
+  intField      : integer
+  decimalField  : decimal
+  boolField     : boolean default false;
 
-CREATE ENTITY Module.MyNestedObject (NON_PERSISTENT)
-  name : String
-  code : String;
+create entity Module.MyNestedObject (NON_PERSISTENT)
+  name : string
+  code : string;
 
-CREATE ASSOCIATION Module.MyRootObject_MyNestedObject
-  FROM Module.MyRootObject
-  TO Module.MyNestedObject;
+create association Module.MyRootObject_MyNestedObject
+  from Module.MyRootObject
+  to Module.MyNestedObject;
 ```
 
 **Rules:**
-- All string fields: bare `String` (no length — unlimited)
-- All number fields: `Integer`, `Decimal`, or `Long` — remove defaults for optional fields
-- Boolean fields **require** `DEFAULT true|false`
+- All string fields: bare `string` (no length — unlimited)
+- All number fields: `integer`, `decimal`, or `long` — remove defaults for optional fields
+- Boolean fields **require** `default true|false`
 - `NON_PERSISTENT` — these entities are not stored in the database
 - One association per parent→child relationship; name it `Parent_Child`
 
@@ -71,13 +71,13 @@ CREATE ASSOCIATION Module.MyRootObject_MyNestedObject
 > **Full reference**: See [json-structures-and-mappings.md](json-structures-and-mappings.md) for complete import/export mapping syntax, domain model patterns, and common mistakes.
 
 ```sql
-CREATE IMPORT MAPPING Module.IMM_MyMapping
-  WITH JSON STRUCTURE Module.JSON_MyStructure
+create import mapping Module.IMM_MyMapping
+  with json structure Module.JSON_MyStructure
 {
-  CREATE Module.MyRootObject {
+  create Module.MyRootObject {
     stringField = stringField,
     intField    = intField,
-    CREATE Module.MyRootObject_MyNestedObject/Module.MyNestedObject = nestedKey {
+    create Module.MyRootObject_MyNestedObject/Module.MyNestedObject = nestedKey {
       name = name,
       code = code
     }
@@ -86,12 +86,12 @@ CREATE IMPORT MAPPING Module.IMM_MyMapping
 ```
 
 **Syntax rules:**
-- Root object: `CREATE Module.Entity { ... }` — always starts with handling keyword
-- Value mappings: `AttributeName = jsonFieldName` — entity attribute on the left, JSON field on the right
-- Nested objects: `CREATE Association/Entity = jsonKey { ... }` — association path + JSON key
-- Object handling: `CREATE` (default), `FIND` (requires KEY), `FIND OR CREATE`
-- KEY marker: `Attr = jsonField KEY` — marks the attribute as a matching key
-- Value transforms: `Attr = Module.Microflow(jsonField)` — call a microflow to transform the value
+- Root object: `create Module.Entity { ... }` — always starts with handling keyword
+- Value mappings: `attributename = jsonFieldName` — entity attribute on the left, JSON field on the right
+- Nested objects: `create association/entity = jsonKey { ... }` — association path + JSON key
+- Object handling: `create` (default), `find` (requires KEY), `find or create`
+- KEY marker: `attr = jsonField key` — marks the attribute as a matching key
+- Value transforms: `attr = Module.Microflow(jsonField)` — call a microflow to transform the value
 
 **Verify** after creation — check Schema elements are ticked in Studio Pro:
 - Open the import mapping in Studio Pro
@@ -102,47 +102,47 @@ CREATE IMPORT MAPPING Module.IMM_MyMapping
 
 ## Step 4 — REST CALL Microflow
 
-Place the microflow in the `[Pages]/Operations/` folder or `Private/` depending on whether it is public.
+Place the microflow in the `[pages]/Operations/` folder or `Private/` depending on whether it is public.
 
 ```sql
-CREATE MICROFLOW Module.GET_MyData ()
-BEGIN
+create microflow Module.GET_MyData ()
+begin
   @position(-5, 200)
-  DECLARE $baseUrl String = 'https://api.example.com';
+  declare $baseUrl string = 'https://api.example.com';
   @position(185, 200)
-  DECLARE $endpoint String = $baseUrl + '/path';
+  declare $endpoint string = $baseUrl + '/path';
   @position(375, 200)
-  $Result = REST CALL GET '{1}' WITH ({1} = $endpoint)
-    HEADER 'Accept' = 'application/json'
-    TIMEOUT 300
-    RETURNS MAPPING Module.IMM_MyMapping AS Module.MyRootObject ON ERROR ROLLBACK;
+  $Result = rest call get '{1}' with ({1} = $endpoint)
+    header 'Accept' = 'application/json'
+    timeout 300
+    returns mapping Module.IMM_MyMapping as Module.MyRootObject on error rollback;
   @position(565, 200)
-  LOG INFO NODE 'Integration' 'Retrieved result' WITH ();
-END;
+  log info node 'Integration' 'Retrieved result' with ();
+end;
 /
 ```
 
 **Key points:**
 - `@position` annotations control the canvas layout — StartEvent is auto-placed 150px to the left of the first annotated activity
-- The output variable name is **automatically derived** from the entity name in `AS Module.MyEntity` — do NOT hardcode it on the left side; the executor overrides it
+- The output variable name is **automatically derived** from the entity name in `as Module.MyEntity` — do NOT hardcode it on the left side; the executor overrides it
 - Single vs list result is **automatically detected**: if the JSON structure's root element is an Object, the variable type is `ObjectType` (single); if Array, `ListType` (list)
-- `ON ERROR ROLLBACK` — standard error handling for integration calls
+- `on error rollback` — standard error handling for integration calls
 
 **For list responses** (JSON root is an array):
 ```sql
-  $Results = REST CALL GET '{1}' WITH ({1} = $endpoint)
-    HEADER 'Accept' = 'application/json'
-    TIMEOUT 300
-    RETURNS MAPPING Module.IMM_MyMapping AS Module.MyItem ON ERROR ROLLBACK;
+  $Results = rest call get '{1}' with ({1} = $endpoint)
+    header 'Accept' = 'application/json'
+    timeout 300
+    returns mapping Module.IMM_MyMapping as Module.MyItem on error rollback;
   @position(565, 200)
-  $Count = COUNT($MyItem);
+  $count = count($MyItem);
 ```
 
 ---
 
 ## Step 5 — Import/Export Mapping in Microflows (Optional)
 
-Instead of using `RETURNS MAPPING` on a REST CALL, you can use standalone import/export mapping actions. This is useful when you already have a JSON string and want to map it to entities, or when you want to serialize entities back to JSON.
+Instead of using `returns mapping` on a REST CALL, you can use standalone import/export mapping actions. This is useful when you already have a JSON string and want to map it to entities, or when you want to serialize entities back to JSON.
 
 ### Import from mapping
 
@@ -150,10 +150,10 @@ Applies an import mapping to a string variable (JSON content) to produce entity 
 
 ```sql
 -- With assignment (non-persistent entities, need the result in the flow)
-$PetResponse = IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
+$PetResponse = import from mapping Module.IMM_Pet($JsonContent);
 
 -- Without assignment (persistent entities, just stores to DB)
-IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
+import from mapping Module.IMM_Pet($JsonContent);
 ```
 
 ### Export to mapping
@@ -161,20 +161,20 @@ IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
 Applies an export mapping to an entity object to produce a JSON string:
 
 ```sql
-$JsonOutput = EXPORT TO MAPPING Module.EMM_Pet($PetResponse);
+$JsonOutput = export to mapping Module.EMM_Pet($PetResponse);
 ```
 
 ### Complete import → process → export microflow
 
 ```sql
-CREATE MICROFLOW Module.ProcessPetData ()
-BEGIN
-  DECLARE $ResponseContent String = $latestHttpResponse/Content;
-  $PetResponse = IMPORT FROM MAPPING Module.IMM_Pet($ResponseContent);
+create microflow Module.ProcessPetData ()
+begin
+  declare $ResponseContent string = $latestHttpResponse/content;
+  $PetResponse = import from mapping Module.IMM_Pet($ResponseContent);
   -- Process the imported data...
-  $JsonOutput = EXPORT TO MAPPING Module.EMM_Pet($PetResponse);
-  LOG INFO NODE 'Integration' 'Exported: ' + $JsonOutput;
-END;
+  $JsonOutput = export to mapping Module.EMM_Pet($PetResponse);
+  log info node 'Integration' 'Exported: ' + $JsonOutput;
+end;
 /
 ```
 
@@ -184,47 +184,47 @@ END;
 
 ```sql
 -- Step 1: JSON Structure
-CREATE JSON STRUCTURE Integrations.JSON_BibleVerse
-  SNIPPET '{"translation":{"identifier":"web","name":"World English Bible","language":"English","language_code":"eng","license":"Public Domain"},"random_verse":{"book_id":"1SA","book":"1 Samuel","chapter":17,"verse":49,"text":"David put his hand in his bag, took a stone, and slung it."}}';
+create json structure Integrations.JSON_BibleVerse
+  snippet '{"translation":{"identifier":"web","name":"World English Bible","language":"English","language_code":"eng","license":"Public Domain"},"random_verse":{"book_id":"1SA","book":"1 Samuel","chapter":17,"verse":49,"text":"David put his hand in his bag, took a stone, and slung it."}}';
 
 -- Step 2: Entities
-CREATE ENTITY Integrations.BibleApiResponse (NON_PERSISTENT);
+create entity Integrations.BibleApiResponse (NON_PERSISTENT);
 
-CREATE ENTITY Integrations.BibleTranslation (NON_PERSISTENT)
-  identifier    : String
-  name          : String
-  language      : String
-  language_code : String
-  license       : String;
+create entity Integrations.BibleTranslation (NON_PERSISTENT)
+  identifier    : string
+  name          : string
+  language      : string
+  language_code : string
+  license       : string;
 
-CREATE ENTITY Integrations.BibleVerse (NON_PERSISTENT)
-  book_id : String
-  book    : String
-  chapter : Integer
-  verse   : Integer
-  text    : String;
+create entity Integrations.BibleVerse (NON_PERSISTENT)
+  book_id : string
+  book    : string
+  chapter : integer
+  verse   : integer
+  text    : string;
 
-CREATE ASSOCIATION Integrations.BibleApiResponse_BibleTranslation
-  FROM Integrations.BibleApiResponse
-  TO Integrations.BibleTranslation;
+create association Integrations.BibleApiResponse_BibleTranslation
+  from Integrations.BibleApiResponse
+  to Integrations.BibleTranslation;
 
-CREATE ASSOCIATION Integrations.BibleApiResponse_BibleVerse
-  FROM Integrations.BibleApiResponse
-  TO Integrations.BibleVerse;
+create association Integrations.BibleApiResponse_BibleVerse
+  from Integrations.BibleApiResponse
+  to Integrations.BibleVerse;
 
 -- Step 3: Import Mapping
-CREATE IMPORT MAPPING Integrations.IMM_BibleVerse
-  WITH JSON STRUCTURE Integrations.JSON_BibleVerse
+create import mapping Integrations.IMM_BibleVerse
+  with json structure Integrations.JSON_BibleVerse
 {
-  CREATE Integrations.BibleApiResponse {
-    CREATE Integrations.BibleApiResponse_BibleTranslation/Integrations.BibleTranslation = translation {
+  create Integrations.BibleApiResponse {
+    create Integrations.BibleApiResponse_BibleTranslation/Integrations.BibleTranslation = translation {
       identifier    = identifier,
       language      = language,
       language_code = language_code,
       license       = license,
       name          = name
     },
-    CREATE Integrations.BibleApiResponse_BibleVerse/Integrations.BibleVerse = random_verse {
+    create Integrations.BibleApiResponse_BibleVerse/Integrations.BibleVerse = random_verse {
       book    = book,
       book_id = book_id,
       chapter = chapter,
@@ -235,20 +235,20 @@ CREATE IMPORT MAPPING Integrations.IMM_BibleVerse
 };
 
 -- Step 4: Microflow
-CREATE MICROFLOW Integrations.GET_BibleVerse_Random ()
-BEGIN
+create microflow Integrations.GET_BibleVerse_Random ()
+begin
   @position(-5, 200)
-  DECLARE $baseUrl String = 'https://bible-api.com';
+  declare $baseUrl string = 'https://bible-api.com';
   @position(185, 200)
-  DECLARE $endpoint String = $baseUrl + '/data/web/random';
+  declare $endpoint string = $baseUrl + '/data/web/random';
   @position(375, 200)
-  $Result = REST CALL GET '{1}' WITH ({1} = $endpoint)
-    HEADER 'Accept' = 'application/json'
-    TIMEOUT 300
-    RETURNS MAPPING Integrations.IMM_BibleVerse AS Integrations.BibleApiResponse ON ERROR ROLLBACK;
+  $Result = rest call get '{1}' with ({1} = $endpoint)
+    header 'Accept' = 'application/json'
+    timeout 300
+    returns mapping Integrations.IMM_BibleVerse as Integrations.BibleApiResponse on error rollback;
   @position(565, 200)
-  LOG INFO NODE 'Integration' 'Retrieved Bible verse' WITH ();
-END;
+  log info node 'Integration' 'Retrieved Bible verse' with ();
+end;
 /
 ```
 
@@ -259,11 +259,11 @@ END;
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Studio Pro "not consistent with snippet" | JSON element tree keys not in alphabetical order | Executor sorts keys; re-derive from snippet |
-| Schema elements not ticked in import mapping | JsonPath mismatch | Named object elements use `(Object)\|key`, NOT `(Object)\|key\|(Object)` |
-| Import mapping not linked in REST call | Wrong BSON field name | Use `ReturnValueMapping`, not `Mapping` |
+| Schema elements not ticked in import mapping | JsonPath mismatch | Named object elements use `(object)\|key`, NOT `(object)\|key\|(object)` |
+| Import mapping not linked in REST call | Wrong BSON field name | Use `ReturnValueMapping`, not `mapping` |
 | Studio Pro shows "List of X" but mapping returns single X | `ForceSingleOccurrence` not set | Executor auto-detects from JSON structure root element type |
 | StartEvent behind first activities | Default posX=200 vs @position(-5,...) | Fixed: executor pre-scans for first @position and shifts StartEvent left |
-| `TypeCacheUnknownTypeException` | Wrong BSON `$Type` names | `ImportMappings$ObjectMappingElement` / `ImportMappings$ValueMappingElement` (no `Import` prefix) |
+| `TypeCacheUnknownTypeException` | Wrong BSON `$type` names | `ImportMappings$ObjectMappingElement` / `ImportMappings$ValueMappingElement` (no `import` prefix) |
 | Attribute not found in Studio Pro | Attribute not fully qualified | Must be `Module.Entity.AttributeName` in the BSON |
 
 ---

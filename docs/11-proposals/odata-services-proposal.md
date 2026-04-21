@@ -27,7 +27,7 @@ This proposal outlines the implementation plan for adding support for:
 | Published Entity Set | No | No | No | No | No |
 | Published Microflow | No | No | No | No | No |
 
-*External entities appear in `SHOW ENTITIES` but without source information.
+*External entities appear in `show entities` but without source information.
 
 ---
 
@@ -37,22 +37,22 @@ This proposal outlines the implementation plan for adding support for:
 
 #### OData Client
 - **Document Type**: Module-level document
-- **BSON $Type**: `Rest$ConsumedODataService`
+- **BSON $Type**: `rest$ConsumedODataService`
 - **Key Fields**: Name, ODataVersion, MetadataUrl, HTTPConfiguration, TimeoutExpression
 
 #### External Entity
-- **Document Type**: Regular entity with special `Source` field
+- **Document Type**: Regular entity with special `source` field
 - **BSON $Type**: `DomainModels$EntityImpl` (same as regular entities)
-- **Source Type**: `Rest$ODataRemoteEntitySource`
+- **Source Type**: `rest$ODataRemoteEntitySource`
 - **Key Fields**: SourceDocument (service reference), EntitySet, RemoteName, Key, Capabilities
 
 #### External Enumeration
-- **Document Type**: Regular enumeration with special `Source` field
-- **BSON $Type**: `Enumerations$Enumeration`
-- **Source Type**: `Rest$ODataRemoteEnumerationSource`
+- **Document Type**: Regular enumeration with special `source` field
+- **BSON $Type**: `enumerations$enumeration`
+- **Source Type**: `rest$ODataRemoteEnumerationSource`
 
 #### External Action Call
-- **Activity Type**: `Microflows$CallExternalAction`
+- **Activity Type**: `microflows$CallExternalAction`
 - **Key Fields**: ConsumedODataService, ParameterMappings, VariableDataType
 
 ### Proposed MDL Syntax
@@ -62,15 +62,15 @@ This proposal outlines the implementation plan for adding support for:
 ##### SHOW
 ```sql
 -- List all OData clients
-SHOW ODATA CLIENTS;
-SHOW ODATA CLIENTS IN MyModule;
+show odata clients;
+show odata clients in MyModule;
 
 -- Output columns: Module, Name, Version, ODataVersion, MetadataUrl, Validated
 ```
 
 ##### DESCRIBE
 ```sql
-DESCRIBE ODATA CLIENT MyModule.SalesforceAPI;
+describe odata client MyModule.SalesforceAPI;
 
 -- Output:
 -- CREATE ODATA CLIENT MyModule.SalesforceAPI (
@@ -86,32 +86,32 @@ DESCRIBE ODATA CLIENT MyModule.SalesforceAPI;
 
 ##### CREATE
 ```sql
-CREATE ODATA CLIENT MyModule.SalesforceAPI (
-  Version: '1.0',
+create odata client MyModule.SalesforceAPI (
+  version: '1.0',
   ODataVersion: OData4,
   MetadataUrl: 'https://api.salesforce.com/odata/v4/$metadata',
-  Timeout: 300,
+  timeout: 300,
   ProxyType: DefaultProxy
 )
-AUTHENTICATION CUSTOM HEADERS
+authentication CUSTOM headers
   'Authorization' = 'Bearer ' + @MyModule.APIToken;
 ```
 
 ##### ALTER
 ```sql
-ALTER ODATA CLIENT MyModule.SalesforceAPI
-  SET Timeout = 600;
+alter odata client MyModule.SalesforceAPI
+  set timeout = 600;
 
-ALTER ODATA CLIENT MyModule.SalesforceAPI
-  SET MetadataUrl = 'https://new-api.salesforce.com/odata/v4/$metadata';
+alter odata client MyModule.SalesforceAPI
+  set MetadataUrl = 'https://new-api.salesforce.com/odata/v4/$metadata';
 
 -- Refresh metadata from service
-ALTER ODATA CLIENT MyModule.SalesforceAPI REFRESH METADATA;
+alter odata client MyModule.SalesforceAPI refresh METADATA;
 ```
 
 ##### DROP
 ```sql
-DROP ODATA CLIENT MyModule.SalesforceAPI;
+drop odata client MyModule.SalesforceAPI;
 ```
 
 #### 1.2 External Entities
@@ -119,15 +119,15 @@ DROP ODATA CLIENT MyModule.SalesforceAPI;
 ##### SHOW
 ```sql
 -- Show external entities (filter from SHOW ENTITIES)
-SHOW EXTERNAL ENTITIES;
-SHOW EXTERNAL ENTITIES IN MyModule;
+show external entities;
+show external entities in MyModule;
 
 -- Output columns: Module, Name, Service, EntitySet, RemoteName, Countable, Creatable, Deletable
 ```
 
 ##### DESCRIBE
 ```sql
-DESCRIBE EXTERNAL ENTITY MyModule.RemoteAccount;
+describe external entity MyModule.RemoteAccount;
 
 -- Output:
 -- CREATE EXTERNAL ENTITY MyModule.RemoteAccount
@@ -151,8 +151,8 @@ DESCRIBE EXTERNAL ENTITY MyModule.RemoteAccount;
 
 ##### CREATE
 ```sql
-CREATE EXTERNAL ENTITY MyModule.RemoteAccount
-FROM ODATA CLIENT MyModule.SalesforceAPI
+create external entity MyModule.RemoteAccount
+from odata client MyModule.SalesforceAPI
 (
   EntitySet: 'Accounts',
   RemoteName: 'Account',
@@ -160,42 +160,42 @@ FROM ODATA CLIENT MyModule.SalesforceAPI
   Creatable: Yes,
   Deletable: No
 )
-KEY (Id MAPS TO 'AccountId' AS Edm.String)
+key (Id MAPS to 'AccountId' as Edm.String)
 (
-  Id: String(200),
-  Name: String(255) MAPS TO 'AccountName' (Creatable, Updatable, Filterable),
-  Industry: String(100) MAPS TO 'Industry' (Filterable, Sortable),
-  CreatedDate: DateTime MAPS TO 'CreatedDate' (ReadOnly)
+  Id: string(200),
+  Name: string(255) MAPS to 'AccountName' (Creatable, Updatable, Filterable),
+  Industry: string(100) MAPS to 'Industry' (Filterable, Sortable),
+  CreatedDate: datetime MAPS to 'CreatedDate' (readonly)
 );
 ```
 
 ##### ALTER
 ```sql
 -- Add attribute
-ALTER EXTERNAL ENTITY MyModule.RemoteAccount
-  ADD Website: String(500) MAPS TO 'Website' (Creatable, Updatable);
+alter external entity MyModule.RemoteAccount
+  add Website: string(500) MAPS to 'Website' (Creatable, Updatable);
 
 -- Modify capabilities
-ALTER EXTERNAL ENTITY MyModule.RemoteAccount
-  SET Creatable = No;
+alter external entity MyModule.RemoteAccount
+  set Creatable = No;
 ```
 
 ##### DROP
 ```sql
-DROP EXTERNAL ENTITY MyModule.RemoteAccount;
+drop external entity MyModule.RemoteAccount;
 ```
 
 #### 1.3 External Enumerations
 
 ##### SHOW
 ```sql
-SHOW EXTERNAL ENUMERATIONS;
-SHOW EXTERNAL ENUMERATIONS IN MyModule;
+show external enumerations;
+show external enumerations in MyModule;
 ```
 
 ##### DESCRIBE
 ```sql
-DESCRIBE EXTERNAL ENUMERATION MyModule.AccountStatus;
+describe external enumeration MyModule.AccountStatus;
 
 -- Output:
 -- CREATE EXTERNAL ENUMERATION MyModule.AccountStatus
@@ -211,13 +211,13 @@ DESCRIBE EXTERNAL ENUMERATION MyModule.AccountStatus;
 
 ##### CREATE
 ```sql
-CREATE EXTERNAL ENUMERATION MyModule.AccountStatus
-FROM ODATA CLIENT MyModule.SalesforceAPI
-MAPS TO 'AccountStatusEnum'
+create external enumeration MyModule.AccountStatus
+from odata client MyModule.SalesforceAPI
+MAPS to 'AccountStatusEnum'
 (
-  Active MAPS TO 'ACTIVE' CAPTION 'Active',
-  Inactive MAPS TO 'INACTIVE' CAPTION 'Inactive',
-  Pending MAPS TO 'PENDING' CAPTION 'Pending Review'
+  Active MAPS to 'ACTIVE' caption 'Active',
+  Inactive MAPS to 'INACTIVE' caption 'Inactive',
+  Pending MAPS to 'PENDING' caption 'Pending Review'
 );
 ```
 
@@ -226,18 +226,18 @@ MAPS TO 'AccountStatusEnum'
 ##### Syntax
 ```sql
 -- Call external action (function/action from OData service)
-$Result = CALL EXTERNAL ACTION MyModule.SalesforceAPI.CreateAccount (
+$Result = call external action MyModule.SalesforceAPI.CreateAccount (
   accountName = $CompanyName,
   accountType = 'Business'
 );
 
 -- With error handling
-$Result = CALL EXTERNAL ACTION MyModule.SalesforceAPI.CreateAccount (
+$Result = call external action MyModule.SalesforceAPI.CreateAccount (
   accountName = $CompanyName
-) ON ERROR ROLLBACK;
+) on error rollback;
 
 -- Void action (no return value)
-CALL EXTERNAL ACTION MyModule.SalesforceAPI.SendNotification (
+call external action MyModule.SalesforceAPI.SendNotification (
   message = $NotificationText
 );
 ```
@@ -245,16 +245,16 @@ CALL EXTERNAL ACTION MyModule.SalesforceAPI.SendNotification (
 ##### DESCRIBE Microflow Output
 When describing a microflow containing external action calls:
 ```sql
-CREATE MICROFLOW MyModule.CreateSalesforceAccount (
-  CompanyName: String
-) RETURNS MyModule.RemoteAccount
-BEGIN
-  $Result = CALL EXTERNAL ACTION MyModule.SalesforceAPI.CreateAccount (
+create microflow MyModule.CreateSalesforceAccount (
+  CompanyName: string
+) returns MyModule.RemoteAccount
+begin
+  $Result = call external action MyModule.SalesforceAPI.CreateAccount (
     accountName = $CompanyName,
     accountType = 'Business'
   );
-  RETURN $Result;
-END;
+  return $Result;
+end;
 ```
 
 ---
@@ -268,19 +268,19 @@ END;
 - **BSON $Type**: `ODataPublish$PublishedODataService2`
 - **Key Fields**:
   - `Name`: Service name
-  - `Path`: URL path for the service endpoint
-  - `Namespace`: OData namespace (default: "DefaultNamespace")
+  - `path`: URL path for the service endpoint
+  - `namespace`: OData namespace (default: "DefaultNamespace")
   - `ServiceName`: Display name for the service
-  - `Version`: Service version (default: "1.0.0")
+  - `version`: Service version (default: "1.0.0")
   - `ODataVersion`: OData version ("OData4")
   - `EntitySets[]`: Array of published entity sets
   - `EntityTypes[]`: Array of entity type definitions
-  - `Enumerations[]`: Published enumerations
-  - `Microflows[]`: Published microflow operations
+  - `enumerations[]`: Published enumerations
+  - `microflows[]`: Published microflow operations
   - `AllowedModuleRoles[]`: Security roles (BY_NAME_REFERENCE)
   - `AuthenticationMicroflow`: Custom auth microflow (BY_NAME_REFERENCE)
   - `AuthenticationTypes[]`: ["Basic", "Guest", "Microflow", "Session"]
-  - `Description`, `Summary`, `Documentation`: API documentation
+  - `description`, `Summary`, `documentation`: API documentation
   - `PublishAssociations`: Whether to expose navigation properties
   - `SupportsGraphQL`: Enable GraphQL support
   - `UseGeneralization`: Expose entity inheritance
@@ -301,10 +301,10 @@ END;
 #### EntityType
 - **BSON $Type**: `ODataPublish$EntityType`
 - **Key Fields**:
-  - `Entity`: Reference to domain model entity (BY_NAME_REFERENCE)
+  - `entity`: Reference to domain model entity (BY_NAME_REFERENCE)
   - `ExposedName`: Name exposed in OData schema
   - `ChildMembers[]`: Array of published attributes and associations
-  - `Description`, `Summary`: Documentation
+  - `description`, `Summary`: Documentation
 
 #### PublishedMember (Abstract)
 Concrete types:
@@ -326,15 +326,15 @@ Concrete types:
 ##### SHOW
 ```sql
 -- List all OData services
-SHOW ODATA SERVICES;
-SHOW ODATA SERVICES IN MyModule;
+show odata services;
+show odata services in MyModule;
 
 -- Output columns: Module, Name, Path, Version, ODataVersion, EntitySets, AuthTypes
 ```
 
 ##### DESCRIBE
 ```sql
-DESCRIBE ODATA SERVICE MyModule.CustomerAPI;
+describe odata service MyModule.CustomerAPI;
 
 -- Output:
 -- CREATE ODATA SERVICE MyModule.CustomerAPI (
@@ -376,30 +376,30 @@ DESCRIBE ODATA SERVICE MyModule.CustomerAPI;
 
 ##### CREATE
 ```sql
-CREATE ODATA SERVICE MyModule.CustomerAPI (
-  Path: '/odata/customers',
-  Version: '1.0.0',
+create odata service MyModule.CustomerAPI (
+  path: '/odata/customers',
+  version: '1.0.0',
   ODataVersion: OData4,
-  Namespace: 'MyApp.Customers',
+  namespace: 'MyApp.Customers',
   ServiceName: 'Customer Service',
   Summary: 'API for managing customers',
   PublishAssociations: Yes
 )
-AUTHENTICATION Basic, Session
+authentication basic, session
 {
-  PUBLISH ENTITY MyModule.Customer AS 'Customers' (
-    ReadMode: SOURCE,
-    InsertMode: SOURCE,
-    UpdateMode: SOURCE,
-    DeleteMode: NOT_SUPPORTED,
+  publish entity MyModule.Customer as 'Customers' (
+    ReadMode: source,
+    InsertMode: source,
+    UpdateMode: source,
+    DeleteMode: not_supported,
     UsePaging: Yes,
     PageSize: 100
   )
-  EXPOSE (
+  expose (
     Id,
     Name (Filterable, Sortable),
     Email,
-    CreatedDate (ReadOnly)
+    CreatedDate (readonly)
   );
 };
 ```
@@ -407,21 +407,21 @@ AUTHENTICATION Basic, Session
 ##### ALTER
 ```sql
 -- Add authentication type
-ALTER ODATA SERVICE MyModule.CustomerAPI
-  ADD AUTHENTICATION Microflow MyModule.ValidateAPIKey;
+alter odata service MyModule.CustomerAPI
+  add authentication microflow MyModule.ValidateAPIKey;
 
 -- Change version
-ALTER ODATA SERVICE MyModule.CustomerAPI
-  SET Version = '2.0.0';
+alter odata service MyModule.CustomerAPI
+  set version = '2.0.0';
 
 -- Add entity to service
-ALTER ODATA SERVICE MyModule.CustomerAPI
-  ADD ENTITY MyModule.Invoice AS 'Invoices' (ReadMode: SOURCE);
+alter odata service MyModule.CustomerAPI
+  add entity MyModule.Invoice as 'Invoices' (ReadMode: source);
 ```
 
 ##### DROP
 ```sql
-DROP ODATA SERVICE MyModule.CustomerAPI;
+drop odata service MyModule.CustomerAPI;
 ```
 
 #### 2.2 Published Microflows
@@ -429,10 +429,10 @@ DROP ODATA SERVICE MyModule.CustomerAPI;
 ```sql
 -- Within ODATA SERVICE block:
 {
-  PUBLISH MICROFLOW MyModule.CalculateDiscount AS 'CalculateDiscount' (
-    $CustomerId: Integer,
-    $Amount: Decimal
-  ) RETURNS Decimal;
+  publish microflow MyModule.CalculateDiscount as 'CalculateDiscount' (
+    $CustomerId: integer,
+    $Amount: decimal
+  ) returns decimal;
 }
 ```
 
@@ -440,10 +440,10 @@ DROP ODATA SERVICE MyModule.CustomerAPI;
 
 ```sql
 -- Grant access to OData service
-GRANT ACCESS ON ODATA SERVICE MyModule.CustomerAPI TO MyModule.Admin, MyModule.User;
+grant access on odata service MyModule.CustomerAPI to MyModule.Admin, MyModule.User;
 
 -- Revoke access
-REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
+revoke access on odata service MyModule.CustomerAPI from MyModule.Guest;
 ```
 
 ---
@@ -462,7 +462,7 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 - [ ] Add `ListODataServices()` to reader interface
 
 #### 1.2 Grammar (`mdl/grammar/`)
-- [ ] Add tokens: `ODATA`, `CLIENT`, `EXTERNAL`, `MAPS`, `AUTHENTICATION`, `PUBLISHED`, `PUBLISH`, `EXPOSE`, `SOURCE`
+- [ ] Add tokens: `odata`, `client`, `external`, `MAPS`, `authentication`, `published`, `publish`, `expose`, `source`
 - [ ] Add `showODataClientsStatement` rule
 - [ ] Add `describeODataClientStatement` rule
 - [ ] Add `showExternalEntitiesStatement` rule
@@ -499,9 +499,9 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 #### 2.1 SDK Layer
 - [ ] Add `ConsumedODataService` to writer
 - [ ] Add `ODataService` to writer
-- [ ] Add BSON serialization for `Rest$ConsumedODataService`
+- [ ] Add BSON serialization for `rest$ConsumedODataService`
 - [ ] Add BSON serialization for `ODataPublish$PublishedODataService2`
-- [ ] Add BSON serialization for `Rest$ODataRemoteEntitySource`
+- [ ] Add BSON serialization for `rest$ODataRemoteEntitySource`
 
 #### 2.2 Grammar
 - [ ] Add `createODataClientStatement` rule
@@ -537,10 +537,10 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 #### 3.1 SDK Layer
 - [ ] Add `CallExternalAction` activity struct
 - [ ] Add `ExternalActionParameterMapping` struct
-- [ ] Add parser support for `Microflows$CallExternalAction`
+- [ ] Add parser support for `microflows$CallExternalAction`
 
 #### 3.2 Grammar
-- [ ] Add `CALL EXTERNAL ACTION` to microflow statements
+- [ ] Add `call external action` to microflow statements
 
 #### 3.3 AST
 - [ ] Add `CallExternalActionStmt` struct
@@ -636,35 +636,35 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 ## Verification Commands
 
 ```bash
-# Phase 1 verification - OData Clients
-./bin/mxcli -p app.mpr -c "SHOW ODATA CLIENTS"
-./bin/mxcli -p app.mpr -c "DESCRIBE ODATA CLIENT MyModule.API"
-./bin/mxcli -p app.mpr -c "SHOW EXTERNAL ENTITIES"
-./bin/mxcli -p app.mpr -c "DESCRIBE EXTERNAL ENTITY MyModule.RemoteEntity"
+# Phase 1 verification - odata clients
+./bin/mxcli -p app.mpr -c "show odata clients"
+./bin/mxcli -p app.mpr -c "describe odata client MyModule.API"
+./bin/mxcli -p app.mpr -c "show external entities"
+./bin/mxcli -p app.mpr -c "describe external entity MyModule.RemoteEntity"
 
-# Phase 1 verification - OData Services
-./bin/mxcli -p app.mpr -c "SHOW ODATA SERVICES"
-./bin/mxcli -p app.mpr -c "DESCRIBE ODATA SERVICE MyModule.CustomerAPI"
+# Phase 1 verification - odata services
+./bin/mxcli -p app.mpr -c "show odata services"
+./bin/mxcli -p app.mpr -c "describe odata service MyModule.CustomerAPI"
 
 # Phase 2 verification (round-trip)
-./bin/mxcli -p app.mpr -c "DESCRIBE ODATA CLIENT MyModule.API" > /tmp/client.mdl
+./bin/mxcli -p app.mpr -c "describe odata client MyModule.API" > /tmp/client.mdl
 ./bin/mxcli check /tmp/client.mdl
 ./bin/mxcli -p app.mpr exec /tmp/client.mdl
 
-./bin/mxcli -p app.mpr -c "DESCRIBE ODATA SERVICE MyModule.CustomerAPI" > /tmp/published.mdl
+./bin/mxcli -p app.mpr -c "describe odata service MyModule.CustomerAPI" > /tmp/published.mdl
 ./bin/mxcli check /tmp/published.mdl
 ./bin/mxcli -p app.mpr exec /tmp/published.mdl
 
 # Phase 3 verification
-./bin/mxcli -p app.mpr -c "DESCRIBE MICROFLOW MyModule.CallExternalMF"
-# Should show CALL EXTERNAL ACTION statements
+./bin/mxcli -p app.mpr -c "describe microflow MyModule.CallExternalMF"
+# Should show call external action statements
 ```
 
 ---
 
 ## Dependencies
 
-- Requires understanding of `Microflows$HttpConfiguration` structure for authentication
+- Requires understanding of `microflows$HttpConfiguration` structure for authentication
 - May need constant references for proxy settings
 - HTTPConfiguration is a required embedded PART - need to generate valid defaults
 - OData services have complex embedded structures (EntitySet, EntityType, etc.)
@@ -673,7 +673,7 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 
 ## Open Questions
 
-1. **Metadata Refresh**: Should `ALTER ODATA CLIENT ... REFRESH METADATA` actually fetch from the URL, or just clear cached metadata?
+1. **Metadata Refresh**: Should `alter odata client ... refresh METADATA` actually fetch from the URL, or just clear cached metadata?
 
 2. **Authentication**: How detailed should authentication configuration be? Options:
    - Basic: Just reference constants for credentials
@@ -681,8 +681,8 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 
 3. **Import vs Create**: Should we support importing from a metadata URL directly?
    ```sql
-   IMPORT ODATA CLIENT FROM 'https://api.example.com/$metadata'
-     INTO MyModule.ExampleAPI;
+   import odata client from 'https://api.example.com/$metadata'
+     into MyModule.ExampleAPI;
    ```
 
 4. **Attribute Auto-Generation**: For external entities, should CREATE support auto-generating attributes from service metadata?
@@ -690,7 +690,7 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 5. **Service Wizard**: Should there be a shorthand for common patterns?
    ```sql
    -- Quick publish with defaults
-   PUBLISH ENTITY MyModule.Customer TO ODATA SERVICE MyModule.API;
+   publish entity MyModule.Customer to odata service MyModule.API;
    ```
 
 ---
@@ -699,7 +699,7 @@ REVOKE ACCESS ON ODATA SERVICE MyModule.CustomerAPI FROM MyModule.Guest;
 
 - `reference/mendixmodellib/reflection-data/11.6.0-structures.json` - Type definitions
 - `mx-test-projects/QueryDemoApp-main/QueryDemoApp.mpr` - Working examples
-- Types: `Rest$ConsumedODataService`, `ODataPublish$PublishedODataService2`, `ODataPublish$EntitySet`, `ODataPublish$EntityType`
+- Types: `rest$ConsumedODataService`, `ODataPublish$PublishedODataService2`, `ODataPublish$EntitySet`, `ODataPublish$EntityType`
 
 ---
 

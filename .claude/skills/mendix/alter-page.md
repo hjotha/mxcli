@@ -2,31 +2,31 @@
 
 ## Overview
 
-ALTER PAGE and ALTER SNIPPET modify an existing page or snippet's widget tree **in-place** without requiring a full `CREATE OR REPLACE`. Operations work directly on the raw BSON tree, preserving widget types and properties that MDL doesn't explicitly model.
+ALTER PAGE and ALTER SNIPPET modify an existing page or snippet's widget tree **in-place** without requiring a full `create or replace`. Operations work directly on the raw BSON tree, preserving widget types and properties that MDL doesn't explicitly model.
 
 ## When to Use
 
 | Scenario | Use |
 |----------|-----|
-| Change a button caption, label, or style | `ALTER PAGE` with `SET` |
-| Add a field to an existing form | `ALTER PAGE` with `INSERT` |
-| Remove unused widgets | `ALTER PAGE` with `DROP` |
-| Replace a footer or section | `ALTER PAGE` with `REPLACE` |
-| Rebuild entire page from scratch | `CREATE OR REPLACE PAGE` |
-| Create a new page | `CREATE PAGE` |
+| Change a button caption, label, or style | `alter page` with `set` |
+| Add a field to an existing form | `alter page` with `insert` |
+| Remove unused widgets | `alter page` with `drop` |
+| Replace a footer or section | `alter page` with `replace` |
+| Rebuild entire page from scratch | `create or replace page` |
+| Create a new page | `create page` |
 
-**Rule of thumb:** Use `ALTER PAGE` for targeted edits to a few widgets. Use `CREATE OR REPLACE PAGE` when redefining the full page structure.
+**Rule of thumb:** Use `alter page` for targeted edits to a few widgets. Use `create or replace page` when redefining the full page structure.
 
 ## Syntax
 
 ```sql
-ALTER PAGE Module.PageName {
+alter page Module.PageName {
   operation1;
   operation2;
   ...
 };
 
-ALTER SNIPPET Module.SnippetName {
+alter snippet Module.SnippetName {
   operation1;
   operation2;
   ...
@@ -41,37 +41,37 @@ Multiple operations can be combined in a single ALTER statement. They are applie
 
 ```sql
 -- Single property
-SET Caption = 'New Caption' ON widgetName
+set caption = 'New Caption' on widgetName
 
 -- Multiple properties
-SET (Caption = 'Save & Close', ButtonStyle = Success) ON btnSave
+set (caption = 'Save & Close', buttonstyle = success) on btnSave
 
 -- Page-level property (no ON clause)
-SET Title = 'New Page Title'
+set title = 'New Page Title'
 ```
 
 **Supported SET properties:**
 
 | Property | Widget Types | Value Type | Example |
 |----------|-------------|------------|---------|
-| `Caption` | ACTIONBUTTON, LINKBUTTON | String | `SET Caption = 'Submit' ON btnSave` |
-| `Content` | DYNAMICTEXT | String | `SET Content = 'New Heading' ON txtTitle` |
-| `Label` | TEXTBOX, TEXTAREA, DATEPICKER, COMBOBOX, CHECKBOX, RADIOBUTTONS | String | `SET Label = 'Full Name' ON txtName` |
-| `ButtonStyle` | ACTIONBUTTON, LINKBUTTON | Primary, Default, Success, Danger, Warning, Info | `SET ButtonStyle = Danger ON btnDelete` |
-| `Class` | Any widget | CSS class string | `SET Class = 'card mx-2' ON container1` |
-| `Style` | Any widget (see warning below) | Inline CSS string | `SET Style = 'padding: 16px;' ON container1` |
-| `Editable` | Input widgets | String | `SET Editable = 'Never' ON txtReadOnly` |
-| `Visible` | Any widget | String or Boolean | `SET Visible = false ON txtHidden` |
-| `Name` | Any widget | String | `SET Name = 'newName' ON oldName` |
-| `Title` | Page-level only | String | `SET Title = 'Edit Customer'` |
-| `Layout` | Page-level only | Qualified name | `SET Layout = Atlas_Core.Atlas_Default` |
-| `Visible` | Any widget | Boolean or `[xpath]` | `SET Visible = false ON txtHidden` |
-| `Editable` | Input widgets | Never/Always or `[xpath]` | `SET Editable = Never ON txtReadOnly` |
-| `'quotedProp'` | Pluggable widgets | String, Boolean, Number | `SET 'showLabel' = false ON cbStatus` |
+| `caption` | ACTIONBUTTON, LINKBUTTON | String | `set caption = 'Submit' on btnSave` |
+| `content` | DYNAMICTEXT | String | `set content = 'New Heading' on txtTitle` |
+| `label` | TEXTBOX, TEXTAREA, DATEPICKER, COMBOBOX, CHECKBOX, RADIOBUTTONS | String | `set label = 'full Name' on txtName` |
+| `buttonstyle` | ACTIONBUTTON, LINKBUTTON | Primary, Default, Success, Danger, Warning, Info | `set buttonstyle = danger on btnDelete` |
+| `class` | Any widget | CSS class string | `set class = 'card mx-2' on container1` |
+| `style` | Any widget (see warning below) | Inline CSS string | `set style = 'padding: 16px;' on container1` |
+| `editable` | Input widgets | String | `set editable = 'Never' on txtReadOnly` |
+| `visible` | Any widget | String or Boolean | `set visible = false on txtHidden` |
+| `Name` | Any widget | String | `set Name = 'newName' on oldName` |
+| `title` | Page-level only | String | `set title = 'Edit Customer'` |
+| `layout` | Page-level only | Qualified name | `set layout = Atlas_Core.Atlas_Default` |
+| `visible` | Any widget | Boolean or `[xpath]` | `set visible = false on txtHidden` |
+| `editable` | Input widgets | Never/Always or `[xpath]` | `set editable = Never on txtReadOnly` |
+| `'quotedProp'` | Pluggable widgets | String, Boolean, Number | `set 'showLabel' = false on cbStatus` |
 
 **Pluggable widget properties** use quoted names to set values in the widget's `Object.Properties[]`. Boolean values are stored as `"yes"`/`"no"` in BSON.
 
-> **Warning: Style on DYNAMICTEXT** — Setting `Style` directly on a DYNAMICTEXT widget crashes MxBuild with a NullReferenceException. Wrap the DYNAMICTEXT in a CONTAINER and apply styling to the container instead:
+> **Warning: Style on DYNAMICTEXT** — Setting `style` directly on a DYNAMICTEXT widget crashes MxBuild with a NullReferenceException. Wrap the DYNAMICTEXT in a CONTAINER and apply styling to the container instead:
 > ```sql
 > -- Wrong: crashes MxBuild
 > SET Style = 'color: red;' ON txtHeading
@@ -88,26 +88,26 @@ SET Title = 'New Page Title'
 
 ```sql
 -- Insert after a widget
-INSERT AFTER txtName {
-  TEXTBOX txtMiddleName (Label: 'Middle Name', Attribute: MiddleName)
+insert after txtName {
+  textbox txtMiddleName (label: 'Middle Name', attribute: MiddleName)
 }
 
 -- Insert before a widget
-INSERT BEFORE btnSave {
-  ACTIONBUTTON btnPreview (Caption: 'Preview', Action: MICROFLOW Module.ACT_Preview)
+insert before btnSave {
+  actionbutton btnPreview (caption: 'Preview', action: microflow Module.ACT_Preview)
 }
 ```
 
-Inserted widgets use the same syntax as `CREATE PAGE`. Multiple widgets can be inserted in a single block.
+Inserted widgets use the same syntax as `create page`. Multiple widgets can be inserted in a single block.
 
 ### DROP - Remove Widgets
 
 ```sql
 -- Drop a single widget
-DROP WIDGET txtUnused
+drop widget txtUnused
 
 -- Drop multiple widgets
-DROP WIDGET txtOldField, lblOldLabel, container2
+drop widget txtOldField, lblOldLabel, container2
 ```
 
 Removes widgets and their entire subtree from the page.
@@ -116,52 +116,52 @@ Removes widgets and their entire subtree from the page.
 
 ```sql
 -- Replace a single widget with new content
-REPLACE footer1 WITH {
-  FOOTER newFooter {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+replace footer1 with {
+  footer newFooter {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 }
 ```
 
-Replaces the target widget with one or more new widgets. The new widgets use the same syntax as `CREATE PAGE`.
+Replaces the target widget with one or more new widgets. The new widgets use the same syntax as `create page`.
 
 ### DataGrid Column Operations
 
-DataGrid2 columns are addressable using dotted notation: `gridName.columnName`. The column name is derived from the attribute short name or caption (same as shown by `DESCRIBE PAGE`).
+DataGrid2 columns are addressable using dotted notation: `gridName.columnName`. The column name is derived from the attribute short name or caption (same as shown by `describe page`).
 
 ```sql
 -- SET a column property
-SET Caption = 'Product SKU' ON dgProducts.Code
+set caption = 'Product SKU' on dgProducts.Code
 
 -- DROP a column
-DROP WIDGET dgProducts.OldColumn
+drop widget dgProducts.OldColumn
 
 -- INSERT a column after an existing one
-INSERT AFTER dgProducts.Price {
-  COLUMN Margin (Attribute: Margin, Caption: 'Margin')
+insert after dgProducts.Price {
+  column Margin (attribute: Margin, caption: 'Margin')
 }
 
 -- REPLACE a column
-REPLACE dgProducts.Description WITH {
-  COLUMN Notes (Attribute: Notes, Caption: 'Notes')
+replace dgProducts.Description with {
+  column Notes (attribute: Notes, caption: 'Notes')
 }
 ```
 
-To discover column names, run `DESCRIBE PAGE Module.PageName` and look at the COLUMN names inside the DATAGRID.
+To discover column names, run `describe page Module.PageName` and look at the COLUMN names inside the DATAGRID.
 
 ### ADD Variables - Add a Page Variable
 
 ```sql
-ADD Variables $showStockColumn: Boolean = 'true'
+add variables $showStockColumn: boolean = 'true'
 ```
 
-Adds a new page variable (`Forms$LocalVariable`) to the page/snippet. DataType can be `Boolean`, `String`, `Integer`, `Decimal`, `DateTime`, or an entity type. Default value is a Mendix expression in single quotes.
+Adds a new page variable (`Forms$LocalVariable`) to the page/snippet. DataType can be `boolean`, `string`, `integer`, `decimal`, `datetime`, or an entity type. Default value is a Mendix expression in single quotes.
 
 ### DROP Variables - Remove a Page Variable
 
 ```sql
-DROP Variables $showStockColumn
+drop variables $showStockColumn
 ```
 
 Removes a page variable by name.
@@ -170,32 +170,32 @@ Removes a page variable by name.
 
 ```sql
 -- Auto-map placeholders by name (most common case)
-SET Layout = Atlas_Core.Atlas_Default
+set layout = Atlas_Core.Atlas_Default
 
 -- Explicit mapping when placeholder names differ
-SET Layout = Atlas_Core.Atlas_SideBar MAP (Main AS Content, Extra AS Sidebar)
+set layout = Atlas_Core.Atlas_SideBar map (Main as content, Extra as Sidebar)
 ```
 
 Changes the page's layout without rebuilding the widget tree. Only rewrites the `FormCall.Form` and `FormCall.Arguments[].Parameter` BSON fields — all widget content is preserved. Not supported for snippets.
 
-When placeholders have the same names in both layouts (e.g., both have `Main`), auto-mapping works. Use `MAP` when placeholder names differ between the old and new layout.
+When placeholders have the same names in both layouts (e.g., both have `Main`), auto-mapping works. Use `map` when placeholder names differ between the old and new layout.
 
 ## Examples
 
 ### Change button text and style
 
 ```sql
-ALTER PAGE MyModule.Customer_Edit {
-  SET (Caption = 'Save & Close', ButtonStyle = Success) ON btnSave
+alter page MyModule.Customer_Edit {
+  set (caption = 'Save & Close', buttonstyle = success) on btnSave
 };
 ```
 
 ### Add a field to a form
 
 ```sql
-ALTER PAGE MyModule.Customer_Edit {
-  INSERT AFTER txtEmail {
-    TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
+alter page MyModule.Customer_Edit {
+  insert after txtEmail {
+    textbox txtPhone (label: 'Phone', attribute: Phone)
   }
 };
 ```
@@ -203,30 +203,30 @@ ALTER PAGE MyModule.Customer_Edit {
 ### Add a page variable for column visibility
 
 ```sql
-ALTER PAGE MyModule.ProductOverview {
-  ADD Variables $showStockColumn: Boolean = 'if (3 < 4) then true else false'
+alter page MyModule.ProductOverview {
+  add variables $showStockColumn: boolean = 'if (3 < 4) then true else false'
 };
 ```
 
 ### Remove unused fields and update title
 
 ```sql
-ALTER PAGE MyModule.Customer_Edit {
-  SET Title = 'Edit Customer Details';
-  DROP WIDGET txtLegacyField, lblOldNote;
-  SET Label = 'Email Address' ON txtEmail
+alter page MyModule.Customer_Edit {
+  set title = 'Edit Customer Details';
+  drop widget txtLegacyField, lblOldNote;
+  set label = 'Email Address' on txtEmail
 };
 ```
 
 ### Replace a footer section
 
 ```sql
-ALTER PAGE MyModule.Customer_Edit {
-  REPLACE footer1 WITH {
-    FOOTER newFooter {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Success)
-      ACTIONBUTTON btnDelete (Caption: 'Delete', Action: DELETE, ButtonStyle: Danger)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+alter page MyModule.Customer_Edit {
+  replace footer1 with {
+    footer newFooter {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: success)
+      actionbutton btnDelete (caption: 'Delete', action: delete, buttonstyle: danger)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 };
@@ -235,10 +235,10 @@ ALTER PAGE MyModule.Customer_Edit {
 ### Modify a snippet
 
 ```sql
-ALTER SNIPPET MyModule.NavigationMenu {
-  SET Caption = 'Dashboard' ON btnHome;
-  INSERT AFTER btnHome {
-    ACTIONBUTTON btnReports (Caption: 'Reports', Action: SHOW_PAGE MyModule.Reports_Overview)
+alter snippet MyModule.NavigationMenu {
+  set caption = 'Dashboard' on btnHome;
+  insert after btnHome {
+    actionbutton btnReports (caption: 'Reports', action: show_page MyModule.Reports_Overview)
   }
 };
 ```
@@ -246,9 +246,9 @@ ALTER SNIPPET MyModule.NavigationMenu {
 ### Set pluggable widget properties
 
 ```sql
-ALTER PAGE MyModule.Customer_Edit {
-  SET 'showLabel' = false ON cbStatus;
-  SET 'labelWidth' = 4 ON cbCategory
+alter page MyModule.Customer_Edit {
+  set 'showLabel' = false on cbStatus;
+  set 'labelWidth' = 4 on cbCategory
 };
 ```
 
@@ -256,29 +256,29 @@ ALTER PAGE MyModule.Customer_Edit {
 
 | Mistake | Fix |
 |---------|-----|
-| Missing `ON widgetName` for widget SET | Add `ON widgetName` (only page-level Title omits ON) |
-| Using unquoted pluggable property names | Quote pluggable props: `SET 'showLabel' = false ON cb` |
-| Wrong widget name | Use `DESCRIBE PAGE Module.Name` to see widget names |
+| Missing `on widgetName` for widget SET | Add `on widgetName` (only page-level Title omits ON) |
+| Using unquoted pluggable property names | Quote pluggable props: `set 'showLabel' = false on cb` |
+| Wrong widget name | Use `describe page Module.Name` to see widget names |
 | SET on non-existent widget | Widget names are case-sensitive; check with DESCRIBE |
 | Missing semicolons between operations | Each operation inside `{ }` ends with `;` |
 
 ## Validation Checklist
 
-1. **Get widget names first**: Run `DESCRIBE PAGE Module.PageName` to see all widget names
+1. **Get widget names first**: Run `describe page Module.PageName` to see all widget names
 2. **Check syntax**: `mxcli check script.mdl`
 3. **Check references**: `mxcli check script.mdl -p app.mpr --references`
-4. **Verify result**: Run `DESCRIBE PAGE Module.PageName` after ALTER to confirm changes
+4. **Verify result**: Run `describe page Module.PageName` after ALTER to confirm changes
 5. **Validate project**: `~/.mxcli/mxbuild/*/modeler/mx check app.mpr` (or `mxcli docker check -p app.mpr`)
 
 ## Related Commands
 
-- `DESCRIBE PAGE Module.PageName` - View current page structure (get widget names)
-- `DESCRIBE SNIPPET Module.SnippetName` - View current snippet structure
-- `CREATE [OR REPLACE] PAGE` - Create or fully rebuild a page
-- `CREATE [OR REPLACE] SNIPPET` - Create or fully rebuild a snippet
-- `UPDATE WIDGETS SET ... WHERE ...` - Bulk update widget properties across pages
-- `DROP PAGE Module.PageName` - Delete a page
-- `DROP SNIPPET Module.SnippetName` - Delete a snippet
+- `describe page Module.PageName` - View current page structure (get widget names)
+- `describe snippet Module.SnippetName` - View current snippet structure
+- `create [or replace] page` - Create or fully rebuild a page
+- `create [or replace] snippet` - Create or fully rebuild a snippet
+- `update widgets set ... where ...` - Bulk update widget properties across pages
+- `drop page Module.PageName` - Delete a page
+- `drop snippet Module.SnippetName` - Delete a snippet
 
 ## Related Skills
 

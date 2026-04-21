@@ -15,12 +15,12 @@ The analysis is based on the existing capabilities demonstrated in `mdl-examples
 
 **Current Syntax:**
 The language uses three different ways to handle variable assignments:
-- `DECLARE $VarName Type = initial_value;` (Declaration)
-- `SET $VarName = new_value;` (Re-assignment)
-- `$VarName = CREATE ...;` or `$VarName = CALL ...;` (Assignment from expression)
+- `declare $VarName type = initial_value;` (Declaration)
+- `set $VarName = new_value;` (Re-assignment)
+- `$VarName = create ...;` or `$VarName = call ...;` (Assignment from expression)
 
 **Problem:**
-This inconsistency increases the learning curve and adds unnecessary verbosity (e.g., the `SET` keyword is redundant).
+This inconsistency increases the learning curve and adds unnecessary verbosity (e.g., the `set` keyword is redundant).
 
 **Proposal: Introduce Go-style Assignment Operators**
 Adopt a more concise and consistent approach:
@@ -29,24 +29,24 @@ Adopt a more concise and consistent approach:
 
 **Example:**
 ```mdl
-// Before
-DECLARE $Counter Integer = 0;
-SET $Counter = $Counter + 1;
-$NewProduct = CREATE MfTest.Product(...);
+// before
+declare $Counter integer = 0;
+set $Counter = $Counter + 1;
+$NewProduct = create MfTest.Product(...);
 
-// After
+// after
 $Counter := 0;
 $Counter = $Counter + 1;
-$NewProduct := CREATE MfTest.Product(...);
+$NewProduct := create MfTest.Product(...);
 ```
-This change would make the `DECLARE` and `SET` keywords obsolete, significantly cleaning up the syntax.
+This change would make the `declare` and `set` keywords obsolete, significantly cleaning up the syntax.
 
 ### 2.2. Control Flow Block Syntax
 
 **Current Syntax:**
-MDL uses `BEGIN...END` and `THEN...END IF` to delineate code blocks.
-- `IF $condition THEN ... END IF;`
-- `LOOP $item IN $list BEGIN ... END LOOP;`
+MDL uses `BEGIN...END` and `THEN...END if` to delineate code blocks.
+- `if $condition then ... end if;`
+- `loop $item in $list begin ... end loop;`
 
 **Problem:**
 This syntax, while explicit, is verbose and less common in modern programming languages. It consumes more tokens and can be harder to read for developers accustomed to C-style syntax.
@@ -56,16 +56,16 @@ Use curly braces to define blocks for all control flow statements.
 
 **Example:**
 ```mdl
-// Before
-IF $Product/IsActive THEN
-  SET $ActiveCount = $ActiveCount + 1;
-  LOG INFO NODE 'Test' 'Found active product';
-END IF;
+// before
+if $Product/IsActive then
+  set $ActiveCount = $ActiveCount + 1;
+  log info node 'Test' 'Found active product';
+end if;
 
-// After
-IF ($Product/IsActive) {
+// after
+if ($Product/IsActive) {
   $ActiveCount = $ActiveCount + 1;
-  LOG INFO NODE 'Test' 'Found active product';
+  log info node 'Test' 'Found active product';
 }
 ```
 
@@ -73,8 +73,8 @@ IF ($Product/IsActive) {
 
 **Current Syntax:**
 List operations are function-based, and aggregate functions have a unique syntax.
-- `$ActiveProducts = FILTER($ProductList, $IteratorProduct/IsActive = true);`
-- `$AveragePrice = AVERAGE($ProductList.Price);`
+- `$ActiveProducts = filter($ProductList, $IteratorProduct/IsActive = true);`
+- `$AveragePrice = average($ProductList.Price);`
 
 **Problem:**
 Chaining multiple operations is clumsy and hard to read. The syntax for aggregation (`$List.Attribute`) is inconsistent with other function calls.
@@ -84,38 +84,38 @@ Allow for method-chaining on list variables. This is a highly readable and expre
 
 **Example:**
 ```mdl
-// Before
-$ActiveProducts = FILTER($ProductList, $IteratorProduct/IsActive = true);
-$SortedProducts = SORT($ActiveProducts, Price DESC);
-$AverageActivePrice = AVERAGE($SortedProducts.Price);
+// before
+$ActiveProducts = filter($ProductList, $IteratorProduct/IsActive = true);
+$SortedProducts = sort($ActiveProducts, Price desc);
+$AverageActivePrice = average($SortedProducts.Price);
 
-// After
+// after
 $AverageActivePrice := $ProductList
   .filter($p -> $p/IsActive)
-  .sort(Price DESC)
+  .sort(Price desc)
   .average($p -> $p/Price);
 ```
 This syntax is more intuitive, token-efficient, and powerful for complex data manipulation. It uses lambda-style expressions (`$p -> ...`) for clarity.
 
-### 2.4. `CHANGE` Statement Readability
+### 2.4. `change` Statement Readability
 
 **Current Syntax:**
-The `CHANGE` statement modifies multiple attributes in a flat list.
-`CHANGE $Product (Name = $NewName, ModifiedDate = [%CurrentDateTime%]);`
+The `change` statement modifies multiple attributes in a flat list.
+`change $Product (Name = $NewName, ModifiedDate = [%CurrentDateTime%]);`
 
 **Problem:**
 For objects with many attributes, this can become a long, hard-to-read line.
 
-**Proposal: Introduce `WITH` block for `CHANGE`**
+**Proposal: Introduce `with` block for `change`**
 Allow a block syntax for grouping attribute changes, improving readability.
 
 **Example:**
 ```mdl
-// Before
-CHANGE $Product (DailyAverage = $DailyAverage, LastCalculated = [%CurrentDateTime%]);
+// before
+change $Product (DailyAverage = $DailyAverage, LastCalculated = [%CurrentDateTime%]);
 
-// After
-CHANGE $Product WITH {
+// after
+change $Product with {
   DailyAverage = $DailyAverage,
   LastCalculated = [%CurrentDateTime%]
 };
@@ -124,23 +124,23 @@ CHANGE $Product WITH {
 ### 2.5. Unify Function and Action Call Syntax
 
 **Current Syntax:**
-- `CALL MICROFLOW MfTest.M001_HelloWorld()`
-- `CALL JAVA ACTION CustomActivities.ExecuteOQLStatement(...)`
-- `COUNT($ProductList)`
+- `call microflow MfTest.M001_HelloWorld()`
+- `call java action CustomActivities.ExecuteOQLStatement(...)`
+- `count($ProductList)`
 
 **Problem:**
-The `CALL` keyword is verbose and inconsistent with built-in function calls like `COUNT`.
+The `call` keyword is verbose and inconsistent with built-in function calls like `count`.
 
 **Proposal: Standardize All Calls**
-Remove the `CALL` keyword and treat microflows and Java actions as regular callable functions. The system can distinguish them by their path.
+Remove the `call` keyword and treat microflows and Java actions as regular callable functions. The system can distinguish them by their path.
 
 **Example:**
 ```mdl
-// Before
-$Result = CALL MICROFLOW MfTest.M003_StringOperations(FirstName = 'Hello', LastName = 'World!');
-$OqlResult = CALL JAVA ACTION CustomActivities.ExecuteOQLStatement(...);
+// before
+$Result = call microflow MfTest.M003_StringOperations(FirstName = 'Hello', LastName = 'World!');
+$OqlResult = call java action CustomActivities.ExecuteOQLStatement(...);
 
-// After
+// after
 $Result := MfTest.M003_StringOperations(FirstName: 'Hello', LastName: 'World!');
 $OqlResult := CustomActivities.ExecuteOQLStatement(...);
 ```
@@ -150,7 +150,7 @@ Using named parameters with colons (`:`) could further improve clarity, distingu
 
 - **Improved Readability:** The proposed syntax is closer to modern programming languages, making it more familiar to a wider range of developers.
 - **Increased Consistency:** Rules for variable assignment and function calls are unified, reducing cognitive load.
-- **Enhanced Token Efficiency:** Removing redundant keywords (`DECLARE`, `SET`, `CALL`, `THEN`, `BEGIN`/`END`) and using braces makes the code more compact for LLM processing.
+- **Enhanced Token Efficiency:** Removing redundant keywords (`declare`, `set`, `call`, `then`, `begin`/`end`) and using braces makes the code more compact for LLM processing.
 - **Greater Expressiveness:** Fluent APIs for list manipulation allow for more complex logic to be expressed clearly and concisely.
 
 Adopting these changes would represent a significant evolution for MDL, making it a more powerful and user-friendly language for Mendix development.

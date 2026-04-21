@@ -50,40 +50,40 @@ When adding a new MDL feature, use this matrix as a checklist to ensure complete
 
 | Feature | Syntax | Examples | Tests | Help | Notes |
 |---------|--------|----------|-------|------|-------|
-| **SQL Connect/Disconnect** | `SQL CONNECT <driver> '<dsn>' AS <alias>` | Y | Y | Y | PostgreSQL, Oracle, SQL Server |
-| **SQL Query** | `SQL <alias> <any-sql>` | Y | Y | Y | Raw SQL passthrough |
-| **SQL Schema Discovery** | `SQL <alias> SHOW TABLES/VIEWS/FUNCTIONS` | Y | Y | Y | Schema exploration |
-| **SQL Describe** | `SQL <alias> DESCRIBE <table>` | Y | Y | Y | Column metadata |
-| **Import** | `IMPORT FROM <alias> QUERY '...' INTO ... MAP (...)` | Y | Y | Y | Batch insert with ID generation |
-| **Generate Connector** | `SQL <alias> GENERATE CONNECTOR INTO <module>` | Y | Y | Y | Database Connector MDL generation |
+| **SQL Connect/Disconnect** | `sql connect <driver> '<dsn>' as <alias>` | Y | Y | Y | PostgreSQL, Oracle, SQL Server |
+| **SQL Query** | `sql <alias> <any-sql>` | Y | Y | Y | Raw SQL passthrough |
+| **SQL Schema Discovery** | `sql <alias> show tables/views/FUNCTIONS` | Y | Y | Y | Schema exploration |
+| **SQL Describe** | `sql <alias> describe <table>` | Y | Y | Y | Column metadata |
+| **Import** | `import from <alias> query '...' into ... map (...)` | Y | Y | Y | Batch insert with ID generation |
+| **Generate Connector** | `sql <alias> generate connector into <module>` | Y | Y | Y | Database Connector MDL generation |
 
 ## Catalog & Analysis
 
 | Feature | Syntax | Tests | Help | Notes |
 |---------|--------|-------|------|-------|
-| **Catalog Refresh** | `REFRESH CATALOG [FULL]` | Y | Y | Builds queryable metadata tables |
-| **Catalog Query** | `SELECT ... FROM CATALOG.<table>` | Y | Y | SQL against project metadata |
-| **Cross-References** | `SHOW CALLERS/CALLEES/REFERENCES/IMPACT/CONTEXT OF` | Y | Y | Requires `REFRESH CATALOG FULL` |
-| **Full-Text Search** | `SEARCH '<keyword>'` | Y | Y | Across all strings and source |
+| **Catalog Refresh** | `refresh catalog [full]` | Y | Y | Builds queryable metadata tables |
+| **Catalog Query** | `select ... from CATALOG.<table>` | Y | Y | SQL against project metadata |
+| **Cross-References** | `show callers/callees/references/impact/context of` | Y | Y | Requires `refresh catalog full` |
+| **Full-Text Search** | `search '<keyword>'` | Y | Y | Across all strings and source |
 | **Linting** | `mxcli lint -p app.mpr` | Y | Y | 14 built-in + 27 Starlark rules |
 | **Report** | `mxcli report -p app.mpr` | Y | Y | Scored best practices report |
-| **Widget Discovery** | `SHOW WIDGETS [IN Module] [WHERE ...]` | Y | Y | Experimental |
-| **Widget Update** | `UPDATE WIDGETS SET ... WHERE ...` | Y | Y | Bulk pluggable widget updates |
+| **Widget Discovery** | `show widgets [in module] [where ...]` | Y | Y | Experimental |
+| **Widget Update** | `update widgets set ... where ...` | Y | Y | Bulk pluggable widget updates |
 
 ## Column Definitions
 
 | Column | Description |
 |--------|-------------|
-| **SHOW** | `SHOW <type> [IN Module]` lists all instances in a table |
-| **DESCRIBE** | `DESCRIBE <type> Module.Name` outputs full MDL definition |
-| **CREATE** | `CREATE <type>` creates a new instance |
-| **OR MODIFY** | `CREATE OR MODIFY <type>` supports idempotent upsert |
-| **DROP** | `DROP <type> Module.Name` deletes an instance |
-| **ALTER** | `ALTER <type>` modifies without full replacement |
+| **SHOW** | `show <type> [in module]` lists all instances in a table |
+| **DESCRIBE** | `describe <type> Module.Name` outputs full MDL definition |
+| **CREATE** | `create <type>` creates a new instance |
+| **OR MODIFY** | `create or modify <type>` supports idempotent upsert |
+| **DROP** | `drop <type> Module.Name` deletes an instance |
+| **ALTER** | `alter <type>` modifies without full replacement |
 | **Examples** | MDL example file exists in `mdl-examples/doctype-tests/` (number = file prefix) |
 | **Tests** | Roundtrip or executor tests exist in `mdl/executor/*_test.go` |
 | **Catalog** | Dedicated table in `mdl/catalog/tables.go` for SQL querying |
-| **REFS** | Tracked in catalog REFS table for impact analysis (`SHOW IMPACT OF`, `SHOW REFERENCES TO`) |
+| **REFS** | Tracked in catalog REFS table for impact analysis (`show impact of`, `show references to`) |
 | **LSP** | LSP support: completions, hover, go-to-definition |
 | **Skills** | Claude skill file exists in `cmd/mxcli/skills/` |
 | **Help** | Documented in `cmd/mxcli/help.go` interactive help output |
@@ -177,7 +177,7 @@ Not yet implemented:
 - **Enumerations** — Could render as a simple table or list diagram
 - **Nanoflows** — Same flowchart logic as microflows, not yet wired up
 - **Snippets** — Same widget tree logic as pages, not yet wired up
-- **Call graphs** — `SHOW CONTEXT OF` / `SHOW CALLERS OF` as directed graphs
+- **Call graphs** — `show context of` / `show callers of` as directed graphs
 - **Module overview** — Combined ER + dependency diagram
 
 ### Not Yet Implemented

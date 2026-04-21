@@ -20,7 +20,7 @@ Oracle Forms migration to Mendix involves:
 
 ## Reserved Word Conflicts
 
-Most common words (`Check`, `Text`, `Format`, `Value`, `Type`, `Index`, `Status`, `Select`, etc.) now work **unquoted** as attribute names in MDL. Only structural keywords (`Create`, `Delete`, `Begin`, `End`, `Return`, `Entity`, `Module`) need quoting.
+Most common words (`check`, `text`, `format`, `value`, `type`, `index`, `status`, `select`, etc.) now work **unquoted** as attribute names in MDL. Only structural keywords (`create`, `delete`, `begin`, `end`, `return`, `entity`, `module`) need quoting.
 
 ### Naming Best Practices
 
@@ -28,25 +28,25 @@ While most words are no longer reserved, using descriptive names is still recomm
 
 | Oracle Forms Field | Recommended Mendix Name | Notes |
 |-------------------|-------------------------|-------|
-| `Check` | `Check` or `CheckStatus` | Works unquoted |
-| `Text` | `Text` or `TextContent` | Works unquoted |
-| `Format` | `Format` or `FormatType` | Works unquoted |
-| `Value` | `Value` or `FieldValue` | Works unquoted |
+| `check` | `check` or `CheckStatus` | Works unquoted |
+| `text` | `text` or `TextContent` | Works unquoted |
+| `format` | `format` or `FormatType` | Works unquoted |
+| `value` | `value` or `FieldValue` | Works unquoted |
 | `Name` | `Name` or `ItemName` | Works unquoted (not a keyword) |
-| `Type` | `Type` or `ItemType` | Works unquoted |
-| `Create` | `"Create"` or `CreatedBy` | **Requires quoting** (structural keyword) |
-| `Delete` | `"Delete"` or `IsDeleted` | **Requires quoting** (structural keyword) |
+| `type` | `type` or `ItemType` | Works unquoted |
+| `create` | `"create"` or `CreatedBy` | **Requires quoting** (structural keyword) |
+| `delete` | `"delete"` or `IsDeleted` | **Requires quoting** (structural keyword) |
 
 ### Example
 
 ```mdl
-CREATE PERSISTENT ENTITY MyModule.FormField (
-  Check: Boolean DEFAULT false,  -- Works unquoted
-  Text: String(500),             -- Works unquoted
-  Format: String(50),            -- Works unquoted
-  CheckFlag: Boolean DEFAULT false  -- Renamed alternative (also fine)
-  TextContent: String(500), -- Renamed
-  FormatType: String(50)    -- Renamed
+create persistent entity MyModule.FormField (
+  check: boolean default false,  -- Works unquoted
+  text: string(500),             -- Works unquoted
+  format: string(50),            -- Works unquoted
+  CheckFlag: boolean default false  -- Renamed alternative (also fine)
+  TextContent: string(500), -- Renamed
+  FormatType: string(50)    -- Renamed
 );
 ```
 
@@ -65,20 +65,20 @@ MDL scripts execute statements sequentially. Items created in one statement can 
 -- PHASE 1: Domain Model (Entities & Associations)
 -- ============================================
 
-CREATE PERSISTENT ENTITY MyModule.Customer (
-  CustomerCode: String(50),
-  CustomerName: String(200),
-  Email: String(200),
-  IsActive: Boolean DEFAULT true
+create persistent entity MyModule.Customer (
+  CustomerCode: string(50),
+  CustomerName: string(200),
+  Email: string(200),
+  IsActive: boolean default true
 );
 
-CREATE PERSISTENT ENTITY MyModule.Order (
-  OrderNumber: String(50),
-  OrderDate: DateTime,
-  TotalAmount: Decimal
+create persistent entity MyModule.Order (
+  OrderNumber: string(50),
+  OrderDate: datetime,
+  TotalAmount: decimal
 );
 
-CREATE ASSOCIATION MyModule.Order_Customer (
+create association MyModule.Order_Customer (
   MyModule.Order [*] -> MyModule.Customer [1]
 );
 /
@@ -91,21 +91,21 @@ CREATE ASSOCIATION MyModule.Order_Customer (
  * Validates and saves a customer record
  * Replaces Oracle Forms POST-INSERT/POST-UPDATE triggers
  */
-CREATE MICROFLOW MyModule.ACT_Customer_Save ($Customer: MyModule.Customer)
-RETURNS Boolean AS $Success
-BEGIN
-  DECLARE $Success Boolean = false;
+create microflow MyModule.ACT_Customer_Save ($Customer: MyModule.Customer)
+returns boolean as $success
+begin
+  declare $success boolean = false;
 
   -- Validation (replaces WHEN-VALIDATE-ITEM)
-  IF $Customer/CustomerCode = empty THEN
-    VALIDATION FEEDBACK $Customer/CustomerCode MESSAGE 'Customer code is required';
-    RETURN false;
-  END IF;
+  if $Customer/CustomerCode = empty then
+    validation feedback $Customer/CustomerCode message 'Customer code is required';
+    return false;
+  end if;
 
-  COMMIT $Customer WITH EVENTS;
-  SET $Success = true;
-  RETURN $Success;
-END;
+  commit $Customer with events;
+  set $success = true;
+  return $success;
+end;
 /
 
 -- ============================================
@@ -113,22 +113,22 @@ END;
 -- ============================================
 
 -- Now this page can reference the microflow created above
-CREATE PAGE MyModule.Customer_Edit
-LAYOUT Atlas_Default
-TITLE 'Edit Customer'
-PARAMETER $Customer: MyModule.Customer
-WIDGETS (
-  DATAVIEW SOURCE $Customer (
-    INPUT 'CustomerCode' ATTRIBUTE CustomerCode LABEL 'Customer Code',
-    INPUT 'CustomerName' ATTRIBUTE CustomerName LABEL 'Name',
-    INPUT 'Email' ATTRIBUTE Email LABEL 'Email',
+create page MyModule.Customer_Edit
+layout Atlas_Default
+title 'Edit Customer'
+parameter $Customer: MyModule.Customer
+widgets (
+  dataview source $Customer (
+    INPUT 'CustomerCode' attribute CustomerCode label 'Customer Code',
+    INPUT 'CustomerName' attribute CustomerName label 'Name',
+    INPUT 'Email' attribute Email label 'Email',
 
-    CONTAINER 'ButtonBar' (
+    container 'ButtonBar' (
       -- Reference to microflow created in Phase 2
-      BUTTON 'Save' CALL MICROFLOW MyModule.ACT_Customer_Save (
+      button 'Save' call microflow MyModule.ACT_Customer_Save (
         Customer = $Customer
       ),
-      BUTTON 'Cancel' ON CLICK CLOSE PAGE
+      button 'Cancel' on CLICK close page
     )
   )
 );
@@ -143,23 +143,23 @@ WIDGETS (
 
 **WRONG:**
 ```mdl
-VALIDATION FEEDBACK 'Customer code is required';  -- Missing attribute!
+validation feedback 'Customer code is required';  -- Missing attribute!
 ```
 
 **CORRECT:**
 ```mdl
 -- Syntax: VALIDATION FEEDBACK $entity/attribute MESSAGE 'message'
-VALIDATION FEEDBACK $Customer/CustomerCode MESSAGE 'Customer code is required';
-VALIDATION FEEDBACK $Order/OrderDate MESSAGE 'Order date cannot be in the future';
+validation feedback $Customer/CustomerCode message 'Customer code is required';
+validation feedback $Order/OrderDate message 'Order date cannot be in the future';
 ```
 
 ### Mapping Oracle Forms Validation
 
 | Oracle Forms | Mendix MDL |
 |--------------|------------|
-| `WHEN-VALIDATE-ITEM` trigger | `IF ... VALIDATION FEEDBACK` in microflow |
-| `RAISE FORM_TRIGGER_FAILURE` | `VALIDATION FEEDBACK` + `RETURN false` |
-| `MESSAGE('error text')` | `VALIDATION FEEDBACK $Entity/Attribute MESSAGE 'error text'` |
+| `when-VALIDATE-item` trigger | `if ... validation feedback` in microflow |
+| `raise FORM_TRIGGER_FAILURE` | `validation feedback` + `return false` |
+| `message('error text')` | `validation feedback $entity/attribute message 'error text'` |
 
 ### Complete Validation Pattern
 
@@ -168,31 +168,31 @@ VALIDATION FEEDBACK $Order/OrderDate MESSAGE 'Order date cannot be in the future
  * Validates order before save
  * Replaces Oracle Forms WHEN-VALIDATE-RECORD trigger
  */
-CREATE MICROFLOW MyModule.ACT_Order_Validate ($Order: MyModule.Order)
-RETURNS Boolean AS $IsValid
-BEGIN
-  DECLARE $IsValid Boolean = true;
+create microflow MyModule.ACT_Order_Validate ($Order: MyModule.Order)
+returns boolean as $IsValid
+begin
+  declare $IsValid boolean = true;
 
   -- Required field validation
-  IF $Order/OrderNumber = empty THEN
-    VALIDATION FEEDBACK $Order/OrderNumber MESSAGE 'Order number is required';
-    SET $IsValid = false;
-  END IF;
+  if $Order/OrderNumber = empty then
+    validation feedback $Order/OrderNumber message 'Order number is required';
+    set $IsValid = false;
+  end if;
 
   -- Date validation
-  IF $Order/OrderDate > [%CurrentDateTime%] THEN
-    VALIDATION FEEDBACK $Order/OrderDate MESSAGE 'Order date cannot be in the future';
-    SET $IsValid = false;
-  END IF;
+  if $Order/OrderDate > [%CurrentDateTime%] then
+    validation feedback $Order/OrderDate message 'Order date cannot be in the future';
+    set $IsValid = false;
+  end if;
 
   -- Cross-field validation
-  IF $Order/TotalAmount < 0 THEN
-    VALIDATION FEEDBACK $Order/TotalAmount MESSAGE 'Total amount cannot be negative';
-    SET $IsValid = false;
-  END IF;
+  if $Order/TotalAmount < 0 then
+    validation feedback $Order/TotalAmount message 'Total amount cannot be negative';
+    set $IsValid = false;
+  end if;
 
-  RETURN $IsValid;
-END;
+  return $IsValid;
+end;
 /
 ```
 
@@ -202,77 +202,77 @@ END;
 
 | Oracle PL/SQL | Mendix MDL |
 |---------------|------------|
-| `INSERT INTO table ...` | `$var = CREATE Module.Entity (...)` |
-| `UPDATE table SET ...` | `CHANGE $var (...)` + `COMMIT $var` |
-| `DELETE FROM table ...` | `DELETE $var` |
-| `SELECT ... INTO ...` | `RETRIEVE $var FROM Module.Entity WHERE ...` |
-| `COMMIT` | `COMMIT $var` |
-| `ROLLBACK` | Built-in with error handlers |
+| `insert into table ...` | `$var = create Module.Entity (...)` |
+| `update table set ...` | `change $var (...)` + `commit $var` |
+| `delete from table ...` | `delete $var` |
+| `select ... into ...` | `retrieve $var from Module.Entity where ...` |
+| `commit` | `commit $var` |
+| `rollback` | Built-in with error handlers |
 
 ### Control Flow
 
 | Oracle PL/SQL | Mendix MDL |
 |---------------|------------|
-| `IF ... THEN ... ELSIF ... ELSE ... END IF` | `IF ... THEN ... ELSE ... END IF` |
-| `FOR ... LOOP ... END LOOP` | `LOOP $item IN $list BEGIN ... END LOOP` |
-| `WHILE ... LOOP ... END LOOP` | Not directly supported; use recursive microflow |
-| `CURSOR` | `RETRIEVE $list FROM ...` then `LOOP` |
-| `EXCEPTION WHEN ... THEN` | `ON ERROR { ... }` |
+| `if ... then ... elsif ... else ... end if` | `if ... then ... else ... end if` |
+| `for ... loop ... end loop` | `loop $item in $list begin ... end loop` |
+| `while ... loop ... end loop` | Not directly supported; use recursive microflow |
+| `CURSOR` | `retrieve $list from ...` then `loop` |
+| `EXCEPTION when ... then` | `on error { ... }` |
 
 ### Example: PL/SQL to MDL
 
 **Oracle PL/SQL:**
 ```sql
-DECLARE
+declare
   v_count NUMBER := 0;
   v_total NUMBER := 0;
-BEGIN
-  FOR rec IN (SELECT * FROM orders WHERE status = 'PENDING') LOOP
+begin
+  for rec in (select * from orders where status = 'PENDING') loop
     v_count := v_count + 1;
     v_total := v_total + rec.amount;
 
-    UPDATE orders SET status = 'PROCESSED' WHERE id = rec.id;
-  END LOOP;
+    update orders set status = 'PROCESSED' where id = rec.id;
+  end loop;
 
-  COMMIT;
+  commit;
   DBMS_OUTPUT.PUT_LINE('Processed ' || v_count || ' orders, total: ' || v_total);
 EXCEPTION
-  WHEN OTHERS THEN
-    ROLLBACK;
-    RAISE;
-END;
+  when OTHERS then
+    rollback;
+    raise;
+end;
 ```
 
 **Mendix MDL:**
 ```mdl
-CREATE MICROFLOW MyModule.ACT_ProcessPendingOrders ()
-RETURNS String AS $Result
-BEGIN
-  DECLARE $OrderList List of MyModule.Order = empty;
-  DECLARE $Count Integer = 0;
-  DECLARE $Total Decimal = 0;
-  DECLARE $Result String = '';
+create microflow MyModule.ACT_ProcessPendingOrders ()
+returns string as $Result
+begin
+  declare $OrderList list of MyModule.Order = empty;
+  declare $count integer = 0;
+  declare $Total decimal = 0;
+  declare $Result string = '';
 
   -- Retrieve pending orders (replaces CURSOR)
-  RETRIEVE $OrderList FROM MyModule.Order
-    WHERE Status = 'PENDING';
+  retrieve $OrderList from MyModule.Order
+    where status = 'PENDING';
 
   -- Process each order (replaces FOR LOOP)
-  LOOP $Order IN $OrderList
-  BEGIN
-    SET $Count = $Count + 1;
-    SET $Total = $Total + $Order/Amount;
+  loop $Order in $OrderList
+  begin
+    set $count = $count + 1;
+    set $Total = $Total + $Order/Amount;
 
-    CHANGE $Order (Status = 'PROCESSED');
-    COMMIT $Order ON ERROR {
-      LOG ERROR 'Failed to process order: ' + $Order/OrderNumber;
+    change $Order (status = 'PROCESSED');
+    commit $Order on error {
+      log error 'Failed to process order: ' + $Order/OrderNumber;
     };
-  END LOOP;
+  end loop;
 
-  LOG INFO 'Processed ' + toString($Count) + ' orders, total: ' + toString($Total);
-  SET $Result = 'Processed ' + toString($Count) + ' orders';
-  RETURN $Result;
-END;
+  log info 'Processed ' + toString($count) + ' orders, total: ' + toString($Total);
+  set $Result = 'Processed ' + toString($count) + ' orders';
+  return $Result;
+end;
 /
 ```
 
@@ -282,12 +282,12 @@ END;
 
 | Oracle Forms Item | Mendix Widget | MDL Syntax |
 |-------------------|---------------|------------|
-| Text Item | Text Input | `INPUT 'name' ATTRIBUTE attr` |
-| Display Item | Text | `TEXT 'content'` |
-| Check Box | Check Box | `CHECKBOX 'name' ATTRIBUTE attr` |
-| Radio Group | Radio Buttons | `RADIO 'name' ATTRIBUTE attr` |
-| List Item (LOV) | Drop-down | `DROPDOWN 'name' ATTRIBUTE attr` |
-| Push Button | Button | `BUTTON 'name' ON CLICK ...` |
+| Text Item | Text Input | `INPUT 'name' attribute attr` |
+| Display Item | Text | `text 'content'` |
+| Check Box | Check Box | `checkbox 'name' attribute attr` |
+| Radio Group | Radio Buttons | `RADIO 'name' attribute attr` |
+| List Item (LOV) | Drop-down | `dropdown 'name' attribute attr` |
+| Push Button | Button | `button 'name' on CLICK ...` |
 | Tab Canvas | Tab Container | `TAB_CONTAINER (TAB 'name' (...))` |
 
 ### Oracle Forms Blocks to Mendix DataViews
@@ -295,16 +295,16 @@ END;
 **Oracle Forms Block → Mendix DataView:**
 ```mdl
 -- Single-record block
-DATAVIEW SOURCE $Customer (
-  INPUT 'Code' ATTRIBUTE CustomerCode,
-  INPUT 'Name' ATTRIBUTE CustomerName
+dataview source $Customer (
+  INPUT 'Code' attribute CustomerCode,
+  INPUT 'Name' attribute CustomerName
 )
 
 -- Multi-record block (tabular)
-DATAGRID SOURCE $OrderList (
-  COLUMN 'OrderNumber' ATTRIBUTE OrderNumber,
-  COLUMN 'OrderDate' ATTRIBUTE OrderDate,
-  COLUMN 'Amount' ATTRIBUTE TotalAmount
+datagrid source $OrderList (
+  column 'OrderNumber' attribute OrderNumber,
+  column 'OrderDate' attribute OrderDate,
+  column 'Amount' attribute TotalAmount
 )
 ```
 
@@ -312,23 +312,23 @@ DATAGRID SOURCE $OrderList (
 
 **Oracle Forms Master-Detail → Mendix:**
 ```mdl
-CREATE PAGE MyModule.CustomerOrders
-LAYOUT Atlas_Default
-TITLE 'Customer Orders'
-PARAMETER $Customer: MyModule.Customer
-WIDGETS (
+create page MyModule.CustomerOrders
+layout Atlas_Default
+title 'Customer Orders'
+parameter $Customer: MyModule.Customer
+widgets (
   -- Master block
-  DATAVIEW SOURCE $Customer (
-    INPUT 'Code' ATTRIBUTE CustomerCode READONLY,
-    INPUT 'Name' ATTRIBUTE CustomerName READONLY
+  dataview source $Customer (
+    INPUT 'Code' attribute CustomerCode readonly,
+    INPUT 'Name' attribute CustomerName readonly
   ),
 
   -- Detail block (orders for this customer)
-  DATAGRID 'OrderGrid' SOURCE DATABASE MyModule.Order
-    WHERE '[MyModule.Order_Customer = $Customer]' (
-    COLUMN 'OrderNumber' ATTRIBUTE OrderNumber,
-    COLUMN 'OrderDate' ATTRIBUTE OrderDate,
-    COLUMN 'Amount' ATTRIBUTE TotalAmount
+  datagrid 'OrderGrid' source database MyModule.Order
+    where '[MyModule.Order_Customer = $Customer]' (
+    column 'OrderNumber' attribute OrderNumber,
+    column 'OrderDate' attribute OrderDate,
+    column 'Amount' attribute TotalAmount
   )
 );
 /
@@ -340,15 +340,15 @@ WIDGETS (
 
 | Oracle Forms Trigger | Mendix Implementation |
 |---------------------|----------------------|
-| `WHEN-NEW-FORM-INSTANCE` | Page load microflow (data source) |
-| `WHEN-NEW-RECORD-INSTANCE` | OnChange microflow on data source |
-| `WHEN-VALIDATE-ITEM` | OnChange microflow or validation in save |
-| `WHEN-VALIDATE-RECORD` | Validation microflow before save |
-| `POST-QUERY` | Microflow data source with transformation |
-| `PRE-INSERT` / `PRE-UPDATE` | Before commit event handler |
-| `POST-INSERT` / `POST-UPDATE` | After commit event handler |
-| `KEY-COMMIT` | Save button action microflow |
-| `ON-ERROR` | `ON ERROR { ... }` blocks |
+| `when-NEW-FORM-INSTANCE` | Page load microflow (data source) |
+| `when-NEW-RECORD-INSTANCE` | OnChange microflow on data source |
+| `when-VALIDATE-item` | OnChange microflow or validation in save |
+| `when-VALIDATE-RECORD` | Validation microflow before save |
+| `post-query` | Microflow data source with transformation |
+| `PRE-insert` / `PRE-update` | Before commit event handler |
+| `post-insert` / `post-update` | After commit event handler |
+| `key-commit` | Save button action microflow |
+| `on-error` | `on error { ... }` blocks |
 
 ## Migration Checklist
 
@@ -364,7 +364,7 @@ During migration:
 - [ ] Create microflows second (Phase 2)
 - [ ] Create pages last (Phase 3) - they can reference microflows
 - [ ] Test validation patterns thoroughly
-- [ ] Use `VALIDATION FEEDBACK $Entity/Attribute MESSAGE 'message'` for all validations
+- [ ] Use `validation feedback $entity/attribute message 'message'` for all validations
 
 After migration:
 - [ ] Run `mxcli check script.mdl -p app.mpr --references`
@@ -376,15 +376,15 @@ After migration:
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| "Parse error: mismatched input 'Create'" | Structural keyword as attribute | Use `"Create"` (quoted) or rename |
+| "Parse error: mismatched input 'Create'" | Structural keyword as attribute | Use `"create"` (quoted) or rename |
 | "microflow not found" | Referenced before created | Move microflow definition before page |
 | "page not found" | Referenced before created | Move page definition earlier |
-| "VALIDATION FEEDBACK requires attribute" | Missing attribute path | Use `VALIDATION FEEDBACK $Entity/Attribute MESSAGE 'msg'` |
+| "VALIDATION FEEDBACK requires attribute" | Missing attribute path | Use `validation feedback $entity/attribute message 'msg'` |
 | CE0117 "Error in expression" | Missing module prefix | Use fully qualified names |
 
 ## Tips for Success
 
-1. **Plan attribute names carefully**: Most words work unquoted; only structural keywords (`Create`, `Delete`, `Begin`, `End`, `Return`) need quoting
+1. **Plan attribute names carefully**: Most words work unquoted; only structural keywords (`create`, `delete`, `begin`, `end`, `return`) need quoting
 2. **Organize scripts by phase**: Entities → Microflows → Pages
 3. **Test incrementally**: Migrate one form at a time
 4. **Keep validation close to logic**: Embed validation in save microflows

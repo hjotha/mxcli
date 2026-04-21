@@ -10,14 +10,14 @@ Create and manage external database connections in Mendix using the External Dat
 - User needs to define SQL queries with parameter binding
 - User wants to map query results to Mendix entities
 
-> **Tip:** Use `GENERATE CONNECTOR` to auto-create all constants, entities, and queries from a database schema:
+> **Tip:** Use `generate connector` to auto-create all constants, entities, and queries from a database schema:
 > ```
 > SQL CONNECT postgres 'postgres://user:pass@host/db' AS source;
 > SQL source GENERATE CONNECTOR INTO MyModule;
 > -- Or generate for specific tables and execute immediately:
 > SQL source GENERATE CONNECTOR INTO MyModule TABLES (employees, departments) EXEC;
 > ```
-> For manual exploration, use `SQL source SHOW TABLES;` and `SQL source DESCRIBE tablename;`.
+> For manual exploration, use `sql source show tables;` and `sql source describe tablename;`.
 
 ## Prerequisites
 
@@ -30,11 +30,11 @@ Database query results must be mapped to NON-PERSISTENT entities. Create these f
 
 ```sql
 -- Entity to hold query results
-CREATE NON-PERSISTENT ENTITY MyModule.EmployeeRecord (
-  EmployeeId: Integer,
-  EmployeeName: String(100),
-  Department: String(50),
-  Salary: Decimal
+create non-persistent entity MyModule.EmployeeRecord (
+  EmployeeId: integer,
+  EmployeeName: string(100),
+  Department: string(50),
+  Salary: decimal
 );
 ```
 
@@ -43,20 +43,20 @@ Connection credentials should be stored in constants:
 
 ```sql
 -- Connection string (JDBC URL)
-CREATE CONSTANT MyModule.DbConnectionString TYPE String
-  DEFAULT 'jdbc:oracle:thin:@//hostname:1521/SERVICENAME'
-  COMMENT 'JDBC connection string for external database';
+create constant MyModule.DbConnectionString type string
+  default 'jdbc:oracle:thin:@//hostname:1521/SERVICENAME'
+  comment 'JDBC connection string for external database';
 
 -- Username
-CREATE CONSTANT MyModule.DbUsername TYPE String
-  DEFAULT 'app_user'
-  COMMENT 'Database username';
+create constant MyModule.DbUsername type string
+  default 'app_user'
+  comment 'Database username';
 
 -- Password (use PRIVATE for local development)
-CREATE CONSTANT MyModule.DbPassword TYPE String
-  DEFAULT ''
+create constant MyModule.DbPassword type string
+  default ''
   PRIVATE
-  COMMENT 'Database password - inject via environment variable in production';
+  comment 'Database password - inject via environment variable in production';
 ```
 
 ## Database Connection Syntax
@@ -64,14 +64,14 @@ CREATE CONSTANT MyModule.DbPassword TYPE String
 ### Basic Connection Structure
 
 ```sql
-CREATE DATABASE CONNECTION Module.ConnectionName
-TYPE '<database-type>'
-CONNECTION STRING @Module.ConnectionStringConstant
-USERNAME @Module.UsernameConstant
-PASSWORD @Module.PasswordConstant
-BEGIN
+create database connection Module.ConnectionName
+type '<database-type>'
+connection string @Module.ConnectionStringConstant
+username @Module.UsernameConstant
+password @Module.PasswordConstant
+begin
   -- Query definitions go here
-END;
+end;
 ```
 
 ### Supported Database Types
@@ -90,18 +90,18 @@ END;
 ### Simple Query (No Parameters)
 
 ```sql
-QUERY QueryName
-  SQL 'SELECT column1, column2 FROM table_name'
-  RETURNS Module.EntityName;
+query QueryName
+  sql 'SELECT column1, column2 FROM table_name'
+  returns Module.EntityName;
 ```
 
 ### Parameterized Query
 
 ```sql
-QUERY QueryName
-  SQL 'SELECT * FROM table_name WHERE column = {paramName}'
-  PARAMETER paramName: String
-  RETURNS Module.EntityName;
+query QueryName
+  sql 'SELECT * FROM table_name WHERE column = {paramName}'
+  parameter paramName: string
+  returns Module.EntityName;
 ```
 
 ### Query with Column Mapping
@@ -109,23 +109,23 @@ QUERY QueryName
 When database column names don't match entity attribute names:
 
 ```sql
-QUERY QueryName
-  SQL 'SELECT emp_id, emp_name, dept_no FROM employees'
-  RETURNS Module.EmployeeRecord
-  MAP (
-    emp_id AS EmployeeId,
-    emp_name AS EmployeeName,
-    dept_no AS DepartmentNumber
+query QueryName
+  sql 'SELECT emp_id, emp_name, dept_no FROM employees'
+  returns Module.EmployeeRecord
+  map (
+    emp_id as EmployeeId,
+    emp_name as EmployeeName,
+    dept_no as DepartmentNumber
   );
 ```
 
 ### Supported Parameter Types
 
-- `String` - Text values
-- `Integer` - Whole numbers
-- `Decimal` - Decimal numbers
-- `Boolean` - true/false
-- `DateTime` - Date and time values
+- `string` - Text values
+- `integer` - Whole numbers
+- `decimal` - Decimal numbers
+- `boolean` - true/false
+- `datetime` - Date and time values
 
 ### Parameter Test Values
 
@@ -133,10 +133,10 @@ Parameters can include a test value for Studio Pro testing, or indicate they sho
 
 ```sql
 -- Test value (used in Studio Pro's Execute Query dialog)
-PARAMETER empName: String DEFAULT 'Smith'
+parameter empName: string default 'Smith'
 
 -- Test with NULL value
-PARAMETER optionalDate: DateTime NULL
+parameter optionalDate: datetime null
 ```
 
 ## Complete Examples
@@ -145,104 +145,104 @@ PARAMETER optionalDate: DateTime NULL
 
 ```sql
 -- Step 1: Create module
-CREATE MODULE OracleDemo;
+create module OracleDemo;
 
 -- Step 2: Create constants for connection
-CREATE CONSTANT OracleDemo.OracleConnectionString TYPE String
-  DEFAULT 'jdbc:oracle:thin:@//10.211.55.2:1522/ORCLPDB1';
+create constant OracleDemo.OracleConnectionString type string
+  default 'jdbc:oracle:thin:@//10.211.55.2:1522/ORCLPDB1';
 
-CREATE CONSTANT OracleDemo.OracleUser TYPE String DEFAULT 'scott';
+create constant OracleDemo.OracleUser type string default 'scott';
 
-CREATE CONSTANT OracleDemo.OraclePassword TYPE String DEFAULT 'tiger' PRIVATE;
+create constant OracleDemo.OraclePassword type string default 'tiger' PRIVATE;
 
 -- Step 3: Create non-persistent entity for results
-CREATE NON-PERSISTENT ENTITY OracleDemo.EmpRecord (
-  EMPNO: Decimal,
-  ENAME: String(10),
-  JOB: String(9),
-  SAL: Decimal,
-  DEPTNO: Decimal
+create non-persistent entity OracleDemo.EmpRecord (
+  EMPNO: decimal,
+  ENAME: string(10),
+  JOB: string(9),
+  SAL: decimal,
+  DEPTNO: decimal
 );
 
 -- Step 4: Create database connection
-CREATE DATABASE CONNECTION OracleDemo.HRDatabase
-TYPE 'Oracle'
-CONNECTION STRING @OracleDemo.OracleConnectionString
-USERNAME @OracleDemo.OracleUser
-PASSWORD @OracleDemo.OraclePassword
-BEGIN
-  QUERY GetAllEmployees
-    SQL 'SELECT EMPNO, ENAME, JOB, SAL, DEPTNO FROM EMP ORDER BY EMPNO'
-    RETURNS OracleDemo.EmpRecord;
+create database connection OracleDemo.HRDatabase
+type 'Oracle'
+connection string @OracleDemo.OracleConnectionString
+username @OracleDemo.OracleUser
+password @OracleDemo.OraclePassword
+begin
+  query GetAllEmployees
+    sql 'SELECT EMPNO, ENAME, JOB, SAL, DEPTNO FROM EMP ORDER BY EMPNO'
+    returns OracleDemo.EmpRecord;
 
-  QUERY GetEmployeeByName
-    SQL 'SELECT EMPNO, ENAME, JOB, SAL, DEPTNO FROM EMP WHERE ENAME = {empName}'
-    PARAMETER empName: String
-    RETURNS OracleDemo.EmpRecord;
+  query GetEmployeeByName
+    sql 'SELECT EMPNO, ENAME, JOB, SAL, DEPTNO FROM EMP WHERE ENAME = {empName}'
+    parameter empName: string
+    returns OracleDemo.EmpRecord;
 
-  QUERY GetHighEarners
-    SQL 'SELECT EMPNO, ENAME, JOB, SAL, DEPTNO FROM EMP WHERE SAL >= {minSalary}'
-    PARAMETER minSalary: Decimal
-    RETURNS OracleDemo.EmpRecord;
-END;
+  query GetHighEarners
+    sql 'SELECT EMPNO, ENAME, JOB, SAL, DEPTNO FROM EMP WHERE SAL >= {minSalary}'
+    parameter minSalary: decimal
+    returns OracleDemo.EmpRecord;
+end;
 ```
 
 ### Example 2: PostgreSQL Connection
 
 ```sql
-CREATE CONSTANT Inventory.PgConnectionString TYPE String
-  DEFAULT 'jdbc:postgresql://localhost:5432/inventory_db';
+create constant Inventory.PgConnectionString type string
+  default 'jdbc:postgresql://localhost:5432/inventory_db';
 
-CREATE CONSTANT Inventory.PgUser TYPE String DEFAULT 'inventory_app';
-CREATE CONSTANT Inventory.PgPassword TYPE String DEFAULT '' PRIVATE;
+create constant Inventory.PgUser type string default 'inventory_app';
+create constant Inventory.PgPassword type string default '' PRIVATE;
 
-CREATE NON-PERSISTENT ENTITY Inventory.ProductRecord (
-  ProductId: Integer,
-  ProductName: String(100),
-  Quantity: Integer,
-  Price: Decimal
+create non-persistent entity Inventory.ProductRecord (
+  ProductId: integer,
+  ProductName: string(100),
+  Quantity: integer,
+  Price: decimal
 );
 
-CREATE DATABASE CONNECTION Inventory.ProductDatabase
-TYPE 'PostgreSQL'
-CONNECTION STRING @Inventory.PgConnectionString
-USERNAME @Inventory.PgUser
-PASSWORD @Inventory.PgPassword
-BEGIN
-  QUERY GetAllProducts
-    SQL 'SELECT product_id, product_name, quantity, price FROM products'
-    RETURNS Inventory.ProductRecord
-    MAP (
-      product_id AS ProductId,
-      product_name AS ProductName,
-      quantity AS Quantity,
-      price AS Price
+create database connection Inventory.ProductDatabase
+type 'PostgreSQL'
+connection string @Inventory.PgConnectionString
+username @Inventory.PgUser
+password @Inventory.PgPassword
+begin
+  query GetAllProducts
+    sql 'SELECT product_id, product_name, quantity, price FROM products'
+    returns Inventory.ProductRecord
+    map (
+      product_id as ProductId,
+      product_name as ProductName,
+      quantity as Quantity,
+      price as Price
     );
 
-  QUERY SearchProducts
-    SQL 'SELECT product_id, product_name, quantity, price FROM products WHERE product_name ILIKE {searchPattern}'
-    PARAMETER searchPattern: String
-    RETURNS Inventory.ProductRecord
-    MAP (
-      product_id AS ProductId,
-      product_name AS ProductName,
-      quantity AS Quantity,
-      price AS Price
+  query SearchProducts
+    sql 'SELECT product_id, product_name, quantity, price FROM products WHERE product_name ILIKE {searchPattern}'
+    parameter searchPattern: string
+    returns Inventory.ProductRecord
+    map (
+      product_id as ProductId,
+      product_name as ProductName,
+      quantity as Quantity,
+      price as Price
     );
-END;
+end;
 ```
 
 ## Viewing Connections
 
 ```sql
 -- List all database connections
-SHOW DATABASE CONNECTIONS;
+show database connections;
 
 -- List connections in a specific module
-SHOW DATABASE CONNECTIONS IN MyModule;
+show database connections in MyModule;
 
 -- View connection source code
-DESCRIBE DATABASE CONNECTION MyModule.MyDatabase;
+describe database connection MyModule.MyDatabase;
 ```
 
 ## Best Practices
@@ -284,40 +284,40 @@ DESCRIBE DATABASE CONNECTION MyModule.MyDatabase;
 
 ```sql
 -- Constants for configuration
-CREATE CONSTANT Module.Name TYPE String DEFAULT 'value';
-SHOW CONSTANTS IN Module;
+create constant Module.Name type string default 'value';
+show constants in module;
 
 -- Non-persistent entities for results
-CREATE NON-PERSISTENT ENTITY Module.Name (...);
-SHOW ENTITIES IN Module;
+create non-persistent entity Module.Name (...);
+show entities in module;
 ```
 
 ## Executing Queries from Microflows
 
-Once a database connection and queries are defined, execute them from microflows using `EXECUTE DATABASE QUERY`. The query is referenced by its **3-part qualified name**: `Module.Connection.Query`.
+Once a database connection and queries are defined, execute them from microflows using `execute database query`. The query is referenced by its **3-part qualified name**: `Module.Connection.Query`.
 
 ### Basic Syntax
 
 ```sql
 -- Execute a query and store results
-$ResultList = EXECUTE DATABASE QUERY Module.Connection.QueryName;
+$ResultList = execute database query Module.Connection.QueryName;
 
 -- Fire-and-forget (no output variable)
-EXECUTE DATABASE QUERY Module.Connection.QueryName;
+execute database query Module.Connection.QueryName;
 ```
 
 ### Dynamic SQL Override
 
-Override the query's SQL at runtime using `DYNAMIC`:
+Override the query's SQL at runtime using `dynamic`:
 
 ```sql
-$ResultList = EXECUTE DATABASE QUERY Module.Connection.QueryName
-  DYNAMIC 'SELECT id, name FROM employees WHERE active = true LIMIT 10';
+$ResultList = execute database query Module.Connection.QueryName
+  dynamic 'SELECT id, name FROM employees WHERE active = true LIMIT 10';
 ```
 
 ### Parameterized Queries
 
-Pass values for query parameters defined with `PARAMETER` in the query definition:
+Pass values for query parameters defined with `parameter` in the query definition:
 
 ```sql
 -- Query definition (in DATABASE CONNECTION block):
@@ -327,7 +327,7 @@ Pass values for query parameters defined with `PARAMETER` in the query definitio
 --     RETURNS Module.DriverRecord;
 
 -- Microflow execution:
-$Drivers = EXECUTE DATABASE QUERY Module.Connection.GetDriversByNationality
+$Drivers = execute database query Module.Connection.GetDriversByNationality
   (nation = $NationalityVar);
 ```
 
@@ -335,71 +335,71 @@ $Drivers = EXECUTE DATABASE QUERY Module.Connection.GetDriversByNationality
 
 ### Runtime Connection Override
 
-Override connection parameters at runtime using `CONNECTION`. Use case: multiple databases with the same schema but different data (e.g., region-specific databases).
+Override connection parameters at runtime using `connection`. Use case: multiple databases with the same schema but different data (e.g., region-specific databases).
 
 ```sql
-$Results = EXECUTE DATABASE QUERY Module.Connection.QueryName
-  CONNECTION (DBSource = $Url, DBUsername = $User, DBPassword = $Pass);
+$Results = execute database query Module.Connection.QueryName
+  connection (DBSource = $url, DBUsername = $user, DBPassword = $Pass);
 ```
 
 **Caveat**: ConnectionParameterMappings require the database connection to have been tested/validated in Studio Pro first. Creating them programmatically may trigger "parameters have been updated" on first open.
 
 ### Error Handling
 
-`EXECUTE DATABASE QUERY` only supports `ON ERROR ROLLBACK` (the default). `ON ERROR CONTINUE` is **not supported** for this action type.
+`execute database query` only supports `on error rollback` (the default). `on error continue` is **not supported** for this action type.
 
 ### Complete Example
 
 ```sql
 -- Set up non-persistent entity, constants, and connection
-CREATE NON-PERSISTENT ENTITY HR.EmployeeRecord (
-  EmpId: Integer,
-  Name: String(100),
-  Department: String(50)
+create non-persistent entity HR.EmployeeRecord (
+  EmpId: integer,
+  Name: string(100),
+  Department: string(50)
 );
 
-CREATE CONSTANT HR.DbUrl TYPE String DEFAULT 'jdbc:postgresql://localhost:5432/hrdb';
-CREATE CONSTANT HR.DbUser TYPE String DEFAULT 'app';
-CREATE CONSTANT HR.DbPass TYPE String DEFAULT '' PRIVATE;
+create constant HR.DbUrl type string default 'jdbc:postgresql://localhost:5432/hrdb';
+create constant HR.DbUser type string default 'app';
+create constant HR.DbPass type string default '' PRIVATE;
 
-CREATE DATABASE CONNECTION HR.MainDB
-TYPE 'PostgreSQL'
-CONNECTION STRING @HR.DbUrl
-USERNAME @HR.DbUser
-PASSWORD @HR.DbPass
-BEGIN
-  QUERY GetAllEmployees
-    SQL 'SELECT emp_id, name, department FROM employees'
-    RETURNS HR.EmployeeRecord
-    MAP (emp_id AS EmpId, name AS Name, department AS Department);
+create database connection HR.MainDB
+type 'PostgreSQL'
+connection string @HR.DbUrl
+username @HR.DbUser
+password @HR.DbPass
+begin
+  query GetAllEmployees
+    sql 'SELECT emp_id, name, department FROM employees'
+    returns HR.EmployeeRecord
+    map (emp_id as EmpId, name as Name, department as Department);
 
-  QUERY GetByDepartment
-    SQL 'SELECT emp_id, name, department FROM employees WHERE department = {dept}'
-    PARAMETER dept: String
-    RETURNS HR.EmployeeRecord
-    MAP (emp_id AS EmpId, name AS Name, department AS Department);
-END;
+  query GetByDepartment
+    sql 'SELECT emp_id, name, department FROM employees WHERE department = {dept}'
+    parameter dept: string
+    returns HR.EmployeeRecord
+    map (emp_id as EmpId, name as Name, department as Department);
+end;
 
 -- Microflow that executes the query
-CREATE MICROFLOW HR.ACT_LoadEmployees($Department: String)
-RETURNS List of HR.EmployeeRecord AS $Employees
-BEGIN
-  $Employees = EXECUTE DATABASE QUERY HR.MainDB.GetByDepartment
+create microflow HR.ACT_LoadEmployees($Department: string)
+returns list of HR.EmployeeRecord as $Employees
+begin
+  $Employees = execute database query HR.MainDB.GetByDepartment
     (dept = $Department);
-  RETURN $Employees;
-END;
+  return $Employees;
+end;
 ```
 
 ## Importing Data from External Databases
 
 To bulk-import data from an external database directly into the Mendix app's PostgreSQL
-database (bypassing the runtime), use `IMPORT FROM` instead of the Database Connector:
+database (bypassing the runtime), use `import from` instead of the Database Connector:
 
 ```sql
-SQL CONNECT postgres 'postgres://user:pass@host:5432/legacydb' AS source;
-IMPORT FROM source QUERY 'SELECT name, email FROM employees'
-  INTO HRModule.Employee
-  MAP (name AS Name, email AS Email);
+sql connect postgres 'postgres://user:pass@host:5432/legacydb' as source;
+import from source query 'SELECT name, email FROM employees'
+  into HRModule.Employee
+  map (name as Name, email as Email);
 ```
 
 See [demo-data.md](./demo-data.md) for details on the Mendix ID system and manual insertion.

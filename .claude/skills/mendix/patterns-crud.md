@@ -23,22 +23,22 @@ Used for Save buttons on NewEdit pages.
  * @param $Customer The customer to save
  * @returns true if saved successfully
  */
-CREATE MICROFLOW Module.ACT_Customer_Save (
+create microflow Module.ACT_Customer_Save (
   $Customer: Module.Customer
 )
-RETURNS Boolean
-BEGIN
+returns boolean
+begin
   -- Validate first
-  DECLARE $IsValid Boolean = true;
-  $IsValid = CALL MICROFLOW Module.VAL_Customer_Save($Customer = $Customer);
+  declare $IsValid boolean = true;
+  $IsValid = call microflow Module.VAL_Customer_Save($Customer = $Customer);
 
-  IF $IsValid THEN
-    COMMIT $Customer WITH EVENTS;
-    CLOSE PAGE;
-  END IF;
+  if $IsValid then
+    commit $Customer with events;
+    close page;
+  end if;
 
-  RETURN $IsValid;
-END;
+  return $IsValid;
+end;
 /
 ```
 
@@ -53,32 +53,32 @@ Companion validation microflow for Save actions.
  * @param $Customer The customer to validate
  * @returns true if valid
  */
-CREATE MICROFLOW Module.VAL_Customer_Save (
+create microflow Module.VAL_Customer_Save (
   $Customer: Module.Customer
 )
-RETURNS Boolean
-BEGIN
-  DECLARE $IsValid Boolean = true;
+returns boolean
+begin
+  declare $IsValid boolean = true;
 
   -- Required field validation
-  IF $Customer/Name = empty THEN
-    VALIDATION FEEDBACK $Customer/Name MESSAGE 'Name is required';
-    SET $IsValid = false;
-  END IF;
+  if $Customer/Name = empty then
+    validation feedback $Customer/Name message 'Name is required';
+    set $IsValid = false;
+  end if;
 
-  IF $Customer/Email = empty THEN
-    VALIDATION FEEDBACK $Customer/Email MESSAGE 'Email is required';
-    SET $IsValid = false;
-  END IF;
+  if $Customer/Email = empty then
+    validation feedback $Customer/Email message 'Email is required';
+    set $IsValid = false;
+  end if;
 
   -- Business rule validation
-  IF $Customer/CreditLimit < 0 THEN
-    VALIDATION FEEDBACK $Customer/CreditLimit MESSAGE 'Credit limit cannot be negative';
-    SET $IsValid = false;
-  END IF;
+  if $Customer/CreditLimit < 0 then
+    validation feedback $Customer/CreditLimit message 'Credit limit cannot be negative';
+    set $IsValid = false;
+  end if;
 
-  RETURN $IsValid;
-END;
+  return $IsValid;
+end;
 /
 ```
 
@@ -94,15 +94,15 @@ Used for Delete buttons with confirmation.
  * @param $Customer The customer to delete
  * @returns true if deleted
  */
-CREATE MICROFLOW Module.ACT_Customer_Delete (
+create microflow Module.ACT_Customer_Delete (
   $Customer: Module.Customer
 )
-RETURNS Boolean
-BEGIN
-  DELETE $Customer;
-  CLOSE PAGE;
-  RETURN true;
-END;
+returns boolean
+begin
+  delete $Customer;
+  close page;
+  return true;
+end;
 /
 ```
 
@@ -118,15 +118,15 @@ Used for Cancel buttons (discard changes).
  * @param $Customer The customer being edited
  * @returns true
  */
-CREATE MICROFLOW Module.ACT_Customer_Cancel (
+create microflow Module.ACT_Customer_Cancel (
   $Customer: Module.Customer
 )
-RETURNS Boolean
-BEGIN
-  ROLLBACK $Customer;
-  CLOSE PAGE;
-  RETURN true;
-END;
+returns boolean
+begin
+  rollback $Customer;
+  close page;
+  return true;
+end;
 /
 ```
 
@@ -140,19 +140,19 @@ Used for New/Add buttons on overview pages.
  *
  * @returns true
  */
-CREATE MICROFLOW Module.ACT_Customer_New ()
-RETURNS Boolean
-BEGIN
-  DECLARE $NewCustomer AS Module.Customer;
+create microflow Module.ACT_Customer_New ()
+returns boolean
+begin
+  declare $NewCustomer as Module.Customer;
 
-  $NewCustomer = CREATE Module.Customer (
+  $NewCustomer = create Module.Customer (
     IsActive = true,
     CreatedDate = [%CurrentDateTime%]
   );
 
-  SHOW PAGE Module.Customer_NewEdit ($Customer = $NewCustomer);
-  RETURN true;
-END;
+  show page Module.Customer_NewEdit ($Customer = $NewCustomer);
+  return true;
+end;
 /
 ```
 
@@ -167,16 +167,16 @@ Used for data grid/list view sources.
  *
  * @returns List of active customers
  */
-CREATE MICROFLOW Module.DS_Customer_GetActive ()
-RETURNS List of Module.Customer
-BEGIN
-  DECLARE $Customers List of Module.Customer = empty;
+create microflow Module.DS_Customer_GetActive ()
+returns list of Module.Customer
+begin
+  declare $Customers list of Module.Customer = empty;
 
-  RETRIEVE $Customers FROM Module.Customer
-    WHERE IsActive = true;
+  retrieve $Customers from Module.Customer
+    where IsActive = true;
 
-  RETURN $Customers;
-END;
+  return $Customers;
+end;
 /
 ```
 
@@ -191,14 +191,14 @@ Open existing entity for editing.
  * @param $Customer The customer to edit
  * @returns true
  */
-CREATE MICROFLOW Module.ACT_Customer_Edit (
+create microflow Module.ACT_Customer_Edit (
   $Customer: Module.Customer
 )
-RETURNS Boolean
-BEGIN
-  SHOW PAGE Module.Customer_NewEdit ($Customer = $Customer);
-  RETURN true;
-END;
+returns boolean
+begin
+  show page Module.Customer_NewEdit ($Customer = $Customer);
+  return true;
+end;
 /
 ```
 
@@ -209,18 +209,18 @@ For a typical entity, create these microflows:
 | Microflow | Purpose | Parameters |
 |-----------|---------|------------|
 | `ACT_Entity_New` | Create new | None |
-| `ACT_Entity_Edit` | Open for edit | `$Entity` |
-| `ACT_Entity_Save` | Save changes | `$Entity` |
-| `VAL_Entity_Save` | Validate | `$Entity` |
-| `ACT_Entity_Delete` | Delete | `$Entity` |
-| `ACT_Entity_Cancel` | Cancel edit | `$Entity` |
+| `ACT_Entity_Edit` | Open for edit | `$entity` |
+| `ACT_Entity_Save` | Save changes | `$entity` |
+| `VAL_Entity_Save` | Validate | `$entity` |
+| `ACT_Entity_Delete` | Delete | `$entity` |
+| `ACT_Entity_Cancel` | Cancel edit | `$entity` |
 | `DS_Entity_GetAll` | List all | None |
 
 ## Best Practices
 
 1. **Always validate before commit**: Call VAL_ microflow in ACT_Save
-2. **Use WITH EVENTS**: `COMMIT $Entity WITH EVENTS` triggers event handlers
-3. **Close page on success**: Use `CLOSE PAGE` after successful save/delete
-4. **Rollback on cancel**: Use `ROLLBACK $Entity` to discard changes
+2. **Use WITH EVENTS**: `commit $entity with events` triggers event handlers
+3. **Close page on success**: Use `close page` after successful save/delete
+4. **Rollback on cancel**: Use `rollback $entity` to discard changes
 5. **Initialize defaults**: Set default values in ACT_New microflow
 6. **Return Boolean**: All action microflows should return success status

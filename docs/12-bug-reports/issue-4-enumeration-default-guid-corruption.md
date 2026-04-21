@@ -15,9 +15,9 @@ System.Collections.Generic.KeyNotFoundException: The given key '3622ee3a-8d34-44
 ## Reproduction
 
 ```mdl
-ALTER ENTITY MaisonElegance.FormSubmission DROP ATTRIBUTE SubmissionStatus;
-ALTER ENTITY MaisonElegance.FormSubmission ADD ATTRIBUTE SubmissionStatus:
-  Enumeration(MaisonElegance.FormSubmissionStatus) DEFAULT
+alter entity MaisonElegance.FormSubmission drop attribute SubmissionStatus;
+alter entity MaisonElegance.FormSubmission add attribute SubmissionStatus:
+  enumeration(MaisonElegance.FormSubmissionStatus) default
   MaisonElegance.FormSubmissionStatus.StatusNew;
 ```
 
@@ -29,12 +29,12 @@ A two-part synchronization failure between the BSON parser and writer for the `$
 
 **File**: `sdk/mpr/parser_domainmodel.go`, function `parseAttributeValue()` (lines 224-249)
 
-The parser extracts `$Type` and `DefaultValue` from BSON but never reads `$ID`. The `AttributeValue` struct embeds `BaseElement` (which has an `ID` field via `model.BaseElement`), but the parser never populates it:
+The parser extracts `$type` and `DefaultValue` from BSON but never reads `$ID`. The `AttributeValue` struct embeds `BaseElement` (which has an `ID` field via `model.BaseElement`), but the parser never populates it:
 
 ```go
 case "DomainModels$StoredValue":
     return &domainmodel.AttributeValue{
-        Type:         "StoredValue",
+        type:         "StoredValue",
         DefaultValue: defaultValue,
         // $ID is never extracted from raw — lost here
     }
@@ -48,9 +48,9 @@ The writer always calls `generateUUID()` for the StoredValue's `$ID`, never chec
 
 ```go
 valueDoc = bson.D{
-    {Key: "$ID", Value: idToBsonBinary(generateUUID())},  // always new
-    {Key: "$Type", Value: "DomainModels$StoredValue"},
-    {Key: "DefaultValue", Value: defaultValue},
+    {key: "$ID", value: idToBsonBinary(generateUUID())},  // always new
+    {key: "$type", value: "DomainModels$StoredValue"},
+    {key: "DefaultValue", value: defaultValue},
 }
 ```
 

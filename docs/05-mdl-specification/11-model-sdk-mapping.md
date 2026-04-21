@@ -21,10 +21,10 @@ The modelsdk-go library is organized into packages:
 
 | Package | Description |
 |---------|-------------|
-| `modelsdk` | Main API: `Open()`, `OpenForWriting()`, helpers |
-| `model` | Core types: `ID`, `Module`, `Element`, `Point` |
+| `modelsdk` | Main API: `open()`, `OpenForWriting()`, helpers |
+| `model` | Core types: `ID`, `module`, `Element`, `Point` |
 | `api` | High-level fluent API: `ModelAPI`, builders for entities, microflows, pages |
-| `sdk/domainmodel` | Domain model types: `Entity`, `Attribute`, `Association` |
+| `sdk/domainmodel` | Domain model types: `entity`, `attribute`, `association` |
 | `sdk/microflows` | Microflow types (60+ activity types) |
 | `sdk/pages` | Page and widget types (50+ widgets) |
 | `sdk/widgets` | Embedded widget templates for pluggable widgets |
@@ -41,9 +41,9 @@ The modelsdk-go library is organized into packages:
 ### MDL Entity
 ```sql
 /** Customer entity */
-@Position(100, 200)
-CREATE PERSISTENT ENTITY Sales.Customer (
-  Name: String(200) NOT NULL
+@position(100, 200)
+create persistent entity Sales.Customer (
+  Name: string(200) not null
 );
 ```
 
@@ -61,10 +61,10 @@ entity := &domainmodel.Entity{
         TypeName: "DomainModels$EntityImpl",
     },
     Name:          "Customer",
-    Documentation: "Customer entity",
+    documentation: "Customer entity",
     Location:      model.Point{X: 100, Y: 200},
     Persistable:   true,
-    Attributes:    []*domainmodel.Attribute{...},
+    attributes:    []*domainmodel.Attribute{...},
 }
 ```
 
@@ -72,40 +72,40 @@ entity := &domainmodel.Entity{
 
 | MDL | Go Field | Value |
 |-----|----------|-------|
-| `PERSISTENT` | `Persistable` | `true` |
-| `NON-PERSISTENT` | `Persistable` | `false` |
-| `VIEW` | `Persistable`, `Source` | `false`, `"OqlView"` |
-| `@Position(x,y)` | `Location` | `model.Point{X: x, Y: y}` |
-| `/** doc */` | `Documentation` | `"doc"` |
+| `persistent` | `Persistable` | `true` |
+| `non-persistent` | `Persistable` | `false` |
+| `view` | `Persistable`, `source` | `false`, `"OqlView"` |
+| `@position(x,y)` | `Location` | `model.Point{X: x, Y: y}` |
+| `/** doc */` | `documentation` | `"doc"` |
 
 ### Entity Struct Definition
 
 ```go
 // domainmodel/domainmodel.go
-type Entity struct {
+type entity struct {
     model.BaseElement
     ContainerID      model.ID    // Parent domain model ID
     Name             string
-    Documentation    string
+    documentation    string
     Location         model.Point
     Persistable      bool
 
-    // Entity members
-    Attributes       []*Attribute
-    Indexes          []*Index
+    // entity members
+    attributes       []*attribute
+    Indexes          []*index
     ValidationRules  []*ValidationRule
     AccessRules      []*AccessRule
     EventHandlers    []*EventHandler
 
-    // Generalization
-    Generalization    Generalization
+    // generalization
+    generalization    generalization
     GeneralizationID  model.ID
     GeneralizationRef string      // e.g., "System.User"
 
-    // External/View entity
-    Source            string      // "OqlViewEntitySource", etc.
+    // external/view entity
+    source            string      // "OqlViewEntitySource", etc.
     RemoteSource      string
-    OqlQuery          string      // For view entities
+    OqlQuery          string      // for view entities
 }
 ```
 
@@ -116,7 +116,7 @@ type Entity struct {
 ### MDL Attribute
 ```sql
 /** Customer name */
-Name: String(200) NOT NULL ERROR 'Required' DEFAULT 'Unknown'
+Name: string(200) not null error 'Required' default 'Unknown'
 ```
 
 ### Go SDK Types
@@ -125,15 +125,15 @@ Name: String(200) NOT NULL ERROR 'Required' DEFAULT 'Unknown'
 attr := &domainmodel.Attribute{
     BaseElement: model.BaseElement{
         ID:       model.ID("generated-uuid"),
-        TypeName: "DomainModels$Attribute",
+        TypeName: "DomainModels$attribute",
     },
     Name:          "Name",
-    Documentation: "Customer name",
-    Type: &domainmodel.StringAttributeType{
-        Length: 200,
+    documentation: "Customer name",
+    type: &domainmodel.StringAttributeType{
+        length: 200,
     },
-    Value: &domainmodel.AttributeValue{
-        Type:         "StoredValue",
+    value: &domainmodel.AttributeValue{
+        type:         "StoredValue",
         DefaultValue: "Unknown",
     },
 }
@@ -143,16 +143,16 @@ attr := &domainmodel.Attribute{
 
 | MDL Type | Go Type |
 |----------|---------|
-| `String` | `*StringAttributeType{Length: 200}` |
-| `String(n)` | `*StringAttributeType{Length: n}` |
-| `Integer` | `*IntegerAttributeType{}` |
-| `Long` | `*LongAttributeType{}` |
-| `Decimal` | `*DecimalAttributeType{}` |
-| `Boolean` | `*BooleanAttributeType{}` |
-| `DateTime` | `*DateTimeAttributeType{}` |
-| `AutoNumber` | `*AutoNumberAttributeType{}` |
-| `Binary` | `*BinaryAttributeType{}` |
-| `Enumeration(M.E)` | `*EnumerationAttributeType{EnumerationID: id}` |
+| `string` | `*StringAttributeType{length: 200}` |
+| `string(n)` | `*StringAttributeType{length: n}` |
+| `integer` | `*IntegerAttributeType{}` |
+| `long` | `*LongAttributeType{}` |
+| `decimal` | `*DecimalAttributeType{}` |
+| `boolean` | `*BooleanAttributeType{}` |
+| `datetime` | `*DateTimeAttributeType{}` |
+| `autonumber` | `*AutoNumberAttributeType{}` |
+| `binary` | `*BinaryAttributeType{}` |
+| `enumeration(M.E)` | `*EnumerationAttributeType{EnumerationID: id}` |
 
 ### Attribute Type Interface
 
@@ -164,11 +164,11 @@ type AttributeType interface {
 
 type StringAttributeType struct {
     model.BaseElement
-    Length int
+    length int
 }
 
 func (t *StringAttributeType) GetTypeName() string {
-    return "String"
+    return "string"
 }
 
 type IntegerAttributeType struct {
@@ -176,7 +176,7 @@ type IntegerAttributeType struct {
 }
 
 func (t *IntegerAttributeType) GetTypeName() string {
-    return "Integer"
+    return "integer"
 }
 
 // ... similar for other types
@@ -187,9 +187,9 @@ func (t *IntegerAttributeType) GetTypeName() string {
 ```go
 type AttributeValue struct {
     model.BaseElement
-    Type         string    // "StoredValue" or "CalculatedValue"
-    DefaultValue string    // String representation of default
-    MicroflowID  model.ID  // For calculated values
+    type         string    // "StoredValue" or "CalculatedValue"
+    DefaultValue string    // string representation of default
+    MicroflowID  model.ID  // for calculated values
 }
 ```
 
@@ -199,19 +199,19 @@ type AttributeValue struct {
 
 ### MDL Validation
 ```sql
-Name: String NOT NULL ERROR 'Name is required' UNIQUE ERROR 'Name must be unique'
+Name: string not null error 'Name is required' unique error 'Name must be unique'
 ```
 
 ### Go SDK Types
 
 ```go
-// Required validation
+// required validation
 requiredRule := &domainmodel.ValidationRule{
     BaseElement: model.BaseElement{
         ID: model.ID("generated-uuid"),
     },
     AttributeID: attrID,  // or qualified name like "Module.Entity.Attr"
-    Type:        "Required",
+    type:        "required",
     ErrorMessage: &model.Text{
         Translations: map[string]string{
             "en_US": "Name is required",
@@ -219,13 +219,13 @@ requiredRule := &domainmodel.ValidationRule{
     },
 }
 
-// Unique validation
+// unique validation
 uniqueRule := &domainmodel.ValidationRule{
     BaseElement: model.BaseElement{
         ID: model.ID("generated-uuid"),
     },
     AttributeID:  attrID,
-    Type:         "Unique",
+    type:         "unique",
     ErrorMessage: &model.Text{
         Translations: map[string]string{
             "en_US": "Name must be unique",
@@ -238,10 +238,10 @@ uniqueRule := &domainmodel.ValidationRule{
 
 | MDL Constraint | Go Type Field |
 |----------------|---------------|
-| `NOT NULL` | `Type: "Required"` |
-| `UNIQUE` | `Type: "Unique"` |
-| `NOT NULL ERROR 'msg'` | `Type: "Required"`, `ErrorMessage: {...}` |
-| `UNIQUE ERROR 'msg'` | `Type: "Unique"`, `ErrorMessage: {...}` |
+| `not null` | `type: "required"` |
+| `unique` | `type: "unique"` |
+| `not null error 'msg'` | `type: "required"`, `ErrorMessage: {...}` |
+| `unique error 'msg'` | `type: "unique"`, `ErrorMessage: {...}` |
 
 ### ValidationRule Struct
 
@@ -250,9 +250,9 @@ type ValidationRule struct {
     model.BaseElement
     ContainerID  model.ID     // Parent entity ID
     AttributeID  model.ID     // Can be UUID or qualified name
-    Type         string       // "Required", "Unique", "Range", "Regex"
+    type         string       // "required", "unique", "range", "regex"
     ErrorMessage *model.Text  // Localized error message
-    Rule         ValidationRuleInfo  // Additional rule details
+    rule         ValidationRuleInfo  // Additional rule details
 }
 ```
 
@@ -262,7 +262,7 @@ type ValidationRule struct {
 
 ### MDL Index
 ```sql
-INDEX (Name, CreatedAt DESC)
+index (Name, CreatedAt desc)
 ```
 
 ### Go SDK Types
@@ -272,7 +272,7 @@ index := &domainmodel.Index{
     BaseElement: model.BaseElement{
         ID: model.ID("generated-uuid"),
     },
-    Attributes: []*domainmodel.IndexAttribute{
+    attributes: []*domainmodel.IndexAttribute{
         {
             AttributeID: nameAttrID,
             Ascending:   true,
@@ -288,11 +288,11 @@ index := &domainmodel.Index{
 ### Index Struct
 
 ```go
-type Index struct {
+type index struct {
     model.BaseElement
     ContainerID  model.ID           // Parent entity ID
     Name         string             // Optional index name
-    Attributes   []*IndexAttribute  // Indexed columns
+    attributes   []*IndexAttribute  // Indexed columns
     AttributeIDs []model.ID         // Alternative: just IDs
 }
 
@@ -308,8 +308,8 @@ type IndexAttribute struct {
 | MDL | Go Ascending |
 |-----|--------------|
 | `AttrName` | `true` |
-| `AttrName ASC` | `true` |
-| `AttrName DESC` | `false` |
+| `AttrName asc` | `true` |
+| `AttrName desc` | `false` |
 
 ---
 
@@ -317,12 +317,12 @@ type IndexAttribute struct {
 
 ### MDL Association
 ```sql
-CREATE ASSOCIATION Sales.Order_Customer
-  FROM Sales.Customer
-  TO Sales.Order
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Sales.Order_Customer
+  from Sales.Customer
+  to Sales.Order
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 ```
 
 ### Go SDK Types
@@ -331,15 +331,15 @@ CREATE ASSOCIATION Sales.Order_Customer
 assoc := &domainmodel.Association{
     BaseElement: model.BaseElement{
         ID:       model.ID("generated-uuid"),
-        TypeName: "DomainModels$Association",
+        TypeName: "DomainModels$association",
     },
     Name:     "Order_Customer",
     ParentID: customerEntityID,
     ChildID:  orderEntityID,
-    Type:     domainmodel.AssociationTypeReference,
-    Owner:    domainmodel.AssociationOwnerDefault,
+    type:     domainmodel.AssociationTypeReference,
+    owner:    domainmodel.AssociationOwnerDefault,
     ParentDeleteBehavior: &domainmodel.DeleteBehavior{
-        Type: domainmodel.DeleteBehaviorTypeDeleteMeButKeepReferences,
+        type: domainmodel.DeleteBehaviorTypeDeleteMeButKeepReferences,
     },
 }
 ```
@@ -348,15 +348,15 @@ assoc := &domainmodel.Association{
 
 | MDL | Go Constant |
 |-----|-------------|
-| `Reference` | `AssociationTypeReference` |
+| `reference` | `AssociationTypeReference` |
 | `ReferenceSet` | `AssociationTypeReferenceSet` |
 
 ### Owner Mapping
 
 | MDL | Go Constant |
 |-----|-------------|
-| `Default` | `AssociationOwnerDefault` |
-| `Both` | `AssociationOwnerBoth` |
+| `default` | `AssociationOwnerDefault` |
+| `both` | `AssociationOwnerBoth` |
 | `Parent` | (not yet defined) |
 | `Child` | (not yet defined) |
 
@@ -370,15 +370,15 @@ assoc := &domainmodel.Association{
 ### Association Struct
 
 ```go
-type Association struct {
+type association struct {
     model.BaseElement
     ContainerID          model.ID
     Name                 string
-    Documentation        string
+    documentation        string
     ParentID             model.ID
     ChildID              model.ID
-    Type                 AssociationType
-    Owner                AssociationOwner
+    type                 AssociationType
+    owner                AssociationOwner
     ParentConnection     model.Point
     ChildConnection      model.Point
     ParentDeleteBehavior *DeleteBehavior
@@ -388,15 +388,15 @@ type Association struct {
 type AssociationType string
 
 const (
-    AssociationTypeReference    AssociationType = "Reference"
+    AssociationTypeReference    AssociationType = "reference"
     AssociationTypeReferenceSet AssociationType = "ReferenceSet"
 )
 
 type AssociationOwner string
 
 const (
-    AssociationOwnerDefault AssociationOwner = "Default"
-    AssociationOwnerBoth    AssociationOwner = "Both"
+    AssociationOwnerDefault AssociationOwner = "default"
+    AssociationOwnerBoth    AssociationOwner = "both"
 )
 ```
 
@@ -406,7 +406,7 @@ const (
 
 ### MDL Enumeration
 ```sql
-CREATE ENUMERATION Sales.OrderStatus (
+create enumeration Sales.OrderStatus (
   Draft 'Draft Order',
   Pending 'Pending Approval',
   Approved 'Approved'
@@ -419,13 +419,13 @@ CREATE ENUMERATION Sales.OrderStatus (
 enum := &model.Enumeration{
     BaseElement: model.BaseElement{
         ID:       model.ID("generated-uuid"),
-        TypeName: "Enumerations$Enumeration",
+        TypeName: "enumerations$enumeration",
     },
     Name: "OrderStatus",
-    Values: []*model.EnumerationValue{
+    values: []*model.EnumerationValue{
         {
             Name: "Draft",
-            Caption: &model.Text{
+            caption: &model.Text{
                 Translations: map[string]string{
                     "en_US": "Draft Order",
                 },
@@ -433,7 +433,7 @@ enum := &model.Enumeration{
         },
         {
             Name: "Pending",
-            Caption: &model.Text{
+            caption: &model.Text{
                 Translations: map[string]string{
                     "en_US": "Pending Approval",
                 },
@@ -441,7 +441,7 @@ enum := &model.Enumeration{
         },
         {
             Name: "Approved",
-            Caption: &model.Text{
+            caption: &model.Text{
                 Translations: map[string]string{
                     "en_US": "Approved",
                 },
@@ -462,23 +462,23 @@ import (
     modelsdk "github.com/mendixlabs/mxcli"
 )
 
-// Open project read-only
+// open project read-only
 reader, err := modelsdk.Open("/path/to/project.mpr")
 if err != nil {
     log.Fatal(err)
 }
 defer reader.Close()
 
-// List modules
+// list modules
 modules, err := reader.ListModules()
 for _, m := range modules {
-    fmt.Printf("Module: %s\n", m.Name)
+    fmt.Printf("module: %s\n", m.Name)
 }
 
-// Get domain model
+// get domain model
 dm, err := reader.GetDomainModel(moduleID)
 for _, entity := range dm.Entities {
-    fmt.Printf("Entity: %s (persistable: %v)\n",
+    fmt.Printf("entity: %s (persistable: %v)\n",
         entity.Name, entity.Persistable)
 
     for _, attr := range entity.Attributes {
@@ -491,26 +491,26 @@ for _, entity := range dm.Entities {
 ### Creating Entities
 
 ```go
-// Open project for writing
+// open project for writing
 writer, err := modelsdk.OpenForWriting("/path/to/project.mpr")
 if err != nil {
     log.Fatal(err)
 }
 defer writer.Close()
 
-// Create entity using helper
+// create entity using helper
 entity := modelsdk.NewEntity("Customer")
 entity.Documentation = "Customer master data"
 entity.Location = model.Point{X: 100, Y: 200}
 
-// Add attributes using helpers
+// add attributes using helpers
 entity.Attributes = append(entity.Attributes,
     modelsdk.NewAutoNumberAttribute("CustomerId"),
     modelsdk.NewStringAttribute("Name", 200),
     modelsdk.NewStringAttribute("Email", 200),
 )
 
-// Create in domain model
+// create in domain model
 err = writer.CreateEntity(domainModelID, entity)
 if err != nil {
     log.Fatal(err)
@@ -547,7 +547,7 @@ func NewStringAttribute(name string, length int) *domainmodel.Attribute {
             ID: model.ID(GenerateID()),
         },
         Name: name,
-        Type: &domainmodel.StringAttributeType{Length: length},
+        type: &domainmodel.StringAttributeType{length: length},
     }
 }
 
@@ -558,7 +558,7 @@ func NewIntegerAttribute(name string) *domainmodel.Attribute {
             ID: model.ID(GenerateID()),
         },
         Name: name,
-        Type: &domainmodel.IntegerAttributeType{},
+        type: &domainmodel.IntegerAttributeType{},
     }
 }
 
@@ -572,22 +572,22 @@ The MDL executor (`mdl/executor` package) translates MDL AST to SDK calls:
 ```go
 // executor/cmd_entities.go
 func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
-    // Find module
+    // find module
     module, err := e.findModule(s.Name.Module)
     if err != nil {
         return err
     }
 
-    // Get domain model
+    // get domain model
     dm, err := e.reader.GetDomainModel(module.ID)
     if err != nil {
         return err
     }
 
-    // Create entity
+    // create entity
     entity := &domainmodel.Entity{
         Name:        s.Name.Name,
-        Documentation: s.Documentation,
+        documentation: s.Documentation,
         Location:    model.Point{X: s.Position.X, Y: s.Position.Y},
         Persistable: s.Kind != ast.EntityNonPersistent,
     }
@@ -596,8 +596,8 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
     for _, a := range s.Attributes {
         attr := &domainmodel.Attribute{
             Name:          a.Name,
-            Documentation: a.Documentation,
-            Type:          convertDataType(a.Type),
+            documentation: a.Documentation,
+            type:          convertDataType(a.Type),
         }
         if a.HasDefault {
             attr.Value = &domainmodel.AttributeValue{
@@ -607,7 +607,7 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
         entity.Attributes = append(entity.Attributes, attr)
     }
 
-    // Write to project
+    // write to project
     return e.writer.CreateEntity(dm.ID, entity)
 }
 ```
@@ -623,7 +623,7 @@ func (e *Executor) execCreateEntity(s *ast.CreateEntityStmt) error {
 func convertDataType(dt ast.DataType) domainmodel.AttributeType {
     switch dt.Kind {
     case ast.TypeString:
-        return &domainmodel.StringAttributeType{Length: dt.Length}
+        return &domainmodel.StringAttributeType{length: dt.Length}
     case ast.TypeInteger:
         return &domainmodel.IntegerAttributeType{}
     case ast.TypeLong:
@@ -643,7 +643,7 @@ func convertDataType(dt ast.DataType) domainmodel.AttributeType {
             // EnumerationID resolved from dt.EnumRef
         }
     default:
-        return &domainmodel.StringAttributeType{Length: 200}
+        return &domainmodel.StringAttributeType{length: 200}
     }
 }
 ```
@@ -656,28 +656,28 @@ func getAttributeTypeName(at domainmodel.AttributeType) string {
     switch t := at.(type) {
     case *domainmodel.StringAttributeType:
         if t.Length > 0 {
-            return fmt.Sprintf("String(%d)", t.Length)
+            return fmt.Sprintf("string(%d)", t.Length)
         }
-        return "String"
+        return "string"
     case *domainmodel.IntegerAttributeType:
-        return "Integer"
+        return "integer"
     case *domainmodel.LongAttributeType:
-        return "Long"
+        return "long"
     case *domainmodel.DecimalAttributeType:
-        return "Decimal"
+        return "decimal"
     case *domainmodel.BooleanAttributeType:
-        return "Boolean"
+        return "boolean"
     case *domainmodel.DateTimeAttributeType:
-        return "DateTime"
+        return "datetime"
     case *domainmodel.AutoNumberAttributeType:
-        return "AutoNumber"
+        return "autonumber"
     case *domainmodel.BinaryAttributeType:
-        return "Binary"
+        return "binary"
     case *domainmodel.EnumerationAttributeType:
         if t.EnumerationID != "" {
-            return fmt.Sprintf("Enumeration(%s)", t.EnumerationID)
+            return fmt.Sprintf("enumeration(%s)", t.EnumerationID)
         }
-        return "Enumeration"
+        return "enumeration"
     default:
         return "Unknown"
     }
@@ -700,11 +700,11 @@ module, _ := modelAPI.Modules.GetModule("Sales")
 modelAPI.SetModule(module)
 
 entity, _ := modelAPI.DomainModels.CreateEntity("Customer").
-    Persistent().
+    persistent().
     WithStringAttribute("Name", 200).
     WithIntegerAttribute("Age").
-    WithEnumerationAttribute("Status", "Sales.CustomerStatus").
-    Build()
+    WithEnumerationAttribute("status", "Sales.CustomerStatus").
+    build()
 ```
 
 ### Microflow Builder
@@ -714,7 +714,7 @@ mf, _ := modelAPI.Microflows.CreateMicroflow("ACT_ProcessOrder").
     WithParameter("Order", "Sales.Order").
     WithStringParameter("Note").
     ReturnsBoolean().
-    Build()
+    build()
 ```
 
 ### Enumeration Builder
@@ -724,16 +724,16 @@ enum, _ := modelAPI.Enumerations.CreateEnumeration("OrderStatus").
     WithValue("Draft", "Draft").
     WithValue("Active", "Active").
     WithValue("Closed", "Closed").
-    Build()
+    build()
 ```
 
 ### MDL to API Mapping
 
 | MDL Statement | Fluent API Method |
 |---------------|-------------------|
-| `CREATE PERSISTENT ENTITY` | `DomainModels.CreateEntity().Persistent().Build()` |
-| `CREATE NON-PERSISTENT ENTITY` | `DomainModels.CreateEntity().NonPersistent().Build()` |
-| `CREATE ASSOCIATION` | `DomainModels.CreateAssociation().Build()` |
-| `CREATE ENUMERATION` | `Enumerations.CreateEnumeration().Build()` |
-| `CREATE MICROFLOW` | `Microflows.CreateMicroflow().Build()` |
-| `CREATE PAGE` | `Pages.CreatePage().Build()` |
+| `create persistent entity` | `DomainModels.CreateEntity().Persistent().Build()` |
+| `create non-persistent entity` | `DomainModels.CreateEntity().NonPersistent().Build()` |
+| `create association` | `DomainModels.CreateAssociation().Build()` |
+| `create enumeration` | `Enumerations.CreateEnumeration().Build()` |
+| `create microflow` | `Microflows.CreateMicroflow().Build()` |
+| `create page` | `Pages.CreatePage().Build()` |

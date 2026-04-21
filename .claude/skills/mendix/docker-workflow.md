@@ -29,7 +29,7 @@ When using `mxcli init`, pass `--container-runtime podman` to generate a devcont
 ## Architecture
 
 ```
-Host machine (browser at localhost:8080)
+host machine (browser at localhost:8080)
   └── Docker or Podman (host daemon)
       └── Devcontainer (VS Code)
           ├── mxcli, JDK 21, project files
@@ -50,7 +50,7 @@ The easiest way to get a Mendix app running in Docker:
 # Setup, build, and start in one command
 mxcli docker run -p app.mpr
 
-# With startup confirmation (waits for "Runtime successfully started")
+# with startup confirmation (waits for "runtime successfully started")
 mxcli docker run -p app.mpr --wait
 
 # Fresh start (removes database volumes first)
@@ -75,7 +75,7 @@ This downloads MxBuild, creates a blank project, sets up AI tooling and Dev Cont
 # Download mxbuild if not already cached
 mxcli setup mxbuild --version 11.6.4
 
-# Create a blank project
+# create a blank project
 mkdir -p /path/to/my-app
 ~/.mxcli/mxbuild/{version}/modeler/mx create-project --app-name MyApp --output-dir /path/to/my-app
 
@@ -102,11 +102,11 @@ mxcli setup mxbuild -p app.mpr
 # Download Mendix runtime matching the project version
 mxcli setup mxruntime -p app.mpr
 
-# Or specify version explicitly (without a project)
+# or specify version explicitly (without a project)
 mxcli setup mxbuild --version 11.6.4
 mxcli setup mxruntime --version 11.6.4
 
-# Or preview what would be downloaded
+# or preview what would be downloaded
 mxcli setup mxbuild -p app.mpr --dry-run
 mxcli setup mxruntime -p app.mpr --dry-run
 ```
@@ -118,26 +118,26 @@ MxBuild is cached at `~/.mxcli/mxbuild/{version}/` and the runtime at `~/.mxcli/
 MxBuild 11.6.3+ expects runtime files (`pad/`, `lib/`, `launcher/`, `agents/`) inside its own `runtime/` directory, but `mxcli setup mxbuild` only downloads the build tools (not the full runtime). If the PAD build fails with `StudioPro.conf.hbs does not exist` or `ClassNotFoundException`, copy the runtime directories into mxbuild:
 
 ```bash
-VERSION=11.6.4  # replace with your version
+version=11.6.4  # replace with your version
 
-# After downloading both mxbuild and mxruntime:
-cp -r ~/.mxcli/runtime/$VERSION/runtime/pad ~/.mxcli/mxbuild/$VERSION/runtime/pad
-cp -r ~/.mxcli/runtime/$VERSION/runtime/lib ~/.mxcli/mxbuild/$VERSION/runtime/lib
-cp -r ~/.mxcli/runtime/$VERSION/runtime/launcher ~/.mxcli/mxbuild/$VERSION/runtime/launcher
-cp -r ~/.mxcli/runtime/$VERSION/runtime/agents ~/.mxcli/mxbuild/$VERSION/runtime/agents
+# after downloading both mxbuild and mxruntime:
+cp -r ~/.mxcli/runtime/$version/runtime/pad ~/.mxcli/mxbuild/$version/runtime/pad
+cp -r ~/.mxcli/runtime/$version/runtime/lib ~/.mxcli/mxbuild/$version/runtime/lib
+cp -r ~/.mxcli/runtime/$version/runtime/launcher ~/.mxcli/mxbuild/$version/runtime/launcher
+cp -r ~/.mxcli/runtime/$version/runtime/agents ~/.mxcli/mxbuild/$version/runtime/agents
 ```
 
 **Important:** The PAD build output may only include partial runtime bundles (5 jars instead of 354). If the runtime fails to start with `ClassNotFoundException: com.mendix.container.support.EventProcessor`, copy the full runtime into the PAD build output:
 
 ```bash
 rm -rf /path/to/project/.docker/build/lib/runtime
-cp -r ~/.mxcli/runtime/$VERSION/runtime /path/to/project/.docker/build/lib/runtime
+cp -r ~/.mxcli/runtime/$version/runtime /path/to/project/.docker/build/lib/runtime
 ```
 
 ### 2. Initialize Docker stack (first time only)
 
 ```bash
-# Generate docker-compose.yml, .env, Dockerfile in .docker/
+# generate docker-compose.yml, .env, Dockerfile in .docker/
 mxcli docker init -p app.mpr
 ```
 
@@ -146,10 +146,10 @@ This creates a `.docker/` directory with Docker Compose configuration for the Me
 **Port conflicts:** If default ports (8080/8090/5432) are already in use, check with `ss -tlnp | grep -E '808|809|543'` and use `--port-offset N` to shift all ports:
 
 ```bash
-# Check which ports are occupied
+# check which ports are occupied
 ss -tlnp | grep -E '808[0-9]|809[0-9]|543[0-9]'
 
-# Use offset to avoid conflicts (e.g., offset 5 → 8085/8095/5437)
+# use offset to avoid conflicts (e.g., offset 5 → 8085/8095/5437)
 mxcli docker init -p app.mpr --port-offset 5
 ```
 
@@ -163,7 +163,7 @@ mxcli docker check -p app.mpr
 ### 4. Build the Portable App Distribution (PAD) package
 
 ```bash
-# Build (auto-downloads MxBuild if not cached)
+# build (auto-downloads MxBuild if not cached)
 mxcli docker build -p app.mpr
 
 # Preview what would happen
@@ -210,28 +210,28 @@ The app is available at:
 ### 6. Query data with OQL
 
 ```bash
-# Run OQL queries against the live runtime (read-only preview mode)
-mxcli oql -p app.mpr "SELECT Name, Email FROM MyModule.Customer"
+# run OQL queries against the live runtime (read-only preview mode)
+mxcli oql -p app.mpr "select Name, Email from MyModule.Customer"
 
-# JSON output for piping
+# json output for piping
 mxcli oql -p app.mpr --json "SELECT count(c.ID) FROM MyModule.Order AS c" | jq '.[0]'
 
-# Test a VIEW entity query before embedding it in MDL
-mxcli oql -p app.mpr "SELECT datepart(YEAR, o.Date) AS Year, sum(o.Total) AS Revenue FROM Sales.Order AS o GROUP BY datepart(YEAR, o.Date)"
+# Test a view entity query before embedding it in MDL
+mxcli oql -p app.mpr "select datepart(YEAR, o.Date) as Year, sum(o.Total) as Revenue from Sales.Order as o GROUP by datepart(YEAR, o.Date)"
 ```
 
 ### 7. Monitor and manage
 
 ```bash
-# View container status
+# view container status
 mxcli docker status -p app.mpr
 
-# View logs
+# view logs
 mxcli docker logs -p app.mpr
 mxcli docker logs -p app.mpr --follow
 mxcli docker logs -p app.mpr --tail 50
 
-# Open a shell in the container
+# open a shell in the container
 mxcli docker shell -p app.mpr
 mxcli docker shell -p app.mpr --exec "ls -la /mendix"
 ```
@@ -251,7 +251,7 @@ mxcli docker down -p app.mpr --volumes
 After making MDL changes:
 
 ```bash
-# 1. Apply MDL changes
+# 1. apply MDL changes
 mxcli exec changes.mdl -p app.mpr
 
 # 2. Rebuild and restart (one command)
@@ -261,7 +261,7 @@ mxcli docker run -p app.mpr --fresh --wait
 Or step by step:
 
 ```bash
-# 1. Apply MDL changes
+# 1. apply MDL changes
 mxcli exec changes.mdl -p app.mpr
 
 # 2. Validate
@@ -270,10 +270,10 @@ mxcli docker check -p app.mpr
 # 3. Rebuild
 mxcli docker build -p app.mpr
 
-# 4. Restart with fresh database and wait for startup
+# 4. restart with fresh database and wait for startup
 mxcli docker up -p app.mpr --fresh --detach --wait
 
-# 5. Check it's running
+# 5. check it's running
 mxcli docker status -p app.mpr
 ```
 
@@ -309,7 +309,7 @@ mxcli docker reload -p app.mpr                      # ~56s  — build + reload
 For logic changes (microflows, nanoflows, pages, security):
 
 ```bash
-# 1. Apply changes
+# 1. apply changes
 mxcli exec changes.mdl -p app.mpr
 
 # 2. Rebuild PAD (skip pre-check for speed)
@@ -322,10 +322,10 @@ mxcli docker reload -p app.mpr --model-only
 Or combine build + reload in one command (no `--model-only`):
 
 ```bash
-# 1. Apply changes
+# 1. apply changes
 mxcli exec changes.mdl -p app.mpr
 
-# 2. Build and reload in one step
+# 2. build and reload in one step
 mxcli docker reload -p app.mpr --skip-check
 ```
 
@@ -421,10 +421,10 @@ All defaults can be overridden in `.docker/.env`.
 | `StudioPro.conf.hbs does not exist` | Runtime not linked into mxbuild — see "Runtime-to-MxBuild Copying" above |
 | `ClassNotFoundException: EventProcessor` | PAD has partial runtime bundles — copy full runtime into `.docker/build/lib/runtime/` (see above) |
 | Port already allocated | Check ports with `ss -tlnp \| grep 808` and use `docker init --port-offset N --force` |
-| `' etc/Default' is not a file` | Dockerfile CMD passes config arg — `docker build` patches this automatically |
+| `' etc/default' is not a file` | Dockerfile CMD passes config arg — `docker build` patches this automatically |
 | `DatabasePassword has no value` | Ensure `RUNTIME_PARAMS_DATABASE*` env vars are in docker-compose.yml — re-run `mxcli docker init --force` |
-| `Password should not be empty (debugger)` | Add `RUNTIME_DEBUGGER_PASSWORD` — re-run `mxcli docker init --force` |
-| `Security level should be set to CHECKEVERYTHING` | App in Production mode without security — set to Development mode or configure security |
+| `password should not be empty (debugger)` | Add `RUNTIME_DEBUGGER_PASSWORD` — re-run `mxcli docker init --force` |
+| `security level should be set to CHECKEVERYTHING` | App in Production mode without security — set to Development mode or configure security |
 | Port 8080 not accessible | Check `forwardPorts` in devcontainer.json includes 8080 |
 | Database errors on startup | Try `mxcli docker up -p app.mpr --fresh` to reset volumes |
 | OQL: "Action not found: preview_execute_oql" | Runtime needs `-Dmendix.live-preview=enabled` JVM flag — re-run `mxcli docker init --force` to get the updated docker-compose.yml |

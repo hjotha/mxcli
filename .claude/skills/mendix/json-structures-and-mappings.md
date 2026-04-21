@@ -17,7 +17,7 @@ An export mapping converts Mendix entity objects into a JSON string. It maps ent
 
 **Import and export mappings for the same JSON structure typically require different entity structures.**
 
-- **Import**: The child entity owns the FK to the parent (`FROM Child TO Parent`). Arrays map directly to the item entity — no intermediate container entity needed.
+- **Import**: The child entity owns the FK to the parent (`from Child to Parent`). Arrays map directly to the item entity — no intermediate container entity needed.
 - **Export**: The domain model mirrors the JSON structure. Arrays need an intermediate container entity (e.g., `Items`) plus an item entity (e.g., `ItemsItem`). The container links to the parent, the item links to the container.
 
 ---
@@ -27,14 +27,14 @@ An export mapping converts Mendix entity objects into a JSON string. It maps ent
 ### Create
 
 ```sql
-CREATE JSON STRUCTURE Module.JSON_Pet
-  SNIPPET '{"id": 1, "name": "Fido", "status": "available"}';
+create json structure Module.JSON_Pet
+  snippet '{"id": 1, "name": "Fido", "status": "available"}';
 ```
 
 For multi-line JSON, use dollar-quoting:
 ```sql
-CREATE JSON STRUCTURE Module.JSON_Order
-  SNIPPET $${
+create json structure Module.JSON_Order
+  snippet $${
   "orderId": 100,
   "customer": {"name": "Alice", "email": "alice@example.com"},
   "items": [{"sku": "A1", "quantity": 2, "price": 9.99}]
@@ -43,18 +43,18 @@ CREATE JSON STRUCTURE Module.JSON_Order
 
 Custom name mapping (rename JSON fields):
 ```sql
-CREATE JSON STRUCTURE Module.JSON_Pet
-  SNIPPET '{"id": 1, "name": "Fido"}'
-  CUSTOM NAME MAP ('id' AS '_id');
+create json structure Module.JSON_Pet
+  snippet '{"id": 1, "name": "Fido"}'
+  CUSTOM NAME map ('id' as '_id');
 ```
 
 ### Browse
 
 ```sql
-SHOW JSON STRUCTURES;
-SHOW JSON STRUCTURES IN Module;
-DESCRIBE JSON STRUCTURE Module.JSON_Pet;
-DROP JSON STRUCTURE Module.JSON_Pet;
+show json structures;
+show json structures in module;
+describe json structure Module.JSON_Pet;
+drop json structure Module.JSON_Pet;
 ```
 
 ---
@@ -66,46 +66,46 @@ DROP JSON STRUCTURE Module.JSON_Pet;
 For import mappings, associations point FROM the child entity TO the parent:
 
 ```sql
-CREATE NON-PERSISTENT ENTITY Module.OrderResponse (
-  OrderId: Integer
+create non-persistent entity Module.OrderResponse (
+  OrderId: integer
 );
 /
 
-CREATE NON-PERSISTENT ENTITY Module.CustomerInfo (
-  Name: String,
-  Email: String
+create non-persistent entity Module.CustomerInfo (
+  Name: string,
+  Email: string
 );
 /
 
-CREATE NON-PERSISTENT ENTITY Module.OrderItem (
-  Sku: String,
-  Quantity: Integer,
-  Price: Decimal
+create non-persistent entity Module.OrderItem (
+  Sku: string,
+  Quantity: integer,
+  Price: decimal
 );
 /
 
 -- Child entity owns the FK (FROM child TO parent)
-CREATE ASSOCIATION Module.CustomerInfo_OrderResponse
-  FROM Module.CustomerInfo
-  TO Module.OrderResponse;
+create association Module.CustomerInfo_OrderResponse
+  from Module.CustomerInfo
+  to Module.OrderResponse;
 /
 
-CREATE ASSOCIATION Module.OrderItem_OrderResponse
-  FROM Module.OrderItem
-  TO Module.OrderResponse;
+create association Module.OrderItem_OrderResponse
+  from Module.OrderItem
+  to Module.OrderResponse;
 /
 ```
 
 ### Simple Import Mapping (flat JSON)
 
 ```sql
-CREATE IMPORT MAPPING Module.IMM_Pet
-  WITH JSON STRUCTURE Module.JSON_Pet
+create import mapping Module.IMM_Pet
+  with json structure Module.JSON_Pet
 {
-  CREATE Module.PetResponse {
+  create Module.PetResponse {
     PetId = id,
     Name = name,
-    Status = status
+    status = status
   }
 };
 ```
@@ -115,16 +115,16 @@ CREATE IMPORT MAPPING Module.IMM_Pet
 Arrays map directly to the item entity — no intermediate container needed:
 
 ```sql
-CREATE IMPORT MAPPING Module.IMM_Order
-  WITH JSON STRUCTURE Module.JSON_Order
+create import mapping Module.IMM_Order
+  with json structure Module.JSON_Order
 {
-  CREATE Module.OrderResponse {
+  create Module.OrderResponse {
     OrderId = orderId,
-    CREATE Module.CustomerInfo_OrderResponse/Module.CustomerInfo = customer {
+    create Module.CustomerInfo_OrderResponse/Module.CustomerInfo = customer {
       Name = name,
       Email = email
     },
-    CREATE Module.OrderItem_OrderResponse/Module.OrderItem = items {
+    create Module.OrderItem_OrderResponse/Module.OrderItem = items {
       Sku = sku,
       Quantity = quantity,
       Price = price
@@ -137,23 +137,23 @@ CREATE IMPORT MAPPING Module.IMM_Order
 
 | Syntax | Meaning |
 |--------|---------|
-| `CREATE Module.Entity` | Always create a new object (default) |
-| `FIND Module.Entity` | Find by KEY attributes, ignore if not found |
-| `FIND OR CREATE Module.Entity` | Find by KEY, create if not found |
+| `create Module.Entity` | Always create a new object (default) |
+| `find Module.Entity` | Find by KEY attributes, ignore if not found |
+| `find or create Module.Entity` | Find by KEY, create if not found |
 
 ```sql
-CREATE IMPORT MAPPING Module.IMM_UpsertPet
-  WITH JSON STRUCTURE Module.JSON_Pet
+create import mapping Module.IMM_UpsertPet
+  with json structure Module.JSON_Pet
 {
-  FIND OR CREATE Module.PetResponse {
-    PetId = id KEY,
+  find or create Module.PetResponse {
+    PetId = id key,
     Name = name,
-    Status = status
+    status = status
   }
 };
 ```
 
-**Note**: `KEY` is only valid with `FIND` or `FIND OR CREATE`, not with `CREATE`.
+**Note**: `key` is only valid with `find` or `find or create`, not with `create`.
 
 ---
 
@@ -165,58 +165,58 @@ Export mappings require entities that **mirror the JSON structure**. Arrays need
 
 ```sql
 -- Root entity (matches top-level JSON object)
-CREATE NON-PERSISTENT ENTITY Module.ExRoot (
-  OrderId: Integer
+create non-persistent entity Module.ExRoot (
+  OrderId: integer
 );
 /
 
 -- Nested object entity (1-1 relationship, use OWNER Both)
-CREATE NON-PERSISTENT ENTITY Module.ExCustomer (
-  Name: String,
-  Email: String
+create non-persistent entity Module.ExCustomer (
+  Name: string,
+  Email: string
 );
 /
 
 -- Array CONTAINER entity (no attributes, just links parent to items)
-CREATE NON-PERSISTENT ENTITY Module.ExItems;
+create non-persistent entity Module.ExItems;
 /
 
 -- Array ITEM entity (attributes for each array element)
-CREATE NON-PERSISTENT ENTITY Module.ExItemsItem (
-  Sku: String,
-  Quantity: Integer,
-  Price: Decimal
+create non-persistent entity Module.ExItemsItem (
+  Sku: string,
+  Quantity: integer,
+  Price: decimal
 );
 /
 
 -- Associations: child FROM, parent TO
-CREATE ASSOCIATION Module.ExCustomer_ExRoot
-  FROM Module.ExCustomer
-  TO Module.ExRoot
-  OWNER Both;   -- 1-1 for nested objects
+create association Module.ExCustomer_ExRoot
+  from Module.ExCustomer
+  to Module.ExRoot
+  owner both;   -- 1-1 for nested objects
 /
 
-CREATE ASSOCIATION Module.ExItems_ExRoot
-  FROM Module.ExItems
-  TO Module.ExRoot;   -- 1-* for arrays
+create association Module.ExItems_ExRoot
+  from Module.ExItems
+  to Module.ExRoot;   -- 1-* for arrays
 /
 
-CREATE ASSOCIATION Module.ExItemsItem_ExItems
-  FROM Module.ExItemsItem
-  TO Module.ExItems;   -- 1-* for array items
+create association Module.ExItemsItem_ExItems
+  from Module.ExItemsItem
+  to Module.ExItems;   -- 1-* for array items
 /
 ```
 
 ### Simple Export Mapping (flat JSON)
 
 ```sql
-CREATE EXPORT MAPPING Module.EMM_Pet
-  WITH JSON STRUCTURE Module.JSON_Pet
+create export mapping Module.EMM_Pet
+  with json structure Module.JSON_Pet
 {
   Module.PetResponse {
     id = PetId,
     name = Name,
-    status = Status
+    status = status
   }
 };
 ```
@@ -226,17 +226,17 @@ CREATE EXPORT MAPPING Module.EMM_Pet
 Arrays have TWO levels: container entity + item entity:
 
 ```sql
-CREATE EXPORT MAPPING Module.EMM_Order
-  WITH JSON STRUCTURE Module.JSON_Order
+create export mapping Module.EMM_Order
+  with json structure Module.JSON_Order
 {
   Module.ExRoot {
     orderId = OrderId,
-    Module.ExCustomer_ExRoot/Module.ExCustomer AS customer {
+    Module.ExCustomer_ExRoot/Module.ExCustomer as customer {
       name = Name,
       email = Email
     },
-    Module.ExItems_ExRoot/Module.ExItems AS items {
-      Module.ExItemsItem_ExItems/Module.ExItemsItem AS ItemsItem {
+    Module.ExItems_ExRoot/Module.ExItems as items {
+      Module.ExItemsItem_ExItems/Module.ExItemsItem as ItemsItem {
         sku = Sku,
         quantity = Quantity,
         price = Price
@@ -249,9 +249,9 @@ CREATE EXPORT MAPPING Module.EMM_Order
 ### NULL VALUES option
 
 ```sql
-CREATE EXPORT MAPPING Module.EMM_Pet
-  WITH JSON STRUCTURE Module.JSON_Pet
-  NULL VALUES SendAsNil     -- or LeaveOutElement (default)
+create export mapping Module.EMM_Pet
+  with json structure Module.JSON_Pet
+  null values SendAsNil     -- or LeaveOutElement (default)
 {
   ...
 };
@@ -265,29 +265,29 @@ CREATE EXPORT MAPPING Module.EMM_Pet
 
 ```sql
 -- With result variable (non-persistent entities)
-$PetResponse = IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
+$PetResponse = import from mapping Module.IMM_Pet($JsonContent);
 
 -- Without result variable (persistent entities, stores to DB)
-IMPORT FROM MAPPING Module.IMM_Pet($JsonContent);
+import from mapping Module.IMM_Pet($JsonContent);
 ```
 
 ### Export to Mapping (entity → JSON)
 
 ```sql
-$JsonOutput = EXPORT TO MAPPING Module.EMM_Pet($PetResponse);
+$JsonOutput = export to mapping Module.EMM_Pet($PetResponse);
 ```
 
 ### Complete Pipeline
 
 ```sql
-CREATE MICROFLOW Module.ProcessData ()
-BEGIN
-  DECLARE $Json String = $latestHttpResponse/Content;
-  $PetResponse = IMPORT FROM MAPPING Module.IMM_Pet($Json);
+create microflow Module.ProcessData ()
+begin
+  declare $json string = $latestHttpResponse/content;
+  $PetResponse = import from mapping Module.IMM_Pet($json);
   -- Process...
-  $Output = EXPORT TO MAPPING Module.EMM_Pet($PetResponse);
-  LOG INFO NODE 'Integration' 'Result: ' + $Output;
-END;
+  $Output = export to mapping Module.EMM_Pet($PetResponse);
+  log info node 'Integration' 'Result: ' + $Output;
+end;
 /
 ```
 
@@ -296,12 +296,12 @@ END;
 ## Browse
 
 ```sql
-SHOW IMPORT MAPPINGS [IN Module];
-SHOW EXPORT MAPPINGS [IN Module];
-DESCRIBE IMPORT MAPPING Module.Name;
-DESCRIBE EXPORT MAPPING Module.Name;
-DROP IMPORT MAPPING Module.Name;
-DROP EXPORT MAPPING Module.Name;
+show import mappings [in module];
+show export mappings [in module];
+describe import mapping Module.Name;
+describe export mapping Module.Name;
+drop import mapping Module.Name;
+drop export mapping Module.Name;
 ```
 
 ---
@@ -316,20 +316,20 @@ Export mappings work on non-persistent entity (NPE) structures that mirror the t
 
 ```sql
 -- Example: build NPE tree from persistent Order data, then export
-CREATE MICROFLOW Module.ExportOrder ($Order: Module.Order)
-RETURNS String AS $Json
-BEGIN
+create microflow Module.ExportOrder ($Order: Module.Order)
+returns string as $json
+begin
   -- Build the NPE tree matching the JSON structure
-  $Root = CREATE Module.ExRoot (OrderId = $Order/OrderId);
+  $Root = create Module.ExRoot (OrderId = $Order/OrderId);
 
-  RETRIEVE $Customer FROM $Order/Module.Order_Customer;
-  $ExCust = CREATE Module.ExCustomer (Name = $Customer/Name, Email = $Customer/Email);
+  retrieve $Customer from $Order/Module.Order_Customer;
+  $ExCust = create Module.ExCustomer (Name = $Customer/Name, Email = $Customer/Email);
   -- Link customer to root...
 
   -- Export
-  $Json = EXPORT TO MAPPING Module.EMM_Order($Root);
-  RETURN $Json;
-END;
+  $json = export to mapping Module.EMM_Order($Root);
+  return $json;
+end;
 /
 ```
 
@@ -338,13 +338,13 @@ END;
 View Entities (OQL-backed) can retrieve data directly into the export-ready structure, skipping the manual NPE assembly:
 
 ```sql
-CREATE VIEW ENTITY Module.ExOrderView (
-  OrderId: Integer,
-  CustomerName: String,
-  CustomerEmail: String
-) AS SELECT o.OrderId, c.Name, c.Email
-   FROM Module.Order o
-   JOIN Module.Order_Customer/Module.Customer c;
+create view entity Module.ExOrderView (
+  OrderId: integer,
+  CustomerName: string,
+  CustomerEmail: string
+) as select o.OrderId, c.Name, c.Email
+   from Module.Order o
+   join Module.Order_Customer/Module.Customer c;
 ```
 
 This can reduce the microflow to a single retrieve + export step.
@@ -360,31 +360,31 @@ exporting country data back to JSON.
 
 ```sql
 -- Single country (flat object)
-CREATE JSON STRUCTURE Integration.JSON_Country
-  SNIPPET '{"name": "Netherlands", "officialName": "Kingdom of the Netherlands", "capital": "Amsterdam", "region": "Europe", "population": 18100436, "flagUrl": "https://flagcdn.com/w320/nl.png"}';
+create json structure Integration.JSON_Country
+  snippet '{"name": "Netherlands", "officialName": "Kingdom of the Netherlands", "capital": "Amsterdam", "region": "Europe", "population": 18100436, "flagUrl": "https://flagcdn.com/w320/nl.png"}';
 
 -- List of countries (array of objects)
-CREATE JSON STRUCTURE Integration.JSON_CountryList
-  SNIPPET '[{"name": "Netherlands", "capital": "Amsterdam", "region": "Europe", "population": 18100436}]';
+create json structure Integration.JSON_CountryList
+  snippet '[{"name": "Netherlands", "capital": "Amsterdam", "region": "Europe", "population": 18100436}]';
 ```
 
 ### Step 2: Import — Single Country
 
 ```sql
-CREATE NON-PERSISTENT ENTITY Integration.Country (
-  Name: String,
-  OfficialName: String,
-  Capital: String,
-  Region: String,
-  Population: Integer,
-  FlagUrl: String
+create non-persistent entity Integration.Country (
+  Name: string,
+  OfficialName: string,
+  Capital: string,
+  Region: string,
+  Population: integer,
+  FlagUrl: string
 );
 /
 
-CREATE IMPORT MAPPING Integration.IMM_Country
-  WITH JSON STRUCTURE Integration.JSON_Country
+create import mapping Integration.IMM_Country
+  with json structure Integration.JSON_Country
 {
-  CREATE Integration.Country {
+  create Integration.Country {
     Name = name,
     OfficialName = officialName,
     Capital = capital,
@@ -400,18 +400,18 @@ CREATE IMPORT MAPPING Integration.IMM_Country
 For a list response, the import mapping maps the array item directly (no container):
 
 ```sql
-CREATE NON-PERSISTENT ENTITY Integration.CountryListItem (
-  Name: String,
-  Capital: String,
-  Region: String,
-  Population: Integer
+create non-persistent entity Integration.CountryListItem (
+  Name: string,
+  Capital: string,
+  Region: string,
+  Population: integer
 );
 /
 
-CREATE IMPORT MAPPING Integration.IMM_CountryList
-  WITH JSON STRUCTURE Integration.JSON_CountryList
+create import mapping Integration.IMM_CountryList
+  with json structure Integration.JSON_CountryList
 {
-  CREATE Integration.CountryListItem {
+  create Integration.CountryListItem {
     Name = name,
     Capital = capital,
     Region = region,
@@ -425,8 +425,8 @@ CREATE IMPORT MAPPING Integration.IMM_CountryList
 For the flat country, the same entity works for both import and export:
 
 ```sql
-CREATE EXPORT MAPPING Integration.EMM_Country
-  WITH JSON STRUCTURE Integration.JSON_Country
+create export mapping Integration.EMM_Country
+  with json structure Integration.JSON_Country
 {
   Integration.Country {
     name = Name,
@@ -445,28 +445,28 @@ For exporting a list, the export domain model needs a root container + item enti
 
 ```sql
 -- Container entity wrapping the array
-CREATE NON-PERSISTENT ENTITY Integration.ExCountryList;
+create non-persistent entity Integration.ExCountryList;
 /
 
 -- Item entity for each country in the array
-CREATE NON-PERSISTENT ENTITY Integration.ExCountryItem (
-  Name: String,
-  Capital: String,
-  Region: String,
-  Population: Integer
+create non-persistent entity Integration.ExCountryItem (
+  Name: string,
+  Capital: string,
+  Region: string,
+  Population: integer
 );
 /
 
-CREATE ASSOCIATION Integration.ExCountryItem_ExCountryList
-  FROM Integration.ExCountryItem
-  TO Integration.ExCountryList;
+create association Integration.ExCountryItem_ExCountryList
+  from Integration.ExCountryItem
+  to Integration.ExCountryList;
 /
 
-CREATE EXPORT MAPPING Integration.EMM_CountryList
-  WITH JSON STRUCTURE Integration.JSON_CountryList
+create export mapping Integration.EMM_CountryList
+  with json structure Integration.JSON_CountryList
 {
   Integration.ExCountryList {
-    Integration.ExCountryItem_ExCountryList/Integration.ExCountryItem AS Root {
+    Integration.ExCountryItem_ExCountryList/Integration.ExCountryItem as Root {
       name = Name,
       capital = Capital,
       region = Region,
@@ -479,25 +479,25 @@ CREATE EXPORT MAPPING Integration.EMM_CountryList
 ### Step 6: Microflow — Fetch, Import, Process, Export
 
 ```sql
-CREATE MICROFLOW Integration.GetCountryInfo ()
-RETURNS String AS $Json
-BEGIN
+create microflow Integration.GetCountryInfo ()
+returns string as $json
+begin
   -- Fetch country data from REST API
-  $Response = REST CALL GET 'https://restcountries.com/v3.1/name/netherlands'
-    HEADER Accept = 'application/json'
-    TIMEOUT 30
-    RETURNS String
-    ON ERROR CONTINUE;
+  $response = rest call get 'https://restcountries.com/v3.1/name/netherlands'
+    header Accept = 'application/json'
+    timeout 30
+    returns string
+    on error continue;
 
   -- Import JSON into entity
-  $Country = IMPORT FROM MAPPING Integration.IMM_Country($Response);
+  $Country = import from mapping Integration.IMM_Country($response);
 
   -- Export back to our own JSON format
-  $Json = EXPORT TO MAPPING Integration.EMM_Country($Country);
-  LOG INFO NODE 'Integration' 'Country: ' + $Json;
+  $json = export to mapping Integration.EMM_Country($Country);
+  log info node 'Integration' 'Country: ' + $json;
 
-  RETURN $Json;
-END;
+  return $json;
+end;
 /
 ```
 
@@ -509,7 +509,7 @@ END;
 |---------|-----|
 | Reusing import domain model for export | Export needs separate entities mirroring JSON structure |
 | Association direction wrong | Always FROM child TO parent (child owns FK) |
-| Using `OWNER Default` for 1-1 nested objects in export | Use `OWNER Both` for 1-1 relationships |
+| Using `owner default` for 1-1 nested objects in export | Use `owner both` for 1-1 relationships |
 | Missing array container entity in export | Arrays need Container + Item entities |
-| Using `KEY` with `CREATE` handling | `KEY` only valid with `FIND` or `FIND OR CREATE` |
+| Using `key` with `create` handling | `key` only valid with `find` or `find or create` |
 | Arrays in import with container entity | Import arrays map directly to item entity, no container |

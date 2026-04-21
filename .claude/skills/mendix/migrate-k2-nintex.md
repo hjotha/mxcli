@@ -75,7 +75,7 @@ The K2 Package and Deployment tool packages K2 artifacts (SmartObjects, forms, v
 
 **How to export:**
 ```
-K2 Management Site → Solutions → Package → Export
+K2 Management Site → Solutions → Package → export
 ```
 
 ### 2. Legacy Project Files
@@ -117,25 +117,25 @@ For a K2 → Mendix migration, approach it in layers:
 **Example MDL:**
 ```sql
 -- SmartBox SmartObject "Customer" → Mendix Entity
-CREATE PERSISTENT ENTITY CRM.Customer (
-  CustomerCode: String(50),
-  CustomerName: String(200),
-  Email: String(200),
-  Phone: String(50),
-  IsActive: Boolean DEFAULT true,
-  CreatedDate: DateTime
+create persistent entity CRM.Customer (
+  CustomerCode: string(50),
+  CustomerName: string(200),
+  Email: string(200),
+  Phone: string(50),
+  IsActive: boolean default true,
+  CreatedDate: datetime
 );
 
 -- SmartBox SmartObject "Order" → Mendix Entity
-CREATE PERSISTENT ENTITY CRM.Order (
-  OrderNumber: String(50),
-  OrderDate: DateTime,
-  Status: CRM.OrderStatus,  -- Enumeration
-  TotalAmount: Decimal
+create persistent entity CRM.Order (
+  OrderNumber: string(50),
+  OrderDate: datetime,
+  status: CRM.OrderStatus,  -- Enumeration
+  TotalAmount: decimal
 );
 
 -- SmartObject relationship → Association
-CREATE ASSOCIATION CRM.Order_Customer (
+create association CRM.Order_Customer (
   CRM.Order [*] -> CRM.Customer [1]
 );
 ```
@@ -173,27 +173,27 @@ SmartForms Views map to Mendix pages/snippets. The rules system (event-driven, "
 
 **Example MDL (SmartForm View → Mendix Page):**
 ```sql
-CREATE PAGE CRM.Customer_Edit
+create page CRM.Customer_Edit
 (
-  Params: { $Customer: CRM.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: CRM.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
+  dataview dvCustomer (datasource: $Customer) {
     -- Text Box controls
-    TEXTBOX txtCode (Label: 'Customer Code', Attribute: CustomerCode)
-    TEXTBOX txtName (Label: 'Customer Name', Attribute: CustomerName)
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-    TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
+    textbox txtCode (label: 'Customer Code', attribute: CustomerCode)
+    textbox txtName (label: 'Customer Name', attribute: CustomerName)
+    textbox txtEmail (label: 'Email', attribute: Email)
+    textbox txtPhone (label: 'Phone', attribute: Phone)
 
     -- Check Box control
-    CHECKBOX chkActive (Label: 'Active', Attribute: IsActive)
+    checkbox chkActive (label: 'Active', attribute: IsActive)
 
     -- Button bar (SmartForms action buttons)
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
@@ -229,34 +229,34 @@ K2 Workflows translate to Mendix microflows or the Workflow module:
 **Example MDL (K2 Task → Mendix Microflow):**
 ```sql
 -- K2 Task "Review Order" → Mendix microflow for task handling
-CREATE MICROFLOW CRM.ACT_Order_SubmitForReview ($Order: CRM.Order)
-BEGIN
+create microflow CRM.ACT_Order_SubmitForReview ($Order: CRM.Order)
+begin
   -- Update status (like K2 "Set Status")
-  CHANGE $Order (Status = CRM.OrderStatus.PendingReview);
-  COMMIT $Order WITH EVENTS;
+  change $Order (status = CRM.OrderStatus.PendingReview);
+  commit $Order with events;
 
   -- Show page for review (like K2 "Task" with form)
-  SHOW PAGE CRM.Order_Review ($Order = $Order);
-END;
+  show page CRM.Order_Review ($Order = $Order);
+end;
 
 -- K2 Decision "Order > $5000?" → Mendix microflow with decision
-CREATE MICROFLOW CRM.ACT_Order_ProcessApproval ($Order: CRM.Order)
-RETURNS Boolean AS $Approved
-BEGIN
-  DECLARE $Approved Boolean = false;
+create microflow CRM.ACT_Order_ProcessApproval ($Order: CRM.Order)
+returns boolean as $Approved
+begin
+  declare $Approved boolean = false;
 
-  IF $Order/TotalAmount > 5000 THEN
+  if $Order/TotalAmount > 5000 then
     -- Route to manager (K2 Destination Rule equivalent)
-    CALL MICROFLOW CRM.ACT_Order_SubmitForManagerReview ($Order = $Order);
-  ELSE
+    call microflow CRM.ACT_Order_SubmitForManagerReview ($Order = $Order);
+  else
     -- Auto-approve (K2 "Go To" equivalent)
-    CHANGE $Order (Status = CRM.OrderStatus.Approved);
-    COMMIT $Order WITH EVENTS;
-    SET $Approved = true;
-  END IF;
+    change $Order (status = CRM.OrderStatus.Approved);
+    commit $Order with events;
+    set $Approved = true;
+  end if;
 
-  RETURN $Approved;
-END;
+  return $Approved;
+end;
 ```
 
 ## Assessment Workflow
@@ -268,12 +268,12 @@ When assessing a K2 application for migration:
 Export SmartObject definitions and categorize:
 
 ```markdown
-| SmartObject Name | Type | Data Source | Entity Count | Mendix Mapping |
+| SmartObject Name | type | data source | entity count | Mendix mapping |
 |------------------|------|-------------|--------------|----------------|
-| CustomerSO | SmartBox | K2 DB | Single | CRM.Customer entity |
-| OrderSO | SmartBox | K2 DB | Single | CRM.Order entity |
-| EmployeeSO | SQL | HR Database | Single | Integration or import |
-| SAPOrderSO | SAP | SAP ERP | Multiple | OData service |
+| CustomerSO | SmartBox | K2 DB | single | CRM.Customer entity |
+| OrderSO | SmartBox | K2 DB | single | CRM.Order entity |
+| EmployeeSO | sql | HR database | single | Integration or import |
+| SAPOrderSO | SAP | SAP ERP | multiple | odata service |
 ```
 
 ### Step 2: Inventory SmartForms
@@ -281,7 +281,7 @@ Export SmartObject definitions and categorize:
 Document all forms and views:
 
 ```markdown
-| Form Name | Views Used | SmartObjects | Mendix Mapping |
+| Form Name | views Used | SmartObjects | Mendix mapping |
 |-----------|------------|--------------|----------------|
 | Customer Entry | CustomerView, AddressView | CustomerSO, AddressSO | Customer_Edit page |
 | Order Dashboard | OrderListView, FilterView | OrderSO | Order_Overview page |
@@ -293,11 +293,11 @@ Document all forms and views:
 Document all workflows and their complexity:
 
 ```markdown
-| Workflow Name | Tasks | Activities | Complexity | Mendix Mapping |
+| workflow Name | Tasks | Activities | Complexity | Mendix mapping |
 |---------------|-------|------------|------------|----------------|
-| Order Approval | 3 | 12 | Medium | Microflow chain |
-| New Employee Onboarding | 8 | 25 | High | Workflow module |
-| Leave Request | 2 | 6 | Low | Microflows only |
+| Order Approval | 3 | 12 | Medium | microflow chain |
+| New Employee Onboarding | 8 | 25 | High | workflow module |
+| Leave request | 2 | 6 | Low | microflows only |
 ```
 
 ### Step 4: Map Rules and Logic
@@ -305,11 +305,11 @@ Document all workflows and their complexity:
 Extract business rules from SmartForms rules and workflow logic:
 
 ```markdown
-| Rule ID | Location | Description | Mendix Implementation |
+| rule ID | Location | description | Mendix Implementation |
 |---------|----------|-------------|----------------------|
-| R-001 | CustomerView | Email format validation | Validation microflow |
-| R-002 | OrderWorkflow | Orders > $5000 need manager approval | Decision in microflow |
-| R-003 | LineItemsView | Auto-calculate line total | On-change nanoflow |
+| R-001 | CustomerView | Email format validation | validation microflow |
+| R-002 | OrderWorkflow | Orders > $5000 need manager approval | decision in microflow |
+| R-003 | LineItemsView | Auto-calculate line total | on-change nanoflow |
 ```
 
 ## Migration Execution Order
@@ -319,7 +319,7 @@ Execute migration in this order to manage dependencies:
 ### Phase 1: Domain Model
 ```sql
 -- 1. Enumerations first (no dependencies)
-CREATE ENUMERATION CRM.OrderStatus AS (
+create enumeration CRM.OrderStatus as (
   Pending: 'Pending',
   Approved: 'Approved',
   Rejected: 'Rejected',
@@ -327,54 +327,54 @@ CREATE ENUMERATION CRM.OrderStatus AS (
 );
 
 -- 2. Entities (may reference enumerations)
-CREATE PERSISTENT ENTITY CRM.Customer (...);
-CREATE PERSISTENT ENTITY CRM.Order (...);
+create persistent entity CRM.Customer (...);
+create persistent entity CRM.Order (...);
 
 -- 3. Associations (reference entities)
-CREATE ASSOCIATION CRM.Order_Customer (...);
+create association CRM.Order_Customer (...);
 ```
 
 ### Phase 2: Business Logic (Microflows)
 ```sql
 -- Core CRUD microflows
-CREATE MICROFLOW CRM.ACT_Customer_Save ($Customer: CRM.Customer)
-BEGIN
+create microflow CRM.ACT_Customer_Save ($Customer: CRM.Customer)
+begin
   -- Validation (from SmartForms rules)
-  IF $Customer/Email = empty THEN
-    VALIDATION FEEDBACK $Customer/Email MESSAGE 'Email is required';
-    RETURN false;
-  END IF;
+  if $Customer/Email = empty then
+    validation feedback $Customer/Email message 'Email is required';
+    return false;
+  end if;
 
-  COMMIT $Customer WITH EVENTS;
-  RETURN true;
-END;
+  commit $Customer with events;
+  return true;
+end;
 
 -- Workflow logic
-CREATE MICROFLOW CRM.ACT_Order_Submit ($Order: CRM.Order)
-BEGIN
+create microflow CRM.ACT_Order_Submit ($Order: CRM.Order)
+begin
   -- Workflow start logic
   ...
-END;
+end;
 ```
 
 ### Phase 3: Pages
 ```sql
 -- Overview pages
-CREATE PAGE CRM.Customer_Overview (...);
+create page CRM.Customer_Overview (...);
 
 -- Edit pages (can reference microflows from Phase 2)
-CREATE PAGE CRM.Customer_Edit (...);
+create page CRM.Customer_Edit (...);
 ```
 
 ### Phase 4: Security
 ```sql
 -- Module roles matching K2 roles
-CREATE MODULE ROLE CRM.Manager DESCRIPTION 'Can approve orders and manage customers';
-CREATE MODULE ROLE CRM.User DESCRIPTION 'Can create and edit own records';
+create module role CRM.Manager description 'Can approve orders and manage customers';
+create module role CRM.User description 'Can create and edit own records';
 
 -- Access rules
-GRANT CRM.Manager ON CRM.Order (CREATE, DELETE, READ *, WRITE *);
-GRANT CRM.User ON CRM.Order (CREATE, READ *, WRITE *) WHERE [Owner = '[%CurrentUser%]'];
+grant CRM.Manager on CRM.Order (create, delete, read *, write *);
+grant CRM.User on CRM.Order (create, read *, write *) where [owner = '[%CurrentUser%]'];
 ```
 
 ## Common Challenges and Solutions
@@ -403,10 +403,10 @@ GRANT CRM.User ON CRM.Order (CREATE, READ *, WRITE *) WHERE [Owner = '[%CurrentU
 
 **Solution**: Map each rule to appropriate Mendix mechanism:
 ```
-Event-based UI logic → Nanoflows
-Validation → Validation microflows + VALIDATION FEEDBACK
-Data manipulation → Microflows
-Complex calculations → Microflow expressions
+event-based UI logic → nanoflows
+validation → validation microflows + validation feedback
+data manipulation → microflows
+Complex calculations → microflow expressions
 ```
 
 ### Challenge 4: Workflow Participants
@@ -416,14 +416,14 @@ Complex calculations → Microflow expressions
 **Solution**: Implement participant logic in microflows:
 ```sql
 -- K2 Destination Rule "Route to Manager" → Mendix microflow
-CREATE MICROFLOW CRM.SUB_GetManager ($Employee: HR.Employee)
-RETURNS HR.Employee AS $Manager
-BEGIN
-  DECLARE $Manager HR.Employee;
-  RETRIEVE $Manager FROM HR.Employee
-    WHERE [HR.Employee_Reports = $Employee];
-  RETURN $Manager;
-END;
+create microflow CRM.SUB_GetManager ($Employee: HR.Employee)
+returns HR.Employee as $Manager
+begin
+  declare $Manager HR.Employee;
+  retrieve $Manager from HR.Employee
+    where [HR.Employee_Reports = $Employee];
+  return $Manager;
+end;
 ```
 
 ## Pre-Migration Checklist

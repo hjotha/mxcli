@@ -2,7 +2,7 @@
 
 ## Problem
 
-Entity positions in the domain model canvas can only be set during `CREATE ENTITY` via the `@position` annotation. There's no way to reposition existing entities without dropping and recreating them — which destroys associations, access rules, and references.
+Entity positions in the domain model canvas can only be set during `create entity` via the `@position` annotation. There's no way to reposition existing entities without dropping and recreating them — which destroys associations, access rules, and references.
 
 This matters for:
 - **Scripts that create multiple related entities** — auto-positioning stacks them linearly, making the domain model hard to read in Studio Pro
@@ -14,17 +14,17 @@ This matters for:
 ### Single entity
 
 ```sql
-ALTER ENTITY Module.Customer SET POSITION (100, 200);
+alter entity Module.Customer set position (100, 200);
 ```
 
-Consistent with existing `ALTER ENTITY ... SET DOCUMENTATION '...'` and `SET COMMENT '...'` patterns.
+Consistent with existing `alter entity ... set documentation '...'` and `set comment '...'` patterns.
 
 ### Multiple entities (batch repositioning)
 
 ```sql
-ALTER ENTITY Module.Customer SET POSITION (100, 100);
-ALTER ENTITY Module.Order    SET POSITION (400, 100);
-ALTER ENTITY Module.Product  SET POSITION (400, 300);
+alter entity Module.Customer set position (100, 100);
+alter entity Module.Order    set position (400, 100);
+alter entity Module.Product  set position (400, 300);
 ```
 
 ### Auto-layout command (future extension)
@@ -32,7 +32,7 @@ ALTER ENTITY Module.Product  SET POSITION (400, 300);
 A separate top-level command for automatic layout of all entities in a module:
 
 ```sql
-ARRANGE DOMAIN MODEL IN Module;
+ARRANGE DOMAIN model in module;
 ```
 
 This is out of scope for the initial implementation but the grammar should not conflict with it.
@@ -44,11 +44,11 @@ Add one alternative to the `alterEntityAction` rule:
 ```ebnf
 alterEntityAction
     : ...existing alternatives...
-    | SET POSITION LPAREN NUMBER_LITERAL COMMA NUMBER_LITERAL RPAREN
+    | set position LPAREN NUMBER_LITERAL COMMA NUMBER_LITERAL RPAREN
     ;
 ```
 
-`POSITION` is already a keyword in the lexer (used by `@position` annotations and notebook actions).
+`position` is already a keyword in the lexer (used by `@position` annotations and notebook actions).
 
 ## AST Change
 
@@ -57,12 +57,12 @@ Add a new operation constant and position field to `AlterEntityStmt`:
 ```go
 const (
     ...
-    AlterEntitySetPosition  // SET POSITION (x, y)
+    AlterEntitySetPosition  // set position (x, y)
 )
 
 type AlterEntityStmt struct {
     ...
-    Position  *Position  // For SET POSITION
+    position  *position  // for set position
 }
 ```
 
@@ -78,25 +78,25 @@ This is a lightweight operation — it only updates the `Location` field in the 
 
 ## DESCRIBE Output
 
-`DESCRIBE ENTITY` should include a `@position` annotation when the entity has a non-default position, so the output is round-trippable:
+`describe entity` should include a `@position` annotation when the entity has a non-default position, so the output is round-trippable:
 
 ```sql
 @position(100, 200)
-CREATE OR REPLACE PERSISTENT ENTITY Module.Customer (
-    Name: String(100),
+create or replace persistent entity Module.Customer (
+    Name: string(100),
     ...
 );
 ```
 
-Currently DESCRIBE omits the `@position` annotation. This should be added regardless of whether `ALTER ENTITY SET POSITION` is implemented, since it improves roundtrip fidelity.
+Currently DESCRIBE omits the `@position` annotation. This should be added regardless of whether `alter entity set position` is implemented, since it improves roundtrip fidelity.
 
 ## Implementation Scope
 
 | Component | Change |
 |-----------|--------|
-| `MDLParser.g4` | Add `SET POSITION (x, y)` to `alterEntityAction` |
-| `MDLLexer.g4` | No change (`POSITION` already exists) |
-| `mdl/ast/ast_entity.go` | Add `AlterEntitySetPosition` op, `Position` field |
+| `MDLParser.g4` | Add `set position (x, y)` to `alterEntityAction` |
+| `MDLLexer.g4` | No change (`position` already exists) |
+| `mdl/ast/ast_entity.go` | Add `AlterEntitySetPosition` op, `position` field |
 | `mdl/visitor/visitor_entity.go` | Parse the new alternative |
 | `mdl/executor/cmd_entities.go` | Handle `AlterEntitySetPosition` |
 | `sdk/mpr/writer.go` | Add `UpdateEntityLocation()` (if not already present) |
@@ -104,8 +104,8 @@ Currently DESCRIBE omits the `@position` annotation. This should be added regard
 
 ## Alternatives Considered
 
-**`@position` annotation on ALTER ENTITY** — e.g., `@position(100,200) ALTER ENTITY ...`. Rejected because annotations are a CREATE-time concept; SET is the established ALTER pattern.
+**`@position` annotation on ALTER ENTITY** — e.g., `@position(100,200) alter entity ...`. Rejected because annotations are a CREATE-time concept; SET is the established ALTER pattern.
 
-**Dedicated MOVE POSITION command** — e.g., `MOVE ENTITY Module.E TO POSITION (x, y)`. Rejected because MOVE already means "move to different module" in MDL.
+**Dedicated MOVE POSITION command** — e.g., `move entity Module.E to position (x, y)`. Rejected because MOVE already means "move to different module" in MDL.
 
 **ARRANGE command only** — Skip per-entity positioning, just auto-layout. Insufficient for scripts that need precise control (e.g., aligning entities in a specific pattern).

@@ -39,18 +39,18 @@ docs/14-eval/eval-1.md          (test definitions)
 │                                                  │
 │  Phase 1 (implemented):                          │
 │  ├── Parse test definitions (Markdown + YAML)    │
-│  ├── Run structural checks (L0)                  │
-│  ├── Run validation checks (L1: mx check)        │
-│  ├── Run lint checks (L2)                        │
+│  ├── run structural checks (L0)                  │
+│  ├── run validation checks (L1: mx check)        │
+│  ├── run lint checks (L2)                        │
 │  ├── Score results (pass/fail per check)         │
-│  └── Generate reports (console, JSON, Markdown)  │
+│  └── generate reports (console, json, Markdown)  │
 │                                                  │
 │  Phase 2 (planned):                              │
 │  ├── Copy template project for each test         │
 │  ├── Invoke Claude Code CLI with prompt           │
-│  ├── Run Docker build/deploy (L3)                │
-│  ├── Execute iteration scenarios (multi-turn)    │
-│  └── Microflow tests via mxcli test (L4)         │
+│  ├── run Docker build/deploy (L3)                │
+│  ├── execute iteration scenarios (multi-turn)    │
+│  └── microflow tests via mxcli test (L4)         │
 │                                                  │
 │  Phase 3 (planned):                              │
 │  ├── LLM-as-judge scoring                        │
@@ -60,7 +60,7 @@ docs/14-eval/eval-1.md          (test definitions)
 └──────────────────────────────────────────────────┘
          │
          ▼
-eval-results/                   (JSON + Markdown reports)
+eval-results/                   (json + Markdown reports)
 ```
 
 ---
@@ -80,36 +80,36 @@ timeout: 10m
 # APP-001: Bookstore Inventory
 
 ## Prompt
-Create an app to manage my bookstore inventory. I need to track books
+create an app to manage my bookstore inventory. I need to track books
 with title, author, ISBN, price, and stock quantity.
 
-## Expected Outcome
+## Expected outcome
 Domain model with Book entity, CRUD pages (overview, detail, edit),
 navigation, and basic microflows for create/update/delete.
 
 ## Checks
 - entity_exists: "*.Book"
-- entity_has_attribute: "*.Book.Title String"
-- entity_has_attribute: "*.Book.Author String"
-- entity_has_attribute: "*.Book.ISBN String"
-- entity_has_attribute: "*.Book.Price Decimal"
-- entity_has_attribute: "*.Book.StockQuantity Integer"
-- page_exists: "*Overview*"
+- entity_has_attribute: "*.Book.Title string"
+- entity_has_attribute: "*.Book.Author string"
+- entity_has_attribute: "*.Book.ISBN string"
+- entity_has_attribute: "*.Book.Price decimal"
+- entity_has_attribute: "*.Book.StockQuantity integer"
+- page_exists: "*overview*"
 - page_exists: "*Edit*"
 - navigation_has_item: true
 - mx_check_passes: true
 
 ## Acceptance Criteria
 - Book entity has all specified attributes with appropriate types
-- Overview page with data grid
+- overview page with data grid
 - New/Edit page with form
-- Delete confirmation
-- Navigation menu item
+- delete confirmation
+- navigation menu item
 
 ## Iteration
 
 ### Prompt
-Add a category field to the books, and let me filter the book list
+add a category field to the books, and let me filter the book list
 by category.
 
 ### Checks
@@ -126,7 +126,7 @@ by category.
 |---------|----------|-------------|
 | YAML frontmatter | Yes | `id` (unique), `category`, `tags`, `timeout` |
 | `## Prompt` | Yes | The user prompt given to Claude Code |
-| `## Expected Outcome` | No | Human-readable description of what should be built |
+| `## Expected outcome` | No | Human-readable description of what should be built |
 | `## Checks` | Yes | Machine-executable assertions (see check types below) |
 | `## Acceptance Criteria` | No | Human-readable criteria (for LLM-as-judge in Phase 3) |
 | `## Iteration` | No | Follow-up prompt with its own checks and criteria |
@@ -135,16 +135,16 @@ by category.
 
 | Check | Args Pattern | Example | Description |
 |-------|-------------|---------|-------------|
-| `entity_exists` | `Pattern` | `*.Book` | Entity matching pattern exists |
-| `entity_has_attribute` | `Pattern.Attr [Type]` | `*.Book.Title String` | Attribute exists, optionally with type |
-| `page_exists` | `Pattern` | `*Overview*` | Page matching pattern exists |
-| `page_has_widget` | `Pattern widget` | `*Overview* dataGrid` | Page contains widget type |
-| `microflow_exists` | `Pattern` | `*.ACT_Create*` | Microflow matching pattern exists |
+| `entity_exists` | `pattern` | `*.Book` | Entity matching pattern exists |
+| `entity_has_attribute` | `Pattern.Attr [type]` | `*.Book.Title string` | Attribute exists, optionally with type |
+| `page_exists` | `pattern` | `*overview*` | Page matching pattern exists |
+| `page_has_widget` | `pattern widget` | `*overview* datagrid` | Page contains widget type |
+| `microflow_exists` | `pattern` | `*.ACT_Create*` | Microflow matching pattern exists |
 | `navigation_has_item` | `true` | `true` | Navigation menu is non-empty |
 | `mx_check_passes` | `true` | `true` | `mx check` reports no errors |
 | `lint_passes` | `true` | `true` | `mxcli lint` reports no errors |
 
-**Pattern matching**: `*` is a wildcard. `*.Book` matches `MyModule.Book` or `Inventory.Book`. `*Overview*` matches `Book_Overview`, `My_Overview_Page`, etc. Case-insensitive.
+**Pattern matching**: `*` is a wildcard. `*.Book` matches `MyModule.Book` or `Inventory.Book`. `*overview*` matches `Book_Overview`, `My_Overview_Page`, etc. Case-insensitive.
 
 ---
 
@@ -159,13 +159,13 @@ mxcli eval check docs/14-eval/eval-1.md -p app.mpr
 # Validate all tests in a directory
 mxcli eval check docs/14-eval/ -p app.mpr
 
-# Run only a specific test
+# run only a specific test
 mxcli eval check docs/14-eval/ -p app.mpr --test APP-001
 
 # Skip expensive mx check
 mxcli eval check docs/14-eval/eval-1.md -p app.mpr --skip-mx-check
 
-# Write reports to a directory
+# write reports to a directory
 mxcli eval check docs/14-eval/eval-1.md -p app.mpr --output eval-results/
 
 # Colored output
@@ -178,7 +178,7 @@ mxcli eval check docs/14-eval/eval-1.md -p app.mpr --color
 mxcli eval list docs/14-eval/
 
 # Output:
-# ID           Category          Checks  Iteration  Title
+# ID           Category          Checks  Iteration  title
 # ----------------------------------------------------------------------
 # APP-001      App/Crud              10   1 checks  APP-001: Bookstore Inventory
 # 1 eval test(s) found.
@@ -190,10 +190,10 @@ mxcli eval list docs/14-eval/
 # Copy template, invoke Claude, validate, score
 mxcli eval run docs/14-eval/ -p template.mpr
 
-# Use specific model
+# use specific model
 mxcli eval run docs/14-eval/ -p template.mpr --model sonnet
 
-# Run tests in parallel
+# run tests in parallel
 mxcli eval run docs/14-eval/ -p template.mpr --parallel 3
 ```
 
@@ -217,10 +217,10 @@ Six validation layers, ordered from cheapest to most expensive. Each layer gates
 Runs `mxcli` commands against the MPR to verify structural expectations:
 
 ```
-entity_exists  →  mxcli -c "SHOW ENTITIES"  →  parse for matching name
-entity_has_attribute  →  mxcli -c "DESCRIBE ENTITY X"  →  parse for attribute + type
-page_exists  →  mxcli -c "SHOW PAGES"  →  parse for matching name
-navigation_has_item  →  mxcli -c "SHOW NAVIGATION MENU"  →  check non-empty
+entity_exists  →  mxcli -c "show entities"  →  parse for matching name
+entity_has_attribute  →  mxcli -c "describe entity X"  →  parse for attribute + type
+page_exists  →  mxcli -c "show pages"  →  parse for matching name
+navigation_has_item  →  mxcli -c "show navigation menu"  →  check non-empty
 ```
 
 Results are cached per run (e.g., entity list fetched once, reused for all entity checks).
@@ -290,9 +290,9 @@ Eval: APP-001 (App/Crud) — Bookstore Inventory
 ============================================================
   Initial:
     [PASS] entity_exists *.Book — found: Bookstore.Book
-    [PASS] entity_has_attribute *.Book.Title String — found: Bookstore.Book.Title (String)
-    [FAIL] entity_has_attribute *.Book.ISBN String — attribute "ISBN" not found in Bookstore.Book
-    [PASS] page_exists *Overview* — found: Bookstore.Book_Overview
+    [PASS] entity_has_attribute *.Book.Title string — found: Bookstore.Book.Title (string)
+    [FAIL] entity_has_attribute *.Book.ISBN string — attribute "ISBN" not found in Bookstore.Book
+    [PASS] page_exists *overview* — found: Bookstore.Book_Overview
     [PASS] mx_check_passes true — mx check passed
     Score: 8/10 (80%)
   Iteration:
@@ -315,7 +315,7 @@ Eval: APP-001 (App/Crud) — Bookstore Inventory
     "phase": "initial",
     "checks": [
       { "check": { "type": "entity_exists", "args": "*.Book" }, "passed": true, "detail": "found: Bookstore.Book" },
-      { "check": { "type": "entity_has_attribute", "args": "*.Book.ISBN String" }, "passed": false, "detail": "attribute not found" }
+      { "check": { "type": "entity_has_attribute", "args": "*.Book.ISBN string" }, "passed": false, "detail": "attribute not found" }
     ],
     "passed": 8, "total": 10, "score": 0.8
   },
@@ -329,10 +329,10 @@ Eval: APP-001 (App/Crud) — Bookstore Inventory
   "overall_score": 0.82,
   "criteria": [
     "Book entity has all specified attributes with appropriate types",
-    "Overview page with data grid",
+    "overview page with data grid",
     "New/Edit page with form",
-    "Delete confirmation",
-    "Navigation menu item"
+    "delete confirmation",
+    "navigation menu item"
   ]
 }
 ```
@@ -342,14 +342,14 @@ Eval: APP-001 (App/Crud) — Bookstore Inventory
 Generated automatically with a summary table and detailed per-test results:
 
 ```markdown
-# Eval Run 2026-02-25 10:30
+# Eval run 2026-02-25 10:30
 
-Tests: 5 | Duration: 23m | Average Score: 78%
+Tests: 5 | Duration: 23m | average Score: 78%
 
 | Test | Category | Score | Checks | Iteration |
 |------|----------|-------|--------|-----------|
 | APP-001 | App/Crud | 82% | 9/11 | 100% |
-| APP-002 | App/Workflow | 70% | 7/10 | 60% |
+| APP-002 | App/workflow | 70% | 7/10 | 60% |
 ```
 
 ---
@@ -376,31 +376,31 @@ The eval runner shells out to the `mxcli` binary for each check type. This keeps
 
 ```
 RunChecks()
-  ├── Pre-fetch: SHOW ENTITIES, SHOW PAGES, SHOW MICROFLOWS, SHOW NAVIGATION MENU
-  ├── For each check:
+  ├── Pre-fetch: show entities, show pages, show microflows, show navigation menu
+  ├── for each check:
   │   ├── entity_exists → search entity list for pattern match
-  │   ├── entity_has_attribute → resolve entity, DESCRIBE it, search for attribute
+  │   ├── entity_has_attribute → resolve entity, describe it, search for attribute
   │   ├── page_exists → search page list for pattern match
-  │   ├── page_has_widget → resolve page, DESCRIBE it, search for widget type
+  │   ├── page_has_widget → resolve page, describe it, search for widget type
   │   ├── microflow_exists → search microflow list for pattern match
   │   ├── navigation_has_item → check navigation menu is non-empty
   │   ├── mx_check_passes → run mx check, check exit code
   │   └── lint_passes → run mxcli lint --format json, check for errors
-  └── Return CheckResult[] with pass/fail + detail per check
+  └── return CheckResult[] with pass/fail + detail per check
 ```
 
-Pattern matching supports `*` wildcards: `*.Book` matches any module's `Book` entity. DESCRIBE output parsing handles comma-separated attributes, type annotations like `String(200)`, and case-insensitive matching.
+Pattern matching supports `*` wildcards: `*.Book` matches any module's `Book` entity. DESCRIBE output parsing handles comma-separated attributes, type annotations like `string(200)`, and case-insensitive matching.
 
 ### Usage
 
 ```bash
-# List available eval tests
+# list available eval tests
 mxcli eval list docs/14-eval/
 
 # Validate a project (e.g., after Claude generated an app)
 mxcli eval check docs/14-eval/eval-1.md -p app.mpr --skip-mx-check
 
-# With full reports
+# with full reports
 mxcli eval check docs/14-eval/eval-1.md -p app.mpr --output eval-results/
 ```
 
@@ -435,7 +435,7 @@ For each eval test:
 ### Claude Code Invocation
 
 ```bash
-# Primary: automated via claude CLI
+# primary: automated via claude CLI
 claude -p "You are working on a Mendix project at $DIR. $PROMPT" \
   --model sonnet \
   --max-turns 50 \
@@ -488,15 +488,15 @@ After automated checks, feed the project state to Claude (via API) for holistic 
 
 ```
 Given this Mendix project structure:
-{SHOW STRUCTURE DEPTH 3 output}
+{show structure depth 3 output}
 
-And these page descriptions:
-{DESCRIBE PAGE outputs for all generated pages}
+and these page descriptions:
+{describe page outputs for all generated pages}
 
 Evaluate against these acceptance criteria:
 {criteria list from eval test}
 
-For each criterion, rate 0 (not met), 1 (partially met), or 2 (fully met).
+for each criterion, rate 0 (not met), 1 (partially met), or 2 (fully met).
 Explain your rating.
 
 Also identify:
@@ -557,8 +557,8 @@ Compare results across runs to detect regressions and improvements:
 mxcli eval report eval-results/ --compare
 
 # Output:
-# Run 2026-02-20  → Average: 72%  (Sonnet 4.5)
-# Run 2026-02-25  → Average: 85%  (Sonnet 4.6)  ↑ +13%
+# run 2026-02-20  → average: 72%  (Sonnet 4.5)
+# run 2026-02-25  → average: 85%  (Sonnet 4.6)  ↑ +13%
 #   APP-001: 70% → 90% ↑  (entity types now correct)
 #   APP-003: 80% → 75% ↓  (regression: delete confirmation missing)
 ```
@@ -602,7 +602,7 @@ docs/14-eval/
 
 eval-results/                    # Generated output (gitignored)
 ├── run-2026-02-25T10-30/
-│   ├── summary.json             # All results for this run
+│   ├── summary.json             # all results for this run
 │   ├── summary.md               # Human-readable report
 │   ├── APP-001/
 │   │   ├── score.json           # Per-test scores
@@ -615,14 +615,14 @@ cmd/mxcli/
 └── evalrunner/
     ├── parser.go                # Test definition parser (Phase 1 ✓)
     ├── parser_test.go           # Parser tests (Phase 1 ✓)
-    ├── checks.go                # Check execution (Phase 1 ✓)
+    ├── checks.go                # check execution (Phase 1 ✓)
     ├── results.go               # Result types + scoring (Phase 1 ✓)
     ├── report.go                # Report generation (Phase 1 ✓)
-    ├── runner.go                # Full orchestrator (Phase 2)
+    ├── runner.go                # full orchestrator (Phase 2)
     ├── claude.go                # Claude CLI wrapper (Phase 2)
     ├── judge.go                 # LLM-as-judge (Phase 3)
     ├── playwright.go            # Playwright integration (Phase 3)
-    └── trends.go                # Cross-run comparison (Phase 3)
+    └── trends.go                # cross-run comparison (Phase 3)
 ```
 
 ---
@@ -631,7 +631,7 @@ cmd/mxcli/
 
 | Need | Existing Tool | Status |
 |------|---------------|--------|
-| Entity/page/microflow inspection | `mxcli SHOW/DESCRIBE` commands | Used in Phase 1 |
+| Entity/page/microflow inspection | `mxcli show/describe` commands | Used in Phase 1 |
 | Project validation | `mx check app.mpr` | Used in Phase 1 |
 | Code quality | `mxcli lint --format json` | Used in Phase 1 |
 | YAML parsing | `gopkg.in/yaml.v3` | Already a dependency |

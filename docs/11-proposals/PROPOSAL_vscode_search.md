@@ -15,23 +15,23 @@ Add a `symbolsCmd` that queries the catalog `objects` view by name using SQL LIK
 
 ```go
 var symbolsCmd = &cobra.Command{
-    Use:   "symbols <query>",
-    Short: "Search project elements by name",
+    use:   "symbols <query>",
+    Short: "search project elements by name",
     Args:  cobra.ExactArgs(1),
-    // Connect, ensureCatalog(false), query objects WHERE Name LIKE '%query%', output JSON
+    // connect, ensureCatalog(false), query objects where Name like '%query%', output json
 }
 ```
 
 Output format (always JSON):
 ```json
-[{"name":"Customer","qualifiedName":"MyModule.Customer","objectType":"ENTITY","moduleName":"MyModule"}]
+[{"name":"Customer","qualifiedName":"MyModule.Customer","objectType":"entity","moduleName":"MyModule"}]
 ```
 
 The query:
 ```sql
-SELECT Name, QualifiedName, ObjectType, ModuleName FROM objects
-WHERE Name LIKE '%query%' OR QualifiedName LIKE '%query%'
-ORDER BY ObjectType, QualifiedName LIMIT 100
+select Name, QualifiedName, ObjectType, ModuleName from objects
+where Name like '%query%' or QualifiedName like '%query%'
+ORDER by ObjectType, QualifiedName limit 100
 ```
 
 Add the executor method in a new file `mdl/executor/cmd_symbols.go` following the same pattern as `cmd_search.go`.
@@ -75,7 +75,7 @@ Icon mapping (matches `projectTreeProvider.ts` patterns):
 
 Add to `contributes.commands`:
 ```json
-{ "command": "mendix.searchProject", "title": "Mendix: Search Project", "icon": "$(search)" }
+{ "command": "mendix.searchProject", "title": "Mendix: search project", "icon": "$(search)" }
 ```
 
 Add to `contributes.keybindings`:

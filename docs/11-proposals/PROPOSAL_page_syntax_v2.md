@@ -11,20 +11,20 @@ This document describes the Page Syntax V2 that has been implemented in MDL.
 
 Page Syntax V2 provides a more consistent, readable, and flexible syntax for creating pages and widgets in MDL:
 
-- **`{ }` blocks** instead of `BEGIN/END` for cleaner nesting
+- **`{ }` blocks** instead of `begin/end` for cleaner nesting
 - **`->` binding operator** for attributes, variables, actions, and datasources
 - **`(Name: value)` property syntax** matching Studio Pro property names
-- **Consistent widget pattern**: `WIDGET [id] ['label'] [-> binding] [(properties)] [{ children }]`
+- **Consistent widget pattern**: `widget [id] ['label'] [-> binding] [(properties)] [{ children }]`
 
 ## Syntax Pattern
 
 ```
-WIDGETTYPE [id] ['label'] [-> binding] [(properties)] [{ children }]
+widgettype [id] ['label'] [-> binding] [(properties)] [{ children }]
 ```
 
 | Part | Required | Description |
 |------|----------|-------------|
-| `WIDGETTYPE` | Yes | Widget type keyword (TEXTBOX, DATAVIEW, etc.) |
+| `widgettype` | Yes | Widget type keyword (TEXTBOX, DATAVIEW, etc.) |
 | `id` | No | Widget identifier for referencing |
 | `'label'` | No | Display label (positional string) |
 | `-> binding` | No | Binding target (attribute, variable, action, datasource) |
@@ -37,75 +37,75 @@ The `->` operator provides a clear, unified way to express bindings:
 
 ```mdl
 -- Attribute binding (form widgets)
-TEXTBOX 'Name' -> Name
-CHECKBOX 'Active' -> IsActive
+textbox 'Name' -> Name
+checkbox 'Active' -> IsActive
 
 -- Variable binding (containers)
-DATAVIEW dvProduct -> $Product { ... }
+dataview dvProduct -> $Product { ... }
 
 -- Action binding (buttons)
-ACTIONBUTTON 'Save' -> SAVE_CHANGES
-ACTIONBUTTON 'Process' -> MICROFLOW MyModule.ProcessOrder
+actionbutton 'Save' -> save_changes
+actionbutton 'Process' -> microflow MyModule.ProcessOrder
 
 -- Database source with query
-DATAGRID -> DATABASE MyModule.Product
-  WHERE [IsActive = true]
-  ORDER BY Name ASC
+datagrid -> database MyModule.Product
+  where [IsActive = true]
+  ORDER by Name asc
 
 -- Selection binding (master-detail)
-DATAVIEW -> SELECTION galleryName
+dataview -> selection galleryName
 ```
 
 ## Complete Example
 
 ```mdl
-CREATE PAGE MyModule.ProductDetail (
+create page MyModule.ProductDetail (
   $Product: MyModule.Product
 )
-  TITLE 'Product Details'
-  LAYOUT Atlas_Core.Atlas_Default
+  title 'Product Details'
+  layout Atlas_Core.Atlas_Default
 {
-  LAYOUTGRID {
-    ROW {
-      COLUMN (DesktopWidth: 12) {
-        DYNAMICTEXT 'Product: {1}' WITH ({1} = $Product/Name) (RenderMode: H3)
+  layoutgrid {
+    row {
+      column (desktopwidth: 12) {
+        dynamictext 'Product: {1}' with ({1} = $Product/Name) (rendermode: H3)
       }
     }
 
-    ROW {
-      COLUMN (DesktopWidth: 6) {
-        DATAVIEW dvProduct -> $Product {
-          TEXTBOX 'Name' -> Name
-          TEXTBOX 'Code' -> Code
-          TEXTAREA 'Description' -> Description
-          DATEPICKER 'Created' -> CreatedDate
-          CHECKBOX 'Active' -> IsActive
-          DROPDOWN 'Status' -> Status
+    row {
+      column (desktopwidth: 6) {
+        dataview dvProduct -> $Product {
+          textbox 'Name' -> Name
+          textbox 'Code' -> Code
+          textarea 'Description' -> description
+          datepicker 'Created' -> CreatedDate
+          checkbox 'Active' -> IsActive
+          dropdown 'Status' -> status
 
-          FOOTER {
-            ACTIONBUTTON 'Save' -> SAVE_CHANGES (ButtonStyle: Primary)
-            ACTIONBUTTON 'Cancel' -> CLOSE_PAGE
-            ACTIONBUTTON 'Process' -> MICROFLOW MyModule.ACT_ProcessProduct (
+          footer {
+            actionbutton 'Save' -> save_changes (buttonstyle: primary)
+            actionbutton 'Cancel' -> close_page
+            actionbutton 'Process' -> microflow MyModule.ACT_ProcessProduct (
               Product: $Product
-            ) (ButtonStyle: Success)
+            ) (buttonstyle: success)
           }
         }
       }
 
-      COLUMN (DesktopWidth: 6) {
-        DATAGRID dgRelated -> DATABASE MyModule.RelatedItem
-          WHERE [MyModule.RelatedItem_Product = $Product]
-          ORDER BY Name ASC
+      column (desktopwidth: 6) {
+        datagrid dgRelated -> database MyModule.RelatedItem
+          where [MyModule.RelatedItem_Product = $Product]
+          ORDER by Name asc
         {
-          ControlBar: {
-            ACTIONBUTTON 'New' -> CREATE_OBJECT MyModule.RelatedItem
-              THEN SHOW_PAGE MyModule.RelatedItem_Edit
-              (ButtonStyle: Primary)
+          controlbar: {
+            actionbutton 'New' -> create_object MyModule.RelatedItem
+              then show_page MyModule.RelatedItem_Edit
+              (buttonstyle: primary)
           }
-          Columns: {
-            COLUMN 'Item Name' -> Name
-            COLUMN 'Category' -> Category
-            COLUMN 'Price' -> Price
+          columns: {
+            column 'Item Name' -> Name
+            column 'Category' -> Category
+            column 'Price' -> Price
           }
         }
       }
@@ -132,18 +132,18 @@ Properties use `Name: value` syntax with colons:
 Complex widgets can have property groups in their body:
 
 ```mdl
-DATAGRID dgProducts -> DATABASE MyModule.Product {
-  ControlBar: {
-    ACTIONBUTTON 'New' -> CREATE_OBJECT MyModule.Product
-      THEN SHOW_PAGE MyModule.Product_Edit
-      (ButtonStyle: Primary)
+datagrid dgProducts -> database MyModule.Product {
+  controlbar: {
+    actionbutton 'New' -> create_object MyModule.Product
+      then show_page MyModule.Product_Edit
+      (buttonstyle: primary)
   }
-  Columns: {
-    COLUMN 'Name' -> Name
-    COLUMN 'Price' -> Price
-    COLUMN 'Actions' {
-      ACTIONBUTTON 'Edit' -> SHOW_PAGE MyModule.Product_Edit
-        (Product: $currentObject) (ButtonStyle: Default)
+  columns: {
+    column 'Name' -> Name
+    column 'Price' -> Price
+    column 'Actions' {
+      actionbutton 'Edit' -> show_page MyModule.Product_Edit
+        (Product: $currentObject) (buttonstyle: default)
     }
   }
 }
@@ -155,52 +155,52 @@ DATAGRID dgProducts -> DATABASE MyModule.Product {
 |---------|--------|----------|
 | Attribute | `-> Name` | Form inputs bound to entity attribute |
 | Variable | `-> $Product` | DataView/Container bound to page parameter |
-| Save | `-> SAVE_CHANGES [CLOSE_PAGE]` | Save button action |
-| Cancel | `-> CANCEL_CHANGES [CLOSE_PAGE]` | Cancel button action |
-| Close | `-> CLOSE_PAGE` | Close page action |
-| Delete | `-> DELETE` | Delete object action |
-| Show Page | `-> SHOW_PAGE Module.Page (params)` | Navigate to page |
-| Microflow | `-> MICROFLOW Module.MF (params)` | Call microflow |
-| Create+Show | `-> CREATE_OBJECT Entity THEN SHOW_PAGE Page` | Create and navigate |
-| Database | `-> DATABASE Entity WHERE [...] ORDER BY` | Grid/Gallery data source |
-| Selection | `-> SELECTION widgetName` | Master-detail binding |
+| Save | `-> save_changes [close_page]` | Save button action |
+| Cancel | `-> cancel_changes [close_page]` | Cancel button action |
+| Close | `-> close_page` | Close page action |
+| Delete | `-> delete` | Delete object action |
+| Show Page | `-> show_page Module.Page (params)` | Navigate to page |
+| Microflow | `-> microflow Module.MF (params)` | Call microflow |
+| Create+Show | `-> create_object entity then show_page page` | Create and navigate |
+| Database | `-> database entity where [...] ORDER by` | Grid/Gallery data source |
+| Selection | `-> selection widgetName` | Master-detail binding |
 
 ## Implemented Widgets
 
 ### Container Widgets
-- `LAYOUTGRID` with `ROW` and `COLUMN`
-- `CONTAINER`
-- `NAVIGATIONLIST` with `ITEM`
-- `FOOTER`
+- `layoutgrid` with `row` and `column`
+- `container`
+- `navigationlist` with `item`
+- `footer`
 
 ### Data Widgets
-- `DATAVIEW` - Single object form
-- `DATAGRID` - Data table (DataGrid2 widget)
-- `GALLERY` - Card gallery with selection
-- `LISTVIEW` - Simple list
+- `dataview` - Single object form
+- `datagrid` - Data table (DataGrid2 widget)
+- `gallery` - Card gallery with selection
+- `listview` - Simple list
 
 ### Input Widgets
-- `TEXTBOX` - Single-line text input
-- `TEXTAREA` - Multi-line text input
-- `CHECKBOX` - Boolean checkbox
-- `RADIOBUTTONS` - Radio button group
-- `DATEPICKER` - Date/time picker
-- `DROPDOWN` - Dropdown (deprecated, use COMBOBOX)
-- `COMBOBOX` - Combo box (pluggable widget)
+- `textbox` - Single-line text input
+- `textarea` - Multi-line text input
+- `checkbox` - Boolean checkbox
+- `radiobuttons` - Radio button group
+- `datepicker` - Date/time picker
+- `dropdown` - Dropdown (deprecated, use COMBOBOX)
+- `combobox` - Combo box (pluggable widget)
 
 ### Display Widgets
-- `DYNAMICTEXT` - Dynamic text with optional template
-- `TITLE` - Page heading
-- `TEXT` - Static text
+- `dynamictext` - Dynamic text with optional template
+- `title` - Page heading
+- `text` - Static text
 
 ### Action Widgets
-- `ACTIONBUTTON` - Button with action
-- `LINKBUTTON` - Link-styled button
+- `actionbutton` - Button with action
+- `linkbutton` - Link-styled button
 
 ### Special Widgets
-- `SNIPPETCALL` - Embed snippet
-- `TEMPLATE` - Template for Gallery/ListView items
-- `FILTER` with `TEXTFILTER` - Gallery filter
+- `snippetcall` - Embed snippet
+- `template` - Template for Gallery/ListView items
+- `filter` with `textfilter` - Gallery filter
 
 ## Property Name Mapping
 
@@ -208,12 +208,12 @@ Property names match Studio Pro for familiarity:
 
 | MDL Property | Widget Types |
 |--------------|--------------|
-| `Content` | Text widgets |
-| `RenderMode` | Text widgets (H1-H6, Paragraph, Text) |
-| `ButtonStyle` | Buttons (Default, Primary, Success, etc.) |
-| `DesktopWidth` | Columns (1-12, AutoFill, AutoFit) |
-| `Selection` | Gallery (Single, Multiple, None) |
-| `Class` | All widgets |
+| `content` | Text widgets |
+| `rendermode` | Text widgets (H1-H6, Paragraph, Text) |
+| `buttonstyle` | Buttons (Default, Primary, Success, etc.) |
+| `desktopwidth` | Columns (1-12, AutoFill, AutoFit) |
+| `selection` | Gallery (Single, Multiple, None) |
+| `class` | All widgets |
 
 ## Implementation Files
 
@@ -252,7 +252,7 @@ See `mdl-examples/doctype-tests/03-page-examples-v2.mdl` for comprehensive examp
 # Parse V2 syntax
 ./bin/mxcli check mdl-examples/doctype-tests/03-page-examples-v2.mdl
 
-# Execute against project
+# execute against project
 ./bin/mxcli -p app.mpr -c "execute script 'mdl-examples/doctype-tests/03-page-examples-v2.mdl'"
 
 # Verify in Studio Pro

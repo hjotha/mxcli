@@ -50,9 +50,9 @@ The current TUI (`mxcli tui`) uses bubbles `list.Model` for panels with page-bas
 
 ```go
 type ScrollListItem interface {
-    Label() string
-    Icon() string
-    Description() string
+    label() string
+    icon() string
+    description() string
     FilterValue() string
 }
 
@@ -81,7 +81,7 @@ type ScrollList struct {
 
 ```go
 type BreadcrumbSegment struct {
-    Label string
+    label string
 }
 
 type Breadcrumb struct {
@@ -90,7 +90,7 @@ type Breadcrumb struct {
 }
 ```
 
-Methods: `Push()`, `PopTo(level)`, `Depth()`, `View()` (renders `A > B > C`), `ClickedSegment(x int) int`.
+Methods: `Push()`, `PopTo(level)`, `depth()`, `view()` (renders `A > B > C`), `ClickedSegment(x int) int`.
 
 ### Panel Refactor
 
@@ -113,8 +113,8 @@ const (
 )
 
 type PanelRect struct {
-    X, Y, Width, Height int
-    Visible             bool
+    X, Y, width, height int
+    visible             bool
 }
 ```
 
@@ -155,8 +155,8 @@ ScrollList handles translated coordinates internally. Breadcrumb click detected 
 
 Panel 3 shows compact metadata card:
 ```
-Type:    Entity
-Module:  MyModule
+type:    entity
+module:  MyModule
 Name:    Customer
 Attrs:   5  Assocs: 2
 [Enter] view details
@@ -202,7 +202,7 @@ Results → `HighlightNDSL()` → `OpenOverlayMsg` → fullscreen overlay
 
 ```
 Phase 1 (ScrollList + Breadcrumb)
-  ├──→ Phase 2 (Layout + Z Mode)
+  ├──→ Phase 2 (layout + Z Mode)
   │       └──→ Phase 3 (Mouse)
   └──→ Phase 4 (Summary + Overlay + Highlighting)
           └──→ Phase 5 (BSON/NDSL Commands)

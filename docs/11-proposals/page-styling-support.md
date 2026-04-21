@@ -6,46 +6,46 @@ Mendix has four styling mechanisms on every widget, all stored in a BSON `Forms$
 
 | Mechanism | BSON Field | Type | Example |
 |---|---|---|---|
-| CSS classes | `Class` | string | `"btn-lg mx-spacing-top-large"` |
-| Inline CSS | `Style` | string | `"color: red; margin: 10px;"` |
+| CSS classes | `class` | string | `"btn-lg mx-spacing-top-large"` |
+| Inline CSS | `style` | string | `"color: red; margin: 10px;"` |
 | Dynamic classes | `DynamicClasses` | string (XPath) | `"if $currentObject/IsActive then 'highlight' else ''"` |
-| Design properties | `DesignProperties` | array of typed tokens | Atlas UI spacing, colors, toggles |
+| Design properties | `designproperties` | array of typed tokens | Atlas UI spacing, colors, toggles |
 
-Additionally, some widgets have their own style enums (e.g. `ButtonStyle: Primary` on buttons — already supported as a separate keyword).
+Additionally, some widgets have their own style enums (e.g. `buttonstyle: primary` on buttons — already supported as a separate keyword).
 
-**What exists today:** The serializer (`serializeAppearance()` in `writer_widgets.go`) writes the `Forms$Appearance` BSON structure but always with empty values. `BaseWidget` has `Class` and `Style` fields in the Go struct but they're never populated from MDL. DESCRIBE doesn't output any styling. The `ButtonStyle:` keyword was renamed from `Style:` to free up `Style:` for CSS inline styling.
+**What exists today:** The serializer (`serializeAppearance()` in `writer_widgets.go`) writes the `Forms$Appearance` BSON structure but always with empty values. `BaseWidget` has `class` and `style` fields in the Go struct but they're never populated from MDL. DESCRIBE doesn't output any styling. The `buttonstyle:` keyword was renamed from `style:` to free up `style:` for CSS inline styling.
 
 ## Proposal: Three Phases
 
-### Phase 1 — `Class` and `Style` properties (highest value) ✅ DONE
+### Phase 1 — `class` and `style` properties (highest value) ✅ DONE
 
-`Class` and `Style` are standard widget properties in the V3 syntax:
+`class` and `style` are standard widget properties in the V3 syntax:
 
 ```sql
-TEXTBOX txtName (Label: 'Name', Attribute: Name, Class: 'form-control-lg mx-spacing-top-large')
-CONTAINER ctn1 (Class: 'card', Style: 'padding: 16px; border-radius: 8px;') {
-  DYNAMICTEXT txt1 (Content: '{1}', Params: [FullName], Class: 'text-primary h3')
+textbox txtName (label: 'Name', attribute: Name, class: 'form-control-lg mx-spacing-top-large')
+container ctn1 (class: 'card', style: 'padding: 16px; border-radius: 8px;') {
+  dynamictext txt1 (content: '{1}', params: [FullName], class: 'text-primary h3')
 }
-ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary, Class: 'btn-block')
+actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary, class: 'btn-block')
 ```
 
 This is the most common way developers style Mendix apps and maps directly to existing fields on `BaseWidget`. Implementation:
 
-- **Grammar**: `CLASS` and `STYLE` keywords in `widgetPropertyV3` rule (MDLParser.g4)
+- **Grammar**: `class` and `style` keywords in `widgetPropertyV3` rule (MDLParser.g4)
 - **AST**: `GetClass()` and `GetStyle()` helpers on `WidgetV3` (ast_page_v3.go)
 - **Visitor**: Extracts Class/Style from parsed string literals (visitor_page_v3.go)
 - **Builder**: `applyWidgetAppearance()` sets Class/Style on any widget via `SetAppearance()` (cmd_pages_builder_v3.go)
 - **Serializer**: `serializeAppearance(class, style)` passes values through to BSON (writer_widgets.go + all callers)
 - **Describe Parse**: Extracts Class/Style from `Appearance` BSON (cmd_pages_describe_parse.go)
-- **Describe Output**: Emits `Class:` and `Style:` when non-empty via `appendAppearanceProps()` (cmd_pages_describe_output.go)
+- **Describe Output**: Emits `class:` and `style:` when non-empty via `appendAppearanceProps()` (cmd_pages_describe_output.go)
 - **Wireframe**: Class/Style fields on `wireframeNode` (cmd_page_wireframe.go)
 
 ### Phase 2 — `DynamicClasses` (conditional styling)
 
 ```sql
-CONTAINER ctn1 (
-  Class: 'card',
-  DynamicClasses: "if $currentObject/Status = 'Error' then 'alert-danger' else 'alert-info'"
+container ctn1 (
+  class: 'card',
+  DynamicClasses: "if $currentObject/status = 'Error' then 'alert-danger' else 'alert-info'"
 ) {
   ...
 }
@@ -62,7 +62,7 @@ Design properties are structured arrays of typed key-value pairs set via Atlas U
 Design property **definitions** (what properties are available per widget type) are NOT in the MPR. They live in the project's `themesource` folder:
 
 ```
-<project-root>/themesource/<Module>/<platform>/design-properties.json
+<project-root>/themesource/<module>/<platform>/design-properties.json
 ```
 
 The primary file for most Mendix apps:
@@ -79,10 +79,10 @@ The `design-properties.json` is a JSON object where keys are widget type names a
 
 ```json
 {
-    "Widget": [
-        { "name": "Spacing top", "type": "Dropdown", "description": "...",
+    "widget": [
+        { "name": "Spacing top", "type": "dropdown", "description": "...",
           "options": [
-            { "name": "None", "class": "spacing-outer-top-none" },
+            { "name": "none", "class": "spacing-outer-top-none" },
             { "name": "Small", "class": "spacing-outer-top" },
             { "name": "Large", "class": "spacing-outer-top-large" }
           ]
@@ -91,36 +91,36 @@ The `design-properties.json` is a JSON object where keys are widget type names a
           "class": "hide-phone" }
     ],
     "DivContainer": [
-        { "name": "Align content", "type": "Dropdown", "description": "...",
+        { "name": "Align content", "type": "dropdown", "description": "...",
           "options": [
-            { "name": "Left align as a row", "class": "row-left" },
+            { "name": "left align as a row", "class": "row-left" },
             { "name": "Center align as a row", "class": "row-center" }
           ]
         },
-        { "name": "Background color", "type": "Dropdown", "description": "...",
+        { "name": "background color", "type": "dropdown", "description": "...",
           "options": [
-            { "name": "Brand Primary", "class": "background-primary" },
+            { "name": "Brand primary", "class": "background-primary" },
             { "name": "Brand Inverse", "class": "background-inverse" }
           ]
         }
     ],
-    "Button": [
-        { "name": "Size", "type": "Dropdown", ... },
-        { "name": "Full width", "type": "Toggle", "class": "btn-block", ... },
+    "button": [
+        { "name": "Size", "type": "dropdown", ... },
+        { "name": "full width", "type": "Toggle", "class": "btn-block", ... },
         { "name": "Border", "type": "Toggle", "class": "btn-bordered", ... }
     ],
     "com.mendix.widget.web.accordion.Accordion": [ ... ]
 }
 ```
 
-**Widget type keys**: Built-in widgets use Model SDK class names (`DivContainer`, `Button`, `DataGrid`, `ListView`, `DynamicText`). Pluggable widgets use their widget ID (`com.mendix.widget.web.accordion.Accordion`). The `Widget` key defines properties that apply to ALL widgets (inherited by all subtypes).
+**Widget type keys**: Built-in widgets use Model SDK class names (`DivContainer`, `button`, `datagrid`, `listview`, `dynamictext`). Pluggable widgets use their widget ID (`com.mendix.widget.web.accordion.Accordion`). The `widget` key defines properties that apply to ALL widgets (inherited by all subtypes).
 
 **Five property types**:
 
 | Type | Description | Value stored in MPR |
 |------|-------------|---------------------|
 | `Toggle` | On/off CSS class | `ToggleDesignPropertyValue` (presence = on) |
-| `Dropdown` | Single-select option list | `OptionDesignPropertyValue` (option name string) |
+| `dropdown` | Single-select option list | `OptionDesignPropertyValue` (option name string) |
 | `ColorPicker` | Dropdown with color preview | `OptionDesignPropertyValue` (same storage as Dropdown) |
 | `ToggleButtonGroup` | Related options as buttons | `OptionDesignPropertyValue` (single) or `CompoundDesignPropertyValue` (multi) |
 | `Spacing` | Margin/padding in 4 directions | `CompoundDesignPropertyValue` (nested properties) |
@@ -131,39 +131,39 @@ Design property **values** are stored per widget in `Appearance.DesignProperties
 
 ```bson
 "Appearance": {
-  "$Type": "Forms$Appearance",
-  "Class": "",
-  "Style": "",
+  "$type": "Forms$Appearance",
+  "class": "",
+  "style": "",
   "DynamicClasses": "",
-  "DesignProperties": [
+  "designproperties": [
     2,
     {
-      "$Type": "Forms$DesignPropertyValue",
-      "Key": "Spacing top",
-      "Value": {
-        "$Type": "Forms$OptionDesignPropertyValue",
+      "$type": "Forms$DesignPropertyValue",
+      "key": "Spacing top",
+      "value": {
+        "$type": "Forms$OptionDesignPropertyValue",
         "Option": "Large"
       }
     },
     {
-      "$Type": "Forms$DesignPropertyValue",
-      "Key": "Full width",
-      "Value": {
-        "$Type": "Forms$ToggleDesignPropertyValue"
+      "$type": "Forms$DesignPropertyValue",
+      "key": "full width",
+      "value": {
+        "$type": "Forms$ToggleDesignPropertyValue"
       }
     },
     {
-      "$Type": "Forms$DesignPropertyValue",
-      "Key": "Spacing",
-      "Value": {
-        "$Type": "Forms$CompoundDesignPropertyValue",
-        "Properties": [
+      "$type": "Forms$DesignPropertyValue",
+      "key": "Spacing",
+      "value": {
+        "$type": "Forms$CompoundDesignPropertyValue",
+        "properties": [
           2,
           {
-            "$Type": "Forms$DesignPropertyValue",
-            "Key": "Top",
-            "Value": {
-              "$Type": "Forms$OptionDesignPropertyValue",
+            "$type": "Forms$DesignPropertyValue",
+            "key": "Top",
+            "value": {
+              "$type": "Forms$OptionDesignPropertyValue",
               "Option": "M"
             }
           }
@@ -177,69 +177,69 @@ Design property **values** are stored per widget in `Appearance.DesignProperties
 **Value type hierarchy**:
 - `Forms$ToggleDesignPropertyValue` — empty struct, presence means enabled
 - `Forms$OptionDesignPropertyValue` — has `Option` string (the selected option name)
-- `Forms$CustomDesignPropertyValue` — has `Value` string (arbitrary text)
-- `Forms$CompoundDesignPropertyValue` — has nested `Properties` array of `DesignPropertyValue`
+- `Forms$CustomDesignPropertyValue` — has `value` string (arbitrary text)
+- `Forms$CompoundDesignPropertyValue` — has nested `properties` array of `DesignPropertyValue`
 
 #### Inline Syntax in CREATE PAGE
 
-Design properties can be included in `CREATE PAGE` using an explicit `DesignProperties:` array on any widget. This keeps them clearly separated from built-in widget properties (Class, Style, Label, Binds, etc.):
+Design properties can be included in `create page` using an explicit `designproperties:` array on any widget. This keeps them clearly separated from built-in widget properties (Class, Style, Label, Binds, etc.):
 
 ```sql
-CREATE PAGE MyModule.Customer_Edit
+create page MyModule.Customer_Edit
 (
-  Params: { $Customer: MyModule.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: MyModule.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    CONTAINER ctn1 (
-      Class: 'card',
-      Style: 'padding: 16px;',
-      DesignProperties: [
+  dataview dvCustomer (datasource: $Customer) {
+    container ctn1 (
+      class: 'card',
+      style: 'padding: 16px;',
+      designproperties: [
         'Spacing top': 'Large',
         'Background color': 'Brand Primary',
-        'Hide on phone': ON
+        'Hide on phone': on
       ]
     ) {
-      TEXTBOX txtName (Label: 'Name', Attribute: Name)
-      TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
+      textbox txtName (label: 'Name', attribute: Name)
+      textbox txtEmail (label: 'Email', attribute: Email)
     }
 
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (
-        Caption: 'Save',
-        Action: SAVE_CHANGES,
-        ButtonStyle: Primary,
-        DesignProperties: ['Full width': ON, 'Size': 'Large']
+    footer footer1 {
+      actionbutton btnSave (
+        caption: 'Save',
+        action: save_changes,
+        buttonstyle: primary,
+        designproperties: ['Full width': on, 'Size': 'Large']
       )
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
 ```
 
 **Syntax rules**:
-- `DesignProperties:` is followed by `[` ... `]` (array brackets, same pattern as `Params:`)
-- Each entry is `STRING_LITERAL COLON (STRING_LITERAL | ON | OFF)` — quoted key, colon, value
-- Toggle properties use `ON` / `OFF` keywords
+- `designproperties:` is followed by `[` ... `]` (array brackets, same pattern as `params:`)
+- Each entry is `STRING_LITERAL COLON (STRING_LITERAL | on | off)` — quoted key, colon, value
+- Toggle properties use `on` / `off` keywords
 - Dropdown/ColorPicker/ToggleButtonGroup properties use quoted option name strings
 - Entries are comma-separated; single-line for few properties, multi-line for many
-- The array is optional — omitting `DesignProperties:` means no design properties (same as today)
+- The array is optional — omitting `designproperties:` means no design properties (same as today)
 
-**Why explicit `DesignProperties:` wrapper** (not bare quoted keys in the property block):
-1. **No ambiguity** — a design property named `Style` or `Label` won't collide with built-in keywords
-2. **Cleaner grammar** — one rule for `DESIGNPROPERTIES COLON LBRACKET ... RBRACKET` instead of a catch-all
+**Why explicit `designproperties:` wrapper** (not bare quoted keys in the property block):
+1. **No ambiguity** — a design property named `style` or `label` won't collide with built-in keywords
+2. **Cleaner grammar** — one rule for `designproperties COLON LBRACKET ... RBRACKET` instead of a catch-all
 3. **Explicit intent** — reading the MDL you immediately know these are theme-driven, not built-in settings
-4. **Simpler builder logic** — everything inside `DesignProperties:` needs theme registry lookup; everything outside doesn't
+4. **Simpler builder logic** — everything inside `designproperties:` needs theme registry lookup; everything outside doesn't
 
-**Serialization dependency**: The builder must read the project's `themesource/*/web/design-properties.json` to determine the BSON value type for each property. For example, `'Full width': ON` serializes as `Forms$ToggleDesignPropertyValue` (empty struct), while `'Size': 'Large'` serializes as `Forms$OptionDesignPropertyValue` with `Option: "Large"`. Without the theme registry, the builder cannot distinguish between property types.
+**Serialization dependency**: The builder must read the project's `themesource/*/web/design-properties.json` to determine the BSON value type for each property. For example, `'full width': on` serializes as `Forms$ToggleDesignPropertyValue` (empty struct), while `'Size': 'Large'` serializes as `Forms$OptionDesignPropertyValue` with `Option: "Large"`. Without the theme registry, the builder cannot distinguish between property types.
 
-**DESCRIBE roundtrip**: `DESCRIBE PAGE` outputs `DesignProperties: [...]` on any widget that has non-empty design properties, making the output re-executable.
+**DESCRIBE roundtrip**: `describe page` outputs `designproperties: [...]` on any widget that has non-empty design properties, making the output re-executable.
 
 #### Proposed Commands — Styling Fragments
 
-In addition to inline syntax in `CREATE PAGE`, design properties can be managed through **fragment-style commands** that operate on individual widgets within existing pages. This is useful for modifying styling without rewriting entire pages.
+In addition to inline syntax in `create page`, design properties can be managed through **fragment-style commands** that operate on individual widgets within existing pages. This is useful for modifying styling without rewriting entire pages.
 
 ##### 1. Discover Available Design Properties
 
@@ -247,7 +247,7 @@ Read the `design-properties.json` from the project's themesource and show what p
 
 ```sql
 -- Show all design properties available for Container widgets
-SHOW DESIGN PROPERTIES FOR CONTAINER;
+show design properties for container;
 
 -- Output:
 -- From: Widget (inherited)
@@ -260,10 +260,10 @@ SHOW DESIGN PROPERTIES FOR CONTAINER;
 --   Background color     Dropdown    [Brand Default, Brand Primary, Brand Inverse, ...]
 
 -- Show available properties for a pluggable widget
-SHOW DESIGN PROPERTIES FOR DATAGRID2;
+show design properties for DATAGRID2;
 
 -- Show available properties for all widget types
-SHOW DESIGN PROPERTIES;
+show design properties;
 ```
 
 This requires reading `themesource/*/web/design-properties.json` from the project directory and mapping widget type keys to MDL widget types.
@@ -274,7 +274,7 @@ Show all styling (Class, Style, DynamicClasses, and DesignProperties) for a spec
 
 ```sql
 -- Show styling for a specific widget on a page
-DESCRIBE STYLING ON PAGE MyModule.CustomerEdit WIDGET btnSave;
+describe styling on page MyModule.CustomerEdit widget btnSave;
 
 -- Output:
 -- WIDGET btnSave (ActionButton)
@@ -285,7 +285,7 @@ DESCRIBE STYLING ON PAGE MyModule.CustomerEdit WIDGET btnSave;
 --     Full width: ON
 
 -- Show styling for ALL widgets on a page
-DESCRIBE STYLING ON PAGE MyModule.CustomerEdit;
+describe styling on page MyModule.CustomerEdit;
 
 -- Output (one section per styled widget):
 -- WIDGET ctn1 (Container)
@@ -304,36 +304,36 @@ Change styling properties on a single widget without rewriting the entire page:
 
 ```sql
 -- Set Class and Style on a widget
-ALTER STYLING ON PAGE MyModule.CustomerEdit WIDGET btnSave
-  SET Class = 'btn-block btn-lg',
-      Style = 'margin-top: 16px;';
+alter styling on page MyModule.CustomerEdit widget btnSave
+  set class = 'btn-block btn-lg',
+      style = 'margin-top: 16px;';
 
 -- Set a design property (dropdown/colorpicker selection)
-ALTER STYLING ON PAGE MyModule.CustomerEdit WIDGET ctn1
-  SET 'Spacing top' = 'Large',
+alter styling on page MyModule.CustomerEdit widget ctn1
+  set 'Spacing top' = 'Large',
       'Background color' = 'Brand Primary';
 
 -- Toggle a design property on
-ALTER STYLING ON PAGE MyModule.CustomerEdit WIDGET btnSave
-  SET 'Full width' = ON;
+alter styling on page MyModule.CustomerEdit widget btnSave
+  set 'Full width' = on;
 
 -- Toggle a design property off
-ALTER STYLING ON PAGE MyModule.CustomerEdit WIDGET btnSave
-  SET 'Full width' = OFF;
+alter styling on page MyModule.CustomerEdit widget btnSave
+  set 'Full width' = off;
 
 -- Clear all design properties on a widget
-ALTER STYLING ON PAGE MyModule.CustomerEdit WIDGET btnSave
-  CLEAR DESIGN PROPERTIES;
+alter styling on page MyModule.CustomerEdit widget btnSave
+  clear design properties;
 
 -- Mixed: set Class, Style, and design properties together
-ALTER STYLING ON PAGE MyModule.CustomerEdit WIDGET ctn1
-  SET Class = 'card custom-card',
-      Style = 'border-radius: 12px;',
+alter styling on page MyModule.CustomerEdit widget ctn1
+  set class = 'card custom-card',
+      style = 'border-radius: 12px;',
       'Spacing top' = 'Large',
       'Background color' = 'Brand Primary';
 ```
 
-The `ALTER STYLING` command:
+The `alter styling` command:
 1. Opens the page from the MPR
 2. Finds the widget by name (searching the widget tree)
 3. Reads the current `Appearance` BSON
@@ -344,45 +344,45 @@ This is a **surgical update** — it doesn't require parsing or rewriting the fu
 
 ##### 4. Bulk Styling Updates (Extension of UPDATE WIDGETS)
 
-The existing `UPDATE WIDGETS` command could be extended for styling:
+The existing `update widgets` command could be extended for styling:
 
 ```sql
 -- Set a design property on all buttons across a module
-UPDATE WIDGETS SET 'Full width' = ON
-  WHERE WidgetType LIKE '%Button%' IN MyModule DRY RUN;
+update widgets set 'Full width' = on
+  where widgettype like '%Button%' in MyModule dry run;
 
 -- Set Class on all containers
-UPDATE WIDGETS SET Class = 'card'
-  WHERE WidgetType = 'DivContainer' IN MyModule;
+update widgets set class = 'card'
+  where widgettype = 'DivContainer' in MyModule;
 ```
 
 #### Widget Type Mapping
 
-The `design-properties.json` keys must be mapped to BSON `$Type` values used in the MPR:
+The `design-properties.json` keys must be mapped to BSON `$type` values used in the MPR:
 
 | design-properties.json key | BSON $Type | MDL keyword |
 |---------------------------|------------|-------------|
-| `Widget` | *(all)* | *(all)* |
-| `DivContainer` | `Forms$DivContainer` | `CONTAINER` |
-| `Button` / `ActionButton` | `Forms$ActionButton` | `ACTIONBUTTON` |
-| `DataGrid` | `Forms$DataGrid` | `DATAGRID` |
-| `ListView` | `Forms$ListView` | `LISTVIEW` |
-| `DynamicText` | `Forms$DynamicText` | `DYNAMICTEXT` |
-| `StaticImageViewer` | `Forms$StaticImageViewer` | `STATICIMAGE` |
-| `Label` | `Forms$Label` | `STATICTEXT` |
-| `GroupBox` | `Forms$GroupBox` | `GROUPBOX` |
-| `TabContainer` | `Forms$TabContainer` | `TABCONTAINER` |
-| Pluggable widget ID | `CustomWidgets$CustomWidget` | Widget-specific |
+| `widget` | *(all)* | *(all)* |
+| `DivContainer` | `Forms$DivContainer` | `container` |
+| `button` / `actionbutton` | `Forms$actionbutton` | `actionbutton` |
+| `datagrid` | `Forms$datagrid` | `datagrid` |
+| `listview` | `Forms$listview` | `listview` |
+| `dynamictext` | `Forms$dynamictext` | `dynamictext` |
+| `StaticImageViewer` | `Forms$StaticImageViewer` | `staticimage` |
+| `label` | `Forms$label` | `statictext` |
+| `groupbox` | `Forms$groupbox` | `groupbox` |
+| `tabcontainer` | `Forms$tabcontainer` | `tabcontainer` |
+| Pluggable widget ID | `CustomWidgets$customwidget` | Widget-specific |
 
 #### Implementation Approach
 
 **Step 1: Theme reader** — Parse `themesource/*/web/design-properties.json` files, merge by widget type, and build an in-memory registry of available properties per widget type. This is a prerequisite for both inline syntax and fragment commands.
 
-**Step 2: Grammar + AST + Visitor** — Add `DESIGNPROPERTIES COLON LBRACKET designPropertyEntry (COMMA designPropertyEntry)* RBRACKET` rule to `widgetPropertyV3` in MDLParser.g4. AST stores design properties as `map[string]string` on `WidgetV3` (key = property name, value = option name or "ON"/"OFF"). Visitor extracts from parse tree.
+**Step 2: Grammar + AST + Visitor** — Add `designproperties COLON LBRACKET designPropertyEntry (COMMA designPropertyEntry)* RBRACKET` rule to `widgetPropertyV3` in MDLParser.g4. AST stores design properties as `map[string]string` on `WidgetV3` (key = property name, value = option name or "ON"/"OFF"). Visitor extracts from parse tree.
 
 **Step 3: Builder + Serializer** — In `buildWidgetV3`, read design properties from AST, look up each in the theme registry to determine the BSON value type, and pass to a new `serializeDesignProperties()` function that builds the `Forms$DesignPropertyValue` array inside `Appearance`.
 
-**Step 4: DESCRIBE Parse + Output** — Parse `DesignProperties` array from Appearance BSON, store on `rawWidget`, and emit `DesignProperties: [...]` in MDL output when non-empty.
+**Step 4: DESCRIBE Parse + Output** — Parse `designproperties` array from Appearance BSON, store on `rawWidget`, and emit `designproperties: [...]` in MDL output when non-empty.
 
 **Step 5: DESCRIBE STYLING** — Dedicated command to show all styling on a widget or page, with human-readable output cross-referencing the theme registry.
 
@@ -392,11 +392,11 @@ The `design-properties.json` keys must be mapped to BSON `$Type` values used in 
 
 #### Open Questions
 
-1. **Snippet styling** — Should `ALTER STYLING` also work on snippets (`ALTER STYLING ON SNIPPET Module.Name WIDGET ...`)?
+1. **Snippet styling** — Should `alter styling` also work on snippets (`alter styling on snippet Module.Name widget ...`)?
 2. **Compound properties** — Spacing has nested structure (margin-top, margin-bottom, etc.). Should we flatten to `'Spacing.Margin.Top' = 'M'` or use a nested syntax?
-3. **Validation** — Should `ALTER STYLING` reject unknown property names / invalid option values, or allow them (for forward compatibility with newer themes)?
+3. **Validation** — Should `alter styling` reject unknown property names / invalid option values, or allow them (for forward compatibility with newer themes)?
 4. **Theme discovery** — The MPR path gives us the project root, but we need to verify `themesource/` exists and handle projects without Atlas Core.
 
 ## Recommendation
 
-Phase 1 alone covers ~90% of real-world styling needs. It's a small change (the plumbing already exists in `BaseWidget` and `serializeAppearance`) and fits naturally into the existing property syntax. Phase 2 is a straightforward extension. Phase 3 provides two complementary interfaces: inline `DesignProperties: [...]` in `CREATE PAGE` for new pages, and fragment commands (`DESCRIBE STYLING`, `ALTER STYLING`, `SHOW DESIGN PROPERTIES`) for surgical updates to existing pages. Both depend on a theme reader that parses `design-properties.json` from the project's `themesource` folder.
+Phase 1 alone covers ~90% of real-world styling needs. It's a small change (the plumbing already exists in `BaseWidget` and `serializeAppearance`) and fits naturally into the existing property syntax. Phase 2 is a straightforward extension. Phase 3 provides two complementary interfaces: inline `designproperties: [...]` in `create page` for new pages, and fragment commands (`describe styling`, `alter styling`, `show design properties`) for surgical updates to existing pages. Both depend on a theme reader that parses `design-properties.json` from the project's `themesource` folder.

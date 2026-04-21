@@ -14,8 +14,8 @@ Send MDL commands to a running mxcli TUI over a Unix socket. **All agent actions
 | Agent action | Maps to human action |
 |-------------|---------------------|
 | `exec` | Human presses `x` → ExecView with MDL → Ctrl+E to execute |
-| `list` | Same as `exec` with `SHOW ...` command |
-| `describe` | Same as `exec` with `DESCRIBE ...` command |
+| `list` | Same as `exec` with `show ...` command |
+| `describe` | Same as `exec` with `describe ...` command |
 | `delete` | Human presses `D` → ConfirmView → `y` to confirm |
 | `create_module` | Human presses `C` → InputView → Enter to submit |
 | `navigate` | Human presses `Space` → jumps to element |
@@ -37,14 +37,14 @@ mxcli tui -p app.mpr --agent-socket /tmp/mxcli-agent.sock --agent-auto-proceed
 ### 2. Send commands via socat
 
 ```bash
-# All UI-visible actions need socat -t timeout (they go through views)
-printf '{"id":1,"action":"exec","mdl":"SHOW ENTITIES"}\n' | socat -t 30 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# all UI-visible actions need socat -t timeout (they go through views)
+printf '{"id":1,"action":"exec","mdl":"SHOW ENTITIES"}\n' | socat -t 30 - UNIX-connect:/tmp/mxcli-agent.sock
 
 # check uses Docker mx check — allow longer timeout
-printf '{"id":2,"action":"check"}\n' | socat -t 120 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+printf '{"id":2,"action":"check"}\n' | socat -t 120 - UNIX-connect:/tmp/mxcli-agent.sock
 
 # state and format are instant (no UI round-trip)
-echo '{"id":3,"action":"state"}' | socat - UNIX-CONNECT:/tmp/mxcli-agent.sock
+echo '{"id":3,"action":"state"}' | socat - UNIX-connect:/tmp/mxcli-agent.sock
 ```
 
 ## Protocol
@@ -54,7 +54,7 @@ JSON-line protocol over Unix socket. One request per line, one JSON response per
 ### Request
 
 ```json
-{"id": 1, "action": "exec", "mdl": "CREATE ENTITY Mod.E (Name: String(100));"}
+{"id": 1, "action": "exec", "mdl": "create entity Mod.E (Name: string(100));"}
 ```
 
 | Field | Required by | Description |
@@ -84,7 +84,7 @@ Supported types for `list`: plural forms (`entities`, `microflows`, `pages`, `mo
 ### Response
 
 ```json
-{"id": 1, "ok": true, "result": "Created entity: Mod.E", "mode": "overlay:exec-result", "changes": [{"action":"created","target":"entity: Mod.E"}]}
+{"id": 1, "ok": true, "result": "created entity: Mod.E", "mode": "overlay:exec-result", "changes": [{"action":"created","target":"entity: Mod.E"}]}
 ```
 
 | Field | Description |
@@ -115,7 +115,7 @@ The `state` action returns a structured JSON object:
 
 | Action | UI View | Visible | Example |
 |--------|---------|---------|---------|
-| `exec` | ExecView → Overlay | yes | `{"id":1,"action":"exec","mdl":"CREATE ENTITY M.E (X: String(100));"}` |
+| `exec` | ExecView → Overlay | yes | `{"id":1,"action":"exec","mdl":"create entity M.E (X: string(100));"}` |
 | `list` | ExecView → Overlay | yes | `{"id":2,"action":"list","target":"entities:MyModule"}` |
 | `describe` | ExecView → Overlay | yes | `{"id":3,"action":"describe","target":"entity:M.E"}` |
 | `check` | Status bar → Overlay | yes | `{"id":4,"action":"check"}` |
@@ -149,32 +149,32 @@ The status bar shows `⚡agent` badge while an agent operation is in progress.
 ## Typical Claude Workflow
 
 ```bash
-# 1. Check current state
-echo '{"id":1,"action":"state"}' | socat - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# 1. check current state
+echo '{"id":1,"action":"state"}' | socat - UNIX-connect:/tmp/mxcli-agent.sock
 
-# 2. List entities in a module (human sees ExecView + Overlay)
-printf '{"id":2,"action":"list","target":"entities:MyModule"}\n' | socat -t 30 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# 2. list entities in a module (human sees ExecView + Overlay)
+printf '{"id":2,"action":"list","target":"entities:MyModule"}\n' | socat -t 30 - UNIX-connect:/tmp/mxcli-agent.sock
 
-# 3. Describe an entity (human sees ExecView + Overlay)
-printf '{"id":3,"action":"describe","target":"entity:MyModule.Customer"}\n' | socat -t 30 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# 3. describe an entity (human sees ExecView + Overlay)
+printf '{"id":3,"action":"describe","target":"entity:MyModule.Customer"}\n' | socat -t 30 - UNIX-connect:/tmp/mxcli-agent.sock
 
-# 4. Create a new module (human sees InputView + Overlay)
-printf '{"id":4,"action":"create_module","name":"Orders"}\n' | socat -t 30 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# 4. create a new module (human sees InputView + Overlay)
+printf '{"id":4,"action":"create_module","name":"Orders"}\n' | socat -t 30 - UNIX-connect:/tmp/mxcli-agent.sock
 
-# 5. Execute MDL (human sees ExecView + Overlay)
-printf '{"id":5,"action":"exec","mdl":"CREATE ENTITY Orders.Order (OrderNo: String(20), Total: Decimal);"}\n' | socat -t 30 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# 5. execute MDL (human sees ExecView + Overlay)
+printf '{"id":5,"action":"exec","mdl":"CREATE ENTITY Orders.Order (OrderNo: String(20), Total: Decimal);"}\n' | socat -t 30 - UNIX-connect:/tmp/mxcli-agent.sock
 
-# 6. Delete an entity (human sees ConfirmView + Overlay)
-printf '{"id":6,"action":"delete","target":"entity:Orders.OldEntity"}\n' | socat -t 30 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# 6. delete an entity (human sees ConfirmView + Overlay)
+printf '{"id":6,"action":"delete","target":"entity:Orders.OldEntity"}\n' | socat -t 30 - UNIX-connect:/tmp/mxcli-agent.sock
 
-# 7. Format MDL text (instant, no UI)
-echo '{"id":7,"action":"format","mdl":"create entity m.e(x:string(100));"}' | socat - UNIX-CONNECT:/tmp/mxcli-agent.sock
+# 7. format MDL text (instant, no UI)
+echo '{"id":7,"action":"format","mdl":"create entity m.e(x:string(100));"}' | socat - UNIX-connect:/tmp/mxcli-agent.sock
 
 # 8. Navigate to see result (human sees browser jump)
-echo '{"id":8,"action":"navigate","target":"entity:Orders.Order"}' | socat - UNIX-CONNECT:/tmp/mxcli-agent.sock
+echo '{"id":8,"action":"navigate","target":"entity:Orders.Order"}' | socat - UNIX-connect:/tmp/mxcli-agent.sock
 
 # 9. Verify with check (human sees status bar + Overlay)
-printf '{"id":9,"action":"check"}\n' | socat -t 120 - UNIX-CONNECT:/tmp/mxcli-agent.sock
+printf '{"id":9,"action":"check"}\n' | socat -t 120 - UNIX-connect:/tmp/mxcli-agent.sock
 ```
 
 ## Common Mistakes
@@ -195,7 +195,7 @@ printf '{"id":9,"action":"check"}\n' | socat -t 120 - UNIX-CONNECT:/tmp/mxcli-ag
 
 ## Architecture Notes
 
-**No special privileges**: All agent actions (except `state` and `format`) go through the same bubbletea views that humans use. `list` and `describe` are converted to `SHOW`/`DESCRIBE` MDL commands and routed through `AgentExecMsg` → ExecView. `delete` goes through ConfirmView. `create_module` goes through InputView.
+**No special privileges**: All agent actions (except `state` and `format`) go through the same bubbletea views that humans use. `list` and `describe` are converted to `show`/`describe` MDL commands and routed through `AgentExecMsg` → ExecView. `delete` goes through ConfirmView. `create_module` goes through InputView.
 
 **agentExecContext**: Tracks agent-initiated UI operations. When an agent action pushes a view (ExecView/ConfirmView/InputView), the response channel is stored in `agentExecContext`. When the view completes (`execShowResultMsg`), the response is sent back. If the user cancels (`PopViewMsg` with Esc), a rejection response is sent.
 

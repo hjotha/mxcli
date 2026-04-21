@@ -23,10 +23,10 @@ Today these tasks require separate database client tools (psql, sqlcmd, SQL*Plus
 ### Use Case 1: Schema Discovery
 
 ```
-mxcli> SQL CONNECT postgres AS source
-mxcli> SQL source SHOW TABLES
-mxcli> SQL source DESCRIBE employees
-mxcli> SQL source SELECT * FROM employees LIMIT 10
+mxcli> sql connect postgres as source
+mxcli> sql source show tables
+mxcli> sql source describe employees
+mxcli> sql source select * from employees limit 10
 ```
 
 The LLM uses this to understand the source database structure, then generates MDL to create matching Mendix entities, database connection configurations, and query definitions.
@@ -34,12 +34,12 @@ The LLM uses this to understand the source database structure, then generates MD
 ### Use Case 2: Test Data Import
 
 ```
-mxcli> SQL CONNECT postgres AS source
-mxcli> SQL source SELECT id, name, email, department FROM employees
+mxcli> sql connect postgres as source
+mxcli> sql source select id, name, email, department from employees
 -- LLM sees the data shape, then generates:
-mxcli> OQL INSERT INTO HRModule.Employee (Name, Email, Department) VALUES ('Alice', 'alice@example.com', 'Engineering')
+mxcli> OQL insert into HRModule.Employee (Name, Email, Department) values ('Alice', 'alice@example.com', 'Engineering')
 -- Or bulk import via a new IMPORT command:
-mxcli> IMPORT FROM source QUERY 'SELECT name, email, department FROM employees' INTO HRModule.Employee MAP (name AS Name, email AS Email, department AS Department)
+mxcli> import from source query 'SELECT name, email, department FROM employees' into HRModule.Employee map (name as Name, email as Email, department as Department)
 ```
 
 ### Use Case 3: Data Migration
@@ -47,7 +47,7 @@ mxcli> IMPORT FROM source QUERY 'SELECT name, email, department FROM employees' 
 Same as test data import but at scale, potentially with transformation logic:
 
 ```
-mxcli> IMPORT FROM source QUERY 'SELECT ...' INTO Module.Entity MAP (...) BATCH 1000
+mxcli> import from source query 'SELECT ...' into Module.Entity map (...) batch 1000
 ```
 
 ## Proposed Architecture
@@ -84,8 +84,8 @@ connections:
 The key security property: **the LLM never sees credentials**. The flow is:
 
 ```
-LLM → "SQL CONNECT postgres AS source" → mxcli resolves credentials internally
-LLM → "SQL source SELECT * FROM employees LIMIT 5" → mxcli executes, returns results
+LLM → "sql connect postgres as source" → mxcli resolves credentials internally
+LLM → "sql source select * from employees limit 5" → mxcli executes, returns results
 ```
 
 mxcli outputs query results (tabular data) but never echoes back connection strings, passwords, or authentication tokens. If a connection requires credentials not available from env/config, mxcli prompts the human user directly via stderr (which is not captured by the LLM in MCP mode).
@@ -96,26 +96,26 @@ New statements to add to the MDL grammar:
 
 ```sql
 -- Connection management
-SQL CONNECT <driver> AS <alias> [OPTIONS ...]
-SQL DISCONNECT <alias>
-SQL CONNECTIONS                          -- list active connections
+sql connect <driver> as <alias> [OPTIONS ...]
+sql disconnect <alias>
+sql connections                          -- list active connections
 
 -- Schema discovery
-SQL <alias> SHOW TABLES [LIKE 'pattern']
-SQL <alias> SHOW VIEWS [LIKE 'pattern']
-SQL <alias> DESCRIBE <table>             -- columns, types, keys, indexes
+sql <alias> show tables [like 'pattern']
+sql <alias> show views [like 'pattern']
+sql <alias> describe <table>             -- columns, types, keys, indexes
 
 -- Query execution
-SQL <alias> <any-sql-statement>          -- freeform SQL passthrough
+sql <alias> <any-sql-statement>          -- freeform SQL passthrough
 
 -- Import (from external DB → running Mendix app via OQL/M2EE)
-IMPORT FROM <alias>
-  QUERY '<sql>'
-  INTO <Module.Entity>
-  MAP (<sql_col> AS <MxAttribute>, ...)
-  [BATCH <size>]
-  [LIMIT <count>]
-  [WHERE <filter>]
+import from <alias>
+  query '<sql>'
+  into <Module.Entity>
+  map (<sql_col> as <MxAttribute>, ...)
+  [batch <size>]
+  [limit <count>]
+  [where <filter>]
 ```
 
 ### Pure Go Database Drivers
@@ -136,23 +136,23 @@ All four implement Go's `database/sql` interface, so the mxcli implementation ca
 ```
 cmd/mxcli/
 ├── cmd_sql.go              # Cobra command: mxcli sql
-├── cmd_import.go           # Cobra command: mxcli import (or IMPORT statement)
+├── cmd_import.go           # Cobra command: mxcli import (or import statement)
 
 mdl/
 ├── ast/
-│   ├── sql_statements.go   # AST nodes for SQL CONNECT, SQL query, IMPORT
+│   ├── sql_statements.go   # AST nodes for sql connect, sql query, import
 ├── visitor/
-│   ├── visitor_sql.go      # ANTLR visitor → AST for SQL statements
+│   ├── visitor_sql.go      # ANTLR visitor → AST for sql statements
 ├── executor/
-│   ├── cmd_sql.go          # SQL statement execution
-│   ├── cmd_import.go       # IMPORT statement execution
+│   ├── cmd_sql.go          # sql statement execution
+│   ├── cmd_import.go       # import statement execution
 
 sql/                         # New package: database abstraction
 ├── driver.go               # Driver registry and connection pool
 ├── connection.go           # Named connection management
 ├── config.go               # Credential resolution (env, file, prompt)
-├── discovery.go            # SHOW TABLES, DESCRIBE, schema introspection
-├── result.go               # Query result formatting (table, JSON, CSV)
+├── discovery.go            # show tables, describe, schema introspection
+├── result.go               # query result formatting (table, json, CSV)
 ├── import.go               # Bulk import: external DB → Mendix runtime
 ```
 
@@ -161,7 +161,7 @@ sql/                         # New package: database abstraction
 Query results are formatted as aligned tables by default (matching existing `mxcli oql` output), with optional `--format json` and `--format csv` flags for programmatic consumption:
 
 ```
-mxcli> SQL source SELECT id, name, department FROM employees LIMIT 5
+mxcli> sql source select id, name, department from employees limit 5
 +----+-----------+-------------+
 | id | name      | department  |
 +----+-----------+-------------+
@@ -180,22 +180,22 @@ mxcli> SQL source SELECT id, name, department FROM employees LIMIT 5
 
 - `sql/` package with driver registry and connection pool
 - Credential resolution from env vars and config file
-- `SQL CONNECT`, `SQL DISCONNECT`, `SQL CONNECTIONS` statements
+- `sql connect`, `sql disconnect`, `sql connections` statements
 - Freeform SQL passthrough with tabular result output
 - Support for PostgreSQL only (simplest to test)
 - Cobra subcommand: `mxcli sql -c <alias> "<query>"`
-- REPL integration: `SQL <alias> <query>`
+- REPL integration: `sql <alias> <query>`
 
 ### Phase 2: Schema Discovery ✅ Implemented
 
-- `SQL <alias> SHOW TABLES`, `SHOW VIEWS`
-- `SQL <alias> DESCRIBE <table>` — columns, types, nullability, keys, indexes
+- `sql <alias> show tables`, `show views`
+- `sql <alias> describe <table>` — columns, types, nullability, keys, indexes
 - Cross-database schema introspection abstraction (each driver implements a `SchemaProvider` interface)
 - Add SQL Server and Oracle driver support
 
 ### Phase 3: Import & Migration ✅ Implemented
 
-- `IMPORT FROM <alias> QUERY '...' INTO Module.Entity MAP (...) [BATCH n] [LIMIT n]`
+- `import from <alias> query '...' into Module.Entity map (...) [batch n] [limit n]`
 - Batched insert directly into Mendix app PostgreSQL database (M2EE `preview_execute_oql` is read-only)
 - Automatic Mendix ID generation (`(short_id << 48) | sequence`) and sequence counter updates
 - Auto-connects to Mendix app DB using project settings (`_mendix` alias)
@@ -209,8 +209,8 @@ mxcli> SQL source SELECT id, name, department FROM employees LIMIT 5
 - MySQL driver support
 - `--format json|csv` output modes
 - Schema diff: compare external DB schema against Mendix domain model
-- Auto-generate MDL (`CREATE ENTITY`, `CREATE DATABASE CONNECTION`) from discovered schema ✅ Implemented (`SQL <alias> GENERATE CONNECTOR INTO <module>`)
-- Connection testing: `SQL <alias> PING`
+- Auto-generate MDL (`create entity`, `create database connection`) from discovered schema ✅ Implemented (`sql <alias> generate connector into <module>`)
+- Connection testing: `sql <alias> PING`
 
 ## Credential Resolution Detail
 
@@ -228,42 +228,42 @@ Passwords are **never logged**, **never included in error messages**, and **neve
 
 ### Database Connector Configuration
 
-After discovering a schema via `SQL <alias> DESCRIBE`, the LLM can generate:
+After discovering a schema via `sql <alias> describe`, the LLM can generate:
 
 ```sql
 -- MDL to create Mendix Database Connector configuration
-CREATE CONSTANT HR.PgConnectionString TYPE String DEFAULT 'jdbc:postgresql://...';
-CREATE NON-PERSISTENT ENTITY HR.EmployeeRecord (Name: String(100), Department: String(50));
-CREATE DATABASE CONNECTION HR.LegacyDB
-TYPE 'PostgreSQL'
-CONNECTION STRING @HR.PgConnectionString
-USERNAME @HR.PgUser
-PASSWORD @HR.PgPassword
-BEGIN
-  QUERY GetEmployees SQL 'SELECT name, department FROM employees' RETURNS HR.EmployeeRecord;
-END;
+create constant HR.PgConnectionString type string default 'jdbc:postgresql://...';
+create non-persistent entity HR.EmployeeRecord (Name: string(100), Department: string(50));
+create database connection HR.LegacyDB
+type 'PostgreSQL'
+connection string @HR.PgConnectionString
+username @HR.PgUser
+password @HR.PgPassword
+begin
+  query GetEmployees sql 'SELECT name, department FROM employees' returns HR.EmployeeRecord;
+end;
 ```
 
 ### OQL Integration
 
-The existing `mxcli oql` command inserts data into the running Mendix runtime. The `IMPORT` command builds on this by automating the read-from-external-DB → insert-into-Mendix loop.
+The existing `mxcli oql` command inserts data into the running Mendix runtime. The `import` command builds on this by automating the read-from-external-DB → insert-into-Mendix loop.
 
 ### Catalog Integration
 
 Discovered schemas can be registered in the mxcli catalog for cross-referencing:
 
 ```sql
-REFRESH CATALOG SQL source   -- index external DB schema in catalog
-SELECT * FROM CATALOG.sql_tables WHERE connection = 'source'
+refresh catalog sql source   -- index external DB schema in catalog
+select * from CATALOG.sql_tables where connection = 'source'
 ```
 
 ## Security Considerations
 
-- **Read-only by default** — `SQL CONNECT` defaults to read-only mode. Write operations (`INSERT`, `UPDATE`, `DELETE`, `DROP`) require explicit `SQL CONNECT ... MODE readwrite`.
+- **Read-only by default** — `sql connect` defaults to read-only mode. Write operations (`insert`, `update`, `delete`, `drop`) require explicit `sql connect ... MODE readwrite`.
 - **Query allow/deny lists** — Optional config to restrict which SQL statements are allowed.
 - **No credential leakage** — Credentials are resolved internally and never appear in output, logs, or error messages visible to the LLM.
 - **Connection timeout** — Default 10s connect timeout, 30s query timeout. Configurable per connection.
-- **Row limits** — Default `LIMIT 1000` applied to `SELECT` queries that don't specify a limit, to prevent accidental large result sets.
+- **Row limits** — Default `limit 1000` applied to `select` queries that don't specify a limit, to prevent accidental large result sets.
 
 ## Risks & Mitigations
 

@@ -22,7 +22,7 @@ Export Mappings define how Mendix entities are serialized to JSON/XML for outgoi
 ```
 ExportMappings$ExportMapping:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
   JsonStructure: string (qualified name)
@@ -45,7 +45,7 @@ ExportMappings$ExportMapping:
 ### SHOW EXPORT MAPPINGS
 
 ```
-SHOW EXPORT MAPPINGS [IN Module]
+show export mappings [in module]
 ```
 
 | Qualified Name | Module | Name | Schema Source | Root Entity | Elements |
@@ -54,7 +54,7 @@ SHOW EXPORT MAPPINGS [IN Module]
 ### DESCRIBE EXPORT MAPPING
 
 ```
-DESCRIBE EXPORT MAPPING Module.Name
+describe export mapping Module.Name
 ```
 
 Output format:
@@ -63,17 +63,17 @@ Output format:
 /**
  * Serializes Customer entity to JSON
  */
-EXPORT MAPPING MyModule.ExportCustomer
-  TO JSON STRUCTURE MyModule.CustomerResponse
-  NULL VALUES LeaveOutElement
+export mapping MyModule.ExportCustomer
+  to json structure MyModule.CustomerResponse
+  null values LeaveOutElement
 {
   MyModule.Customer -> root
-    Id -> id (Integer)
-    Name -> name (String)
-    Email -> email (String)
-    MyModule.Address VIA MyModule.Customer_Address -> addresses
-      Street -> street (String)
-      City -> city (String)
+    Id -> id (integer)
+    Name -> name (string)
+    Email -> email (string)
+    MyModule.Address via MyModule.Customer_Address -> addresses
+      Street -> street (string)
+      City -> city (string)
 };
 /
 ```
@@ -86,7 +86,7 @@ EXPORT MAPPING MyModule.ExportCustomer
 type ExportMapping struct {
     ContainerID     model.ID
     Name            string
-    Documentation   string
+    documentation   string
     Excluded        bool
     ExportLevel     string
     JsonStructure   string
@@ -97,12 +97,12 @@ type ExportMapping struct {
 }
 
 type ExportMappingElement struct {
-    Kind        string // "Object" or "Value"
-    Entity      string
-    Attribute   string
+    Kind        string // "object" or "value"
+    entity      string
+    attribute   string
     ExposedName string
     JsonPath    string
-    Association string
+    association string
     DataType    string
     Children    []ExportMappingElement
 }
@@ -112,7 +112,7 @@ type ExportMappingElement struct {
 
 Same pattern as Import Mappings — share the element tree parsing logic where possible. Consider a shared `parseMappingElements()` helper.
 
-Grammar tokens: `EXPORT` (already exists), `MAPPING`, `MAPPINGS` (shared with Import).
+Grammar tokens: `export` (already exists), `mapping`, `mappings` (shared with Import).
 
 ## Dependencies
 

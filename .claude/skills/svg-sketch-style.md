@@ -239,7 +239,7 @@ svg += '<rect x="' + (titleX + titleWidth + 8) + '" y="' + (titleY - 12) +
 svg += '<text x="' + (titleX + titleWidth + 38) + '" y="' + (titleY + 1) +
   '" font-size="9" fill="#5a5a5a" text-anchor="middle" font-family="\'Architects Daughter\', cursive">PoC draft</text>';
 
-// Footer text
+// footer text
 svg += '<text x="10" y="' + (svgHeight - 8) +
   '" font-size="10" fill="#5a5a5a" opacity="0.4" font-family="\'Architects Daughter\', cursive">sketch — subject to change</text>';
 ```
@@ -256,7 +256,7 @@ svg += '<text x="10" y="' + (svgHeight - 8) +
 function buildSketchSvg(svgWidth, svgHeight, renderContent) {
   let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + svgWidth + '" height="' + svgHeight + '">';
 
-  // 1. Filter definitions
+  // 1. filter definitions
   svg += '<defs>';
   svg += '<filter id="pencil"><feTurbulence type="turbulence" baseFrequency="0.03" numOctaves="4" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5"/></filter>';
   svg += '<filter id="marker-texture"><feTurbulence type="fractalNoise" baseFrequency="0.04 0.15" numOctaves="3" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="2"/><feGaussianBlur stdDeviation="0.3"/></filter>';
@@ -270,7 +270,7 @@ function buildSketchSvg(svgWidth, svgHeight, renderContent) {
   // 3. Diagram content (nodes, edges, labels)
   svg += renderContent();
 
-  // 4. Footer
+  // 4. footer
   svg += '<text x="10" y="' + (svgHeight - 8) + '" font-size="10" fill="#5a5a5a" opacity="0.4" font-family="\'Architects Daughter\', cursive">sketch — subject to change</text>';
 
   svg += '</svg>';

@@ -9,7 +9,7 @@ When mxcli creates pluggable widgets (ComboBox, DataGrid2, etc.), it uses **stat
 ## Current Architecture
 
 ```
-Embedded JSON templates (Mendix 11.6)
+Embedded json templates (Mendix 11.6)
   combobox.json (52 properties)
   datagrid.json
   gallery.json
@@ -20,8 +20,8 @@ Embedded JSON templates (Mendix 11.6)
   (loads template, remaps IDs, converts to BSON)
          │
          ▼
-  Widget BSON in page document
-  (PropertyTypes in Type + Properties in Object)
+  widget BSON in page document
+  (PropertyTypes in type + properties in object)
 ```
 
 **The problem**: If the project has ComboBox v2.5.0 (55 properties) but our template has v2.3.0 (52 properties), Studio Pro sees 3 missing PropertyTypes and raises CE0463. The same happens in reverse if the template has properties the installed widget doesn't know about.
@@ -31,13 +31,13 @@ Embedded JSON templates (Mendix 11.6)
 Read the `.mpk` file from the project's `widgets/` folder at runtime and **augment the static template** — adding missing properties and removing stale ones — before BSON conversion. The augmentation happens at the JSON `map[string]interface{}` level, keeping the existing BSON conversion pipeline untouched.
 
 ```
-Static template (JSON)
+Static template (json)
          │
          ▼
   Load & deep-clone template
          │
          ▼
-  Augment from .mpk XML    ◄── Parse widget XML from ZIP
+  Augment from .mpk xml    ◄── Parse widget xml from ZIP
   (add missing, remove stale)
          │
          ▼
@@ -59,12 +59,12 @@ Static template (JSON)
 package mpk
 
 type PropertyDef struct {
-    Key          string   // e.g. "staticDataSourceCaption"
-    Type         string   // XML type: "attribute", "expression", "textTemplate", "widgets", etc.
-    Caption      string
-    Description  string
+    key          string   // e.g. "staticDataSourceCaption"
+    type         string   // xml type: "attribute", "expression", "textTemplate", "widgets", etc.
+    caption      string
+    description  string
     Category     string   // from enclosing propertyGroup captions, joined with "::"
-    Required     bool
+    required     bool
     DefaultValue string   // for enumeration types
     IsList       bool
     IsSystem     bool     // true for <systemProperty> elements
@@ -73,12 +73,12 @@ type PropertyDef struct {
 type WidgetDefinition struct {
     ID         string          // e.g. "com.mendix.widget.web.combobox.Combobox"
     Name       string
-    Version    string
-    Properties []PropertyDef   // regular <property> elements
+    version    string
+    properties []PropertyDef   // regular <property> elements
     SystemProps []PropertyDef  // <systemProperty> elements
 }
 
-// ParseMPK opens an .mpk ZIP archive, finds the widget XML, and parses it.
+// ParseMPK opens an .mpk ZIP archive, finds the widget xml, and parses it.
 func ParseMPK(mpkPath string) (*WidgetDefinition, error)
 
 // FindMPK looks in the project's widgets/ directory for an .mpk matching the widgetID.
@@ -97,8 +97,8 @@ func FindMPK(projectDir string, widgetID string) (string, error)
 
 ```go
 // AugmentTemplate modifies a template's Type and Object in-place to match an .mpk definition.
-// - Adds PropertyTypes (in Type) and Properties (in Object) for keys in .mpk but missing from template
-// - Removes PropertyTypes and Properties for keys in template but missing from .mpk
+// - Adds PropertyTypes (in type) and properties (in object) for keys in .mpk but missing from template
+// - Removes PropertyTypes and properties for keys in template but missing from .mpk
 // - Only processes regular properties (not system properties)
 func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error
 ```
@@ -109,20 +109,20 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error
 
 | XML `type=`   | BSON `ValueType.Type` | Default Object Value                        |
 |---------------|----------------------|---------------------------------------------|
-| `attribute`   | `"Attribute"`        | `AttributeRef: null`                        |
-| `expression`  | `"Expression"`       | `Expression: ""`                            |
+| `attribute`   | `"attribute"`        | `AttributeRef: null`                        |
+| `expression`  | `"expression"`       | `expression: ""`                            |
 | `textTemplate`| `"TextTemplate"`     | `TextTemplate: {Forms$ClientTemplate...}`   |
-| `widgets`     | `"Widgets"`          | `Widgets: [2]` (empty array marker)         |
-| `enumeration` | `"Enumeration"`      | `PrimitiveValue: "<defaultValue>"`          |
-| `boolean`     | `"Boolean"`          | `PrimitiveValue: "true"/"false"`            |
-| `integer`     | `"Integer"`          | `PrimitiveValue: "0"`                       |
-| `datasource`  | `"DataSource"`       | `DataSource: null`                          |
-| `action`      | `"Action"`           | `Action: {Forms$NoAction}`                  |
-| `selection`   | `"Selection"`        | `Selection: "None"`                         |
-| `association`  | `"Association"`     | `AttributeRef: null`                        |
-| `object`      | `"Object"`           | `Objects: [2]`                              |
-| `string`      | `"String"`           | `PrimitiveValue: ""`                        |
-| `decimal`     | `"Decimal"`          | `PrimitiveValue: ""`                        |
+| `widgets`     | `"widgets"`          | `widgets: [2]` (empty array marker)         |
+| `enumeration` | `"enumeration"`      | `PrimitiveValue: "<defaultValue>"`          |
+| `boolean`     | `"boolean"`          | `PrimitiveValue: "true"/"false"`            |
+| `integer`     | `"integer"`          | `PrimitiveValue: "0"`                       |
+| `datasource`  | `"datasource"`       | `datasource: null`                          |
+| `action`      | `"action"`           | `action: {Forms$NoAction}`                  |
+| `selection`   | `"selection"`        | `selection: "none"`                         |
+| `association`  | `"association"`     | `AttributeRef: null`                        |
+| `object`      | `"object"`           | `objects: [2]`                              |
+| `string`      | `"string"`           | `PrimitiveValue: ""`                        |
+| `decimal`     | `"decimal"`          | `PrimitiveValue: ""`                        |
 
 2. **A Property** in `Object.Properties[]` — a `CustomWidgets$WidgetProperty` with matching `TypePointer` and a `CustomWidgets$WidgetValue` containing the default value for the type.
 
@@ -139,10 +139,10 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error
 Add `projectPath` parameter to `GetTemplateFullBSON`:
 
 ```go
-// Before:
+// before:
 func GetTemplateFullBSON(widgetID string, idGenerator func() string) (...)
 
-// After:
+// after:
 func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath string) (...)
 ```
 
@@ -167,7 +167,7 @@ if projectPath != "" {
     }
 }
 
-// Continue with tmplClone...
+// continue with tmplClone...
 ```
 
 ### 4. Update Call Sites
@@ -206,13 +206,13 @@ This means the feature can never make things worse — it only improves compatib
 ## Verification
 
 ```bash
-# Build
+# build
 make build
 
 # Unit tests
 make test
 
-# End-to-end: ComboBox with newer widget version
+# end-to-end: combobox with newer widget version
 ./bin/mxcli exec test.mdl -p /path/to/project.mpr
 reference/mxbuild/modeler/mx check /path/to/project.mpr
 # Should have NO CE0463 errors

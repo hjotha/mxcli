@@ -7,8 +7,8 @@
 ## Context
 
 The existing styling proposal (`page-styling-support.md`) defined three phases. Phases 1 and 3 are fully implemented:
-- Phase 1: `Class` and `Style` inline properties
-- Phase 3: `SHOW DESIGN PROPERTIES`, `DESCRIBE STYLING`, `ALTER STYLING`, inline `DesignProperties:`, `UPDATE WIDGETS` bulk styling
+- Phase 1: `class` and `style` inline properties
+- Phase 3: `show design properties`, `describe styling`, `alter styling`, inline `designproperties:`, `update widgets` bulk styling
 
 Phase 2 (`DynamicClasses`) remains open.
 
@@ -26,25 +26,25 @@ Currently there is no MDL interface for modifying `theme/web/custom-variables.sc
 
 ```sql
 -- List all custom variables (from theme/web/custom-variables.scss)
-SHOW THEME VARIABLES;
+show THEME variables;
 
 -- List atlas_core default variables (read-only reference)
-SHOW THEME VARIABLES DEFAULT;
+show THEME variables default;
 
 -- Search variables by pattern
-SHOW THEME VARIABLES LIKE '%brand%';
+show THEME variables like '%brand%';
 
 -- Set a single variable
-ALTER THEME VARIABLE '$brand-primary' = '#FF6B35';
+alter THEME VARIABLE '$brand-primary' = '#FF6B35';
 
 -- Batch set
-ALTER THEME VARIABLES
+alter THEME variables
   '$brand-primary' = '#FF6B35',
   '$brand-secondary' = '#2D3748',
   '$font-size-default' = '15px';
 
 -- Reset to atlas_core default (remove from custom-variables.scss)
-ALTER THEME VARIABLE '$brand-primary' RESET;
+alter THEME VARIABLE '$brand-primary' RESET;
 ```
 
 ### Implementation Strategy
@@ -54,7 +54,7 @@ ALTER THEME VARIABLE '$brand-primary' RESET;
 - Preserves non-variable lines (comments, blank lines, imports) for write-back
 - Surgical line edits only — never rewrites the entire file
 
-**Validation** — Only accepts variable names that exist in atlas_core defaults. Override with `FORCE` keyword for truly custom variables.
+**Validation** — Only accepts variable names that exist in atlas_core defaults. Override with `force` keyword for truly custom variables.
 
 ### Implementation Files
 
@@ -72,19 +72,19 @@ ALTER THEME VARIABLE '$brand-primary' RESET;
 
 ### Motivation
 
-Theme presets package common styling recipes (dark mode, high-contrast, brand color schemes) as reusable MDL scripts. Since `ALTER THEME VARIABLES` (Feature 1) provides the primitive, presets are a thin wrapper around script execution.
+Theme presets package common styling recipes (dark mode, high-contrast, brand color schemes) as reusable MDL scripts. Since `alter THEME variables` (Feature 1) provides the primitive, presets are a thin wrapper around script execution.
 
 ### Syntax
 
 ```sql
 -- List available presets (built-in + project-local)
-SHOW THEME PRESETS;
+show THEME PRESETS;
 
 -- Preview what a preset will do (dry run)
-DESCRIBE THEME PRESET 'dark';
+describe THEME PRESET 'dark';
 
 -- Apply a preset (executes the MDL script)
-APPLY THEME PRESET 'dark';
+apply THEME PRESET 'dark';
 ```
 
 ### Preset File Format
@@ -97,7 +97,7 @@ Standard `.mdl` files with comment metadata headers:
 -- author: mxcli
 -- version: 1.0
 
-ALTER THEME VARIABLES
+alter THEME variables
   '$brand-default' = '#1a1a2e',
   '$brand-primary' = '#6c63ff',
   '$bg-color' = '#16213e',
@@ -128,6 +128,6 @@ ALTER THEME VARIABLES
 | Phase | Feature | Dependency |
 |-------|---------|------------|
 | 1 | SCSS Variable Management | Independent |
-| 2 | Theme Presets | Depends on Phase 1 (presets use `ALTER THEME VARIABLES`) |
+| 2 | Theme Presets | Depends on Phase 1 (presets use `alter THEME variables`) |
 
 Phase 2 (`DynamicClasses` from the original proposal) can be implemented independently at any time.

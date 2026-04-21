@@ -4,7 +4,7 @@
 
 **Goal:** Add MDL script execution capability to the TUI — both from pasted text and from file selection.
 
-**Architecture:** New `ExecView` implementing the `View` interface, with a `textarea` for MDL input and a file picker fallback. Execution delegates to `runMxcli("exec", ...)` subprocess (consistent with existing TUI patterns). Results display in an OverlayView; project tree refreshes after successful execution.
+**Architecture:** New `ExecView` implementing the `view` interface, with a `textarea` for MDL input and a file picker fallback. Execution delegates to `runMxcli("exec", ...)` subprocess (consistent with existing TUI patterns). Results display in an OverlayView; project tree refreshes after successful execution.
 
 **Tech Stack:** `github.com/charmbracelet/bubbles/textarea`, existing TUI View/ViewStack infrastructure
 
@@ -32,19 +32,19 @@ const (
 )
 ```
 
-And in the `String()` method, add:
+And in the `string()` method, add:
 ```go
 case ModeExec:
-    return "Exec"
+    return "exec"
 ```
 
 **Step 2: Add ExecViewHints to hintbar.go**
 
 ```go
 ExecViewHints = []Hint{
-    {Key: "Ctrl+E", Label: "execute"},
-    {Key: "Ctrl+O", Label: "open file"},
-    {Key: "Esc", Label: "close"},
+    {key: "Ctrl+E", label: "execute"},
+    {key: "Ctrl+O", label: "open file"},
+    {key: "Esc", label: "close"},
 }
 ```
 
@@ -87,7 +87,7 @@ func TestExecView_Mode(t *testing.T) {
 func TestExecView_StatusInfo(t *testing.T) {
     ev := NewExecView("mxcli", "/tmp/test.mpr", 80, 24)
     info := ev.StatusInfo()
-    if info.Mode != "Exec" {
+    if info.Mode != "exec" {
         t.Errorf("expected mode 'Exec', got %q", info.Mode)
     }
 }
@@ -162,9 +162,9 @@ func (ev ExecView) Hints() []Hint {
 func (ev ExecView) StatusInfo() StatusInfo {
     lines := strings.Count(ev.textarea.Value(), "\n") + 1
     return StatusInfo{
-        Breadcrumb: []string{"Execute MDL"},
-        Position:   fmt.Sprintf("L%d", lines),
-        Mode:       "Exec",
+        Breadcrumb: []string{"execute MDL"},
+        position:   fmt.Sprintf("L%d", lines),
+        Mode:       "exec",
     }
 }
 
@@ -173,7 +173,7 @@ func (ev ExecView) Render(width, height int) string {
     ev.textarea.SetHeight(height - 6)
 
     titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor).Padding(0, 1)
-    title := titleStyle.Render("Execute MDL")
+    title := titleStyle.Render("execute MDL")
 
     statusLine := ""
     if ev.executing {
@@ -191,7 +191,7 @@ func (ev ExecView) Render(width, height int) string {
     return lipgloss.NewStyle().Padding(1, 2).Render(content)
 }
 
-func (ev ExecView) Update(msg tea.Msg) (View, tea.Cmd) {
+func (ev ExecView) update(msg tea.Msg) (view, tea.Cmd) {
     switch msg := msg.(type) {
     case ExecDoneMsg:
         ev.executing = false
@@ -201,7 +201,7 @@ func (ev ExecView) Update(msg tea.Msg) (View, tea.Cmd) {
         }
         // Push result overlay and pop exec view
         return ev, func() tea.Msg {
-            return execShowResultMsg{Content: content, Success: msg.Err == nil}
+            return execShowResultMsg{content: content, success: msg.Err == nil}
         }
 
     case tea.KeyMsg:
@@ -214,7 +214,7 @@ func (ev ExecView) Update(msg tea.Msg) (View, tea.Cmd) {
             if ev.textarea.Value() == "" {
                 return ev, func() tea.Msg { return PopViewMsg{} }
             }
-            // If there's content, first Esc clears flash; second Esc closes
+            // if there's content, first Esc clears flash; second Esc closes
             if ev.flash != "" {
                 ev.flash = ""
                 return ev, nil
@@ -224,7 +224,7 @@ func (ev ExecView) Update(msg tea.Msg) (View, tea.Cmd) {
         case "ctrl+e":
             mdlText := strings.TrimSpace(ev.textarea.Value())
             if mdlText == "" {
-                ev.flash = "Nothing to execute"
+                ev.flash = "nothing to execute"
                 return ev, nil
             }
             ev.executing = true
@@ -250,7 +250,7 @@ func (ev ExecView) executeMDL(mdlText string) tea.Cmd {
     mxcliPath := ev.mxcliPath
     projectPath := ev.projectPath
     return func() tea.Msg {
-        // Write to temp file
+        // write to temp file
         tmpFile, err := os.CreateTemp("", "mxcli-exec-*.mdl")
         if err != nil {
             return ExecDoneMsg{Output: fmt.Sprintf("Failed to create temp file: %v", err), Err: err}
@@ -275,7 +275,7 @@ func (ev ExecView) executeMDL(mdlText string) tea.Cmd {
 }
 
 // openFileDialog uses the system file picker or a simple stdin prompt.
-// For now, it reads from a well-known env var or prompts via the picker.
+// for now, it reads from a well-known env var or prompts via the picker.
 func (ev ExecView) openFileDialog() tea.Cmd {
     return func() tea.Msg {
         return execOpenFileMsg{}
@@ -284,8 +284,8 @@ func (ev ExecView) openFileDialog() tea.Cmd {
 
 // execShowResultMsg signals App to show exec result and optionally refresh tree.
 type execShowResultMsg struct {
-    Content string
-    Success bool
+    content string
+    success bool
 }
 
 // execOpenFileMsg signals App to open the file picker for MDL files.
@@ -325,17 +325,17 @@ case "x":
 
 **Step 2: Handle execShowResultMsg in App.Update**
 
-Add a case in the `Update` switch:
+Add a case in the `update` switch:
 
 ```go
 case execShowResultMsg:
     // Pop the ExecView
     a.views.Pop()
-    // Show result in overlay
+    // show result in overlay
     content := DetectAndHighlight(msg.Content)
-    ov := NewOverlayView("Exec Result", content, a.width, a.height, OverlayViewOpts{})
+    ov := NewOverlayView("exec Result", content, a.width, a.height, OverlayViewOpts{})
     a.views.Push(ov)
-    // If execution succeeded, refresh tree
+    // if execution succeeded, refresh tree
     if msg.Success {
         return a, a.Init()
     }
@@ -380,7 +380,7 @@ func (ev ExecView) pickFile() tea.Cmd {
                         if err != nil {
                             return execFileLoadedMsg{Err: err}
                         }
-                        return execFileLoadedMsg{Path: path, Content: string(content)}
+                        return execFileLoadedMsg{path: path, content: string(content)}
                     }
                 }
                 return execFileLoadedMsg{} // user cancelled
@@ -395,8 +395,8 @@ Add message type and handler in `execview.go`:
 
 ```go
 type execFileLoadedMsg struct {
-    Path    string
-    Content string
+    path    string
+    content string
     Err     error
 }
 ```
@@ -406,7 +406,7 @@ And in ExecView.Update, add:
 ```go
 case execFileLoadedMsg:
     if msg.Err != nil {
-        ev.flash = fmt.Sprintf("Error: %v", msg.Err)
+        ev.flash = fmt.Sprintf("error: %v", msg.Err)
         return ev, nil
     }
     if msg.Content != "" {
@@ -426,10 +426,10 @@ In `help.go`, add under ACTIONS:
 
 **Step 5: Add hint for x in ListBrowsingHints**
 
-In `hintbar.go`, add before `{Key: "?", Label: "help"}`:
+In `hintbar.go`, add before `{key: "?", label: "help"}`:
 
 ```go
-{Key: "x", Label: "exec"},
+{key: "x", label: "exec"},
 ```
 
 **Step 6: Build and verify**
@@ -484,7 +484,7 @@ case execOpenFileMsg:
 Run: `cd /mnt/data_sdd/gh/mxcli-wt-01 && go run ./cmd/mxcli tui -p /mnt/data_sdd/gh/mxproj-GenAIDemo/App.mpr`
 
 - Press `x` → ExecView should appear with textarea
-- Type `SHOW MODULES;` → Press Ctrl+E → Should execute and show result
+- Type `show modules;` → Press Ctrl+E → Should execute and show result
 - Press `q` to close result → Tree should refresh
 - Press `x` again → Press Ctrl+O → File picker should open (if zenity installed)
 
@@ -544,7 +544,7 @@ Expected: Success
 
 1. `./bin/mxcli tui -p /mnt/data_sdd/gh/mxproj-GenAIDemo/App.mpr`
 2. Press `x` → verify textarea appears
-3. Paste: `SHOW MODULES;` → Ctrl+E → verify output overlay
+3. Paste: `show modules;` → Ctrl+E → verify output overlay
 4. Press `q` → verify back to browser, tree refreshed
 5. Press `x` → Ctrl+O → verify file picker (or graceful error)
 6. Press `Esc` → verify returns to browser

@@ -12,17 +12,17 @@ This document proposes MDL syntax for managing Mendix security configuration. Se
 
 The following BSON types are involved:
 
-| BSON `$Type` | Containment | Purpose |
+| BSON `$type` | Containment | Purpose |
 |---|---|---|
-| `Security$ProjectSecurity` | Project root | Security level, user roles, demo users, password policy |
-| `Security$UserRole` | Inside ProjectSecurity | Application-level user role combining module roles |
-| `Security$DemoUserImpl` | Inside ProjectSecurity | Demo user for testing |
-| `Security$ModuleSecurity` | Per module (`ModuleSecurity`) | Container for module roles |
-| `Security$ModuleRole` | Inside ModuleSecurity | Module-level role |
+| `security$ProjectSecurity` | Project root | Security level, user roles, demo users, password policy |
+| `security$UserRole` | Inside ProjectSecurity | Application-level user role combining module roles |
+| `security$DemoUserImpl` | Inside ProjectSecurity | Demo user for testing |
+| `security$ModuleSecurity` | Per module (`ModuleSecurity`) | Container for module roles |
+| `security$ModuleRole` | Inside ModuleSecurity | Module-level role |
 | `DomainModels$AccessRule` | Inside Entity | Entity access: create/delete, member rights, XPath |
 | `DomainModels$MemberAccess` | Inside AccessRule | Per-attribute/association rights |
-| `Microflows$Microflow.AllowedModuleRoles` | Microflow field | Which module roles can execute |
-| `Microflows$Microflow.ApplyEntityAccess` | Microflow field | Whether entity access rules apply |
+| `microflows$Microflow.AllowedModuleRoles` | Microflow field | Which module roles can execute |
+| `microflows$Microflow.ApplyEntityAccess` | Microflow field | Whether entity access rules apply |
 | `Forms$Page.AllowedModuleRoles` | Page field | Which module roles can view the page |
 
 ### Key BSON Structures
@@ -30,7 +30,7 @@ The following BSON types are involved:
 **Project Security:**
 ```json
 {
-  "$Type": "Security$ProjectSecurity",
+  "$type": "security$ProjectSecurity",
   "SecurityLevel": "CheckEverything",  // CheckNothing | CheckFormsAndMicroflows | CheckEverything
   "AdminUserName": "MxAdmin",
   "AdminPassword": "1",
@@ -41,8 +41,8 @@ The following BSON types are involved:
   "EnableDemoUsers": true,
   "EnableGuestAccess": false,
   "GuestUserRole": "",
-  "UserRoles": [2, { "$Type": "Security$UserRole", "Name": "Administrator", "ModuleRoles": [1, "Administration.Administrator", "Shop.ShopUser", ...], "ManageAllRoles": true, ... }],
-  "DemoUsers": [2, { "$Type": "Security$DemoUserImpl", "UserName": "demo_administrator", "Password": "...", "UserRoles": [1, "Administrator"], "Entity": "Administration.Account" }],
+  "UserRoles": [2, { "$type": "security$UserRole", "Name": "Administrator", "ModuleRoles": [1, "Administration.Administrator", "Shop.ShopUser", ...], "ManageAllRoles": true, ... }],
+  "DemoUsers": [2, { "$type": "security$DemoUserImpl", "username": "demo_administrator", "password": "...", "UserRoles": [1, "Administrator"], "entity": "Administration.Account" }],
   "PasswordPolicySettings": { "MinimumLength": 1, "RequireDigit": false, "RequireMixedCase": false, "RequireSymbol": false }
 }
 ```
@@ -50,29 +50,29 @@ The following BSON types are involved:
 **Module Security:**
 ```json
 {
-  "$Type": "Security$ModuleSecurity",
-  "ModuleRoles": [3, { "$Type": "Security$ModuleRole", "Name": "ShopUser", "Description": "" }]
+  "$type": "security$ModuleSecurity",
+  "ModuleRoles": [3, { "$type": "security$ModuleRole", "Name": "ShopUser", "description": "" }]
 }
 ```
 
 **Entity Access Rule** (inside entity's `AccessRules` array):
 ```json
 {
-  "$Type": "DomainModels$AccessRule",
+  "$type": "DomainModels$AccessRule",
   "AllowCreate": false,
   "AllowDelete": true,
   "AllowedModuleRoles": [1, "Shop.ShopUser"],
   "DefaultMemberAccessRights": "ReadWrite",
   "MemberAccesses": [3,
-    { "$Type": "DomainModels$MemberAccess", "AccessRights": "ReadWrite", "Attribute": "Shop.Customer.FirstName", "Association": "" },
-    { "$Type": "DomainModels$MemberAccess", "AccessRights": "ReadWrite", "Association": "Shop.Order_Customer", "Attribute": "" }
+    { "$type": "DomainModels$MemberAccess", "AccessRights": "ReadWrite", "attribute": "Shop.Customer.FirstName", "association": "" },
+    { "$type": "DomainModels$MemberAccess", "AccessRights": "ReadWrite", "association": "Shop.Order_Customer", "attribute": "" }
   ],
   "XPathConstraint": "",
   "XPathConstraintCaption": ""
 }
 ```
 
-**Microflow Access** (fields on `Microflows$Microflow`):
+**Microflow Access** (fields on `microflows$microflow`):
 ```json
 {
   "AllowedModuleRoles": [1, "Shop.ShopUser"],
@@ -80,7 +80,7 @@ The following BSON types are involved:
 }
 ```
 
-**Page Access** (field on `Forms$Page`):
+**Page Access** (field on `Forms$page`):
 ```json
 {
   "AllowedRoles": [1, "Shop.ShopUser"]
@@ -93,71 +93,71 @@ The following BSON types are involved:
 
 ```sql
 -- Set security level
-ALTER PROJECT SECURITY LEVEL PRODUCTION;     -- CheckEverything
-ALTER PROJECT SECURITY LEVEL PROTOTYPE;      -- CheckFormsAndMicroflows
-ALTER PROJECT SECURITY LEVEL OFF;            -- CheckNothing
+alter project security level production;     -- CheckEverything
+alter project security level prototype;      -- CheckFormsAndMicroflows
+alter project security level off;            -- CheckNothing
 
 -- Show current security level
-SHOW PROJECT SECURITY;
+show project security;
 ```
 
 ### 2. Module Roles
 
 ```sql
 -- Create module roles
-CREATE MODULE ROLE Shop.ShopUser;
-CREATE MODULE ROLE Shop.ShopUser DESCRIPTION 'Regular shop user with read access';
-CREATE MODULE ROLE Shop.Admin DESCRIPTION 'Shop administrator';
+create module role Shop.ShopUser;
+create module role Shop.ShopUser description 'Regular shop user with read access';
+create module role Shop.Admin description 'Shop administrator';
 
 -- Show module roles
-SHOW MODULE ROLES;
-SHOW MODULE ROLES IN Shop;
+show module roles;
+show module roles in Shop;
 
 -- Describe a module role (shows access rules across entities/microflows/pages)
-DESCRIBE MODULE ROLE Shop.ShopUser;
+describe module role Shop.ShopUser;
 
 -- Drop a module role
-DROP MODULE ROLE Shop.Admin;
+drop module role Shop.Admin;
 ```
 
 ### 3. Application User Roles
 
 ```sql
 -- Create user roles that combine module roles
-CREATE USER ROLE Administrator (
+create user role Administrator (
     Shop.ShopUser,
     Shop.Admin,
     Administration.Administrator,
     System.Administrator
 )
-MANAGE ALL ROLES;
+manage all roles;
 
-CREATE USER ROLE User (
+create user role user (
     Shop.ShopUser,
     Administration.User,
     System.User
 );
 
-CREATE USER ROLE Api (
+create user role api (
     System.User,
     ShopSvc.Api
 );
 
 -- Show user roles
-SHOW USER ROLES;
-DESCRIBE USER ROLE Administrator;
+show user roles;
+describe user role Administrator;
 
 -- Modify user role
-ALTER USER ROLE User ADD MODULE ROLES (
+alter user role user add module roles (
     NewModule.NewRole
 );
 
-ALTER USER ROLE User REMOVE MODULE ROLES (
+alter user role user remove module roles (
     OldModule.OldRole
 );
 
 -- Drop user role
-DROP USER ROLE Api;
+drop user role api;
 ```
 
 ### 4. Entity Access Rules
@@ -166,97 +166,97 @@ Entity access rules define which module roles can create, read, write, and delet
 
 ```sql
 -- Grant access to an entity for a module role
-GRANT Shop.ShopUser ON Shop.Customer (
-    CREATE,
-    DELETE,
-    READ *,           -- Read all attributes/associations
-    WRITE *           -- Write all attributes/associations
+grant Shop.ShopUser on Shop.Customer (
+    create,
+    delete,
+    read *,           -- Read all attributes/associations
+    write *           -- Write all attributes/associations
 );
 
 -- Fine-grained member access
-GRANT Shop.ShopUser ON Shop.Customer (
-    READ (FirstName, LastName, EmailAddress),
-    WRITE (FirstName, LastName),
-    READ ASSOCIATION (Shop.Order_Customer)
+grant Shop.ShopUser on Shop.Customer (
+    read (FirstName, LastName, EmailAddress),
+    write (FirstName, LastName),
+    read association (Shop.Order_Customer)
 );
 
 -- With XPath constraint (row-level security)
-GRANT Shop.ShopUser ON Shop.Customer (
-    READ *,
-    WRITE (FirstName, LastName)
+grant Shop.ShopUser on Shop.Customer (
+    read *,
+    write (FirstName, LastName)
 )
-WHERE '[%CurrentUser%/Shop.Customer_Account = System.owner]';
+where '[%CurrentUser%/Shop.Customer_Account = System.owner]';
 
 -- Multiple roles with same access
-GRANT Shop.ShopUser, Shop.Admin ON Shop.Order (
-    CREATE,
-    DELETE,
-    READ *,
-    WRITE *
+grant Shop.ShopUser, Shop.Admin on Shop.Order (
+    create,
+    delete,
+    read *,
+    write *
 );
 
 -- Revoke access
-REVOKE Shop.ShopUser ON Shop.Customer;
+revoke Shop.ShopUser on Shop.Customer;
 
 -- Show entity access
-SHOW ACCESS ON Shop.Customer;
-DESCRIBE ACCESS ON Shop.Customer;
+show access on Shop.Customer;
+describe access on Shop.Customer;
 ```
 
 ### 5. Microflow Access
 
 ```sql
 -- Grant module roles access to execute a microflow
-GRANT EXECUTE ON MICROFLOW Shop.ACT_CreateOrder TO Shop.ShopUser;
-GRANT EXECUTE ON MICROFLOW Shop.ACT_CreateOrder TO Shop.ShopUser, Shop.Admin;
+grant execute on microflow Shop.ACT_CreateOrder to Shop.ShopUser;
+grant execute on microflow Shop.ACT_CreateOrder to Shop.ShopUser, Shop.Admin;
 
 -- Apply entity access (microflow respects entity-level security)
-ALTER MICROFLOW Shop.ACT_CreateOrder APPLY ENTITY ACCESS;
-ALTER MICROFLOW Shop.ACT_CreateOrder NO ENTITY ACCESS;
+alter microflow Shop.ACT_CreateOrder apply entity access;
+alter microflow Shop.ACT_CreateOrder NO entity access;
 
 -- Revoke microflow access
-REVOKE EXECUTE ON MICROFLOW Shop.ACT_CreateOrder FROM Shop.ShopUser;
+revoke execute on microflow Shop.ACT_CreateOrder from Shop.ShopUser;
 
 -- Show microflow access
-SHOW ACCESS ON MICROFLOW Shop.ACT_CreateOrder;
+show access on microflow Shop.ACT_CreateOrder;
 ```
 
 ### 6. Page Access
 
 ```sql
 -- Grant module roles access to view a page
-GRANT VIEW ON PAGE Shop.CustomerOverview TO Shop.ShopUser;
-GRANT VIEW ON PAGE Shop.CustomerOverview TO Shop.ShopUser, Shop.Admin;
+grant view on page Shop.CustomerOverview to Shop.ShopUser;
+grant view on page Shop.CustomerOverview to Shop.ShopUser, Shop.Admin;
 
 -- Revoke page access
-REVOKE VIEW ON PAGE Shop.CustomerOverview FROM Shop.ShopUser;
+revoke view on page Shop.CustomerOverview from Shop.ShopUser;
 
 -- Show page access
-SHOW ACCESS ON PAGE Shop.CustomerOverview;
+show access on page Shop.CustomerOverview;
 ```
 
 ### 7. Demo Users
 
 ```sql
 -- Create demo users (for development/testing)
-CREATE DEMO USER 'demo_admin' PASSWORD '1' (
+create demo user 'demo_admin' password '1' (
     Administrator
 );
 
-CREATE DEMO USER 'demo_user' PASSWORD '1' (
-    User,
-    Api
+create demo user 'demo_user' password '1' (
+    user,
+    api
 );
 
 -- Enable/disable demo users
-ALTER PROJECT SECURITY DEMO USERS ON;
-ALTER PROJECT SECURITY DEMO USERS OFF;
+alter project security demo users on;
+alter project security demo users off;
 
 -- Show demo users
-SHOW DEMO USERS;
+show demo users;
 
 -- Drop demo user
-DROP DEMO USER 'demo_admin';
+drop demo user 'demo_admin';
 ```
 
 ### 8. Inline Security in CREATE Statements
@@ -265,33 +265,33 @@ For convenience, security can be declared inline when creating entities, microfl
 
 ```sql
 -- Entity with inline access rules
-CREATE PERSISTENT ENTITY Shop.Customer (
-    FirstName: String(200),
-    LastName: String(200),
-    Email: String(200)
+create persistent entity Shop.Customer (
+    FirstName: string(200),
+    LastName: string(200),
+    Email: string(200)
 )
-ACCESS (
-    GRANT Shop.ShopUser (CREATE, DELETE, READ *, WRITE *),
-    GRANT Shop.Admin (CREATE, DELETE, READ *, WRITE *)
-        WHERE '[%CurrentUser%/Shop.Customer_Account = System.owner]'
+access (
+    grant Shop.ShopUser (create, delete, read *, write *),
+    grant Shop.Admin (create, delete, read *, write *)
+        where '[%CurrentUser%/Shop.Customer_Account = System.owner]'
 );
 
 -- Microflow with inline access
-CREATE MICROFLOW Shop.ACT_CreateOrder ($Customer: Shop.Customer)
-RETURNS Shop.Order AS $Order
-ACCESS (Shop.ShopUser, Shop.Admin)
-APPLY ENTITY ACCESS
-BEGIN
+create microflow Shop.ACT_CreateOrder ($Customer: Shop.Customer)
+returns Shop.Order as $Order
+access (Shop.ShopUser, Shop.Admin)
+apply entity access
+begin
     -- ...
-END;
+end;
 
 -- Page with inline access
-CREATE PAGE Shop.CustomerOverview
+create page Shop.CustomerOverview
 (
-    Title: 'Customers',
-    Layout: Atlas_Core.Atlas_Default
+    title: 'Customers',
+    layout: Atlas_Core.Atlas_Default
 )
-ACCESS (Shop.ShopUser, Shop.Admin)
+access (Shop.ShopUser, Shop.Admin)
 {
     -- widgets ...
 };
@@ -301,14 +301,14 @@ ACCESS (Shop.ShopUser, Shop.Admin)
 
 ```sql
 -- Grant a role access to all microflows in a module
-GRANT EXECUTE ON ALL MICROFLOWS IN Shop TO Shop.ShopUser;
+grant execute on all microflows in Shop to Shop.ShopUser;
 
 -- Grant a role access to all pages in a module
-GRANT VIEW ON ALL PAGES IN Shop TO Shop.ShopUser;
+grant view on all pages in Shop to Shop.ShopUser;
 
 -- Grant default entity access for all entities in a module
-GRANT Shop.ShopUser ON ALL ENTITIES IN Shop (
-    READ *
+grant Shop.ShopUser on all entities in Shop (
+    read *
 );
 ```
 
@@ -316,10 +316,10 @@ GRANT Shop.ShopUser ON ALL ENTITIES IN Shop (
 
 ```sql
 -- Comprehensive security overview
-SHOW PROJECT SECURITY;
+show project security;
 
 -- What can a module role do?
-DESCRIBE MODULE ROLE Shop.ShopUser;
+describe module role Shop.ShopUser;
 -- Output:
 --   Module Role: Shop.ShopUser
 --   User Roles: Administrator, User
@@ -334,10 +334,10 @@ DESCRIBE MODULE ROLE Shop.ShopUser;
 --     Shop.OrderDetail: VIEW
 
 -- What roles can access a specific entity?
-SHOW ACCESS ON Shop.Customer;
+show access on Shop.Customer;
 
 -- Security matrix for a module
-SHOW SECURITY MATRIX IN Shop;
+show security matrix in Shop;
 ```
 
 ## Implementation Phases
@@ -346,12 +346,12 @@ SHOW SECURITY MATRIX IN Shop;
 
 Read-only commands to inspect existing security configuration. Requires:
 
-- Parse `Security$ProjectSecurity` from MPR
-- Parse `Security$ModuleSecurity` from each module
+- Parse `security$ProjectSecurity` from MPR
+- Parse `security$ModuleSecurity` from each module
 - Read `AccessRules` from entities (already partially implemented in `parser_domainmodel.go`)
 - Read `AllowedModuleRoles` from microflows
 - Read `AllowedRoles` from pages
-- New executor commands: `SHOW PROJECT SECURITY`, `SHOW MODULE ROLES`, `SHOW ACCESS ON`, `DESCRIBE MODULE ROLE`
+- New executor commands: `show project security`, `show module roles`, `show access on`, `describe module role`
 - Add security data to the catalog for cross-referencing
 
 **Existing code to build on:**
@@ -361,7 +361,7 @@ Read-only commands to inspect existing security configuration. Requires:
 - `generated/metamodel/enums.go` — `SecuritySecurityLevel` enum defined
 
 **Implementation gaps:**
-- No parsing for `Security$ProjectSecurity` or `Security$ModuleSecurity` units
+- No parsing for `security$ProjectSecurity` or `security$ModuleSecurity` units
 - No parsing of `AllowedModuleRoles` on microflows (field exists in BSON but is not read)
 - No parsing of `AllowedRoles` on pages
 - Entity access rules are parsed but role IDs are not resolved to names
@@ -371,27 +371,27 @@ Read-only commands to inspect existing security configuration. Requires:
 
 Write support for module and user role management:
 
-- `CREATE MODULE ROLE` — add role to `Security$ModuleSecurity`
-- `DROP MODULE ROLE` — remove role (with impact check)
-- `CREATE USER ROLE` — add to `Security$ProjectSecurity`
-- `ALTER USER ROLE` — modify module role assignments
-- `ALTER PROJECT SECURITY LEVEL` — change security level
+- `create module role` — add role to `security$ModuleSecurity`
+- `drop module role` — remove role (with impact check)
+- `create user role` — add to `security$ProjectSecurity`
+- `alter user role` — modify module role assignments
+- `alter project security level` — change security level
 
 ### Phase 3: Access Rule Management (GRANT/REVOKE)
 
 Write support for access control:
 
-- `GRANT ... ON entity` — add/modify `DomainModels$AccessRule` inside entity
-- `REVOKE ... ON entity` — remove access rule
-- `GRANT EXECUTE ON MICROFLOW` — set `AllowedModuleRoles` on microflow
-- `GRANT VIEW ON PAGE` — set `AllowedRoles` on page
-- Inline `ACCESS (...)` in `CREATE ENTITY`, `CREATE MICROFLOW`, `CREATE PAGE`
+- `grant ... on entity` — add/modify `DomainModels$AccessRule` inside entity
+- `revoke ... on entity` — remove access rule
+- `grant execute on microflow` — set `AllowedModuleRoles` on microflow
+- `grant view on page` — set `AllowedRoles` on page
+- Inline `access (...)` in `create entity`, `create microflow`, `create page`
 - Fix writer to preserve existing access rules when modifying entities
 
 ### Phase 4: Bulk Operations and Audit
 
-- `GRANT ... ON ALL MICROFLOWS/PAGES/ENTITIES IN module`
-- `SHOW SECURITY MATRIX`
+- `grant ... on all microflows/pages/entities in module`
+- `show security matrix`
 - Catalog integration for security queries
 - Lint rules for security (e.g., "microflow has no access rules", "entity accessible to all roles")
 
@@ -400,26 +400,26 @@ Write support for access control:
 New tokens for `MDLLexer.g4`:
 
 ```antlr
-// Security keywords
-SECURITY: S E C U R I T Y;
-ROLE: R O L E;
-ROLES: R O L E S;
-GRANT: G R A N T;
-REVOKE: R E V O K E;
-EXECUTE: E X E C U T E;  // already exists
-ACCESS: A C C E S S;
-PRODUCTION: P R O D U C T I O N;
-PROTOTYPE: P R O T O T Y P E;
-MANAGE: M A N A G E;
-DEMO: D E M O;
-MATRIX: M A T R I X;
-APPLY: A P P L Y;
+// security keywords
+security: S E C U R I T Y;
+role: R O L E;
+roles: R O L E S;
+grant: G R A N T;
+revoke: R E V O K E;
+execute: E X E C U T E;  // already exists
+access: A C C E S S;
+production: P R O D U C T I O N;
+prototype: P R O T O T Y P E;
+manage: M A N A G E;
+demo: D E M O;
+matrix: M A T R I X;
+apply: A P P L Y;
 ```
 
 New parser rules for `MDLParser.g4`:
 
 ```antlr
-// Security statements
+// security statements
 securityStatement
     : createModuleRoleStmt
     | dropModuleRoleStmt
@@ -442,12 +442,12 @@ securityStatement
     ;
 
 createModuleRoleStmt
-    : CREATE MODULE ROLE qualifiedName (DESCRIPTION STRING_LITERAL)?
+    : create module role qualifiedName (description STRING_LITERAL)?
     ;
 
 grantEntityAccessStmt
-    : GRANT moduleRoleList ON qualifiedName LPAREN entityAccessRights RPAREN
-      (WHERE STRING_LITERAL)?
+    : grant moduleRoleList on qualifiedName LPAREN entityAccessRights RPAREN
+      (where STRING_LITERAL)?
     ;
 
 entityAccessRights
@@ -455,13 +455,13 @@ entityAccessRights
     ;
 
 entityAccessRight
-    : CREATE
-    | DELETE
-    | READ STAR
-    | READ LPAREN identifierList RPAREN
-    | WRITE STAR
-    | WRITE LPAREN identifierList RPAREN
-    | READ ASSOCIATION LPAREN qualifiedNameList RPAREN
+    : create
+    | delete
+    | read STAR
+    | read LPAREN identifierList RPAREN
+    | write STAR
+    | write LPAREN identifierList RPAREN
+    | read association LPAREN qualifiedNameList RPAREN
     ;
 ```
 
@@ -469,7 +469,7 @@ entityAccessRight
 
 ### SQL-style GRANT/REVOKE
 
-The `GRANT`/`REVOKE` syntax was chosen because:
+The `grant`/`revoke` syntax was chosen because:
 1. It's familiar to anyone who knows SQL security
 2. It maps cleanly to the Mendix access model (roles, permissions, objects)
 3. It reads naturally: "GRANT ShopUser ON Customer (READ *, WRITE *)"
@@ -477,7 +477,7 @@ The `GRANT`/`REVOKE` syntax was chosen because:
 
 ### Inline ACCESS Clause
 
-The inline `ACCESS (...)` clause on CREATE statements enables one-shot provisioning:
+The inline `access (...)` clause on CREATE statements enables one-shot provisioning:
 - Define and secure an entity in one statement
 - No separate GRANT needed for new entities
 - Consistent with how Studio Pro presents security alongside entity configuration
@@ -490,80 +490,80 @@ Module roles are the fundamental unit of access in Mendix:
 - Page access references module roles
 - User roles are composites of module roles
 
-MDL reflects this by making `DESCRIBE MODULE ROLE` the primary audit tool.
+MDL reflects this by making `describe module role` the primary audit tool.
 
 ### XPath Constraints as Strings
 
-Entity access XPath constraints are kept as string literals (`WHERE '...'`) rather than parsed. This matches how Mendix stores them and avoids needing an XPath parser in MDL.
+Entity access XPath constraints are kept as string literals (`where '...'`) rather than parsed. This matches how Mendix stores them and avoids needing an XPath parser in MDL.
 
 ## Example: Complete Security Setup
 
 ```sql
 -- 1. Set security level
-ALTER PROJECT SECURITY LEVEL PRODUCTION;
+alter project security level production;
 
 -- 2. Create module roles
-CREATE MODULE ROLE Shop.Customer DESCRIPTION 'Customer self-service access';
-CREATE MODULE ROLE Shop.Employee DESCRIPTION 'Shop employee with full access';
-CREATE MODULE ROLE Shop.Manager DESCRIPTION 'Shop manager with admin access';
+create module role Shop.Customer description 'Customer self-service access';
+create module role Shop.Employee description 'Shop employee with full access';
+create module role Shop.Manager description 'Shop manager with admin access';
 
 -- 3. Create user roles
-CREATE USER ROLE Customer (
+create user role Customer (
     Shop.Customer,
     System.User
 );
 
-CREATE USER ROLE Employee (
+create user role Employee (
     Shop.Customer,
     Shop.Employee,
     Administration.User,
     System.User
 );
 
-CREATE USER ROLE Manager (
+create user role Manager (
     Shop.Customer,
     Shop.Employee,
     Shop.Manager,
     Administration.Administrator,
     System.Administrator
 )
-MANAGE ALL ROLES;
+manage all roles;
 
 -- 4. Entity access
-GRANT Shop.Customer ON Shop.Order (
-    CREATE,
-    READ *,
-    WRITE (Status, Notes)
+grant Shop.Customer on Shop.Order (
+    create,
+    read *,
+    write (status, Notes)
 )
-WHERE '[%CurrentUser%/Shop.Order_Customer = System.owner]';
+where '[%CurrentUser%/Shop.Order_Customer = System.owner]';
 
-GRANT Shop.Employee ON Shop.Order (
-    CREATE,
-    DELETE,
-    READ *,
-    WRITE *
+grant Shop.Employee on Shop.Order (
+    create,
+    delete,
+    read *,
+    write *
 );
 
-GRANT Shop.Manager ON Shop.Order (
-    CREATE,
-    DELETE,
-    READ *,
-    WRITE *
+grant Shop.Manager on Shop.Order (
+    create,
+    delete,
+    read *,
+    write *
 );
 
 -- 5. Microflow access
-GRANT EXECUTE ON MICROFLOW Shop.ACT_PlaceOrder TO Shop.Customer, Shop.Employee;
-GRANT EXECUTE ON MICROFLOW Shop.ACT_CancelOrder TO Shop.Employee, Shop.Manager;
-GRANT EXECUTE ON MICROFLOW Shop.ACT_DeleteOrder TO Shop.Manager;
+grant execute on microflow Shop.ACT_PlaceOrder to Shop.Customer, Shop.Employee;
+grant execute on microflow Shop.ACT_CancelOrder to Shop.Employee, Shop.Manager;
+grant execute on microflow Shop.ACT_DeleteOrder to Shop.Manager;
 
 -- 6. Page access
-GRANT VIEW ON PAGE Shop.MyOrders TO Shop.Customer;
-GRANT VIEW ON PAGE Shop.AllOrders TO Shop.Employee, Shop.Manager;
-GRANT VIEW ON PAGE Shop.AdminDashboard TO Shop.Manager;
+grant view on page Shop.MyOrders to Shop.Customer;
+grant view on page Shop.AllOrders to Shop.Employee, Shop.Manager;
+grant view on page Shop.AdminDashboard to Shop.Manager;
 
 -- 7. Demo users
-CREATE DEMO USER 'demo_customer' PASSWORD 'customer1' (Customer);
-CREATE DEMO USER 'demo_employee' PASSWORD 'employee1' (Employee);
-CREATE DEMO USER 'demo_manager' PASSWORD 'manager1' (Manager);
-ALTER PROJECT SECURITY DEMO USERS ON;
+create demo user 'demo_customer' password 'customer1' (Customer);
+create demo user 'demo_employee' password 'employee1' (Employee);
+create demo user 'demo_manager' password 'manager1' (Manager);
+alter project security demo users on;
 ```

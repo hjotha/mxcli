@@ -14,75 +14,75 @@ Use this skill when the user wants to:
 
 ```sql
 -- List all business event service documents
-SHOW BUSINESS EVENT SERVICES;
+show business event services;
 
 -- Filter by module
-SHOW BUSINESS EVENT SERVICES IN MyModule;
+show business event services in MyModule;
 
 -- List all business event client documents (future)
-SHOW BUSINESS EVENT CLIENTS;
+show business event clients;
 
 -- List individual messages across all services
-SHOW BUSINESS EVENTS;
+show business events;
 
 -- Filter messages by module
-SHOW BUSINESS EVENTS IN MyModule;
+show business events in MyModule;
 
 -- Full MDL description (round-trippable)
-DESCRIBE BUSINESS EVENT SERVICE Module.ServiceName;
+describe business event service Module.ServiceName;
 ```
 
 ### Create a Business Event Service
 
 ```sql
-CREATE BUSINESS EVENT SERVICE Module.CustomerEventsApi
+create business event service Module.CustomerEventsApi
 (
   ServiceName: 'CustomerEventsApi',
   EventNamePrefix: 'com.example'
 )
 {
-  MESSAGE CustomerChangedEvent (CustomerId: Long) PUBLISH
-    ENTITY Module.PBE_CustomerChangedEvent;
-  MESSAGE AddressChangedEvent (AddressId: Long) PUBLISH
-    ENTITY Module.PBE_AddressChangedEvent;
+  message CustomerChangedEvent (CustomerId: long) publish
+    entity Module.PBE_CustomerChangedEvent;
+  message AddressChangedEvent (AddressId: long) publish
+    entity Module.PBE_AddressChangedEvent;
 };
 ```
 
 ### Create or Replace (Overwrite Existing)
 
 ```sql
-CREATE OR REPLACE BUSINESS EVENT SERVICE Module.CustomerEventsApi
+create or replace business event service Module.CustomerEventsApi
 (
   ServiceName: 'CustomerEventsApi',
   EventNamePrefix: ''
 )
 {
-  MESSAGE CustomerChangedEvent (CustomerId: Long) PUBLISH
-    ENTITY Module.PBE_CustomerChangedEvent;
+  message CustomerChangedEvent (CustomerId: long) publish
+    entity Module.PBE_CustomerChangedEvent;
 };
 ```
 
 ### Drop a Business Event Service
 
 ```sql
-DROP BUSINESS EVENT SERVICE Module.CustomerEventsApi;
+drop business event service Module.CustomerEventsApi;
 ```
 
 ## Message Definition Syntax
 
 ```
-MESSAGE <MessageName> (<AttrName>: <Type>, ...) PUBLISH|SUBSCRIBE
-  [ENTITY <Module.EntityName>]
-  [MICROFLOW <Module.MicroflowName>];
+message <MessageName> (<AttrName>: <type>, ...) publish|subscribe
+  [entity <Module.EntityName>]
+  [microflow <Module.MicroflowName>];
 ```
 
 ### Supported Attribute Types
-- `String` - Text
-- `Integer` - 32-bit integer
-- `Long` - 64-bit integer
-- `Decimal` - Precise decimal number
-- `Boolean` - True/false
-- `DateTime` - Date and time
+- `string` - Text
+- `integer` - 32-bit integer
+- `long` - 64-bit integer
+- `decimal` - Precise decimal number
+- `boolean` - True/false
+- `datetime` - Date and time
 
 ## Service Properties
 
@@ -90,31 +90,31 @@ MESSAGE <MessageName> (<AttrName>: <Type>, ...) PUBLISH|SUBSCRIBE
 |----------|-------------|
 | `ServiceName` | The service name used in the event broker |
 | `EventNamePrefix` | Prefix added to event names (can be empty) |
-| `Folder` | Optional folder path for the service document |
+| `folder` | Optional folder path for the service document |
 
 ## Operations
 
 | Operation | Description |
 |-----------|-------------|
-| `PUBLISH` | This service publishes the event (other apps subscribe) |
-| `SUBSCRIBE` | This service subscribes to the event (other apps publish) |
+| `publish` | This service publishes the event (other apps subscribe) |
+| `subscribe` | This service subscribes to the event (other apps publish) |
 
 ## Publishing Events from Microflows
 
 There is no dedicated microflow activity for publishing business events. Instead, Mendix
-provides Java actions in the `BusinessEvents` marketplace module. Use `CALL JAVA ACTION`
+provides Java actions in the `BusinessEvents` marketplace module. Use `call java action`
 to publish an event from a microflow:
 
 ```sql
 -- Create an event entity instance and publish it
-CREATE MICROFLOW Module.ACT_PublishCustomerChanged
-  FOLDER 'ACT'
-BEGIN
-  DECLARE $Event Module.PBE_CustomerChangedEvent;
-  $Event = CREATE Module.PBE_CustomerChangedEvent (CustomerId = $CustomerId);
-  COMMIT $Event;
-  CALL JAVA ACTION BusinessEvents.PublishBusinessEvent_V2(EventObject = $Event);
-END;
+create microflow Module.ACT_PublishCustomerChanged
+  folder 'ACT'
+begin
+  declare $event Module.PBE_CustomerChangedEvent;
+  $event = create Module.PBE_CustomerChangedEvent (CustomerId = $CustomerId);
+  commit $event;
+  call java action BusinessEvents.PublishBusinessEvent_V2(EventObject = $event);
+end;
 ```
 
 ### Available Java Actions (from BusinessEvents module)
@@ -145,7 +145,7 @@ END;
 - [ ] Entity names use qualified format: `Module.EntityName`
 - [ ] Entities for published events are conventionally prefixed with `PBE_`
 - [ ] Attribute types must be valid (String, Integer, Long, Decimal, Boolean, DateTime)
-- [ ] Use `DESCRIBE BUSINESS EVENT SERVICE` to verify the result
+- [ ] Use `describe business event service` to verify the result
 - [ ] The DESCRIBE output is parseable and can be used as a CREATE statement
-- [ ] To publish events from microflows, use `CALL JAVA ACTION BusinessEvents.PublishBusinessEvent_V2`
+- [ ] To publish events from microflows, use `call java action BusinessEvents.PublishBusinessEvent_V2`
 - [ ] The `BusinessEvents` module must be included in the project (marketplace module)

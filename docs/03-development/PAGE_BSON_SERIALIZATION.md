@@ -10,8 +10,8 @@ reference/mendixmodellib/reflection-data/{version}-structures.json
 ```
 
 Each structure entry contains:
-- `qualifiedName`: The API name (e.g., `Pages$DivContainer`)
-- `storageName`: The BSON `$Type` value (e.g., `Forms$DivContainer`)
+- `qualifiedName`: The API name (e.g., `pages$DivContainer`)
+- `storageName`: The BSON `$type` value (e.g., `Forms$DivContainer`)
 - `defaultSettings`: Required default property values
 - `properties`: Property definitions with types and requirements
 
@@ -21,8 +21,8 @@ Mendix uses different prefixes for API names vs storage names:
 
 | API Prefix | Storage Prefix | Domain |
 |------------|----------------|--------|
-| `Pages$` | `Forms$` | Page widgets |
-| `Microflows$` | `Microflows$` | Microflow elements |
+| `pages$` | `Forms$` | Page widgets |
+| `microflows$` | `microflows$` | Microflow elements |
 | `DomainModels$` | `DomainModels$` | Domain model elements |
 | `Texts$` | `Texts$` | Text/translation elements |
 | `DataTypes$` | `DataTypes$` | Data type definitions |
@@ -35,8 +35,8 @@ Mendix uses different prefixes for API names vs storage names:
 | `Forms$NoClientAction` | `Forms$NoAction` |
 | `Forms$PageClientAction` | `Forms$FormAction` |
 | `Forms$MicroflowClientAction` | `Forms$MicroflowAction` |
-| `Pages$DivContainer` | `Forms$DivContainer` |
-| `Pages$ActionButton` | `Forms$ActionButton` |
+| `pages$DivContainer` | `Forms$DivContainer` |
+| `pages$actionbutton` | `Forms$actionbutton` |
 
 ## Widget Default Properties
 
@@ -46,16 +46,16 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$DivContainer",
+  "$type": "Forms$DivContainer",
   "Appearance": { ... },
   "ConditionalVisibilitySettings": null,
   "Name": "",
   "NativeAccessibilitySettings": null,
-  "OnClickAction": { "$Type": "Forms$NoAction", ... },
-  "RenderMode": "Div",
+  "OnClickAction": { "$type": "Forms$NoAction", ... },
+  "rendermode": "div",
   "ScreenReaderHidden": false,
-  "TabIndex": 0,
-  "Widgets": [3]
+  "tabindex": 0,
+  "widgets": [3]
 }
 ```
 
@@ -63,13 +63,13 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$LayoutGrid",
+  "$type": "Forms$layoutgrid",
   "Appearance": { ... },
   "ConditionalVisibilitySettings": null,
   "Name": "",
   "Rows": [3],
-  "TabIndex": 0,
-  "Width": "FullWidth"
+  "tabindex": 0,
+  "width": "FullWidth"
 }
 ```
 
@@ -77,13 +77,13 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$LayoutGridRow",
+  "$type": "Forms$LayoutGridRow",
   "Appearance": { ... },
-  "Columns": [3],
+  "columns": [3],
   "ConditionalVisibilitySettings": null,
-  "HorizontalAlignment": "None",
+  "HorizontalAlignment": "none",
   "SpacingBetweenColumns": true,
-  "VerticalAlignment": "None"
+  "VerticalAlignment": "none"
 }
 ```
 
@@ -91,14 +91,14 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$LayoutGridColumn",
+  "$type": "Forms$LayoutGridColumn",
   "Appearance": { ... },
   "PhoneWeight": -1,
   "PreviewWidth": -1,
   "TabletWeight": -1,
-  "VerticalAlignment": "None",
+  "VerticalAlignment": "none",
   "Weight": -1,
-  "Widgets": [3]
+  "widgets": [3]
 }
 ```
 
@@ -106,37 +106,37 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$ActionButton",
-  "Action": { ... },
+  "$type": "Forms$actionbutton",
+  "action": { ... },
   "Appearance": { ... },
-  "AriaRole": "Button",
-  "ButtonStyle": "Default",
+  "AriaRole": "button",
+  "buttonstyle": "default",
   "CaptionTemplate": { ... },
   "ConditionalVisibilitySettings": null,
-  "Icon": null,
+  "icon": null,
   "Name": "",
   "NativeAccessibilitySettings": null,
-  "RenderType": "Button",
-  "TabIndex": 0,
-  "Tooltip": { ... }
+  "RenderType": "button",
+  "tabindex": 0,
+  "tooltip": { ... }
 }
 ```
 
-**Note:** Use `RenderType` (not `RenderMode`) for ActionButton.
+**Note:** Use `RenderType` (not `rendermode`) for ActionButton.
 
 ### DynamicText
 
 ```json
 {
-  "$Type": "Forms$DynamicText",
+  "$type": "Forms$dynamictext",
   "Appearance": { ... },
   "ConditionalVisibilitySettings": null,
-  "Content": { ... },
+  "content": { ... },
   "Name": "",
   "NativeAccessibilitySettings": null,
-  "NativeTextStyle": "Text",
-  "RenderMode": "Text",
-  "TabIndex": 0
+  "NativeTextStyle": "text",
+  "rendermode": "text",
+  "tabindex": 0
 }
 ```
 
@@ -144,15 +144,15 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$Text",
+  "$type": "Forms$text",
   "Appearance": { ... },
-  "Caption": { ... },
+  "caption": { ... },
   "ConditionalVisibilitySettings": null,
   "Name": "",
   "NativeAccessibilitySettings": null,
-  "NativeTextStyle": "Text",
-  "RenderMode": "Text",
-  "TabIndex": 0
+  "NativeTextStyle": "text",
+  "rendermode": "text",
+  "tabindex": 0
 }
 ```
 
@@ -160,13 +160,13 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$Title",
+  "$type": "Forms$title",
   "Appearance": { ... },
-  "Caption": { ... },
+  "caption": { ... },
   "ConditionalVisibilitySettings": null,
   "Name": "",
   "NativeAccessibilitySettings": null,
-  "TabIndex": 0
+  "tabindex": 0
 }
 ```
 
@@ -174,11 +174,11 @@ Each widget type requires specific default properties to be serialized. Studio P
 
 ```json
 {
-  "$Type": "Forms$DataView",
+  "$type": "Forms$dataview",
   "Appearance": { ... },
   "ConditionalEditabilitySettings": null,
   "ConditionalVisibilitySettings": null,
-  "DataSource": { ... },
+  "datasource": { ... },
   "Editability": "Always",
   "FooterWidgets": [3],
   "LabelWidth": 3,
@@ -186,8 +186,8 @@ Each widget type requires specific default properties to be serialized. Studio P
   "NoEntityMessage": { ... },
   "ReadOnlyStyle": "Control",
   "ShowFooter": true,
-  "TabIndex": 0,
-  "Widgets": [3]
+  "tabindex": 0,
+  "widgets": [3]
 }
 ```
 
@@ -197,55 +197,55 @@ Input widgets require several non-null properties for proper serialization:
 
 ```json
 {
-  "$Type": "Forms$TextBox",
+  "$type": "Forms$textbox",
   "Appearance": { ... },
   "AriaRequired": false,
   "AttributeRef": {
     "$ID": "<uuid>",
-    "$Type": "DomainModels$AttributeRef",
-    "Attribute": "Module.Entity.AttributeName",
+    "$type": "DomainModels$AttributeRef",
+    "attribute": "Module.Entity.AttributeName",
     "EntityRef": null
   },
   "AutoFocus": false,
   "Autocomplete": true,
-  "AutocompletePurpose": "On",
+  "AutocompletePurpose": "on",
   "ConditionalEditabilitySettings": null,
   "ConditionalVisibilitySettings": null,
-  "Editable": "Always",
+  "editable": "Always",
   "FormattingInfo": { ... },
   "InputMask": "",
   "IsPasswordBox": false,
-  "KeyboardType": "Default",
+  "KeyboardType": "default",
   "LabelTemplate": { ... },
   "MaxLengthCode": -1,
   "Name": "textBox1",
   "NativeAccessibilitySettings": null,
-  "OnChangeAction": { "$Type": "Forms$NoAction", ... },
-  "OnEnterAction": { "$Type": "Forms$NoAction", ... },
-  "OnEnterKeyPressAction": { "$Type": "Forms$NoAction", ... },
-  "OnLeaveAction": { "$Type": "Forms$NoAction", ... },
+  "OnChangeAction": { "$type": "Forms$NoAction", ... },
+  "OnEnterAction": { "$type": "Forms$NoAction", ... },
+  "OnEnterKeyPressAction": { "$type": "Forms$NoAction", ... },
+  "OnLeaveAction": { "$type": "Forms$NoAction", ... },
   "PlaceholderTemplate": { ... },
   "ReadOnlyStyle": "Inherit",
   "ScreenReaderLabel": null,
   "SourceVariable": null,
   "SubmitBehaviour": "OnEndEditing",
   "SubmitOnInputDelay": 300,
-  "TabIndex": 0,
-  "Validation": { ... }
+  "tabindex": 0,
+  "validation": { ... }
 }
 ```
 
 **Required nested objects:**
-- `AttributeRef` - Must have `Attribute` as fully qualified path (e.g., `Module.Entity.AttributeName`)
+- `AttributeRef` - Must have `attribute` as fully qualified path (e.g., `Module.Entity.AttributeName`)
 - `FormattingInfo` - Required for TextBox and DatePicker
 - `PlaceholderTemplate` - Required `Forms$ClientTemplate` object
-- `Validation` - Required `Forms$WidgetValidation` object
+- `validation` - Required `Forms$WidgetValidation` object
 
 ### Attribute Path Resolution
 
 The `AttributeRef.Attribute` field requires a **fully qualified path** in the format `Module.Entity.AttributeName`.
 
-When using short attribute names in MDL (e.g., `ATTRIBUTE 'Name'`), the SDK automatically resolves them to fully qualified paths using the DataView's entity context:
+When using short attribute names in MDL (e.g., `attribute 'Name'`), the SDK automatically resolves them to fully qualified paths using the DataView's entity context:
 
 ```
 Short:     Name
@@ -279,8 +279,8 @@ Mendix BSON uses version markers for arrays:
 
 Example:
 ```json
-"Widgets": [3]           // Empty widgets array
-"Widgets": [2, {...}]    // One widget
+"widgets": [3]           // empty widgets array
+"widgets": [2, {...}]    // One widget
 "Items": [3, {...}]      // One text translation item
 ```
 
@@ -291,11 +291,11 @@ Standard appearance object for widgets:
 ```json
 {
   "$ID": "<uuid>",
-  "$Type": "Forms$Appearance",
-  "Class": "",
-  "DesignProperties": [3],
+  "$type": "Forms$Appearance",
+  "class": "",
+  "designproperties": [3],
   "DynamicClasses": "",
-  "Style": ""
+  "style": ""
 }
 ```
 
@@ -306,49 +306,49 @@ A page document has this top-level structure:
 ```json
 {
   "$ID": "<uuid>",
-  "$Type": "Forms$Page",
+  "$type": "Forms$page",
   "AllowedModuleRoles": [1],
   "Appearance": { ... },
   "Autofocus": "DesktopOnly",
   "CanvasHeight": 600,
   "CanvasWidth": 1200,
-  "Documentation": "",
+  "documentation": "",
   "Excluded": false,
   "ExportLevel": "Hidden",
   "FormCall": { ... },
   "Name": "PageName",
-  "Parameters": [3, ...],
+  "parameters": [3, ...],
   "PopupCloseAction": "",
-  "Title": { ... },
-  "Url": "page_url",
-  "Variables": [3]
+  "title": { ... },
+  "url": "page_url",
+  "variables": [3]
 }
 ```
 
 ## Pluggable Widgets (CustomWidget)
 
-Pluggable widgets like ComboBox use the `CustomWidgets$CustomWidget` type with a complex structure:
+Pluggable widgets like ComboBox use the `CustomWidgets$customwidget` type with a complex structure:
 
 ```json
 {
-  "$Type": "CustomWidgets$CustomWidget",
+  "$type": "CustomWidgets$customwidget",
   "Appearance": { ... },
   "ConditionalEditabilitySettings": null,
   "ConditionalVisibilitySettings": null,
-  "Editable": "Always",
+  "editable": "Always",
   "LabelTemplate": null,
   "Name": "comboBox1",
-  "Object": {
-    "$Type": "CustomWidgets$WidgetObject",
-    "Properties": [2, { ... }],
+  "object": {
+    "$type": "CustomWidgets$WidgetObject",
+    "properties": [2, { ... }],
     "TypePointer": "<binary ID referencing ObjectType>"
   },
-  "TabIndex": 0,
-  "Type": {
-    "$Type": "CustomWidgets$CustomWidgetType",
+  "tabindex": 0,
+  "type": {
+    "$type": "CustomWidgets$CustomWidgetType",
     "HelpUrl": "...",
     "ObjectType": {
-      "$Type": "CustomWidgets$WidgetObjectType",
+      "$type": "CustomWidgets$WidgetObjectType",
       "PropertyTypes": [2, { ... }]
     },
     "OfflineCapable": false,
@@ -401,11 +401,11 @@ To create pluggable widgets correctly, we use **embedded templates** extracted f
 
 ```
 sdk/widgets/
-├── loader.go                           # Template loading and cloning
+├── loader.go                           # template loading and cloning
 └── templates/
     └── mendix-11.6/
-        ├── combobox.json              # Full ComboBox template (~5400 lines JSON)
-        ├── datagrid.json              # DataGrid template
+        ├── combobox.json              # full combobox template (~5400 lines json)
+        ├── datagrid.json              # datagrid template
         └── ...
 ```
 
@@ -420,13 +420,13 @@ When creating a widget:
 4. Modify specific property values (e.g., `attributeEnumeration`)
 
 ```go
-// Get template and clone with new IDs
+// get template and clone with new IDs
 embeddedType, embeddedObject, propertyIDs, objectTypeID, err := widgets.GetTemplateFullBSON(
     pages.WidgetIDComboBox,
     mpr.GenerateID,
 )
 
-// Update specific property value
+// update specific property value
 updatedObject := updateWidgetPropertyValue(embeddedObject, propertyIDs, "attributeEnumeration", ...)
 ```
 
@@ -454,33 +454,33 @@ Convert to JSON and save to `sdk/widgets/templates/mendix-{version}/`.
 
 ### "The type cache does not contain a type with qualified name X"
 
-This error means the `$Type` value is incorrect. Check the reflection-data for the correct storage name.
+This error means the `$type` value is incorrect. Check the reflection-data for the correct storage name.
 
 **Examples:**
 - `Forms$NoClientAction` → Use `Forms$NoAction`
 - `Forms$PageClientAction` → Use `Forms$FormAction`
-- `Pages$DivContainer` → Use `Forms$DivContainer`
+- `pages$DivContainer` → Use `Forms$DivContainer`
 
 ### "No entity configured for the data source"
 
-The DataView's `DataSource` property is missing or incorrectly configured. A DataView using a page parameter needs a `Forms$DataViewSource` with proper `EntityRef` and `SourceVariable`:
+The DataView's `datasource` property is missing or incorrectly configured. A DataView using a page parameter needs a `Forms$DataViewSource` with proper `EntityRef` and `SourceVariable`:
 
 ```json
 {
-  "$Type": "Forms$DataViewSource",
+  "$type": "Forms$DataViewSource",
   "EntityRef": {
-    "$Type": "DomainModels$DirectEntityRef",
-    "Entity": "Module.EntityName"
+    "$type": "DomainModels$DirectEntityRef",
+    "entity": "Module.EntityName"
   },
   "ForceFullObjects": false,
   "SourceVariable": {
-    "$Type": "Forms$PageVariable",
+    "$type": "Forms$PageVariable",
     "LocalVariable": "",
     "PageParameter": "ParameterName",
     "SnippetParameter": "",
     "SubKey": "",
     "UseAllPages": false,
-    "Widget": ""
+    "widget": ""
   }
 }
 ```
@@ -504,12 +504,12 @@ import json
 with open('reference/mendixmodellib/reflection-data/11.0.0-structures.json') as f:
     data = json.load(f)
 
-# Find widget by API name
+# find widget by api name
 widget = data.get('Pages$DivContainer', {})
 print('Storage name:', widget.get('storageName'))
 print('Defaults:', json.dumps(widget.get('defaultSettings', {}), indent=2))
 
-# Search by storage name
+# search by storage name
 for key, val in data.items():
     if val.get('storageName') == 'Forms$NoAction':
         print(f'{key}: {val.get("defaultSettings")}')
@@ -536,8 +536,8 @@ Pluggable widgets like DataGrid2, ComboBox, and Gallery use a fundamentally diff
 ### Structure
 
 ```
-CustomWidgets$CustomWidget
-├── Type (CustomWidgets$CustomWidgetType)
+CustomWidgets$customwidget
+├── type (CustomWidgets$CustomWidgetType)
 │   ├── WidgetId: "com.mendix.widget.web.datagrid.Datagrid"
 │   ├── ObjectType (CustomWidgets$WidgetObjectType)
 │   │   └── PropertyTypes[] (CustomWidgets$WidgetPropertyType)
@@ -545,13 +545,13 @@ CustomWidgets$CustomWidget
 │   │       ├── PropertyKey: "datasource"
 │   │       └── ValueType (CustomWidgets$WidgetValueType)
 │   └── ...
-└── Object (CustomWidgets$WidgetObject)
-    └── Properties[] (CustomWidgets$WidgetProperty)
-        ├── TypePointer: "<property-type-id>"  // References PropertyTypes.$ID
-        └── Value (CustomWidgets$WidgetValue)
+└── object (CustomWidgets$WidgetObject)
+    └── properties[] (CustomWidgets$WidgetProperty)
+        ├── TypePointer: "<property-type-id>"  // references PropertyTypes.$ID
+        └── value (CustomWidgets$WidgetValue)
             ├── TypePointer: "<value-type-id>"
-            ├── DataSource, AttributeRef, PrimitiveValue, TextTemplate, etc.
-            └── Objects[] (for nested object lists like columns)
+            ├── datasource, AttributeRef, PrimitiveValue, TextTemplate, etc.
+            └── objects[] (for nested object lists like columns)
 ```
 
 ### Critical Requirements
@@ -564,10 +564,10 @@ CustomWidgets$CustomWidget
    ```json
    "TextTemplate": {
      "$ID": "<uuid>",
-     "$Type": "Forms$ClientTemplate",
-     "Fallback": { "$ID": "<uuid>", "$Type": "Texts$Text", "Items": [] },
-     "Parameters": [],
-     "Template": { "$ID": "<uuid>", "$Type": "Texts$Text", "Items": [] }
+     "$type": "Forms$ClientTemplate",
+     "Fallback": { "$ID": "<uuid>", "$type": "Texts$text", "Items": [] },
+     "parameters": [],
+     "template": { "$ID": "<uuid>", "$type": "Texts$text", "Items": [] }
    }
    ```
 
@@ -578,14 +578,14 @@ CustomWidgets$CustomWidget
 ### Implementation Pattern
 
 ```go
-// Load template with both Type and Object
+// Load template with both type and object
 embeddedType, embeddedObject, propertyTypeIDs, objectTypeID, err :=
     widgets.GetTemplateFullBSON(widgetID, mpr.GenerateID)
 
-// Update the template Object with specific values (datasource, columns)
+// update the template object with specific values (datasource, columns)
 rawObject := updateTemplateObject(embeddedObject, propertyTypeIDs, datasource, columns)
 
-// Create widget with cloned Type and updated Object
+// create widget with cloned type and updated object
 widget := &pages.CustomWidget{
     RawType:   embeddedType,
     RawObject: rawObject,
@@ -604,7 +604,7 @@ widget := &pages.CustomWidget{
 The DataGrid2 `columns` property has an `ObjectType` with 21 `PropertyTypes`:
 
 ```
-showContentAs, attribute, content, dynamicText, exportValue, header, tooltip,
+showContentAs, attribute, content, dynamictext, exportValue, header, tooltip,
 filter, visible, sortable, resizable, draggable, hidable, allowEventPropagation,
 width, minWidth, minWidthLimit, size, alignment, columnClass, wrapText
 ```
@@ -623,13 +623,13 @@ columnProperties := bson.A{int32(2),
 
 **Correct approach** (creates all 21 properties):
 ```go
-// Create ALL properties from the template's ObjectType.PropertyTypes
+// create all properties from the template's ObjectType.PropertyTypes
 for _, propType := range columnObjectType.PropertyTypes {
     if propType.PropertyKey == "attribute" {
-        // Use explicit value
+        // use explicit value
         columnProperties = append(columnProperties, buildProperty(propType, attrPath))
     } else {
-        // Use default value from template
+        // use default value from template
         columnProperties = append(columnProperties, buildDefaultProperty(propType))
     }
 }
@@ -667,7 +667,7 @@ When creating columns, iterate through ALL `PropertyTypes` and create a `WidgetP
 
 ### Expression-Type Properties
 
-**Critical Insight**: Properties with `ValueType.Type = "Expression"` (like `visible`, `editable`, etc.) require a non-empty `Expression` value. Template widgets often have empty/placeholder Expression values that will cause validation errors if cloned directly.
+**Critical Insight**: Properties with `ValueType.Type = "expression"` (like `visible`, `editable`, etc.) require a non-empty `expression` value. Template widgets often have empty/placeholder Expression values that will cause validation errors if cloned directly.
 
 #### Example: DataGrid2 Column "visible" Property
 
@@ -675,31 +675,31 @@ The `visible` property on DataGrid2 columns controls whether the column is displ
 
 ```json
 {
-  "$Type": "CustomWidgets$WidgetProperty",
+  "$type": "CustomWidgets$WidgetProperty",
   "TypePointer": "<visible-property-type-id>",
-  "Value": {
-    "$Type": "CustomWidgets$WidgetValue",
-    "Expression": "true",        // REQUIRED: Non-empty expression
+  "value": {
+    "$type": "CustomWidgets$WidgetValue",
+    "expression": "true",        // required: non-empty expression
     "TypePointer": "<visible-value-type-id>",
     ...
   }
 }
 ```
 
-**Template pitfall**: The template's `visible` property may have `"Expression": ""` (empty). When cloning column properties, you must:
+**Template pitfall**: The template's `visible` property may have `"expression": ""` (empty). When cloning column properties, you must:
 
 1. **Check if Expression is empty**: If the template has an empty Expression
-2. **Rebuild the property**: Create a new property with `Expression: "true"` instead of cloning
+2. **Rebuild the property**: Create a new property with `expression: "true"` instead of cloning
 
 ```go
-// In cloneAndUpdateColumnProperties
+// in cloneAndUpdateColumnProperties
 if propKey == "visible" {
     var hasExpression bool
     for _, pe := range propMap {
-        if pe.Key == "Value" {
+        if pe.Key == "value" {
             if valDoc, ok := pe.Value.(bson.D); ok {
                 for _, ve := range valDoc {
-                    if ve.Key == "Expression" && ve.Value != "" {
+                    if ve.Key == "expression" && ve.Value != "" {
                         hasExpression = true
                     }
                 }
@@ -707,7 +707,7 @@ if propKey == "visible" {
         }
     }
     if !hasExpression {
-        // Rebuild with Expression: "true" instead of cloning empty value
+        // Rebuild with expression: "true" instead of cloning empty value
         result = append(result, pb.buildColumnExpressionProperty(visibleEntry, "true"))
     } else {
         result = append(result, pb.clonePropertyWithNewIDs(propMap))
@@ -719,8 +719,8 @@ if propKey == "visible" {
 
 | Error | Property | Solution |
 |-------|----------|----------|
-| CE0642 "Property 'Visible' is required" | Column `visible` | Rebuild with `Expression: "true"` |
-| CE0642 "Property 'Editable' is required" | Column `editable` | Rebuild with `Expression: "true"` |
+| CE0642 "Property 'Visible' is required" | Column `visible` | Rebuild with `expression: "true"` |
+| CE0642 "Property 'Editable' is required" | Column `editable` | Rebuild with `expression: "true"` |
 | Column always hidden | Column `visible` | Check Expression isn't empty |
 
 ### Common Errors
@@ -758,13 +758,13 @@ that change which other properties are visible vs hidden. The widget's `editorCo
 (inside the `.mpk` package) defines these visibility rules:
 
 ```javascript
-// From Datagrid.editorConfig.js (deminified):
-// When NOT customContent mode: HIDE content, allowEventPropagation, exportValue
+// from Datagrid.editorConfig.js (deminified):
+// when not customContent mode: HIDE content, allowEventPropagation, exportValue
 "customContent" !== col.showContentAs &&
     hideNestedPropertiesIn(properties, values, "columns", idx,
         ["content", "allowEventPropagation", "exportValue"]);
 
-// When IN customContent mode: HIDE tooltip
+// when in customContent mode: HIDE tooltip
 "customContent" === col.showContentAs &&
     hidePropertyIn(properties, values, "columns", idx, "tooltip");
 ```
@@ -781,7 +781,7 @@ When `showContentAs` changes, certain properties must have mode-appropriate valu
 | `tooltip`             | VISIBLE (TT=present)| HIDDEN (TT=null)      |
 | `exportValue`         | HIDDEN (no TT)      | VISIBLE (TT=present)  |
 | `allowEventPropagation`| HIDDEN (PV=true)   | VISIBLE (PV=true, required) |
-| `dynamicText`         | VISIBLE             | HIDDEN                |
+| `dynamictext`         | VISIBLE             | HIDDEN                |
 
 **Key insight**: Simply cloning a template column (which has attribute-mode defaults) and
 changing only `showContentAs` to `customContent` triggers CE0463 because the hidden/visible
@@ -801,10 +801,10 @@ widget. The canonical widget definition is in `{WidgetName}.xml` inside the mpk:
 
 ```
 widgets/com.mendix.widget.web.Datagrid.mpk
-├── Datagrid.xml              ← Widget schema: properties, types, defaults, enums
+├── Datagrid.xml              ← widget schema: properties, types, defaults, enums
 ├── Datagrid.editorConfig.js  ← Property visibility rules (mode-dependent hiding)
 ├── package.xml               ← Package metadata and version
-└── com/mendix/.../Datagrid.js  ← Runtime widget code
+└── com/mendix/.../Datagrid.js  ← runtime widget code
 ```
 
 The `Datagrid.xml` defines all 21 column properties with their types, defaults, and
@@ -819,7 +819,7 @@ the mpk definition. This eliminates CE0463 regardless of what property states th
 programmatic builder set:
 
 ```bash
-# After creating pages with mxcli:
+# after creating pages with mxcli:
 reference/mxbuild/modeler/mx update-widgets /path/to/app.mpr
 ```
 

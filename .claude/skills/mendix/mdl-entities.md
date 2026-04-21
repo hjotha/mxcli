@@ -6,9 +6,9 @@ Complete syntax reference for creating entities, attributes, and associations.
 
 | Type | Keyword | Stored in DB | Use Case |
 |------|---------|--------------|----------|
-| Persistent | `CREATE PERSISTENT ENTITY` | Yes | Business data |
-| Non-Persistent | `CREATE NON-PERSISTENT ENTITY` | No | Temporary/view data |
-| View | `CREATE VIEW ENTITY` | No (OQL query) | Aggregated/computed data |
+| Persistent | `create persistent entity` | Yes | Business data |
+| Non-Persistent | `create non-persistent entity` | No | Temporary/view data |
+| View | `create view entity` | No (OQL query) | Aggregated/computed data |
 
 ## Persistent Entity
 
@@ -16,28 +16,28 @@ Complete syntax reference for creating entities, attributes, and associations.
 /**
  * Customer entity for storing customer data
  */
-CREATE PERSISTENT ENTITY Module.Customer (
+create persistent entity Module.Customer (
   -- String attributes
-  Name: String(100) NOT NULL,
-  Email: String(200),
-  Code: String(20) UNIQUE,
+  Name: string(100) not null,
+  Email: string(200),
+  Code: string(20) unique,
 
   -- Numeric attributes
-  Age: Integer,
-  CreditLimit: Decimal,
+  Age: integer,
+  CreditLimit: decimal,
 
   -- Boolean
-  IsActive: Boolean DEFAULT true,
+  IsActive: boolean default true,
 
   -- Date/Time
-  CreatedDate: DateTime,
-  BirthDate: Date,
+  CreatedDate: datetime,
+  BirthDate: date,
 
   -- Enumeration
-  Status: Module.CustomerStatus DEFAULT Active,
+  status: Module.CustomerStatus default Active,
 
   -- Auto-number
-  CustomerNumber: AutoNumber
+  CustomerNumber: autonumber
 );
 /
 ```
@@ -50,11 +50,11 @@ Used for temporary data, form parameters, or calculated values.
 /**
  * Search parameters for customer search form
  */
-CREATE NON-PERSISTENT ENTITY Module.CustomerSearchParams (
-  SearchName: String(100),
-  SearchEmail: String(200),
-  MinCreditLimit: Decimal,
-  IncludeInactive: Boolean DEFAULT false
+create non-persistent entity Module.CustomerSearchParams (
+  SearchName: string(100),
+  SearchEmail: string(200),
+  MinCreditLimit: decimal,
+  IncludeInactive: boolean default false
 );
 /
 ```
@@ -63,27 +63,27 @@ CREATE NON-PERSISTENT ENTITY Module.CustomerSearchParams (
 
 | Type | Syntax | Example |
 |------|--------|---------|
-| String | `Name: String(length)` | `Name: String(100)` |
-| Integer | `Name: Integer` | `Count: Integer` |
-| Long | `Name: Long` | `BigNumber: Long` |
-| Decimal | `Name: Decimal` | `Amount: Decimal` |
-| Boolean | `Name: Boolean` | `IsActive: Boolean` |
-| DateTime | `Name: DateTime` | `CreatedAt: DateTime` |
-| Date | `Name: Date` | `BirthDate: Date` |
-| Enumeration | `Name: Module.EnumName` | `Status: Module.Status` |
-| AutoNumber | `Name: AutoNumber` | `Code: AutoNumber` |
-| Binary | `Name: Binary` | `FileData: Binary` |
-| Hashed String | `Name: HashedString` | `Password: HashedString` |
+| String | `Name: string(length)` | `Name: string(100)` |
+| Integer | `Name: integer` | `count: integer` |
+| Long | `Name: long` | `BigNumber: long` |
+| Decimal | `Name: decimal` | `Amount: decimal` |
+| Boolean | `Name: boolean` | `IsActive: boolean` |
+| DateTime | `Name: datetime` | `CreatedAt: datetime` |
+| Date | `Name: date` | `BirthDate: date` |
+| Enumeration | `Name: Module.EnumName` | `status: Module.Status` |
+| AutoNumber | `Name: autonumber` | `Code: autonumber` |
+| Binary | `Name: binary` | `FileData: binary` |
+| Hashed String | `Name: hashedstring` | `password: hashedstring` |
 
 ## Attribute Modifiers
 
 | Modifier | Meaning | Example |
 |----------|---------|---------|
-| `NOT NULL` | Required field | `Name: String(100) NOT NULL` |
-| `UNIQUE` | Unique constraint | `Code: String(20) UNIQUE` |
-| `DEFAULT value` | Default value | `IsActive: Boolean DEFAULT true` |
+| `not null` | Required field | `Name: string(100) not null` |
+| `unique` | Unique constraint | `Code: string(20) unique` |
+| `default value` | Default value | `IsActive: boolean default true` |
 
-**Note:** Boolean attributes auto-default to `false` when no `DEFAULT` is specified.
+**Note:** Boolean attributes auto-default to `false` when no `default` is specified.
 
 ## Generalization (Inheritance)
 
@@ -93,18 +93,18 @@ CREATE NON-PERSISTENT ENTITY Module.CustomerSearchParams (
 /**
  * Base entity
  */
-CREATE PERSISTENT ENTITY Module.Person (
-  PersonName: String(100) NOT NULL,
-  Email: String(200)
+create persistent entity Module.Person (
+  PersonName: string(100) not null,
+  Email: string(200)
 );
 /
 
 /**
  * Customer extends Person - EXTENDS before (
  */
-CREATE PERSISTENT ENTITY Module.Customer EXTENDS Module.Person (
-  CustomerCode: String(20),
-  CreditLimit: Decimal
+create persistent entity Module.Customer extends Module.Person (
+  CustomerCode: string(20),
+  CreditLimit: decimal
 );
 /
 ```
@@ -112,23 +112,23 @@ CREATE PERSISTENT ENTITY Module.Customer EXTENDS Module.Person (
 Common parent entities for file/image storage:
 ```mdl
 -- Image entity (inherits Name, Size, Contents, thumbnail)
-CREATE PERSISTENT ENTITY Module.ProductPhoto EXTENDS System.Image (
-  PhotoCaption: String(200),
-  SortOrder: Integer DEFAULT 0
+create persistent entity Module.ProductPhoto extends System.Image (
+  PhotoCaption: string(200),
+  SortOrder: integer default 0
 );
 
 -- File document (inherits Name, Size, Contents)
-CREATE PERSISTENT ENTITY Module.Attachment EXTENDS System.FileDocument (
-  AttachmentDescription: String(500)
+create persistent entity Module.Attachment extends System.FileDocument (
+  AttachmentDescription: string(500)
 );
 ```
 
 **Wrong** (parse error):
 ```mdl
 -- EXTENDS after ) = parse error!
-CREATE PERSISTENT ENTITY Module.Photo (
-  PhotoCaption: String(200)
-) EXTENDS System.Image;
+create persistent entity Module.Photo (
+  PhotoCaption: string(200)
+) extends System.Image;
 ```
 
 ## Associations
@@ -139,7 +139,7 @@ CREATE PERSISTENT ENTITY Module.Photo (
 /**
  * Order belongs to one Customer
  */
-CREATE ASSOCIATION Module.Order_Customer (
+create association Module.Order_Customer (
   PARENT Module.Customer,
   CHILD Module.Order
 );
@@ -153,8 +153,8 @@ CREATE ASSOCIATION Module.Order_Customer (
  * Product can be in many Categories
  * Category can have many Products
  */
-CREATE ASSOCIATION Module.Product_Category (
-  PARENT Module.Category AS REFERENCE SET,
+create association Module.Product_Category (
+  PARENT Module.Category as reference set,
   CHILD Module.Product
 );
 /
@@ -166,18 +166,18 @@ CREATE ASSOCIATION Module.Product_Category (
 /**
  * Delete orders when customer is deleted
  */
-CREATE ASSOCIATION Module.Order_Customer (
+create association Module.Order_Customer (
   PARENT Module.Customer,
   CHILD Module.Order,
-  DELETE PARENT CASCADE  -- Delete orders when customer deleted
+  delete PARENT cascade  -- Delete orders when customer deleted
 );
 /
 ```
 
 Delete behaviors:
-- `DELETE PARENT CASCADE` - Delete children when parent deleted
-- `DELETE PARENT PREVENT` - Prevent deletion if children exist
-- `DELETE CHILD CASCADE` - Delete parent when last child deleted
+- `delete PARENT cascade` - Delete children when parent deleted
+- `delete PARENT prevent` - Prevent deletion if children exist
+- `delete CHILD cascade` - Delete parent when last child deleted
 
 ## Enumerations
 
@@ -185,7 +185,7 @@ Delete behaviors:
 /**
  * Order status values
  */
-CREATE ENUMERATION Module.OrderStatus (
+create enumeration Module.OrderStatus (
   Draft = 'Draft',
   Pending = 'Pending',
   Approved = 'Approved',
@@ -202,21 +202,21 @@ CREATE ENUMERATION Module.OrderStatus (
 /**
  * Monthly sales summary by customer
  */
-CREATE VIEW ENTITY Module.CustomerSalesSummary (
-  CustomerName: String(100),
-  TotalOrders: Integer,
-  TotalAmount: Decimal,
-  LastOrderDate: DateTime
+create view entity Module.CustomerSalesSummary (
+  CustomerName: string(100),
+  TotalOrders: integer,
+  TotalAmount: decimal,
+  LastOrderDate: datetime
 )
-AS
-  SELECT
+as
+  select
     c.Name as CustomerName,
     count(o.OrderID) as TotalOrders,
     sum(o.Amount) as TotalAmount,
     max(o.OrderDate) as LastOrderDate
-  FROM Module.Customer c
-  LEFT JOIN c/Module.Order_Customer/Module.Order o
-  GROUP BY c.Name;
+  from Module.Customer c
+  left join c/Module.Order_Customer/Module.Order o
+  GROUP by c.Name;
 /
 ```
 
@@ -226,14 +226,14 @@ AS
 /**
  * Product with search index
  */
-CREATE PERSISTENT ENTITY Module.Product (
-  Code: String(20) NOT NULL,
-  Name: String(100) NOT NULL,
-  Category: String(50),
-  Price: Decimal
+create persistent entity Module.Product (
+  Code: string(20) not null,
+  Name: string(100) not null,
+  Category: string(50),
+  Price: decimal
 )
-INDEX idx_product_code ON (Code)
-INDEX idx_product_category ON (Category);
+index idx_product_code on (Code)
+index idx_product_category on (Category);
 /
 ```
 
@@ -241,7 +241,7 @@ INDEX idx_product_category ON (Category);
 
 ```mdl
 -- Enumeration
-CREATE ENUMERATION Shop.OrderStatus (
+create enumeration Shop.OrderStatus (
   Draft = 'Draft',
   Confirmed = 'Confirmed',
   Shipped = 'Shipped',
@@ -250,59 +250,59 @@ CREATE ENUMERATION Shop.OrderStatus (
 /
 
 -- Customer entity
-CREATE PERSISTENT ENTITY Shop.Customer (
-  Name: String(100) NOT NULL,
-  Email: String(200) NOT NULL UNIQUE,
-  Phone: String(20),
-  IsActive: Boolean DEFAULT true,
-  CreatedDate: DateTime
+create persistent entity Shop.Customer (
+  Name: string(100) not null,
+  Email: string(200) not null unique,
+  Phone: string(20),
+  IsActive: boolean default true,
+  CreatedDate: datetime
 );
 /
 
 -- Product entity
-CREATE PERSISTENT ENTITY Shop.Product (
-  Code: String(20) NOT NULL UNIQUE,
-  Name: String(100) NOT NULL,
-  Description: String(500),
-  Price: Decimal NOT NULL,
-  Stock: Integer DEFAULT 0,
-  IsAvailable: Boolean DEFAULT true
+create persistent entity Shop.Product (
+  Code: string(20) not null unique,
+  Name: string(100) not null,
+  description: string(500),
+  Price: decimal not null,
+  Stock: integer default 0,
+  IsAvailable: boolean default true
 );
 /
 
 -- Order entity
-CREATE PERSISTENT ENTITY Shop.Order (
-  OrderNumber: AutoNumber,
-  OrderDate: DateTime NOT NULL,
-  Status: Shop.OrderStatus DEFAULT Draft,
-  TotalAmount: Decimal,
-  Notes: String(500)
+create persistent entity Shop.Order (
+  OrderNumber: autonumber,
+  OrderDate: datetime not null,
+  status: Shop.OrderStatus default Draft,
+  TotalAmount: decimal,
+  Notes: string(500)
 );
 /
 
 -- Order line entity
-CREATE PERSISTENT ENTITY Shop.OrderLine (
-  Quantity: Integer NOT NULL,
-  UnitPrice: Decimal NOT NULL,
-  LineTotal: Decimal
+create persistent entity Shop.OrderLine (
+  Quantity: integer not null,
+  UnitPrice: decimal not null,
+  LineTotal: decimal
 );
 /
 
 -- Associations
-CREATE ASSOCIATION Shop.Order_Customer (
+create association Shop.Order_Customer (
   PARENT Shop.Customer,
   CHILD Shop.Order
 );
 /
 
-CREATE ASSOCIATION Shop.OrderLine_Order (
+create association Shop.OrderLine_Order (
   PARENT Shop.Order,
   CHILD Shop.OrderLine,
-  DELETE PARENT CASCADE
+  delete PARENT cascade
 );
 /
 
-CREATE ASSOCIATION Shop.OrderLine_Product (
+create association Shop.OrderLine_Product (
   PARENT Shop.Product,
   CHILD Shop.OrderLine
 );
@@ -313,28 +313,28 @@ CREATE ASSOCIATION Shop.OrderLine_Product (
 
 ### Entity Creation
 ```mdl
-CREATE PERSISTENT ENTITY Module.Name (attributes);
-CREATE NON-PERSISTENT ENTITY Module.Name (attributes);
-CREATE VIEW ENTITY Module.Name (attributes) AS SELECT ...;
+create persistent entity Module.Name (attributes);
+create non-persistent entity Module.Name (attributes);
+create view entity Module.Name (attributes) as select ...;
 ```
 
 ### Attribute Syntax
 ```mdl
-AttributeName: Type [(length)] [NOT NULL] [UNIQUE] [DEFAULT value]
+attributename: type [(length)] [not null] [unique] [default value]
 ```
 
 ### Association Syntax
 ```mdl
-CREATE ASSOCIATION Module.Name (
-  PARENT Module.ParentEntity [AS REFERENCE SET],
+create association Module.Name (
+  PARENT Module.ParentEntity [as reference set],
   CHILD Module.ChildEntity
-  [, DELETE PARENT CASCADE|PREVENT]
+  [, delete PARENT cascade|prevent]
 );
 ```
 
 ### Enumeration Syntax
 ```mdl
-CREATE ENUMERATION Module.Name (
+create enumeration Module.Name (
   Value1 = 'Caption1',
   Value2 = 'Caption2'
 );

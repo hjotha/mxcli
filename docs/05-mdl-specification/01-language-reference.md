@@ -36,35 +36,35 @@ This document provides a complete reference for MDL (Mendix Definition Language)
 MDL keywords are **case-insensitive**. The following are reserved keywords:
 
 ```
-ACCESS, ACTIONS, ADD, AFTER, ALL, ALTER, AND, ANNOTATION, AS, ASC,
-ASCENDING, ASSOCIATION, AUTONUMBER, BATCH, BEFORE, BEGIN, BINARY,
-BOOLEAN, BOTH, BUSINESS, BY, CALL, CANCEL, CAPTION, CASCADE,
-CATALOG, CHANGE, CHILD, CLOSE, COLUMN, COMBOBOX, COMMIT, CONNECT,
-CONFIGURATION, CONNECTOR, CONSTANT, CONSTRAINT, CONTAINER, CREATE,
-CRUD, DATAGRID, DATAVIEW, DATE, DATETIME, DECLARE, DEFAULT, DELETE,
-DELETE_BEHAVIOR, DELETE_BUT_KEEP_REFERENCES, DELETE_CASCADE, DEMO,
-DEPTH, DESC, DESCENDING, DESCRIBE, DIFF, DISCONNECT, DROP, ELSE,
-EMPTY, END, ENTITY, ENUMERATION, ERROR, EVENT, EVENTS, EXECUTE,
-EXEC, EXIT, EXPORT, EXTENDS, EXTERNAL, FALSE, FOLDER, FOOTER,
-FOR, FORMAT, FROM, FULL, GALLERY, GENERATE, GRANT, HEADER, HELP,
-HOME, IF, IMPORT, IN, INDEX, INFO, INSERT, INTEGER, INTO, JAVA,
-KEEP_REFERENCES, LABEL, LANGUAGE, LAYOUT, LAYOUTGRID, LEVEL, LIMIT,
-LINK, LIST, LISTVIEW, LOCAL, LOG, LOGIN, LONG, LOOP, MANAGE, MAP,
-MATRIX, MENU, MESSAGE, MICROFLOW, MICROFLOWS, MODEL, MODIFY, MODULE,
-MODULES, MOVE, NANOFLOW, NANOFLOWS, NAVIGATION, NODE, NON_PERSISTENT,
-NOT, NULL, OF, ON, OR, ORACLE, OVERVIEW, OWNER, PAGE, PAGES, PARENT,
-PASSWORD, PERSISTENT, POSITION, POSTGRES, PRODUCTION, PROJECT,
-PROTOTYPE, QUERY, QUIT, REFERENCE, REFERENCESET, REFRESH, REMOVE,
-REPLACE, REPORT, RESPONSIVE, RETRIEVE, RETURN, REVOKE, ROLE, ROLES,
-ROLLBACK, ROW, SAVE, SCRIPT, SEARCH, SECURITY, SELECTION, SET, SHOW,
-SNIPPET, SNIPPETS, SQL, SQLSERVER, STATUS, STRING, STRUCTURE,
-TABLES, TEXTBOX, TEXTAREA, THEN, TO, TRUE, TYPE, UNIQUE, UPDATE,
-USER, VALIDATION, VALUE, VIEW, VIEWS, VISIBLE, WARNING, WHERE, WIDGET,
-WIDGETS, WITH, WORKFLOWS, WRITE
+access, actions, add, after, all, alter, and, annotation, as, asc,
+ASCENDING, association, autonumber, batch, before, begin, binary,
+boolean, both, business, by, call, cancel, caption, cascade,
+catalog, change, CHILD, close, column, combobox, commit, connect,
+configuration, connector, constant, constraint, container, create,
+CRUD, datagrid, dataview, date, datetime, declare, default, delete,
+delete_behavior, DELETE_BUT_KEEP_REFERENCES, DELETE_CASCADE, demo,
+depth, desc, DESCENDING, describe, DIFF, disconnect, drop, else,
+empty, end, entity, enumeration, error, event, events, execute,
+exec, EXIT, export, extends, external, false, folder, footer,
+for, format, from, full, gallery, generate, grant, header, HELP,
+home, if, import, in, index, info, insert, integer, into, java,
+KEEP_REFERENCES, label, LANGUAGE, layout, layoutgrid, level, limit,
+link, list, listview, local, log, login, long, loop, manage, map,
+matrix, menu, message, microflow, microflows, model, modify, module,
+modules, move, nanoflow, nanoflows, navigation, node, NON_PERSISTENT,
+not, null, of, on, or, ORACLE, overview, owner, page, pages, PARENT,
+password, persistent, position, POSTGRES, production, project,
+prototype, query, QUIT, reference, REFERENCESET, refresh, remove,
+replace, REPORT, RESPONSIVE, retrieve, return, revoke, role, roles,
+rollback, row, SAVE, script, search, security, selection, set, show,
+snippet, snippets, sql, SQLSERVER, status, string, structure,
+tables, textbox, textarea, then, to, true, type, unique, update,
+user, validation, value, view, views, visible, warning, where, widget,
+widgets, with, workflows, write
 ```
 
 Most MDL keywords work **unquoted** as identifiers (entity names, attribute names, etc.).
-Only structural keywords like `CREATE`, `DELETE`, `BEGIN`, `END`, `RETURN`, `ENTITY`, `MODULE`
+Only structural keywords like `create`, `delete`, `begin`, `end`, `return`, `entity`, `module`
 require quoting when used as identifiers. See [MDL Quick Reference](../MDL_QUICK_REFERENCE.md#reserved-words-and-quoted-identifiers) for details.
 
 ### Literals
@@ -83,9 +83,9 @@ Note: Mendix expression strings use doubled single quotes for escaping (`'it''s 
 
 Use double-quotes (ANSI SQL) or backticks (MySQL) to escape reserved words in identifiers:
 ```sql
-"ComboBox"."CategoryTreeVE"
-`Order`.`Status`
-"ComboBox".CategoryTreeVE    -- mixed is fine
+"combobox"."CategoryTreeVE"
+`Order`.`status`
+"combobox".CategoryTreeVE    -- mixed is fine
 ```
 
 #### Numeric Literals
@@ -98,8 +98,8 @@ Use double-quotes (ANSI SQL) or backticks (MySQL) to escape reserved words in id
 
 #### Boolean Literals
 ```sql
-TRUE
-FALSE
+true
+false
 ```
 
 ### Comments
@@ -161,7 +161,7 @@ Establishes a connection to a Mendix project file.
 
 **Syntax:**
 ```sql
-CONNECT LOCAL '<path>'
+connect local '<path>'
 ```
 
 **Parameters:**
@@ -169,8 +169,8 @@ CONNECT LOCAL '<path>'
 
 **Examples:**
 ```sql
-CONNECT LOCAL '/Users/dev/projects/MyApp/MyApp.mpr';
-CONNECT LOCAL './mx-test-projects/test1-go-app/test1-go.mpr';
+connect local '/Users/dev/projects/MyApp/MyApp.mpr';
+connect local './mx-test-projects/test1-go-app/test1-go.mpr';
 ```
 
 ### DISCONNECT
@@ -179,7 +179,7 @@ Closes the current project connection.
 
 **Syntax:**
 ```sql
-DISCONNECT
+disconnect
 ```
 
 ### STATUS
@@ -188,14 +188,14 @@ Shows current connection status and project information.
 
 **Syntax:**
 ```sql
-STATUS
+status
 ```
 
 **Output:**
 ```
-Status: Connected
-Project: /path/to/project.mpr
-Modules: 5
+status: Connected
+project: /path/to/project.mpr
+modules: 5
 ```
 
 ---
@@ -208,31 +208,31 @@ Lists elements of a specific type.
 
 **Syntax:**
 ```sql
-SHOW MODULES
-SHOW ENTITIES [IN <module>]
-SHOW ENTITY <qualified-name>
-SHOW ENUMERATIONS [IN <module>]
-SHOW ASSOCIATIONS [IN <module>]
-SHOW ASSOCIATION <qualified-name>
-SHOW MICROFLOWS [IN <module>]
-SHOW NANOFLOWS [IN <module>]
-SHOW PAGES [IN <module>]
-SHOW SNIPPETS [IN <module>]
-SHOW JAVA ACTIONS [IN <module>]
-SHOW WIDGETS
-SHOW STRUCTURE [DEPTH 1|2|3] [IN <module>] [ALL]
-SHOW BUSINESS EVENTS [IN <module>]
+show modules
+show entities [in <module>]
+show entity <qualified-name>
+show enumerations [in <module>]
+show associations [in <module>]
+show association <qualified-name>
+show microflows [in <module>]
+show nanoflows [in <module>]
+show pages [in <module>]
+show snippets [in <module>]
+show java actions [in <module>]
+show widgets
+show structure [depth 1|2|3] [in <module>] [all]
+show business events [in <module>]
 ```
 
 **Examples:**
 ```sql
-SHOW MODULES
-SHOW ENTITIES IN MyFirstModule
-SHOW ENTITY MyModule.Customer
-SHOW MICROFLOWS IN Administration
-SHOW STRUCTURE DEPTH 1          -- Module counts
-SHOW STRUCTURE IN MyModule      -- Single module at depth 2
-SHOW STRUCTURE DEPTH 3 ALL      -- Full detail, all modules
+show modules
+show entities in MyFirstModule
+show entity MyModule.Customer
+show microflows in Administration
+show structure depth 1          -- Module counts
+show structure in MyModule      -- Single module at depth 2
+show structure depth 3 all      -- Full detail, all modules
 ```
 
 ### DESCRIBE
@@ -241,26 +241,26 @@ Shows detailed definition of an element in MDL syntax.
 
 **Syntax:**
 ```sql
-DESCRIBE ENTITY <qualified-name>
-DESCRIBE ENUMERATION <qualified-name>
-DESCRIBE ASSOCIATION <qualified-name>
-DESCRIBE MICROFLOW <qualified-name>
-DESCRIBE NANOFLOW <qualified-name>
-DESCRIBE PAGE <qualified-name>
-DESCRIBE SNIPPET <qualified-name>
-DESCRIBE JAVA ACTION <qualified-name>
-DESCRIBE BUSINESS EVENT SERVICE <qualified-name>
-DESCRIBE NAVIGATION [<profile>]
-DESCRIBE SETTINGS
+describe entity <qualified-name>
+describe enumeration <qualified-name>
+describe association <qualified-name>
+describe microflow <qualified-name>
+describe nanoflow <qualified-name>
+describe page <qualified-name>
+describe snippet <qualified-name>
+describe java action <qualified-name>
+describe business event service <qualified-name>
+describe navigation [<profile>]
+describe settings
 ```
 
 **Examples:**
 ```sql
-DESCRIBE ENTITY MyModule.Customer
-DESCRIBE ENUMERATION MyModule.OrderStatus
-DESCRIBE MICROFLOW MyModule.CreateOrder
-DESCRIBE PAGE MyModule.Customer_Edit
-DESCRIBE NAVIGATION Responsive
+describe entity MyModule.Customer
+describe enumeration MyModule.OrderStatus
+describe microflow MyModule.CreateOrder
+describe page MyModule.Customer_Edit
+describe navigation Responsive
 ```
 
 **Output Example:**
@@ -268,15 +268,15 @@ DESCRIBE NAVIGATION Responsive
 /**
  * Customer entity stores customer information.
  */
-@Position(100, 200)
-CREATE PERSISTENT ENTITY MyModule.Customer (
+@position(100, 200)
+create persistent entity MyModule.Customer (
   /** Customer identifier */
-  CustomerId: AutoNumber NOT NULL UNIQUE DEFAULT 1,
-  Name: String(200) NOT NULL,
-  Email: String(200),
-  Status: Enumeration(MyModule.CustomerStatus) DEFAULT 'Active'
+  CustomerId: autonumber not null unique default 1,
+  Name: string(200) not null,
+  Email: string(200),
+  status: enumeration(MyModule.CustomerStatus) default 'Active'
 )
-INDEX (Name);
+index (Name);
 /
 ```
 
@@ -290,12 +290,12 @@ Creates a new module in the project.
 
 **Syntax:**
 ```sql
-CREATE MODULE <name>
+create module <name>
 ```
 
 **Example:**
 ```sql
-CREATE MODULE OrderManagement;
+create module OrderManagement;
 ```
 
 ### DROP MODULE
@@ -304,12 +304,12 @@ Removes a module from the project.
 
 **Syntax:**
 ```sql
-DROP MODULE <name>
+drop module <name>
 ```
 
 **Example:**
 ```sql
-DROP MODULE OrderManagement;
+drop module OrderManagement;
 ```
 
 ---
@@ -323,7 +323,7 @@ Creates a new enumeration type.
 **Syntax:**
 ```sql
 [/** <documentation> */]
-CREATE ENUMERATION <qualified-name> (
+create enumeration <qualified-name> (
   <value-name> '<caption>' [, ...]
 )
 ```
@@ -336,7 +336,7 @@ CREATE ENUMERATION <qualified-name> (
 **Example:**
 ```sql
 /** Order status enumeration */
-CREATE ENUMERATION OrderModule.OrderStatus (
+create enumeration OrderModule.OrderStatus (
   Draft 'Draft',
   Pending 'Pending Approval',
   Approved 'Approved',
@@ -352,20 +352,20 @@ Modifies an existing enumeration.
 
 **Syntax:**
 ```sql
-ALTER ENUMERATION <qualified-name>
-  ADD VALUE <value-name> '<caption>'
+alter enumeration <qualified-name>
+  add value <value-name> '<caption>'
 
-ALTER ENUMERATION <qualified-name>
-  REMOVE VALUE <value-name>
+alter enumeration <qualified-name>
+  remove value <value-name>
 ```
 
 **Examples:**
 ```sql
-ALTER ENUMERATION OrderModule.OrderStatus
-  ADD VALUE OnHold 'On Hold';
+alter enumeration OrderModule.OrderStatus
+  add value OnHold 'On Hold';
 
-ALTER ENUMERATION OrderModule.OrderStatus
-  REMOVE VALUE Draft;
+alter enumeration OrderModule.OrderStatus
+  remove value Draft;
 ```
 
 ### DROP ENUMERATION
@@ -374,7 +374,7 @@ Removes an enumeration.
 
 **Syntax:**
 ```sql
-DROP ENUMERATION <qualified-name>
+drop enumeration <qualified-name>
 ```
 
 ---
@@ -388,58 +388,58 @@ Creates a new entity in the domain model.
 **Syntax:**
 ```sql
 [/** <documentation> */]
-[@Position(<x>, <y>)]
-CREATE [OR MODIFY] <entity-type> ENTITY <qualified-name> (
+[@position(<x>, <y>)]
+create [or modify] <entity-type> entity <qualified-name> (
   [<attribute-definition> [, ...]]
 )
-[INDEX (<column-list>)]
-[INDEX (<column-list>)]
+[index (<column-list>)]
+[index (<column-list>)]
 ```
 
 **Entity Types:**
-- `PERSISTENT` - Stored in database
-- `NON-PERSISTENT` - In-memory only
-- `VIEW` - Based on OQL query (see CREATE VIEW ENTITY)
-- `EXTERNAL` - From external data source
+- `persistent` - Stored in database
+- `non-persistent` - In-memory only
+- `view` - Based on OQL query (see CREATE VIEW ENTITY)
+- `external` - From external data source
 
 **Attribute Definition:**
 ```sql
 [/** <documentation> */]
-<name>: <type> [NOT NULL [ERROR '<message>']] [UNIQUE [ERROR '<message>']] [DEFAULT <value>] [CALCULATED]
+<name>: <type> [not null [error '<message>']] [unique [error '<message>']] [default <value>] [calculated]
 ```
 
 **Examples:**
 
 ```sql
 /** Customer entity */
-@Position(100, 200)
-CREATE PERSISTENT ENTITY Sales.Customer (
+@position(100, 200)
+create persistent entity Sales.Customer (
   /** Unique customer ID */
-  CustomerId: AutoNumber NOT NULL UNIQUE,
+  CustomerId: autonumber not null unique,
 
   /** Customer full name */
-  Name: String(200) NOT NULL ERROR 'Name is required',
+  Name: string(200) not null error 'Name is required',
 
-  Email: String(200) UNIQUE ERROR 'Email must be unique',
+  Email: string(200) unique error 'Email must be unique',
 
-  Balance: Decimal DEFAULT 0,
+  Balance: decimal default 0,
 
-  IsActive: Boolean DEFAULT TRUE,
+  IsActive: boolean default true,
 
-  CreatedDate: DateTime,
+  CreatedDate: datetime,
 
-  Status: Enumeration(Sales.CustomerStatus) DEFAULT 'Active'
+  status: enumeration(Sales.CustomerStatus) default 'Active'
 )
-INDEX (Name)
-INDEX (Email);
+index (Name)
+index (Email);
 /
 ```
 
 ```sql
-CREATE NON-PERSISTENT ENTITY Sales.CustomerFilter (
-  SearchName: String(200),
-  MinBalance: Decimal,
-  MaxBalance: Decimal
+create non-persistent entity Sales.CustomerFilter (
+  SearchName: string(200),
+  MinBalance: decimal,
+  MaxBalance: decimal
 );
 ```
 
@@ -448,11 +448,11 @@ CREATE NON-PERSISTENT ENTITY Sales.CustomerFilter (
 Creates an entity if it doesn't exist, or modifies it if it does.
 
 ```sql
-CREATE OR MODIFY PERSISTENT ENTITY Sales.Customer (
-  CustomerId: AutoNumber NOT NULL UNIQUE,
-  Name: String(200) NOT NULL,
-  Email: String(200),
-  Phone: String(50)  -- New attribute added
+create or modify persistent entity Sales.Customer (
+  CustomerId: autonumber not null unique,
+  Name: string(200) not null,
+  Email: string(200),
+  Phone: string(50)  -- New attribute added
 );
 ```
 
@@ -462,26 +462,26 @@ Creates a view entity based on an OQL query.
 
 **Syntax:**
 ```sql
-CREATE VIEW ENTITY <qualified-name> (
+create view entity <qualified-name> (
   <attribute-definition> [, ...]
-) AS
+) as
   <oql-query>
 ```
 
 **Example:**
 ```sql
-CREATE VIEW ENTITY Reports.CustomerSummary (
-  CustomerName: String,
-  TotalOrders: Integer,
-  TotalAmount: Decimal
-) AS
-  SELECT
-    c.Name AS CustomerName,
-    COUNT(o.OrderId) AS TotalOrders,
-    SUM(o.Amount) AS TotalAmount
-  FROM Sales.Customer c
-  LEFT JOIN Sales.Order o ON o.Customer = c
-  GROUP BY c.Name;
+create view entity Reports.CustomerSummary (
+  CustomerName: string,
+  TotalOrders: integer,
+  TotalAmount: decimal
+) as
+  select
+    c.Name as CustomerName,
+    count(o.OrderId) as TotalOrders,
+    sum(o.Amount) as TotalAmount
+  from Sales.Customer c
+  left join Sales.Order o on o.Customer = c
+  GROUP by c.Name;
 /
 ```
 
@@ -491,7 +491,7 @@ Removes an entity from the domain model.
 
 **Syntax:**
 ```sql
-DROP ENTITY <qualified-name>
+drop entity <qualified-name>
 ```
 
 ---
@@ -504,56 +504,56 @@ Modifies an existing entity's attributes, indexes, or documentation without recr
 
 **Syntax:**
 ```sql
-ALTER ENTITY <qualified-name>
-  ADD (<attribute-definition> [, ...])
+alter entity <qualified-name>
+  add (<attribute-definition> [, ...])
 
-ALTER ENTITY <qualified-name>
-  DROP (<attribute-name> [, ...])
+alter entity <qualified-name>
+  drop (<attribute-name> [, ...])
 
-ALTER ENTITY <qualified-name>
-  MODIFY (<attribute-definition> [, ...])
+alter entity <qualified-name>
+  modify (<attribute-definition> [, ...])
 
-ALTER ENTITY <qualified-name>
-  RENAME <old-name> TO <new-name>
+alter entity <qualified-name>
+  rename <old-name> to <new-name>
 
-ALTER ENTITY <qualified-name>
-  ADD INDEX (<column-list>)
+alter entity <qualified-name>
+  add index (<column-list>)
 
-ALTER ENTITY <qualified-name>
-  DROP INDEX (<column-list>)
+alter entity <qualified-name>
+  drop index (<column-list>)
 
-ALTER ENTITY <qualified-name>
-  SET DOCUMENTATION '<text>'
+alter entity <qualified-name>
+  set documentation '<text>'
 
-ALTER ENTITY <qualified-name>
-  SET POSITION (<x>, <y>)
+alter entity <qualified-name>
+  set position (<x>, <y>)
 ```
 
 **Examples:**
 ```sql
 -- Add new attributes
-ALTER ENTITY Sales.Customer
-  ADD (Phone: String(50), Notes: String(unlimited));
+alter entity Sales.Customer
+  add (Phone: string(50), Notes: string(unlimited));
 
 -- Drop attributes
-ALTER ENTITY Sales.Customer
-  DROP (Notes);
+alter entity Sales.Customer
+  drop (Notes);
 
 -- Rename attribute
-ALTER ENTITY Sales.Customer
-  RENAME Phone TO PhoneNumber;
+alter entity Sales.Customer
+  rename Phone to PhoneNumber;
 
 -- Add index
-ALTER ENTITY Sales.Customer
-  ADD INDEX (Email);
+alter entity Sales.Customer
+  add index (Email);
 
 -- Set documentation
-ALTER ENTITY Sales.Customer
-  SET DOCUMENTATION 'Customer master data';
+alter entity Sales.Customer
+  set documentation 'Customer master data';
 
 -- Reposition entity on domain model canvas
-ALTER ENTITY Sales.Customer
-  SET POSITION (100, 200);
+alter entity Sales.Customer
+  set position (100, 200);
 ```
 
 ---
@@ -567,21 +567,21 @@ Creates an association between two entities.
 **Syntax:**
 ```sql
 [/** <documentation> */]
-CREATE ASSOCIATION <qualified-name>
-  FROM <parent-entity>
-  TO <child-entity>
-  TYPE <association-type>
-  [OWNER <owner>]
-  [DELETE_BEHAVIOR <behavior>]
+create association <qualified-name>
+  from <parent-entity>
+  to <child-entity>
+  type <association-type>
+  [owner <owner>]
+  [delete_behavior <behavior>]
 ```
 
 **Association Types:**
-- `Reference` - One-to-many (child has reference to parent)
+- `reference` - One-to-many (child has reference to parent)
 - `ReferenceSet` - Many-to-many
 
 **Owner Options:**
-- `Default` - Child owns the association
-- `Both` - Both ends can modify
+- `default` - Child owns the association
+- `both` - Both ends can modify
 - `Parent` - Parent owns the association
 - `Child` - Child owns the association
 
@@ -592,21 +592,21 @@ CREATE ASSOCIATION <qualified-name>
 **Example:**
 ```sql
 /** Links orders to customers */
-CREATE ASSOCIATION Sales.Order_Customer
-  FROM Sales.Customer
-  TO Sales.Order
-  TYPE Reference
-  OWNER Default
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Sales.Order_Customer
+  from Sales.Customer
+  to Sales.Order
+  type reference
+  owner default
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 /
 ```
 
 ```sql
-CREATE ASSOCIATION Sales.Order_Product
-  FROM Sales.Order
-  TO Sales.Product
-  TYPE ReferenceSet
-  OWNER Both;
+create association Sales.Order_Product
+  from Sales.Order
+  to Sales.Product
+  type ReferenceSet
+  owner both;
 /
 ```
 
@@ -616,7 +616,7 @@ Removes an association.
 
 **Syntax:**
 ```sql
-DROP ASSOCIATION <qualified-name>
+drop association <qualified-name>
 ```
 
 ---
@@ -629,50 +629,50 @@ Creates a microflow with activities, parameters, return type, and control flow.
 
 **Syntax:**
 ```sql
-CREATE [OR REPLACE] MICROFLOW <qualified-name>
-  [FOLDER '<path>']
-BEGIN
+create [or replace] microflow <qualified-name>
+  [folder '<path>']
+begin
   [<statements>]
-END
+end
 ```
 
 **Statement Types:**
 ```sql
 -- Variable declaration
-DECLARE $Var Type = value;
-DECLARE $Entity Module.Entity;
-DECLARE $List List of Module.Entity = empty;
+declare $Var type = value;
+declare $entity Module.Entity;
+declare $list list of Module.Entity = empty;
 
 -- Object operations
-$Var = CREATE Module.Entity (Attr = value);
-CHANGE $Entity (Attr = value);
-COMMIT $Entity [WITH EVENTS] [REFRESH];
-DELETE $Entity;
-ROLLBACK $Entity [REFRESH];
+$Var = create Module.Entity (attr = value);
+change $entity (attr = value);
+commit $entity [with events] [refresh];
+delete $entity;
+rollback $entity [refresh];
 
 -- Retrieval
-RETRIEVE $Var FROM Module.Entity [WHERE condition] [LIMIT n];
+retrieve $Var from Module.Entity [where condition] [limit n];
 
 -- Calls
-$Result = CALL MICROFLOW Module.Name (Param = $value);
-$Result = CALL NANOFLOW Module.Name (Param = $value);
-$Result = CALL JAVA ACTION Module.Name (Param = value);
+$Result = call microflow Module.Name (Param = $value);
+$Result = call nanoflow Module.Name (Param = $value);
+$Result = call java action Module.Name (Param = value);
 
 -- UI actions
-SHOW PAGE Module.PageName ($Param = $value);
-CLOSE PAGE;
+show page Module.PageName ($Param = $value);
+close page;
 
 -- Validation and logging
-VALIDATION FEEDBACK $Entity/Attribute MESSAGE 'message';
-LOG INFO|WARNING|ERROR [NODE 'name'] 'message';
+validation feedback $entity/attribute message 'message';
+log info|warning|error [node 'name'] 'message';
 
 -- Control flow
-IF condition THEN ... [ELSE ...] END IF;
-LOOP $Item IN $List BEGIN ... END LOOP;
-RETURN $value;
+if condition then ... [else ...] end if;
+loop $item in $list begin ... end loop;
+return $value;
 
 -- Error handling (suffix on any activity)
-... ON ERROR CONTINUE|ROLLBACK|{ handler };
+... on error continue|rollback|{ handler };
 
 -- Annotations (before any activity)
 @position(x, y)
@@ -683,18 +683,18 @@ RETURN $value;
 
 **Example:**
 ```sql
-CREATE MICROFLOW Sales.ACT_CreateOrder
-FOLDER 'Orders'
-BEGIN
-  DECLARE $Order Sales.Order;
-  $Order = CREATE Sales.Order (
+create microflow Sales.ACT_CreateOrder
+folder 'Orders'
+begin
+  declare $Order Sales.Order;
+  $Order = create Sales.Order (
     OrderDate = [%CurrentDateTime%],
-    Status = 'Draft'
+    status = 'Draft'
   );
-  COMMIT $Order;
-  SHOW PAGE Sales.Order_Edit ($Order = $Order);
-  RETURN $Order;
-END;
+  commit $Order;
+  show page Sales.Order_Edit ($Order = $Order);
+  return $Order;
+end;
 ```
 
 ### DESCRIBE MICROFLOW
@@ -704,7 +704,7 @@ Shows the full MDL definition of an existing microflow (round-trippable output).
 ### DROP MICROFLOW
 
 ```sql
-DROP MICROFLOW <qualified-name>
+drop microflow <qualified-name>
 ```
 
 ---
@@ -717,12 +717,12 @@ Creates a page with a widget tree.
 
 **Syntax:**
 ```sql
-CREATE [OR REPLACE] PAGE <qualified-name>
+create [or replace] page <qualified-name>
 (
-  [Params: { $Param: Module.Entity | Type [, ...] },]
-  Title: '<title>',
-  Layout: <Module.LayoutName>
-  [, Folder: '<path>']
+  [params: { $Param: Module.Entity | type [, ...] },]
+  title: '<title>',
+  layout: <Module.LayoutName>
+  [, folder: '<path>']
 )
 {
   <widget-tree>
@@ -735,27 +735,27 @@ WIDGET_TYPE widgetName (Property: value, ...) [{ children }]
 ```
 
 **Supported Widget Types:**
-- Layout: `LAYOUTGRID`, `ROW`, `COLUMN`, `CONTAINER`, `CUSTOMCONTAINER`
-- Input: `TEXTBOX`, `TEXTAREA`, `CHECKBOX`, `RADIOBUTTONS`, `DATEPICKER`, `COMBOBOX`
-- Display: `DYNAMICTEXT`, `DATAGRID`, `GALLERY`, `LISTVIEW`, `IMAGE`, `STATICIMAGE`, `DYNAMICIMAGE`
-- Actions: `ACTIONBUTTON`, `LINKBUTTON`, `NAVIGATIONLIST`
-- Structure: `DATAVIEW`, `HEADER`, `FOOTER`, `CONTROLBAR`, `SNIPPETCALL`
+- Layout: `layoutgrid`, `row`, `column`, `container`, `customcontainer`
+- Input: `textbox`, `textarea`, `checkbox`, `radiobuttons`, `datepicker`, `combobox`
+- Display: `dynamictext`, `datagrid`, `gallery`, `listview`, `image`, `staticimage`, `dynamicimage`
+- Actions: `actionbutton`, `linkbutton`, `navigationlist`
+- Structure: `dataview`, `header`, `footer`, `controlbar`, `snippetcall`
 
 **Example:**
 ```sql
-CREATE PAGE MyModule.Customer_Edit
+create page MyModule.Customer_Edit
 (
-  Params: { $Customer: MyModule.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: MyModule.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-    FOOTER footer1 {
-      ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-      ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+  dataview dvCustomer (datasource: $Customer) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtEmail (label: 'Email', attribute: Email)
+    footer footer1 {
+      actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
     }
   }
 }
@@ -764,22 +764,22 @@ CREATE PAGE MyModule.Customer_Edit
 ### DROP PAGE
 
 ```sql
-DROP PAGE <qualified-name>
+drop page <qualified-name>
 ```
 
 ---
 
 ## ALTER PAGE / ALTER SNIPPET
 
-Modifies an existing page or snippet's widget tree in-place without full `CREATE OR REPLACE`.
+Modifies an existing page or snippet's widget tree in-place without full `create or replace`.
 
 **Syntax:**
 ```sql
-ALTER PAGE <qualified-name> {
+alter page <qualified-name> {
   <operations>
 }
 
-ALTER SNIPPET <qualified-name> {
+alter snippet <qualified-name> {
   <operations>
 }
 ```
@@ -787,33 +787,33 @@ ALTER SNIPPET <qualified-name> {
 **Operations:**
 ```sql
 -- Set property on widget
-SET Caption = 'New' ON widgetName;
-SET (Caption = 'Save', ButtonStyle = Success) ON btn;
+set caption = 'New' on widgetName;
+set (caption = 'Save', buttonstyle = success) on btn;
 
 -- Set page-level property
-SET Title = 'New Title';
+set title = 'New Title';
 
 -- Insert widgets
-INSERT AFTER widgetName { <widgets> };
-INSERT BEFORE widgetName { <widgets> };
+insert after widgetName { <widgets> };
+insert before widgetName { <widgets> };
 
 -- Remove widgets
-DROP WIDGET name1, name2;
+drop widget name1, name2;
 
 -- Replace widget
-REPLACE widgetName WITH { <widgets> };
+replace widgetName with { <widgets> };
 
 -- Pluggable widget properties (quoted)
-SET 'showLabel' = false ON cbStatus;
+set 'showLabel' = false on cbStatus;
 ```
 
 **Example:**
 ```sql
-ALTER PAGE Module.EditPage {
-  SET (Caption = 'Save & Close', ButtonStyle = Success) ON btnSave;
-  DROP WIDGET txtUnused;
-  INSERT AFTER txtEmail {
-    TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
+alter page Module.EditPage {
+  set (caption = 'Save & Close', buttonstyle = success) on btnSave;
+  drop widget txtUnused;
+  insert after txtEmail {
+    textbox txtPhone (label: 'Phone', attribute: Phone)
   }
 };
 ```
@@ -829,20 +829,20 @@ Moves documents (pages, microflows, snippets, nanoflows, entities, enumerations)
 **Syntax:**
 ```sql
 -- Move to folder within same module
-MOVE PAGE <qualified-name> TO FOLDER '<folder-path>';
-MOVE MICROFLOW <qualified-name> TO FOLDER '<folder-path>';
-MOVE SNIPPET <qualified-name> TO FOLDER '<folder-path>';
-MOVE NANOFLOW <qualified-name> TO FOLDER '<folder-path>';
-MOVE ENUMERATION <qualified-name> TO FOLDER '<folder-path>';
+move page <qualified-name> to folder '<folder-path>';
+move microflow <qualified-name> to folder '<folder-path>';
+move snippet <qualified-name> to folder '<folder-path>';
+move nanoflow <qualified-name> to folder '<folder-path>';
+move enumeration <qualified-name> to folder '<folder-path>';
 
 -- Move to module root
-MOVE PAGE <qualified-name> TO <module-name>;
+move page <qualified-name> to <module-name>;
 
 -- Move entity to different module (no folder support)
-MOVE ENTITY <qualified-name> TO <module-name>;
+move entity <qualified-name> to <module-name>;
 
 -- Move to folder in different module
-MOVE PAGE <qualified-name> TO FOLDER '<folder-path>' IN <module-name>;
+move page <qualified-name> to folder '<folder-path>' in <module-name>;
 ```
 
 **Parameters:**
@@ -853,27 +853,27 @@ MOVE PAGE <qualified-name> TO FOLDER '<folder-path>' IN <module-name>;
 **Examples:**
 ```sql
 -- Move page to folder
-MOVE PAGE MyModule.CustomerEdit TO FOLDER 'Customers';
+move page MyModule.CustomerEdit to folder 'Customers';
 
 -- Move microflow to nested folder
-MOVE MICROFLOW MyModule.ACT_ProcessOrder TO FOLDER 'Orders/Processing';
+move microflow MyModule.ACT_ProcessOrder to folder 'Orders/Processing';
 
 -- Move snippet to different module
-MOVE SNIPPET OldModule.NavigationMenu TO Common;
+move snippet OldModule.NavigationMenu to Common;
 
 -- Move entity to different module
-MOVE ENTITY OldModule.Customer TO NewModule;
+move entity OldModule.Customer to NewModule;
 
 -- Move enumeration to different module
-MOVE ENUMERATION OldModule.OrderStatus TO NewModule;
+move enumeration OldModule.OrderStatus to NewModule;
 
 -- Move page to folder in different module
-MOVE PAGE OldModule.CustomerPage TO FOLDER 'Screens' IN NewModule;
+move page OldModule.CustomerPage to folder 'Screens' in NewModule;
 ```
 
-**Warning:** Cross-module moves change the qualified name and may break by-name references. Use `SHOW IMPACT OF <name>` to check before moving.
+**Warning:** Cross-module moves change the qualified name and may break by-name references. Use `show impact of <name>` to check before moving.
 
-**Note:** `MOVE ENTITY` only supports moving to a module (not to a folder), since entities are embedded in domain model documents.
+**Note:** `move entity` only supports moving to a module (not to a folder), since entities are embedded in domain model documents.
 
 ---
 
@@ -885,7 +885,7 @@ Displays project-wide security settings.
 
 **Syntax:**
 ```sql
-SHOW PROJECT SECURITY
+show project security
 ```
 
 ### SHOW MODULE ROLES
@@ -894,8 +894,8 @@ Lists module roles, optionally filtered by module.
 
 **Syntax:**
 ```sql
-SHOW MODULE ROLES
-SHOW MODULE ROLES IN <module>
+show module roles
+show module roles in <module>
 ```
 
 ### SHOW USER ROLES
@@ -904,7 +904,7 @@ Lists project-level user roles.
 
 **Syntax:**
 ```sql
-SHOW USER ROLES
+show user roles
 ```
 
 ### SHOW DEMO USERS
@@ -913,7 +913,7 @@ Lists configured demo users.
 
 **Syntax:**
 ```sql
-SHOW DEMO USERS
+show demo users
 ```
 
 ### SHOW ACCESS ON
@@ -922,9 +922,9 @@ Shows which roles have access to a specific element.
 
 **Syntax:**
 ```sql
-SHOW ACCESS ON MICROFLOW <module>.<name>
-SHOW ACCESS ON PAGE <module>.<name>
-SHOW ACCESS ON <module>.<entity>
+show access on microflow <module>.<name>
+show access on page <module>.<name>
+show access on <module>.<entity>
 ```
 
 ### SHOW SECURITY MATRIX
@@ -933,8 +933,8 @@ Displays a comprehensive access matrix for all or one module.
 
 **Syntax:**
 ```sql
-SHOW SECURITY MATRIX
-SHOW SECURITY MATRIX IN <module>
+show security matrix
+show security matrix in <module>
 ```
 
 ### CREATE MODULE ROLE
@@ -943,13 +943,13 @@ Creates a new module role within a module.
 
 **Syntax:**
 ```sql
-CREATE MODULE ROLE <module>.<role> [DESCRIPTION '<text>']
+create module role <module>.<role> [description '<text>']
 ```
 
 **Example:**
 ```sql
-CREATE MODULE ROLE Shop.Admin DESCRIPTION 'Full administrative access';
-CREATE MODULE ROLE Shop.Viewer;
+create module role Shop.Admin description 'Full administrative access';
+create module role Shop.Viewer;
 ```
 
 ### DROP MODULE ROLE
@@ -958,7 +958,7 @@ Removes a module role.
 
 **Syntax:**
 ```sql
-DROP MODULE ROLE <module>.<role>
+drop module role <module>.<role>
 ```
 
 ### GRANT EXECUTE ON MICROFLOW
@@ -967,12 +967,12 @@ Grants execute access on a microflow to one or more module roles.
 
 **Syntax:**
 ```sql
-GRANT EXECUTE ON MICROFLOW <module>.<name> TO <module>.<role> [, ...]
+grant execute on microflow <module>.<name> to <module>.<role> [, ...]
 ```
 
 **Example:**
 ```sql
-GRANT EXECUTE ON MICROFLOW Shop.ACT_Order_Process TO Shop.User, Shop.Admin;
+grant execute on microflow Shop.ACT_Order_Process to Shop.User, Shop.Admin;
 ```
 
 ### REVOKE EXECUTE ON MICROFLOW
@@ -981,7 +981,7 @@ Removes execute access on a microflow from one or more module roles.
 
 **Syntax:**
 ```sql
-REVOKE EXECUTE ON MICROFLOW <module>.<name> FROM <module>.<role> [, ...]
+revoke execute on microflow <module>.<name> from <module>.<role> [, ...]
 ```
 
 ### GRANT VIEW ON PAGE
@@ -990,7 +990,7 @@ Grants view access on a page to one or more module roles.
 
 **Syntax:**
 ```sql
-GRANT VIEW ON PAGE <module>.<name> TO <module>.<role> [, ...]
+grant view on page <module>.<name> to <module>.<role> [, ...]
 ```
 
 ### REVOKE VIEW ON PAGE
@@ -999,7 +999,7 @@ Removes view access on a page from one or more module roles.
 
 **Syntax:**
 ```sql
-REVOKE VIEW ON PAGE <module>.<name> FROM <module>.<role> [, ...]
+revoke view on page <module>.<name> from <module>.<role> [, ...]
 ```
 
 ### GRANT (Entity Access)
@@ -1008,31 +1008,31 @@ Creates or updates an access rule on an entity for one or more module roles with
 
 **Syntax:**
 ```sql
-GRANT <module>.<role> ON <module>.<entity> (<rights>) [WHERE '<xpath>']
+grant <module>.<role> on <module>.<entity> (<rights>) [where '<xpath>']
 ```
 
 Where `<rights>` is a comma-separated list of:
-- `CREATE` — allow creating instances
-- `DELETE` — allow deleting instances
-- `READ *` — read all members, or `READ (<attr>, ...)` for specific attributes
-- `WRITE *` — write all members, or `WRITE (<attr>, ...)` for specific attributes
+- `create` — allow creating instances
+- `delete` — allow deleting instances
+- `read *` — read all members, or `read (<attr>, ...)` for specific attributes
+- `write *` — write all members, or `write (<attr>, ...)` for specific attributes
 
 **Examples:**
 ```sql
 -- Full access
-GRANT Shop.Admin ON Shop.Customer (CREATE, DELETE, READ *, WRITE *);
+grant Shop.Admin on Shop.Customer (create, delete, read *, write *);
 
 -- Read-only
-GRANT Shop.Viewer ON Shop.Customer (READ *);
+grant Shop.Viewer on Shop.Customer (read *);
 
 -- Selective member access
-GRANT Shop.User ON Shop.Customer (READ (Name, Email), WRITE (Email));
+grant Shop.User on Shop.Customer (read (Name, Email), write (Email));
 
 -- With XPath constraint
-GRANT Shop.User ON Shop.Order (READ *, WRITE *) WHERE '[Status = ''Open'']';
+grant Shop.User on Shop.Order (read *, write *) where '[Status = ''Open'']';
 
 -- Additive: adds Phone to existing read access (Name, Email preserved)
-GRANT Shop.User ON Shop.Customer (READ (Phone));
+grant Shop.User on Shop.Customer (read (Phone));
 ```
 
 ### REVOKE (Entity Access)
@@ -1042,24 +1042,24 @@ Removes an entity access rule entirely, or revokes specific rights.
 **Syntax:**
 ```sql
 -- Full revoke (removes entire rule)
-REVOKE <module>.<role> ON <module>.<entity>
+revoke <module>.<role> on <module>.<entity>
 
 -- Partial revoke (downgrades specific rights)
-REVOKE <module>.<role> ON <module>.<entity> (<rights>)
+revoke <module>.<role> on <module>.<entity> (<rights>)
 ```
 
-Partial revoke semantics: `REVOKE READ (x)` sets member x to no access. `REVOKE WRITE (x)` downgrades from ReadWrite to ReadOnly. `REVOKE CREATE` / `REVOKE DELETE` removes the structural permission.
+Partial revoke semantics: `revoke read (x)` sets member x to no access. `revoke write (x)` downgrades from ReadWrite to ReadOnly. `revoke create` / `revoke delete` removes the structural permission.
 
 **Examples:**
 ```sql
 -- Remove all access
-REVOKE Shop.Viewer ON Shop.Customer;
+revoke Shop.Viewer on Shop.Customer;
 
 -- Remove read on specific attribute
-REVOKE Shop.User ON Shop.Customer (READ (Phone));
+revoke Shop.User on Shop.Customer (read (Phone));
 
 -- Downgrade write to read-only
-REVOKE Shop.User ON Shop.Customer (WRITE (Email));
+revoke Shop.User on Shop.Customer (write (Email));
 ```
 
 ### CREATE USER ROLE
@@ -1068,13 +1068,13 @@ Creates a project-level user role that aggregates module roles.
 
 **Syntax:**
 ```sql
-CREATE USER ROLE <name> (<module>.<role> [, ...]) [MANAGE ALL ROLES]
+create user role <name> (<module>.<role> [, ...]) [manage all roles]
 ```
 
 **Example:**
 ```sql
-CREATE USER ROLE AppAdmin (Shop.Admin, System.Administrator) MANAGE ALL ROLES;
-CREATE USER ROLE AppUser (Shop.User);
+create user role AppAdmin (Shop.Admin, System.Administrator) manage all roles;
+create user role AppUser (Shop.User);
 ```
 
 ### ALTER USER ROLE
@@ -1083,8 +1083,8 @@ Adds or removes module roles from a user role.
 
 **Syntax:**
 ```sql
-ALTER USER ROLE <name> ADD MODULE ROLES (<module>.<role> [, ...])
-ALTER USER ROLE <name> REMOVE MODULE ROLES (<module>.<role> [, ...])
+alter user role <name> add module roles (<module>.<role> [, ...])
+alter user role <name> remove module roles (<module>.<role> [, ...])
 ```
 
 ### DROP USER ROLE
@@ -1093,7 +1093,7 @@ Removes a project-level user role.
 
 **Syntax:**
 ```sql
-DROP USER ROLE <name>
+drop user role <name>
 ```
 
 ### ALTER PROJECT SECURITY
@@ -1102,8 +1102,8 @@ Changes project-wide security settings.
 
 **Syntax:**
 ```sql
-ALTER PROJECT SECURITY LEVEL OFF | PROTOTYPE | PRODUCTION
-ALTER PROJECT SECURITY DEMO USERS ON | OFF
+alter project security level off | prototype | production
+alter project security demo users on | off
 ```
 
 ### CREATE DEMO USER
@@ -1112,15 +1112,15 @@ Creates a demo user for development/testing.
 
 **Syntax:**
 ```sql
-CREATE DEMO USER '<username>' PASSWORD '<password>' [ENTITY <Module.Entity>] (<userrole> [, ...])
+create demo user '<username>' password '<password>' [entity <Module.Entity>] (<userrole> [, ...])
 ```
 
-The optional `ENTITY` clause specifies the entity that generalizes `System.User` (e.g., `Administration.Account`). If omitted, the system auto-detects the unique `System.User` subtype.
+The optional `entity` clause specifies the entity that generalizes `System.User` (e.g., `Administration.Account`). If omitted, the system auto-detects the unique `System.User` subtype.
 
 **Example:**
 ```sql
-CREATE DEMO USER 'demo_admin' PASSWORD 'Admin123!' (AppAdmin);
-CREATE DEMO USER 'demo_admin' PASSWORD 'Admin123!' ENTITY Administration.Account (AppAdmin);
+create demo user 'demo_admin' password 'Admin123!' (AppAdmin);
+create demo user 'demo_admin' password 'Admin123!' entity Administration.Account (AppAdmin);
 ```
 
 ### DROP DEMO USER
@@ -1129,7 +1129,7 @@ Removes a demo user.
 
 **Syntax:**
 ```sql
-DROP DEMO USER '<username>'
+drop demo user '<username>'
 ```
 
 ---
@@ -1139,43 +1139,43 @@ DROP DEMO USER '<username>'
 ### SHOW NAVIGATION
 
 ```sql
-SHOW NAVIGATION                    -- Summary of all profiles
-SHOW NAVIGATION MENU [<profile>]   -- Menu tree
-SHOW NAVIGATION HOMES              -- Home page assignments
+show navigation                    -- Summary of all profiles
+show navigation menu [<profile>]   -- Menu tree
+show navigation homes              -- Home page assignments
 ```
 
 ### DESCRIBE NAVIGATION
 
 ```sql
-DESCRIBE NAVIGATION [<profile>]    -- Full MDL output (round-trippable)
+describe navigation [<profile>]    -- Full MDL output (round-trippable)
 ```
 
 ### CREATE OR REPLACE NAVIGATION
 
 ```sql
-CREATE OR REPLACE NAVIGATION <profile>
-  HOME PAGE Module.HomePage
-  [HOME PAGE Module.AdminHome FOR Module.AdminRole]
-  [LOGIN PAGE Module.LoginPage]
-  [NOT FOUND PAGE Module.Custom404]
-  [MENU (
-    MENU ITEM 'Label' PAGE Module.Page;
-    MENU 'Submenu' (
-      MENU ITEM 'Label' PAGE Module.Page;
+create or replace navigation <profile>
+  home page Module.HomePage
+  [home page Module.AdminHome for Module.AdminRole]
+  [login page Module.LoginPage]
+  [not found page Module.Custom404]
+  [menu (
+    menu item 'Label' page Module.Page;
+    menu 'Submenu' (
+      menu item 'Label' page Module.Page;
     );
   )]
 ```
 
 **Example:**
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE MyModule.Home_Web
-  HOME PAGE MyModule.AdminHome FOR MyModule.Administrator
-  LOGIN PAGE Administration.Login
-  MENU (
-    MENU ITEM 'Home' PAGE MyModule.Home_Web;
-    MENU 'Admin' (
-      MENU ITEM 'Users' PAGE Administration.Account_Overview;
+create or replace navigation Responsive
+  home page MyModule.Home_Web
+  home page MyModule.AdminHome for MyModule.Administrator
+  login page Administration.Login
+  menu (
+    menu item 'Home' page MyModule.Home_Web;
+    menu 'Admin' (
+      menu item 'Users' page Administration.Account_Overview;
     );
   );
 ```
@@ -1187,14 +1187,14 @@ CREATE OR REPLACE NAVIGATION Responsive
 ### SHOW / DESCRIBE SETTINGS
 
 ```sql
-SHOW SETTINGS              -- Overview of all settings
-DESCRIBE SETTINGS           -- Full MDL output (round-trippable)
+show settings              -- Overview of all settings
+describe settings           -- Full MDL output (round-trippable)
 ```
 
 ### SHOW CONSTANT VALUES
 
 ```sql
-SHOW CONSTANT VALUES [IN Module]   -- Compare constant values across configurations
+show constant values [in module]   -- Compare constant values across configurations
 ```
 
 Displays one row per constant per configuration. Shows the default value followed by any per-configuration overrides.
@@ -1202,38 +1202,38 @@ Displays one row per constant per configuration. Shows the default value followe
 ### ALTER SETTINGS
 
 ```sql
-ALTER SETTINGS MODEL Key = Value;
-ALTER SETTINGS CONFIGURATION 'Name' Key = Value;
-ALTER SETTINGS CONSTANT 'Name' VALUE 'val' IN CONFIGURATION 'cfg';
-ALTER SETTINGS DROP CONSTANT 'Name' IN CONFIGURATION 'cfg';
-ALTER SETTINGS LANGUAGE Key = Value;
-ALTER SETTINGS WORKFLOWS Key = Value;
+alter settings model key = value;
+alter settings configuration 'Name' key = value;
+alter settings constant 'Name' value 'val' in configuration 'cfg';
+alter settings drop constant 'Name' in configuration 'cfg';
+alter settings LANGUAGE key = value;
+alter settings workflows key = value;
 ```
 
 ### CREATE / DROP CONFIGURATION
 
 ```sql
-CREATE CONFIGURATION 'Name' [Key = Value, ...];
-DROP CONFIGURATION 'Name';
+create configuration 'Name' [key = value, ...];
+drop configuration 'Name';
 ```
 
 **Example:**
 ```sql
-ALTER SETTINGS MODEL AfterStartupMicroflow = 'MyModule.ACT_Startup';
-ALTER SETTINGS CONFIGURATION 'default' DatabaseType = 'POSTGRESQL';
-ALTER SETTINGS LANGUAGE DefaultLanguageCode = 'en_US';
+alter settings model AfterStartupMicroflow = 'MyModule.ACT_Startup';
+alter settings configuration 'default' DatabaseType = 'POSTGRESQL';
+alter settings LANGUAGE DefaultLanguageCode = 'en_US';
 
 -- View constant values across all configurations
-SHOW CONSTANT VALUES;
+show constant values;
 
 -- Create a new configuration
-CREATE CONFIGURATION 'Staging' DatabaseType = 'POSTGRESQL', DatabaseUrl = 'staging-db:5432';
+create configuration 'Staging' DatabaseType = 'POSTGRESQL', DatabaseUrl = 'staging-db:5432';
 
 -- Remove a constant override
-ALTER SETTINGS DROP CONSTANT 'MyModule.ApiKey' IN CONFIGURATION 'Default';
+alter settings drop constant 'MyModule.ApiKey' in configuration 'Default';
 
 -- Drop a configuration
-DROP CONFIGURATION 'Staging';
+drop configuration 'Staging';
 ```
 
 ---
@@ -1245,7 +1245,7 @@ Direct SQL query execution against external databases (PostgreSQL, Oracle, SQL S
 ### SQL CONNECT
 
 ```sql
-SQL CONNECT <driver> '<dsn>' AS <alias>
+sql connect <driver> '<dsn>' as <alias>
 ```
 
 Drivers: `postgres` (pg, postgresql), `oracle` (ora), `sqlserver` (mssql).
@@ -1253,23 +1253,23 @@ Drivers: `postgres` (pg, postgresql), `oracle` (ora), `sqlserver` (mssql).
 ### SQL Commands
 
 ```sql
-SQL CONNECTIONS                     -- List active connections (alias + driver only)
-SQL DISCONNECT <alias>              -- Close connection
-SQL <alias> SHOW TABLES             -- List user tables
-SQL <alias> SHOW VIEWS              -- List user views
-SQL <alias> SHOW FUNCTIONS          -- List functions/procedures
-SQL <alias> DESCRIBE <table>        -- Column details
-SQL <alias> <any-sql>               -- Raw SQL passthrough
-SQL <alias> GENERATE CONNECTOR INTO <module> [TABLES (...)] [VIEWS (...)] [EXEC]
+sql connections                     -- List active connections (alias + driver only)
+sql disconnect <alias>              -- Close connection
+sql <alias> show tables             -- List user tables
+sql <alias> show views              -- List user views
+sql <alias> show FUNCTIONS          -- List functions/procedures
+sql <alias> describe <table>        -- Column details
+sql <alias> <any-sql>               -- Raw SQL passthrough
+sql <alias> generate connector into <module> [tables (...)] [views (...)] [exec]
 ```
 
 **Example:**
 ```sql
-SQL CONNECT postgres 'postgres://user:pass@localhost:5432/mydb' AS source;
-SQL source SHOW TABLES;
-SQL source SELECT * FROM users WHERE active = true LIMIT 10;
-SQL source GENERATE CONNECTOR INTO HRModule TABLES (employees, departments) EXEC;
-SQL DISCONNECT source;
+sql connect postgres 'postgres://user:pass@localhost:5432/mydb' as source;
+sql source show tables;
+sql source select * from users where active = true limit 10;
+sql source generate connector into HRModule tables (employees, departments) exec;
+sql disconnect source;
 ```
 
 ---
@@ -1282,22 +1282,22 @@ Imports data from an external database into a Mendix application database.
 
 **Syntax:**
 ```sql
-IMPORT FROM <alias> QUERY '<sql>'
-  INTO <Module.Entity>
-  MAP (<source-col> AS <AttrName> [, ...])
-  [LINK (<source-col> TO <AssocName> ON <MatchAttr>) [, ...]]
-  [BATCH <size>]
-  [LIMIT <count>]
+import from <alias> query '<sql>'
+  into <Module.Entity>
+  map (<source-col> as <AttrName> [, ...])
+  [link (<source-col> to <AssocName> on <MatchAttr>) [, ...]]
+  [batch <size>]
+  [limit <count>]
 ```
 
 **Example:**
 ```sql
-IMPORT FROM source QUERY 'SELECT name, email, dept_name FROM employees'
-  INTO HR.Employee
-  MAP (name AS Name, email AS Email)
-  LINK (dept_name TO Employee_Department ON Name)
-  BATCH 500
-  LIMIT 1000;
+import from source query 'SELECT name, email, dept_name FROM employees'
+  into HR.Employee
+  map (name as Name, email as Email)
+  link (dept_name to Employee_Department on Name)
+  batch 500
+  limit 1000;
 ```
 
 ---
@@ -1309,33 +1309,33 @@ The catalog provides SQLite-based cross-reference queries over project metadata.
 ### REFRESH CATALOG
 
 ```sql
-REFRESH CATALOG             -- Rebuild basic catalog
-REFRESH CATALOG FULL        -- Rebuild including cross-references and source
+refresh catalog             -- Rebuild basic catalog
+refresh catalog full        -- Rebuild including cross-references and source
 ```
 
 ### Catalog Queries
 
 ```sql
-SHOW CATALOG TABLES                           -- List available catalog tables
-SELECT ... FROM CATALOG.<table> [WHERE ...]   -- SQL query against catalog
+show catalog tables                           -- List available catalog tables
+select ... from CATALOG.<table> [where ...]   -- SQL query against catalog
 ```
 
 ### Cross-Reference Navigation
 
-Requires `REFRESH CATALOG FULL` to populate reference data.
+Requires `refresh catalog full` to populate reference data.
 
 ```sql
-SHOW CALLERS OF <qualified-name>       -- What calls this element
-SHOW CALLEES OF <qualified-name>       -- What this element calls
-SHOW REFERENCES OF <qualified-name>    -- All references to/from
-SHOW IMPACT OF <qualified-name>        -- Impact analysis
-SHOW CONTEXT OF <qualified-name>       -- Surrounding context
+show callers of <qualified-name>       -- What calls this element
+show callees of <qualified-name>       -- What this element calls
+show references of <qualified-name>    -- All references to/from
+show impact of <qualified-name>        -- Impact analysis
+show context of <qualified-name>       -- Surrounding context
 ```
 
 ### Full-Text Search
 
 ```sql
-SEARCH '<keyword>'                     -- Search across all strings and source
+search '<keyword>'                     -- Search across all strings and source
 ```
 
 ---
@@ -1343,10 +1343,10 @@ SEARCH '<keyword>'                     -- Search across all strings and source
 ## Business Event Statements
 
 ```sql
-SHOW BUSINESS EVENTS [IN <module>]
-DESCRIBE BUSINESS EVENT SERVICE <qualified-name>
-CREATE BUSINESS EVENT SERVICE <qualified-name> (...) { MESSAGE ... }
-DROP BUSINESS EVENT SERVICE <qualified-name>
+show business events [in <module>]
+describe business event service <qualified-name>
+create business event service <qualified-name> (...) { message ... }
+drop business event service <qualified-name>
 ```
 
 ---
@@ -1355,25 +1355,25 @@ DROP BUSINESS EVENT SERVICE <qualified-name>
 
 ```sql
 -- List and inspect
-SHOW JAVA ACTIONS [IN <module>]
-DESCRIBE JAVA ACTION <qualified-name>
+show java actions [in <module>]
+describe java action <qualified-name>
 
 -- Create with inline Java code
-CREATE JAVA ACTION <qualified-name>(<params>) RETURNS <type>
-  [EXPOSED AS '<caption>' IN '<category>']
-  AS $$ <java-code> $$
+create java action <qualified-name>(<params>) returns <type>
+  [exposed as '<caption>' in '<category>']
+  as $$ <java-code> $$
 
 -- Type parameters for generic entity handling
-CREATE JAVA ACTION Module.Validate(
-  EntityType: ENTITY <pEntity> NOT NULL,
-  InputObject: pEntity NOT NULL
-) RETURNS Boolean AS $$ return InputObject != null; $$
+create java action Module.Validate(
+  EntityType: entity <pEntity> not null,
+  InputObject: pEntity not null
+) returns boolean as $$ return InputObject != null; $$
 
 -- Drop
-DROP JAVA ACTION <qualified-name>
+drop java action <qualified-name>
 ```
 
-Parameter types: `String`, `Integer`, `Long`, `Decimal`, `Boolean`, `DateTime`, `Module.Entity`, `List of Module.Entity`, `StringTemplate(Sql)`, `StringTemplate(Oql)`, `ENTITY <typeParam>`.
+Parameter types: `string`, `integer`, `long`, `decimal`, `boolean`, `datetime`, `Module.Entity`, `list of Module.Entity`, `stringtemplate(sql)`, `stringtemplate(Oql)`, `entity <typeParam>`.
 
 ---
 
@@ -1385,13 +1385,13 @@ Sets a session variable.
 
 **Syntax:**
 ```sql
-SET <key> = <value>
+set <key> = <value>
 ```
 
 **Example:**
 ```sql
-SET output_format = 'json'
-SET verbose = TRUE
+set output_format = 'json'
+set verbose = true
 ```
 
 ### REFRESH / UPDATE
@@ -1400,8 +1400,8 @@ Reloads the project from disk.
 
 **Syntax:**
 ```sql
-REFRESH
-UPDATE
+refresh
+update
 ```
 
 ### EXECUTE SCRIPT
@@ -1410,12 +1410,12 @@ Executes an MDL script file.
 
 **Syntax:**
 ```sql
-EXECUTE SCRIPT '<path>'
+execute script '<path>'
 ```
 
 **Example:**
 ```sql
-EXECUTE SCRIPT './scripts/setup_domain_model.mdl';
+execute script './scripts/setup_domain_model.mdl';
 ```
 
 ### HELP
@@ -1448,13 +1448,13 @@ Specifies the visual position in the domain model diagram.
 
 **Syntax:**
 ```sql
-@Position(<x>, <y>)
+@position(<x>, <y>)
 ```
 
 **Example:**
 ```sql
-@Position(100, 200)
-CREATE PERSISTENT ENTITY MyModule.Customer (
+@position(100, 200)
+create persistent entity MyModule.Customer (
   ...
 );
 ```
@@ -1489,7 +1489,7 @@ statement       = connect_stmt | disconnect_stmt | status_stmt
 
 qualified_name  = IDENTIFIER [ '.' IDENTIFIER [ '.' IDENTIFIER ] ] ;
 
-data_type       = 'String' [ '(' INTEGER ')' ]
+data_type       = 'String' [ '(' integer ')' ]
                 | 'Integer' | 'Long' | 'Decimal' | 'Boolean'
                 | 'DateTime' | 'Date' | 'AutoNumber' | 'Binary'
                 | 'HashedString'
@@ -1499,5 +1499,5 @@ data_type       = 'String' [ '(' INTEGER ')' ]
 
 entity_type     = 'PERSISTENT' | 'NON-PERSISTENT' | 'VIEW' | 'EXTERNAL' ;
 
-literal         = STRING | INTEGER | DECIMAL | 'TRUE' | 'FALSE' | 'NULL' ;
+literal         = string | integer | decimal | 'TRUE' | 'FALSE' | 'NULL' ;
 ```

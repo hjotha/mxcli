@@ -19,19 +19,19 @@ The **MxGraphStudioDemo** project (Mendix 11.6.3) is a small app that connects t
 ## Architecture
 
 ```
-Graph Studio OData API
+Graph Studio odata api
     |
     v
 [OdataPlm.MxPlmOdataApiClient] -- consumed OData service
     |
     v
-External Entities: Customer, Address, Bom, Component, Sub_Component
+external entities: Customer, Address, Bom, Component, Sub_Component
     |
     v
-Pages: Customer_Overview, Address_Overview, Customer_NewEdit, Address_NewEdit, BomTree
+pages: Customer_Overview, Address_Overview, Customer_NewEdit, Address_NewEdit, BomTree
     |
     v
-Navigation: Responsive -> Main.Home_Web -> buttons to OdataPlm pages
+navigation: Responsive -> Main.Home_Web -> buttons to OdataPlm pages
 ```
 
 ### Associations
@@ -46,32 +46,32 @@ Navigation: Responsive -> Main.Home_Web -> buttons to OdataPlm pages
 
 | Feature | MDL Syntax | Status |
 |---------|-----------|--------|
-| External entities | `CREATE EXTERNAL ENTITY` | Supported |
-| Persistent entities | `CREATE PERSISTENT ENTITY` | Supported |
-| Non-persistent entities | `CREATE NON-PERSISTENT ENTITY` | Supported |
-| Enumerations | `CREATE ENUMERATION` | Supported |
-| Overview pages (DataGrid2 + filters) | `CREATE PAGE ... { DATAGRID ... }` | Supported |
-| Edit pages (DataView + TextBox) | `CREATE PAGE ... { DATAVIEW ... }` | Supported |
-| Snippets | `CREATE SNIPPET` | Supported |
-| Navigation lists | `NAVIGATIONLIST` | Supported |
-| Layout grids | `LAYOUTGRID / ROW / COLUMN` | Supported |
-| Action buttons | `ACTIONBUTTON` | Supported |
-| Text/Number filters | `TEXTFILTER / NUMBERFILTER` | Supported |
-| Dynamic text / headings | `DYNAMICTEXT` | Supported |
-| ComboBox | `COMBOBOX` | Supported |
-| Navigation profiles | `CREATE OR REPLACE NAVIGATION` | Supported |
-| Constants | `CREATE CONSTANT` | Supported |
-| Page parameters | `Params: { $Var: Entity }` | Supported |
-| Show page actions | `Action: SHOW_PAGE Module.Page` | Supported |
-| Save/Cancel actions | `Action: SAVE_CHANGES / CANCEL_CHANGES` | Supported |
-| Consumed OData clients | `CREATE ODATA CLIENT` | Supported |
-| External entities with OData source | `CREATE EXTERNAL ENTITY ... FROM ODATA CLIENT` | Supported |
+| External entities | `create external entity` | Supported |
+| Persistent entities | `create persistent entity` | Supported |
+| Non-persistent entities | `create non-persistent entity` | Supported |
+| Enumerations | `create enumeration` | Supported |
+| Overview pages (DataGrid2 + filters) | `create page ... { datagrid ... }` | Supported |
+| Edit pages (DataView + TextBox) | `create page ... { dataview ... }` | Supported |
+| Snippets | `create snippet` | Supported |
+| Navigation lists | `navigationlist` | Supported |
+| Layout grids | `layoutgrid / row / column` | Supported |
+| Action buttons | `actionbutton` | Supported |
+| Text/Number filters | `textfilter / numberfilter` | Supported |
+| Dynamic text / headings | `dynamictext` | Supported |
+| ComboBox | `combobox` | Supported |
+| Navigation profiles | `create or replace navigation` | Supported |
+| Constants | `create constant` | Supported |
+| Page parameters | `params: { $Var: entity }` | Supported |
+| Show page actions | `action: show_page Module.Page` | Supported |
+| Save/Cancel actions | `action: save_changes / cancel_changes` | Supported |
+| Consumed OData clients | `create odata client` | Supported |
+| External entities with OData source | `create external entity ... from odata client` | Supported |
 
 ### Not Supported
 
 | Feature | What's Missing | Workaround |
 |---------|---------------|------------|
-| **TreeNode widget** | Pluggable widget not in MDL grammar or SDK. `DESCRIBE PAGE` outputs `TREENODE treeNode1` but cannot configure it. | No workaround — requires Studio Pro to configure. Can create the page structure and add TreeNode manually. |
+| **TreeNode widget** | Pluggable widget not in MDL grammar or SDK. `describe page` outputs `TREENODE treeNode1` but cannot configure it. | No workaround — requires Studio Pro to configure. Can create the page structure and add TreeNode manually. |
 | **RestOperationCallAction** | Microflow activity not implemented in describe/create. Shows as `-- Unsupported action type`. | Must create REST call microflows in Studio Pro. |
 
 ### Partially Supported
@@ -79,7 +79,7 @@ Navigation: Responsive -> Main.Home_Web -> buttons to OdataPlm pages
 | Feature | Notes |
 |---------|-------|
 | **BomTree page** | The page layout (LayoutGrid, DynamicText heading) is fully supported. Only the `TREENODE` widget inside it cannot be configured — MDL outputs just the widget name with no properties. |
-| **Main.GetCustomers microflow** | The `RETRIEVE` and `RETURN` are supported, but the `RestOperationCallAction` at the start is emitted as a comment. |
+| **Main.GetCustomers microflow** | The `retrieve` and `return` are supported, but the `RestOperationCallAction` at the start is emitted as a comment. |
 
 ## MDL Scripts to Recreate the App
 
@@ -89,27 +89,27 @@ Navigation: Responsive -> Main.Home_Web -> buttons to OdataPlm pages
 -- The OdataPlm and Main modules must exist first.
 -- Marketplace modules (Atlas_Core, Administration, etc.) are assumed to be
 -- installed via the Mendix Marketplace in Studio Pro.
-CREATE MODULE OdataPlm;
-CREATE MODULE Main;
+create module OdataPlm;
+create module Main;
 ```
 
 ### Step 2: Create Constants (needed by OData client)
 
 ```sql
-CREATE CONSTANT Main.MxPlmGraphClient_graphmart AS String = 'http%3A%2F%2Fcambridgesemantics.com%2F...';
-CREATE CONSTANT Main.MxPlmGraphClient_graphstudio_api AS String = 'https://graphstudio.mendixdemo.com/sp...';
-CREATE CONSTANT Main.MxPlmGraphClient_password AS String = 'Welcome1!';
-CREATE CONSTANT Main.MxPlmGraphClient_username AS String = 'Administrator';
-CREATE CONSTANT OdataPlm.MxPlmOdataApiClient_Location AS String = 'https://graphstudio.mendixdemo.com/da...';
+create constant Main.MxPlmGraphClient_graphmart as string = 'http%3A%2F%2Fcambridgesemantics.com%2F...';
+create constant Main.MxPlmGraphClient_graphstudio_api as string = 'https://graphstudio.mendixdemo.com/sp...';
+create constant Main.MxPlmGraphClient_password as string = 'Welcome1!';
+create constant Main.MxPlmGraphClient_username as string = 'Administrator';
+create constant OdataPlm.MxPlmOdataApiClient_Location as string = 'https://graphstudio.mendixdemo.com/da...';
 ```
 
 ### Step 3: Create the Consumed OData Client
 
 ```sql
-CREATE ODATA CLIENT OdataPlm.MxPlmOdataApiClient (
+create odata client OdataPlm.MxPlmOdataApiClient (
   ODataVersion: OData4,
   MetadataUrl: 'https://graphstudio.mendixdemo.com/dataondemand/Mx-PLM-example/MxPlmExample/$metadata',
-  Timeout: 300,
+  timeout: 300,
   ServiceUrl: '@OdataPlm.MxPlmOdataApiClient_Location',
   UseAuthentication: Yes,
   HttpUsername: '@Main.MxPlmGraphClient_username',
@@ -121,8 +121,8 @@ CREATE ODATA CLIENT OdataPlm.MxPlmOdataApiClient (
 ### Step 4: External Entities (OdataPlm)
 
 ```sql
-CREATE EXTERNAL ENTITY OdataPlm.Customer
-FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
+create external entity OdataPlm.Customer
+from odata client OdataPlm.MxPlmOdataApiClient
 (
   EntitySet: 'Customer',
   RemoteName: 'Customer',
@@ -132,19 +132,19 @@ FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
   Updatable: No
 )
 (
-  customer_key: String,
-  Industry: String,
-  address_key: String,
-  Name: String,
-  _Id: String,
-  Phone: String,
-  Email: String,
-  Contact_Person: String
+  customer_key: string,
+  Industry: string,
+  address_key: string,
+  Name: string,
+  _Id: string,
+  Phone: string,
+  Email: string,
+  Contact_Person: string
 );
 /
 
-CREATE EXTERNAL ENTITY OdataPlm.Address
-FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
+create external entity OdataPlm.Address
+from odata client OdataPlm.MxPlmOdataApiClient
 (
   EntitySet: 'Address',
   RemoteName: 'Address',
@@ -154,18 +154,18 @@ FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
   Updatable: No
 )
 (
-  address_key: String,
-  Country: String,
-  State: String,
-  Street: String,
-  Post_Code: String,
-  City: String,
-  Zip_Code: Integer
+  address_key: string,
+  Country: string,
+  State: string,
+  Street: string,
+  Post_Code: string,
+  City: string,
+  Zip_Code: integer
 );
 /
 
-CREATE EXTERNAL ENTITY OdataPlm.Bom
-FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
+create external entity OdataPlm.Bom
+from odata client OdataPlm.MxPlmOdataApiClient
 (
   EntitySet: 'Bom',
   RemoteName: 'Bom',
@@ -175,16 +175,16 @@ FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
   Updatable: No
 )
 (
-  bom_key: String,
-  Product_Version: Decimal,
-  Product_Id: String,
-  _Id: String,
-  Name: String
+  bom_key: string,
+  Product_Version: decimal,
+  Product_Id: string,
+  _Id: string,
+  Name: string
 );
 /
 
-CREATE EXTERNAL ENTITY OdataPlm.Component
-FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
+create external entity OdataPlm.Component
+from odata client OdataPlm.MxPlmOdataApiClient
 (
   EntitySet: 'Component',
   RemoteName: 'Component',
@@ -194,17 +194,17 @@ FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
   Updatable: No
 )
 (
-  component_key: String,
-  Name: String,
-  Quantity_Required: Long,
-  Level: Long,
-  _Id: String,
-  Unit_Of_Measure: String
+  component_key: string,
+  Name: string,
+  Quantity_Required: long,
+  level: long,
+  _Id: string,
+  Unit_Of_Measure: string
 );
 /
 
-CREATE EXTERNAL ENTITY OdataPlm.Sub_Component
-FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
+create external entity OdataPlm.Sub_Component
+from odata client OdataPlm.MxPlmOdataApiClient
 (
   EntitySet: 'Sub_Component',
   RemoteName: 'Sub_Component',
@@ -214,12 +214,12 @@ FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
   Updatable: No
 )
 (
-  sub_component_key: String,
-  Unit_Of_Measure: String,
-  Quantity_Required: Long,
-  Component_Name: String,
-  Level: Long,
-  Component_Id: String
+  sub_component_key: string,
+  Unit_Of_Measure: string,
+  Quantity_Required: long,
+  Component_Name: string,
+  level: long,
+  Component_Id: string
 );
 /
 ```
@@ -227,13 +227,13 @@ FROM ODATA CLIENT OdataPlm.MxPlmOdataApiClient
 ### Step 5: Test Entity and Enumeration (OdataPlm)
 
 ```sql
-CREATE ENUMERATION OdataPlm.Test (
+create enumeration OdataPlm.Test (
   wewe 'wewe'
 );
 /
 
-CREATE PERSISTENT ENTITY OdataPlm.TestAbc (
-  test: Enumeration(OdataPlm.Test)
+create persistent entity OdataPlm.TestAbc (
+  test: enumeration(OdataPlm.Test)
 );
 /
 ```
@@ -241,21 +241,21 @@ CREATE PERSISTENT ENTITY OdataPlm.TestAbc (
 ### Step 6: Non-Persistent Entities (Main)
 
 ```sql
-CREATE NON-PERSISTENT ENTITY Main.GetCustomerResponse ();
+create non-persistent entity Main.GetCustomerResponse ();
 /
 
-CREATE NON-PERSISTENT ENTITY Main.Customer (
-  Customer__type: String,
-  Customer_Value: String,
-  CustomerId__type: String,
-  CustomerId_Value: String,
-  CustomerName__type: String,
-  CustomerName_Value: String
+create non-persistent entity Main.Customer (
+  Customer__type: string,
+  Customer_Value: string,
+  CustomerId__type: string,
+  CustomerId_Value: string,
+  CustomerName__type: string,
+  CustomerName_Value: string
 );
 /
 
-CREATE NON-PERSISTENT ENTITY Main.Var (
-  Value: String
+create non-persistent entity Main.Var (
+  value: string
 );
 /
 ```
@@ -265,12 +265,12 @@ CREATE NON-PERSISTENT ENTITY Main.Var (
 ```sql
 -- Auto-created for OdataPlm associations via consumed OData service.
 -- Main module associations:
-CREATE ASSOCIATION Main.Customer_GetCustomerResponse (
+create association Main.Customer_GetCustomerResponse (
   Main.Customer -> Main.GetCustomerResponse
 );
 /
 
-CREATE ASSOCIATION Main.Var_GetCustomerResponse (
+create association Main.Var_GetCustomerResponse (
   Main.Var -> Main.GetCustomerResponse
 );
 /
@@ -279,14 +279,14 @@ CREATE ASSOCIATION Main.Var_GetCustomerResponse (
 ### Step 8: Snippet (Entity_Menu)
 
 ```sql
-CREATE SNIPPET OdataPlm.Entity_Menu {
-  DYNAMICTEXT text1 (Content: 'Entities', RenderMode: H2)
-  NAVIGATIONLIST navigationList1 {
-    ITEM (Action: SHOW_PAGE 'OdataPlm.Address_Overview') {
-      DYNAMICTEXT text2 (Content: 'Address')
+create snippet OdataPlm.Entity_Menu {
+  dynamictext text1 (content: 'Entities', rendermode: H2)
+  navigationlist navigationList1 {
+    item (action: show_page 'OdataPlm.Address_Overview') {
+      dynamictext text2 (content: 'Address')
     }
-    ITEM (Action: SHOW_PAGE 'OdataPlm.Customer_Overview') {
-      DYNAMICTEXT text3 (Content: 'Customer')
+    item (action: show_page 'OdataPlm.Customer_Overview') {
+      dynamictext text3 (content: 'Customer')
     }
   }
 }
@@ -297,43 +297,43 @@ CREATE SNIPPET OdataPlm.Entity_Menu {
 #### Customer Overview
 
 ```sql
-CREATE PAGE OdataPlm.Customer_Overview
-(Title: 'Customer Overview', Layout: Atlas_Core.Atlas_Default)
+create page OdataPlm.Customer_Overview
+(title: 'Customer Overview', layout: Atlas_Core.Atlas_Default)
 {
-  LAYOUTGRID layoutGrid1 {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
-        SNIPPETCALL snippetCall1 (Snippet: OdataPlm.Entity_Menu)
+  layoutgrid layoutGrid1 {
+    row row1 {
+      column col1 (desktopwidth: autofill) {
+        snippetcall snippetCall1 (snippet: OdataPlm.Entity_Menu)
       }
-      COLUMN col2 (DesktopWidth: AutoFill) {
-        DYNAMICTEXT text1 (Content: 'Customer', RenderMode: H2)
-        DATAGRID dataGrid2_1 (DataSource: DATABASE OdataPlm.Customer) {
-          COLUMN col1 (Attribute: customer_key, Caption: 'customer key') {
-            TEXTFILTER textFilter2
+      column col2 (desktopwidth: autofill) {
+        dynamictext text1 (content: 'Customer', rendermode: H2)
+        datagrid dataGrid2_1 (datasource: database OdataPlm.Customer) {
+          column col1 (attribute: customer_key, caption: 'customer key') {
+            textfilter textFilter2
           }
-          COLUMN col2 (Attribute: Industry, Caption: 'Industry') {
-            TEXTFILTER textFilter3
+          column col2 (attribute: Industry, caption: 'Industry') {
+            textfilter textFilter3
           }
-          COLUMN col3 (Attribute: address_key, Caption: 'address key') {
-            TEXTFILTER textFilter4
+          column col3 (attribute: address_key, caption: 'address key') {
+            textfilter textFilter4
           }
-          COLUMN col4 (Attribute: Name, Caption: 'Name') {
-            TEXTFILTER textFilter5
+          column col4 (attribute: Name, caption: 'Name') {
+            textfilter textFilter5
           }
-          COLUMN col5 (Attribute: _Id, Caption: 'Id') {
-            TEXTFILTER textFilter6
+          column col5 (attribute: _Id, caption: 'Id') {
+            textfilter textFilter6
           }
-          COLUMN col6 (Attribute: Phone, Caption: 'Phone') {
-            TEXTFILTER textFilter7
+          column col6 (attribute: Phone, caption: 'Phone') {
+            textfilter textFilter7
           }
-          COLUMN col7 (Attribute: Email, Caption: 'Email') {
-            TEXTFILTER textFilter8
+          column col7 (attribute: Email, caption: 'Email') {
+            textfilter textFilter8
           }
-          COLUMN col8 (Attribute: Contact_Person, Caption: 'Contact Person') {
-            TEXTFILTER textFilter1
+          column col8 (attribute: Contact_Person, caption: 'Contact Person') {
+            textfilter textFilter1
           }
-          COLUMN col9 (Attribute: customer_key, ShowContentAs: customContent) {
-            ACTIONBUTTON actionButton1 (Action: SHOW_PAGE OdataPlm.Customer_NewEdit, Style: Primary)
+          column col9 (attribute: customer_key, ShowContentAs: customContent) {
+            actionbutton actionButton1 (action: show_page OdataPlm.Customer_NewEdit, style: primary)
           }
         }
       }
@@ -345,25 +345,25 @@ CREATE PAGE OdataPlm.Customer_Overview
 #### Customer Edit (Popup)
 
 ```sql
-CREATE PAGE OdataPlm.Customer_NewEdit
-(Title: 'Edit Customer', Layout: Atlas_Core.PopupLayout, Params: { $Customer: OdataPlm.Customer })
+create page OdataPlm.Customer_NewEdit
+(title: 'Edit Customer', layout: Atlas_Core.PopupLayout, params: { $Customer: OdataPlm.Customer })
 {
-  LAYOUTGRID layoutGrid1 {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
-        DATAVIEW dataView1 (DataSource: $Customer) {
-          TEXTBOX textBox1 (Label: 'customer key', Attribute: OdataPlm.Customer.customer_key)
-          TEXTBOX textBox2 (Label: 'Industry', Attribute: OdataPlm.Customer.Industry)
-          TEXTBOX textBox3 (Label: 'address key', Attribute: OdataPlm.Customer.address_key)
-          TEXTBOX textBox4 (Label: 'Name', Attribute: OdataPlm.Customer.Name)
-          TEXTBOX textBox5 (Label: 'Id', Attribute: OdataPlm.Customer._Id)
-          TEXTBOX textBox6 (Label: 'Phone', Attribute: OdataPlm.Customer.Phone)
-          TEXTBOX textBox7 (Label: 'Email', Attribute: OdataPlm.Customer.Email)
-          TEXTBOX textBox8 (Label: 'Contact Person', Attribute: OdataPlm.Customer.Contact_Person)
-          COMBOBOX comboBox1 (Attribute: OdataPlm.Address.address_key)
-          FOOTER footer1 {
-            ACTIONBUTTON actionButton1 (Caption: 'Save', Action: SAVE_CHANGES CLOSE_PAGE, Style: Success)
-            ACTIONBUTTON actionButton2 (Caption: 'Cancel', Action: CANCEL_CHANGES CLOSE_PAGE)
+  layoutgrid layoutGrid1 {
+    row row1 {
+      column col1 (desktopwidth: autofill) {
+        dataview dataView1 (datasource: $Customer) {
+          textbox textBox1 (label: 'customer key', attribute: OdataPlm.Customer.customer_key)
+          textbox textBox2 (label: 'Industry', attribute: OdataPlm.Customer.Industry)
+          textbox textBox3 (label: 'address key', attribute: OdataPlm.Customer.address_key)
+          textbox textBox4 (label: 'Name', attribute: OdataPlm.Customer.Name)
+          textbox textBox5 (label: 'Id', attribute: OdataPlm.Customer._Id)
+          textbox textBox6 (label: 'Phone', attribute: OdataPlm.Customer.Phone)
+          textbox textBox7 (label: 'Email', attribute: OdataPlm.Customer.Email)
+          textbox textBox8 (label: 'Contact Person', attribute: OdataPlm.Customer.Contact_Person)
+          combobox comboBox1 (attribute: OdataPlm.Address.address_key)
+          footer footer1 {
+            actionbutton actionButton1 (caption: 'Save', action: save_changes close_page, style: success)
+            actionbutton actionButton2 (caption: 'Cancel', action: cancel_changes close_page)
           }
         }
       }
@@ -375,40 +375,40 @@ CREATE PAGE OdataPlm.Customer_NewEdit
 #### Address Overview
 
 ```sql
-CREATE PAGE OdataPlm.Address_Overview
-(Title: 'Address Overview', Layout: Atlas_Core.Atlas_Default)
+create page OdataPlm.Address_Overview
+(title: 'Address Overview', layout: Atlas_Core.Atlas_Default)
 {
-  LAYOUTGRID layoutGrid1 {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
-        SNIPPETCALL snippetCall1 (Snippet: OdataPlm.Entity_Menu)
+  layoutgrid layoutGrid1 {
+    row row1 {
+      column col1 (desktopwidth: autofill) {
+        snippetcall snippetCall1 (snippet: OdataPlm.Entity_Menu)
       }
-      COLUMN col2 (DesktopWidth: AutoFill) {
-        DYNAMICTEXT text1 (Content: 'Address', RenderMode: H2)
-        DATAGRID dataGrid2_1 (DataSource: DATABASE OdataPlm.Address) {
-          COLUMN col1 (Attribute: address_key, Caption: 'address key') {
-            TEXTFILTER textFilter2
+      column col2 (desktopwidth: autofill) {
+        dynamictext text1 (content: 'Address', rendermode: H2)
+        datagrid dataGrid2_1 (datasource: database OdataPlm.Address) {
+          column col1 (attribute: address_key, caption: 'address key') {
+            textfilter textFilter2
           }
-          COLUMN col2 (Attribute: Country, Caption: 'Country') {
-            TEXTFILTER textFilter3
+          column col2 (attribute: Country, caption: 'Country') {
+            textfilter textFilter3
           }
-          COLUMN col3 (Attribute: State, Caption: 'State') {
-            TEXTFILTER textFilter4
+          column col3 (attribute: State, caption: 'State') {
+            textfilter textFilter4
           }
-          COLUMN col4 (Attribute: Street, Caption: 'Street') {
-            TEXTFILTER textFilter5
+          column col4 (attribute: Street, caption: 'Street') {
+            textfilter textFilter5
           }
-          COLUMN col5 (Attribute: Post_Code, Caption: 'Post Code') {
-            TEXTFILTER textFilter6
+          column col5 (attribute: Post_Code, caption: 'Post Code') {
+            textfilter textFilter6
           }
-          COLUMN col6 (Attribute: City, Caption: 'City') {
-            TEXTFILTER textFilter1
+          column col6 (attribute: City, caption: 'City') {
+            textfilter textFilter1
           }
-          COLUMN col7 (Attribute: Zip_Code, Caption: 'Zip Code') {
-            NUMBERFILTER numberFilter1 (FilterType: equal)
+          column col7 (attribute: Zip_Code, caption: 'Zip Code') {
+            numberfilter numberFilter1 (filtertype: equal)
           }
-          COLUMN col8 (Attribute: address_key, ShowContentAs: customContent) {
-            ACTIONBUTTON actionButton1 (Action: SHOW_PAGE OdataPlm.Address_NewEdit, Style: Primary)
+          column col8 (attribute: address_key, ShowContentAs: customContent) {
+            actionbutton actionButton1 (action: show_page OdataPlm.Address_NewEdit, style: primary)
           }
         }
       }
@@ -420,23 +420,23 @@ CREATE PAGE OdataPlm.Address_Overview
 #### Address Edit (Popup)
 
 ```sql
-CREATE PAGE OdataPlm.Address_NewEdit
-(Title: 'Edit Address', Layout: Atlas_Core.PopupLayout, Params: { $Address: OdataPlm.Address })
+create page OdataPlm.Address_NewEdit
+(title: 'Edit Address', layout: Atlas_Core.PopupLayout, params: { $Address: OdataPlm.Address })
 {
-  LAYOUTGRID layoutGrid1 {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
-        DATAVIEW dataView1 (DataSource: $Address) {
-          TEXTBOX textBox1 (Label: 'address key', Attribute: OdataPlm.Address.address_key)
-          TEXTBOX textBox2 (Label: 'Country', Attribute: OdataPlm.Address.Country)
-          TEXTBOX textBox3 (Label: 'State', Attribute: OdataPlm.Address.State)
-          TEXTBOX textBox4 (Label: 'Street', Attribute: OdataPlm.Address.Street)
-          TEXTBOX textBox5 (Label: 'Post Code', Attribute: OdataPlm.Address.Post_Code)
-          TEXTBOX textBox6 (Label: 'City', Attribute: OdataPlm.Address.City)
-          TEXTBOX textBox7 (Label: 'Zip Code', Attribute: OdataPlm.Address.Zip_Code)
-          FOOTER footer1 {
-            ACTIONBUTTON actionButton1 (Caption: 'Save', Action: SAVE_CHANGES CLOSE_PAGE, Style: Success)
-            ACTIONBUTTON actionButton2 (Caption: 'Cancel', Action: CANCEL_CHANGES CLOSE_PAGE)
+  layoutgrid layoutGrid1 {
+    row row1 {
+      column col1 (desktopwidth: autofill) {
+        dataview dataView1 (datasource: $Address) {
+          textbox textBox1 (label: 'address key', attribute: OdataPlm.Address.address_key)
+          textbox textBox2 (label: 'Country', attribute: OdataPlm.Address.Country)
+          textbox textBox3 (label: 'State', attribute: OdataPlm.Address.State)
+          textbox textBox4 (label: 'Street', attribute: OdataPlm.Address.Street)
+          textbox textBox5 (label: 'Post Code', attribute: OdataPlm.Address.Post_Code)
+          textbox textBox6 (label: 'City', attribute: OdataPlm.Address.City)
+          textbox textBox7 (label: 'Zip Code', attribute: OdataPlm.Address.Zip_Code)
+          footer footer1 {
+            actionbutton actionButton1 (caption: 'Save', action: save_changes close_page, style: success)
+            actionbutton actionButton2 (caption: 'Cancel', action: cancel_changes close_page)
           }
         }
       }
@@ -450,17 +450,17 @@ CREATE PAGE OdataPlm.Address_NewEdit
 ```sql
 -- NOTE: The TREENODE widget cannot be fully configured via MDL.
 -- This creates the page structure. Add the TreeNode widget configuration in Studio Pro.
-CREATE PAGE OdataPlm.BomTree
-(Title: 'Bom tree', Layout: Atlas_Core.Atlas_Default)
+create page OdataPlm.BomTree
+(title: 'Bom tree', layout: Atlas_Core.Atlas_Default)
 {
-  LAYOUTGRID layoutGrid1 {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
-        DYNAMICTEXT text1 (Content: 'BOM', RenderMode: H1)
+  layoutgrid layoutGrid1 {
+    row row1 {
+      column col1 (desktopwidth: autofill) {
+        dynamictext text1 (content: 'BOM', rendermode: H1)
       }
     }
-    ROW row2 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
+    row row2 {
+      column col1 (desktopwidth: autofill) {
         -- TREENODE widget goes here (configure in Studio Pro)
         -- It displays Bom -> Component -> Sub_Component hierarchy
       }
@@ -473,41 +473,41 @@ CREATE PAGE OdataPlm.BomTree
 
 
 ```sql
-CREATE PAGE Main.Home_Web
-(Title: 'Homepage', Layout: Atlas_Core.Atlas_TopBar)
+create page Main.Home_Web
+(title: 'Homepage', layout: Atlas_Core.Atlas_TopBar)
 {
-  LAYOUTGRID layoutGrid3 {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
-        DYNAMICTEXT text1 (Content: 'Tekst', RenderMode: H1)
+  layoutgrid layoutGrid3 {
+    row row1 {
+      column col1 (desktopwidth: autofill) {
+        dynamictext text1 (content: 'Tekst', rendermode: H1)
       }
     }
-    ROW row2 {
-      COLUMN col1 (DesktopWidth: AutoFill) {
-        ACTIONBUTTON actionButton3 (Caption: 'Customer Overview', Action: SHOW_PAGE OdataPlm.Customer_Overview)
-        ACTIONBUTTON actionButton4 (Caption: 'Bom tree', Action: SHOW_PAGE OdataPlm.BomTree)
-        DATAGRID dataGrid2_1 {
-          COLUMN col1 (Attribute: Customer__type, Caption: 'Customer type') {
-            TEXTFILTER textFilter1
+    row row2 {
+      column col1 (desktopwidth: autofill) {
+        actionbutton actionButton3 (caption: 'Customer Overview', action: show_page OdataPlm.Customer_Overview)
+        actionbutton actionButton4 (caption: 'Bom tree', action: show_page OdataPlm.BomTree)
+        datagrid dataGrid2_1 {
+          column col1 (attribute: Customer__type, caption: 'Customer type') {
+            textfilter textFilter1
           }
-          COLUMN col2 (Attribute: Customer_Value, Caption: 'Customer Value') {
-            TEXTFILTER textFilter2
+          column col2 (attribute: Customer_Value, caption: 'Customer Value') {
+            textfilter textFilter2
           }
-          COLUMN col3 (Attribute: CustomerId__type, Caption: 'Customer id type') {
-            TEXTFILTER textFilter3
+          column col3 (attribute: CustomerId__type, caption: 'Customer id type') {
+            textfilter textFilter3
           }
-          COLUMN col4 (Attribute: CustomerId_Value, Caption: 'Customer id Value') {
-            TEXTFILTER textFilter4
+          column col4 (attribute: CustomerId_Value, caption: 'Customer id Value') {
+            textfilter textFilter4
           }
-          COLUMN col5 (Attribute: CustomerName__type, Caption: 'Customer name type') {
-            TEXTFILTER textFilter5
+          column col5 (attribute: CustomerName__type, caption: 'Customer name type') {
+            textfilter textFilter5
           }
-          COLUMN col6 (Attribute: CustomerName_Value, Caption: 'Customer name Value') {
-            TEXTFILTER textFilter6
+          column col6 (attribute: CustomerName_Value, caption: 'Customer name Value') {
+            textfilter textFilter6
           }
-          COLUMN col7 (Attribute: Customer__type, ShowContentAs: customContent) {
-            ACTIONBUTTON actionButton1 (Action: SHOW_PAGE Main.Customer_View, Style: Primary)
-            ACTIONBUTTON actionButton2 (Action: DELETE_OBJECT, Style: Primary)
+          column col7 (attribute: Customer__type, ShowContentAs: customContent) {
+            actionbutton actionButton1 (action: show_page Main.Customer_View, style: primary)
+            actionbutton actionButton2 (action: delete_object, style: primary)
           }
         }
       }
@@ -519,10 +519,10 @@ CREATE PAGE Main.Home_Web
 ### Step 11: Navigation
 
 ```sql
-CREATE OR REPLACE NAVIGATION Responsive
-  HOME PAGE Main.Home_Web
-  MENU (
-    MENU ITEM 'Home' PAGE Main.Home_Web;
+create or replace navigation Responsive
+  home page Main.Home_Web
+  menu (
+    menu item 'Home' page Main.Home_Web;
   )
 ;
 ```
@@ -532,13 +532,13 @@ CREATE OR REPLACE NAVIGATION Responsive
 ```sql
 -- NOTE: The RestOperationCallAction is not supported in MDL.
 -- This microflow must be completed in Studio Pro by adding the REST call action.
-CREATE MICROFLOW Main.GetCustomers ()
-RETURNS List of Main.Customer AS $CustomerList
-BEGIN
+create microflow Main.GetCustomers ()
+returns list of Main.Customer as $CustomerList
+begin
   -- TODO: Add REST operation call to get customerResponse (requires Studio Pro)
-  RETRIEVE $BindingList FROM ASSOCIATION $customerResponse/Main.Customer_GetCustomerResponse;
-  RETURN $BindingList;
-END;
+  retrieve $BindingList from association $customerResponse/Main.Customer_GetCustomerResponse;
+  return $BindingList;
+end;
 /
 ```
 

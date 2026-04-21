@@ -25,10 +25,10 @@ Use when encountering:
 ### Step 1: Reproduce the Error
 
 ```bash
-# Create a page via MDL
+# create a page via MDL
 ./bin/mxcli exec script.mdl -p /path/to/app.mpr
 
-# Run mx check to get the error
+# run mx check to get the error
 reference/mxbuild/modeler/mx check /path/to/app.mpr
 ```
 
@@ -58,8 +58,8 @@ import json
 conn = sqlite3.connect('/path/to/app.mpr')
 cursor = conn.cursor()
 
-# Find the document containing the widget
-cursor.execute("SELECT UnitData FROM Unit$ WHERE ContainmentName = 'Document' AND Name = ?", ('PageName',))
+# find the document containing the widget
+cursor.execute("select UnitData from Unit$ where ContainmentName = 'Document' and Name = ?", ('PageName',))
 row = cursor.fetchone()
 doc = bson.decode(row[0])
 
@@ -72,7 +72,7 @@ print(json.dumps(doc, indent=2, default=str))
 Extract the widget's mpk to understand its schema and mode-dependent rules:
 
 ```bash
-# Find the mpk in the project's widgets folder
+# find the mpk in the project's widgets folder
 ls /path/to/project/widgets/*.mpk
 
 # Extract (mpk is a ZIP archive)
@@ -81,8 +81,8 @@ cd /tmp/mpk-widget && unzip /path/to/project/widgets/com.mendix.widget.web.Datag
 ```
 
 Key files inside the mpk:
-- **`{Widget}.xml`** — Property schema: types, defaults, enumerations, nested objects
-- **`{Widget}.editorConfig.js`** — Mode-dependent visibility rules (which properties hide/show based on other values)
+- **`{widget}.xml`** — Property schema: types, defaults, enumerations, nested objects
+- **`{widget}.editorConfig.js`** — Mode-dependent visibility rules (which properties hide/show based on other values)
 - **`package.xml`** — Package version metadata
 
 ### Step 5: Read editorConfig.js for Mode Rules
@@ -108,18 +108,18 @@ Use binary search to find the exact property causing the error:
 # Mutation test: change a single property on a known-good widget
 import bson
 
-# Read the working widget BSON
+# read the working widget BSON
 with open('working-widget.bson', 'rb') as f:
     doc = bson.decode(f.read())
 
-# Change only one property value
+# change only one property value
 # ... modify the specific property ...
 
 # Re-encode and write back
 with open('test-widget.bson', 'wb') as f:
     f.write(bson.encode(doc))
 
-# Then insert back into the MPR and run mx check
+# then insert back into the MPR and run mx check
 ```
 
 ### Step 7: Extract Fresh Templates
@@ -131,7 +131,7 @@ If the widget template is outdated, extract a fresh one:
 reference/mxbuild/modeler/mx convert -p /path/to/app.mpr
 reference/mxbuild/modeler/mx update-widgets /path/to/app.mpr
 
-# Then extract using mxcli
+# then extract using mxcli
 ./bin/mxcli extract-templates -p /path/to/app.mpr -widget "com.mendix.widget.web.datagrid.DataGrid2" -o /tmp/template.json
 ```
 
@@ -159,12 +159,12 @@ Three Mendix tools parse the same BSON but with **different strictness levels**:
 ```bash
 # Self-diff: is the project's BSON clean?
 mx diff project.mpr project.mpr output.mpr
-# Success = all BSON matches schema. Crash = some mxunit has bad properties.
+# success = all BSON matches schema. Crash = some mxunit has bad properties.
 
-# Cross-diff: compare baseline vs modified
+# cross-diff: compare baseline vs modified
 # 1. Extract baseline from git
-mkdir /tmp/baseline && cd project-dir && git archive HEAD -- *.mpr mprcontents/ | tar -x -C /tmp/baseline/
-# 2. Run diff (file names must match!)
+mkdir /tmp/baseline && cd project-dir && git archive head -- *.mpr mprcontents/ | tar -x -C /tmp/baseline/
+# 2. run diff (file names must match!)
 mx diff /tmp/baseline/App.mpr ./App.mpr /tmp/diff-output.mpr
 ```
 
@@ -172,7 +172,7 @@ mx diff /tmp/baseline/App.mpr ./App.mpr /tmp/diff-output.mpr
 
 **Detailed error** (when both sides have same-ID objects):
 ```
-Objects with ID b6fc893f-... of type Settings$ServerConfiguration do not have the same properties.
+objects with ID b6fc893f-... of type settings$ServerConfiguration do not have the same properties.
 baseNames = ApplicationRootUrl, ConstantValues, CustomSettings, ..., Tracing;
 newNames = ApplicationRootUrl, ConstantValues, ...
 ```
@@ -186,15 +186,15 @@ Sequence contains no matching element
 
 ### Finding the Offending mxunit File
 
-Write a Go tool (or use the pattern below) to compare property keys of mxcli-written files against Studio Pro-native files of the same `$Type`:
+Write a Go tool (or use the pattern below) to compare property keys of mxcli-written files against Studio Pro-native files of the same `$type`:
 
 ```go
-// Walk mprcontents/, group files by $Type, compare key sets
+// Walk mprcontents/, group files by $type, compare key sets
 // Files with EXTRA keys (vs native files of same type) = the crash cause
 // Files with MISSING keys = also crash cause for mx diff
 ```
 
-The principle: for each `$Type`, ALL instances must have the **exact same set of non-$ property names**. Any deviation → crash.
+The principle: for each `$type`, ALL instances must have the **exact same set of non-$ property names**. Any deviation → crash.
 
 ### Version-Specific Properties
 
@@ -229,7 +229,7 @@ Some properties only exist in certain Mendix versions. Before adding a property 
 
 **Symptom**: Studio Pro crashes when opening a project with `System.InvalidOperationException: Sequence contains no matching element` at `Mendix.Modeler.Storage.Mpr.MprProperty..ctor`.
 
-**Root cause**: A BSON document contains a property (field name) that does not exist in the Mendix type definition for its `$Type`. Studio Pro's `MprProperty` constructor uses `First()` to look up each BSON field in the type cache, and crashes on unrecognized fields.
+**Root cause**: A BSON document contains a property (field name) that does not exist in the Mendix type definition for its `$type`. Studio Pro's `MprProperty` constructor uses `First()` to look up each BSON field in the type cache, and crashes on unrecognized fields.
 
 **Diagnosis workflow**:
 
@@ -242,10 +242,10 @@ type_props = defaultdict(set)
 
 def walk_bson(obj, tp):
     if isinstance(obj, dict):
-        t = obj.get("$Type", "")
+        t = obj.get("$type", "")
         if t:
             for k in obj.keys():
-                if k not in ("$Type", "$ID"):
+                if k not in ("$type", "$ID"):
                     tp[t].add(k)
         for v in obj.values():
             walk_bson(v, tp)
@@ -272,7 +272,7 @@ for t, props in crash_props.items():
 
 3. **Extra properties = the crash cause**. The fix is to remove those fields from the writer function.
 
-**Example**: `DomainModels$CrossAssociation` had `ParentConnection` and `ChildConnection` copied from `DomainModels$Association`, but these fields don't exist on `CrossAssociation`. Removing them fixed the crash.
+**Example**: `DomainModels$CrossAssociation` had `ParentConnection` and `ChildConnection` copied from `DomainModels$association`, but these fields don't exist on `CrossAssociation`. Removing them fixed the crash.
 
 **Key principle**: When copying serialization code between similar types (e.g., Association → CrossAssociation), always verify which fields belong to each type by checking a baseline project's BSON.
 
@@ -282,7 +282,7 @@ for t, props in crash_props.items():
 
 **Root cause**: Two variants:
 
-1. **Association stored as Attribute**: In `ChangeActionItem` BSON, an association name was written to the `Attribute` field instead of the `Association` field. Check the executor code that builds `MemberChange` — it must query the domain model to distinguish associations from attributes.
+1. **Association stored as Attribute**: In `ChangeActionItem` BSON, an association name was written to the `attribute` field instead of the `association` field. Check the executor code that builds `MemberChange` — it must query the domain model to distinguish associations from attributes.
 
 2. **Entity treated as Enumeration**: In `CreateVariableAction` BSON, an entity qualified name was used as `DataTypes$EnumerationType` instead of `DataTypes$ObjectType`. Check `buildDataType()` in the visitor — bare qualified names default to `TypeEnumeration` and need catalog-based disambiguation.
 

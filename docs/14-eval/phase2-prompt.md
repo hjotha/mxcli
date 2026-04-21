@@ -8,7 +8,7 @@ Extend the eval framework (Phase 1 already implemented) to automate the full loo
 
 The `cmd/mxcli/evalrunner/` package is already implemented with:
 
-- **`parser.go`** — Parses eval test definitions from Markdown+YAML frontmatter files (like `docs/14-eval/eval-1.md`). Key types: `EvalTest`, `EvalIteration`, `Check`.
+- **`parser.go`** — Parses eval test definitions from Markdown+YAML frontmatter files (like `docs/14-eval/eval-1.md`). Key types: `EvalTest`, `EvalIteration`, `check`.
 - **`checks.go`** — Runs 8 check types against an MPR file by shelling out to `mxcli`: `entity_exists`, `entity_has_attribute`, `page_exists`, `page_has_widget`, `microflow_exists`, `navigation_has_item`, `mx_check_passes`, `lint_passes`. Uses wildcard pattern matching (`*.Book` matches `MyModule.Book`).
 - **`results.go`** — Result types (`CheckResult`, `PhaseResult`, `EvalResult`, `RunSummary`) and scoring logic.
 - **`report.go`** — Console, JSON, and Markdown report generation.
@@ -28,13 +28,13 @@ Phase 2 adds `eval run` which automates the entire pipeline.
 Add a new `evalRunCmd` subcommand:
 
 ```bash
-# Run all eval tests with automated Claude invocation
+# run all eval tests with automated Claude invocation
 mxcli eval run docs/14-eval/ --template mx-test-projects/template-app-116/TemplateApp116.mpr
 
-# Run specific test
+# run specific test
 mxcli eval run docs/14-eval/eval-1.md --template template.mpr --test APP-001
 
-# Use specific model
+# use specific model
 mxcli eval run docs/14-eval/ --template template.mpr --model opus
 
 # Skip Docker checks (L0-L2 only)
@@ -61,21 +61,21 @@ Main orchestration function:
 ```go
 type RunOptions struct {
     EvalFiles    []string      // Eval test file(s) or directory
-    TemplatePath string        // Path to template .mpr to copy
+    TemplatePath string        // path to template .mpr to copy
     TestID       string        // Optional: run only this test
-    Model        string        // Claude model (default: "sonnet")
-    MaxTurns     int           // Max Claude turns (default: 50)
+    model        string        // Claude model (default: "sonnet")
+    MaxTurns     int           // max Claude turns (default: 50)
     SkipDocker   bool          // Skip L3+ checks
     SkipMxCheck  bool          // Skip mx check
     OutputDir    string        // Report output directory
-    MxCliPath    string        // Path to mxcli binary
+    MxCliPath    string        // path to mxcli binary
     Color        bool
-    Timeout      time.Duration
+    timeout      time.Duration
     Stdout       io.Writer
     Stderr       io.Writer
 }
 
-func Run(opts RunOptions) (*RunSummary, error)
+func run(opts RunOptions) (*RunSummary, error)
 ```
 
 Pipeline per test:
@@ -95,13 +95,13 @@ Pipeline per test:
 
 ```go
 type ClaudeOptions struct {
-    WorkDir    string   // Project directory
-    Prompt     string   // User prompt
-    Model      string   // "sonnet", "opus", etc.
+    WorkDir    string   // project directory
+    Prompt     string   // user prompt
+    model      string   // "sonnet", "opus", etc.
     MaxTurns   int
-    SessionID  string   // For --continue on iteration
-    Continue   bool     // Use --continue flag
-    Timeout    time.Duration
+    SessionID  string   // for --continue on iteration
+    continue   bool     // use --continue flag
+    timeout    time.Duration
 }
 
 type ClaudeResult struct {
@@ -185,26 +185,26 @@ $ mxcli eval run docs/14-eval/eval-1.md \
     --template mx-test-projects/template-app-116/TemplateApp116.mpr \
     --model sonnet --output eval-results/
 
-Eval Run: 1 test(s), model: sonnet
+Eval run: 1 test(s), model: sonnet
 ============================================================
 
 [APP-001] Copying template project...
 [APP-001] Initializing project for Claude Code...
 [APP-001] Invoking Claude with initial prompt...
-  Prompt: "Create an app to manage my bookstore inventory..."
+  Prompt: "create an app to manage my bookstore inventory..."
   Claude completed in 45s (32 turns)
 [APP-001] Running initial checks...
   [PASS] entity_exists *.Book — found: Bookstore.Book
-  [PASS] entity_has_attribute *.Book.Title String
-  [PASS] entity_has_attribute *.Book.Author String
-  [PASS] page_exists *Overview*
+  [PASS] entity_has_attribute *.Book.Title string
+  [PASS] entity_has_attribute *.Book.Author string
+  [PASS] page_exists *overview*
   [PASS] page_exists *Edit*
   [PASS] navigation_has_item true
   [PASS] mx_check_passes true
   Score: 10/10 (100%)
 
 [APP-001] Invoking Claude with iteration prompt...
-  Prompt: "Add a category field to the books..."
+  Prompt: "add a category field to the books..."
   Claude completed in 20s (12 turns)
 [APP-001] Running iteration checks...
   [PASS] entity_has_attribute *.Book.Category
@@ -229,10 +229,10 @@ Reports written to eval-results/run-2026-02-25T16-00/
 After implementation, test with:
 
 ```bash
-# Build
+# build
 make build
 
-# Run eval against the template project
+# run eval against the template project
 ./bin/mxcli eval run docs/14-eval/eval-1.md \
   --template mx-test-projects/template-app-116/TemplateApp116.mpr \
   --skip-docker --output /tmp/eval-results/

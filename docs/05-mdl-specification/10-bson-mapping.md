@@ -40,20 +40,20 @@ SQLite metadata file + separate content files:
 |----------|---------------|
 | `DomainModels$DomainModel` | Domain model (entities, associations) |
 | `DomainModels$ViewEntitySourceDocument` | OQL query for VIEW entities |
-| `Microflows$Microflow` | Microflow definition |
-| `Microflows$Nanoflow` | Nanoflow definition |
-| `Pages$Page` | Page definition |
-| `Pages$Layout` | Layout definition |
-| `Pages$Snippet` | Snippet definition |
-| `Pages$BuildingBlock` | Building block definition |
-| `Enumerations$Enumeration` | Enumeration definition |
+| `microflows$microflow` | Microflow definition |
+| `microflows$nanoflow` | Nanoflow definition |
+| `pages$page` | Page definition |
+| `pages$layout` | Layout definition |
+| `pages$snippet` | Snippet definition |
+| `pages$BuildingBlock` | Building block definition |
+| `enumerations$enumeration` | Enumeration definition |
 | `JavaActions$JavaAction` | Java action definition |
-| `Security$ProjectSecurity` | Project security settings |
-| `Security$ModuleSecurity` | Module security settings |
-| `Navigation$NavigationDocument` | Navigation profile |
-| `Settings$ProjectSettings` | Project settings |
+| `security$ProjectSecurity` | Project security settings |
+| `security$ModuleSecurity` | Module security settings |
+| `navigation$NavigationDocument` | Navigation profile |
+| `settings$ProjectSettings` | Project settings |
 | `BusinessEvents$BusinessEventService` | Business event service |
-| `CustomWidgets$CustomWidget` | Custom widget definition |
+| `CustomWidgets$customwidget` | Custom widget definition |
 
 ---
 
@@ -66,7 +66,7 @@ Every BSON document contains:
 | Field | Type | Description |
 |-------|------|-------------|
 | `$ID` | Binary (UUID) | Unique identifier |
-| `$Type` | String | Fully qualified type name |
+| `$type` | String | Fully qualified type name |
 
 ### ID Format
 
@@ -75,7 +75,7 @@ IDs are stored as BSON Binary subtype 0 (generic) containing UUID bytes:
 {
   "$ID": {
     "Subtype": 0,
-    "Data": "base64-encoded-uuid"
+    "data": "base64-encoded-uuid"
   }
 }
 ```
@@ -88,7 +88,7 @@ UUID string format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
 ```json
 {
   "Items": [
-    2,           // Count of items (2 items follow)
+    2,           // count of items (2 items follow)
     { ... },     // First element
     { ... }      // Second element
   ]
@@ -119,14 +119,14 @@ The Mendix metamodel defines two types of references:
 | Reference Type | Storage Format | Example Use |
 |---------------|----------------|-------------|
 | `BY_ID_REFERENCE` | Binary UUID | Index `AttributePointer` |
-| `BY_NAME_REFERENCE` | Qualified name string | ValidationRule `Attribute` |
+| `BY_NAME_REFERENCE` | Qualified name string | ValidationRule `attribute` |
 
 **BY_ID_REFERENCE** - Stored as BSON Binary containing UUID bytes:
 ```json
 {
   "AttributePointer": {
     "Subtype": 0,
-    "Data": "base64-uuid"
+    "data": "base64-uuid"
   }
 }
 ```
@@ -134,7 +134,7 @@ The Mendix metamodel defines two types of references:
 **BY_NAME_REFERENCE** - Stored as qualified name string:
 ```json
 {
-  "Attribute": "MyModule.MyEntity.MyAttribute"
+  "attribute": "MyModule.MyEntity.MyAttribute"
 }
 ```
 
@@ -146,31 +146,31 @@ The metamodel defines two type identifiers for each element type:
 
 | Field | Usage | Example |
 |-------|-------|---------|
-| `qualifiedName` | TypeScript SDK API, internal naming | `DomainModels$Index` |
-| `storageName` | BSON `$Type` field value | `DomainModels$EntityIndex` |
+| `qualifiedName` | TypeScript SDK API, internal naming | `DomainModels$index` |
+| `storageName` | BSON `$type` field value | `DomainModels$EntityIndex` |
 
-**Critical**: The `$Type` field in BSON must use the `storageName`, not the `qualifiedName`. These are often identical, but not always:
+**Critical**: The `$type` field in BSON must use the `storageName`, not the `qualifiedName`. These are often identical, but not always:
 
 ```json
-// From metamodel reflection data
-"DomainModels$Index" : {
-  "qualifiedName" : "DomainModels$Index",
-  "storageName" : "DomainModels$EntityIndex",  // ← Use this for $Type!
+// from metamodel reflection data
+"DomainModels$index" : {
+  "qualifiedName" : "DomainModels$index",
+  "storageName" : "DomainModels$EntityIndex",  // ← use this for $type!
   ...
 }
 ```
 
 Using the wrong type name causes Studio Pro to fail with:
 ```
-TypeCacheUnknownTypeException: The type cache does not contain a type with qualified name DomainModels$Index
+TypeCacheUnknownTypeException: The type cache does not contain a type with qualified name DomainModels$index
 ```
 
 **Known differences** (Mendix 11.6):
 
 | qualifiedName | storageName (use this) |
 |---------------|------------------------|
-| `DomainModels$Index` | `DomainModels$EntityIndex` |
-| `DomainModels$Entity` | `DomainModels$EntityImpl` |
+| `DomainModels$index` | `DomainModels$EntityIndex` |
+| `DomainModels$entity` | `DomainModels$EntityImpl` |
 
 When adding support for new document types, always check the metamodel reflection data in `reference/mendixmodellib/reflection-data/<version>-structures.json` to find the correct `storageName`.
 
@@ -183,10 +183,10 @@ From the metamodel reflection data (`*-structures.json`):
   "DomainModels$ValidationRule": {
     "properties": {
       "attribute": {
-        "storageName": "Attribute",
+        "storageName": "attribute",
         "typeInfo": {
           "type": "ELEMENT",
-          "elementType": "DomainModels$Attribute",
+          "elementType": "DomainModels$attribute",
           "kind": "BY_NAME_REFERENCE"
         }
       }
@@ -198,7 +198,7 @@ From the metamodel reflection data (`*-structures.json`):
         "storageName": "AttributePointer",
         "typeInfo": {
           "type": "ELEMENT",
-          "elementType": "DomainModels$Attribute",
+          "elementType": "DomainModels$attribute",
           "kind": "BY_ID_REFERENCE"
         }
       }
@@ -214,28 +214,28 @@ From the metamodel reflection data (`*-structures.json`):
 ### MDL Entity
 ```sql
 /** Documentation text */
-@Position(100, 200)
-CREATE PERSISTENT ENTITY Module.EntityName (
-  AttrName: String(200) NOT NULL
+@position(100, 200)
+create persistent entity Module.EntityName (
+  AttrName: string(200) not null
 )
-INDEX (AttrName);
+index (AttrName);
 /
 ```
 
 ### BSON Structure
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$EntityImpl",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$EntityImpl",
   "Name": "EntityName",
-  "Documentation": "Documentation text",
+  "documentation": "documentation text",
   "Location": "100;200",
   "MaybeGeneralization": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$NoGeneralization",
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$NoGeneralization",
     "Persistable": true
   },
-  "Attributes": [
+  "attributes": [
     3,
     { /* attribute BSON */ }
   ],
@@ -248,7 +248,7 @@ INDEX (AttrName);
     { /* index BSON */ }
   ],
   "AccessRules": [3],
-  "Events": [3]
+  "events": [3]
 }
 ```
 
@@ -256,10 +256,10 @@ INDEX (AttrName);
 
 | MDL | BSON Persistable | BSON Source |
 |-----|------------------|-------------|
-| `PERSISTENT` | `true` | `null` |
-| `NON-PERSISTENT` | `false` | `null` |
-| `VIEW` | `false` | `OqlViewEntitySource` |
-| `EXTERNAL` | `false` | `ODataRemoteEntitySource` |
+| `persistent` | `true` | `null` |
+| `non-persistent` | `false` | `null` |
+| `view` | `false` | `OqlViewEntitySource` |
+| `external` | `false` | `ODataRemoteEntitySource` |
 
 ### VIEW Entity Structure
 
@@ -274,58 +274,58 @@ This is a separate document (unit) that stores the OQL query:
 
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$ViewEntitySourceDocument",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$ViewEntitySourceDocument",
   "Name": "ActiveProducts",
-  "Documentation": "Products that are currently active",
+  "documentation": "Products that are currently active",
   "Excluded": false,
   "ExportLevel": "Hidden",
-  "Oql": "SELECT p.Name AS Name, p.Price AS Price FROM Module.Product p WHERE p.IsActive = true"
+  "Oql": "select p.Name as Name, p.Price as Price from Module.Product p where p.IsActive = true"
 }
 ```
 
 #### Entity with OqlViewEntitySource
 
-The entity's `Source` field references the ViewEntitySourceDocument by qualified name:
+The entity's `source` field references the ViewEntitySourceDocument by qualified name:
 
 ```json
 {
-  "$Type": "DomainModels$EntityImpl",
+  "$type": "DomainModels$EntityImpl",
   "Name": "ActiveProducts",
   "MaybeGeneralization": {
-    "$Type": "DomainModels$NoGeneralization",
+    "$type": "DomainModels$NoGeneralization",
     "Persistable": false
   },
-  "Source": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$OqlViewEntitySource",
+  "source": {
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$OqlViewEntitySource",
     "SourceDocument": "Module.ActiveProducts"
   },
-  "Attributes": [...]
+  "attributes": [...]
 }
 ```
 
 #### OqlViewValue for View Attributes
 
-View entity attributes use `OqlViewValue` instead of `StoredValue`. The `Reference` field contains the OQL column alias:
+View entity attributes use `OqlViewValue` instead of `StoredValue`. The `reference` field contains the OQL column alias:
 
 ```json
 {
-  "$Type": "DomainModels$Attribute",
+  "$type": "DomainModels$attribute",
   "Name": "Name",
   "NewType": {
-    "$Type": "DomainModels$StringAttributeType",
-    "Length": 0
+    "$type": "DomainModels$StringAttributeType",
+    "length": 0
   },
-  "Value": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$OqlViewValue",
-    "Reference": "Name"
+  "value": {
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$OqlViewValue",
+    "reference": "Name"
   }
 }
 ```
 
-The `Reference` value must match the OQL column alias (e.g., `AS Name` in the SELECT clause).
+The `reference` value must match the OQL column alias (e.g., `as Name` in the SELECT clause).
 
 ### Location Format
 
@@ -336,7 +336,7 @@ Position is stored as semicolon-separated string:
 
 Parsed from MDL:
 ```sql
-@Position(100, 200)
+@position(100, 200)
 ```
 
 ---
@@ -346,24 +346,24 @@ Parsed from MDL:
 ### MDL Attribute
 ```sql
 /** Attribute documentation */
-AttrName: String(200) NOT NULL ERROR 'Required' UNIQUE ERROR 'Must be unique' DEFAULT 'value'
+AttrName: string(200) not null error 'Required' unique error 'Must be unique' default 'value'
 ```
 
 ### BSON Structure
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$Attribute",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$attribute",
   "Name": "AttrName",
-  "Documentation": "Attribute documentation",
+  "documentation": "attribute documentation",
   "NewType": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$StringAttributeType",
-    "Length": 200
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$StringAttributeType",
+    "length": 200
   },
-  "Value": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$StoredValue",
+  "value": {
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$StoredValue",
     "DefaultValue": "value"
   }
 }
@@ -373,27 +373,27 @@ AttrName: String(200) NOT NULL ERROR 'Required' UNIQUE ERROR 'Must be unique' DE
 
 | MDL Type | BSON $Type | Additional Fields |
 |----------|------------|-------------------|
-| `String` | `DomainModels$StringAttributeType` | `Length: 200` (default) |
-| `String(n)` | `DomainModels$StringAttributeType` | `Length: n` |
-| `Integer` | `DomainModels$IntegerAttributeType` | - |
-| `Long` | `DomainModels$LongAttributeType` | - |
-| `Decimal` | `DomainModels$DecimalAttributeType` | - |
-| `Boolean` | `DomainModels$BooleanAttributeType` | - |
-| `DateTime` | `DomainModels$DateTimeAttributeType` | `LocalizeDate: false` |
-| `AutoNumber` | `DomainModels$AutoNumberAttributeType` | - |
-| `Binary` | `DomainModels$BinaryAttributeType` | - |
-| `Enumeration(M.E)` | `DomainModels$EnumerationAttributeType` | `Enumeration: "Module.EnumName"` |
-| `HashedString` | `DomainModels$HashedStringAttributeType` | - |
+| `string` | `DomainModels$StringAttributeType` | `length: 200` (default) |
+| `string(n)` | `DomainModels$StringAttributeType` | `length: n` |
+| `integer` | `DomainModels$IntegerAttributeType` | - |
+| `long` | `DomainModels$LongAttributeType` | - |
+| `decimal` | `DomainModels$DecimalAttributeType` | - |
+| `boolean` | `DomainModels$BooleanAttributeType` | - |
+| `datetime` | `DomainModels$DateTimeAttributeType` | `LocalizeDate: false` |
+| `autonumber` | `DomainModels$AutoNumberAttributeType` | - |
+| `binary` | `DomainModels$BinaryAttributeType` | - |
+| `enumeration(M.E)` | `DomainModels$EnumerationAttributeType` | `enumeration: "Module.EnumName"` |
+| `hashedstring` | `DomainModels$HashedStringAttributeType` | - |
 
 ### Enumeration Attribute Type
 
-The `Enumeration` field in `EnumerationAttributeType` uses a **BY_NAME_REFERENCE** (qualified name string), not a binary UUID:
+The `enumeration` field in `EnumerationAttributeType` uses a **BY_NAME_REFERENCE** (qualified name string), not a binary UUID:
 
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$EnumerationAttributeType",
-  "Enumeration": "MyModule.Status"
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$EnumerationAttributeType",
+  "enumeration": "MyModule.Status"
 }
 ```
 
@@ -403,12 +403,12 @@ The qualified name references the enumeration document by its `Module.EnumName` 
 
 | MDL Default | BSON Structure |
 |-------------|----------------|
-| `DEFAULT 'text'` | `{$Type: "DomainModels$StoredValue", DefaultValue: "text"}` |
-| `DEFAULT 123` | `{$Type: "DomainModels$StoredValue", DefaultValue: "123"}` |
-| `DEFAULT TRUE` | `{$Type: "DomainModels$StoredValue", DefaultValue: "true"}` |
-| `DEFAULT FALSE` | `{$Type: "DomainModels$StoredValue", DefaultValue: "false"}` |
-| `DEFAULT 'EnumValue'` | `{$Type: "DomainModels$StoredValue", DefaultValue: "EnumValue"}` |
-| (no default) | `Value` field absent or null |
+| `default 'text'` | `{$type: "DomainModels$StoredValue", DefaultValue: "text"}` |
+| `default 123` | `{$type: "DomainModels$StoredValue", DefaultValue: "123"}` |
+| `default true` | `{$type: "DomainModels$StoredValue", DefaultValue: "true"}` |
+| `default false` | `{$type: "DomainModels$StoredValue", DefaultValue: "false"}` |
+| `default 'EnumValue'` | `{$type: "DomainModels$StoredValue", DefaultValue: "EnumValue"}` |
+| (no default) | `value` field absent or null |
 
 ---
 
@@ -418,34 +418,34 @@ Validation rules are stored separately from attributes in the entity's `Validati
 
 ### MDL Validation
 ```sql
-AttrName: String NOT NULL ERROR 'Field is required' UNIQUE ERROR 'Must be unique'
+AttrName: string not null error 'Field is required' unique error 'Must be unique'
 ```
 
 ### BSON Structure (Required Rule)
 
-> **Important**: Field order matters. Studio Pro expects: `$ID`, `$Type`, `Attribute`, `Message`, `RuleInfo`
+> **Important**: Field order matters. Studio Pro expects: `$ID`, `$type`, `attribute`, `message`, `RuleInfo`
 
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$ValidationRule",
-  "Attribute": "Module.Entity.AttrName",
-  "Message": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "Texts$Text",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$ValidationRule",
+  "attribute": "Module.Entity.AttrName",
+  "message": {
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "Texts$text",
     "Items": [
       3,
       {
-        "$ID": {"Subtype": 0, "Data": "<uuid>"},
-        "$Type": "Texts$Translation",
+        "$ID": {"Subtype": 0, "data": "<uuid>"},
+        "$type": "Texts$Translation",
         "LanguageCode": "en_US",
-        "Text": "Field is required"
+        "text": "Field is required"
       }
     ]
   },
   "RuleInfo": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$RequiredRuleInfo"
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$RequiredRuleInfo"
   }
 }
 ```
@@ -453,13 +453,13 @@ AttrName: String NOT NULL ERROR 'Field is required' UNIQUE ERROR 'Must be unique
 ### BSON Structure (Unique Rule)
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$ValidationRule",
-  "Attribute": "Module.Entity.AttrName",
-  "Message": { /* same structure */ },
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$ValidationRule",
+  "attribute": "Module.Entity.AttrName",
+  "message": { /* same structure */ },
   "RuleInfo": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$UniqueRuleInfo"
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$UniqueRuleInfo"
   }
 }
 ```
@@ -468,18 +468,18 @@ AttrName: String NOT NULL ERROR 'Field is required' UNIQUE ERROR 'Must be unique
 
 | MDL Constraint | BSON RuleInfo.$Type |
 |----------------|---------------------|
-| `NOT NULL` | `DomainModels$RequiredRuleInfo` |
-| `UNIQUE` | `DomainModels$UniqueRuleInfo` |
-| (future) `RANGE` | `DomainModels$RangeRuleInfo` |
-| (future) `REGEX` | `DomainModels$RegexRuleInfo` |
+| `not null` | `DomainModels$RequiredRuleInfo` |
+| `unique` | `DomainModels$UniqueRuleInfo` |
+| (future) `range` | `DomainModels$RangeRuleInfo` |
+| (future) `regex` | `DomainModels$RegexRuleInfo` |
 
 ### Attribute Reference (BY_NAME_REFERENCE)
 
-The `Attribute` field in ValidationRule uses **BY_NAME_REFERENCE** and MUST be a qualified name string:
+The `attribute` field in ValidationRule uses **BY_NAME_REFERENCE** and MUST be a qualified name string:
 
 ```json
 {
-  "Attribute": "Module.Entity.Attribute"
+  "attribute": "Module.Entity.Attribute"
 }
 ```
 
@@ -495,7 +495,7 @@ This is different from Index's `AttributePointer` which uses **BY_ID_REFERENCE**
 
 ### MDL Index
 ```sql
-INDEX (AttrName1, AttrName2 DESC)
+index (AttrName1, AttrName2 desc)
 ```
 
 ### BSON Structure
@@ -504,23 +504,23 @@ INDEX (AttrName1, AttrName2 DESC)
 
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$EntityIndex",
-  "Attributes": [
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$EntityIndex",
+  "attributes": [
     2,
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "DomainModels$IndexedAttribute",
-      "AttributePointer": {"Subtype": 0, "Data": "<attr1-uuid>"},
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "DomainModels$IndexedAttribute",
+      "AttributePointer": {"Subtype": 0, "data": "<attr1-uuid>"},
       "Ascending": true,
-      "Type": "Normal"
+      "type": "Normal"
     },
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "DomainModels$IndexedAttribute",
-      "AttributePointer": {"Subtype": 0, "Data": "<attr2-uuid>"},
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "DomainModels$IndexedAttribute",
+      "AttributePointer": {"Subtype": 0, "data": "<attr2-uuid>"},
       "Ascending": false,
-      "Type": "Normal"
+      "type": "Normal"
     }
   ]
 }
@@ -532,19 +532,19 @@ The `AttributePointer` field in IndexedAttribute uses **BY_ID_REFERENCE** and MU
 
 ```json
 {
-  "AttributePointer": {"Subtype": 0, "Data": "<attribute-uuid>"}
+  "AttributePointer": {"Subtype": 0, "data": "<attribute-uuid>"}
 }
 ```
 
-This is different from ValidationRule's `Attribute` which uses **BY_NAME_REFERENCE** (qualified name string).
+This is different from ValidationRule's `attribute` which uses **BY_NAME_REFERENCE** (qualified name string).
 
 ### Sort Order Mapping
 
 | MDL | BSON Ascending |
 |-----|----------------|
 | `AttrName` (default) | `true` |
-| `AttrName ASC` | `true` |
-| `AttrName DESC` | `false` |
+| `AttrName asc` | `true` |
+| `AttrName desc` | `false` |
 
 ---
 
@@ -553,34 +553,34 @@ This is different from ValidationRule's `Attribute` which uses **BY_NAME_REFEREN
 ### MDL Association
 ```sql
 -- Many Orders can reference one Customer (1-to-many from Customer perspective)
-CREATE ASSOCIATION Module.Order_Customer
-  FROM Module.Order       -- Entity holding the FK reference
-  TO Module.Customer      -- Entity being referenced
-  TYPE Reference
-  OWNER Default           -- Creates 1-to-many cardinality
-  DELETE_BEHAVIOR DELETE_BUT_KEEP_REFERENCES;
+create association Module.Order_Customer
+  from Module.Order       -- Entity holding the FK reference
+  to Module.Customer      -- Entity being referenced
+  type reference
+  owner default           -- Creates 1-to-many cardinality
+  delete_behavior DELETE_BUT_KEEP_REFERENCES;
 ```
 
 ### BSON Structure
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "DomainModels$Association",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "DomainModels$association",
   "Name": "Order_Customer",
-  "Documentation": "",
+  "documentation": "",
   "ExportLevel": "Hidden",
-  "GUID": {"Subtype": 0, "Data": "<uuid>"},
-  "ParentPointer": {"Subtype": 0, "Data": "<order-entity-uuid>"},
-  "ChildPointer": {"Subtype": 0, "Data": "<customer-entity-uuid>"},
-  "Type": "Reference",
-  "Owner": "Default",
+  "GUID": {"Subtype": 0, "data": "<uuid>"},
+  "ParentPointer": {"Subtype": 0, "data": "<order-entity-uuid>"},
+  "ChildPointer": {"Subtype": 0, "data": "<customer-entity-uuid>"},
+  "type": "reference",
+  "owner": "default",
   "ParentConnection": "0;50",
   "ChildConnection": "100;50",
-  "StorageFormat": "Table",
-  "Source": null,
+  "StorageFormat": "table",
+  "source": null,
   "DeleteBehavior": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "DomainModels$DeleteBehavior",
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "DomainModels$DeleteBehavior",
     "ChildDeleteBehavior": "DeleteMeButKeepReferences",
     "ChildErrorMessage": null,
     "ParentDeleteBehavior": "DeleteMeButKeepReferences",
@@ -593,40 +593,40 @@ CREATE ASSOCIATION Module.Order_Customer
 
 | MDL | BSON Field | Description |
 |-----|------------|-------------|
-| `FROM Entity` | `ParentPointer` | Entity holding the foreign key reference (BY_ID_REFERENCE) |
-| `TO Entity` | `ChildPointer` | Entity being referenced (BY_ID_REFERENCE) |
-| `DELETE_BEHAVIOR` | `DeleteBehavior.ChildDeleteBehavior` | Behavior when child (TO) entity is deleted |
+| `from entity` | `ParentPointer` | Entity holding the foreign key reference (BY_ID_REFERENCE) |
+| `to entity` | `ChildPointer` | Entity being referenced (BY_ID_REFERENCE) |
+| `delete_behavior` | `DeleteBehavior.ChildDeleteBehavior` | Behavior when child (TO) entity is deleted |
 
 ### Association Type Mapping
 
 | MDL Type | BSON Type |
 |----------|-----------|
-| `Reference` | `"Reference"` |
+| `reference` | `"reference"` |
 | `ReferenceSet` | `"ReferenceSet"` |
 
 ### Owner Mapping and Cardinality
 
-The `Owner` setting determines relationship cardinality in Studio Pro:
+The `owner` setting determines relationship cardinality in Studio Pro:
 
 | MDL Owner | BSON Owner | Cardinality | Use Case |
 |-----------|------------|-------------|----------|
-| `Default` | `"Default"` | **1-to-many** | Many Orders → One Customer |
-| `Both` | `"Both"` | **1-to-1** | One Order ↔ One Customer |
+| `default` | `"default"` | **1-to-many** | Many Orders → One Customer |
+| `both` | `"both"` | **1-to-1** | One Order ↔ One Customer |
 
-**Important**: For many-to-one relationships, use `OWNER Default`. Using `OWNER Both` creates a one-to-one relationship.
+**Important**: For many-to-one relationships, use `owner default`. Using `owner both` creates a one-to-one relationship.
 
 ```sql
 -- Many-to-one (many orders to one customer)
-CREATE ASSOCIATION Module.Order_Customer
-FROM Module.Order TO Module.Customer
-TYPE Reference
-OWNER Default;  -- Creates 1-to-many: Customer has many Orders
+create association Module.Order_Customer
+from Module.Order to Module.Customer
+type reference
+owner default;  -- Creates 1-to-many: Customer has many Orders
 
 -- One-to-one (bidirectional)
-CREATE ASSOCIATION Module.Order_Customer
-FROM Module.Order TO Module.Customer
-TYPE Reference
-OWNER Both;     -- Creates 1-to-1: Customer has one Order
+create association Module.Order_Customer
+from Module.Order to Module.Customer
+type reference
+owner both;     -- Creates 1-to-1: Customer has one Order
 ```
 
 ### Delete Behavior Mapping
@@ -644,7 +644,7 @@ OWNER Both;     -- Creates 1-to-1: Customer has one Order
 ### MDL Enumeration
 ```sql
 /** Status values */
-CREATE ENUMERATION Module.Status (
+create enumeration Module.Status (
   Active 'Active',
   Inactive 'Inactive',
   Pending 'Pending Review'
@@ -654,46 +654,46 @@ CREATE ENUMERATION Module.Status (
 ### BSON Structure
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "Enumerations$Enumeration",
-  "Name": "Status",
-  "Documentation": "Status values",
-  "Values": [
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "enumerations$enumeration",
+  "Name": "status",
+  "documentation": "status values",
+  "values": [
     3,
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Enumerations$EnumerationValue",
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "enumerations$EnumerationValue",
       "Name": "Active",
-      "Caption": {
-        "$Type": "Texts$Text",
+      "caption": {
+        "$type": "Texts$text",
         "Items": [
           3,
           {
-            "$Type": "Texts$Translation",
+            "$type": "Texts$Translation",
             "LanguageCode": "en_US",
-            "Text": "Active"
+            "text": "Active"
           }
         ]
       }
     },
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Enumerations$EnumerationValue",
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "enumerations$EnumerationValue",
       "Name": "Inactive",
-      "Caption": { /* ... */ }
+      "caption": { /* ... */ }
     },
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Enumerations$EnumerationValue",
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "enumerations$EnumerationValue",
       "Name": "Pending",
-      "Caption": {
-        "$Type": "Texts$Text",
+      "caption": {
+        "$type": "Texts$text",
         "Items": [
           3,
           {
-            "$Type": "Texts$Translation",
+            "$type": "Texts$Translation",
             "LanguageCode": "en_US",
-            "Text": "Pending Review"
+            "text": "Pending Review"
           }
         ]
       }
@@ -708,25 +708,25 @@ CREATE ENUMERATION Module.Status (
 
 ### Text Structure
 
-All user-visible text uses the `Texts$Text` structure with translations:
+All user-visible text uses the `Texts$text` structure with translations:
 
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "Texts$Text",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "Texts$text",
   "Items": [
     3,
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Texts$Translation",
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "Texts$Translation",
       "LanguageCode": "en_US",
-      "Text": "English text"
+      "text": "English text"
     },
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Texts$Translation",
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "Texts$Translation",
       "LanguageCode": "nl_NL",
-      "Text": "Dutch text"
+      "text": "Dutch text"
     }
   ]
 }
@@ -747,7 +747,7 @@ Currently MDL uses the first available translation or `en_US` if available:
 
 ```sql
 -- Error message uses en_US translation
-AttrName: String NOT NULL ERROR 'This field is required'
+AttrName: string not null error 'This field is required'
 ```
 
 Multi-language support is planned for future versions.
@@ -787,92 +787,92 @@ id := uuid.New().String()
 ### MDL Input
 ```sql
 /** Customer entity */
-@Position(100, 200)
-CREATE PERSISTENT ENTITY Sales.Customer (
+@position(100, 200)
+create persistent entity Sales.Customer (
   /** Unique identifier */
-  CustomerId: AutoNumber NOT NULL UNIQUE DEFAULT 1,
+  CustomerId: autonumber not null unique default 1,
   /** Customer name */
-  Name: String(200) NOT NULL ERROR 'Name is required',
-  Email: String(200) UNIQUE ERROR 'Email must be unique'
+  Name: string(200) not null error 'Name is required',
+  Email: string(200) unique error 'Email must be unique'
 )
-INDEX (Name);
+index (Name);
 /
 ```
 
 ### BSON Output
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "..."},
-  "$Type": "DomainModels$EntityImpl",
+  "$ID": {"Subtype": 0, "data": "..."},
+  "$type": "DomainModels$EntityImpl",
   "Name": "Customer",
-  "Documentation": "Customer entity",
+  "documentation": "Customer entity",
   "Location": "100;200",
   "MaybeGeneralization": {
-    "$Type": "DomainModels$NoGeneralization",
+    "$type": "DomainModels$NoGeneralization",
     "Persistable": true
   },
-  "Attributes": [
+  "attributes": [
     3,
     {
-      "$Type": "DomainModels$Attribute",
+      "$type": "DomainModels$attribute",
       "Name": "CustomerId",
-      "Documentation": "Unique identifier",
-      "NewType": {"$Type": "DomainModels$AutoNumberAttributeType"},
-      "Value": {"$Type": "DomainModels$StoredValue", "DefaultValue": "1"}
+      "documentation": "unique identifier",
+      "NewType": {"$type": "DomainModels$AutoNumberAttributeType"},
+      "value": {"$type": "DomainModels$StoredValue", "DefaultValue": "1"}
     },
     {
-      "$Type": "DomainModels$Attribute",
+      "$type": "DomainModels$attribute",
       "Name": "Name",
-      "Documentation": "Customer name",
-      "NewType": {"$Type": "DomainModels$StringAttributeType", "Length": 200}
+      "documentation": "Customer name",
+      "NewType": {"$type": "DomainModels$StringAttributeType", "length": 200}
     },
     {
-      "$Type": "DomainModels$Attribute",
+      "$type": "DomainModels$attribute",
       "Name": "Email",
-      "NewType": {"$Type": "DomainModels$StringAttributeType", "Length": 200}
+      "NewType": {"$type": "DomainModels$StringAttributeType", "length": 200}
     }
   ],
   "ValidationRules": [
     3,
     {
-      "$ID": {"Subtype": 0, "Data": "..."},
-      "$Type": "DomainModels$ValidationRule",
-      "Attribute": "Sales.Customer.CustomerId",
-      "RuleInfo": {"$ID": {...}, "$Type": "DomainModels$RequiredRuleInfo"}
+      "$ID": {"Subtype": 0, "data": "..."},
+      "$type": "DomainModels$ValidationRule",
+      "attribute": "Sales.Customer.CustomerId",
+      "RuleInfo": {"$ID": {...}, "$type": "DomainModels$RequiredRuleInfo"}
     },
     {
-      "$ID": {"Subtype": 0, "Data": "..."},
-      "$Type": "DomainModels$ValidationRule",
-      "Attribute": "Sales.Customer.CustomerId",
-      "RuleInfo": {"$ID": {...}, "$Type": "DomainModels$UniqueRuleInfo"}
+      "$ID": {"Subtype": 0, "data": "..."},
+      "$type": "DomainModels$ValidationRule",
+      "attribute": "Sales.Customer.CustomerId",
+      "RuleInfo": {"$ID": {...}, "$type": "DomainModels$UniqueRuleInfo"}
     },
     {
-      "$ID": {"Subtype": 0, "Data": "..."},
-      "$Type": "DomainModels$ValidationRule",
-      "Attribute": "Sales.Customer.Name",
-      "Message": {"$ID": {...}, "$Type": "Texts$Text", "Items": [3, {...}]},
-      "RuleInfo": {"$ID": {...}, "$Type": "DomainModels$RequiredRuleInfo"}
+      "$ID": {"Subtype": 0, "data": "..."},
+      "$type": "DomainModels$ValidationRule",
+      "attribute": "Sales.Customer.Name",
+      "message": {"$ID": {...}, "$type": "Texts$text", "Items": [3, {...}]},
+      "RuleInfo": {"$ID": {...}, "$type": "DomainModels$RequiredRuleInfo"}
     },
     {
-      "$ID": {"Subtype": 0, "Data": "..."},
-      "$Type": "DomainModels$ValidationRule",
-      "Attribute": "Sales.Customer.Email",
-      "Message": {"$ID": {...}, "$Type": "Texts$Text", "Items": [3, {...}]},
-      "RuleInfo": {"$ID": {...}, "$Type": "DomainModels$UniqueRuleInfo"}
+      "$ID": {"Subtype": 0, "data": "..."},
+      "$type": "DomainModels$ValidationRule",
+      "attribute": "Sales.Customer.Email",
+      "message": {"$ID": {...}, "$type": "Texts$text", "Items": [3, {...}]},
+      "RuleInfo": {"$ID": {...}, "$type": "DomainModels$UniqueRuleInfo"}
     }
   ],
   "Indexes": [
     3,
     {
-      "$Type": "DomainModels$EntityIndex",
-      "Attributes": [
+      "$type": "DomainModels$EntityIndex",
+      "attributes": [
         2,
         {"AttributePointer": "<name-attr-id>", "Ascending": true}
       ]
     }
   ],
   "AccessRules": [3],
-  "Events": [3]
+  "events": [3]
 }
 ```
 
@@ -887,18 +887,18 @@ When adding support for new Mendix metamodel types (microflows, pages, workflows
 Locate the type in `reference/mendixmodellib/reflection-data/<version>-structures.json`:
 
 ```bash
-# Search for a type
+# search for a type
 grep -A 20 '"Microflows\$Microflow"' reference/mendixmodellib/reflection-data/11.6.0-structures.json
 ```
 
 ### 2. Check storageName vs qualifiedName
 
-**Always use `storageName` for the `$Type` field**:
+**Always use `storageName` for the `$type` field**:
 
 ```json
-"Microflows$Microflow" : {
-  "qualifiedName" : "Microflows$Microflow",
-  "storageName" : "Microflows$Microflow",  // ← Use this
+"microflows$microflow" : {
+  "qualifiedName" : "microflows$microflow",
+  "storageName" : "microflows$microflow",  // ← use this
   ...
 }
 ```
@@ -913,7 +913,7 @@ For each property that references another element, check the `kind` field:
     "storageName": "ObjectCollection",
     "typeInfo": {
       "type": "ELEMENT",
-      "elementType": "Microflows$MicroflowObjectCollection",
+      "elementType": "microflows$MicroflowObjectCollection",
       "kind": "PART"  // Embedded object, serialize inline
     }
   },
@@ -996,13 +996,13 @@ Layout grid columns have weight properties for responsive design:
 **BSON Structure:**
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "Forms$LayoutGridColumn",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "Forms$LayoutGridColumn",
   "Appearance": {...},
   "PhoneWeight": -1,
   "TabletWeight": -1,
   "Weight": 6,
-  "Widgets": [3, ...]
+  "widgets": [3, ...]
 }
 ```
 
@@ -1010,59 +1010,59 @@ Layout grid columns have weight properties for responsive design:
 
 ### ActionButton with CaptionTemplate
 
-ActionButton widgets use `CaptionTemplate` (not `Caption`) for parameterized button text with placeholders like `{1}`.
+ActionButton widgets use `CaptionTemplate` (not `caption`) for parameterized button text with placeholders like `{1}`.
 
 **BSON Structure:**
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "Forms$ActionButton",
-  "Action": {...},
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "Forms$actionbutton",
+  "action": {...},
   "Appearance": {...},
-  "ButtonStyle": "Primary",
+  "buttonstyle": "primary",
   "CaptionTemplate": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "Forms$ClientTemplate",
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "Forms$ClientTemplate",
     "Fallback": {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Texts$Text",
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "Texts$text",
       "Items": [3]
     },
-    "Parameters": [
+    "parameters": [
       2,
       {
-        "$ID": {"Subtype": 0, "Data": "<uuid>"},
-        "$Type": "Forms$ClientTemplateParameter",
+        "$ID": {"Subtype": 0, "data": "<uuid>"},
+        "$type": "Forms$ClientTemplateParameter",
         "AttributeRef": null,
-        "Expression": "'Hello'",
+        "expression": "'Hello'",
         "FormattingInfo": {...},
         "SourceVariable": null
       }
     ],
-    "Template": {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Texts$Text",
+    "template": {
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "Texts$text",
       "Items": [
         3,
         {
-          "$ID": {"Subtype": 0, "Data": "<uuid>"},
-          "$Type": "Texts$Translation",
+          "$ID": {"Subtype": 0, "data": "<uuid>"},
+          "$type": "Texts$Translation",
           "LanguageCode": "en_US",
-          "Text": "Save {1}"
+          "text": "Save {1}"
         }
       ]
     }
   },
   "Name": "btnSave1",
-  "RenderMode": "Button"
+  "rendermode": "button"
 }
 ```
 
 > **Critical Field Names and Structures:**
-> 1. **`CaptionTemplate`** - Must be `CaptionTemplate`, NOT `Caption`. Using `Caption` causes the button text to not display in Studio Pro.
-> 2. **`Fallback`** - Must be a `Texts$Text` object, NOT a string field like `FallbackValue`. Using `FallbackValue: ""` causes the template to fail.
+> 1. **`CaptionTemplate`** - Must be `CaptionTemplate`, NOT `caption`. Using `caption` causes the button text to not display in Studio Pro.
+> 2. **`Fallback`** - Must be a `Texts$text` object, NOT a string field like `FallbackValue`. Using `FallbackValue: ""` causes the template to fail.
 > 3. **Array version markers differ by context:**
->    - `Parameters`: Use `[2, items...]` for non-empty, `[3]` for empty
+>    - `parameters`: Use `[2, items...]` for non-empty, `[3]` for empty
 >    - `Template.Items`: Use `[3, items...]` for non-empty, `[3]` for empty
 >
 > These differences were discovered by comparing SDK-generated BSON with Studio Pro-generated BSON. When in doubt, create a reference structure in Studio Pro and compare.
@@ -1074,27 +1074,27 @@ DynamicText widgets use `ClientTemplate` for parameterized content with placehol
 **BSON Structure:**
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "Forms$DynamicText",
-  "Content": {
-    "$ID": {"Subtype": 0, "Data": "<uuid>"},
-    "$Type": "Forms$ClientTemplate",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "Forms$dynamictext",
+  "content": {
+    "$ID": {"Subtype": 0, "data": "<uuid>"},
+    "$type": "Forms$ClientTemplate",
     "Fallback": {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Texts$Text",
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "Texts$text",
       "Items": [3]
     },
-    "Parameters": [
+    "parameters": [
       2,
       {
-        "$ID": {"Subtype": 0, "Data": "<uuid>"},
-        "$Type": "Forms$ClientTemplateParameter",
-        "Expression": "'Hello World'"
+        "$ID": {"Subtype": 0, "data": "<uuid>"},
+        "$type": "Forms$ClientTemplateParameter",
+        "expression": "'Hello World'"
       }
     ],
-    "Template": {
-      "$Type": "Texts$Text",
-      "Items": [3, {"LanguageCode": "en_US", "Text": "{1}"}]
+    "template": {
+      "$type": "Texts$text",
+      "Items": [3, {"LanguageCode": "en_US", "text": "{1}"}]
     }
   }
 }
@@ -1102,12 +1102,12 @@ DynamicText widgets use `ClientTemplate` for parameterized content with placehol
 
 ### ClientTemplateParameter Expression Format
 
-The `Expression` field must contain a valid Mendix expression:
+The `expression` field must contain a valid Mendix expression:
 
 | Value Type | Expression Format | Example |
 |------------|-------------------|---------|
 | String literal | Single-quoted | `'Hello World'` |
-| Variable | Dollar prefix | `$Parameter/Name` |
+| Variable | Dollar prefix | `$parameter/Name` |
 | Number | Unquoted | `42` |
 | Boolean | Unquoted | `true` or `false` |
 | Attribute path | Dollar + path | `$currentObject/Name` |
@@ -1120,25 +1120,25 @@ The `Expression` field must contain a valid Mendix expression:
 
 ### CreateChangeAction (CREATE Object)
 
-The CreateObjectAction uses `Microflows$CreateChangeAction` as its storageName.
+The CreateObjectAction uses `microflows$CreateChangeAction` as its storageName.
 
 **BSON Structure:**
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "Microflows$CreateChangeAction",
-  "Commit": "No",
-  "Entity": "Module.EntityName",
-  "ErrorHandlingType": "Rollback",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "microflows$CreateChangeAction",
+  "commit": "No",
+  "entity": "Module.EntityName",
+  "ErrorHandlingType": "rollback",
   "Items": [
-    4,  // Count of items!
+    4,  // count of items!
     {
-      "$ID": {"Subtype": 0, "Data": "<uuid>"},
-      "$Type": "Microflows$ChangeActionItem",
-      "Association": "",
-      "Attribute": "Module.Entity.AttributeName",
-      "Type": "Set",
-      "Value": "$ParameterName"
+      "$ID": {"Subtype": 0, "data": "<uuid>"},
+      "$type": "microflows$ChangeActionItem",
+      "association": "",
+      "attribute": "Module.Entity.AttributeName",
+      "type": "set",
+      "value": "$ParameterName"
     },
     // ... more items
   ],
@@ -1150,8 +1150,8 @@ The CreateObjectAction uses `Microflows$CreateChangeAction` as its storageName.
 **Required fields for CreateChangeAction:**
 | Field | Description | Required |
 |-------|-------------|----------|
-| `Commit` | "No", "Yes", or "YesWithoutEvents" | Yes |
-| `Entity` | Qualified entity name (BY_NAME_REFERENCE) | Yes |
+| `commit` | "No", "Yes", or "YesWithoutEvents" | Yes |
+| `entity` | Qualified entity name (BY_NAME_REFERENCE) | Yes |
 | `ErrorHandlingType` | "Rollback" or "Abort" | Yes |
 | `Items` | Array of ChangeActionItem with count prefix | Yes |
 | `RefreshInClient` | Boolean | Yes |
@@ -1165,26 +1165,26 @@ Each item in the `Items` array represents an attribute assignment.
 | Field | Description | Required |
 |-------|-------------|----------|
 | `$ID` | Unique UUID | Yes |
-| `$Type` | `"Microflows$ChangeActionItem"` | Yes |
-| `Association` | Empty string for attribute changes | Yes |
-| `Attribute` | Qualified attribute name (BY_NAME_REFERENCE) | For attribute changes |
-| `Type` | "Set", "Add", or "Remove" | Yes |
-| `Value` | Expression string | Yes |
+| `$type` | `"microflows$ChangeActionItem"` | Yes |
+| `association` | Empty string for attribute changes | Yes |
+| `attribute` | Qualified attribute name (BY_NAME_REFERENCE) | For attribute changes |
+| `type` | "Set", "Add", or "Remove" | Yes |
+| `value` | Expression string | Yes |
 
-> **Critical**: The `Association` field MUST be present even when empty. Missing this field causes Studio Pro to fail silently, showing fewer items than expected.
+> **Critical**: The `association` field MUST be present even when empty. Missing this field causes Studio Pro to fail silently, showing fewer items than expected.
 
 ### ChangeAction (CHANGE Object)
 
-Similar to CreateChangeAction but uses `Microflows$ChangeAction`:
+Similar to CreateChangeAction but uses `microflows$ChangeAction`:
 
 ```json
 {
-  "$ID": {"Subtype": 0, "Data": "<uuid>"},
-  "$Type": "Microflows$ChangeAction",
+  "$ID": {"Subtype": 0, "data": "<uuid>"},
+  "$type": "microflows$ChangeAction",
   "ChangeVariableName": "Product",
-  "Commit": "No",
+  "commit": "No",
   "Items": [
-    2,  // Count of items
+    2,  // count of items
     { /* ChangeActionItem */ },
     { /* ChangeActionItem */ }
   ],
@@ -1209,7 +1209,7 @@ When Studio Pro doesn't display data correctly (e.g., missing attributes, incorr
 Use this pattern to compare your generated BSON with Mendix-generated BSON:
 
 ```go
-// In sdk/mpr/reader_units.go there's GetRawMicroflowByName for debugging
+// in sdk/mpr/reader_units.go there's GetRawMicroflowByName for debugging
 raw1, _ := reader.GetRawMicroflowByName("Module.BrokenMicroflow")
 raw2, _ := reader.GetRawMicroflowByName("Module.WorkingMicroflow")
 
@@ -1229,17 +1229,17 @@ bson.Unmarshal(raw2, &map2)
 | Fields showing default values | Missing required fields | Check metamodel for required fields |
 | "Unknown type" error | Wrong $Type value | Use `storageName`, not `qualifiedName` |
 | Silent failures | Missing optional-but-expected fields | Compare with Mendix-generated BSON |
-| "(Empty caption)" on buttons | Wrong field name or structure | Use `CaptionTemplate`, not `Caption` |
-| Template not displaying | Wrong Fallback structure | Use `Fallback: {Texts$Text}`, not `FallbackValue: ""` |
+| "(Empty caption)" on buttons | Wrong field name or structure | Use `CaptionTemplate`, not `caption` |
+| Template not displaying | Wrong Fallback structure | Use `Fallback: {Texts$text}`, not `FallbackValue: ""` |
 
 ### 4. Key Patterns Discovered
 
 1. **Array version markers vary by type**:
-   - `Parameters` arrays use `[2, items...]` for non-empty
+   - `parameters` arrays use `[2, items...]` for non-empty
    - `Texts$Text.Items` arrays use `[3, items...]` for non-empty
    - Empty arrays typically use `[3]` alone
-2. **Field names may differ from SDK types**: e.g., SDK uses `Caption` but BSON needs `CaptionTemplate`
-3. **Object vs string fields**: e.g., `Fallback` must be a `Texts$Text` object, not a string
+2. **Field names may differ from SDK types**: e.g., SDK uses `caption` but BSON needs `CaptionTemplate`
+3. **Object vs string fields**: e.g., `Fallback` must be a `Texts$text` object, not a string
 4. **Empty string vs null**: Some fields require empty string `""`, not null/omitted
 5. **Required "optional" fields**: Some fields marked optional in metamodel are required by Studio Pro
 6. **Field order**: Some elements require specific field ordering (use `bson.D`, not `bson.M`)

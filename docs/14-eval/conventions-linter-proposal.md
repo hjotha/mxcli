@@ -134,7 +134,7 @@ These rules can be implemented immediately as Starlark rules using existing cata
 
 ### 4.2 Tier 2 — Requires FULL Catalog or BSON Inspection
 
-These rules need activity-level data from `REFRESH CATALOG FULL` or raw BSON reader access.
+These rules need activity-level data from `refresh catalog full` or raw BSON reader access.
 
 | Rule ID | Name | Category | Severity | What It Checks |
 |---------|------|----------|----------|----------------|
@@ -160,7 +160,7 @@ Extend the existing Go naming rule to recognize all 17 microflow prefixes from t
 
 ```
 Current:  ACT_, SUB_, DS_, VAL_, SCH_, IVK_
-Add:      BCO_, ACO_, BCR_, ACR_, BDE_, ADE_, BRO_, ARO_, OCH_, SE_, DL_, PWS_, ASU_, NAV_, LOGIN_
+add:      BCO_, ACO_, BCR_, ACR_, BDE_, ADE_, BRO_, ARO_, OCH_, SE_, DL_, PWS_, ASU_, NAV_, LOGIN_
 ```
 
 ---
@@ -172,7 +172,7 @@ Add:      BCO_, ACO_, BCR_, ACR_, BDE_, ADE_, BRO_, ARO_, OCH_, SE_, DL_, PWS_, 
 A new `mxcli report` command that runs all convention rules and produces a structured **Best Practices Report** with per-category scoring.
 
 ```bash
-# Generate report
+# generate report
 mxcli report -p app.mpr --format markdown
 mxcli report -p app.mpr --format json
 mxcli report -p app.mpr --format html
@@ -190,7 +190,7 @@ mxcli report -p app.mpr --format html
 ║                                                  ║
 ║  Category Scores:                                ║
 ║  ├── Naming Conventions     ████████░░  82%      ║
-║  ├── Security               ██████░░░░  60%      ║
+║  ├── security               ██████░░░░  60%      ║
 ║  ├── Maintainability        ████████░░  78%      ║
 ║  ├── Performance            █████████░  90%      ║
 ║  ├── Architecture           ███████░░░  70%      ║

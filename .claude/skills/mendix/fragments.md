@@ -3,9 +3,9 @@
 ## When to Use This Skill
 
 Use this skill when:
-- Defining reusable widget groups with `DEFINE FRAGMENT`
-- Inserting fragments into pages or snippets with `USE FRAGMENT`
-- Listing or inspecting fragments with `SHOW FRAGMENTS` / `DESCRIBE FRAGMENT`
+- Defining reusable widget groups with `define fragment`
+- Inserting fragments into pages or snippets with `use fragment`
+- Listing or inspecting fragments with `show fragments` / `describe fragment`
 - Building multiple pages that share common widget patterns (footers, form fields, buttons)
 - Avoiding copy-paste of repeated widget structures across pages
 
@@ -22,10 +22,10 @@ Fragments are **script-scoped, transient** widget groups:
 ### DEFINE FRAGMENT
 
 ```mdl
-DEFINE FRAGMENT SaveCancelFooter AS {
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+define fragment SaveCancelFooter as {
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 };
 ```
@@ -33,10 +33,10 @@ DEFINE FRAGMENT SaveCancelFooter AS {
 Multiple top-level widgets:
 
 ```mdl
-DEFINE FRAGMENT CustomerFields AS {
-  TEXTBOX txtName (Label: 'Name', Attribute: Name)
-  TEXTBOX txtEmail (Label: 'Email', Attribute: Email)
-  TEXTBOX txtPhone (Label: 'Phone', Attribute: Phone)
+define fragment CustomerFields as {
+  textbox txtName (label: 'Name', attribute: Name)
+  textbox txtEmail (label: 'Email', attribute: Email)
+  textbox txtPhone (label: 'Phone', attribute: Phone)
 };
 ```
 
@@ -45,16 +45,16 @@ DEFINE FRAGMENT CustomerFields AS {
 Inside a page or snippet body:
 
 ```mdl
-CREATE PAGE Module.CustomerEdit
+create page Module.CustomerEdit
 (
-  Params: { $Customer: Module.Customer },
-  Title: 'Edit Customer',
-  Layout: Atlas_Core.PopupLayout
+  params: { $Customer: Module.Customer },
+  title: 'Edit Customer',
+  layout: Atlas_Core.PopupLayout
 )
 {
-  DATAVIEW dvCustomer (DataSource: $Customer) {
-    USE FRAGMENT CustomerFields
-    USE FRAGMENT SaveCancelFooter
+  dataview dvCustomer (datasource: $Customer) {
+    use fragment CustomerFields
+    use fragment SaveCancelFooter
   }
 };
 ```
@@ -62,21 +62,21 @@ CREATE PAGE Module.CustomerEdit
 With prefix (avoids name conflicts):
 
 ```mdl
-USE FRAGMENT SaveCancelFooter AS order_
+use fragment SaveCancelFooter as order_
 -- Creates: order_footer1, order_btnSave, order_btnCancel
 ```
 
 ### SHOW FRAGMENTS
 
 ```mdl
-SHOW FRAGMENTS;
+show fragments;
 -- Lists all defined fragments with widget counts
 ```
 
 ### DESCRIBE FRAGMENT
 
 ```mdl
-DESCRIBE FRAGMENT SaveCancelFooter;
+describe fragment SaveCancelFooter;
 -- Outputs the full MDL definition
 ```
 
@@ -85,25 +85,25 @@ DESCRIBE FRAGMENT SaveCancelFooter;
 ### Pattern 1: Standard CRUD Footer
 
 ```mdl
-DEFINE FRAGMENT CrudFooter AS {
-  FOOTER footer1 {
-    ACTIONBUTTON btnSave (Caption: 'Save', Action: SAVE_CHANGES, ButtonStyle: Primary)
-    ACTIONBUTTON btnCancel (Caption: 'Cancel', Action: CANCEL_CHANGES)
+define fragment CrudFooter as {
+  footer footer1 {
+    actionbutton btnSave (caption: 'Save', action: save_changes, buttonstyle: primary)
+    actionbutton btnCancel (caption: 'Cancel', action: cancel_changes)
   }
 };
 
 -- Use in every edit page
-CREATE PAGE Module.Customer_Edit (...) {
-  DATAVIEW dv (DataSource: $Customer) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    USE FRAGMENT CrudFooter
+create page Module.Customer_Edit (...) {
+  dataview dv (datasource: $Customer) {
+    textbox txtName (label: 'Name', attribute: Name)
+    use fragment CrudFooter
   }
 };
 
-CREATE PAGE Module.Order_Edit (...) {
-  DATAVIEW dv (DataSource: $Order) {
-    TEXTBOX txtNumber (Label: 'Order #', Attribute: Number)
-    USE FRAGMENT CrudFooter
+create page Module.Order_Edit (...) {
+  dataview dv (datasource: $Order) {
+    textbox txtNumber (label: 'Order #', attribute: Number)
+    use fragment CrudFooter
   }
 };
 ```
@@ -111,19 +111,19 @@ CREATE PAGE Module.Order_Edit (...) {
 ### Pattern 2: Form Field Groups
 
 ```mdl
-DEFINE FRAGMENT AddressFields AS {
-  TEXTBOX txtStreet (Label: 'Street', Attribute: Street)
-  TEXTBOX txtCity (Label: 'City', Attribute: City)
-  TEXTBOX txtZip (Label: 'Zip Code', Attribute: ZipCode)
-  TEXTBOX txtCountry (Label: 'Country', Attribute: Country)
+define fragment AddressFields as {
+  textbox txtStreet (label: 'Street', attribute: Street)
+  textbox txtCity (label: 'City', attribute: City)
+  textbox txtZip (label: 'Zip Code', attribute: ZipCode)
+  textbox txtCountry (label: 'Country', attribute: Country)
 };
 
 -- Reuse in customer and supplier pages
-CREATE PAGE Module.Customer_Edit (...) {
-  DATAVIEW dv (DataSource: $Customer) {
-    TEXTBOX txtName (Label: 'Name', Attribute: Name)
-    USE FRAGMENT AddressFields
-    USE FRAGMENT CrudFooter
+create page Module.Customer_Edit (...) {
+  dataview dv (datasource: $Customer) {
+    textbox txtName (label: 'Name', attribute: Name)
+    use fragment AddressFields
+    use fragment CrudFooter
   }
 };
 ```
@@ -131,19 +131,19 @@ CREATE PAGE Module.Customer_Edit (...) {
 ### Pattern 3: Same Fragment with Prefix
 
 ```mdl
-DEFINE FRAGMENT ActionButtons AS {
-  ACTIONBUTTON btnApprove (Caption: 'Approve', Action: SAVE_CHANGES, ButtonStyle: Success)
-  ACTIONBUTTON btnReject (Caption: 'Reject', Action: CANCEL_CHANGES, ButtonStyle: Danger)
+define fragment ActionButtons as {
+  actionbutton btnApprove (caption: 'Approve', action: save_changes, buttonstyle: success)
+  actionbutton btnReject (caption: 'Reject', action: cancel_changes, buttonstyle: danger)
 };
 
-CREATE PAGE Module.DualPanel (...) {
-  LAYOUTGRID lg {
-    ROW row1 {
-      COLUMN col1 (DesktopWidth: 6) {
-        USE FRAGMENT ActionButtons AS left_
+create page Module.DualPanel (...) {
+  layoutgrid lg {
+    row row1 {
+      column col1 (desktopwidth: 6) {
+        use fragment ActionButtons as left_
       }
-      COLUMN col2 (DesktopWidth: 6) {
-        USE FRAGMENT ActionButtons AS right_
+      column col2 (desktopwidth: 6) {
+        use fragment ActionButtons as right_
       }
     }
   }
@@ -156,16 +156,16 @@ CREATE PAGE Module.DualPanel (...) {
 
 ```mdl
 -- WRONG: Defining the same fragment name twice causes an error
-DEFINE FRAGMENT Footer AS { ... };
-DEFINE FRAGMENT Footer AS { ... };  -- Error: fragment "Footer" already defined
+define fragment footer as { ... };
+define fragment footer as { ... };  -- Error: fragment "Footer" already defined
 ```
 
 ### Missing Fragment
 
 ```mdl
 -- WRONG: Using a fragment that hasn't been defined
-CREATE PAGE Module.MyPage (...) {
-  USE FRAGMENT NonExistent   -- Error: fragment "NonExistent" not found
+create page Module.MyPage (...) {
+  use fragment NonExistent   -- Error: fragment "NonExistent" not found
 };
 ```
 
@@ -173,33 +173,33 @@ CREATE PAGE Module.MyPage (...) {
 
 ```mdl
 -- WRONG: Using same fragment twice without prefix creates duplicate widget names
-USE FRAGMENT Footer
-USE FRAGMENT Footer   -- Widget name "footer1" already exists!
+use fragment footer
+use fragment footer   -- Widget name "footer1" already exists!
 
 -- CORRECT: Use prefix for uniqueness
-USE FRAGMENT Footer AS first_
-USE FRAGMENT Footer AS second_
+use fragment footer as first_
+use fragment footer as second_
 ```
 
 ### Fragment Order
 
 ```mdl
 -- WRONG: Using a fragment before defining it
-CREATE PAGE Module.MyPage (...) {
-  USE FRAGMENT Footer   -- Error: fragment "Footer" not found
+create page Module.MyPage (...) {
+  use fragment footer   -- Error: fragment "Footer" not found
 };
-DEFINE FRAGMENT Footer AS { ... };
+define fragment footer as { ... };
 
 -- CORRECT: Define before use
-DEFINE FRAGMENT Footer AS { ... };
-CREATE PAGE Module.MyPage (...) {
-  USE FRAGMENT Footer   -- OK
+define fragment footer as { ... };
+create page Module.MyPage (...) {
+  use fragment footer   -- OK
 };
 ```
 
 ## Validation Checklist
 
-- [ ] All `DEFINE FRAGMENT` statements appear before their `USE FRAGMENT` references
+- [ ] All `define fragment` statements appear before their `use fragment` references
 - [ ] No duplicate fragment names in the script
 - [ ] Prefix used when the same fragment appears multiple times on one page
 - [ ] Fragment widget names don't conflict with other widgets on the page

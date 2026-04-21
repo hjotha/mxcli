@@ -28,13 +28,13 @@ Mendix Studio Pro has an **Integration Pane** that shows all connected services 
 
 #### OData `Metadata` Field
 
-The `Rest$ConsumedODataService` BSON contains a `Metadata` string field with the complete `$metadata` XML. Also stores:
+The `rest$ConsumedODataService` BSON contains a `Metadata` string field with the complete `$metadata` XML. Also stores:
 - `MetadataHash` — SHA-256 hash for change detection
 - `MetadataReferences` — array (entity/type references)
 - `ValidatedEntities` — array of validated entity references
 - `ApplicationId`, `EndpointId`, `CatalogUrl` — Mendix Catalog integration
 - `EnvironmentType` — "Production", etc.
-- `Icon` — base64-encoded PNG
+- `icon` — base64-encoded PNG
 
 Verified in test projects:
 - `EnquiriesManagement/LatoIntegrations.SAP` — OData3, 9 entity types (PurchaseOrder, Product, Customer, Employee, etc.) with full property definitions
@@ -63,18 +63,18 @@ Since contracts are stored locally, we can parse them without network access:
 
 | Service Type | SHOW | DESCRIBE | Catalog Table |
 |---|---|---|---|
-| OData Client | `SHOW ODATA CLIENTS` | `DESCRIBE ODATA CLIENT` | `odata_clients` |
-| OData Service (published) | `SHOW ODATA SERVICES` | `DESCRIBE ODATA SERVICE` | `odata_services` |
-| External Entity | `SHOW EXTERNAL ENTITIES` | `DESCRIBE EXTERNAL ENTITY` | — (in `entities` table) |
+| OData Client | `show odata clients` | `describe odata client` | `odata_clients` |
+| OData Service (published) | `show odata services` | `describe odata service` | `odata_services` |
+| External Entity | `show external entities` | `describe external entity` | — (in `entities` table) |
 | External Action | — | — | — |
 | SOAP Client (consumed) | — | — | — |
 | SOAP Service (published) | — | — | — |
-| REST Client | `SHOW REST CLIENTS` | `DESCRIBE REST CLIENT` | — |
+| REST Client | `show rest clients` | `describe rest client` | — |
 | Published REST | — | — | — |
-| Business Event Service | `SHOW BUSINESS EVENT SERVICES` | `DESCRIBE BUSINESS EVENT SERVICE` | `business_event_services` |
-| Business Event Messages | `SHOW BUSINESS EVENTS` | — | — |
-| Business Event Client | `SHOW BUSINESS EVENT CLIENTS` (stub) | — | — |
-| Database Connection | `SHOW DATABASE CONNECTIONS` | `DESCRIBE DATABASE CONNECTION` | `database_connections` |
+| Business Event Service | `show business event services` | `describe business event service` | `business_event_services` |
+| Business Event Messages | `show business events` | — | — |
+| Business Event Client | `show business event clients` (stub) | — | — |
+| Database Connection | `show database connections` | `describe database connection` | `database_connections` |
 
 ### Catalog Gaps
 
@@ -100,189 +100,189 @@ Since contracts are stored locally, we can parse them without network access:
 
 #### OData External Actions (from microflow usage)
 ```sql
-SHOW EXTERNAL ACTIONS;                    -- All external actions used in microflows
-SHOW EXTERNAL ACTIONS IN MyModule;        -- Filter by module
+show external actions;                    -- All external actions used in microflows
+show external actions in MyModule;        -- Filter by module
 ```
 
-Output columns: `Service`, `Action`, `Parameters`, `UsedBy` (microflow names)
+Output columns: `service`, `action`, `parameters`, `UsedBy` (microflow names)
 
 > **Note:** Phase 1 discovers actions from microflow usage only. Phase 2 will parse the cached `$metadata` XML to list ALL available actions from the contract, including those not yet used. See also [mendixlabs/mxcli#44](https://github.com/mendixlabs/mxcli/issues/44).
 
 #### Published REST Services
 ```sql
-SHOW PUBLISHED REST SERVICES;             -- All published REST services
-SHOW PUBLISHED REST SERVICES IN MyModule; -- Filter by module
-DESCRIBE PUBLISHED REST SERVICE MyModule.CustomerAPI;
+show published rest services;             -- All published REST services
+show published rest services in MyModule; -- Filter by module
+describe published rest service MyModule.CustomerAPI;
 ```
 
-Output columns: `Module`, `QualifiedName`, `Path`, `Version`, `Resources`, `Operations`
+Output columns: `module`, `QualifiedName`, `path`, `version`, `Resources`, `Operations`
 
 ### 1.2 New Catalog Tables
 
 #### `rest_clients` — Consumed REST Services
 ```sql
-CREATE TABLE IF NOT EXISTS rest_clients (
-    Id TEXT PRIMARY KEY,
-    Name TEXT,
-    QualifiedName TEXT,
-    ModuleName TEXT,
-    Folder TEXT,
-    BaseUrl TEXT,
-    AuthScheme TEXT,           -- "Basic", "None"
-    OperationCount INTEGER,
-    Documentation TEXT,
-    ProjectId TEXT,
-    ProjectName TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT
+create table if not exists rest_clients (
+    Id text primary key,
+    Name text,
+    QualifiedName text,
+    ModuleName text,
+    folder text,
+    BaseUrl text,
+    AuthScheme text,           -- "Basic", "None"
+    OperationCount integer,
+    documentation text,
+    ProjectId text,
+    ProjectName text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text
 );
 ```
 
 #### `rest_operations` — REST Client Operations (detail table)
 ```sql
-CREATE TABLE IF NOT EXISTS rest_operations (
-    Id TEXT PRIMARY KEY,
-    ServiceId TEXT,             -- FK to rest_clients.Id
-    ServiceQualifiedName TEXT,
-    Name TEXT,
-    HttpMethod TEXT,            -- GET, POST, PUT, PATCH, DELETE
-    Path TEXT,
-    ParameterCount INTEGER,
-    HasBody INTEGER,
-    ResponseType TEXT,          -- "ImplicitMapping", "NoResponse"
-    Timeout INTEGER,
-    ModuleName TEXT,
-    ProjectId TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT
+create table if not exists rest_operations (
+    Id text primary key,
+    ServiceId text,             -- FK to rest_clients.Id
+    ServiceQualifiedName text,
+    Name text,
+    HttpMethod text,            -- GET, POST, PUT, PATCH, DELETE
+    path text,
+    ParameterCount integer,
+    HasBody integer,
+    ResponseType text,          -- "ImplicitMapping", "NoResponse"
+    timeout integer,
+    ModuleName text,
+    ProjectId text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text
 );
 ```
 
 #### `published_rest_services` — Published REST Services
 ```sql
-CREATE TABLE IF NOT EXISTS published_rest_services (
-    Id TEXT PRIMARY KEY,
-    Name TEXT,
-    QualifiedName TEXT,
-    ModuleName TEXT,
-    Folder TEXT,
-    Path TEXT,
-    Version TEXT,
-    ServiceName TEXT,
-    ResourceCount INTEGER,
-    OperationCount INTEGER,
-    Documentation TEXT,
-    ProjectId TEXT,
-    ProjectName TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT
+create table if not exists published_rest_services (
+    Id text primary key,
+    Name text,
+    QualifiedName text,
+    ModuleName text,
+    folder text,
+    path text,
+    version text,
+    ServiceName text,
+    ResourceCount integer,
+    OperationCount integer,
+    documentation text,
+    ProjectId text,
+    ProjectName text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text
 );
 ```
 
 #### `published_rest_operations` — Published REST Operations (detail table)
 ```sql
-CREATE TABLE IF NOT EXISTS published_rest_operations (
-    Id TEXT PRIMARY KEY,
-    ServiceId TEXT,             -- FK to published_rest_services.Id
-    ServiceQualifiedName TEXT,
-    ResourceName TEXT,
-    HttpMethod TEXT,
-    Path TEXT,
-    Summary TEXT,
-    Microflow TEXT,             -- Implementation microflow (BY_NAME)
-    Deprecated INTEGER,
-    ModuleName TEXT,
-    ProjectId TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT
+create table if not exists published_rest_operations (
+    Id text primary key,
+    ServiceId text,             -- FK to published_rest_services.Id
+    ServiceQualifiedName text,
+    ResourceName text,
+    HttpMethod text,
+    path text,
+    Summary text,
+    microflow text,             -- Implementation microflow (BY_NAME)
+    deprecated integer,
+    ModuleName text,
+    ProjectId text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text
 );
 ```
 
 #### `external_entities` — OData External Entities (view on entities)
 ```sql
-CREATE TABLE IF NOT EXISTS external_entities (
-    Id TEXT PRIMARY KEY,
-    Name TEXT,
-    QualifiedName TEXT,
-    ModuleName TEXT,
-    ServiceName TEXT,           -- Consumed OData service qualified name
-    EntitySet TEXT,             -- Remote entity set name
-    RemoteName TEXT,            -- Remote entity name
-    Countable INTEGER,
-    Creatable INTEGER,
-    Deletable INTEGER,
-    Updatable INTEGER,
-    AttributeCount INTEGER,
-    ProjectId TEXT,
-    ProjectName TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT
+create table if not exists external_entities (
+    Id text primary key,
+    Name text,
+    QualifiedName text,
+    ModuleName text,
+    ServiceName text,           -- Consumed OData service qualified name
+    EntitySet text,             -- Remote entity set name
+    RemoteName text,            -- Remote entity name
+    Countable integer,
+    Creatable integer,
+    Deletable integer,
+    Updatable integer,
+    AttributeCount integer,
+    ProjectId text,
+    ProjectName text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text
 );
 ```
 
 #### `external_actions` — OData External Actions (from microflow usage)
 ```sql
-CREATE TABLE IF NOT EXISTS external_actions (
-    Id TEXT PRIMARY KEY,        -- Synthetic: hash of service+action
-    ServiceName TEXT,           -- Consumed OData service qualified name
-    ActionName TEXT,
-    ModuleName TEXT,            -- Module where the calling microflow lives
-    UsageCount INTEGER,         -- Number of microflow activities calling this
-    CallerNames TEXT,           -- Comma-separated list of calling microflows
-    ParameterNames TEXT,        -- Comma-separated parameter names
-    ProjectId TEXT,
-    ProjectName TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT
+create table if not exists external_actions (
+    Id text primary key,        -- Synthetic: hash of service+action
+    ServiceName text,           -- Consumed OData service qualified name
+    ActionName text,
+    ModuleName text,            -- Module where the calling microflow lives
+    UsageCount integer,         -- Number of microflow activities calling this
+    CallerNames text,           -- Comma-separated list of calling microflows
+    ParameterNames text,        -- Comma-separated parameter names
+    ProjectId text,
+    ProjectName text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text
 );
 ```
 
 #### `business_events` — Individual Business Event Messages (detail table)
 ```sql
-CREATE TABLE IF NOT EXISTS business_events (
-    Id TEXT PRIMARY KEY,
-    ServiceId TEXT,             -- FK to business_event_services.Id
-    ServiceQualifiedName TEXT,
-    ChannelName TEXT,
-    MessageName TEXT,
-    CanPublish INTEGER,
-    CanSubscribe INTEGER,
-    AttributeCount INTEGER,
-    Entity TEXT,                -- Associated entity (BY_NAME)
-    PublishMicroflow TEXT,      -- Publisher microflow (BY_NAME)
-    SubscribeMicroflow TEXT,    -- Subscriber microflow (BY_NAME)
-    ModuleName TEXT,
-    ProjectId TEXT,
-    SnapshotId TEXT,
-    SnapshotDate TEXT,
-    SnapshotSource TEXT
+create table if not exists business_events (
+    Id text primary key,
+    ServiceId text,             -- FK to business_event_services.Id
+    ServiceQualifiedName text,
+    ChannelName text,
+    MessageName text,
+    CanPublish integer,
+    CanSubscribe integer,
+    AttributeCount integer,
+    entity text,                -- Associated entity (BY_NAME)
+    PublishMicroflow text,      -- Publisher microflow (BY_NAME)
+    SubscribeMicroflow text,    -- Subscriber microflow (BY_NAME)
+    ModuleName text,
+    ProjectId text,
+    SnapshotId text,
+    SnapshotDate text,
+    SnapshotSource text
 );
 ```
 
 ### 1.3 Fix Existing Catalog Gaps
 
 1. **Add `CallExternalAction` to `getMicroflowActionType()`** in `mdl/catalog/builder_microflows.go`
-2. **Add service/action columns to `activities` table** — `ServiceRef TEXT`, `ActionRef TEXT` for CallExternalAction, CallRestAction, etc.
-3. **Populate `external_entities` table** during catalog refresh from domain models with `Source = "Rest$ODataRemoteEntitySource"`
+2. **Add service/action columns to `activities` table** — `ServiceRef text`, `ActionRef text` for CallExternalAction, CallRestAction, etc.
+3. **Populate `external_entities` table** during catalog refresh from domain models with `source = "rest$ODataRemoteEntitySource"`
 4. **Add `IsExternal` column to `entities` table** for easy filtering
 
 ### 1.4 OBJECTS View Integration
 
-Add all new tables to the `CATALOG.OBJECTS` UNION ALL view so `SHOW CATALOG TABLES` and `SELECT * FROM CATALOG.OBJECTS` include them:
+Add all new tables to the `CATALOG.OBJECTS` UNION ALL view so `show catalog tables` and `select * from CATALOG.OBJECTS` include them:
 
 ```sql
-UNION ALL SELECT Id, 'RestClient' AS ObjectType, Name, QualifiedName, ModuleName, ... FROM rest_clients
-UNION ALL SELECT Id, 'RestOperation' AS ObjectType, Name, ... FROM rest_operations
-UNION ALL SELECT Id, 'PublishedRestService' AS ObjectType, Name, ... FROM published_rest_services
-UNION ALL SELECT Id, 'ExternalEntity' AS ObjectType, Name, ... FROM external_entities
-UNION ALL SELECT Id, 'ExternalAction' AS ObjectType, ActionName AS Name, ... FROM external_actions
-UNION ALL SELECT Id, 'BusinessEvent' AS ObjectType, MessageName AS Name, ... FROM business_events
+union all select Id, 'RestClient' as ObjectType, Name, QualifiedName, ModuleName, ... from rest_clients
+union all select Id, 'RestOperation' as ObjectType, Name, ... from rest_operations
+union all select Id, 'PublishedRestService' as ObjectType, Name, ... from published_rest_services
+union all select Id, 'ExternalEntity' as ObjectType, Name, ... from external_entities
+union all select Id, 'ExternalAction' as ObjectType, ActionName as Name, ... from external_actions
+union all select Id, 'BusinessEvent' as ObjectType, MessageName as Name, ... from business_events
 ```
 
 ---
@@ -306,7 +306,7 @@ UNION ALL SELECT Id, 'BusinessEvent' AS ObjectType, MessageName AS Name, ... FRO
 ### Step 2: SHOW EXTERNAL ACTIONS command
 
 - [ ] Add `ShowExternalActions` to AST `ShowObjectType` enum
-- [ ] Add grammar rule `SHOW EXTERNAL ACTIONS [IN module]` to `MDLParser.g4`
+- [ ] Add grammar rule `show external actions [in module]` to `MDLParser.g4`
 - [ ] Add visitor handler in `visitor_query.go`
 - [ ] Implement `showExternalActions()` in `cmd_odata.go` (scan microflows for CallExternalAction)
 - [ ] Add executor dispatch in `executor.go`
@@ -344,7 +344,7 @@ Phase 2 parses the contract documents already stored in the MPR (no network acce
 
 ### OData `$metadata` Parsing
 
-Parse the `Metadata` XML field on `Rest$ConsumedODataService` to extract:
+Parse the `Metadata` XML field on `rest$ConsumedODataService` to extract:
 - Entity types with properties (name, Edm type, nullable, max length)
 - Navigation properties (associations between entity types)
 - Entity sets (with entity type mapping)
@@ -353,9 +353,9 @@ Parse the `Metadata` XML field on `Rest$ConsumedODataService` to extract:
 
 ```sql
 -- Show all entities available in the OData contract (including not-yet-imported)
-SHOW CONTRACT ENTITIES FROM MyModule.SalesforceAPI;
-SHOW CONTRACT ACTIONS FROM MyModule.SalesforceAPI;
-DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder;
+show contract entities from MyModule.SalesforceAPI;
+show contract actions from MyModule.SalesforceAPI;
+describe contract entity MyModule.SalesforceAPI.PurchaseOrder;
 ```
 
 Catalog tables:
@@ -364,14 +364,14 @@ Catalog tables:
 
 ### Generating CREATE EXTERNAL ENTITY from Contracts ([mendixlabs/mxcli#44](https://github.com/mendixlabs/mxcli/issues/44))
 
-For **entities**, there's no new command needed — `CREATE EXTERNAL ENTITY` already exists. The contract parsing enables a workflow where the user browses available entities and the tool generates the correct `CREATE EXTERNAL ENTITY` with attributes mapped from Edm types:
+For **entities**, there's no new command needed — `create external entity` already exists. The contract parsing enables a workflow where the user browses available entities and the tool generates the correct `create external entity` with attributes mapped from Edm types:
 
 ```sql
 -- 1. Browse what's available in the contract
-SHOW CONTRACT ENTITIES FROM MyModule.SalesforceAPI;
+show contract entities from MyModule.SalesforceAPI;
 
 -- 2. Inspect a specific entity's properties
-DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder;
+describe contract entity MyModule.SalesforceAPI.PurchaseOrder;
 -- Output:
 --   PurchaseOrder (Key: ID)
 --     ID           Edm.Int64        NOT NULL
@@ -384,32 +384,32 @@ DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder;
 --     → Customer            (Navigation: Customer 0..1)
 
 -- 3. Generate a CREATE EXTERNAL ENTITY from the contract (all attributes)
-DESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.PurchaseOrder FORMAT mdl;
+describe contract entity MyModule.SalesforceAPI.PurchaseOrder format mdl;
 -- Output: ready-to-execute CREATE EXTERNAL ENTITY statement
 
 -- 4. Or create with a subset of attributes
-CREATE EXTERNAL ENTITY MyModule.PurchaseOrder
-FROM ODATA CLIENT MyModule.SalesforceAPI (
+create external entity MyModule.PurchaseOrder
+from odata client MyModule.SalesforceAPI (
     EntitySet: 'PurchaseOrders',
     RemoteName: 'PurchaseOrder',
     Countable: Yes
 )
 (
-    Number: Long,
-    Status: String(200),
-    SupplierName: String(200),
-    GrossAmount: Decimal
+    Number: long,
+    status: string(200),
+    SupplierName: string(200),
+    GrossAmount: decimal
 );
 ```
 
-For **actions**, there IS new functionality needed — action definitions and their request/response NPEs (non-persistent entities) don't have a `CREATE` equivalent today:
+For **actions**, there IS new functionality needed — action definitions and their request/response NPEs (non-persistent entities) don't have a `create` equivalent today:
 
 ```sql
 -- Browse available actions
-SHOW CONTRACT ACTIONS FROM MyModule.SalesforceAPI;
+show contract actions from MyModule.SalesforceAPI;
 
 -- Inspect an action's signature (parameters, return type)
-DESCRIBE CONTRACT ACTION MyModule.SalesforceAPI.CreateOrder;
+describe contract action MyModule.SalesforceAPI.CreateOrder;
 -- Output:
 --   CreateOrder
 --     Parameters:
@@ -418,15 +418,15 @@ DESCRIBE CONTRACT ACTION MyModule.SalesforceAPI.CreateOrder;
 --       OrderResult  ComplexType:OrderConfirmation (ConfirmationId: Edm.String, Status: Edm.String)
 
 -- Generate MDL to create the NPEs and wire the action
-DESCRIBE CONTRACT ACTION MyModule.SalesforceAPI.CreateOrder FORMAT mdl;
+describe contract action MyModule.SalesforceAPI.CreateOrder format mdl;
 -- Output: CREATE ENTITY statements for NPEs + documentation for CALL EXTERNAL ACTION usage
 ```
 
-`DESCRIBE CONTRACT ACTION ... FORMAT mdl` should generate:
-1. `CREATE ENTITY` (non-persistent) for complex type parameters
-2. `CREATE ENTITY` (non-persistent) for complex type return values
+`describe contract action ... format mdl` should generate:
+1. `create entity` (non-persistent) for complex type parameters
+2. `create entity` (non-persistent) for complex type return values
 3. Edm → Mendix type mapping (Edm.String → String, Edm.Int64 → Long, Edm.Decimal → Decimal, etc.)
-4. A comment showing the `CALL EXTERNAL ACTION` syntax with the correct parameter names
+4. A comment showing the `call external action` syntax with the correct parameter names
 
 This addresses the core request in issue #44: users want to browse available actions and generate the domain model entities needed to call them.
 
@@ -439,13 +439,13 @@ Parse the `Document` YAML field on `BusinessEvents$BusinessEventService` (consum
 
 ```sql
 -- Show all channels/messages from the AsyncAPI contract
-SHOW CONTRACT CHANNELS FROM MyModule.EventClient;
-SHOW CONTRACT MESSAGES FROM MyModule.EventClient;
+show contract channels from MyModule.EventClient;
+show contract messages from MyModule.EventClient;
 ```
 
 ### OpenAPI / REST Contract Parsing
 
-The `Rest$ConsumedRestService` may contain an `OpenApiFile` field (not yet verified in test projects). If present, parse it for:
+The `rest$ConsumedRestService` may contain an `OpenApiFile` field (not yet verified in test projects). If present, parse it for:
 - Paths and operations
 - Request/response schemas
 - Parameters
@@ -453,8 +453,8 @@ The `Rest$ConsumedRestService` may contain an `OpenApiFile` field (not yet verif
 ### Database Schema Discovery
 ```sql
 -- Already partially implemented via SQL CONNECT + SQL <alias> SHOW TABLES
-SQL mydb SHOW TABLES;
-SQL mydb DESCRIBE TABLE orders;
+sql mydb show tables;
+sql mydb describe table orders;
 ```
 
 ### Contract Generation for Published Services
@@ -464,8 +464,8 @@ Studio Pro can generate/download contracts for published services (OpenAPI for R
 #### Published REST → OpenAPI
 ```sql
 -- Generate OpenAPI 3.0 JSON from a published REST service definition
-EXPORT CONTRACT FROM MyModule.CustomerAPI FORMAT openapi;
-EXPORT CONTRACT FROM MyModule.CustomerAPI FORMAT openapi TO '/path/to/openapi.json';
+export contract from MyModule.CustomerAPI format openapi;
+export contract from MyModule.CustomerAPI format openapi to '/path/to/openapi.json';
 ```
 
 Generate by mapping published REST resources and operations to OpenAPI paths, methods, and parameters. Include microflow return types as response schemas where inferrable.
@@ -473,11 +473,11 @@ Generate by mapping published REST resources and operations to OpenAPI paths, me
 #### Published OData → `$metadata` / GraphQL
 ```sql
 -- Generate OData $metadata XML from a published OData service definition
-EXPORT CONTRACT FROM MyModule.ProductAPI FORMAT odata;
-EXPORT CONTRACT FROM MyModule.ProductAPI FORMAT odata TO '/path/to/metadata.xml';
+export contract from MyModule.ProductAPI format odata;
+export contract from MyModule.ProductAPI format odata to '/path/to/metadata.xml';
 
 -- Generate GraphQL schema from a published OData service (optional, OData4 only)
-EXPORT CONTRACT FROM MyModule.ProductAPI FORMAT graphql;
+export contract from MyModule.ProductAPI format graphql;
 ```
 
 Generate by mapping published entity types, entity sets, exposed members, and CRUD modes to EDMX/CSDL. The GraphQL variant maps entity sets to queries and CUD modes to mutations.
@@ -485,8 +485,8 @@ Generate by mapping published entity types, entity sets, exposed members, and CR
 #### Business Event Service → AsyncAPI
 ```sql
 -- Generate AsyncAPI YAML from a business event service definition
-EXPORT CONTRACT FROM MyModule.OrderEvents FORMAT asyncapi;
-EXPORT CONTRACT FROM MyModule.OrderEvents FORMAT asyncapi TO '/path/to/asyncapi.yaml';
+export contract from MyModule.OrderEvents format asyncapi;
+export contract from MyModule.OrderEvents format asyncapi to '/path/to/asyncapi.yaml';
 ```
 
 Generate by mapping channels, messages, and attributes from the structured `Definition` to AsyncAPI 2.x format with CloudEvents headers.
@@ -494,12 +494,12 @@ Generate by mapping channels, messages, and attributes from the structured `Defi
 #### Default Behavior
 ```sql
 -- Without FORMAT, auto-detect based on service type
-EXPORT CONTRACT FROM MyModule.CustomerAPI;          -- REST → openapi
-EXPORT CONTRACT FROM MyModule.ProductAPI;           -- OData → odata
-EXPORT CONTRACT FROM MyModule.OrderEvents;          -- Business Event → asyncapi
+export contract from MyModule.CustomerAPI;          -- REST → openapi
+export contract from MyModule.ProductAPI;           -- OData → odata
+export contract from MyModule.OrderEvents;          -- Business Event → asyncapi
 ```
 
-When no `TO` path is given, output the contract to stdout (useful for piping or inspection).
+When no `to` path is given, output the contract to stdout (useful for piping or inspection).
 
 ---
 
@@ -518,29 +518,29 @@ Mendix supports both consuming and publishing SOAP web services. The BSON types 
 | `WebServices$OperationInfo` | Individual SOAP operation (request/response body, SOAP action) |
 | `WebServices$PublishedOperation` | Published operation (microflow handler, parameters, return type) |
 | `WebServices$VersionedService` | Versioned published service (caption, authentication, validation) |
-| `Microflows$WebServiceCallAction` | Microflow activity that calls a consumed SOAP operation |
+| `microflows$WebServiceCallAction` | Microflow activity that calls a consumed SOAP operation |
 
 ### Implementation Steps
 
 1. **Model types** — Add `ImportedWebService`, `PublishedWebService` to `model/types.go`
 2. **Parser** — Create `sdk/mpr/parser_webservices.go` for BSON deserialization
 3. **Reader** — Add `ListImportedWebServices()`, `ListPublishedWebServices()` to reader
-4. **SHOW/DESCRIBE** — `SHOW SOAP CLIENTS`, `SHOW SOAP SERVICES`, `DESCRIBE SOAP CLIENT`, `DESCRIBE SOAP SERVICE`
+4. **SHOW/DESCRIBE** — `show SOAP clients`, `show SOAP services`, `describe SOAP client`, `describe SOAP service`
 5. **Catalog tables** — `soap_clients` (with operation count, WSDL URL, SOAP version), `soap_services` (with versioned service info), `soap_operations` (detail table)
 6. **Microflow integration** — Add `WebServiceCallAction` to `getMicroflowActionType()` and populate `ServiceRef`/`ActionRef`
 
 ### Target MDL Commands
 ```sql
-SHOW SOAP CLIENTS;                           -- List consumed SOAP services
-SHOW SOAP CLIENTS IN MyModule;
-SHOW SOAP SERVICES;                          -- List published SOAP services
-DESCRIBE SOAP CLIENT MyModule.WeatherService;
-DESCRIBE SOAP SERVICE MyModule.OrderService;
+show SOAP clients;                           -- List consumed SOAP services
+show SOAP clients in MyModule;
+show SOAP services;                          -- List published SOAP services
+describe SOAP client MyModule.WeatherService;
+describe SOAP service MyModule.OrderService;
 
 -- Catalog queries
-SELECT * FROM CATALOG.SOAP_CLIENTS;
-SELECT * FROM CATALOG.SOAP_SERVICES;
-SELECT * FROM CATALOG.SOAP_OPERATIONS;
+select * from CATALOG.SOAP_CLIENTS;
+select * from CATALOG.SOAP_SERVICES;
+select * from CATALOG.SOAP_OPERATIONS;
 ```
 
 ---
@@ -549,39 +549,39 @@ SELECT * FROM CATALOG.SOAP_OPERATIONS;
 
 ```sql
 -- Integration overview: all external services
-SELECT ObjectType, QualifiedName, ModuleName
-FROM CATALOG.OBJECTS
-WHERE ObjectType IN ('ODataClient', 'RestClient', 'PublishedODataService',
+select ObjectType, QualifiedName, ModuleName
+from CATALOG.OBJECTS
+where ObjectType in ('ODataClient', 'RestClient', 'PublishedODataService',
                      'PublishedRestService', 'BusinessEventService', 'DatabaseConnection',
                      'SoapClient', 'SoapService');  -- Phase 3
 
 -- All external entities and their source services
-SELECT QualifiedName, ServiceName, EntitySet, RemoteName
-FROM CATALOG.EXTERNAL_ENTITIES;
+select QualifiedName, ServiceName, EntitySet, RemoteName
+from CATALOG.EXTERNAL_ENTITIES;
 
 -- All external actions and where they're called from
-SELECT ServiceName, ActionName, UsageCount, CallerNames
-FROM CATALOG.EXTERNAL_ACTIONS;
+select ServiceName, ActionName, UsageCount, CallerNames
+from CATALOG.EXTERNAL_ACTIONS;
 
 -- All REST operations across all consumed services
-SELECT ServiceQualifiedName, HttpMethod, Path, Name
-FROM CATALOG.REST_OPERATIONS
-ORDER BY ServiceQualifiedName, Path;
+select ServiceQualifiedName, HttpMethod, path, Name
+from CATALOG.REST_OPERATIONS
+ORDER by ServiceQualifiedName, path;
 
 -- Published API surface area
-SELECT ServiceQualifiedName, HttpMethod, Path, Microflow
-FROM CATALOG.PUBLISHED_REST_OPERATIONS;
+select ServiceQualifiedName, HttpMethod, path, microflow
+from CATALOG.PUBLISHED_REST_OPERATIONS;
 
 -- Business event messages with their handlers
-SELECT ServiceQualifiedName, MessageName, CanPublish, CanSubscribe, Entity
-FROM CATALOG.BUSINESS_EVENTS;
+select ServiceQualifiedName, MessageName, CanPublish, CanSubscribe, entity
+from CATALOG.BUSINESS_EVENTS;
 
 -- Cross-cutting: find all integration touchpoints in a module
-SELECT 'OData Client' AS Type, QualifiedName FROM CATALOG.ODATA_CLIENTS WHERE ModuleName = 'Integration'
-UNION ALL
-SELECT 'REST Client', QualifiedName FROM CATALOG.REST_CLIENTS WHERE ModuleName = 'Integration'
-UNION ALL
-SELECT 'External Entity', QualifiedName FROM CATALOG.EXTERNAL_ENTITIES WHERE ModuleName = 'Integration'
-UNION ALL
-SELECT 'Business Event', ServiceQualifiedName || '.' || MessageName FROM CATALOG.BUSINESS_EVENTS WHERE ModuleName = 'Integration';
+select 'OData Client' as type, QualifiedName from CATALOG.ODATA_CLIENTS where ModuleName = 'Integration'
+union all
+select 'REST Client', QualifiedName from CATALOG.REST_CLIENTS where ModuleName = 'Integration'
+union all
+select 'External Entity', QualifiedName from CATALOG.EXTERNAL_ENTITIES where ModuleName = 'Integration'
+union all
+select 'Business Event', ServiceQualifiedName || '.' || MessageName from CATALOG.BUSINESS_EVENTS where ModuleName = 'Integration';
 ```

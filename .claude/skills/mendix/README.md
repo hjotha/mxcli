@@ -40,7 +40,7 @@ External system integration:
 | Skill | Purpose | Use When |
 |-------|---------|----------|
 | [database-connections.md](database-connections.md) | Mendix Database Connector | Connecting to Oracle, PostgreSQL, etc. via JDBC |
-| [demo-data.md](demo-data.md) | Demo data & IMPORT | Seeding data, `IMPORT FROM` bulk import from external DB |
+| [demo-data.md](demo-data.md) | Demo data & IMPORT | Seeding data, `import from` bulk import from external DB |
 | [rest-client.md](rest-client.md) | REST API consumption | Calling external REST APIs via consumed REST client documents |
 | [rest-call-from-json.md](rest-call-from-json.md) | REST CALL end-to-end | JSON Structure → Entities → Import Mapping → REST CALL microflow |
 | [json-structures-and-mappings.md](json-structures-and-mappings.md) | JSON structures & mappings | CREATE/DESCRIBE JSON structures, import/export mappings, domain model patterns |
@@ -111,11 +111,11 @@ When encountering errors:
 
 | Mistake | Frequency | Quick Fix |
 |---------|-----------|-----------|
-| SET without DECLARE | High | Add `DECLARE $var Type = value;` before SET |
-| Missing AS for entity | High | Use `DECLARE $var AS Module.Entity;` |
-| Unqualified association | Medium | Use `$var/Module.Assoc/Attr` |
+| SET without DECLARE | High | Add `declare $var type = value;` before SET |
+| Missing AS for entity | High | Use `declare $var as Module.Entity;` |
+| Unqualified association | Medium | Use `$var/Module.Assoc/attr` |
 | String enum comparison | Medium | Use `Module.Enum.Value` not `'string'` |
-| Missing RETURN | Low | Add `RETURN $value;` at end |
+| Missing RETURN | Low | Add `return $value;` at end |
 
 ---
 

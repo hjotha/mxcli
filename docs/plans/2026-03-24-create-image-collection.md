@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add `CREATE IMAGE COLLECTION Module.Name` MDL syntax to create empty Mendix image collections.
+**Goal:** Add `create image collection Module.Name` MDL syntax to create empty Mendix image collections.
 
-**Architecture:** Follow the same 7-layer pattern already established for `CREATE ENUMERATION`: Lexer token → Parser rule → AST node → Visitor handler → BSON writer → Executor command → dispatch registration. Phase 1 creates empty collections only (no image embedding); Phase 2 adds `IMAGE "name" FROM FILE 'path'` syntax.
+**Architecture:** Follow the same 7-layer pattern already established for `create enumeration`: Lexer token → Parser rule → AST node → Visitor handler → BSON writer → Executor command → dispatch registration. Phase 1 creates empty collections only (no image embedding); Phase 2 adds `image "name" from file 'path'` syntax.
 
 **Tech Stack:** ANTLR4 (grammar), Go (parser/visitor/executor/writer), `go.mongodb.org/mongo-driver/bson` (serialization), `modernc.org/sqlite` (MPR storage)
 
@@ -16,14 +16,14 @@ A Mendix image collection is stored as a single BSON unit in the MPR with type `
 
 ```
 Images$ImageCollection
-  Documentation: ""
+  documentation: ""
   Excluded: false
   ExportLevel: "Hidden"
   Images [marker=3]: []
   Name: "Icons"
 ```
 
-Each image inside is an `Images$Image` sub-document embedded in the `Images` array. The actual image bytes are stored inline as BSON binary — not as file paths.
+Each image inside is an `Images$image` sub-document embedded in the `Images` array. The actual image bytes are stored inline as BSON binary — not as file paths.
 
 The `model.ImageCollection` and `mpr.Reader.ListImageCollections()` already exist (`sdk/mpr/reader_types.go`). We only need to add the **writer** and the **MDL pipeline**.
 
@@ -61,7 +61,7 @@ func TestCreateImageCollectionEmpty(t *testing.T) {
     w, cleanup := openTestWriter(t)
     defer cleanup()
 
-    // Get MyFirstModule's ID
+    // get MyFirstModule's ID
     modules, err := w.ListModules()
     if err != nil {
         t.Fatalf("ListModules: %v", err)
@@ -156,41 +156,41 @@ func (w *Writer) serializeImageCollection(ic *ImageCollection) ([]byte, error) {
             img.ID = ID(generateUUID())
         }
         images = append(images, bson.D{
-            {Key: "$ID", Value: idToBsonBinary(string(img.ID))},
-            {Key: "$Type", Value: "Images$Image"},
-            {Key: "Image", Value: primitive.Binary{Subtype: 0, Data: img.Data}},
-            {Key: "ImageFormat", Value: img.Format},
-            {Key: "Name", Value: img.Name},
+            {key: "$ID", value: idToBsonBinary(string(img.ID))},
+            {key: "$type", value: "Images$image"},
+            {key: "image", value: primitive.Binary{Subtype: 0, data: img.Data}},
+            {key: "ImageFormat", value: img.Format},
+            {key: "Name", value: img.Name},
         })
     }
 
     doc := bson.D{
-        {Key: "$ID", Value: idToBsonBinary(string(ic.ID))},
-        {Key: "$Type", Value: "Images$ImageCollection"},
-        {Key: "Documentation", Value: ic.Documentation},
-        {Key: "Excluded", Value: false},
-        {Key: "ExportLevel", Value: ic.ExportLevel},
-        {Key: "Images", Value: images},
-        {Key: "Name", Value: ic.Name},
+        {key: "$ID", value: idToBsonBinary(string(ic.ID))},
+        {key: "$type", value: "Images$ImageCollection"},
+        {key: "documentation", value: ic.Documentation},
+        {key: "Excluded", value: false},
+        {key: "ExportLevel", value: ic.ExportLevel},
+        {key: "Images", value: images},
+        {key: "Name", value: ic.Name},
     }
 
     return bson.Marshal(doc)
 }
 ```
 
-**Note:** `ImageCollection` and `Image` types are defined in `sdk/mpr/reader_types.go`. The `Image` struct currently only has `ID` and `Name` fields — you will need to add `Data []byte` and `Format string` fields to support Phase 2. For Phase 1 (empty collections), `ic.Images` will be empty so those fields won't be accessed.
+**Note:** `ImageCollection` and `image` types are defined in `sdk/mpr/reader_types.go`. The `image` struct currently only has `ID` and `Name` fields — you will need to add `data []byte` and `format string` fields to support Phase 2. For Phase 1 (empty collections), `ic.Images` will be empty so those fields won't be accessed.
 
 **Step 5: Extend the Image struct in reader_types.go**
 
 Modify `sdk/mpr/reader_types.go` lines 228–232:
 
 ```go
-// Image represents an image in a collection.
-type Image struct {
+// image represents an image in a collection.
+type image struct {
     ID     ID     `json:"id"`
     Name   string `json:"name"`
-    Data   []byte `json:"data,omitempty"`   // raw image bytes
-    Format string `json:"format,omitempty"` // "Png", "Svg", "Gif", "Jpeg", "Bmp"
+    data   []byte `json:"data,omitempty"`   // raw image bytes
+    format string `json:"format,omitempty"` // "Png", "Svg", "Gif", "Jpeg", "Bmp"
 }
 ```
 
@@ -221,19 +221,19 @@ After modifying grammar, always regenerate: `make grammar`
 
 **Step 1: Add COLLECTION token to the lexer**
 
-In `mdl/grammar/MDLLexer.g4`, find the block containing `IMAGE`, `STATICIMAGE`, `DYNAMICIMAGE` (around line 311). Add `COLLECTION` nearby (alphabetical order is not required; group with related keywords):
+In `mdl/grammar/MDLLexer.g4`, find the block containing `image`, `staticimage`, `dynamicimage` (around line 311). Add `collection` nearby (alphabetical order is not required; group with related keywords):
 
 ```antlr
-COLLECTION: C O L L E C T I O N;
+collection: C O L L E C T I O N;
 ```
 
-You can add it right after line 311 (`IMAGE: I M A G E;`).
+You can add it right after line 311 (`image: I M A G E;`).
 
 **Step 2: Add COLLECTION to the parser's keyword-as-identifier list**
 
-Search for `commonNameKeyword` in `MDLParser.g4`. It's a rule that lists all keywords that can also be used as identifiers. Add `COLLECTION` to this list so it doesn't break existing identifiers that might contain it.
+Search for `commonNameKeyword` in `MDLParser.g4`. It's a rule that lists all keywords that can also be used as identifiers. Add `collection` to this list so it doesn't break existing identifiers that might contain it.
 
-Also add `COLLECTION` to the `qualifiedNameKeyword` rule if it exists.
+Also add `collection` to the `qualifiedNameKeyword` rule if it exists.
 
 **Step 3: Add createImageCollectionStatement rule to the parser**
 
@@ -247,11 +247,11 @@ Then add the rule definition near the ENUMERATION section (around line 725):
 
 ```antlr
 // =============================================================================
-// IMAGE COLLECTION CREATION
+// image collection CREATION
 // =============================================================================
 
 createImageCollectionStatement
-    : IMAGE COLLECTION qualifiedName imageCollectionOptions?
+    : image collection qualifiedName imageCollectionOptions?
     ;
 
 imageCollectionOptions
@@ -259,8 +259,8 @@ imageCollectionOptions
     ;
 
 imageCollectionOption
-    : EXPORT LEVEL STRING_LITERAL   // e.g. EXPORT LEVEL 'Public'
-    | COMMENT STRING_LITERAL
+    : export level STRING_LITERAL   // e.g. export level 'Public'
+    | comment STRING_LITERAL
     ;
 ```
 
@@ -284,7 +284,7 @@ Expected: no errors
 
 ```bash
 git add mdl/grammar/MDLLexer.g4 mdl/grammar/MDLParser.g4 mdl/grammar/parser/
-git commit -m "feat(grammar): add COLLECTION token and createImageCollectionStatement rule"
+git commit -m "feat(grammar): add collection token and createImageCollectionStatement rule"
 ```
 
 ---
@@ -309,14 +309,14 @@ import (
 )
 
 func TestParseCreateImageCollection(t *testing.T) {
-    stmts, err := visitor.Parse("CREATE IMAGE COLLECTION MyModule.Icons;")
+    stmts, err := visitor.Parse("create image collection MyModule.Icons;")
     if err != nil {
         t.Fatalf("parse error: %v", err)
     }
     if len(stmts) != 1 {
         t.Fatalf("expected 1 statement, got %d", len(stmts))
     }
-    // Import the ast package and type-assert
+    // import the ast package and type-assert
     // (will fail to compile until AST node + visitor are added)
     _ = stmts[0]
 }
@@ -341,16 +341,16 @@ package ast
 
 // CreateImageCollectionStmt represents:
 //
-//	CREATE IMAGE COLLECTION Module.Name [EXPORT LEVEL 'Public'] [COMMENT '...']
+//	create image collection Module.Name [export level 'Public'] [comment '...']
 type CreateImageCollectionStmt struct {
     Name        QualifiedName
     ExportLevel string // "Hidden" (default) or "Public"
-    Comment     string
+    comment     string
 }
 
 func (s *CreateImageCollectionStmt) isStatement() {}
 
-// DropImageCollectionStmt represents: DROP IMAGE COLLECTION Module.Name
+// DropImageCollectionStmt represents: drop image collection Module.Name
 type DropImageCollectionStmt struct {
     Name QualifiedName
 }
@@ -472,11 +472,11 @@ func TestExecCreateImageCollection(t *testing.T) {
     env := newTestEnv(t) // opens test MPR in write mode
     defer env.Close()
 
-    output, err := env.Exec("CREATE IMAGE COLLECTION MyFirstModule.TestIcons;")
+    output, err := env.Exec("create image collection MyFirstModule.TestIcons;")
     if err != nil {
         t.Fatalf("exec error: %v", err)
     }
-    if !strings.Contains(output, "Created image collection") {
+    if !strings.Contains(output, "created image collection") {
         t.Errorf("expected success message, got: %q", output)
     }
 }
@@ -485,11 +485,11 @@ func TestExecCreateImageCollectionDuplicate(t *testing.T) {
     env := newTestEnv(t)
     defer env.Close()
 
-    if _, err := env.Exec("CREATE IMAGE COLLECTION MyFirstModule.TestIcons;"); err != nil {
+    if _, err := env.Exec("create image collection MyFirstModule.TestIcons;"); err != nil {
         t.Fatalf("first create: %v", err)
     }
 
-    _, err := env.Exec("CREATE IMAGE COLLECTION MyFirstModule.TestIcons;")
+    _, err := env.Exec("create image collection MyFirstModule.TestIcons;")
     if err == nil {
         t.Error("expected error for duplicate, got nil")
     }
@@ -509,7 +509,7 @@ Expected: FAIL — `execCreateImageCollection` doesn't exist yet
 ```go
 // SPDX-License-Identifier: Apache-2.0
 
-// Package executor - Image collection commands (CREATE/DROP IMAGE COLLECTION)
+// Package executor - image collection commands (create/drop image collection)
 package executor
 
 import (
@@ -519,7 +519,7 @@ import (
     "github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
-// execCreateImageCollection handles CREATE IMAGE COLLECTION statements.
+// execCreateImageCollection handles create image collection statements.
 func (e *Executor) execCreateImageCollection(s *ast.CreateImageCollectionStmt) error {
     if e.reader == nil {
         return fmt.Errorf("not connected to a project")
@@ -530,7 +530,7 @@ func (e *Executor) execCreateImageCollection(s *ast.CreateImageCollectionStmt) e
         return err
     }
 
-    // Check for duplicate
+    // check for duplicate
     if existing := e.findImageCollection(s.Name.Module, s.Name.Name); existing != nil {
         return fmt.Errorf("image collection already exists: %s.%s", s.Name.Module, s.Name.Name)
     }
@@ -547,11 +547,11 @@ func (e *Executor) execCreateImageCollection(s *ast.CreateImageCollectionStmt) e
 
     e.invalidateHierarchy()
 
-    fmt.Fprintf(e.output, "Created image collection: %s\n", s.Name)
+    fmt.Fprintf(e.output, "created image collection: %s\n", s.Name)
     return nil
 }
 
-// execDropImageCollection handles DROP IMAGE COLLECTION statements.
+// execDropImageCollection handles drop image collection statements.
 func (e *Executor) execDropImageCollection(s *ast.DropImageCollectionStmt) error {
     if e.reader == nil {
         return fmt.Errorf("not connected to a project")
@@ -611,11 +611,11 @@ case *ast.DropImageCollectionStmt:
 In `mdl/executor/stmt_summary.go`, find the switch block and add after the Enumeration section:
 
 ```go
-// Image Collection
+// image collection
 case *ast.CreateImageCollectionStmt:
-    return fmt.Sprintf("CREATE IMAGE COLLECTION %s", s.Name)
+    return fmt.Sprintf("create image collection %s", s.Name)
 case *ast.DropImageCollectionStmt:
-    return fmt.Sprintf("DROP IMAGE COLLECTION %s", s.Name)
+    return fmt.Sprintf("drop image collection %s", s.Name)
 ```
 
 **Step 6: Add to validate.go**
@@ -642,7 +642,7 @@ Expected: PASS both tests
 ```bash
 git add mdl/executor/cmd_imagecollections.go mdl/executor/imagecollection_test.go \
         mdl/executor/executor.go mdl/executor/stmt_summary.go mdl/executor/validate.go
-git commit -m "feat(executor): add CREATE/DROP IMAGE COLLECTION commands"
+git commit -m "feat(executor): add create/drop image collection commands"
 ```
 
 ---
@@ -661,7 +661,7 @@ Expected: `Built bin/mxcli bin/source_tree`
 
 ```bash
 ./bin/mxcli check /dev/stdin <<'EOF'
-CREATE IMAGE COLLECTION MyModule.Icons;
+create image collection MyModule.Icons;
 EOF
 ```
 
@@ -671,10 +671,10 @@ Expected: `✓ Syntax OK` (or equivalent)
 
 ```bash
 ./bin/mxcli -p /mnt/data_sdd/gh/mxproj-GenAIDemo/App.mpr -c \
-    "CREATE IMAGE COLLECTION MyFirstModule.TestPlanIcons;"
+    "create image collection MyFirstModule.TestPlanIcons;"
 ```
 
-Expected output: `Created image collection: MyFirstModule.TestPlanIcons`
+Expected output: `created image collection: MyFirstModule.TestPlanIcons`
 
 **Step 4: Verify with BSON dump**
 
@@ -686,7 +686,7 @@ Expected output: `Created image collection: MyFirstModule.TestPlanIcons`
 Expected NDSL:
 ```
 Images$ImageCollection
-  Documentation: ""
+  documentation: ""
   Excluded: false
   ExportLevel: "Hidden"
   Images [marker=3]: []
@@ -716,19 +716,19 @@ git commit --allow-empty -m "test: e2e smoke test for CREATE IMAGE COLLECTION pa
 
 **Step 1: Add dropImageCollectionStatement rule**
 
-In `MDLParser.g4`, find the `dropStatement` rule (search for `DROP ENUMERATION`). It looks like:
+In `MDLParser.g4`, find the `dropStatement` rule (search for `drop enumeration`). It looks like:
 
 ```antlr
 dropStatement
-    : DROP ENTITY qualifiedName
-    | DROP ENUMERATION qualifiedName
+    : drop entity qualifiedName
+    | drop enumeration qualifiedName
     | ...
 ```
 
 Add:
 
 ```antlr
-| DROP IMAGE COLLECTION qualifiedName
+| drop image collection qualifiedName
 ```
 
 **Step 2: Add visitor for drop**
@@ -753,7 +753,7 @@ make grammar && go build ./mdl/...
 
 ```bash
 ./bin/mxcli -p /mnt/data_sdd/gh/mxproj-GenAIDemo/App.mpr -c \
-    "DROP IMAGE COLLECTION MyFirstModule.TestPlanIcons;"
+    "drop image collection MyFirstModule.TestPlanIcons;"
 ```
 
 Expected: `Dropped image collection: MyFirstModule.TestPlanIcons`
@@ -762,7 +762,7 @@ Expected: `Dropped image collection: MyFirstModule.TestPlanIcons`
 
 ```bash
 git add mdl/grammar/MDLParser.g4 mdl/grammar/parser/ mdl/visitor/visitor_imagecollection.go
-git commit -m "feat(grammar): add DROP IMAGE COLLECTION statement"
+git commit -m "feat(grammar): add drop image collection statement"
 ```
 
 ---
@@ -772,14 +772,14 @@ git commit -m "feat(grammar): add DROP IMAGE COLLECTION statement"
 Phase 2 adds:
 
 ```sql
-CREATE IMAGE COLLECTION MyModule.Icons (
-    IMAGE "logo"  FROM FILE 'assets/logo.png',
-    IMAGE "close" FROM FILE 'assets/close.svg'
+create image collection MyModule.Icons (
+    image "logo"  from file 'assets/logo.png',
+    image "close" from file 'assets/close.svg'
 );
 ```
 
 Implementation additions needed:
-- Grammar: extend `imageCollectionOptions` to include `IMAGE STRING_LITERAL FROM FILE STRING_LITERAL`
+- Grammar: extend `imageCollectionOptions` to include `image STRING_LITERAL from file STRING_LITERAL`
 - AST: add `Images []ImageEntry` field to `CreateImageCollectionStmt` where `ImageEntry` holds `Name string` and `FilePath string`
 - Executor: read file bytes at `FilePath` relative to the MDL script's directory, auto-detect format from extension (`.png`→`"Png"`, `.svg`→`"Svg"`, `.gif`→`"Gif"`, `.jpg`/`.jpeg`→`"Jpeg"`, `.bmp`→`"Bmp"`), populate `ic.Images`
 - Writer: already supports embedded images in `serializeImageCollection` (via `img.Data` and `img.Format`)

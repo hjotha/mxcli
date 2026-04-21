@@ -9,19 +9,19 @@ Based on investigation of three real-world Mendix 11.6.3 projects:
 
 | Document Type ($Type) | EM | FM | LPI | Total | Priority |
 |----------------------|----|----|-----|-------|----------|
-| `Workflows$Workflow` | 12 | 1 | 0 | **13** | **High** |
+| `workflows$workflow` | 12 | 1 | 0 | **13** | **High** |
 | `JsonStructures$JsonStructure` | 23 | 42 | 38 | **103** | Medium |
 | `ImportMappings$ImportMapping` | 22 | 35 | 33 | **90** | Medium |
 | `ExportMappings$ExportMapping` | 19 | 31 | 24 | **74** | Medium |
-| `Microflows$Rule` | 15 | 28 | 12 | **55** | Medium |
+| `microflows$rule` | 15 | 28 | 12 | **55** | Medium |
 | `MessageDefinitions$MessageDefinitionCollection` | 12 | 11 | 10 | **33** | Low |
-| `Rest$PublishedRestService` | 2 | 7 | 8 | **17** | **High** |
+| `rest$PublishedRestService` | 2 | 7 | 8 | **17** | **High** |
 | `RegularExpressions$RegularExpression` | 8 | 4 | 4 | **16** | Low |
 | `CustomIcons$CustomIconCollection` | 5 | 2 | 3 | **10** | Low |
 | `Menus$MenuDocument` | 3 | 2 | 2 | **7** | Low |
 | `Queues$Queue` | 2 | 2 | 1 | **5** | Low |
 | `Texts$SystemTextCollection` | 1 | 1 | 1 | **3** | Low |
-| `Rest$ConsumedRestService` | 0 | 2 | 0 | **2** | Medium |
+| `rest$ConsumedRestService` | 0 | 2 | 0 | **2** | Medium |
 | `DatabaseConnector$DatabaseConnection` | 0 | 1 | 0 | **1** | Low |
 
 EM = EnquiriesManagement, FM = FactoryManagement, LPI = LatoProductInventory
@@ -30,7 +30,7 @@ EM = EnquiriesManagement, FM = FactoryManagement, LPI = LatoProductInventory
 
 ### High Priority
 
-#### 1. Workflows (`Workflows$Workflow`) - 13 documents
+#### 1. Workflows (`workflows$workflow`) - 13 documents
 
 **Impact**: Core Mendix feature for business process automation. Used heavily in the EnquiriesManagement project for agent-orchestrated enquiry handling.
 
@@ -38,14 +38,14 @@ EM = EnquiriesManagement, FM = FactoryManagement, LPI = LatoProductInventory
 
 **Summary**: BSON parser, Reader methods, SHOW/DESCRIBE commands, catalog table, cross-references. The workflow domain has 14 concrete activity types and multiple polymorphic hierarchies.
 
-#### 2. Published REST Services (`Rest$PublishedRestService`) - 17 documents
+#### 2. Published REST Services (`rest$PublishedRestService`) - 17 documents
 
 **Impact**: Published REST services are a primary integration mechanism in Mendix. FactoryManagement exposes 7 REST services (oauth2, discovery, TCSSO, ViewerService, etc.), LatoProductInventory exposes 8.
 
 **What's needed**:
-- BSON parser for `Rest$PublishedRestService` documents
+- BSON parser for `rest$PublishedRestService` documents
 - Reader: `ListPublishedRestServices()`, `GetPublishedRestService(id)`
-- Commands: `SHOW REST SERVICES`, `DESCRIBE REST SERVICE Module.Name`
+- Commands: `show rest services`, `describe rest service Module.Name`
 - Catalog table: `CATALOG.REST_SERVICES` with columns for Name, Path, Version, Authentication, OperationCount
 - Cross-references: REST operations referencing microflows, entities
 
@@ -60,7 +60,7 @@ EM = EnquiriesManagement, FM = FactoryManagement, LPI = LatoProductInventory
 **What's needed**:
 - BSON parser for JSON structure documents
 - Reader: `ListJsonStructures()`, `GetJsonStructure(id)`
-- Commands: `SHOW JSON STRUCTURES`, `DESCRIBE JSON STRUCTURE Module.Name`
+- Commands: `show json structures`, `describe json structure Module.Name`
 - Catalog table with Name, ModuleName, documentation
 
 **Complexity**: Low-Medium. JSON structures are relatively simple documents containing a JSON schema definition.
@@ -78,24 +78,24 @@ EM = EnquiriesManagement, FM = FactoryManagement, LPI = LatoProductInventory
 
 **Complexity**: Medium. Mappings contain element-to-attribute mappings with entity references, attribute mappings, and value transformations.
 
-#### 5. Rules (`Microflows$Rule`) - 55 documents
+#### 5. Rules (`microflows$rule`) - 55 documents
 
 **Impact**: Rules are a special microflow subtype used for entity validation. Currently parsed as regular microflows but not distinguished.
 
 **What's needed**:
-- Distinguish rules from microflows in the parser (check `$Type == "Microflows$Rule"`)
+- Distinguish rules from microflows in the parser (check `$type == "microflows$rule"`)
 - Add `IsRule` field to the Microflow struct or create a separate Rule type
-- Add to catalog as `ObjectType = 'RULE'` in the objects view
-- `SHOW RULES [IN Module]` command
+- Add to catalog as `ObjectType = 'rule'` in the objects view
+- `show rules [in module]` command
 
 **Complexity**: Low. Rules use the same BSON format as microflows. The main change is distinguishing them in listing/catalog.
 
-#### 6. Consumed REST Services (`Rest$ConsumedRestService`) - 2 documents
+#### 6. Consumed REST Services (`rest$ConsumedRestService`) - 2 documents
 
 **Impact**: Different from consumed OData services (which are already supported). These are plain REST API integrations.
 
 **What's needed**:
-- BSON parser for `Rest$ConsumedRestService` documents
+- BSON parser for `rest$ConsumedRestService` documents
 - Reader: `ListConsumedRestServices()`, `GetConsumedRestService(id)`
 - SHOW/DESCRIBE commands
 - Catalog table

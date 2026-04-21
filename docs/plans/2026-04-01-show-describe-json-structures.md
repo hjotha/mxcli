@@ -4,7 +4,7 @@
 
 JSON Structures are a Mendix document type (`JsonStructures$JsonStructure`) used for REST integrations and import/export mappings. They define JSON schemas with a snippet and a parsed element tree that maps JSON fields to types. The proposal (`docs/11-proposals/show-describe-json-structures.md`) requests SHOW/DESCRIBE support; we extend this to also include CREATE/DROP for full read-write support.
 
-The generated metamodel already defines Go types (`JsonStructuresJsonStructure`, `JsonStructuresJsonElement` in `generated/metamodel/types.go`). The lexer already has `JSON` and `STRUCTURE` tokens. No parser, reader, executor, or grammar rules exist yet.
+The generated metamodel already defines Go types (`JsonStructuresJsonStructure`, `JsonStructuresJsonElement` in `generated/metamodel/types.go`). The lexer already has `json` and `structure` tokens. No parser, reader, executor, or grammar rules exist yet.
 
 ## Real-World BSON Reference
 
@@ -14,12 +14,12 @@ Extracted from a real Mendix 11.6.3 MPR v2 project — a paginated API search re
 
 ```
 $ID: <binary 16 bytes UUID>
-$Type: "JsonStructures$JsonStructure"
+$type: "JsonStructures$JsonStructure"
 Name: "SearchResponse"
-Documentation: ""
+documentation: ""
 Excluded: false
 ExportLevel: "Hidden"
-JsonSnippet: <raw JSON string>
+JsonSnippet: <raw json string>
 Elements: [2, ...elements]  // bson.A starts with int version marker (2)
 ```
 
@@ -27,12 +27,12 @@ Elements: [2, ...elements]  // bson.A starts with int version marker (2)
 
 ```
 $ID: <binary 16 bytes UUID>
-$Type: "JsonStructures$JsonElement"
-ExposedName: "Root"            // Display name
-ExposedItemName: ""            // For arrays: name of individual items
-Path: "(Object)"              // JSON path using (Object)|(Array) notation
-ElementType: "Object"         // "Object", "Array", "Value"
-PrimitiveType: "Unknown"      // "String", "Integer", "Boolean", "Decimal", "Unknown"
+$type: "JsonStructures$JsonElement"
+ExposedName: "Root"            // display name
+ExposedItemName: ""            // for arrays: name of individual items
+path: "(object)"              // json path using (object)|(Array) notation
+ElementType: "object"         // "object", "Array", "value"
+PrimitiveType: "Unknown"      // "string", "integer", "boolean", "decimal", "Unknown"
 MinOccurs: 1
 MaxOccurs: 1                  // -1 = unbounded (arrays)
 Nillable: true
@@ -40,7 +40,7 @@ IsDefaultType: false
 MaxLength: -1                 // -1 = unset
 FractionDigits: -1            // -1 = unset
 TotalDigits: -1               // -1 = unset
-OriginalValue: ""             // Original JSON sample value
+OriginalValue: ""             // Original json sample value
 ErrorMessage: ""
 WarningMessage: ""
 Children: [2, ...children]    // Recursive, same bson.A format with version prefix
@@ -49,45 +49,45 @@ Children: [2, ...children]    // Recursive, same bson.A format with version pref
 ### Example Element Tree (Paginated API Response)
 
 ```
-Root: Object
-  Page: Integer
-  ResultsPerPage: Integer
-  Total: Integer
+Root: object
+  page: integer
+  ResultsPerPage: integer
+  Total: integer
   Results: Array
-    ResultsItem: Object[0..*]
-      Id: String
-      Name: String
-      Category: String
-      Address: Object
-        Street: String
-        City: String
-        ZipCode: String
-      _type: String
+    ResultsItem: object[0..*]
+      Id: string
+      Name: string
+      Category: string
+      Address: object
+        Street: string
+        City: string
+        ZipCode: string
+      _type: string
       Links: Array
-        Link: Object[0..*]
-          Rel: String
-          Href: String
+        link: object[0..*]
+          Rel: string
+          Href: string
   Links_2: Array
-    Links_2Item: Object[0..*]
-      Rel: String
-      Href: String
+    Links_2Item: object[0..*]
+      Rel: string
+      Href: string
 ```
 
 ### Key Observations from Real Data
 
 1. **Version prefix**: `Elements` and `Children` arrays start with an integer `2` before the actual elements — must be skipped during parsing (same pattern as other BSON arrays in this codebase)
-2. **Root element**: Always present as the first element, with `Path: "(Object)"` and `ExposedName: "Root"`
+2. **Root element**: Always present as the first element, with `path: "(object)"` and `ExposedName: "Root"`
 3. **Array items**: An Array element (e.g., `Resultaten`) contains a child Object element with `MaxOccurs: -1` representing the array item
 4. **Negative sentinels**: `-1` means "unset" for `MaxLength`, `FractionDigits`, `TotalDigits`, and "unbounded" for `MaxOccurs`
 5. **PrimitiveType for containers**: Object and Array elements have `PrimitiveType: "Unknown"`
-6. **ExposedName generation**: Mendix derives ExposedName by capitalizing the JSON key (e.g., `name` → `Name`). For arrays, items get suffix `Item` (e.g., `results` → `ResultsItem`)
+6. **ExposedName generation**: Mendix derives ExposedName by capitalizing the JSON key (e.g., `name` → `Name`). For arrays, items get suffix `item` (e.g., `results` → `ResultsItem`)
 7. **Duplicate key handling**: When JSON has duplicate keys at different levels (e.g., `links`), Mendix appends `_2`, `_3` etc. (e.g., `Links_2`)
-8. **Path format**: `(Object)|fieldName|(Array)|(Object)|nestedField` — path segments use `(Object)` and `(Array)` type markers
+8. **Path format**: `(object)|fieldName|(Array)|(object)|nestedField` — path segments use `(object)` and `(Array)` type markers
 
 ## Scope
 
 **In scope:** SHOW, DESCRIBE, CREATE, CREATE OR REPLACE, DROP JSON STRUCTURE, autocomplete, catalog table
-**Edit flow:** `CREATE OR REPLACE JSON STRUCTURE` handles updates — drops existing structure and recreates from new snippet. This is idempotent, atomic, and ideal for AI agents that generate the full JSON snippet. No ALTER needed since the element tree is always derived from the snippet.
+**Edit flow:** `create or replace json structure` handles updates — drops existing structure and recreates from new snippet. This is idempotent, atomic, and ideal for AI agents that generate the full JSON snippet. No ALTER needed since the element tree is always derived from the snippet.
 
 ## Implementation Steps
 
@@ -102,7 +102,7 @@ type JsonStructure struct {
     model.BaseElement
     ContainerID   model.ID       `json:"containerId"`
     Name          string         `json:"name"`
-    Documentation string         `json:"documentation,omitempty"`
+    documentation string         `json:"documentation,omitempty"`
     JsonSnippet   string         `json:"jsonSnippet,omitempty"`
     Elements      []*JsonElement `json:"elements,omitempty"`
     Excluded      bool           `json:"excluded,omitempty"`
@@ -112,9 +112,9 @@ type JsonStructure struct {
 type JsonElement struct {
     ExposedName     string         `json:"exposedName"`
     ExposedItemName string         `json:"exposedItemName,omitempty"`
-    Path            string         `json:"path"`
-    ElementType     string         `json:"elementType"`     // "Object", "Array", "Value"
-    PrimitiveType   string         `json:"primitiveType"`   // "String", "Integer", "Boolean", "Decimal", "Unknown"
+    path            string         `json:"path"`
+    ElementType     string         `json:"elementType"`     // "object", "Array", "value"
+    PrimitiveType   string         `json:"primitiveType"`   // "string", "integer", "boolean", "decimal", "Unknown"
     MinOccurs       int            `json:"minOccurs"`
     MaxOccurs       int            `json:"maxOccurs"`       // -1 = unbounded
     Nillable        bool           `json:"nillable,omitempty"`
@@ -176,30 +176,30 @@ Algorithm:
 2. Walk the JSON tree recursively
 3. For each key-value pair, create a `JsonElement` with:
    - `ExposedName`: capitalize first letter of JSON key
-   - `Path`: build from parent path + `|keyName`
+   - `path`: build from parent path + `|keyName`
    - `ElementType`: "Object" for `{}`, "Array" for `[]`, "Value" for primitives
    - `PrimitiveType`: infer from JSON value type (string→"String", number with `.`→"Decimal", integer→"Integer", bool→"Boolean")
    - `OriginalValue`: JSON-encoded sample value
    - `MaxOccurs`: 1 for objects/values, -1 for array items
 4. Handle duplicate keys by appending `_2`, `_3` suffixes
 5. For arrays, create intermediate Array element + Object child with `MaxOccurs: -1`
-6. Always wrap in a Root element with `Path: "(Object)"`
+6. Always wrap in a Root element with `path: "(object)"`
 
 ### Step 5: AST — `mdl/ast/ast_query.go` + new `mdl/ast/ast_jsonstructure.go`
 
 **In `ast_query.go`:**
 - Add `ShowJsonStructures` to `ShowObjectType` iota (after `ShowConstantValues`, line 82)
-- Add `"JSON STRUCTURES"` to `ShowObjectType.String()`
+- Add `"json structures"` to `ShowObjectType.String()`
 - Add `DescribeJsonStructure` to `DescribeObjectType` iota (after `DescribeContractMessage`, line 256)
-- Add `"JSON STRUCTURE"` to `DescribeObjectType.String()`
+- Add `"json structure"` to `DescribeObjectType.String()`
 
 **New `ast_jsonstructure.go`** (following `ast_imagecollection.go` pattern):
 ```go
 type CreateJsonStructureStmt struct {
     Name          QualifiedName
-    JsonSnippet   string   // Raw JSON snippet
+    JsonSnippet   string   // Raw json snippet
     ExportLevel   string   // "Hidden" (default) or "Public"
-    Documentation string
+    documentation string
     CreateOrReplace bool
 }
 func (s *CreateJsonStructureStmt) isStatement() {}
@@ -212,24 +212,24 @@ func (s *DropJsonStructureStmt) isStatement() {}
 
 ### Step 6: Grammar — `mdl/grammar/MDLLexer.g4` + `MDLParser.g4`
 
-**Lexer** — add `STRUCTURES` token (alphabetically, ~line 545):
+**Lexer** — add `structures` token (alphabetically, ~line 545):
 ```antlr
-STRUCTURES: S T R U C T U R E S;
+structures: S T R U C T U R E S;
 ```
 
 **Parser** — add to `showStatement` alternatives (after line 2501):
 ```antlr
-| SHOW JSON STRUCTURES (IN (qualifiedName | IDENTIFIER))?
+| show json structures (in (qualifiedName | IDENTIFIER))?
 ```
 
 Add to `describeStatement` alternatives (after line 2627):
 ```antlr
-| DESCRIBE JSON STRUCTURE qualifiedName
+| describe json structure qualifiedName
 ```
 
 Add to `dropStatement` alternatives (after line 258):
 ```antlr
-| DROP JSON STRUCTURE qualifiedName
+| drop json structure qualifiedName
 ```
 
 Add `createJsonStructureStatement` to `createStatement` alternatives (after line 100):
@@ -240,7 +240,7 @@ Add `createJsonStructureStatement` to `createStatement` alternatives (after line
 Add new production:
 ```antlr
 createJsonStructureStatement
-    : JSON STRUCTURE qualifiedName jsonStructureOptions? SNIPPET STRING_LITERAL
+    : json structure qualifiedName jsonStructureOptions? snippet STRING_LITERAL
     ;
 
 jsonStructureOptions
@@ -248,21 +248,21 @@ jsonStructureOptions
     ;
 
 jsonStructureOption
-    : EXPORT LEVEL STRING_LITERAL
-    | COMMENT STRING_LITERAL
+    : export level STRING_LITERAL
+    | comment STRING_LITERAL
     ;
 ```
 
 MDL syntax:
 ```sql
 -- Create new (fails if exists)
-CREATE JSON STRUCTURE Module.Name SNIPPET '{...json...}';
+create json structure Module.Name snippet '{...json...}';
 
 -- Create with metadata
-CREATE JSON STRUCTURE Module.Name EXPORT LEVEL 'Public' COMMENT 'API response schema' SNIPPET '{...}';
+create json structure Module.Name export level 'Public' comment 'API response schema' snippet '{...}';
 
 -- Create or update (idempotent — preferred for AI agents)
-CREATE OR REPLACE JSON STRUCTURE Module.Name SNIPPET '{...}';
+create or replace json structure Module.Name snippet '{...}';
 ```
 
 Then run `make grammar` to regenerate.
@@ -275,7 +275,7 @@ Add to `ExitShowStatement` (after IMAGE COLLECTION block, ~line 468):
 ```go
 } else if ctx.JSON() != nil && ctx.STRUCTURES() != nil {
     stmt := &ast.ShowStmt{ObjectType: ast.ShowJsonStructures}
-    // parse IN module filter
+    // parse in module filter
     b.statements = append(b.statements, stmt)
 }
 ```
@@ -298,7 +298,7 @@ func (b *Builder) ExitCreateJsonStructureStatement(ctx *parser.CreateJsonStructu
 ### Step 8: Executor — new file `mdl/executor/cmd_jsonstructures.go`
 
 **`showJsonStructures(moduleName string) error`**
-Table: `| Qualified Name | Elements | Source |`
+Table: `| Qualified Name | Elements | source |`
 
 **`describeJsonStructure(name ast.QualifiedName) error`**
 Output: Element tree with indentation + JSON Snippet as comment block.
@@ -319,7 +319,7 @@ Rendering rules:
 4. Call `writer.CreateJsonStructure(js)`
 5. Invalidate hierarchy cache
 
-This makes `CREATE OR REPLACE` the idempotent edit operation — AI agents can always use it without checking existence first.
+This makes `create or replace` the idempotent edit operation — AI agents can always use it without checking existence first.
 
 **`execDropJsonStructure(s *ast.DropJsonStructureStmt) error`**
 Same pattern as `execDropImageCollection`.
@@ -354,8 +354,8 @@ case *ast.DropJsonStructureStmt:
 Add `GetJsonStructureNames(moduleFilter string) []string` following `GetBusinessEventServiceNames` (line 315).
 
 Register in REPL completions for:
-- `"DESCRIBE JSON STRUCTURE "` → `GetJsonStructureNames`
-- `"DROP JSON STRUCTURE "` → `GetJsonStructureNames`
+- `"describe json structure "` → `GetJsonStructureNames`
+- `"drop json structure "` → `GetJsonStructureNames`
 
 ### Step 11: Catalog Table — `mdl/catalog/tables.go`
 
@@ -367,12 +367,12 @@ Add `json_structures` catalog table:
 
 ```sql
 -- JSON Structure examples (read)
-SHOW JSON STRUCTURES;
-SHOW JSON STRUCTURES IN MyModule;
-DESCRIBE JSON STRUCTURE MyModule.CustomerResponse;
+show json structures;
+show json structures in MyModule;
+describe json structure MyModule.CustomerResponse;
 
 -- JSON Structure examples (create)
-CREATE JSON STRUCTURE MyModule.CustomerResponse SNIPPET '{
+create json structure MyModule.CustomerResponse snippet '{
   "id": 1,
   "name": "John",
   "email": "john@example.com",
@@ -381,7 +381,7 @@ CREATE JSON STRUCTURE MyModule.CustomerResponse SNIPPET '{
 }';
 
 -- JSON Structure examples (edit — idempotent, preferred for AI agents)
-CREATE OR REPLACE JSON STRUCTURE MyModule.CustomerResponse SNIPPET '{
+create or replace json structure MyModule.CustomerResponse snippet '{
   "id": 1,
   "name": "John",
   "email": "john@example.com",
@@ -391,7 +391,7 @@ CREATE OR REPLACE JSON STRUCTURE MyModule.CustomerResponse SNIPPET '{
 }';
 
 -- JSON Structure examples (delete)
-DROP JSON STRUCTURE MyModule.CustomerResponse;
+drop json structure MyModule.CustomerResponse;
 ```
 
 ## Files to Modify
@@ -423,22 +423,22 @@ DROP JSON STRUCTURE MyModule.CustomerResponse;
 4. `./bin/mxcli check mdl-examples/doctype-tests/18-json-structure-examples.mdl` — syntax OK
 5. Test against any Mendix project with JSON structures:
    ```bash
-   ./bin/mxcli -p app.mpr -c "SHOW JSON STRUCTURES"
-   ./bin/mxcli -p app.mpr -c "DESCRIBE JSON STRUCTURE Module.StructureName"
+   ./bin/mxcli -p app.mpr -c "show json structures"
+   ./bin/mxcli -p app.mpr -c "describe json structure Module.StructureName"
    ```
 6. Test CREATE roundtrip:
    ```bash
-   ./bin/mxcli -p app.mpr -c "CREATE JSON STRUCTURE MyModule.Test SNIPPET '{\"name\": \"John\", \"age\": 30}'"
-   ./bin/mxcli -p app.mpr -c "DESCRIBE JSON STRUCTURE MyModule.Test"
+   ./bin/mxcli -p app.mpr -c "create json structure MyModule.Test snippet '{\"name\": \"John\", \"age\": 30}'"
+   ./bin/mxcli -p app.mpr -c "describe json structure MyModule.Test"
    ```
 7. Test CREATE OR REPLACE (edit flow):
    ```bash
-   ./bin/mxcli -p app.mpr -c "CREATE OR REPLACE JSON STRUCTURE MyModule.Test SNIPPET '{\"name\": \"John\", \"age\": 30, \"email\": \"john@test.com\"}'"
-   ./bin/mxcli -p app.mpr -c "DESCRIBE JSON STRUCTURE MyModule.Test"
+   ./bin/mxcli -p app.mpr -c "create or replace json structure MyModule.Test snippet '{\"name\": \"John\", \"age\": 30, \"email\": \"john@test.com\"}'"
+   ./bin/mxcli -p app.mpr -c "describe json structure MyModule.Test"
    # Verify element tree now includes Email field
    ```
 8. Test DROP:
    ```bash
-   ./bin/mxcli -p app.mpr -c "DROP JSON STRUCTURE MyModule.Test"
+   ./bin/mxcli -p app.mpr -c "drop json structure MyModule.Test"
    ```
 9. Validate with `mx check` that created JSON structures are valid Mendix format

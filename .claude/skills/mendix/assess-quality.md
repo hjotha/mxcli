@@ -17,13 +17,13 @@ Use this skill when:
 Run the automated linter and report to get a baseline score:
 
 ```bash
-# Connect to the project and build a full catalog (needed for deep analysis)
-mxcli -p app.mpr -c "REFRESH CATALOG FULL"
+# connect to the project and build a full catalog (needed for deep analysis)
+mxcli -p app.mpr -c "refresh catalog full"
 
-# Run the linter (41 rules: MDL, SEC, QUAL, ARCH, DESIGN, CONV series)
+# run the linter (41 rules: MDL, SEC, QUAL, ARCH, design, CONV series)
 mxcli lint -p app.mpr
 
-# Generate the scored best practices report
+# generate the scored best practices report
 mxcli report -p app.mpr --format markdown
 ```
 
@@ -35,24 +35,24 @@ Use catalog queries to understand the project's shape:
 
 ```sql
 -- Overview of project size and structure
-SHOW STRUCTURE DEPTH 2
+show structure depth 2
 
 -- Key metrics
-SELECT module_name, COUNT(*) FROM CATALOG.entities GROUP BY module_name
-SELECT module_name, COUNT(*) FROM CATALOG.microflows GROUP BY module_name
-SELECT module_name, COUNT(*) FROM CATALOG.pages GROUP BY module_name
+select module_name, count(*) from CATALOG.entities GROUP by module_name
+select module_name, count(*) from CATALOG.microflows GROUP by module_name
+select module_name, count(*) from CATALOG.pages GROUP by module_name
 
 -- Complexity metrics (McCabe/Sigrid-style)
-SELECT qualified_name, cyclomatic_complexity
-FROM CATALOG.microflows
-WHERE cyclomatic_complexity > 10
-ORDER BY cyclomatic_complexity DESC
+select qualified_name, cyclomatic_complexity
+from CATALOG.microflows
+where cyclomatic_complexity > 10
+ORDER by cyclomatic_complexity desc
 
 -- Large microflows
-SELECT qualified_name, activity_count
-FROM CATALOG.microflows
-WHERE activity_count > 15
-ORDER BY activity_count DESC
+select qualified_name, activity_count
+from CATALOG.microflows
+where activity_count > 15
+ORDER by activity_count desc
 ```
 
 ### Step 3: Manual Review Against Guidelines
@@ -112,9 +112,9 @@ After reviewing automated results, assess the following areas manually. The guid
 
 | Convention | What to Check |
 |-----------|---------------|
-| Each module has `[Objects]` and `[UI]` top-level folders | Open in Studio Pro or check folder data |
+| Each module has `[objects]` and `[UI]` top-level folders | Open in Studio Pro or check folder data |
 | `ACT_` and `DS_` microflows live in the `[UI]` folder | These are page-related, belong in UI |
-| Entity-specific microflows grouped in entity subfolders under `[Objects]` | e.g., `[Objects]/Customer/BCO_Customer_Validate` |
+| Entity-specific microflows grouped in entity subfolders under `[objects]` | e.g., `[objects]/Customer/BCO_Customer_Validate` |
 | Pages organized by entity or feature | Not scattered randomly |
 
 ### C. Security
@@ -153,7 +153,7 @@ The Dutch Institute for Vulnerability Disclosure (DIVD) found widespread authori
 | Newly registered user permissions | Default user role should not grant broad data access |
 | XPath constraints completeness | Every READ/WRITE access rule on business entities needs XPath constraints |
 | Published REST/OData security | All published services require authentication |
-| Entity access audit | Run `SELECT * FROM CATALOG.permissions WHERE is_constrained = 0` |
+| Entity access audit | Run `select * from CATALOG.permissions where is_constrained = 0` |
 
 #### C.4 Additional Security Practices
 
@@ -201,13 +201,13 @@ The Dutch Institute for Vulnerability Disclosure (DIVD) found widespread authori
 **XPath performance tips:**
 - Avoid negation in XPath (`not()`, `!=`) — these cannot use indexes efficiently
 - Use indexed attributes in XPath constraints
-- Prefer `[Assoc/Entity/Attribute = value]` over retrieving + filtering in microflow
+- Prefer `[Assoc/entity/attribute = value]` over retrieving + filtering in microflow
 - For large datasets, consider using a data source microflow with pagination
 
 **Microflow performance tips:**
 - Use batching for operations on 100+ objects (retrieve in batches of 1000, process, commit batch)
 - Avoid deep nesting of microflow calls (call stack overhead)
-- Use list operations (`FIND`, `FILTER`, `HEAD`) instead of loops when possible
+- Use list operations (`find`, `filter`, `head`) instead of loops when possible
 
 ### F. Architecture
 
@@ -258,7 +258,7 @@ The Dutch Institute for Vulnerability Disclosure (DIVD) found widespread authori
 | Use ConnectionDetails entity | Centralize endpoint, username, password, timeout in one entity |
 | Use constants for connection settings | Avoid dependency on Encryption module; use constants with empty defaults |
 | Operations naming | Follow `METHOD_VERSION_OPERATION` pattern |
-| File structure | Separate `Connection Details`, `Operations`, `Private` folders |
+| File structure | Separate `connection Details`, `Operations`, `Private` folders |
 | Validate input before urlEncode | Check for empty values before constructing URLs |
 
 ### I. UI Best Practices
@@ -276,23 +276,23 @@ The catalog includes McCabe cyclomatic complexity metrics aligned with the ISO 2
 
 ```sql
 -- Complexity distribution (Sigrid-style)
-SELECT
-  CASE
-    WHEN cyclomatic_complexity <= 5 THEN 'Low (1-5)'
-    WHEN cyclomatic_complexity <= 10 THEN 'Moderate (6-10)'
-    WHEN cyclomatic_complexity <= 20 THEN 'High (11-20)'
-    ELSE 'Very High (>20)'
-  END as complexity_band,
-  COUNT(*) as microflow_count
-FROM CATALOG.microflows
-GROUP BY complexity_band
+select
+  case
+    when cyclomatic_complexity <= 5 then 'Low (1-5)'
+    when cyclomatic_complexity <= 10 then 'Moderate (6-10)'
+    when cyclomatic_complexity <= 20 then 'High (11-20)'
+    else 'Very High (>20)'
+  end as complexity_band,
+  count(*) as microflow_count
+from CATALOG.microflows
+GROUP by complexity_band
 
 -- Top complex microflows
-SELECT qualified_name, cyclomatic_complexity, activity_count
-FROM CATALOG.microflows
-WHERE cyclomatic_complexity > 10
-ORDER BY cyclomatic_complexity DESC
-LIMIT 20
+select qualified_name, cyclomatic_complexity, activity_count
+from CATALOG.microflows
+where cyclomatic_complexity > 10
+ORDER by cyclomatic_complexity desc
+limit 20
 ```
 
 **Sigrid benchmarks** (5-star system):
@@ -320,41 +320,41 @@ View entities are powerful for specific scenarios but not universal replacements
 After running the automated tools and performing manual review, produce a report using this structure:
 
 ```markdown
-# Mendix Project Quality Assessment
+# Mendix project Quality Assessment
 
-**Project:** [Name]
-**Date:** [Date]
+**project:** [Name]
+**date:** [date]
 **Assessor:** Claude Code
 
 ## Executive Summary
 
 Overall Score: [X]/100 (from `mxcli report`)
 
-| Category | Score | Key Finding |
+| Category | Score | key Finding |
 |----------|-------|-------------|
 | Naming | X% | [one-line summary] |
-| Security | X% | [one-line summary] |
+| security | X% | [one-line summary] |
 | Quality | X% | [one-line summary] |
 | Architecture | X% | [one-line summary] |
 | Performance | X% | [one-line summary] |
-| Design | X% | [one-line summary] |
+| design | X% | [one-line summary] |
 
-## Project Metrics
+## project Metrics
 
-| Metric | Value |
+| Metric | value |
 |--------|-------|
-| Modules | X |
-| Entities (persistent) | X |
-| Microflows | X |
-| Pages | X |
-| Avg complexity | X |
-| Max complexity | X |
+| modules | X |
+| entities (persistent) | X |
+| microflows | X |
+| pages | X |
+| avg complexity | X |
+| max complexity | X |
 
 ## Automated Findings
 
 [Summary of lint violations by category, grouped by severity]
 
-### Critical Issues (must fix)
+### critical Issues (must fix)
 - [list]
 
 ### High Priority (should fix)
@@ -368,7 +368,7 @@ Overall Score: [X]/100 (from `mxcli report`)
 ### Naming Conventions
 [Assessment against Section A guidelines]
 
-### Security Posture
+### security Posture
 [Assessment against Section C guidelines, including DIVD checklist]
 
 ### Maintainability
@@ -380,22 +380,22 @@ Overall Score: [X]/100 (from `mxcli report`)
 ### Architecture
 [Assessment against Section F guidelines]
 
-### Error Handling
+### error Handling
 [Assessment against Section G guidelines]
 
 ## Recommendations
 
-### Top 5 Actions (Highest Impact)
+### Top 5 actions (Highest impact)
 1. [specific, actionable recommendation]
 2. [specific, actionable recommendation]
 3. [specific, actionable recommendation]
 4. [specific, actionable recommendation]
 5. [specific, actionable recommendation]
 
-### Quick Wins (Low Effort, High Value)
+### Quick Wins (Low Effort, High value)
 - [list of easy fixes]
 
-### Long-term Improvements
+### long-term Improvements
 - [list of architectural/structural improvements]
 ```
 

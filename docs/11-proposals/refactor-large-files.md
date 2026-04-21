@@ -43,9 +43,9 @@ New widgets only require adding a case to `writer_widgets.go`. Consider future r
 ```go
 // Future enhancement: widget serializer registry
 var widgetSerializers = map[string]func(pages.Widget) bson.D{
-    "Forms$Container":    serializeContainer,
-    "Forms$LayoutGrid":   serializeLayoutGrid,
-    "Forms$ActionButton": serializeActionButton,
+    "Forms$container":    serializeContainer,
+    "Forms$layoutgrid":   serializeLayoutGrid,
+    "Forms$actionbutton": serializeActionButton,
     // New widgets registered here
 }
 ```
@@ -207,13 +207,13 @@ After each split:
 A comprehensive test framework exists in `mdl/executor/roundtrip_test.go`:
 
 ```bash
-# Run semantic roundtrip tests (fast, ~5s)
+# run semantic roundtrip tests (fast, ~5s)
 go test -v ./mdl/executor/... -run "Roundtrip" -timeout 60s
 
-# Run mx check integration tests (slower, ~25s)
+# run mx check integration tests (slower, ~25s)
 go test -v ./mdl/executor/... -run "MxCheck" -timeout 120s
 
-# Run all tests
+# run all tests
 go test -v ./mdl/executor/... -run "Roundtrip|MxCheck" -timeout 120s
 ```
 

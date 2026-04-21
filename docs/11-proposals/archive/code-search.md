@@ -36,15 +36,15 @@ Extend mxcli to be an LLM-friendly codebase search tool that helps Claude Code u
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘            │
 │       │            │            │                   │
 ├───────┴────────────┴────────────┴───────────────────┤
-│  Core Services                                      │
+│  Core services                                      │
 │  ┌─────────────┐ ┌─────────────┐ ┌───────────────┐ │
-│  │ MDL Parser  │ │ Project     │ │ Search Service│ │
-│  │ & Evaluator │ │ Model       │ │ (new/extend)  │ │
+│  │ MDL Parser  │ │ project     │ │ search service│ │
+│  │ & Evaluator │ │ model       │ │ (new/extend)  │ │
 │  │ (existing)  │ │ (existing)  │ │               │ │
 │  └─────────────┘ └─────────────┘ └───────────────┘ │
 │  ┌─────────────┐ ┌─────────────┐                   │
 │  │ Diff Engine │ │ SQLite      │                   │
-│  │ (existing)  │ │ Catalog     │                   │
+│  │ (existing)  │ │ catalog     │                   │
 │  │             │ │ (existing)  │                   │
 │  └─────────────┘ └─────────────┘                   │
 └─────────────────────────────────────────────────────┘
@@ -56,28 +56,28 @@ Add reference tracking to enable "find usages" and call graph queries:
 
 ```sql
 -- New table for reference tracking
-CREATE TABLE catalog.references (
-    id INTEGER PRIMARY KEY,
-    source_type TEXT,      -- 'microflow', 'page', 'entity', ...
-    source_name TEXT,      -- qualified name of the referring document
-    source_location TEXT,  -- optional: position within document
-    target_type TEXT,      -- what kind of thing is referenced
-    target_name TEXT,      -- qualified name of referenced thing
-    ref_kind TEXT          -- 'call', 'attribute_use', 'entity_use', 'parameter_type', ...
+create table catalog.references (
+    id integer primary key,
+    source_type text,      -- 'microflow', 'page', 'entity', ...
+    source_name text,      -- qualified name of the referring document
+    source_location text,  -- optional: position within document
+    target_type text,      -- what kind of thing is referenced
+    target_name text,      -- qualified name of referenced thing
+    ref_kind text          -- 'call', 'attribute_use', 'entity_use', 'parameter_type', ...
 );
 
-CREATE INDEX idx_refs_target ON catalog.references(target_type, target_name);
-CREATE INDEX idx_refs_source ON catalog.references(source_type, source_name);
+create index idx_refs_target on catalog.references(target_type, target_name);
+create index idx_refs_source on catalog.references(source_type, source_name);
 
 -- Convenience view for microflow call graph
-CREATE VIEW catalog.call_graph AS
-SELECT 
+create view catalog.call_graph as
+select 
     source_name as caller,
     target_name as callee
-FROM catalog.references 
-WHERE source_type = 'microflow' 
-  AND target_type = 'microflow'
-  AND ref_kind = 'call';
+from catalog.references 
+where source_type = 'microflow' 
+  and target_type = 'microflow'
+  and ref_kind = 'call';
 ```
 
 ## Proposed CLI Commands
@@ -88,20 +88,20 @@ mxcli search symbol <name> [--type=microflow|entity|page|...]
 mxcli search entities [pattern]
 mxcli search microflows [pattern]
 
-# Reference search  
+# reference search  
 mxcli search refs <name> [--type=...] [--ref-kind=call|use|...]
 
-# Call graph
+# call graph
 mxcli search callers <microflow> [--transitive]
 mxcli search callees <microflow> [--transitive]
 
-# Impact analysis
+# impact analysis
 mxcli search impact <name> [--type=...]
 
-# Context assembly (for LLM consumption)
+# context assembly (for LLM consumption)
 mxcli search context <name> [--depth=N] [--max-tokens=N]
 
-# Direct SQL (already exists?)
+# Direct sql (already exists?)
 mxcli sql "<query>"
 ```
 
@@ -110,27 +110,27 @@ mxcli sql "<query>"
 Add search functions to MDL that compile to SQL queries:
 
 ```ruby
-# Find symbols by type and filters
-find(Entity)                                    # All entities
-find(Entity, name: /^Customer/)                 # Regex/pattern match
-find(Microflow, module: "OrderManagement")      # Filter by module
+# find symbols by type and filters
+find(entity)                                    # all entities
+find(entity, name: /^Customer/)                 # regex/pattern match
+find(microflow, module: "OrderManagement")      # filter by module
 
-# Reference queries
+# reference queries
 refs(entity: "Customer")                        # What references Customer?
 refs(microflow: "ACT_CreateOrder")              # What calls this microflow?
-refs("Customer.Name")                           # References to specific attribute
+refs("Customer.Name")                           # references to specific attribute
 
-# Call graph queries
+# call graph queries
 callers("SUB_ValidateOrder")                    # Direct callers
-callers("SUB_ValidateOrder", transitive: true)  # Transitive callers
+callers("SUB_ValidateOrder", transitive: true)  # transitive callers
 callees("ACT_ProcessOrder")                     # What does this call?
 
 # Dependency and impact analysis
-deps("OrderManagement")                         # Module dependencies
+deps("OrderManagement")                         # module dependencies
 impact("Customer.Email")                        # What would changing this affect?
 
-# Context assembly for LLM
-context("ACT_CreateOrder", depth: 2)            # Microflow + deps + entities used
+# context assembly for LLM
+context("ACT_CreateOrder", depth: 2)            # microflow + deps + entities used
 ```
 
 ## Reference Extraction During Indexing
@@ -163,11 +163,11 @@ The `context` command/function assembles relevant information for LLM consumptio
 context("ACT_CreateOrder", depth: 2) returns:
 
 1. The target microflow definition/structure
-2. All entities it uses (retrieves, creates, changes)
-3. All microflows it calls (depth 1)
-4. All microflows those call (depth 2)  
+2. all entities it uses (retrieves, creates, changes)
+3. all microflows it calls (depth 1)
+4. all microflows those call (depth 2)  
 5. Direct callers of the target (limited)
-6. Parameter and return types
+6. parameter and return types
 
 Formatted as a single text block with clear sections,
 trimmed to fit within max_tokens.

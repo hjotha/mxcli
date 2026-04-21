@@ -32,7 +32,7 @@ Test blocks separated by `/`, each with a javadoc comment containing test annota
  * @test String concatenation
  * @expect $result = 'John Doe'
  */
-$result = CALL MICROFLOW MyModule.ConcatNames(
+$result = call microflow MyModule.ConcatNames(
   FirstName = 'John', LastName = 'Doe'
 );
 /
@@ -41,7 +41,7 @@ $result = CALL MICROFLOW MyModule.ConcatNames(
  * @test Arithmetic operation
  * @expect $result = 50
  */
-$result = CALL MICROFLOW MyModule.Multiply(A = 10, B = 5);
+$result = call microflow MyModule.Multiply(A = 10, B = 5);
 /
 ```
 
@@ -52,13 +52,13 @@ Tests embedded in documentation as `mdl-test` fenced code blocks:
 ~~~markdown
 # MyModule Specification
 
-## String Operations
+## string Operations
 
 The ConcatNames microflow joins first and last name.
 
 ```mdl-test
 /** @expect $result = 'John Doe' */
-$result = CALL MICROFLOW MyModule.ConcatNames(
+$result = call microflow MyModule.ConcatNames(
   FirstName = 'John', LastName = 'Doe'
 );
 ```
@@ -72,11 +72,11 @@ The markdown format turns your tests into living documentation.
 
 | Tag | Purpose | Example |
 |-----|---------|---------|
-| `@test` | Test name (required) | `@test String concatenation` |
+| `@test` | Test name (required) | `@test string concatenation` |
 | `@expect` | Assert variable value | `@expect $result = 'John Doe'` |
 | `@expect` | Assert entity attribute | `@expect $product/Name = 'TestProduct'` |
-| `@verify` | OQL post-condition | `@verify SELECT count(*) FROM Mod.E WHERE Code = 'X' = 1` |
-| `@throws` | Expect error | `@throws 'Validation failed'` |
+| `@verify` | OQL post-condition | `@verify select count(*) from Mod.E where Code = 'X' = 1` |
+| `@throws` | Expect error | `@throws 'validation failed'` |
 | `@cleanup` | Rollback strategy | `@cleanup rollback` (default) or `@cleanup none` |
 
 ---
@@ -84,16 +84,16 @@ The markdown format turns your tests into living documentation.
 ## Running Tests
 
 ```bash
-# Run tests from a file
+# run tests from a file
 mxcli test tests/microflows.test.mdl -p app.mpr
 
-# Run all tests in a directory
+# run all tests in a directory
 mxcli test tests/ -p app.mpr
 
-# List tests without executing
+# list tests without executing
 mxcli test tests/ -p app.mpr --list
 
-# Output JUnit XML for CI
+# Output JUnit xml for CI
 mxcli test tests/ -p app.mpr --junit results.xml
 
 # Skip build (reuse existing deployment)
@@ -130,7 +130,7 @@ Each test block should test one thing:
  * @test Discount applied for orders over 100
  * @expect $result = 90.0
  */
-$result = CALL MICROFLOW Sales.CalculateDiscount(OrderTotal = 100.0);
+$result = call microflow Sales.CalculateDiscount(OrderTotal = 100.0);
 /
 ```
 
@@ -143,21 +143,21 @@ Use separate blocks for different input values:
  * @test Negative value returns 'negative'
  * @expect $result = 'negative'
  */
-$result = CALL MICROFLOW MyModule.Classify(Value = -5);
+$result = call microflow MyModule.Classify(value = -5);
 /
 
 /**
  * @test Zero returns 'zero'
  * @expect $result = 'zero'
  */
-$result = CALL MICROFLOW MyModule.Classify(Value = 0);
+$result = call microflow MyModule.Classify(value = 0);
 /
 
 /**
  * @test Positive value returns 'positive'
  * @expect $result = 'positive'
  */
-$result = CALL MICROFLOW MyModule.Classify(Value = 42);
+$result = call microflow MyModule.Classify(value = 42);
 /
 ```
 
@@ -170,11 +170,11 @@ Tests can create, modify, and verify entities:
  * @test Create and update product
  * @expect $updated = true
  */
-$product = CALL MICROFLOW Sales.CreateProduct(
+$product = call microflow Sales.CreateProduct(
   Name = 'Widget', Code = 'W-001'
 );
-COMMIT $product;
-$updated = CALL MICROFLOW Sales.UpdateProduct(
+commit $product;
+$updated = call microflow Sales.UpdateProduct(
   Product = $product, NewName = 'Super Widget'
 );
 /
@@ -189,7 +189,7 @@ Use `@throws` to verify that a microflow raises an error:
  * @test Invalid input throws validation error
  * @throws 'Validation failed'
  */
-CALL MICROFLOW Sales.ValidateOrder(Total = -1);
+call microflow Sales.ValidateOrder(Total = -1);
 /
 ```
 
@@ -201,9 +201,9 @@ Recommended structure:
 
 ```
 tests/
-├── microflows.test.mdl      # Business logic tests
-├── entities.test.mdl         # Entity CRUD tests
-├── validation.test.mdl       # Validation tests
+├── microflows.test.mdl      # business logic tests
+├── entities.test.mdl         # entity CRUD tests
+├── validation.test.mdl       # validation tests
 └── specs/
     └── sales-module.test.md  # Markdown specification
 ```
@@ -217,7 +217,7 @@ tests/
 | `Exception during execution` | Microflow threw a runtime error | Check BSON structure, entity references, attribute types |
 | `Expected $result = 'X' but got 'Y'` | Wrong return value | Fix microflow logic |
 | `Test was not executed` | Runtime crashed before reaching it | Check earlier test failures or runtime logs |
-| `After startup microflow should return a boolean` | Generated runner has wrong return type | Report as bug in mxcli |
+| `after startup microflow should return a boolean` | Generated runner has wrong return type | Report as bug in mxcli |
 
 ---
 
@@ -232,13 +232,13 @@ mxcli test tests/ -p app.mpr --junit test-results.xml
 The JUnit XML works with GitHub Actions, Jenkins, Azure DevOps, GitLab CI, etc.
 
 ```yaml
-# GitHub Actions example
-- name: Run microflow tests
+# GitHub actions example
+- name: run microflow tests
   run: mxcli test tests/ -p app.mpr --junit test-results.xml
-- name: Publish test results
+- name: publish test results
   uses: dorny/test-reporter@v1
   with:
-    name: Microflow Tests
+    name: microflow Tests
     path: test-results.xml
     reporter: java-junit
 ```

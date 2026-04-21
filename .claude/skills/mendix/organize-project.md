@@ -50,28 +50,28 @@ Adapt to your project's conventions. The key is consistency across modules.
 
 ### Microflows
 
-Use the `FOLDER` keyword after the return type, before `BEGIN`:
+Use the `folder` keyword after the return type, before `begin`:
 
 ```mdl
-CREATE MICROFLOW MyModule.ACT_ProcessOrder ($Order: MyModule.Order)
-RETURNS Boolean AS $Success
-FOLDER 'Order'
-BEGIN
-  COMMIT $Order;
-  RETURN true;
-END;
+create microflow MyModule.ACT_ProcessOrder ($Order: MyModule.Order)
+returns boolean as $success
+folder 'Order'
+begin
+  commit $Order;
+  return true;
+end;
 ```
 
 ### Pages
 
-Use the `Folder` property inside the page properties:
+Use the `folder` property inside the page properties:
 
 ```sql
-CREATE PAGE MyModule.Customer_Overview
+create page MyModule.Customer_Overview
 (
-  Title: 'Customer Overview',
-  Layout: Atlas_Core.Atlas_Default,
-  Folder: 'Customer'
+  title: 'Customer Overview',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Customer'
 )
 {
   -- widgets
@@ -81,9 +81,9 @@ CREATE PAGE MyModule.Customer_Overview
 ### Snippets
 
 ```sql
-CREATE SNIPPET MyModule.CustomerCard
+create snippet MyModule.CustomerCard
 (
-  Folder: 'Customer'
+  folder: 'Customer'
 )
 {
   -- widgets
@@ -96,59 +96,59 @@ Use `/` to create nested folder paths. Missing folders are created automatically
 
 ```mdl
 -- Creates 'Order', then 'Order/Batch' if they don't exist
-CREATE MICROFLOW MyModule.ACT_BatchProcess ($List: List of MyModule.Order)
-FOLDER 'Order/Batch'
-BEGIN
-  LOOP $Order IN $List BEGIN
-    COMMIT $Order;
-  END LOOP;
-  RETURN;
-END;
+create microflow MyModule.ACT_BatchProcess ($list: list of MyModule.Order)
+folder 'Order/Batch'
+begin
+  loop $Order in $list begin
+    commit $Order;
+  end loop;
+  return;
+end;
 ```
 
 ## Moving Documents
 
-The `MOVE` command relocates existing documents between folders and modules.
+The `move` command relocates existing documents between folders and modules.
 
 ### Move to a Folder (Same Module)
 
 ```mdl
-MOVE PAGE MyModule.CustomerEdit TO FOLDER 'Customer';
-MOVE MICROFLOW MyModule.ACT_ProcessOrder TO FOLDER 'Order';
-MOVE SNIPPET MyModule.NavigationMenu TO FOLDER 'Shared';
-MOVE NANOFLOW MyModule.NAV_OpenCustomer TO FOLDER 'Customer';
-MOVE ENUMERATION MyModule.OrderStatus TO FOLDER 'Shared';
+move page MyModule.CustomerEdit to folder 'Customer';
+move microflow MyModule.ACT_ProcessOrder to folder 'Order';
+move snippet MyModule.NavigationMenu to folder 'Shared';
+move nanoflow MyModule.NAV_OpenCustomer to folder 'Customer';
+move enumeration MyModule.OrderStatus to folder 'Shared';
 ```
 
 ### Move to Module Root (Out of Folder)
 
 ```mdl
-MOVE PAGE MyModule.CustomerEdit TO MyModule;
+move page MyModule.CustomerEdit to MyModule;
 ```
 
 ### Move Across Modules
 
 ```mdl
 -- Move to another module's root
-MOVE PAGE OldModule.CustomerPage TO NewModule;
+move page OldModule.CustomerPage to NewModule;
 
 -- Move to a folder in another module
-MOVE PAGE OldModule.CustomerPage TO FOLDER 'Pages' IN NewModule;
+move page OldModule.CustomerPage to folder 'Pages' in NewModule;
 ```
 
 ### Cross-Module Move Warning
 
 Cross-module moves change the qualified name (e.g., `OldModule.CustomerPage` becomes `NewModule.CustomerPage`). This **breaks by-name references** such as:
-- Microflows calling `SHOW PAGE OldModule.CustomerPage`
-- Other microflows calling `CALL MICROFLOW OldModule.SomeMicroflow`
+- Microflows calling `show page OldModule.CustomerPage`
+- Other microflows calling `call microflow OldModule.SomeMicroflow`
 - Widget actions referencing the old qualified name
 
 **Always check impact before cross-module moves:**
 
 ```mdl
-SHOW IMPACT OF OldModule.CustomerPage;
+show impact of OldModule.CustomerPage;
 -- Review the output, then move if safe:
-MOVE PAGE OldModule.CustomerPage TO NewModule;
+move page OldModule.CustomerPage to NewModule;
 ```
 
 ## Folder Rules
@@ -163,83 +163,83 @@ MOVE PAGE OldModule.CustomerPage TO NewModule;
 
 | Document Type | FOLDER on Create | MOVE Command |
 |---------------|-----------------|--------------|
-| Page          | `Folder: 'path'` (property) | `MOVE PAGE ...` |
-| Microflow     | `FOLDER 'path'` (keyword) | `MOVE MICROFLOW ...` |
-| Nanoflow      | `FOLDER 'path'` (keyword) | `MOVE NANOFLOW ...` |
-| Snippet       | `Folder: 'path'` (property) | `MOVE SNIPPET ...` |
-| Enumeration   | N/A | `MOVE ENUMERATION ...` |
-| Entity        | N/A | `MOVE ENTITY ...` (module only, no folders) |
+| Page          | `folder: 'path'` (property) | `move page ...` |
+| Microflow     | `folder 'path'` (keyword) | `move microflow ...` |
+| Nanoflow      | `folder 'path'` (keyword) | `move nanoflow ...` |
+| Snippet       | `folder: 'path'` (property) | `move snippet ...` |
+| Enumeration   | N/A | `move enumeration ...` |
+| Entity        | N/A | `move entity ...` (module only, no folders) |
 
-**Note:** Pages and snippets use property syntax (`Folder: 'path'` inside parentheses). Microflows and nanoflows use keyword syntax (`FOLDER 'path'` before `BEGIN`). Entities are embedded in domain models and can only be moved to a different module (no folder support).
+**Note:** Pages and snippets use property syntax (`folder: 'path'` inside parentheses). Microflows and nanoflows use keyword syntax (`folder 'path'` before `begin`). Entities are embedded in domain models and can only be moved to a different module (no folder support).
 
 ## Example: Reorganize a Module
 
 ```mdl
 -- Group all Customer artifacts together
-MOVE PAGE CRM.Customer_Overview TO FOLDER 'Customer';
-MOVE PAGE CRM.Customer_NewEdit TO FOLDER 'Customer';
-MOVE MICROFLOW CRM.ACT_Customer_Save TO FOLDER 'Customer';
-MOVE MICROFLOW CRM.ACT_Customer_Delete TO FOLDER 'Customer';
-MOVE MICROFLOW CRM.ACT_Customer_New TO FOLDER 'Customer';
-MOVE MICROFLOW CRM.VAL_Customer TO FOLDER 'Customer';
-MOVE SNIPPET CRM.CustomerCard TO FOLDER 'Customer';
+move page CRM.Customer_Overview to folder 'Customer';
+move page CRM.Customer_NewEdit to folder 'Customer';
+move microflow CRM.ACT_Customer_Save to folder 'Customer';
+move microflow CRM.ACT_Customer_Delete to folder 'Customer';
+move microflow CRM.ACT_Customer_New to folder 'Customer';
+move microflow CRM.VAL_Customer to folder 'Customer';
+move snippet CRM.CustomerCard to folder 'Customer';
 
 -- Group all Order artifacts together
-MOVE PAGE CRM.Order_Overview TO FOLDER 'Order';
-MOVE PAGE CRM.Order_NewEdit TO FOLDER 'Order';
-MOVE MICROFLOW CRM.ACT_Order_Save TO FOLDER 'Order';
-MOVE MICROFLOW CRM.ACT_Order_Process TO FOLDER 'Order/Processing';
+move page CRM.Order_Overview to folder 'Order';
+move page CRM.Order_NewEdit to folder 'Order';
+move microflow CRM.ACT_Order_Save to folder 'Order';
+move microflow CRM.ACT_Order_Process to folder 'Order/Processing';
 
 -- Move shared artifacts to a Shared folder or common module
-SHOW IMPACT OF CRM.Header_Snippet;
-MOVE SNIPPET CRM.Header_Snippet TO FOLDER 'Shared' IN Common;
+show impact of CRM.Header_Snippet;
+move snippet CRM.Header_Snippet to folder 'Shared' in Common;
 
 -- Move entity to different module
-SHOW IMPACT OF CRM.Customer;
-MOVE ENTITY CRM.Customer TO CustomerModule;
+show impact of CRM.Customer;
+move entity CRM.Customer to CustomerModule;
 
 -- Move enumeration to different module
-MOVE ENUMERATION CRM.OrderStatus TO SharedModule;
+move enumeration CRM.OrderStatus to SharedModule;
 ```
 
 ## Moving Folders
 
-Use `MOVE FOLDER` to reorganize folders. Syntax matches document moves: `Module.FolderName`.
+Use `move folder` to reorganize folders. Syntax matches document moves: `Module.FolderName`.
 
 ```sql
 -- Move a folder into another folder
-MOVE FOLDER MyModule.Resources TO FOLDER 'Archive';
+move folder MyModule.Resources to folder 'Archive';
 
 -- Move a nested folder (use double quotes for paths with /)
-MOVE FOLDER MyModule."Orders/Archive" TO MyModule;
+move folder MyModule."Orders/Archive" to MyModule;
 
 -- Move a folder to a different module
-MOVE FOLDER MyModule.SharedWidgets TO CommonModule;
+move folder MyModule.SharedWidgets to CommonModule;
 
 -- Move a folder into a folder in another module
-MOVE FOLDER MyModule.Templates TO FOLDER 'Shared' IN CommonModule;
+move folder MyModule.Templates to folder 'Shared' in CommonModule;
 ```
 
 ## Deleting Folders
 
-Use `DROP FOLDER` to remove empty folders. The folder must not contain any documents or sub-folders.
+Use `drop folder` to remove empty folders. The folder must not contain any documents or sub-folders.
 
 ```sql
 -- Drop an empty folder
-DROP FOLDER 'OldPages' IN MyModule;
+drop folder 'OldPages' in MyModule;
 
 -- Drop a nested folder (only the leaf is removed)
-DROP FOLDER 'Orders/Archive' IN MyModule;
+drop folder 'Orders/Archive' in MyModule;
 
 -- Move contents out first, then drop
-MOVE MICROFLOW MyModule.ACT_Process TO MyModule;
-DROP FOLDER 'Processing' IN MyModule;
+move microflow MyModule.ACT_Process to MyModule;
+drop folder 'Processing' in MyModule;
 ```
 
 ## Validation Checklist
 
 - [ ] Folder paths use `/` separator (not `\`)
 - [ ] FOLDER keyword placement is correct (before BEGIN for microflows, inside properties for pages)
-- [ ] Cross-module moves: checked impact with `SHOW IMPACT OF` first
+- [ ] Cross-module moves: checked impact with `show impact of` first
 - [ ] Folder naming is consistent across modules
 - [ ] DROP FOLDER: verify folder is empty before dropping

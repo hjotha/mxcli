@@ -22,12 +22,12 @@ Image Collections group image resources used in pages and navigation. Each colle
 ```
 Images$ImageCollection:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
-  Images: []*Images$Image
+  Images: []*Images$image
     - Name: string
-    - Image: binary (raw image data)
+    - image: binary (raw image data)
     - ImageFormat: string ("Png", "Svg", "Jpg", "Gif", "Bmp", "Webp", "Unknown")
 ```
 
@@ -36,7 +36,7 @@ Images$ImageCollection:
 ### SHOW IMAGE COLLECTIONS
 
 ```
-SHOW IMAGE COLLECTIONS [IN Module]
+show image COLLECTIONS [in module]
 ```
 
 | Qualified Name | Module | Name | Images | Formats |
@@ -47,19 +47,19 @@ Where "Images" is the count and "Formats" shows distinct formats used (e.g., "PN
 ### DESCRIBE IMAGE COLLECTION
 
 ```
-DESCRIBE IMAGE COLLECTION Module.Name
+describe image collection Module.Name
 ```
 
 Output format:
 
 ```
-IMAGE COLLECTION MyModule.Icons
+image collection MyModule.Icons
 {
   Arrow_Down: PNG
   Arrow_Up: PNG
   Logo: SVG
   Banner: JPG
-  Placeholder: PNG
+  placeholder: PNG
 };
 
 -- (5 images)
@@ -72,7 +72,7 @@ Binary image data is not shown — only names and formats are listed.
 
 ### 1. Enhance Parser (sdk/mpr/parser_misc.go)
 
-Extend existing parser to capture `ImageFormat` for each image. Skip binary `Image` data (not useful for MDL output).
+Extend existing parser to capture `ImageFormat` for each image. Skip binary `image` data (not useful for MDL output).
 
 Update `ImageCollection` struct to include `ImageFormat` per image.
 
@@ -86,12 +86,12 @@ DescribeImageCollection // in DescribeObjectType enum
 ### 3. Add Grammar Rules
 
 ```antlr
-IMAGE: 'IMAGE';
-COLLECTION: 'COLLECTION';
+image: 'IMAGE';
+collection: 'COLLECTION';
 COLLECTIONS: 'COLLECTIONS';
 
-// SHOW IMAGE COLLECTIONS [IN module]
-// DESCRIBE IMAGE COLLECTION qualifiedName
+// show image COLLECTIONS [in module]
+// describe image collection qualifiedName
 ```
 
 ### 4. Add Executor (mdl/executor/cmd_image_collections.go)

@@ -19,9 +19,9 @@ This analysis is based on scanning **448 unique XPath expressions** across **823
 
 | Feature | Grammar | Visitor | Executor | Round-trip |
 |---------|---------|---------|----------|------------|
-| Simple attribute comparison `[Attr = 'value']` | Yes | Yes | Yes | Yes |
-| Variable reference `[Attr = $var]` | Yes | Yes | Yes | Yes |
-| Variable path `$Var/Attr` | Yes | Yes | Yes | Yes |
+| Simple attribute comparison `[attr = 'value']` | Yes | Yes | Yes | Yes |
+| Variable reference `[attr = $var]` | Yes | Yes | Yes | Yes |
+| Variable path `$Var/attr` | Yes | Yes | Yes | Yes |
 | Boolean operators `and`, `or` | Yes | Yes | Yes | Yes |
 | Comparison operators `=`, `!=`, `<`, `>`, `<=`, `>=` | Yes | Yes | Yes | Yes |
 | Parenthesized grouping `(expr)` | Yes | Yes | Yes | Yes |
@@ -37,7 +37,7 @@ This analysis is based on scanning **448 unique XPath expressions** across **823
 
 | Context | Read | Write |
 |---------|------|-------|
-| `Microflows$DatabaseRetrieveSource/XpathConstraint` | Yes | Yes |
+| `microflows$DatabaseRetrieveSource/XpathConstraint` | Yes | Yes |
 | `DomainModels$AccessRule/XPathConstraint` | Yes | Yes |
 | `Forms$ListViewXPathSource/XPathConstraint` | Partial | Partial |
 | `CustomWidgets$CustomWidgetXPathSource/XPathConstraint` | No | No |
@@ -52,7 +52,7 @@ This analysis is based on scanning **448 unique XPath expressions** across **823
 In XPath constraints, association paths often appear without a `$variable` prefix:
 
 ```xpath
-[Module.Association/Module.Entity/Attribute = $value]
+[Module.Association/Module.Entity/attribute = $value]
 [Module.Association = $object]
 [not(Module.Association/Module.Entity)]
 ```
@@ -109,7 +109,7 @@ Mendix XPath uses `id` as a special pseudo-attribute to compare entity identity:
 2. Add `id` to the catalog/validator as a recognized XPath pseudo-attribute.
 3. Document that `id` refers to the Mendix object GUID.
 
-### Gap 4: `not()` Function vs `NOT` Keyword
+### Gap 4: `not()` Function vs `not` Keyword
 
 **Frequency:** 30 occurrences (6%)
 
@@ -121,14 +121,14 @@ XPath uses `not()` as a function, often for existence checks:
 [not(contains(Name, 'demo'))]
 ```
 
-**Current behavior:** The grammar has `NOT` as a prefix operator in `notExpression` and `not` is not in the `functionName` rule. However, since `HYPHENATED_ID` doesn't match `not` and `NOT` is a keyword, `not(...)` would be parsed as `NOT ( expression )` — a prefix-NOT with parenthesized expression, which actually works correctly for boolean expressions.
+**Current behavior:** The grammar has `not` as a prefix operator in `notExpression` and `not` is not in the `functionName` rule. However, since `HYPHENATED_ID` doesn't match `not` and `not` is a keyword, `not(...)` would be parsed as `not ( expression )` — a prefix-NOT with parenthesized expression, which actually works correctly for boolean expressions.
 
 For existence checks like `not(Module.Assoc/Module.Entity)`, parsing fails because `Module.Assoc/Module.Entity` is not recognized as a boolean expression in the general expression grammar — it's a path, not a comparison.
 
 **Impact:** Medium - existence checks are common in security rules.
 
 **Fix:**
-1. Add `NOT` to the `functionName` rule so `not(...)` can also parse as a function call.
+1. Add `not` to the `functionName` rule so `not(...)` can also parse as a function call.
 2. In the XPath-specific context, treat a bare path as a boolean (existence check).
 3. This overlaps with Gap 2 — a dedicated XPath expression grammar would handle this naturally.
 
@@ -232,14 +232,14 @@ Custom widgets (DataGrid2, Gallery, etc.) and ListView use XPath constraints via
 Add `XPathPathExpr` AST node and extend path detection in the visitor:
 
 ```go
-// XPathPathExpr represents a bare XPath path: Module.Assoc/Module.Entity/Attr
+// XPathPathExpr represents a bare xpath path: Module.Assoc/Module.Entity/attr
 type XPathPathExpr struct {
     Steps []XPathStep
 }
 
 type XPathStep struct {
     Name      string       // Qualified name or identifier
-    Predicate Expression   // Optional nested predicate [expr]
+    Predicate expression   // Optional nested predicate [expr]
 }
 ```
 
@@ -265,15 +265,15 @@ xpathConstraint
     ;
 
 xpathOrExpr
-    : xpathAndExpr (OR xpathAndExpr)*
+    : xpathAndExpr (or xpathAndExpr)*
     ;
 
 xpathAndExpr
-    : xpathNotExpr (AND xpathNotExpr)*
+    : xpathNotExpr (and xpathNotExpr)*
     ;
 
 xpathNotExpr
-    : NOT? xpathComparison
+    : not? xpathComparison
     ;
 
 xpathComparison
@@ -296,12 +296,12 @@ xpathValue
     | NUMBER_LITERAL
     | VARIABLE (SLASH xpathStep)*
     | MENDIX_TOKEN
-    | EMPTY
+    | empty
     | xpathFunctionCall
     ;
 
 xpathFunctionCall
-    : (IDENTIFIER | HYPHENATED_ID | NOT | TRUE | FALSE | CONTAINS)
+    : (IDENTIFIER | HYPHENATED_ID | not | true | false | contains)
       LPAREN xpathArgList? RPAREN
     ;
 
@@ -348,7 +348,7 @@ In XPath, a bare path like `Module.Assoc/Module.Entity` is truthy if the associa
 
 With the Phase 1 xpath grammar, these work naturally:
 - `xpathComparison` allows `xpathPath` without a comparison operator (existence check)
-- `xpathNotExpr` handles `NOT? xpathComparison`
+- `xpathNotExpr` handles `not? xpathComparison`
 - `not()` as a function call in `xpathFunctionCall`
 
 **Files to modify:**
@@ -363,7 +363,7 @@ With the Phase 1 xpath grammar, these work naturally:
 
 #### 3a. `CustomWidgetXPathSource`
 
-Pluggable widgets store XPath in their property data under the `$Type: CustomWidgets$CustomWidgetXPathSource` BSON type. This needs:
+Pluggable widgets store XPath in their property data under the `$type: CustomWidgets$CustomWidgetXPathSource` BSON type. This needs:
 
 1. Recognition in the BSON parser
 2. Extraction of `XPathConstraint` field

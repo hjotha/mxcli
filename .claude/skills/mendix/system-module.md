@@ -18,19 +18,19 @@ In MDL, reference System entities with the `System.` prefix:
 
 ```mdl
 -- Association to the current user
-CREATE ASSOCIATION MyModule.Order_CreatedBy
-  BETWEEN MyModule.Order [*] AND System.User [1];
+create association MyModule.Order_CreatedBy
+  between MyModule.Order [*] and System.User [1];
 
 -- Entity that generalizes FileDocument for file uploads
-CREATE PERSISTENT ENTITY MyModule.Invoice EXTENDS System.FileDocument (
-  InvoiceNumber: String(50),
-  IssueDate: DateTime
+create persistent entity MyModule.Invoice extends System.FileDocument (
+  InvoiceNumber: string(50),
+  IssueDate: datetime
 );
 
 -- Entity that generalizes Image for image uploads
-CREATE PERSISTENT ENTITY MyModule.ProductPhoto EXTENDS System.Image (
-  PhotoCaption: String(200),
-  IsPrimary: Boolean DEFAULT false
+create persistent entity MyModule.ProductPhoto extends System.Image (
+  PhotoCaption: string(200),
+  IsPrimary: boolean default false
 );
 ```
 
@@ -64,7 +64,7 @@ The central user entity. All application users are instances of `System.User` or
 - Associate application entities to `System.User` for audit trails (CreatedBy, ModifiedBy)
 - Specialize `System.User` (via `Administration.Account`) to add custom profile attributes
 - Use `[%CurrentUser%]` token in XPath to filter by logged-in user
-- Check `$User/Active` and `$User/Blocked` for access control
+- Check `$user/Active` and `$user/Blocked` for access control
 
 ### System.UserRole
 
@@ -147,13 +147,13 @@ Base entity for all file storage. Specialize this entity to create custom file t
 **Usage:** Create a specialization to store typed files:
 
 ```mdl
-CREATE PERSISTENT ENTITY MyModule.Attachment EXTENDS System.FileDocument (
-  Description: String(500),
+create persistent entity MyModule.Attachment extends System.FileDocument (
+  description: string(500),
   Category: MyModule.AttachmentCategory
 );
 
-CREATE ASSOCIATION MyModule.Order_Attachment
-  BETWEEN MyModule.Order [1] AND MyModule.Attachment [*];
+create association MyModule.Order_Attachment
+  between MyModule.Order [1] and MyModule.Attachment [*];
 ```
 
 ### System.Image
@@ -168,9 +168,9 @@ Extends `System.FileDocument` with image-specific features.
 **Usage:** Specialize for application images:
 
 ```mdl
-CREATE PERSISTENT ENTITY MyModule.ProductPhoto EXTENDS System.Image (
-  PhotoCaption: String(200),
-  SortOrder: Integer DEFAULT 0
+create persistent entity MyModule.ProductPhoto extends System.Image (
+  PhotoCaption: string(200),
+  SortOrder: integer default 0
 );
 ```
 
@@ -610,16 +610,16 @@ HTTP proxy settings (internal use).
 `InProgress`, `Paused`, `Completed`, `Aborted`, `Incompatible`, `Failed`
 
 ### WorkflowUserTaskState
-`Created`, `InProgress`, `Completed`, `Paused`, `Aborted`, `Failed`
+`created`, `InProgress`, `Completed`, `Paused`, `Aborted`, `Failed`
 
 ### WorkflowUserTaskCompletionType
-`Single`, `Veto`, `Consensus`, `Majority`, `Threshold`, `Microflow`
+`single`, `Veto`, `Consensus`, `Majority`, `Threshold`, `microflow`
 
 ### WorkflowActivityType
-`Start`, `End`, `ExclusiveSplit`, `ParallelSplit`, `ParallelSplitBranchStopper`, `ParallelSplitMerge`, `UserTask`, `CallMicroflow`, `CallWorkflow`, `JumpTo`, `MultiInputUserTask`, `WaitForNotification`, `WaitForTimer`, `EndOfBoundaryEventPath`, `NonInterruptingTimerEvent`, `InterruptingTimerEvent`
+`Start`, `end`, `ExclusiveSplit`, `ParallelSplit`, `ParallelSplitBranchStopper`, `ParallelSplitMerge`, `UserTask`, `CallMicroflow`, `CallWorkflow`, `JumpTo`, `MultiInputUserTask`, `WaitForNotification`, `WaitForTimer`, `EndOfBoundaryEventPath`, `NonInterruptingTimerEvent`, `InterruptingTimerEvent`
 
 ### WorkflowActivityExecutionState
-`Created`, `InProgress`, `Completed`, `Paused`, `Aborted`, `Failed`
+`created`, `InProgress`, `Completed`, `Paused`, `Aborted`, `Failed`
 
 ### WorkflowCurrentActivityAction
 `DoNothing`, `JumpTo`
@@ -631,13 +631,13 @@ HTTP proxy settings (internal use).
 `Idle`, `Running`, `Completed`, `Failed`, `Retrying`, `Aborted`, `Incompatible`
 
 ### EventStatus
-`Running`, `Completed`, `Error`, `Stopped`
+`Running`, `Completed`, `error`, `Stopped`
 
 ### ContextType
-`System`, `User`, `Anonymous`, `ScheduledEvent`
+`System`, `user`, `Anonymous`, `ScheduledEvent`
 
 ### UserType
-`Internal`, `External`
+`Internal`, `external`
 
 ### DeviceType
 `Phone`, `Tablet`, `Desktop`
@@ -662,16 +662,16 @@ System.Error (non-persistent)
   └── System.SoapFault
 ```
 
-**Key point for MDL:** When creating entities that store files or images, use `EXTENDS`:
+**Key point for MDL:** When creating entities that store files or images, use `extends`:
 
 ```mdl
-CREATE PERSISTENT ENTITY MyModule.Document EXTENDS System.FileDocument (
-  Title: String(200),
-  Version: Integer DEFAULT 1
+create persistent entity MyModule.Document extends System.FileDocument (
+  title: string(200),
+  version: integer default 1
 );
 
-CREATE PERSISTENT ENTITY MyModule.Photo EXTENDS System.Image (
-  AltText: String(200)
+create persistent entity MyModule.Photo extends System.Image (
+  AltText: string(200)
 );
 ```
 
@@ -680,37 +680,37 @@ CREATE PERSISTENT ENTITY MyModule.Photo EXTENDS System.Image (
 ### Audit Trail (CreatedBy / ModifiedBy)
 
 ```mdl
-CREATE ASSOCIATION MyModule.Order_CreatedBy
-  BETWEEN MyModule.Order [*] AND System.User [1];
+create association MyModule.Order_CreatedBy
+  between MyModule.Order [*] and System.User [1];
 
-CREATE ASSOCIATION MyModule.Order_ModifiedBy
-  BETWEEN MyModule.Order [*] AND System.User [1];
+create association MyModule.Order_ModifiedBy
+  between MyModule.Order [*] and System.User [1];
 ```
 
 ### File Attachments
 
 ```mdl
-CREATE PERSISTENT ENTITY MyModule.Attachment EXTENDS System.FileDocument (
-  Description: String(500)
+create persistent entity MyModule.Attachment extends System.FileDocument (
+  description: string(500)
 );
 
-CREATE ASSOCIATION MyModule.Order_Attachments
-  BETWEEN MyModule.Order [1] AND MyModule.Attachment [*];
+create association MyModule.Order_Attachments
+  between MyModule.Order [1] and MyModule.Attachment [*];
 ```
 
 ### Workflow Context Object
 
 ```mdl
 -- Application entity that serves as workflow context
-CREATE PERSISTENT ENTITY MyModule.ExpenseReport (
-  Amount: Decimal,
-  Description: String(500),
-  Status: MyModule.ApprovalStatus DEFAULT 'Draft'
+create persistent entity MyModule.ExpenseReport (
+  Amount: decimal,
+  description: string(500),
+  status: MyModule.ApprovalStatus default 'Draft'
 );
 
 -- Associate with workflow instance
-CREATE ASSOCIATION MyModule.ExpenseReport_Workflow
-  BETWEEN MyModule.ExpenseReport [1] AND System.Workflow [*];
+create association MyModule.ExpenseReport_Workflow
+  between MyModule.ExpenseReport [1] and System.Workflow [*];
 ```
 
 ### Task Inbox Page

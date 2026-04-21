@@ -21,33 +21,33 @@ import (
 )
 
 func main() {
-    // Open a Mendix project
+    // open a Mendix project
     reader, err := modelsdk.Open("/path/to/MyApp.mpr")
     if err != nil {
         panic(err)
     }
     defer reader.Close()
 
-    // List all modules
+    // list all modules
     modules, _ := reader.ListModules()
     for _, m := range modules {
-        fmt.Printf("Module: %s\n", m.Name)
+        fmt.Printf("module: %s\n", m.Name)
     }
 
-    // Get domain model for a module
+    // get domain model for a module
     dm, _ := reader.GetDomainModel(modules[0].ID)
     for _, entity := range dm.Entities {
-        fmt.Printf("  Entity: %s\n", entity.Name)
+        fmt.Printf("  entity: %s\n", entity.Name)
         for _, attr := range entity.Attributes {
             fmt.Printf("    - %s: %s\n", attr.Name, attr.Type.GetTypeName())
         }
     }
 
-    // List microflows
+    // list microflows
     microflows, _ := reader.ListMicroflows()
     fmt.Printf("Total microflows: %d\n", len(microflows))
 
-    // List pages
+    // list pages
     pages, _ := reader.ListPages()
     fmt.Printf("Total pages: %d\n", len(pages))
 }
@@ -63,7 +63,7 @@ import (
 )
 
 func main() {
-    // Open for writing
+    // open for writing
     writer, err := modelsdk.OpenForWriting("/path/to/MyApp.mpr")
     if err != nil {
         panic(err)
@@ -74,21 +74,21 @@ func main() {
     modules, _ := reader.ListModules()
     dm, _ := reader.GetDomainModel(modules[0].ID)
 
-    // Create a new entity
+    // create a new entity
     customer := modelsdk.NewEntity("Customer")
     writer.CreateEntity(dm.ID, customer)
 
-    // Add attributes
+    // add attributes
     writer.AddAttribute(dm.ID, customer.ID, modelsdk.NewStringAttribute("Name", 200))
     writer.AddAttribute(dm.ID, customer.ID, modelsdk.NewStringAttribute("Email", 254))
     writer.AddAttribute(dm.ID, customer.ID, modelsdk.NewBooleanAttribute("IsActive"))
     writer.AddAttribute(dm.ID, customer.ID, modelsdk.NewDateTimeAttribute("CreatedDate", true))
 
-    // Create another entity
+    // create another entity
     order := modelsdk.NewEntity("Order")
     writer.CreateEntity(dm.ID, order)
 
-    // Create an association
+    // create an association
     assoc := modelsdk.NewAssociation("Customer_Order", customer.ID, order.ID)
     writer.CreateAssociation(dm.ID, assoc)
 }
@@ -113,51 +113,51 @@ func main() {
     }
     defer writer.Close()
 
-    // Create the high-level API
+    // create the high-level api
     modelAPI := api.New(writer)
 
-    // Set the current module context
+    // set the current module context
     module, _ := modelAPI.Modules.GetModule("MyModule")
     modelAPI.SetModule(module)
 
-    // Create entity with fluent builder
+    // create entity with fluent builder
     customer, _ := modelAPI.DomainModels.CreateEntity("Customer").
-        Persistent().
+        persistent().
         WithStringAttribute("Name", 100).
         WithStringAttribute("Email", 254).
         WithIntegerAttribute("Age").
         WithBooleanAttribute("IsActive").
         WithDateTimeAttribute("CreatedDate", true).
-        Build()
+        build()
 
-    // Create another entity
+    // create another entity
     order, _ := modelAPI.DomainModels.CreateEntity("Order").
-        Persistent().
+        persistent().
         WithDecimalAttribute("TotalAmount").
         WithDateTimeAttribute("OrderDate", true).
-        Build()
+        build()
 
-    // Create association between entities
+    // create association between entities
     _, _ = modelAPI.DomainModels.CreateAssociation("Customer_Orders").
-        From("Customer").
-        To("Order").
+        from("Customer").
+        to("Order").
         OneToMany().
-        Build()
+        build()
 
-    // Create enumeration
+    // create enumeration
     _, _ = modelAPI.Enumerations.CreateEnumeration("OrderStatus").
         WithValue("Pending", "Pending").
         WithValue("Processing", "Processing").
         WithValue("Completed", "Completed").
         WithValue("Cancelled", "Cancelled").
-        Build()
+        build()
 
-    // Create microflow
+    // create microflow
     _, _ = modelAPI.Microflows.CreateMicroflow("ACT_ProcessOrder").
         WithParameter("Order", "MyModule.Order").
-        WithStringParameter("Message").
+        WithStringParameter("message").
         ReturnsBoolean().
-        Build()
+        build()
 }
 ```
 
@@ -182,71 +182,71 @@ func main() {
 ### Reader Methods
 
 ```go
-// Open a project
+// open a project
 reader, _ := modelsdk.Open("path/to/project.mpr")
 defer reader.Close()
 
 // Metadata
-reader.Path()                    // Get file path
-reader.Version()                 // Get MPR version (1 or 2)
-reader.GetMendixVersion()        // Get Mendix Studio Pro version
+reader.Path()                    // get file path
+reader.Version()                 // get MPR version (1 or 2)
+reader.GetMendixVersion()        // get Mendix Studio Pro version
 
-// Modules
-reader.ListModules()             // List all modules
-reader.GetModule(id)             // Get module by ID
-reader.GetModuleByName(name)     // Get module by name
+// modules
+reader.ListModules()             // list all modules
+reader.GetModule(id)             // get module by ID
+reader.GetModuleByName(name)     // get module by name
 
-// Domain Models
-reader.ListDomainModels()        // List all domain models
-reader.GetDomainModel(moduleID)  // Get domain model for module
+// Domain models
+reader.ListDomainModels()        // list all domain models
+reader.GetDomainModel(moduleID)  // get domain model for module
 
-// Microflows & Nanoflows
-reader.ListMicroflows()          // List all microflows
-reader.GetMicroflow(id)          // Get microflow by ID
-reader.ListNanoflows()           // List all nanoflows
-reader.GetNanoflow(id)           // Get nanoflow by ID
+// microflows & nanoflows
+reader.ListMicroflows()          // list all microflows
+reader.GetMicroflow(id)          // get microflow by ID
+reader.ListNanoflows()           // list all nanoflows
+reader.GetNanoflow(id)           // get nanoflow by ID
 
-// Pages & Layouts
-reader.ListPages()               // List all pages
-reader.GetPage(id)               // Get page by ID
-reader.ListLayouts()             // List all layouts
-reader.GetLayout(id)             // Get layout by ID
+// pages & layouts
+reader.ListPages()               // list all pages
+reader.GetPage(id)               // get page by ID
+reader.ListLayouts()             // list all layouts
+reader.GetLayout(id)             // get layout by ID
 
 // Other
-reader.ListEnumerations()        // List all enumerations
-reader.ListConstants()           // List all constants
-reader.ListScheduledEvents()     // List all scheduled events
-reader.ExportJSON()              // Export entire model as JSON
+reader.ListEnumerations()        // list all enumerations
+reader.ListConstants()           // list all constants
+reader.ListScheduledEvents()     // list all scheduled events
+reader.ExportJSON()              // export entire model as json
 ```
 
 ### Writer Methods
 
 ```go
-// Open for writing
+// open for writing
 writer, _ := modelsdk.OpenForWriting("path/to/project.mpr")
 defer writer.Close()
 
-// Access the reader
+// access the reader
 reader := writer.Reader()
 
-// Modules
+// modules
 writer.CreateModule(module)
 writer.UpdateModule(module)
 writer.DeleteModule(id)
 
-// Entities
+// entities
 writer.CreateEntity(domainModelID, entity)
 writer.UpdateEntity(domainModelID, entity)
 writer.DeleteEntity(domainModelID, entityID)
 
-// Attributes
+// attributes
 writer.AddAttribute(domainModelID, entityID, attribute)
 
-// Associations
+// associations
 writer.CreateAssociation(domainModelID, association)
 writer.DeleteAssociation(domainModelID, associationID)
 
-// Microflows & Nanoflows
+// microflows & nanoflows
 writer.CreateMicroflow(microflow)
 writer.UpdateMicroflow(microflow)
 writer.DeleteMicroflow(id)
@@ -254,7 +254,7 @@ writer.CreateNanoflow(nanoflow)
 writer.UpdateNanoflow(nanoflow)
 writer.DeleteNanoflow(id)
 
-// Pages & Layouts
+// pages & layouts
 writer.CreatePage(page)
 writer.UpdatePage(page)
 writer.DeletePage(id)
@@ -270,7 +270,7 @@ writer.CreateConstant(constant)
 ### Helper Functions
 
 ```go
-// Create attributes
+// create attributes
 modelsdk.NewStringAttribute(name, length)
 modelsdk.NewIntegerAttribute(name)
 modelsdk.NewDecimalAttribute(name)
@@ -278,22 +278,22 @@ modelsdk.NewBooleanAttribute(name)
 modelsdk.NewDateTimeAttribute(name, localize)
 modelsdk.NewEnumerationAttribute(name, enumID)
 
-// Create entities
+// create entities
 modelsdk.NewEntity(name)                 // Persistable entity
-modelsdk.NewNonPersistableEntity(name)   // Non-persistable entity
+modelsdk.NewNonPersistableEntity(name)   // non-persistable entity
 
-// Create associations
-modelsdk.NewAssociation(name, parentID, childID)      // Reference (1:N)
-modelsdk.NewReferenceSetAssociation(name, p, c)       // Reference set (M:N)
+// create associations
+modelsdk.NewAssociation(name, parentID, childID)      // reference (1:N)
+modelsdk.NewReferenceSetAssociation(name, p, c)       // reference set (M:N)
 
-// Create flows
+// create flows
 modelsdk.NewMicroflow(name)
 modelsdk.NewNanoflow(name)
 
-// Create pages
+// create pages
 modelsdk.NewPage(name)
 
-// Generate IDs
+// generate IDs
 modelsdk.GenerateID()
 ```
 
@@ -312,8 +312,8 @@ modelsdk.GenerateID()
 ```
 github.com/mendixlabs/mxcli/
 ├── modelsdk.go          # Main package with convenience functions
-├── model/               # Core model types (ID, Module, Project, etc.)
-├── api/                 # High-level fluent API (builders)
+├── model/               # Core model types (ID, module, project, etc.)
+├── api/                 # High-level fluent api (builders)
 │   ├── api.go           # ModelAPI entry point
 │   ├── domainmodels.go  # EntityBuilder, AssociationBuilder
 │   ├── enumerations.go  # EnumerationBuilder
@@ -321,9 +321,9 @@ github.com/mendixlabs/mxcli/
 │   ├── pages.go         # PageBuilder, widget builders
 │   └── modules.go       # ModulesAPI
 ├── sdk/
-│   ├── domainmodel/     # Domain model types (Entity, Attribute, Association)
-│   ├── microflows/      # Microflow and Nanoflow types
-│   ├── pages/           # Page, Layout, and Widget types
+│   ├── domainmodel/     # Domain model types (entity, attribute, association)
+│   ├── microflows/      # microflow and nanoflow types
+│   ├── pages/           # page, layout, and widget types
 │   └── mpr/             # MPR file reader and writer
 └── examples/            # Example applications
 ```
@@ -346,31 +346,31 @@ The library automatically detects and handles both formats.
 ## Model Structure
 
 ```
-Project
-├── Modules
-│   ├── Domain Model
-│   │   ├── Entities
-│   │   │   ├── Attributes
+project
+├── modules
+│   ├── Domain model
+│   │   ├── entities
+│   │   │   ├── attributes
 │   │   │   ├── Indexes
-│   │   │   ├── Access Rules
-│   │   │   ├── Validation Rules
-│   │   │   └── Event Handlers
-│   │   ├── Associations
+│   │   │   ├── access rules
+│   │   │   ├── validation rules
+│   │   │   └── event Handlers
+│   │   ├── associations
 │   │   └── Annotations
-│   ├── Microflows
-│   │   ├── Parameters
+│   ├── microflows
+│   │   ├── parameters
 │   │   └── Activities & Flows
-│   ├── Nanoflows
-│   ├── Pages
-│   │   ├── Widgets
-│   │   └── Data Sources
-│   ├── Layouts
-│   ├── Snippets
-│   ├── Enumerations
-│   ├── Constants
-│   ├── Scheduled Events
-│   └── Java Actions
-└── Project Documents
+│   ├── nanoflows
+│   ├── pages
+│   │   ├── widgets
+│   │   └── data Sources
+│   ├── layouts
+│   ├── snippets
+│   ├── enumerations
+│   ├── constants
+│   ├── Scheduled events
+│   └── java actions
+└── project Documents
 ```
 
 ## Examples

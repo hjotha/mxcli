@@ -14,11 +14,11 @@ Today's codebase hardcodes BSON structure in hand-written parsers/writers target
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                        Schema Registry                           │
+│                        schema Registry                           │
 │                        (sdk/schema/)                              │
 │                                                                   │
 │  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────┐   │
-│  │ Platform Schemas │  │ Widget Schemas    │  │ Extension      │   │
+│  │ Platform Schemas │  │ widget Schemas    │  │ Extension      │   │
 │  │ (reflection data │  │ (from .mpk files  │  │ Schemas        │   │
 │  │  per version,    │  │  in project, with │  │ (from ext      │   │
 │  │  ~15 embedded)   │  │  template         │  │  manifests,    │   │
@@ -27,7 +27,7 @@ Today's codebase hardcodes BSON structure in hand-written parsers/writers target
 │           └──────────────┬──────┘                     │            │
 │                          ▼                            │            │
 │               ┌──────────────────┐                    │            │
-│               │  Unified Schema  │◄───────────────────┘            │
+│               │  Unified schema  │◄───────────────────┘            │
 │               │  Lookup          │                                  │
 │               └────────┬─────────┘                                  │
 │                        │                                            │
@@ -89,7 +89,7 @@ Load reflection data at runtime, resolve storage names, provide type lookup.
 | Storage name index | Part of registry | Not started |
 | Reader integration | `sdk/mpr/reader_documents.go` (`SchemaRegistry()`) | Not started |
 
-**Deliverable**: `registry.LookupByStorage("Forms$LayoutGrid")` returns full property metadata.
+**Deliverable**: `registry.LookupByStorage("Forms$layoutgrid")` returns full property metadata.
 
 **Embedding strategy**: ~15 key versions (LTS/MTS + last-minor-of-EOL), not all ~111. ~18 MB total.
 
@@ -130,7 +130,7 @@ Expose and modify scalar properties on built-in widgets (LayoutGrid, DataView, T
 | UPDATE WIDGETS raw path | `cmd_widgets.go` | Not started |
 | `UpdateRawUnit` writer | `sdk/mpr/writer_page.go` | Not started |
 
-**Deliverable**: `UPDATE WIDGETS SET 'Width' = 'FullWidth' WHERE WidgetType LIKE '%LayoutGrid%'` works for built-in widgets.
+**Deliverable**: `update widgets set 'width' = 'FullWidth' where widgettype like '%layoutgrid%'` works for built-in widgets.
 
 ### Phase 4: Generic Parser
 
@@ -145,7 +145,7 @@ Read any BSON document type using schema metadata, enabling DESCRIBE/SHOW for un
 | Reader integration | `sdk/mpr/reader.go` | Not started |
 | MDL DESCRIBE integration | `mdl/executor/` | Not started |
 
-**Deliverable**: `DESCRIBE WORKFLOW Module.MyWorkflow` works without hand-coded workflow parsers.
+**Deliverable**: `describe workflow Module.MyWorkflow` works without hand-coded workflow parsers.
 
 ### Phase 5: Version Migration
 
@@ -178,17 +178,17 @@ Round-trip custom extension documents safely.
 ## Phase Dependencies
 
 ```
-Phase W (Widget Augmentation) ─── DONE
+Phase W (widget Augmentation) ─── DONE
     │
     │   Reuses mpk.ParseMPK() as Tier 1 widget loader
     │
 Phase 1 (Registry Core) ─── foundation for everything below
     │
-    ├── Phase 2 (Write-Side Completion)
+    ├── Phase 2 (write-Side Completion)
     │       │
-    │       └── Phase 5 (Version Migration) ─── requires two registries
+    │       └── Phase 5 (version Migration) ─── requires two registries
     │
-    ├── Phase 3 (Built-in Widget Properties) ─── uses ScalarProperties()
+    ├── Phase 3 (Built-in widget properties) ─── uses ScalarProperties()
     │
     ├── Phase 4 (Generic Parser) ─── uses full type metadata
     │

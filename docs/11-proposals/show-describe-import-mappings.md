@@ -22,7 +22,7 @@ Import Mappings define how incoming JSON/XML data is mapped to Mendix entities. 
 ```
 ImportMappings$ImportMapping:
   Name: string
-  Documentation: string
+  documentation: string
   Excluded: bool
   ExportLevel: string
   JsonStructure: string (qualified name reference)
@@ -37,18 +37,18 @@ ImportMappings$ImportMapping:
   UseSubtransactionsForMicroflows: bool
   MappingSourceReference: nullable
   Elements: []*ImportMappings$ObjectMappingElement
-    - Entity: string (qualified entity name)
+    - entity: string (qualified entity name)
     - ExposedName: string
     - JsonPath: string
     - XmlPath: string
-    - ObjectHandling: string ("Create", "Find", "Custom", "CallAMicroflow")
-    - Association: string
-    - Children: [] (recursive, mix of Object and Value elements)
+    - ObjectHandling: string ("create", "find", "Custom", "CallAMicroflow")
+    - association: string
+    - Children: [] (recursive, mix of object and value elements)
       - ImportMappings$ValueMappingElement:
-        - Attribute: string (qualified name)
+        - attribute: string (qualified name)
         - ExposedName: string
         - JsonPath: string
-        - Type: DataTypes$* (polymorphic)
+        - type: DataTypes$* (polymorphic)
         - IsKey: bool
 ```
 
@@ -57,7 +57,7 @@ ImportMappings$ImportMapping:
 ### SHOW IMPORT MAPPINGS
 
 ```
-SHOW IMPORT MAPPINGS [IN Module]
+show import mappings [in module]
 ```
 
 | Qualified Name | Module | Name | Schema Source | Root Entity | Elements |
@@ -68,7 +68,7 @@ Where "Schema Source" shows the referenced JSON Structure, XML Schema, or Messag
 ### DESCRIBE IMPORT MAPPING
 
 ```
-DESCRIBE IMPORT MAPPING Module.Name
+describe import mapping Module.Name
 ```
 
 Output format:
@@ -77,16 +77,16 @@ Output format:
 /**
  * Maps customer API response to Customer entity
  */
-IMPORT MAPPING MyModule.ImportCustomer
-  FROM JSON STRUCTURE MyModule.CustomerResponse
+import mapping MyModule.ImportCustomer
+  from json structure MyModule.CustomerResponse
 {
-  root -> MyModule.Customer (Create)
-    id -> Id (Integer, KEY)
-    name -> Name (String)
-    email -> Email (String)
-    addresses -> MyModule.Address (Create) VIA MyModule.Customer_Address
-      street -> Street (String)
-      city -> City (String)
+  root -> MyModule.Customer (create)
+    id -> Id (integer, key)
+    name -> Name (string)
+    email -> Email (string)
+    addresses -> MyModule.Address (create) via MyModule.Customer_Address
+      street -> Street (string)
+      city -> City (string)
 };
 /
 ```
@@ -94,15 +94,15 @@ IMPORT MAPPING MyModule.ImportCustomer
 For XML/WSDL-based mappings:
 
 ```
-IMPORT MAPPING MyModule.ImportOrder
-  FROM XML SCHEMA MyModule.OrderSchema
+import mapping MyModule.ImportOrder
+  from xml schema MyModule.OrderSchema
   ROOT ELEMENT 'Order'
 {
-  Order -> MyModule.Order (Find)
-    OrderId -> OrderId (Integer, KEY)
-    LineItems -> MyModule.LineItem (Create) VIA MyModule.Order_LineItem
-      Product -> ProductName (String)
-      Quantity -> Quantity (Integer)
+  Order -> MyModule.Order (find)
+    OrderId -> OrderId (integer, key)
+    LineItems -> MyModule.LineItem (create) via MyModule.Order_LineItem
+      Product -> ProductName (string)
+      Quantity -> Quantity (integer)
 };
 /
 ```
@@ -115,26 +115,26 @@ IMPORT MAPPING MyModule.ImportOrder
 type ImportMapping struct {
     ContainerID   model.ID
     Name          string
-    Documentation string
+    documentation string
     Excluded      bool
     ExportLevel   string
-    // Schema source (one of these is set)
+    // schema source (one of these is set)
     JsonStructure     string // qualified name
     XmlSchema         string
     MessageDefinition string
     WsdlFile          string
-    // Mapping tree
+    // mapping tree
     Elements []ImportMappingElement
 }
 
 type ImportMappingElement struct {
-    Kind          string // "Object" or "Value"
-    Entity        string // qualified name (for objects)
-    Attribute     string // qualified name (for values)
+    Kind          string // "object" or "value"
+    entity        string // qualified name (for objects)
+    attribute     string // qualified name (for values)
     ExposedName   string
     JsonPath      string
-    ObjectHandling string // "Create", "Find", "Custom"
-    Association   string
+    ObjectHandling string // "create", "find", "Custom"
+    association   string
     IsKey         bool
     DataType      string
     Children      []ImportMappingElement
@@ -153,7 +153,7 @@ func (r *Reader) ListImportMappings() ([]*model.ImportMapping, error)
 
 ### 4. Add AST, Grammar, Visitor, Executor
 
-Standard pattern. Grammar tokens: `IMPORT` (already exists), `MAPPING`, `MAPPINGS`.
+Standard pattern. Grammar tokens: `import` (already exists), `mapping`, `mappings`.
 
 ### 5. Add Autocomplete
 

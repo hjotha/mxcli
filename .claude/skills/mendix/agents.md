@@ -6,10 +6,10 @@ Four AI agent document types stored as JSON inside Mendix MPR files:
 
 | Type | CREATE keyword | Notes |
 |------|---------------|-------|
-| Model | `CREATE MODEL` | GenAI model configuration; required by Agent |
-| Knowledge Base | `CREATE KNOWLEDGE BASE` | KB source; referenced by Agent body |
-| Consumed MCP Service | `CREATE CONSUMED MCP SERVICE` | MCP tool server; referenced by Agent body |
-| Agent | `CREATE AGENT` | Orchestrates model + tools + prompts |
+| Model | `create model` | GenAI model configuration; required by Agent |
+| Knowledge Base | `create knowledge base` | KB source; referenced by Agent body |
+| Consumed MCP Service | `create consumed mcp service` | MCP tool server; referenced by Agent body |
+| Agent | `create agent` | Orchestrates model + tools + prompts |
 
 **Requires:** `AgentEditorCommons` marketplace module, Mendix 11.9+.
 
@@ -18,63 +18,63 @@ Four AI agent document types stored as JSON inside Mendix MPR files:
 ### Model
 
 ```sql
-CREATE MODEL Module.MyModel (
+create model Module.MyModel (
   Provider: MxCloudGenAI,   -- default, can omit
-  Key: Module.ApiKeyConst   -- must be a String constant
+  key: Module.ApiKeyConst   -- must be a String constant
 );
 ```
 
 ### Knowledge Base
 
 ```sql
-CREATE KNOWLEDGE BASE Module.ProductDocs (
+create knowledge base Module.ProductDocs (
   Provider: MxCloudGenAI,
-  Key: Module.KBKeyConst
+  key: Module.KBKeyConst
 );
 ```
 
 ### Consumed MCP Service
 
 ```sql
-CREATE CONSUMED MCP SERVICE Module.WebSearch (
+create consumed mcp service Module.WebSearch (
   ProtocolVersion: v2025_03_26,
-  Version: '1.0',
+  version: '1.0',
   ConnectionTimeoutSeconds: 30,
-  Documentation: 'Web search MCP server'
+  documentation: 'Web search MCP server'
 );
 ```
 
 ### Agent (full syntax)
 
 ```sql
-CREATE AGENT Module.MyAgent (
-  UsageType: Task,              -- Task | Conversational
-  Model: Module.MyModel,        -- must exist
-  Description: 'Agent description',
+create agent Module.MyAgent (
+  UsageType: task,              -- Task | Conversational
+  model: Module.MyModel,        -- must exist
+  description: 'Agent description',
   MaxTokens: 4096,
   Temperature: 0.7,             -- float
   TopP: 0.9,                    -- float
   ToolChoice: Auto,
-  Variables: ("Language": EntityAttribute, "Name": String),
-  SystemPrompt: $$Multi-line
+  variables: ("Language": EntityAttribute, "Name": string),
+  SystemPrompt: $$multi-line
 prompt here.$$,
   UserPrompt: 'Single line prompt.'
 )
 {
-  MCP SERVICE Module.WebSearch {
+  mcp service Module.WebSearch {
     Enabled: true
   }
 
-  KNOWLEDGE BASE KBAlias {
-    Source: Module.ProductDocs,
-    Collection: 'product-docs',
+  knowledge base KBAlias {
+    source: Module.ProductDocs,
+    collection: 'product-docs',
     MaxResults: 5,
-    Description: 'Product docs',
+    description: 'Product docs',
     Enabled: true
   }
 
-  TOOL MyMicroflowTool {
-    Description: 'Fetch customer data',
+  tool MyMicroflowTool {
+    description: 'Fetch customer data',
     Enabled: true
   }
 };
@@ -94,28 +94,28 @@ Each document has both a `qualifiedName` (e.g. `Module.MyModel`) and an opaque `
 ### Drop order
 Agents reference Model, Knowledge Base, and MCP Service documents. Always drop Agents before dropping their dependencies:
 ```sql
-DROP AGENT Module.MyAgent;
-DROP CONSUMED MCP SERVICE Module.WebSearch;
-DROP KNOWLEDGE BASE Module.ProductDocs;
-DROP MODEL Module.MyModel;
+drop agent Module.MyAgent;
+drop consumed mcp service Module.WebSearch;
+drop knowledge base Module.ProductDocs;
+drop model Module.MyModel;
 ```
 
 ### Variables: syntax
-- `"Key": EntityAttribute` — binds an attribute from the entity in the agent's context
-- `"Key": String` — binds a plain string value
+- `"key": EntityAttribute` — binds an attribute from the entity in the agent's context
+- `"key": string` — binds a plain string value
 - Keys must be quoted (string literals or quoted identifiers)
 
 ### Association between BSON and MDL names
-The feature uses `CustomBlobDocument` BSON type with a `Contents` field holding the JSON payload. The `$Type` field is always `"AgentEditorCommons$CustomBlobDocument"`. The document type is identified by the `readableTypeName` inside `Metadata`.
+The feature uses `CustomBlobDocument` BSON type with a `Contents` field holding the JSON payload. The `$type` field is always `"AgentEditorCommons$CustomBlobDocument"`. The document type is identified by the `readableTypeName` inside `Metadata`.
 
 ## Common Patterns
 
 ### Minimal agent (no tools)
 ```sql
-CREATE MODEL Module.M (Provider: MxCloudGenAI, Key: Module.K);
-CREATE AGENT Module.A (
-  UsageType: Task,
-  Model: Module.M,
+create model Module.M (Provider: MxCloudGenAI, key: Module.K);
+create agent Module.A (
+  UsageType: task,
+  model: Module.M,
   SystemPrompt: 'You are a helpful assistant.',
   UserPrompt: 'Ask me anything.'
 );
@@ -123,44 +123,44 @@ CREATE AGENT Module.A (
 
 ### Check all agent documents in a module
 ```sql
-LIST MODELS IN Module;
-LIST KNOWLEDGE BASES IN Module;
-LIST CONSUMED MCP SERVICES IN Module;
-LIST AGENTS IN Module;
+list models in module;
+list knowledge bases in module;
+list consumed mcp services in module;
+list agents in module;
 ```
 
 ## Calling Agents from Microflows
 
-Dedicated `CALL AGENT` MDL syntax is **not yet implemented**. Use `CALL JAVA ACTION` with the AgentCommons Java actions instead:
+Dedicated `call agent` MDL syntax is **not yet implemented**. Use `call java action` with the AgentCommons Java actions instead:
 
 ```sql
 -- Single-call (Task) agent — no chat history
-$Response = CALL JAVA ACTION AgentCommons.Agent_Call_WithoutHistory(
-  Agent = $Agent,
+$response = call java action AgentCommons.Agent_Call_WithoutHistory(
+  agent = $agent,
   UserMessage = $UserInput
 );
 
 -- Conversational agent — with chat history
-$Response = CALL JAVA ACTION AgentCommons.Agent_Call_WithHistory(
-  Agent = $Agent,
+$response = call java action AgentCommons.Agent_Call_WithHistory(
+  agent = $agent,
   ChatContext = $ChatContext,
   UserMessage = $UserInput
 );
 
 -- Create a ChatContext wired to an agent (for ConversationalUI)
-$ChatContext = CALL JAVA ACTION AgentCommons.ChatContext_Create_ForAgent(
-  Agent = $Agent,
+$ChatContext = call java action AgentCommons.ChatContext_Create_ForAgent(
+  agent = $agent,
   ActionMicroflow = Module.HandleToolCall,
-  Context = $ContextObject
+  context = $ContextObject
 );
 ```
 
 Retrieve the `AgentCommons.Agent` entity by qualified name before calling:
 
 ```sql
-RETRIEVE $Agent FROM DATABASE AgentCommons.Agent
-  WHERE AgentCommons.Agent/QualifiedName = 'Module.MyAgent'
-  LIMIT 1;
+retrieve $agent from database AgentCommons.Agent
+  where AgentCommons.Agent/QualifiedName = 'Module.MyAgent'
+  limit 1;
 ```
 
-The `AgentCommons.Agent` entity is populated at runtime by `ASU_AgentEditor` from the agent documents you create with `CREATE AGENT`.
+The `AgentCommons.Agent` entity is populated at runtime by `ASU_AgentEditor` from the agent documents you create with `create agent`.
