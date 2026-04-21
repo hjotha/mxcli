@@ -97,6 +97,32 @@ func TestAnyCachedMxBuildPath_Found(t *testing.T) {
 	}
 }
 
+func TestAnyCachedMxBuildPath_PicksNewestNumericVersion(t *testing.T) {
+	dir := t.TempDir()
+	setTestHomeDir(t, dir)
+
+	versions := []string{"9.24.40.80973", "11.6.3", "11.9.0"}
+	var newest string
+	for _, version := range versions {
+		modelerDir := filepath.Join(dir, ".mxcli", "mxbuild", version, "modeler")
+		if err := os.MkdirAll(modelerDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		bin := filepath.Join(modelerDir, mxbuildBinaryName())
+		if err := os.WriteFile(bin, []byte("fake"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if version == "11.9.0" {
+			newest = bin
+		}
+	}
+
+	path := AnyCachedMxBuildPath()
+	if path != newest {
+		t.Errorf("expected newest cached mxbuild %s, got %s", newest, path)
+	}
+}
+
 func TestRuntimeCDNURL(t *testing.T) {
 	url := RuntimeCDNURL("11.6.3")
 	expected := "https://cdn.mendix.com/runtime/mendix-11.6.3.tar.gz"

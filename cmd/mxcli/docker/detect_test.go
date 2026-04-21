@@ -268,3 +268,33 @@ func TestResolveMxBuild_PrefersStudioProOverCache(t *testing.T) {
 		t.Errorf("expected Studio Pro binary %s, got %s (should prefer Studio Pro over cache)", studioBin, result)
 	}
 }
+
+func TestResolveMxBuild_PrefersExactCachedVersion(t *testing.T) {
+	dir := t.TempDir()
+	setTestHomeDir(t, dir)
+	t.Setenv("PATH", "")
+
+	versions := []string{"9.24.40.80973", "11.6.3", "11.9.0"}
+	var expected string
+	for _, version := range versions {
+		modelerDir := filepath.Join(dir, ".mxcli", "mxbuild", version, "modeler")
+		if err := os.MkdirAll(modelerDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		bin := filepath.Join(modelerDir, mxbuildBinaryName())
+		if err := os.WriteFile(bin, []byte("fake"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if version == "11.9.0" {
+			expected = bin
+		}
+	}
+
+	result, err := resolveMxBuild("", "11.9.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != expected {
+		t.Errorf("expected exact cached version %s, got %s", expected, result)
+	}
+}
