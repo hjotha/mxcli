@@ -172,9 +172,11 @@ func allKnownStatements() []ast.Statement {
 		&ast.AlterUserRoleStmt{},
 		&ast.AlterWorkflowStmt{},
 		&ast.ConnectStmt{},
+		&ast.CreateAgentStmt{},
 		&ast.CreateAssociationStmt{},
 		&ast.CreateBusinessEventServiceStmt{},
 		&ast.CreateConfigurationStmt{},
+		&ast.CreateConsumedMCPServiceStmt{},
 		&ast.CreateConstantStmt{},
 		&ast.CreateDatabaseConnectionStmt{},
 		&ast.CreateDataTransformerStmt{},
@@ -188,7 +190,9 @@ func allKnownStatements() []ast.Statement {
 		&ast.CreateImportMappingStmt{},
 		&ast.CreateJavaActionStmt{},
 		&ast.CreateJsonStructureStmt{},
+		&ast.CreateKnowledgeBaseStmt{},
 		&ast.CreateMicroflowStmt{},
+		&ast.CreateModelStmt{},
 		&ast.CreateModuleRoleStmt{},
 		&ast.CreateModuleStmt{},
 		&ast.CreateODataClientStmt{},
@@ -206,9 +210,11 @@ func allKnownStatements() []ast.Statement {
 		&ast.DescribeStmt{},
 		&ast.DescribeStylingStmt{},
 		&ast.DisconnectStmt{},
+		&ast.DropAgentStmt{},
 		&ast.DropAssociationStmt{},
 		&ast.DropBusinessEventServiceStmt{},
 		&ast.DropConfigurationStmt{},
+		&ast.DropConsumedMCPServiceStmt{},
 		&ast.DropConstantStmt{},
 		&ast.DropDataTransformerStmt{},
 		&ast.DropDemoUserStmt{},
@@ -220,7 +226,9 @@ func allKnownStatements() []ast.Statement {
 		&ast.DropImportMappingStmt{},
 		&ast.DropJavaActionStmt{},
 		&ast.DropJsonStructureStmt{},
+		&ast.DropKnowledgeBaseStmt{},
 		&ast.DropMicroflowStmt{},
+		&ast.DropModelStmt{},
 		&ast.DropModuleRoleStmt{},
 		&ast.DropModuleStmt{},
 		&ast.DropODataClientStmt{},
@@ -284,5 +292,16 @@ func TestNewRegistry_Completeness(t *testing.T) {
 	err := r.Validate(allKnownStatements())
 	if err != nil {
 		t.Fatalf("registry is incomplete: %v", err)
+	}
+}
+
+// TestNewRegistry_HandlerCountSnapshot validates the expected number of
+// registered handlers. Update the expected count when adding new handlers.
+func TestNewRegistry_HandlerCountSnapshot(t *testing.T) {
+	r := NewRegistry()
+	known := allKnownStatements()
+
+	if got := r.HandlerCount(); got != len(known) {
+		t.Errorf("handler count mismatch: registry has %d, allKnownStatements has %d — update allKnownStatements or register missing handlers", got, len(known))
 	}
 }
