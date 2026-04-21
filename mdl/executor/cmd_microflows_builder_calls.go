@@ -139,6 +139,10 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
+	if s.OutputVariable != "" {
+		fb.registerResultVariableType(s.OutputVariable, fb.lookupMicroflowReturnType(mfQN))
+	}
+
 	// Build custom error handler flow if present
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing

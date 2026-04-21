@@ -152,8 +152,9 @@ func writeExpectAssertion(b *strings.Builder, testID string, exp Expect) {
 // varPattern matches $VariableName in MDL ($ followed by word characters).
 var varPattern = regexp.MustCompile(`\$([A-Za-z_][A-Za-z0-9_]*)`)
 
-// assignPattern matches "$var = CALL" or "$var = CREATE" at the start of a statement.
-var assignPattern = regexp.MustCompile(`^\s*\$([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:CALL|CREATE)`)
+// assignPattern matches "$var = CALL" or "$var = CREATE" at the start of any
+// statement line inside the test body.
+var assignPattern = regexp.MustCompile(`(?m)^\s*\$([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:CALL|CREATE)`)
 
 // extractVariableNames finds all user-defined variable names in the MDL body.
 // Returns the set of variable names (without $ prefix).
@@ -243,11 +244,6 @@ func rewriteWithErrorHandling(lines []string, testID string) []string {
 			result = append(result, "  SET $AllPassed = false;")
 			result = append(result, "  RETURN $AllPassed;")
 			result = append(result, "};")
-		} else if isSideEffectStatement(trimmed) && strings.HasSuffix(trimmed, ";") {
-			// DELETE, COMMIT, CHANGE — add ON ERROR CONTINUE so validation
-			// feedback or entity state issues don't crash the test suite.
-			withoutSemicolon := strings.TrimSuffix(trimmed, ";")
-			result = append(result, withoutSemicolon+" ON ERROR CONTINUE;")
 		} else {
 			result = append(result, line)
 		}
@@ -286,9 +282,6 @@ func rewriteForThrowsTest(lines []string, testID string, didThrowVar string) []s
 			result = append(result, joined+" ON ERROR {")
 			result = append(result, fmt.Sprintf("  SET %s = true;", didThrowVar))
 			result = append(result, "};")
-		} else if isSideEffectStatement(trimmed) && strings.HasSuffix(trimmed, ";") {
-			withoutSemicolon := strings.TrimSuffix(trimmed, ";")
-			result = append(result, withoutSemicolon+" ON ERROR CONTINUE;")
 		} else {
 			result = append(result, line)
 		}
@@ -302,16 +295,6 @@ func containsCallMicroflow(s string) bool {
 	upper := strings.ToUpper(s)
 	return strings.Contains(upper, "CALL MICROFLOW") ||
 		strings.Contains(upper, "CALL NANOFLOW")
-}
-
-// isSideEffectStatement checks if a trimmed line is a DELETE, COMMIT, or CHANGE
-// statement that should get ON ERROR CONTINUE to prevent validation feedback
-// or other entity state issues from crashing the test suite.
-func isSideEffectStatement(trimmed string) bool {
-	upper := strings.ToUpper(trimmed)
-	return strings.HasPrefix(upper, "DELETE ") ||
-		strings.HasPrefix(upper, "COMMIT ") ||
-		strings.HasPrefix(upper, "CHANGE ")
 }
 
 // escapeMDLString escapes single quotes for MDL string literals.
