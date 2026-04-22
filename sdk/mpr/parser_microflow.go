@@ -460,9 +460,7 @@ func parseSplitCondition(raw map[string]any) microflows.SplitCondition {
 			Expression: extractString(raw["Expression"]),
 		}
 	case "Microflows$RuleSplitCondition":
-		cond := &microflows.RuleSplitCondition{
-			RuleID: model.ID(extractBsonID(raw["Rule"])),
-		}
+		cond := &microflows.RuleSplitCondition{}
 		// Mendix nests the rule reference under a RuleCall sub-document whose
 		// "Microflow" field holds the rule's qualified name (rules share the
 		// microflow namespace). Parameter mappings are scoped inside RuleCall too.
