@@ -555,9 +555,14 @@ func buildFunctionCall(ctx parser.IFunctionCallContext) ast.Expression {
 
 	funcExpr := &ast.FunctionCallExpr{}
 
-	// Get function name from FunctionName rule
+	// Get function name. `functionCall` accepts either a built-in `functionName`
+	// (length, find, ...) or a `qualifiedName` (Module.Rule, Module.SubMicroflow)
+	// so that describe → check roundtrips preserve rule-based split conditions
+	// and sub-microflow calls used in expression position.
 	if fn := funcCtx.FunctionName(); fn != nil {
 		funcExpr.Name = fn.GetText()
+	} else if qn := funcCtx.QualifiedName(); qn != nil {
+		funcExpr.Name = buildQualifiedName(qn).String()
 	}
 
 	// Get arguments
