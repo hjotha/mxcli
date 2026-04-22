@@ -294,7 +294,6 @@ func (ExpressionSplitCondition) isSplitCondition() {}
 // "RuleCall.Microflow" field (rules and microflows share a namespace).
 type RuleSplitCondition struct {
 	model.BaseElement
-	RuleID            model.ID                    `json:"ruleId"`
 	RuleQualifiedName string                      `json:"ruleQualifiedName,omitempty"`
 	ParameterMappings []*RuleCallParameterMapping `json:"parameterMappings,omitempty"`
 }
