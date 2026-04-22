@@ -73,7 +73,12 @@ func findMxBuildInDir(dir string) string {
 // CDN downloads are Linux binaries that cannot run natively on Windows.
 // The explicit path can be the binary itself or a directory containing it
 // (e.g., a Mendix installation root with modeler/mxbuild inside).
-func resolveMxBuild(explicitPath string) (string, error) {
+func resolveMxBuild(explicitPath string, preferredVersion ...string) (string, error) {
+	targetVersion := ""
+	if len(preferredVersion) > 0 {
+		targetVersion = preferredVersion[0]
+	}
+
 	if explicitPath != "" {
 		info, err := os.Stat(explicitPath)
 		if err != nil {
@@ -94,13 +99,31 @@ func resolveMxBuild(explicitPath string) (string, error) {
 		return p, nil
 	}
 
+	// Try the exact Studio Pro installation for the project version first.
+	// This keeps Docker builds on the same Mendix line as the project when
+	// multiple installs are present locally.
+	if targetVersion != "" {
+		if studioProDir := ResolveStudioProDir(targetVersion); studioProDir != "" {
+			if found := findMxBuildInDir(studioProDir); found != "" {
+				return found, nil
+			}
+		}
+	}
+
 	// Try OS-specific known locations (Studio Pro on Windows) BEFORE cached downloads.
 	// On Windows, CDN downloads are Linux binaries — Studio Pro's mxbuild.exe is preferred.
-	for _, pattern := range mxbuildSearchPaths() {
-		matches, _ := filepath.Glob(pattern)
-		if len(matches) > 0 {
-			// Return the last match (likely newest version)
-			return matches[len(matches)-1], nil
+	if matches := globVersionedMatches(mxbuildSearchPaths()); len(matches) > 0 {
+		if exact := exactVersionedPath(matches, targetVersion); exact != "" {
+			return exact, nil
+		}
+		if newest := newestVersionedPath(matches); newest != "" {
+			return newest, nil
+		}
+	}
+
+	if targetVersion != "" {
+		if p := CachedMxBuildPath(targetVersion); p != "" {
+			return p, nil
 		}
 	}
 

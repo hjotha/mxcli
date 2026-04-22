@@ -118,3 +118,35 @@ func TestCheck_SkipUpdateWidgetsFlag(t *testing.T) {
 		t.Error("check should still be called")
 	}
 }
+
+func TestResolveMxForVersion_PrefersExactCachedVersion(t *testing.T) {
+	dir := t.TempDir()
+	setTestHomeDir(t, dir)
+	// Point PATH at an empty temp dir (rather than clearing it) so exec.LookPath
+	// still works for any other testing infrastructure but can't find mx.
+	t.Setenv("PATH", t.TempDir())
+
+	versions := []string{"9.24.40.80973", "11.6.3", "11.9.0"}
+	var expected string
+	for _, version := range versions {
+		modelerDir := filepath.Join(dir, ".mxcli", "mxbuild", version, "modeler")
+		if err := os.MkdirAll(modelerDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		bin := filepath.Join(modelerDir, mxBinaryName())
+		if err := os.WriteFile(bin, []byte("fake"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if version == "11.9.0" {
+			expected = bin
+		}
+	}
+
+	result, err := ResolveMxForVersion("", "11.9.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != expected {
+		t.Errorf("expected exact cached mx %s, got %s", expected, result)
+	}
+}

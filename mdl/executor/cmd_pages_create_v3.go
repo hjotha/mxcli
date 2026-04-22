@@ -40,12 +40,18 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	// Check if page already exists - collect ALL duplicates
 	existingPages, _ := ctx.Backend.ListPages()
 	var pagesToDelete []model.ID
+	var existingAllowedRoles []model.ID
+	preserveAllowedRoles := false
 	for _, p := range existingPages {
 		modID := getModuleID(ctx, p.ContainerID)
 		modName := getModuleName(ctx, modID)
 		if modName == s.Name.Module && p.Name == s.Name.Name {
 			if !s.IsReplace && !s.IsModify && len(pagesToDelete) == 0 {
 				return mdlerrors.NewAlreadyExists("page", s.Name.String())
+			}
+			if len(pagesToDelete) == 0 {
+				existingAllowedRoles = cloneRoleIDs(p.AllowedRoles)
+				preserveAllowedRoles = true
 			}
 			pagesToDelete = append(pagesToDelete, p.ID)
 		}
@@ -68,6 +74,11 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	page, err := pb.buildPageV3(s)
 	if err != nil {
 		return mdlerrors.NewBackend("build page", err)
+	}
+	if preserveAllowedRoles {
+		page.AllowedRoles = existingAllowedRoles
+	} else if len(page.AllowedRoles) == 0 {
+		page.AllowedRoles = defaultDocumentAccessRoles(ctx, module)
 	}
 
 	// Replace or create the page in the MPR

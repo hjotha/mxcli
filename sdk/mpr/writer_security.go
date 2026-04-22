@@ -4,6 +4,7 @@ package mpr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
 
@@ -170,20 +171,59 @@ func (w *Writer) RemoveFromAllowedRoles(unitID model.ID, roleName string) (bool,
 // ============================================================================
 
 // AddModuleRole adds a new module role to the module's Security$ModuleSecurity unit.
+// If a role with the same name (case-insensitive) already exists, the existing role's
+// Name is overwritten with the caller-supplied casing and Description is updated.
+// Mendix Studio Pro rejects case-insensitive duplicate role names with CE0123, so
+// merging into the existing entry matches runtime semantics — and preserves the
+// caller's casing for downstream case-sensitive lookups (e.g., GRANT ACCESS TO x.user).
 func (w *Writer) AddModuleRole(unitID model.ID, roleName, description string) error {
 	return w.readPatchWrite(unitID, func(doc bson.D) (bson.D, error) {
+		// Get existing ModuleRoles array
+		existing := getBsonArray(doc, "ModuleRoles")
+		if existing == nil {
+			existing = bson.A{int32(1)}
+		}
+
+		// If a case-insensitive duplicate already exists, overwrite its Name and
+		// Description with the caller's values. This keeps the ID stable (any
+		// references to it remain valid) while adopting the newly-requested casing.
+		for i, item := range existing {
+			role, ok := item.(bson.D)
+			if !ok {
+				continue
+			}
+			matched := false
+			for _, field := range role {
+				if field.Key == "Name" {
+					if name, ok := field.Value.(string); ok && strings.EqualFold(name, roleName) {
+						matched = true
+					}
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+			for j, field := range role {
+				switch field.Key {
+				case "Name":
+					role[j].Value = roleName
+				case "Description":
+					if description != "" {
+						role[j].Value = description
+					}
+				}
+			}
+			existing[i] = role
+			return setBsonField(doc, "ModuleRoles", existing), nil
+		}
+
 		// Build the new role BSON document
 		newRole := bson.D{
 			{Key: "$Type", Value: "Security$ModuleRole"},
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "Name", Value: roleName},
 			{Key: "Description", Value: description},
-		}
-
-		// Get existing ModuleRoles array
-		existing := getBsonArray(doc, "ModuleRoles")
-		if existing == nil {
-			existing = bson.A{int32(1)}
 		}
 
 		existing = append(existing, newRole)

@@ -31,11 +31,35 @@ func execCreateModuleRole(ctx *ExecContext, s *ast.CreateModuleRoleStmt) error {
 		return mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", s.Name.Module), err)
 	}
 
-	// Check if role already exists
+	// Check if role already exists. Mendix treats role names case-insensitively
+	// (CE0123), so match that way. An auto-provisioned role collides with any
+	// user-requested casing; let AddModuleRole overwrite to adopt the caller's
+	// casing so later case-sensitive lookups (GRANT ACCESS TO x.user) succeed.
 	for _, mr := range ms.ModuleRoles {
-		if mr.Name == s.Name.Name {
-			return mdlerrors.NewAlreadyExists("module role", s.Name.Module+"."+s.Name.Name)
+		if !strings.EqualFold(mr.Name, s.Name.Name) {
+			continue
 		}
+		if mr.Description == autoDocumentRoleDescription {
+			oldQualified := s.Name.Module + "." + mr.Name
+			newQualified := s.Name.Module + "." + s.Name.Name
+			if err := ctx.Backend.AddModuleRole(ms.ID, s.Name.Name, s.Description); err != nil {
+				return mdlerrors.NewBackend("create module role", err)
+			}
+			// If the casing actually changed, propagate the rename across every
+			// unit that referenced the old name (AllowedModuleRoles on microflows,
+			// pages, published REST services, etc.). Without this, mx check fails
+			// with CE1613 "selected module role X no longer exists".
+			if oldQualified != newQualified {
+				if _, err := ctx.Backend.UpdateQualifiedNameInAllUnits(oldQualified, newQualified); err != nil {
+					return mdlerrors.NewBackend(fmt.Sprintf("rename references %s -> %s", oldQualified, newQualified), err)
+				}
+			}
+			if !ctx.Quiet {
+				fmt.Fprintf(ctx.Output, "Module role %s.%s already exists (auto-provisioned)\n", s.Name.Module, s.Name.Name)
+			}
+			return nil
+		}
+		return mdlerrors.NewAlreadyExists("module role", s.Name.Module+"."+s.Name.Name)
 	}
 
 	if err := ctx.Backend.AddModuleRole(ms.ID, s.Name.Name, s.Description); err != nil {
@@ -148,6 +172,9 @@ func execDropModuleRole(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	if ps, err := ctx.Backend.GetProjectSecurity(); err == nil {
 		if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(ps.ID, qualifiedRole); err == nil && n > 0 {
 			fmt.Fprintf(ctx.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
+		}
+		if err := pruneInvalidUserRoles(ctx, ps); err != nil {
+			return mdlerrors.NewBackend("cleanup invalid user roles", err)
 		}
 	}
 

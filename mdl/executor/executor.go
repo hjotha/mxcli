@@ -461,15 +461,6 @@ func rememberDroppedMicroflow(ctx *ExecContext, qualifiedName string, id, contai
 	}
 }
 
-func cloneRoleIDs(roles []model.ID) []model.ID {
-	if len(roles) == 0 {
-		return nil
-	}
-	cloned := make([]model.ID, len(roles))
-	copy(cloned, roles)
-	return cloned
-}
-
 // consumeDroppedMicroflow returns the original IDs of a microflow dropped
 // earlier in this session (if any) and removes the entry so repeated CREATEs
 // don't collide on the same ID. Returns nil when nothing was remembered.

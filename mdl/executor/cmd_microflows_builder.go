@@ -12,6 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // flowBuilder helps construct the flow graph from AST statements.
@@ -75,6 +76,132 @@ func (fb *flowBuilder) isVariableDeclared(varName string) bool {
 		return true
 	}
 	return false
+}
+
+// registerResultVariableType records the output type of an action so later
+// statements such as CHANGE, ADD TO, or attribute access can resolve members.
+// When dt is nil (e.g. backend lookup failed), any stale entity/list typing is
+// cleared but the variable remains declared as Unknown so downstream statements
+// don't report it as undeclared.
+func (fb *flowBuilder) registerResultVariableType(varName string, dt microflows.DataType) {
+	if varName == "" {
+		return
+	}
+	if dt == nil {
+		if fb.varTypes != nil {
+			delete(fb.varTypes, varName)
+		}
+		if fb.declaredVars != nil {
+			fb.declaredVars[varName] = "Unknown"
+		}
+		return
+	}
+
+	switch t := dt.(type) {
+	case *microflows.ObjectType:
+		entityQName := t.EntityQualifiedName
+		if entityQName == "" && t.EntityID != "" {
+			entityQName = fb.resolveEntityQualifiedName(t.EntityID)
+		}
+		if fb.varTypes != nil && entityQName != "" {
+			fb.varTypes[varName] = entityQName
+			return
+		}
+	case *microflows.ListType:
+		entityQName := t.EntityQualifiedName
+		if entityQName == "" && t.EntityID != "" {
+			entityQName = fb.resolveEntityQualifiedName(t.EntityID)
+		}
+		if fb.varTypes != nil && entityQName != "" {
+			fb.varTypes[varName] = "List of " + entityQName
+			return
+		}
+	}
+
+	if fb.declaredVars != nil {
+		fb.declaredVars[varName] = dt.GetTypeName()
+	}
+}
+
+// lookupMicroflowReturnType resolves the return type of a called microflow by
+// qualified name so downstream activities can infer variable types.
+func (fb *flowBuilder) lookupMicroflowReturnType(qualifiedName string) microflows.DataType {
+	if fb.backend == nil || qualifiedName == "" {
+		return nil
+	}
+
+	if rawUnit, err := fb.backend.GetRawUnitByName("microflow", qualifiedName); err == nil && rawUnit != nil && len(rawUnit.Contents) > 0 {
+		if mf, err := mpr.ParseMicroflowBSON(rawUnit.Contents, model.ID(rawUnit.ID), ""); err == nil && mf != nil {
+			return mf.ReturnType
+		}
+	}
+
+	moduleName, microflowName, ok := strings.Cut(qualifiedName, ".")
+	if !ok || moduleName == "" || microflowName == "" {
+		return nil
+	}
+
+	module, err := fb.backend.GetModuleByName(moduleName)
+	if err != nil || module == nil {
+		return nil
+	}
+	microflowList, err := fb.backend.ListMicroflows()
+	if err != nil {
+		return nil
+	}
+
+	for _, mf := range microflowList {
+		if mf == nil {
+			continue
+		}
+		containerModuleID := mf.ContainerID
+		if fb.hierarchy != nil {
+			containerModuleID = fb.hierarchy.FindModuleID(mf.ContainerID)
+		}
+		if containerModuleID == module.ID && mf.Name == microflowName {
+			return mf.ReturnType
+		}
+	}
+
+	return nil
+}
+
+func (fb *flowBuilder) resolveEntityQualifiedName(entityID model.ID) string {
+	if fb.backend == nil || entityID == "" {
+		return ""
+	}
+
+	domainModels, err := fb.backend.ListDomainModels()
+	if err != nil {
+		return ""
+	}
+
+	for _, dm := range domainModels {
+		if dm == nil {
+			continue
+		}
+
+		moduleName := ""
+		if fb.hierarchy != nil {
+			moduleName = fb.hierarchy.GetModuleName(dm.ContainerID)
+		}
+		if moduleName == "" {
+			if mod, err := fb.backend.GetModule(dm.ContainerID); err == nil && mod != nil {
+				moduleName = mod.Name
+			}
+		}
+		if moduleName == "" {
+			continue
+		}
+
+		for _, entity := range dm.Entities {
+			if entity != nil && entity.ID == entityID {
+				return moduleName + "." + entity.Name
+			}
+		}
+	}
+
+	return ""
 }
 
 // exprToString converts an AST Expression to a Mendix expression string,

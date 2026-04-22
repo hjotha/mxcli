@@ -125,8 +125,13 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 	case *ast.CallMicroflowStmt:
 		// Register result variable if assigned
 		if s.OutputVariable != "" {
-			// We don't know the return type, so just mark it as declared
-			fb.declaredVars[s.OutputVariable] = "Unknown"
+			mfQN := s.MicroflowName.Module + "." + s.MicroflowName.Name
+			if returnType := fb.lookupMicroflowReturnType(mfQN); returnType != nil {
+				fb.registerResultVariableType(s.OutputVariable, returnType)
+			} else {
+				// We don't know the return type, so just mark it as declared
+				fb.declaredVars[s.OutputVariable] = "Unknown"
+			}
 		}
 		// Validate error handler body if present
 		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
