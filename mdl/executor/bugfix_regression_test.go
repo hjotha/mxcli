@@ -65,6 +65,157 @@ func TestFormatActivity_WhileLoop(t *testing.T) {
 	}
 }
 
+func TestAddLoopStatement_PreservesAnnotatedPosition(t *testing.T) {
+	fb := &flowBuilder{
+		posX:         350,
+		posY:         200,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"Items": "List of Test.Item"},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{varTypes: map[string]string{"Items": "List of Test.Item"}},
+	}
+
+	stmt := &ast.LoopStmt{
+		LoopVariable: "Item",
+		ListVariable: "Items",
+		Annotations: &ast.ActivityAnnotations{
+			Position: &ast.Position{X: 350, Y: 200},
+		},
+	}
+
+	id := fb.addLoopStatement(stmt)
+	if id == "" {
+		t.Fatal("expected loop activity ID")
+	}
+
+	loop, ok := fb.objects[len(fb.objects)-1].(*microflows.LoopedActivity)
+	if !ok {
+		t.Fatalf("expected LoopedActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+	if loop.Position.X != 350 || loop.Position.Y != 200 {
+		t.Fatalf("got loop position (%d, %d), want (350, 200)", loop.Position.X, loop.Position.Y)
+	}
+	wantNextX := 350 + loop.Size.Width/2 + HorizontalSpacing
+	if fb.posX != wantNextX {
+		t.Fatalf("got next posX %d, want %d", fb.posX, wantNextX)
+	}
+}
+
+func TestAddWhileStatement_PreservesAnnotatedPosition(t *testing.T) {
+	fb := &flowBuilder{
+		posX:         420,
+		posY:         180,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{varTypes: map[string]string{}},
+	}
+
+	stmt := &ast.WhileStmt{
+		Condition: &ast.BinaryExpr{
+			Left:     &ast.VariableExpr{Name: "Count"},
+			Operator: "<",
+			Right:    &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: int64(10)},
+		},
+		Annotations: &ast.ActivityAnnotations{
+			Position: &ast.Position{X: 420, Y: 180},
+		},
+	}
+
+	id := fb.addWhileStatement(stmt)
+	if id == "" {
+		t.Fatal("expected while activity ID")
+	}
+
+	loop, ok := fb.objects[len(fb.objects)-1].(*microflows.LoopedActivity)
+	if !ok {
+		t.Fatalf("expected LoopedActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+	if loop.Position.X != 420 || loop.Position.Y != 180 {
+		t.Fatalf("got while position (%d, %d), want (420, 180)", loop.Position.X, loop.Position.Y)
+	}
+	wantNextX := 420 + loop.Size.Width/2 + HorizontalSpacing
+	if fb.posX != wantNextX {
+		t.Fatalf("got next posX %d, want %d", fb.posX, wantNextX)
+	}
+}
+
+func TestAddLogMessageAction_PreservesNodeExpression(t *testing.T) {
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     200,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+
+	stmt := &ast.LogStmt{
+		Level: ast.LogInfo,
+		Node: &ast.ConstantRefExpr{
+			QualifiedName: ast.QualifiedName{Module: "TestModule", Name: "SecurityLogNode"},
+		},
+		Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "User added"},
+	}
+
+	id := fb.addLogMessageAction(stmt)
+	if id == "" {
+		t.Fatal("expected log activity ID")
+	}
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+
+	action, ok := activity.Action.(*microflows.LogMessageAction)
+	if !ok {
+		t.Fatalf("expected LogMessageAction, got %T", activity.Action)
+	}
+
+	if action.LogNodeName != "@TestModule.SecurityLogNode" {
+		t.Fatalf("got log node %q, want %q", action.LogNodeName, "@TestModule.SecurityLogNode")
+	}
+}
+
+func TestAddLogMessageAction_TemplateLiteralDoesNotKeepQuotes(t *testing.T) {
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     200,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+
+	stmt := &ast.LogStmt{
+		Level: ast.LogInfo,
+		Node:  &ast.LiteralExpr{Kind: ast.LiteralString, Value: "App"},
+		Message: &ast.LiteralExpr{
+			Kind:  ast.LiteralString,
+			Value: "Order {1}",
+		},
+		Template: []ast.TemplateParam{
+			{Index: 1, Value: &ast.VariableExpr{Name: "OrderNumber"}},
+		},
+	}
+
+	id := fb.addLogMessageAction(stmt)
+	if id == "" {
+		t.Fatal("expected log activity ID")
+	}
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+
+	action, ok := activity.Action.(*microflows.LogMessageAction)
+	if !ok {
+		t.Fatalf("expected LogMessageAction, got %T", activity.Action)
+	}
+
+	if got := action.MessageTemplate.Translations["en_US"]; got != "Order {1}" {
+		t.Fatalf("got message template %q, want %q", got, "Order {1}")
+	}
+}
+
 // =============================================================================
 // Issue #19: Long type must not be downgraded to Integer
 // =============================================================================

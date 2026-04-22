@@ -182,10 +182,7 @@ func expressionToString(expr ast.Expression) string {
 	case *ast.LiteralExpr:
 		switch e.Kind {
 		case ast.LiteralString:
-			// Escape single quotes for Mendix expression syntax (use '' inside strings)
-			strVal := fmt.Sprintf("%v", e.Value)
-			strVal = strings.ReplaceAll(strVal, `'`, `''`)
-			return "'" + strVal + "'"
+			return mdlQuote(fmt.Sprintf("%v", e.Value))
 		case ast.LiteralBoolean:
 			if e.Value.(bool) {
 				return "true"

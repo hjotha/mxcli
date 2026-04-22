@@ -462,6 +462,20 @@ func TestFormatAction_ShowMessage_EscapesQuotes(t *testing.T) {
 	}
 }
 
+func TestFormatAction_ShowMessage_EscapesMultiline(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ShowMessageAction{
+		Type: microflows.MessageTypeInformation,
+		Template: &model.Text{
+			Translations: map[string]string{"en_US": "Line 1\nLine 2\tTabbed"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	if got != "show message 'Line 1\\nLine 2\\tTabbed' type Information;" {
+		t.Errorf("got %q", got)
+	}
+}
+
 func TestFormatAction_ValidationFeedback(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ValidationFeedbackAction{
@@ -506,6 +520,38 @@ func TestFormatAction_LogMessage_WithTemplateParams(t *testing.T) {
 	}
 	got := e.formatAction(action, nil, nil)
 	want := "log info node 'App' 'Order {1} for {2}' with ({1} = $OrderNumber, {2} = $CustomerName);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_LogMessage_EscapesMultiline(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.LogMessageAction{
+		LogLevel:    microflows.LogLevelInfo,
+		LogNodeName: "'App'",
+		MessageTemplate: &model.Text{
+			Translations: map[string]string{"en_US": "Line 1\nLine 2"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "log info node 'App' 'Line 1\\nLine 2';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_LogMessage_NodeExpression(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.LogMessageAction{
+		LogLevel:    microflows.LogLevelInfo,
+		LogNodeName: "@MyModule.SecurityLogNode",
+		MessageTemplate: &model.Text{
+			Translations: map[string]string{"en_US": "User added"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "log info node @MyModule.SecurityLogNode 'User added';"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

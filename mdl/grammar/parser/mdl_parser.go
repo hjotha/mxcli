@@ -2488,18 +2488,18 @@ func mdlparserParserInit() {
 		0, 0, 3523, 3524, 5, 321, 0, 0, 3524, 3525, 5, 320, 0, 0, 3525, 301, 1,
 		0, 0, 0, 3526, 3528, 5, 113, 0, 0, 3527, 3529, 3, 304, 152, 0, 3528, 3527,
 		1, 0, 0, 0, 3528, 3529, 1, 0, 0, 0, 3529, 3532, 1, 0, 0, 0, 3530, 3531,
-		5, 120, 0, 0, 3531, 3533, 5, 566, 0, 0, 3532, 3530, 1, 0, 0, 0, 3532, 3533,
-		1, 0, 0, 0, 3533, 3534, 1, 0, 0, 0, 3534, 3536, 3, 784, 392, 0, 3535, 3537,
-		3, 310, 155, 0, 3536, 3535, 1, 0, 0, 0, 3536, 3537, 1, 0, 0, 0, 3537, 303,
-		1, 0, 0, 0, 3538, 3539, 7, 18, 0, 0, 3539, 305, 1, 0, 0, 0, 3540, 3541,
-		5, 140, 0, 0, 3541, 3542, 5, 552, 0, 0, 3542, 3547, 3, 308, 154, 0, 3543,
-		3544, 5, 550, 0, 0, 3544, 3546, 3, 308, 154, 0, 3545, 3543, 1, 0, 0, 0,
-		3546, 3549, 1, 0, 0, 0, 3547, 3545, 1, 0, 0, 0, 3547, 3548, 1, 0, 0, 0,
-		3548, 3550, 1, 0, 0, 0, 3549, 3547, 1, 0, 0, 0, 3550, 3551, 5, 553, 0,
-		0, 3551, 3555, 1, 0, 0, 0, 3552, 3553, 5, 392, 0, 0, 3553, 3555, 3, 834,
-		417, 0, 3554, 3540, 1, 0, 0, 0, 3554, 3552, 1, 0, 0, 0, 3555, 307, 1, 0,
-		0, 0, 3556, 3557, 5, 554, 0, 0, 3557, 3558, 5, 568, 0, 0, 3558, 3559, 5,
-		555, 0, 0, 3559, 3560, 5, 539, 0, 0, 3560, 3561, 3, 784, 392, 0, 3561,
+		5, 120, 0, 0, 3531, 3533, 3, 784, 392, 0, 3532, 3530, 1, 0, 0, 0, 3532,
+		3533, 1, 0, 0, 0, 3533, 3534, 1, 0, 0, 0, 3534, 3536, 3, 784, 392, 0, 3535,
+		3537, 3, 310, 155, 0, 3536, 3535, 1, 0, 0, 0, 3536, 3537, 1, 0, 0, 0, 3537,
+		303, 1, 0, 0, 0, 3538, 3539, 7, 18, 0, 0, 3539, 305, 1, 0, 0, 0, 3540,
+		3541, 5, 140, 0, 0, 3541, 3542, 5, 552, 0, 0, 3542, 3547, 3, 308, 154,
+		0, 3543, 3544, 5, 550, 0, 0, 3544, 3546, 3, 308, 154, 0, 3545, 3543, 1,
+		0, 0, 0, 3546, 3549, 1, 0, 0, 0, 3547, 3545, 1, 0, 0, 0, 3547, 3548, 1,
+		0, 0, 0, 3548, 3550, 1, 0, 0, 0, 3549, 3547, 1, 0, 0, 0, 3550, 3551, 5,
+		553, 0, 0, 3551, 3555, 1, 0, 0, 0, 3552, 3553, 5, 392, 0, 0, 3553, 3555,
+		3, 834, 417, 0, 3554, 3540, 1, 0, 0, 0, 3554, 3552, 1, 0, 0, 0, 3555, 307,
+		1, 0, 0, 0, 3556, 3557, 5, 554, 0, 0, 3557, 3558, 5, 568, 0, 0, 3558, 3559,
+		5, 555, 0, 0, 3559, 3560, 5, 539, 0, 0, 3560, 3561, 3, 784, 392, 0, 3561,
 		309, 1, 0, 0, 0, 3562, 3563, 3, 306, 153, 0, 3563, 311, 1, 0, 0, 0, 3564,
 		3565, 3, 308, 154, 0, 3565, 313, 1, 0, 0, 0, 3566, 3567, 5, 569, 0, 0,
 		3567, 3569, 5, 539, 0, 0, 3568, 3566, 1, 0, 0, 0, 3568, 3569, 1, 0, 0,
@@ -45607,10 +45607,10 @@ type ILogStatementContext interface {
 
 	// Getter signatures
 	LOG() antlr.TerminalNode
-	Expression() IExpressionContext
+	AllExpression() []IExpressionContext
+	Expression(i int) IExpressionContext
 	LogLevel() ILogLevelContext
 	NODE() antlr.TerminalNode
-	STRING_LITERAL() antlr.TerminalNode
 	LogTemplateParams() ILogTemplateParamsContext
 
 	// IsLogStatementContext differentiates from other interfaces.
@@ -45653,12 +45653,37 @@ func (s *LogStatementContext) LOG() antlr.TerminalNode {
 	return s.GetToken(MDLParserLOG, 0)
 }
 
-func (s *LogStatementContext) Expression() IExpressionContext {
+func (s *LogStatementContext) AllExpression() []IExpressionContext {
+	children := s.GetChildren()
+	len := 0
+	for _, ctx := range children {
+		if _, ok := ctx.(IExpressionContext); ok {
+			len++
+		}
+	}
+
+	tst := make([]IExpressionContext, len)
+	i := 0
+	for _, ctx := range children {
+		if t, ok := ctx.(IExpressionContext); ok {
+			tst[i] = t.(IExpressionContext)
+			i++
+		}
+	}
+
+	return tst
+}
+
+func (s *LogStatementContext) Expression(i int) IExpressionContext {
 	var t antlr.RuleContext
+	j := 0
 	for _, ctx := range s.GetChildren() {
 		if _, ok := ctx.(IExpressionContext); ok {
-			t = ctx.(antlr.RuleContext)
-			break
+			if j == i {
+				t = ctx.(antlr.RuleContext)
+				break
+			}
+			j++
 		}
 	}
 
@@ -45687,10 +45712,6 @@ func (s *LogStatementContext) LogLevel() ILogLevelContext {
 
 func (s *LogStatementContext) NODE() antlr.TerminalNode {
 	return s.GetToken(MDLParserNODE, 0)
-}
-
-func (s *LogStatementContext) STRING_LITERAL() antlr.TerminalNode {
-	return s.GetToken(MDLParserSTRING_LITERAL, 0)
 }
 
 func (s *LogStatementContext) LogTemplateParams() ILogTemplateParamsContext {
@@ -45769,11 +45790,7 @@ func (p *MDLParser) LogStatement() (localctx ILogStatementContext) {
 		}
 		{
 			p.SetState(3531)
-			p.Match(MDLParserSTRING_LITERAL)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
+			p.Expression()
 		}
 
 	} else if p.HasError() { // JIM
