@@ -3598,8 +3598,16 @@ aggregateFunction
     : (COUNT | SUM | AVG | MIN | MAX) LPAREN (DISTINCT? expression | STAR) RPAREN
     ;
 
+/** Function call: built-in (`length($s)`) or qualified rule / sub-microflow
+ *  (`Module.Rule($arg)`, `Module.Mf(Param = $v)`).
+ *
+ *  Named arguments parse naturally as equality expressions, i.e. a single
+ *  `Name = expr` argument is a `BinaryExpr` with operator `=`. This matches
+ *  the form the describer emits for `RuleSplitCondition` / rule calls in
+ *  expression position and restores describe → check roundtrip symmetry.
+ */
 functionCall
-    : functionName LPAREN argumentList? RPAREN
+    : (functionName | qualifiedName) LPAREN argumentList? RPAREN
     ;
 
 /** Function names - includes identifiers and keywords that are valid function names */
