@@ -172,11 +172,37 @@ func newUpwardFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	}
 }
 
-// lastStmtIsReturn checks if the last statement in a body is a RETURN statement.
+// lastStmtIsReturn reports whether execution of a body is guaranteed to terminate
+// (via RETURN or RAISE ERROR) on every path — i.e. control can never fall off the
+// end of the body into the parent flow.
+//
+// Terminal statements: ReturnStmt, RaiseErrorStmt. An IfStmt is terminal iff it
+// has an ELSE and both branches are terminal (recursively). A LoopStmt is never
+// terminal — BREAK can exit the loop even if the body returns.
+//
+// Naming kept for history; the predicate is really "last stmt is a guaranteed
+// terminator". Missing this case causes the outer IF to emit a dangling
+// continuation flow (duplicate "true" edge + orphan EndEvent), which Studio Pro
+// rejects as "Sequence contains no matching element" when diffing.
 func lastStmtIsReturn(stmts []ast.MicroflowStatement) bool {
 	if len(stmts) == 0 {
 		return false
 	}
-	_, ok := stmts[len(stmts)-1].(*ast.ReturnStmt)
-	return ok
+	return isTerminalStmt(stmts[len(stmts)-1])
+}
+
+func isTerminalStmt(stmt ast.MicroflowStatement) bool {
+	switch s := stmt.(type) {
+	case *ast.ReturnStmt:
+		return true
+	case *ast.RaiseErrorStmt:
+		return true
+	case *ast.IfStmt:
+		if len(s.ElseBody) == 0 {
+			return false
+		}
+		return lastStmtIsReturn(s.ThenBody) && lastStmtIsReturn(s.ElseBody)
+	default:
+		return false
+	}
 }
