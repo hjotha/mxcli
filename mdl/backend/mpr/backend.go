@@ -221,6 +221,9 @@ func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.writer.Delete
 func (b *MprBackend) MoveMicroflow(mf *microflows.Microflow) error {
 	return b.writer.MoveMicroflow(mf)
 }
+func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
+	return b.reader.IsRule(qualifiedName)
+}
 
 func (b *MprBackend) ListNanoflows() ([]*microflows.Nanoflow, error) {
 	return b.reader.ListNanoflows()
