@@ -326,3 +326,112 @@ func TestExecDropFolder_Mock(t *testing.T) {
 		t.Fatal("DeleteFolderFunc was not called")
 	}
 }
+
+func TestExecCreateModule_Mock_AlreadyExists(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{{Name: "Existing"}}, nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	assertNoError(t, execCreateModule(ctx, &ast.CreateModuleStmt{Name: "Existing"}))
+	assertContainsStr(t, buf.String(), "already exists")
+}
+
+func TestExecDropEnumeration_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListEnumerationsFunc: func() ([]*model.Enumeration, error) {
+			return nil, nil
+		},
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, execDropEnumeration(ctx, &ast.DropEnumerationStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
+	}))
+}
+
+func TestExecDropEntity_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	dm := mkDomainModel(mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
+			return dm, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, execDropEntity(ctx, &ast.DropEntityStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
+	}))
+}
+
+func TestExecDropMicroflow_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:    func() bool { return true },
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, execDropMicroflow(ctx, &ast.DropMicroflowStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
+	}))
+}
+
+func TestExecDropPage_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, execDropPage(ctx, &ast.DropPageStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
+	}))
+}
+
+func TestExecDropSnippet_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:  func() bool { return true },
+		ListSnippetsFunc: func() ([]*pages.Snippet, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, execDropSnippet(ctx, &ast.DropSnippetStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
+	}))
+}
+
+func TestExecDropAssociation_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	dm := mkDomainModel(mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
+			return dm, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, execDropAssociation(ctx, &ast.DropAssociationStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
+	}))
+}

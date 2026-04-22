@@ -70,9 +70,13 @@ func TestShowEntities_BackendError_Modules(t *testing.T) {
 }
 
 func TestShowEntities_BackendError(t *testing.T) {
+	mod := mkModule("Sales")
 	mb := &mock.MockBackend{
-		IsConnectedFunc:      func() bool { return true },
-		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, fmt.Errorf("backend down") },
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
+			return nil, fmt.Errorf("backend down")
+		},
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, listEntities(ctx, ""))

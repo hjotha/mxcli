@@ -526,3 +526,179 @@ func TestDescribeAgentEditorConsumedMCPService_Mock(t *testing.T) {
 	assertContainsStr(t, out, "create consumed mcp service")
 	assertContainsStr(t, out, "ProtocolVersion")
 }
+
+// ---------------------------------------------------------------------------
+// DESCRIBE — Not Found
+// ---------------------------------------------------------------------------
+
+func TestDescribeAgentEditorModel_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeAgentEditorModel(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
+}
+
+func TestDescribeAgentEditorAgent_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeAgentEditorAgent(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
+}
+
+func TestDescribeAgentEditorKnowledgeBase_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:                   func() bool { return true },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeAgentEditorKnowledgeBase(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
+}
+
+func TestDescribeAgentEditorConsumedMCPService_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:                        func() bool { return true },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeAgentEditorConsumedMCPService(ctx, ast.QualifiedName{Module: "M", Name: "NonExistent"}))
+}
+
+// ---------------------------------------------------------------------------
+// DROP — Not Found
+// ---------------------------------------------------------------------------
+
+func TestDropAgentEditorModel_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, execDropAgentEditorModel(ctx, &ast.DropModelStmt{
+		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
+	}))
+}
+
+func TestDropConsumedMCPService_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:                        func() bool { return true },
+		ListAgentEditorConsumedMCPServicesFunc: func() ([]*agenteditor.ConsumedMCPService, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, execDropConsumedMCPService(ctx, &ast.DropConsumedMCPServiceStmt{
+		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
+	}))
+}
+
+func TestDropKnowledgeBase_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:                   func() bool { return true },
+		ListAgentEditorKnowledgeBasesFunc: func() ([]*agenteditor.KnowledgeBase, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, execDropKnowledgeBase(ctx, &ast.DropKnowledgeBaseStmt{
+		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
+	}))
+}
+
+func TestDropAgent_Mock_NotFound(t *testing.T) {
+	mod := mkModule("M")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, execDropAgent(ctx, &ast.DropAgentStmt{
+		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
+	}))
+}
+
+// ---------------------------------------------------------------------------
+// LIST — Filter by Module
+// ---------------------------------------------------------------------------
+
+func TestShowAgentEditorModels_Mock_FilterByModule(t *testing.T) {
+	mod1 := mkModule("A")
+	mod2 := mkModule("B")
+	m1 := &agenteditor.Model{
+		BaseElement: model.BaseElement{ID: nextID("aem")},
+		ContainerID: mod1.ID,
+		Name:        "M1",
+	}
+	m2 := &agenteditor.Model{
+		BaseElement: model.BaseElement{ID: nextID("aem")},
+		ContainerID: mod2.ID,
+		Name:        "M2",
+	}
+
+	h := mkHierarchy(mod1, mod2)
+	withContainer(h, m1.ContainerID, mod1.ID)
+	withContainer(h, m2.ContainerID, mod2.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListAgentEditorModelsFunc: func() ([]*agenteditor.Model, error) { return []*agenteditor.Model{m1, m2}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listAgentEditorModels(ctx, "B"))
+
+	out := buf.String()
+	assertNotContainsStr(t, out, "A.M1")
+	assertContainsStr(t, out, "B.M2")
+}
+
+func TestShowAgentEditorAgents_Mock_FilterByModule(t *testing.T) {
+	mod1 := mkModule("A")
+	mod2 := mkModule("B")
+	a1 := &agenteditor.Agent{
+		BaseElement: model.BaseElement{ID: nextID("aea")},
+		ContainerID: mod1.ID,
+		Name:        "Agent1",
+	}
+	a2 := &agenteditor.Agent{
+		BaseElement: model.BaseElement{ID: nextID("aea")},
+		ContainerID: mod2.ID,
+		Name:        "Agent2",
+	}
+
+	h := mkHierarchy(mod1, mod2)
+	withContainer(h, a1.ContainerID, mod1.ID)
+	withContainer(h, a2.ContainerID, mod2.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListAgentEditorAgentsFunc: func() ([]*agenteditor.Agent, error) { return []*agenteditor.Agent{a1, a2}, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listAgentEditorAgents(ctx, "B"))
+
+	out := buf.String()
+	assertNotContainsStr(t, out, "A.Agent1")
+	assertContainsStr(t, out, "B.Agent2")
+}

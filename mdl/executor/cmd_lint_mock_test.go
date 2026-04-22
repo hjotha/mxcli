@@ -26,8 +26,10 @@ func TestLint_NotConnected(t *testing.T) {
 // ---------------------------------------------------------------------------
 // listLintRules — ShowRules happy path
 //
-// The ShowRules=true path calls listLintRules which only needs ctx.Output.
-// It prints built-in rules (ID + Name + Description + Category + Severity).
+// Although listLintRules itself only writes to ctx.Output, execLint currently
+// checks ctx.Connected() before dispatching to the ShowRules branch, so this
+// test still needs a connected backend. It prints built-in rules
+// (ID + Name + Description + Category + Severity).
 // ---------------------------------------------------------------------------
 
 func TestLint_ShowRules(t *testing.T) {
