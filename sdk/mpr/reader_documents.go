@@ -216,6 +216,55 @@ func (r *Reader) GetMicroflow(id model.ID) (*microflows.Microflow, error) {
 	return nil, fmt.Errorf("microflow not found: %s", id)
 }
 
+// IsRule reports whether the given qualified name refers to a rule
+// (Microflows$Rule). Rules share the microflow namespace but are stored
+// under a distinct BSON type — the flow-builder needs this distinction so
+// it can emit RuleSplitCondition instead of ExpressionSplitCondition for
+// rule-based IF statements.
+func (r *Reader) IsRule(qualifiedName string) (bool, error) {
+	if qualifiedName == "" {
+		return false, nil
+	}
+	units, err := r.listUnitsByType("Microflows$Rule")
+	if err != nil {
+		return false, err
+	}
+	if len(units) == 0 {
+		return false, nil
+	}
+	modules, err := r.ListModules()
+	if err != nil {
+		return false, err
+	}
+	moduleMap := make(map[string]string, len(modules))
+	for _, m := range modules {
+		moduleMap[string(m.ID)] = m.Name
+	}
+	containerParent, err := r.buildContainerParent()
+	if err != nil {
+		return false, err
+	}
+	for _, u := range units {
+		var raw map[string]any
+		if err := bson.Unmarshal(u.Contents, &raw); err != nil {
+			continue
+		}
+		name, _ := raw["Name"].(string)
+		if name == "" {
+			continue
+		}
+		moduleName := resolveModuleName(u.ContainerID, moduleMap, containerParent)
+		fullName := name
+		if moduleName != "" {
+			fullName = moduleName + "." + name
+		}
+		if fullName == qualifiedName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // ListNanoflows returns all nanoflows in the project.
 func (r *Reader) ListNanoflows() ([]*microflows.Nanoflow, error) {
 	units, err := r.listUnitsByType("Microflows$Nanoflow")

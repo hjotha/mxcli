@@ -26,4 +26,10 @@ type MicroflowBackend interface {
 	UpdateNanoflow(nf *microflows.Nanoflow) error
 	DeleteNanoflow(id model.ID) error
 	MoveNanoflow(nf *microflows.Nanoflow) error
+
+	// IsRule reports whether the given qualified name refers to a rule
+	// (Microflows$Rule) rather than a microflow. The flow builder uses this
+	// to decide whether an IF condition that looks like a function call
+	// (Module.Name(...)) should be serialized as a RuleSplitCondition.
+	IsRule(qualifiedName string) (bool, error)
 }

@@ -88,6 +88,7 @@ type MockBackend struct {
 	UpdateNanoflowFunc        func(nf *microflows.Nanoflow) error
 	DeleteNanoflowFunc        func(id model.ID) error
 	MoveNanoflowFunc          func(nf *microflows.Nanoflow) error
+	IsRuleFunc                func(qualifiedName string) (bool, error)
 
 	// PageBackend
 	ListPagesFunc          func() ([]*pages.Page, error)

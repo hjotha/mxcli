@@ -97,3 +97,10 @@ func (m *MockBackend) MoveNanoflow(nf *microflows.Nanoflow) error {
 	}
 	return nil
 }
+
+func (m *MockBackend) IsRule(qualifiedName string) (bool, error) {
+	if m.IsRuleFunc != nil {
+		return m.IsRuleFunc(qualifiedName)
+	}
+	return false, nil
+}
