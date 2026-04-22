@@ -73,3 +73,123 @@ func TestExpressionToString_QualifiedNameUnchanged(t *testing.T) {
 		t.Errorf("expressionToString = %q, want %q", got, want)
 	}
 }
+
+// TestMendixFunctionName_CanonicalSpelling ensures every built-in Mendix
+// expression function is emitted with the runtime-accepted camelCase
+// spelling regardless of how the AST stores the name. The visitor
+// upper-cases list / aggregate operations for dispatch (e.g. FIND, COUNT);
+// without normalisation the writer would emit `FIND(...)` which the Mendix
+// expression runtime rejects with CE0117. This test pins the canonical
+// spelling for the full documented built-in set.
+//
+// References:
+//   - https://docs.mendix.com/refguide/expressions/
+//   - https://docs.mendix.com/refguide/string-function-calls/
+//   - https://docs.mendix.com/refguide/mathematical-function-calls/
+//   - https://docs.mendix.com/refguide/add-date-function-calls/
+//   - https://docs.mendix.com/refguide/between-date-function-calls/
+//   - https://docs.mendix.com/refguide/parse-and-format-date-function-calls/
+//   - https://docs.mendix.com/refguide/parse-and-format-decimal-function-calls/
+func TestMendixFunctionName_CanonicalSpelling(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		// List operations: visitor emits UPPERCASE, runtime requires lowercase
+		{"HEAD", "head"}, {"TAIL", "tail"}, {"FIND", "find"},
+		{"FILTER", "filter"}, {"SORT", "sort"}, {"UNION", "union"},
+		{"INTERSECT", "intersect"}, {"SUBTRACT", "subtract"},
+		{"CONTAINS", "contains"}, {"EQUALS", "equals"}, {"RANGE", "range"},
+		// Aggregates: visitor maps AVG/MIN/MAX to AVERAGE/MINIMUM/MAXIMUM
+		{"COUNT", "count"}, {"SUM", "sum"},
+		{"AVERAGE", "average"}, {"MINIMUM", "minimum"}, {"MAXIMUM", "maximum"},
+		// String functions
+		{"LENGTH", "length"}, {"Length", "length"}, {"length", "length"},
+		{"SUBSTRING", "substring"}, {"ToUpperCase", "toUpperCase"},
+		{"TOLOWERCASE", "toLowerCase"}, {"TRIM", "trim"},
+		{"FINDLAST", "findLast"}, {"REPLACEALL", "replaceAll"},
+		{"STARTSWITH", "startsWith"}, {"ENDSWITH", "endsWith"},
+		{"ISMATCH", "isMatch"}, {"URLENCODE", "urlEncode"},
+		// Math
+		{"ABS", "abs"}, {"CEIL", "ceil"}, {"FLOOR", "floor"},
+		{"ROUND", "round"}, {"POW", "pow"}, {"SQRT", "sqrt"},
+		// Parse / format
+		{"PARSEINTEGER", "parseInteger"}, {"ParseInteger", "parseInteger"},
+		{"PARSEDECIMAL", "parseDecimal"}, {"PARSELONG", "parseLong"},
+		{"FORMATDECIMAL", "formatDecimal"}, {"FORMATDATETIME", "formatDateTime"},
+		{"PARSEDATETIME", "parseDateTime"}, {"PARSEDATETIMEUTC", "parseDateTimeUTC"},
+		{"TOSTRING", "toString"}, {"TOBOOLEAN", "toBoolean"},
+		// Add / subtract / between date
+		{"ADDDAYS", "addDays"}, {"ADDMONTHS", "addMonths"},
+		{"SUBTRACTDAYS", "subtractDays"},
+		{"DAYSBETWEEN", "daysBetween"}, {"SECONDSBETWEEN", "secondsBetween"},
+		{"MILLISECONDSBETWEEN", "millisecondsBetween"},
+		// Begin/end/trim-to date
+		{"BEGINOFDAY", "beginOfDay"}, {"ENDOFMONTH", "endOfMonth"},
+		{"TRIMTODAYS", "trimToDays"}, {"TRIMTOMINUTES", "trimToMinutes"},
+		// Misc
+		{"EMPTY", "empty"}, {"ISNEW", "isNew"},
+		{"GETCAPTION", "getCaption"}, {"GETKEY", "getKey"},
+		// Custom user-defined names pass through unchanged (no normalisation)
+		{"MyJavaAction", "MyJavaAction"},
+		{"MyModule_DoSomething", "MyModule_DoSomething"},
+		{"SOMEUNKNOWNFUNC", "SOMEUNKNOWNFUNC"},
+	}
+	for _, tc := range cases {
+		got := mendixFunctionName(tc.input)
+		if got != tc.want {
+			t.Errorf("mendixFunctionName(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+// TestExpressionToString_FunctionCallCaseFixed ensures that a FunctionCallExpr
+// built from a list operation (visitor canonicalises FIND in uppercase) is
+// serialised with the Mendix-accepted lowercase spelling, with arguments
+// separated by ", " to match the pristine BSON serialisation format.
+func TestExpressionToString_FunctionCallCaseFixed(t *testing.T) {
+	expr := &ast.FunctionCallExpr{
+		Name: "FIND",
+		Arguments: []ast.Expression{
+			&ast.VariableExpr{Name: "DisplayVersion"},
+			&ast.LiteralExpr{Value: ".", Kind: ast.LiteralString},
+		},
+	}
+	got := expressionToString(expr)
+	want := "find($DisplayVersion, '.')"
+	if got != want {
+		t.Errorf("expressionToString = %q, want %q", got, want)
+	}
+}
+
+// TestExpressionToString_NestedBuiltins exercises the common parseInteger(
+// substring(..., find(..., '.'))) pattern found in pristine Mendix microflows
+// (Apps.GetOrCreateMendixVersionFromString). Before the fix mxcli emitted
+// `FIND` uppercase here, triggering CE0117 on roundtrip.
+func TestExpressionToString_NestedBuiltins(t *testing.T) {
+	// parseInteger(substring($DisplayVersion, 0, find($DisplayVersion, '.')))
+	findCall := &ast.FunctionCallExpr{
+		Name: "FIND",
+		Arguments: []ast.Expression{
+			&ast.VariableExpr{Name: "DisplayVersion"},
+			&ast.LiteralExpr{Value: ".", Kind: ast.LiteralString},
+		},
+	}
+	substringCall := &ast.FunctionCallExpr{
+		Name: "substring",
+		Arguments: []ast.Expression{
+			&ast.VariableExpr{Name: "DisplayVersion"},
+			&ast.LiteralExpr{Value: int64(0), Kind: ast.LiteralInteger},
+			findCall,
+		},
+	}
+	parseInt := &ast.FunctionCallExpr{
+		Name:      "parseInteger",
+		Arguments: []ast.Expression{substringCall},
+	}
+	got := expressionToString(parseInt)
+	want := "parseInteger(substring($DisplayVersion, 0, find($DisplayVersion, '.')))"
+	if got != want {
+		t.Errorf("expressionToString = %q, want %q", got, want)
+	}
+}

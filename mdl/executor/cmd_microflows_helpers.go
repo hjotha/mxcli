@@ -68,6 +68,103 @@ func convertASTToMicroflowDataType(dt ast.DataType, entityResolver func(ast.Qual
 	}
 }
 
+// mendixBuiltinFunctions is the canonical spelling of every built-in Mendix
+// expression function. The expression runtime is case-sensitive: it only
+// recognises these names as spelt here (lower-case with camelCase for
+// compound words). Emitting an alternative spelling causes CE0117
+// ("Error(s) in expression.") on Studio Pro validation.
+//
+// Source: https://docs.mendix.com/refguide/expressions/ and the linked
+// function-specific pages (string, math, date arithmetic, parse/format,
+// trim-to-date, list operations, aggregates, type conversions).
+//
+// The map key is the upper-case spelling for case-insensitive lookup; the
+// value is the runtime-accepted canonical spelling. Custom user-defined
+// java actions, sub-microflows, and unknown function names pass through
+// unchanged so user case is preserved.
+var mendixBuiltinFunctions = func() map[string]string {
+	canonical := []string{
+		// List operations
+		"head", "tail", "find", "filter", "sort", "union",
+		"intersect", "subtract", "contains", "equals", "range",
+		// List aggregates
+		"count", "sum", "average", "minimum", "maximum",
+		"allTrue", "anyTrue",
+		// String functions (docs.mendix.com/refguide/string-function-calls)
+		"toUpperCase", "toLowerCase", "trim", "length", "substring",
+		"findLast", "replaceAll", "replaceFirst", "startsWith", "endsWith",
+		"isMatch", "isInvariantMatch", "stringFromRegex", "stringListFromRegex",
+		"urlEncode", "urlDecode", "reverse", "indexOf",
+		// Math functions (docs.mendix.com/refguide/mathematical-function-calls)
+		"abs", "ceil", "floor", "round", "max", "min", "pow",
+		"sqrt", "ln", "log10", "random", "rand",
+		// Date creation (docs.mendix.com/refguide/date-creation)
+		"dateTime", "dateTimeUTC",
+		// Begin-of-date / end-of-date / trim-to-date
+		"trimToDays", "trimToHours", "trimToMinutes", "trimToSeconds",
+		"trimToDaysUTC", "trimToHoursUTC", "trimToMinutesUTC", "trimToSecondsUTC",
+		"beginOfDay", "beginOfWeek", "beginOfMonth", "beginOfYear",
+		"beginOfDayUTC", "beginOfWeekUTC", "beginOfMonthUTC", "beginOfYearUTC",
+		"endOfDay", "endOfWeek", "endOfMonth", "endOfYear",
+		"endOfDayUTC", "endOfWeekUTC", "endOfMonthUTC", "endOfYearUTC",
+		// Between-date functions
+		"millisecondsBetween", "secondsBetween", "minutesBetween",
+		"hoursBetween", "daysBetween", "weeksBetween", "monthsBetween",
+		"yearsBetween", "calendarDaysBetween", "calendarMonthsBetween",
+		"calendarYearsBetween",
+		// Add-date functions
+		"addMilliseconds", "addSeconds", "addMinutes", "addHours",
+		"addDays", "addWeeks", "addMonths", "addYears",
+		"addDaysUTC", "addWeeksUTC", "addMonthsUTC", "addYearsUTC",
+		// Subtract-date functions
+		"subtractMilliseconds", "subtractSeconds", "subtractMinutes",
+		"subtractHours", "subtractDays", "subtractWeeks", "subtractMonths",
+		"subtractYears", "subtractDaysUTC", "subtractWeeksUTC",
+		"subtractMonthsUTC", "subtractYearsUTC",
+		// Day-of / timestamp conversion helpers
+		"dayOfWeek", "dayOfWeekFromDateTime", "weekOfYearFromDateTime",
+		"dayOfYearFromDateTime", "daysInMonth", "daysInYear",
+		"dateTimeToEpoch", "epochToDateTime",
+		// Parse / format (parse-and-format-date, parse-and-format-decimal)
+		"formatDateTime", "formatDateTimeUTC", "parseDateTime", "parseDateTimeUTC",
+		"parseInteger", "parseLong", "parseDecimal", "formatDecimal",
+		// To-string / length  (to-string, length refguide pages)
+		"toString", "toBoolean", "toFloat",
+		// Enumeration helpers
+		"getCaption", "getKey",
+		// Miscellaneous
+		"if", "empty", "isNew", "isAnonymous",
+		// Boolean operators expressed as functions (true(), false())
+		"true", "false",
+		// Not / and / or appear as operators, not function calls — omitted.
+	}
+	m := make(map[string]string, len(canonical))
+	for _, c := range canonical {
+		m[strings.ToUpper(c)] = c
+	}
+	return m
+}()
+
+// mendixFunctionName normalises the case of built-in Mendix expression
+// functions. The visitor canonicalises list / aggregate operations in
+// UPPERCASE for AST dispatch; the expression runtime only recognises the
+// documented camelCase spelling. For every built-in Mendix function we
+// always emit the canonical spelling so that:
+//
+//   - round-tripping a pristine microflow never mutates `find(...)` into
+//     `FIND(...)` (which Studio Pro rejects with CE0117).
+//   - LLM-generated MDL with accidental capitalisation (`LENGTH(...)`,
+//     `ToString(...)`) still validates when executed.
+//
+// Custom (user-defined) java actions, sub-microflows and entity member
+// references pass through unchanged so user case is preserved.
+func mendixFunctionName(name string) string {
+	if canonical, ok := mendixBuiltinFunctions[strings.ToUpper(name)]; ok {
+		return canonical
+	}
+	return name
+}
+
 // expressionToString converts an AST Expression to a Mendix expression string.
 func expressionToString(expr ast.Expression) string {
 	// Check for nil interface
@@ -119,7 +216,7 @@ func expressionToString(expr ast.Expression) string {
 		for _, arg := range e.Arguments {
 			args = append(args, expressionToString(arg))
 		}
-		return e.Name + "(" + strings.Join(args, ", ") + ")"
+		return mendixFunctionName(e.Name) + "(" + strings.Join(args, ", ") + ")"
 	case *ast.TokenExpr:
 		return "[%" + e.Token + "%]"
 	case *ast.ParenExpr:
@@ -181,7 +278,7 @@ func expressionToXPath(expr ast.Expression) string {
 		for _, arg := range e.Arguments {
 			args = append(args, expressionToXPath(arg))
 		}
-		return e.Name + "(" + strings.Join(args, ", ") + ")"
+		return mendixFunctionName(e.Name) + "(" + strings.Join(args, ", ") + ")"
 	case *ast.LiteralExpr:
 		if e.Kind == ast.LiteralEmpty {
 			return "empty"
