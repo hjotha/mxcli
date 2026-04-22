@@ -1496,38 +1496,38 @@ func fetchODataMetadata(metadataUrl string) (metadata string, hash string, err e
 		return "", "", nil
 	}
 
-  var body []byte
+	var body []byte
 
-  // At this point, metadataUrl is already normalized by NormalizeURL() in createODataClient:
-  // - Relative paths have been converted to absolute file:// URLs
-  // - HTTP(S) URLs are unchanged
-  // So we only need to distinguish file:// vs HTTP(S)
+	// At this point, metadataUrl is already normalized by NormalizeURL() in createODataClient:
+	// - Relative paths have been converted to absolute file:// URLs
+	// - HTTP(S) URLs are unchanged
+	// So we only need to distinguish file:// vs HTTP(S)
 
-  filePath := pathutil.PathFromURL(metadataUrl)
-  if filePath != "" {
-      // Local file - read directly (path is already absolute)
-      body, err = os.ReadFile(filePath)
-      if err != nil {
-          return "", "", mdlerrors.NewBackend(fmt.Sprintf("read local metadata file %s", filePath), err)
-      }
-  } else {
-      // HTTP(S) fetch
-      client := &http.Client{Timeout: 30 * time.Second}
-      resp, err := client.Get(metadataUrl)
-      if err != nil {
-          return "", "", mdlerrors.NewBackend(fmt.Sprintf("fetch $metadata from %s", metadataUrl), err)
-      }
-      defer resp.Body.Close()
+	filePath := pathutil.PathFromURL(metadataUrl)
+	if filePath != "" {
+		// Local file - read directly (path is already absolute)
+		body, err = os.ReadFile(filePath)
+		if err != nil {
+			return "", "", mdlerrors.NewBackend(fmt.Sprintf("read local metadata file %s", filePath), err)
+		}
+	} else {
+		// HTTP(S) fetch
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Get(metadataUrl)
+		if err != nil {
+			return "", "", mdlerrors.NewBackend(fmt.Sprintf("fetch $metadata from %s", metadataUrl), err)
+		}
+		defer resp.Body.Close()
 
-      if resp.StatusCode != http.StatusOK {
-          return "", "", mdlerrors.NewValidationf("$metadata fetch returned HTTP %d from %s", resp.StatusCode, metadataUrl)
-      }
+		if resp.StatusCode != http.StatusOK {
+			return "", "", mdlerrors.NewValidationf("$metadata fetch returned HTTP %d from %s", resp.StatusCode, metadataUrl)
+		}
 
-      body, err = io.ReadAll(resp.Body)
-      if err != nil {
-          return "", "", mdlerrors.NewBackend("read $metadata response", err)
-      }
-  }
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return "", "", mdlerrors.NewBackend("read $metadata response", err)
+		}
+	}
 
 	// Hash calculation (same for both HTTP and local file)
 	metadata = string(body)
