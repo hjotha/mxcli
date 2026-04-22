@@ -45,6 +45,11 @@ func validateNoPlaceholderIDs(unitID string, contents []byte) error {
 	return nil
 }
 
+func contentHashBase64(contents []byte) string {
+	hash := sha256.Sum256(contents)
+	return base64.StdEncoding.EncodeToString(hash[:])
+}
+
 func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType string, contents []byte) error {
 	if err := validateNoPlaceholderIDs(unitID, contents); err != nil {
 		return err
@@ -70,9 +75,7 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 			return fmt.Errorf("failed to write unit file: %w", err)
 		}
 
-		// Compute content hash (base64-encoded SHA256)
-		hash := sha256.Sum256(contents)
-		contentsHash := base64.StdEncoding.EncodeToString(hash[:])
+		contentsHash := contentHashBase64(contents)
 
 		// Insert reference to database
 		_, err := w.reader.db.Exec(`
@@ -90,11 +93,13 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 	}
 
 	// MPR v1: Store directly in database
+	contentsHash := contentHashBase64(contents)
+
 	// Try new schema first (without Type column - Mendix 11.6.2+)
 	_, err := w.reader.db.Exec(`
 		INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts, Contents)
-		VALUES (?, ?, ?, 0, '', '', ?)
-	`, unitIDBlob, containerIDBlob, containmentName, contents)
+		VALUES (?, ?, ?, 0, ?, '', ?)
+	`, unitIDBlob, containerIDBlob, containmentName, contentsHash, contents)
 	if err != nil {
 		// Try old schema with Type column
 		_, err = w.reader.db.Exec(`
@@ -133,9 +138,7 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 			return fmt.Errorf("failed to write unit file: %w", err)
 		}
 
-		// Update ContentsHash in database
-		hash := sha256.Sum256(contents)
-		contentsHash := base64.StdEncoding.EncodeToString(hash[:])
+		contentsHash := contentHashBase64(contents)
 		_, err := w.reader.db.Exec(`
 			UPDATE Unit SET ContentsHash = ? WHERE UnitID = ?
 		`, contentsHash, unitIDBlob)
@@ -147,9 +150,16 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 	}
 
 	// MPR v1: Update in database
+	contentsHash := contentHashBase64(contents)
 	_, err := w.reader.db.Exec(`
-		UPDATE Unit SET Contents = ? WHERE UnitID = ?
-	`, contents, unitIDBlob)
+		UPDATE Unit SET Contents = ?, ContentsHash = ? WHERE UnitID = ?
+	`, contents, contentsHash, unitIDBlob)
+	if err != nil {
+		// Older v1 schemas do not have ContentsHash.
+		_, err = w.reader.db.Exec(`
+			UPDATE Unit SET Contents = ? WHERE UnitID = ?
+		`, contents, unitIDBlob)
+	}
 	return err
 }
 

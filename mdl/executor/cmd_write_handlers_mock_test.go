@@ -12,6 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
 func TestExecCreateModule_Mock(t *testing.T) {
@@ -435,3 +436,175 @@ func TestExecDropAssociation_Mock_NotFound(t *testing.T) {
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 	}))
 }
+
+// TestDropThenCreatePreservesMicroflowUnitID is a regression test for the
+// MPR corruption bug documented in docs/MXCLI_MPR_CORRUPTION_PROMPT_0015.md.
+//
+// When a script runs `DROP MICROFLOW X; CREATE OR MODIFY MICROFLOW X ...` in
+// the same session, the executor used to delete the Unit row and then insert
+// a new one with a freshly generated UUID. Studio Pro treats the rewritten
+// ContainerID/UnitID pair as an unrelated document and refuses to open the
+// resulting .mpr ("file does not look like a Mendix Studio Pro project").
+//
+// The fix records the UnitID of dropped microflows on the executor cache and
+// reuses it when a subsequent CREATE OR REPLACE/MODIFY targets the same
+// qualified name, so the delete+insert behaves like an in-place update.
+func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
+	mod := mkModule("MyModule")
+	mf := mkMicroflow(mod.ID, "DoSomething")
+	originalID := mf.ID
+	mf.AllowedModuleRoles = []model.ID{"MyModule.Admin", "MyModule.User"}
+
+	h := mkHierarchy(mod)
+	withContainer(h, mf.ContainerID, mod.ID)
+
+	listedMicroflows := []*microflows.Microflow{mf}
+	var createdID model.ID
+	var createdRoles []model.ID
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
+			return listedMicroflows, nil
+		},
+		DeleteMicroflowFunc: func(id model.ID) error {
+			// Simulate real deletion: hide the microflow from subsequent
+			// ListMicroflows calls so CREATE OR MODIFY sees no existing unit
+			// (matching the bug reproduction exactly).
+			listedMicroflows = nil
+			return nil
+		},
+		CreateMicroflowFunc: func(m *microflows.Microflow) error {
+			createdID = m.ID
+			createdRoles = cloneRoleIDs(m.AllowedModuleRoles)
+			return nil
+		},
+		GetModuleSecurityFunc: func(moduleID model.ID) (*security.ModuleSecurity, error) {
+			return &security.ModuleSecurity{
+				BaseElement: model.BaseElement{ID: nextID("ms")},
+				ContainerID: moduleID,
+			}, nil
+		},
+		AddModuleRoleFunc: func(moduleSecurityID model.ID, name, description string) error {
+			return nil
+		},
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
+			return nil, nil
+		},
+		ListConsumedRestServicesFunc: func() ([]*model.ConsumedRestService, error) {
+			return nil, nil
+		},
+	}
+
+	// Need an Executor so ctx.executor is set (trackCreatedMicroflow uses it).
+	exec := New(&bytesWriter{})
+	ctx := &ExecContext{
+		Context:  t.Context(),
+		Backend:  mb,
+		Output:   exec.output,
+		Format:   FormatTable,
+		executor: exec,
+	}
+	exec.backend = mb
+	withHierarchy(h)(ctx)
+
+	if err := execDropMicroflow(ctx, &ast.DropMicroflowStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
+	}); err != nil {
+		t.Fatalf("DROP MICROFLOW failed: %v", err)
+	}
+
+	// The UnitID and ContainerID must have been stashed on the cache before deletion.
+	if ctx.Cache == nil || ctx.Cache.droppedMicroflows == nil ||
+		ctx.Cache.droppedMicroflows["MyModule.DoSomething"] == nil ||
+		ctx.Cache.droppedMicroflows["MyModule.DoSomething"].ID != originalID {
+		t.Fatalf("expected droppedMicroflows[MyModule.DoSomething].ID = %q, got cache=%+v",
+			originalID, ctx.Cache)
+	}
+
+	// CREATE OR MODIFY with the same qualified name must reuse the dropped ID.
+	createStmt := &ast.CreateMicroflowStmt{
+		Name:           ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
+		CreateOrModify: true,
+		Body:           nil, // empty body is fine for this test
+	}
+	if err := execCreateMicroflow(ctx, createStmt); err != nil {
+		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
+	}
+
+	if createdID != originalID {
+		t.Fatalf("CREATE OR MODIFY must reuse dropped UnitID: got %q, want %q",
+			createdID, originalID)
+	}
+	if len(createdRoles) != 2 || createdRoles[0] != "MyModule.Admin" || createdRoles[1] != "MyModule.User" {
+		t.Fatalf("CREATE OR MODIFY must preserve dropped allowed roles: got %v", createdRoles)
+	}
+
+	// The cache entry must be consumed so repeated CREATEs don't collide.
+	if ctx.Cache != nil && ctx.Cache.droppedMicroflows != nil {
+		if _, stillThere := ctx.Cache.droppedMicroflows["MyModule.DoSomething"]; stillThere {
+			t.Errorf("droppedMicroflows entry should be cleared after reuse")
+		}
+	}
+}
+
+func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
+	mod := mkModule("MyModule")
+	mf := mkMicroflow(mod.ID, "DoSomething")
+	mf.AllowedModuleRoles = []model.ID{"MyModule.Admin"}
+
+	h := mkHierarchy(mod)
+	withContainer(h, mf.ContainerID, mod.ID)
+
+	var updatedRoles []model.ID
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
+			return []*microflows.Microflow{mf}, nil
+		},
+		UpdateMicroflowFunc: func(updated *microflows.Microflow) error {
+			updatedRoles = cloneRoleIDs(updated.AllowedModuleRoles)
+			return nil
+		},
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
+			return nil, nil
+		},
+		ListConsumedRestServicesFunc: func() ([]*model.ConsumedRestService, error) {
+			return nil, nil
+		},
+	}
+
+	exec := New(&bytesWriter{})
+	ctx := &ExecContext{
+		Context:  t.Context(),
+		Backend:  mb,
+		Output:   exec.output,
+		Format:   FormatTable,
+		executor: exec,
+	}
+	exec.backend = mb
+	withHierarchy(h)(ctx)
+
+	if err := execCreateMicroflow(ctx, &ast.CreateMicroflowStmt{
+		Name:           ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
+		CreateOrModify: true,
+	}); err != nil {
+		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
+	}
+
+	if len(updatedRoles) != 1 || updatedRoles[0] != "MyModule.Admin" {
+		t.Fatalf("expected existing allowed roles to be preserved, got %v", updatedRoles)
+	}
+}
+
+// bytesWriter is a trivial io.Writer used to satisfy New() in the regression
+// test above. We don't care about captured output for this test.
+type bytesWriter struct{}
+
+func (*bytesWriter) Write(p []byte) (int, error) { return len(p), nil }
