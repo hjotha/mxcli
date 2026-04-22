@@ -117,8 +117,10 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			}
 		}
 
-		// Connect THEN body to merge only if it doesn't end with RETURN
-		if !thenReturns {
+		// Connect THEN body to merge only if it doesn't end with RETURN and a merge exists.
+		// When needMerge=false, the continuing branch is wired up by the parent via
+		// nextConnectionPoint/nextFlowCase, so we must not emit a dangling flow here.
+		if !thenReturns && needMerge {
 			if lastThenID != "" {
 				fb.flows = append(fb.flows, newHorizontalFlow(lastThenID, mergeID))
 			} else {
@@ -153,8 +155,10 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			}
 		}
 
-		// Connect ELSE body to merge only if it doesn't end with RETURN
-		if !elseReturns {
+		// Connect ELSE body to merge only if it doesn't end with RETURN and a merge exists.
+		// When needMerge=false, the continuing branch is handled by the parent; emitting
+		// a flow with an empty mergeID would create an orphan SequenceFlow.
+		if !elseReturns && needMerge {
 			if lastElseID != "" {
 				fb.flows = append(fb.flows, newUpwardFlow(lastElseID, mergeID))
 			}
@@ -196,8 +200,10 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			}
 		}
 
-		// Connect THEN body to merge only if it doesn't end with RETURN
-		if !thenReturns {
+		// Connect THEN body to merge only if it doesn't end with RETURN and a merge exists.
+		// With no ELSE + thenReturns, needMerge=false and the FALSE path is threaded through
+		// the parent — any flow emitted here would dangle with mergeID="".
+		if !thenReturns && needMerge {
 			if lastThenID != "" {
 				fb.flows = append(fb.flows, newUpwardFlow(lastThenID, mergeID))
 			} else {

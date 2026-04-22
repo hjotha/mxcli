@@ -83,6 +83,15 @@ func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, inde
 		}
 	}
 
+	// @caption for splits — preserves the human-readable label (e.g. "Right format?")
+	// that Mendix stores independently from the expression/rule being evaluated.
+	if split, ok := obj.(*microflows.ExclusiveSplit); ok && split.Caption != "" {
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
+	}
+	if split, ok := obj.(*microflows.InheritanceSplit); ok && split.Caption != "" {
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
+	}
+
 	// @annotation (attached Annotation objects)
 	if annotationsByTarget != nil {
 		for _, caption := range annotationsByTarget[currentID] {

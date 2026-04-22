@@ -276,6 +276,18 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 	// Generate activities
 	if targetMf.ObjectCollection != nil && len(targetMf.ObjectCollection.Objects) > 0 {
 		activityLines := formatMicroflowActivities(ctx, targetMf, entityNames, microflowNames)
+		// Free-floating annotations (no AnnotationFlow) get attached as leading
+		// @annotation entries on the first activity so their text survives the
+		// describe→exec roundtrip — otherwise author notes like date-stamped
+		// comments silently disappear.
+		freeAnnots := collectFreeAnnotations(targetMf.ObjectCollection)
+		if len(freeAnnots) > 0 && len(activityLines) > 0 {
+			prefix := make([]string, 0, len(freeAnnots))
+			for _, text := range freeAnnots {
+				prefix = append(prefix, fmt.Sprintf("@annotation %s", mdlQuote(text)))
+			}
+			activityLines = append(prefix, activityLines...)
+		}
 		for _, line := range activityLines {
 			lines = append(lines, "  "+line)
 		}
@@ -532,6 +544,18 @@ func renderMicroflowMDL(
 			activityLines = formatMicroflowActivitiesWithSourceMap(ctx, mf, entityNames, microflowNames, sourceMap, headerLineCount)
 		} else {
 			activityLines = formatMicroflowActivities(ctx, mf, entityNames, microflowNames)
+		}
+		// Emit free-floating annotations (those with no AnnotationFlow) as leading
+		// @annotation entries on the first activity so their text survives a
+		// describe→exec roundtrip. The alternative — dropping them — silently loses
+		// human context like author/date comments Mendix developers leave on flows.
+		freeAnnots := collectFreeAnnotations(mf.ObjectCollection)
+		if len(freeAnnots) > 0 && len(activityLines) > 0 {
+			prefix := make([]string, 0, len(freeAnnots))
+			for _, text := range freeAnnots {
+				prefix = append(prefix, fmt.Sprintf("@annotation %s", mdlQuote(text)))
+			}
+			activityLines = append(prefix, activityLines...)
 		}
 		for _, line := range activityLines {
 			lines = append(lines, "  "+line)

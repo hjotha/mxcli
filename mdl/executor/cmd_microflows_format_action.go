@@ -39,12 +39,7 @@ func formatActivity(
 		return formatAction(ctx, activity.Action, entityNames, microflowNames)
 
 	case *microflows.ExclusiveSplit:
-		condition := "true"
-		if activity.SplitCondition != nil {
-			if exprCond, ok := activity.SplitCondition.(*microflows.ExpressionSplitCondition); ok {
-				condition = exprCond.Expression
-			}
-		}
+		condition := formatSplitCondition(activity.SplitCondition)
 		return fmt.Sprintf("if %s then", condition)
 
 	case *microflows.ExclusiveMerge:
@@ -1154,4 +1149,43 @@ func (e *Executor) formatListOperation(op microflows.ListOperation, outputVar st
 
 func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
 	return formatRestCallAction(e.newExecContext(context.Background()), a)
+}
+
+// formatSplitCondition renders an ExclusiveSplit's condition as an MDL expression.
+// ExpressionSplitCondition is emitted verbatim. RuleSplitCondition is rendered as
+// a rule call expression using the rule's qualified name — Mendix expressions
+// allow calling a rule the same way as a microflow, so this is re-parseable.
+// Unknown or nil conditions fall back to "true" so the describer still produces
+// valid MDL; callers should rely on the original Caption (emitted via @caption)
+// to preserve human-readable intent.
+func formatSplitCondition(cond microflows.SplitCondition) string {
+	switch c := cond.(type) {
+	case *microflows.ExpressionSplitCondition:
+		expr := strings.TrimRight(c.Expression, " \t\n\r")
+		if expr == "" {
+			return "true"
+		}
+		return expr
+	case *microflows.RuleSplitCondition:
+		name := c.RuleQualifiedName
+		if name == "" {
+			return "true"
+		}
+		args := make([]string, 0, len(c.ParameterMappings))
+		for _, pm := range c.ParameterMappings {
+			paramName := pm.ParameterName
+			if idx := strings.LastIndex(paramName, "."); idx >= 0 {
+				paramName = paramName[idx+1:]
+			}
+			arg := strings.TrimRight(pm.Argument, " \t\n\r")
+			if paramName != "" {
+				args = append(args, fmt.Sprintf("%s = %s", paramName, arg))
+			} else {
+				args = append(args, arg)
+			}
+		}
+		return fmt.Sprintf("%s(%s)", name, strings.Join(args, ", "))
+	default:
+		return "true"
+	}
 }
