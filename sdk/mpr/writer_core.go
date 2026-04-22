@@ -148,7 +148,9 @@ func (wt *WriteTransaction) WriteUnit(unitID string, contents []byte) error {
 	_, err := wt.tx.Exec(`
 		UPDATE Unit SET Contents = ?, ContentsHash = ? WHERE UnitID = ?
 	`, contents, contentsHash, unitIDBlob)
-	if err != nil {
+	if err != nil && isContentsHashSchemaError(err) {
+		// Older v1 schemas do not have ContentsHash; retry without it.
+		// Any other error (disk full, invalid UnitID, rolled-back tx) propagates.
 		_, err = wt.tx.Exec(`
 			UPDATE Unit SET Contents = ? WHERE UnitID = ?
 		`, contents, unitIDBlob)

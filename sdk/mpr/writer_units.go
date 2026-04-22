@@ -9,9 +9,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
+
+// isContentsHashSchemaError returns true when the error looks like SQLite complaining
+// about the absence of the ContentsHash column (i.e. an old MPR v1 schema from pre-Mx
+// versions that predate ContentsHash). Anything else — a disk-full error, a missing
+// UnitID, a rolled-back transaction — must propagate so writes don't silently succeed
+// without updating Contents.
+func isContentsHashSchemaError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "ContentsHash")
+}
 
 // updateTransactionID updates the _Transaction table with a new UUID.
 // Studio Pro uses this to detect external changes during F4 sync.
@@ -154,8 +168,9 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 	_, err := w.reader.db.Exec(`
 		UPDATE Unit SET Contents = ?, ContentsHash = ? WHERE UnitID = ?
 	`, contents, contentsHash, unitIDBlob)
-	if err != nil {
-		// Older v1 schemas do not have ContentsHash.
+	if err != nil && isContentsHashSchemaError(err) {
+		// Older v1 schemas do not have ContentsHash; retry without it.
+		// Any other error (disk full, invalid UnitID, rolled-back tx) propagates.
 		_, err = w.reader.db.Exec(`
 			UPDATE Unit SET Contents = ? WHERE UnitID = ?
 		`, contents, unitIDBlob)

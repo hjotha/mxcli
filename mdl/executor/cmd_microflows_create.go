@@ -95,7 +95,9 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		if s.Folder == "" && dropped.ContainerID != "" {
 			containerID = dropped.ContainerID
 		}
-		existingAllowedRoles = cloneRoleIDs(dropped.AllowedRoles)
+		// consumeDroppedMicroflow removed the cache entry, so we own this
+		// slice — no need to clone it again.
+		existingAllowedRoles = dropped.AllowedRoles
 		preserveAllowedRoles = true
 	}
 
