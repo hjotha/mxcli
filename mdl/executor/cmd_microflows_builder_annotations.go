@@ -116,8 +116,8 @@ func (fb *flowBuilder) applyAnnotations(activityID model.ID, ann *ast.ActivityAn
 				continue
 			}
 
-			// @caption, @color, and @excluded — only applicable to ActionActivity
-			if activity, ok := obj.(*microflows.ActionActivity); ok {
+			switch activity := obj.(type) {
+			case *microflows.ActionActivity:
 				if ann.Caption != "" {
 					activity.Caption = ann.Caption
 					activity.AutoGenerateCaption = false
@@ -127,6 +127,16 @@ func (fb *flowBuilder) applyAnnotations(activityID model.ID, ann *ast.ActivityAn
 				}
 				if ann.Excluded {
 					activity.Disabled = true
+				}
+			case *microflows.ExclusiveSplit:
+				// Splits carry a human-readable Caption (e.g. "Right format?")
+				// independent of the expression/rule being evaluated.
+				if ann.Caption != "" {
+					activity.Caption = ann.Caption
+				}
+			case *microflows.InheritanceSplit:
+				if ann.Caption != "" {
+					activity.Caption = ann.Caption
 				}
 			}
 
