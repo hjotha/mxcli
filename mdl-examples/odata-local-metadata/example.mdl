@@ -1,0 +1,43 @@
+-- Example: Using local OData metadata files
+--
+-- This demonstrates three ways to specify local metadata files for OData clients:
+-- 1. Absolute file:// URI (stored as-is)
+-- 2. Relative path with ./ (normalized to absolute file://)
+-- 3. Relative path without ./ (normalized to absolute file://)
+--
+-- IMPORTANT: ServiceUrl must be a constant reference (prefixed with @)
+
+-- First, create constants for service locations (required for ServiceUrl)
+CREATE CONSTANT TestModule.NorthwindLocation
+  TYPE String
+  DEFAULT 'https://services.odata.org/V4/Northwind/Northwind.svc/';
+
+-- Method 1: Absolute file:// URI (stored as-is in model)
+-- Useful when the metadata file is in a fixed location
+CREATE ODATA CLIENT TestModule.NorthwindAbsolute (
+  MetadataUrl: 'file:///tmp/northwind-metadata.xml',
+  ServiceUrl: '@TestModule.NorthwindLocation'
+);
+
+-- Method 2: Relative path with ./ (normalized to absolute file:// in model)
+-- Best for metadata files stored alongside the project
+-- Example: './metadata/file.xml' → 'file:///absolute/path/to/project/metadata/file.xml'
+CREATE ODATA CLIENT TestModule.NorthwindRelative (
+  MetadataUrl: './mdl-examples/odata-local-metadata/sample-metadata.xml',
+  ServiceUrl: '@TestModule.NorthwindLocation'
+);
+
+-- Method 3: Relative path without ./ (normalized to absolute file:// in model)
+CREATE ODATA CLIENT TestModule.NorthwindSimple (
+  MetadataUrl: 'mdl-examples/odata-local-metadata/sample-metadata.xml',
+  ServiceUrl: '@TestModule.NorthwindLocation'
+);
+
+-- HTTP(S) URLs still work as before (stored as-is in model)
+CREATE ODATA CLIENT TestModule.NorthwindRemote (
+  MetadataUrl: 'https://services.odata.org/V4/Northwind/Northwind.svc/$metadata',
+  ServiceUrl: '@TestModule.NorthwindLocation'
+);
+
+-- Show the created clients (note: relative paths appear as file:// URLs)
+SHOW ODATA CLIENTS IN TestModule;

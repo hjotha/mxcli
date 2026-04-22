@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+  <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Northwind">
+      <EntityType Name="Product">
+        <Key>
+          <PropertyRef Name="ProductID"/>
+        </Key>
+        <Property Name="ProductID" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="ProductName" Type="Edm.String" MaxLength="40" Nullable="false"/>
+        <Property Name="SupplierID" Type="Edm.Int32"/>
+        <Property Name="CategoryID" Type="Edm.Int32"/>
+        <Property Name="QuantityPerUnit" Type="Edm.String" MaxLength="20"/>
+        <Property Name="UnitPrice" Type="Edm.Decimal"/>
+        <Property Name="UnitsInStock" Type="Edm.Int16"/>
+        <Property Name="UnitsOnOrder" Type="Edm.Int16"/>
+        <Property Name="ReorderLevel" Type="Edm.Int16"/>
+        <Property Name="Discontinued" Type="Edm.Boolean" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="Category">
+        <Key>
+          <PropertyRef Name="CategoryID"/>
+        </Key>
+        <Property Name="CategoryID" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="CategoryName" Type="Edm.String" MaxLength="15" Nullable="false"/>
+        <Property Name="Description" Type="Edm.String"/>
+      </EntityType>
+      <EntityContainer Name="NorthwindEntities">
+        <EntitySet Name="Products" EntityType="Northwind.Product"/>
+        <EntitySet Name="Categories" EntityType="Northwind.Category"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

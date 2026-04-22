@@ -1,0 +1,45 @@
+-- ============================================================================
+-- Bug #258: DROP + CREATE OR MODIFY microflow UnitID preservation
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   A DROP MICROFLOW X followed by CREATE OR MODIFY MICROFLOW X in the same
+--   session produced a *different* UnitID for the new row. Studio Pro treats
+--   Unit rows with a different UnitID as unrelated documents and refuses to
+--   open the project:
+--     ".mpr does not look like a Mendix Studio Pro project file"
+--
+-- After fix:
+--   The executor remembers the dropped UnitID (and ContainerID, AllowedRoles)
+--   and reuses them on the subsequent CREATE so Studio Pro sees an in-place
+--   update. Also exercises v1 ContentsHash persistence — MPR v1 projects need
+--   the hash populated on every write or Studio Pro rejects the file as
+--   corrupt.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/258-drop-create-microflow-unitid-preservation.mdl -p app.mpr
+--   Open the project in Studio Pro — it must load without corruption errors
+--   and the microflow MF_Replaced must be visible under BugTest258.
+-- ============================================================================
+
+create module BugTest258;
+
+create microflow BugTest258.MF_Original
+    returns string
+(
+    set $return = 'original'
+);
+
+-- Drop + recreate in the same session. Before the fix, this produced a
+-- dangling Unit row with a fresh UUID and the project became unopenable in
+-- Studio Pro. After the fix, the new microflow reuses the original UnitID.
+drop microflow BugTest258.MF_Original;
+
+create or modify microflow BugTest258.MF_Original
+    returns string
+(
+    set $return = 'replaced'
+);
+
+-- DESCRIBE must round-trip cleanly (no placeholder UUIDs leaking).
+describe microflow BugTest258.MF_Original;

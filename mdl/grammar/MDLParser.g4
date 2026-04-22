@@ -2820,8 +2820,8 @@ workflowActivityStmt
 workflowUserTaskStmt
     : USER TASK IDENTIFIER STRING_LITERAL
       (PAGE qualifiedName)?
-      (TARGETING MICROFLOW qualifiedName)?
-      (TARGETING XPATH STRING_LITERAL)?
+      (TARGETING (USERS | GROUPS)? MICROFLOW qualifiedName)?
+      (TARGETING (USERS | GROUPS)? XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
       (DESCRIPTION STRING_LITERAL)?
@@ -2829,8 +2829,8 @@ workflowUserTaskStmt
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
     | MULTI USER TASK IDENTIFIER STRING_LITERAL
       (PAGE qualifiedName)?
-      (TARGETING MICROFLOW qualifiedName)?
-      (TARGETING XPATH STRING_LITERAL)?
+      (TARGETING (USERS | GROUPS)? MICROFLOW qualifiedName)?
+      (TARGETING (USERS | GROUPS)? XPATH STRING_LITERAL)?
       (ENTITY qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
       (DESCRIPTION STRING_LITERAL)?
@@ -3483,7 +3483,7 @@ linkMapping
     ;
 
 helpStatement
-    : IDENTIFIER  // HELP command
+    : IDENTIFIER (identifierOrKeyword)*  // HELP [topic words...]
     ;
 
 /**
@@ -3860,7 +3860,7 @@ keyword
 
     // Workflow
     | ABORT | ACTIVITY | ANNOTATION | BOUNDARY | BY | COMPLETE_TASK
-    | CONDITION | DATE | DECISION | DUE | INTERRUPTING | JUMP
+    | CONDITION | DATE | DECISION | DUE | GROUPS | INTERRUPTING | JUMP
     | LOCK | MULTI | NODE | NON | NOTIFICATION | NOTIFY
     | OPEN | OUTCOME | OUTCOMES | OVERVIEW | PARALLEL | PAUSE
     | REASON | RESTART | RETRY | SPLIT | TARGETING | TASK | TIMER

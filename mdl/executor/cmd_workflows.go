@@ -426,11 +426,19 @@ func formatUserTask(a *workflows.UserTask, indent string) []string {
 		switch us := a.UserSource.(type) {
 		case *workflows.MicroflowBasedUserSource:
 			if us.Microflow != "" {
-				lines = append(lines, fmt.Sprintf("%s  targeting microflow %s", indent, us.Microflow))
+				lines = append(lines, fmt.Sprintf("%s  targeting users microflow %s", indent, us.Microflow))
 			}
 		case *workflows.XPathBasedUserSource:
 			if us.XPath != "" {
-				lines = append(lines, fmt.Sprintf("%s  targeting xpath '%s'", indent, us.XPath))
+				lines = append(lines, fmt.Sprintf("%s  targeting users xpath '%s'", indent, us.XPath))
+			}
+		case *workflows.MicroflowGroupSource:
+			if us.Microflow != "" {
+				lines = append(lines, fmt.Sprintf("%s  targeting groups microflow %s", indent, us.Microflow))
+			}
+		case *workflows.XPathGroupSource:
+			if us.XPath != "" {
+				lines = append(lines, fmt.Sprintf("%s  targeting groups xpath '%s'", indent, us.XPath))
 			}
 		}
 	}

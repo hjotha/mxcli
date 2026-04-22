@@ -57,6 +57,8 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 	// Check if microflow with same name already exists in this module
 	var existingID model.ID
 	var existingContainerID model.ID
+	var existingAllowedRoles []model.ID
+	preserveAllowedRoles := false
 	existingMicroflows, err := ctx.Backend.ListMicroflows()
 	if err != nil {
 		return mdlerrors.NewBackend("check existing microflows", err)
@@ -68,11 +70,14 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 			}
 			existingID = existing.ID
 			existingContainerID = existing.ContainerID
+			existingAllowedRoles = cloneRoleIDs(existing.AllowedModuleRoles)
+			preserveAllowedRoles = true
 			break
 		}
 	}
 
 	// For CREATE OR REPLACE/MODIFY, reuse the existing ID to preserve references
+	qualifiedName := s.Name.Module + "." + s.Name.Name
 	microflowID := model.ID(types.GenerateID())
 	if existingID != "" {
 		microflowID = existingID
@@ -80,6 +85,20 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		if s.Folder == "" {
 			containerID = existingContainerID
 		}
+	} else if dropped := consumeDroppedMicroflow(ctx, qualifiedName); dropped != nil {
+		// A prior DROP MICROFLOW in the same session removed the unit. Reuse
+		// its original UnitID and (unless a new folder is specified)
+		// ContainerID so that Studio Pro sees the rewrite as an in-place
+		// update rather than a delete+insert pair, which produces
+		// ".mpr does not look like a Mendix Studio Pro project file" errors.
+		microflowID = dropped.ID
+		if s.Folder == "" && dropped.ContainerID != "" {
+			containerID = dropped.ContainerID
+		}
+		// consumeDroppedMicroflow removed the cache entry, so we own this
+		// slice — no need to clone it again.
+		existingAllowedRoles = dropped.AllowedRoles
+		preserveAllowedRoles = true
 	}
 
 	// Build the microflow
@@ -93,6 +112,9 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		AllowConcurrentExecution: true, // Default: allow concurrent execution
 		MarkAsUsed:               false,
 		Excluded:                 s.Excluded,
+	}
+	if preserveAllowedRoles {
+		mf.AllowedModuleRoles = existingAllowedRoles
 	}
 
 	// Build entity resolver function for parameter/return types

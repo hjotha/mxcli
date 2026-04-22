@@ -7,6 +7,8 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
 )
 
@@ -171,4 +173,111 @@ func TestDescribeDemoUser_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb))
 	assertNoError(t, describeDemoUser(ctx, "demo_admin"))
 	assertContainsStr(t, buf.String(), "create demo user")
+}
+
+func TestShowModuleRoles_Mock_FilterByModule(t *testing.T) {
+	mod1 := mkModule("Sales")
+	mod2 := mkModule("HR")
+	h := mkHierarchy(mod1, mod2)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) {
+			return []*security.ModuleSecurity{
+				{ContainerID: mod1.ID, ModuleRoles: []*security.ModuleRole{{Name: "Manager"}}},
+				{ContainerID: mod2.ID, ModuleRoles: []*security.ModuleRole{{Name: "Employee"}}},
+			}, nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listModuleRoles(ctx, "HR"))
+
+	out := buf.String()
+	assertNotContainsStr(t, out, "Sales")
+	assertContainsStr(t, out, "HR")
+	assertContainsStr(t, out, "Employee")
+}
+
+func TestDescribeModuleRole_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModuleSecurityFunc: func() ([]*security.ModuleSecurity, error) {
+			return []*security.ModuleSecurity{{
+				ContainerID: mod.ID,
+				ModuleRoles: []*security.ModuleRole{{Name: "Admin"}},
+			}}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeModuleRole(ctx, ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
+}
+
+func TestDescribeUserRole_Mock_NotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
+			return &security.ProjectSecurity{
+				UserRoles: []*security.UserRole{{Name: "Admin"}},
+			}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describeUserRole(ctx, ast.QualifiedName{Name: "NonExistent"}))
+}
+
+func TestDescribeDemoUser_Mock_NotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSecurityFunc: func() (*security.ProjectSecurity, error) {
+			return &security.ProjectSecurity{
+				EnableDemoUsers: true,
+				DemoUsers:       []*security.DemoUser{{UserName: "demo_admin"}},
+			}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describeDemoUser(ctx, "nonexistent"))
+}
+
+func TestShowAccessOnEntity_Mock_NilName(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, listAccessOnEntity(ctx, nil))
+}
+
+func TestShowAccessOnMicroflow_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:    func() bool { return true },
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, listAccessOnMicroflow(ctx, &ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
+}
+
+func TestShowAccessOnPage_Mock_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, listAccessOnPage(ctx, &ast.QualifiedName{Module: "MyModule", Name: "NonExistent"}))
+}
+
+func TestShowAccessOnWorkflow_Mock_Unsupported(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, listAccessOnWorkflow(ctx, &ast.QualifiedName{Module: "MyModule", Name: "SomeWorkflow"}))
 }

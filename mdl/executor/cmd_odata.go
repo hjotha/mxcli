@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/mendixlabs/mxcli/internal/pathutil"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -1001,8 +1004,15 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 			ClientCertificate: stmt.ClientCertificate,
 		}
 		if stmt.ServiceUrl != "" {
-			if err := validateServiceURL(stmt.ServiceUrl); err != nil {
-				return err
+			// ServiceUrl must be a constant reference (e.g., @Module.ConstantName)
+			if !strings.HasPrefix(stmt.ServiceUrl, "@") {
+				return fmt.Errorf(`ServiceUrl must now be a constant reference (e.g., '@Module.ApiLocation').
+Previously literal URLs were allowed; this enforces the Mendix best practice of externalizing configuration.
+Create a constant first:
+  CREATE CONSTANT Module.ApiLocation TYPE String DEFAULT 'https://api.example.com/';
+Then reference it:
+  ServiceUrl: '@Module.ApiLocation'
+Got: %s`, stmt.ServiceUrl)
 			}
 			cfg.OverrideLocation = true
 			cfg.CustomLocation = stmt.ServiceUrl
@@ -1017,8 +1027,21 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 	}
 
 	// Fetch and cache $metadata from the service URL
+	// Normalize local file paths to absolute file:// URLs for Studio Pro compatibility
 	if newSvc.MetadataUrl != "" {
-		metadata, hash, err := fetchODataMetadata(newSvc.MetadataUrl)
+		mprDir := ""
+		if ctx.MprPath != "" {
+			mprDir = filepath.Dir(ctx.MprPath)
+		}
+
+		// Normalize MetadataUrl: convert relative paths to absolute file:// URLs
+		normalizedUrl, err := pathutil.NormalizeURL(newSvc.MetadataUrl, mprDir)
+		if err != nil {
+			return fmt.Errorf("failed to normalize MetadataUrl: %w", err)
+		}
+		newSvc.MetadataUrl = normalizedUrl
+
+		metadata, hash, err := fetchODataMetadata(normalizedUrl)
 		if err != nil {
 			fmt.Fprintf(ctx.Output, "Warning: could not fetch $metadata: %v\n", err)
 		} else if metadata != "" {
@@ -1460,29 +1483,53 @@ func astEntityDefToModel(def *ast.PublishedEntityDef) (*model.PublishedEntityTyp
 	return entityType, entitySet
 }
 
-// fetchODataMetadata downloads the $metadata document from the service URL.
+// fetchODataMetadata downloads or reads the $metadata document.
+// Supports:
+//   - https://... or http://... (HTTP fetch)
+//   - file:///abs/path (local absolute path from normalized URL)
+//
 // Returns the metadata XML and its SHA-256 hash, or empty strings if the fetch fails.
+// Note: metadataUrl is expected to be already normalized by NormalizeURL() in createODataClient,
+// so all relative paths have been converted to absolute file:// URLs.
 func fetchODataMetadata(metadataUrl string) (metadata string, hash string, err error) {
 	if metadataUrl == "" {
 		return "", "", nil
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(metadataUrl)
-	if err != nil {
-		return "", "", mdlerrors.NewBackend(fmt.Sprintf("fetch $metadata from %s", metadataUrl), err)
-	}
-	defer resp.Body.Close()
+  var body []byte
 
-	if resp.StatusCode != http.StatusOK {
-		return "", "", mdlerrors.NewValidationf("$metadata fetch returned HTTP %d from %s", resp.StatusCode, metadataUrl)
-	}
+  // At this point, metadataUrl is already normalized by NormalizeURL() in createODataClient:
+  // - Relative paths have been converted to absolute file:// URLs
+  // - HTTP(S) URLs are unchanged
+  // So we only need to distinguish file:// vs HTTP(S)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", mdlerrors.NewBackend("read $metadata response", err)
-	}
+  filePath := pathutil.PathFromURL(metadataUrl)
+  if filePath != "" {
+      // Local file - read directly (path is already absolute)
+      body, err = os.ReadFile(filePath)
+      if err != nil {
+          return "", "", mdlerrors.NewBackend(fmt.Sprintf("read local metadata file %s", filePath), err)
+      }
+  } else {
+      // HTTP(S) fetch
+      client := &http.Client{Timeout: 30 * time.Second}
+      resp, err := client.Get(metadataUrl)
+      if err != nil {
+          return "", "", mdlerrors.NewBackend(fmt.Sprintf("fetch $metadata from %s", metadataUrl), err)
+      }
+      defer resp.Body.Close()
 
+      if resp.StatusCode != http.StatusOK {
+          return "", "", mdlerrors.NewValidationf("$metadata fetch returned HTTP %d from %s", resp.StatusCode, metadataUrl)
+      }
+
+      body, err = io.ReadAll(resp.Body)
+      if err != nil {
+          return "", "", mdlerrors.NewBackend("read $metadata response", err)
+      }
+  }
+
+	// Hash calculation (same for both HTTP and local file)
 	metadata = string(body)
 	h := sha256.Sum256(body)
 	hash = fmt.Sprintf("%x", h)

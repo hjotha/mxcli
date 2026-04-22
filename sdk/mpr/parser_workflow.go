@@ -278,9 +278,15 @@ func parseUserTask(raw map[string]any) *workflows.UserTask {
 		a.OnCreated = onCreated
 	}
 
-	// UserSource (PART)
+	// UserSource (PART) — legacy field name
 	if userSourceRaw := raw["UserSource"]; userSourceRaw != nil {
 		a.UserSource = parseUserSource(toMap(userSourceRaw))
+	}
+	// UserTargeting (PART) — current field name (Mendix 10.12+)
+	if a.UserSource == nil {
+		if userTargetingRaw := raw["UserTargeting"]; userTargetingRaw != nil {
+			a.UserSource = parseUserSource(toMap(userTargetingRaw))
+		}
 	}
 
 	// Outcomes
@@ -565,6 +571,9 @@ func parseConditionOutcomes(v any) []workflows.ConditionOutcome {
 }
 
 // parseUserSource parses a UserSource from raw BSON data.
+// Mendix versions before 10.12 use "UserSource" BSON field with $Type names like
+// "Workflows$MicroflowBasedUserSource". Mendix 10.12+ uses "UserTargeting" field
+// with $Type names like "Workflows$MicroflowUserTargeting". Both are supported.
 func parseUserSource(raw map[string]any) workflows.UserSource {
 	if raw == nil {
 		return &workflows.NoUserSource{}
@@ -572,7 +581,10 @@ func parseUserSource(raw map[string]any) workflows.UserSource {
 
 	typeName := extractString(raw["$Type"])
 	switch typeName {
-	case "Workflows$MicroflowBasedUserSource":
+	case "Workflows$NoUserSource", "Workflows$NoUserTargeting":
+		return &workflows.NoUserSource{}
+
+	case "Workflows$MicroflowBasedUserSource", "Workflows$MicroflowUserTargeting":
 		source := &workflows.MicroflowBasedUserSource{}
 		if mf, ok := raw["Microflow"].(string); ok {
 			source.Microflow = mf
@@ -582,12 +594,29 @@ func parseUserSource(raw map[string]any) workflows.UserSource {
 		}
 		return source
 
-	case "Workflows$XPathBasedUserSource":
+	case "Workflows$XPathBasedUserSource", "Workflows$XPathUserTargeting":
 		source := &workflows.XPathBasedUserSource{}
-		if xpath, ok := raw["XPath"].(string); ok {
+		if xpath, ok := raw["XPathConstraint"].(string); ok {
 			source.XPath = xpath
 		}
-		if xpath, ok := raw["XPathConstraint"].(string); ok && source.XPath == "" {
+		if xpath, ok := raw["XPath"].(string); ok && source.XPath == "" {
+			source.XPath = xpath
+		}
+		return source
+
+	case "Workflows$MicroflowGroupTargeting":
+		source := &workflows.MicroflowGroupSource{}
+		if mf, ok := raw["Microflow"].(string); ok {
+			source.Microflow = mf
+		}
+		return source
+
+	case "Workflows$XPathGroupTargeting":
+		source := &workflows.XPathGroupSource{}
+		if xpath, ok := raw["XPathConstraint"].(string); ok {
+			source.XPath = xpath
+		}
+		if xpath, ok := raw["XPath"].(string); ok && source.XPath == "" {
 			source.XPath = xpath
 		}
 		return source

@@ -90,3 +90,39 @@ func TestDescribeNavigation_Mock(t *testing.T) {
 	assertNoError(t, describeNavigation(ctx, ast.QualifiedName{Name: "Responsive"}))
 	assertContainsStr(t, buf.String(), "create or replace navigation")
 }
+
+func TestDescribeNavigation_NotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetNavigationFunc: func() (*types.NavigationDocument, error) {
+			return &types.NavigationDocument{
+				Profiles: []*types.NavigationProfile{{
+					Name: "Responsive",
+					Kind: "Responsive",
+				}},
+			}, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describeNavigation(ctx, ast.QualifiedName{Name: "NonExistent"}))
+}
+
+func TestDescribeNavigation_AllProfiles(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetNavigationFunc: func() (*types.NavigationDocument, error) {
+			return &types.NavigationDocument{
+				Profiles: []*types.NavigationProfile{
+					{Name: "Responsive", Kind: "Responsive"},
+					{Name: "NativePhone", Kind: "NativePhone"},
+				},
+			}, nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	assertNoError(t, describeNavigation(ctx, ast.QualifiedName{Name: ""}))
+
+	out := buf.String()
+	assertContainsStr(t, out, "Responsive")
+	assertContainsStr(t, out, "NativePhone")
+}

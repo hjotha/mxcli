@@ -1,6 +1,8 @@
 # Browse Integration Services and Contracts
 
-This skill covers discovering external services, browsing cached contracts, and querying integration assets via the catalog.
+This skill covers discovering external services, browsing cached contracts, and querying integration assets via the **MDL CATALOG** (local project metadata).
+
+**⚠️ NOTE:** This covers the **MDL CATALOG keyword** (`SELECT ... FROM CATALOG.entities`), NOT the **Mendix Catalog CLI** (`mxcli catalog search`). See `.claude/skills/mendix/catalog-search.md` for the external service registry.
 
 ## When to Use This Skill
 
@@ -40,6 +42,14 @@ show external actions;
 
 ## Contract Browsing: OData $metadata
 
+`create odata client` auto-fetches and caches the `$metadata` XML from HTTP(S) URLs or reads it from local files. Browse it without network access:
+
+**Note:** `MetadataUrl` supports:
+- `https://...` or `http://...` — fetches from HTTP endpoint
+- `file:///abs/path` — reads from local absolute path
+- `./path` or `path/file.xml` — reads from local relative path (resolved against `.mpr` directory)
+
+Local metadata files enable offline development, reproducible testing, and version-pinned contracts.
 `create odata client` auto-fetches and caches the `$metadata` XML. Browse it without network access:
 
 ```sql

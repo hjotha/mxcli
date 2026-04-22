@@ -61,3 +61,37 @@ func TestDescribeRestClient_Mock(t *testing.T) {
 	assertContainsStr(t, out, "create rest client")
 	assertContainsStr(t, out, "MyModule.WeatherAPI")
 }
+
+func TestDescribeRestClient_NotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListConsumedRestServicesFunc: func() ([]*model.ConsumedRestService, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describeRestClient(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
+}
+
+func TestShowRestClients_FilterByModule(t *testing.T) {
+	mod := mkModule("Integrations")
+	svc := &model.ConsumedRestService{
+		BaseElement: model.BaseElement{ID: nextID("crs")},
+		ContainerID: mod.ID,
+		Name:        "PaymentAPI",
+		BaseUrl:     "https://api.payment.com",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, svc.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListConsumedRestServicesFunc: func() ([]*model.ConsumedRestService, error) {
+			return []*model.ConsumedRestService{svc}, nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listRestClients(ctx, "Integrations"))
+	assertContainsStr(t, buf.String(), "Integrations.PaymentAPI")
+}

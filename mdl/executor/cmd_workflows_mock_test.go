@@ -50,3 +50,29 @@ func TestDescribeWorkflow_Mock(t *testing.T) {
 	assertContainsStr(t, out, "workflow")
 	assertContainsStr(t, out, "Sales.ApproveOrder")
 }
+
+func TestDescribeWorkflow_NotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc:   func() bool { return true },
+		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describeWorkflow(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
+}
+
+func TestShowWorkflows_FilterByModule(t *testing.T) {
+	mod := mkModule("Sales")
+	wf := mkWorkflow(mod.ID, "ApproveOrder")
+
+	h := mkHierarchy(mod)
+	withContainer(h, wf.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:   func() bool { return true },
+		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listWorkflows(ctx, "Sales"))
+	assertContainsStr(t, buf.String(), "Sales.ApproveOrder")
+}

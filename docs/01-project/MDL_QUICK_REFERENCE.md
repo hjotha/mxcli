@@ -133,12 +133,40 @@ create constant MyModule.EnableLogging type boolean default true;
 
 **OData Client Example:**
 ```sql
+-- HTTP(S) URL (fetches metadata from remote service)
 create odata client MyModule.ExternalAPI (
-  version: '1.0',
+  Version: '1.0',
   ODataVersion: OData4,
   MetadataUrl: 'https://api.example.com/odata/v4/$metadata',
   timeout: 300
 );
+
+-- Local file with absolute file:// URI
+CREATE ODATA CLIENT MyModule.LocalService (
+  Version: '1.0',
+  ODataVersion: OData4,
+  MetadataUrl: 'file:///path/to/metadata.xml',
+  Timeout: 300
+);
+
+-- Local file with relative path (normalized to absolute file:// in model)
+CREATE ODATA CLIENT MyModule.LocalService2 (
+  Version: '1.0',
+  ODataVersion: OData4,
+  MetadataUrl: './metadata/service.xml',
+  Timeout: 300,
+  ServiceUrl: '@MyModule.ServiceLocation'  -- Must be a constant reference
+);
+```
+
+**Note:** `MetadataUrl` supports three formats:
+- `https://...` or `http://...` — fetches from HTTP(S) endpoint
+- `file:///abs/path` — reads from local absolute path
+- `./path` or `path/file.xml` — reads from local relative path, **normalized to absolute `file://` in the model** for Studio Pro compatibility
+
+**Important:** `ServiceUrl` must always be a constant reference starting with `@` (e.g., `@Module.ConstantName`). Create a constant first:
+```sql
+CREATE CONSTANT MyModule.ServiceLocation TYPE String DEFAULT 'https://api.example.com/odata/v4/';
 ```
 
 **OData Service Example:**
@@ -276,7 +304,7 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 | Drop workflow | `drop workflow Module.Name;` | |
 
 **Workflow Activity Types:**
-- `user task <name> '<caption>' [page Mod.Page] [targeting microflow Mod.MF] [outcomes '<out>' { } ...];`
+- `user task <name> '<caption>' [page Mod.Page] [targeting [users|groups] microflow Mod.MF] [targeting [users|groups] xpath '<expr>'] [outcomes '<out>' { } ...];`
 - `call microflow Mod.MF [comment '<text>'] [outcomes '<out>' { } ...];`
 - `call workflow Mod.WF [comment '<text>'];`
 - `decision ['<caption>'] outcomes '<out>' { } ...;`
@@ -312,8 +340,8 @@ Modify an existing workflow's properties, activities, outcomes, paths, condition
 | Set parameter | `set parameter $Var: Module.Entity` | Workflow context parameter |
 | Set activity page | `set activity name page Module.Page` | Change user task page |
 | Set activity description | `set activity name description 'text'` | Activity description |
-| Set activity targeting | `set activity name targeting microflow Module.MF` | Target user assignment |
-| Set activity XPath | `set activity name targeting xpath '[expr]'` | XPath targeting |
+| Set activity targeting | `set activity name targeting [users\|groups] microflow Module.MF` | Target user/group assignment |
+| Set activity XPath | `set activity name targeting [users\|groups] xpath '[expr]'` | XPath targeting |
 | Set activity due date | `set activity name due date 'expr'` | Activity-level due date |
 | Insert activity | `insert after name call microflow Module.MF` | Insert after named activity |
 | Drop activity | `drop activity name` | Remove activity by name |

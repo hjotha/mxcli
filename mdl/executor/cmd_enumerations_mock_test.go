@@ -97,3 +97,6 @@ func TestDescribeEnumeration_Mock_NotFound(t *testing.T) {
 	err := describeEnumeration(ctx, ast.QualifiedName{Module: "MyModule", Name: "Missing"})
 	assertError(t, err)
 }
+
+// Backend error: cmd_error_mock_test.go (TestShowEnumerations_Mock_BackendError)
+// JSON: cmd_json_mock_test.go (TestShowEnumerations_Mock_JSON)

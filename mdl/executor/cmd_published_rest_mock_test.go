@@ -68,3 +68,37 @@ func TestDescribePublishedRestService_Mock(t *testing.T) {
 	assertContainsStr(t, out, "create published rest service")
 	assertContainsStr(t, out, "MyModule.OrderAPI")
 }
+
+func TestDescribePublishedRestService_NotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListPublishedRestServicesFunc: func() ([]*model.PublishedRestService, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describePublishedRestService(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
+}
+
+func TestShowPublishedRestServices_FilterByModule(t *testing.T) {
+	mod := mkModule("Sales")
+	svc := &model.PublishedRestService{
+		BaseElement: model.BaseElement{ID: nextID("prs")},
+		ContainerID: mod.ID,
+		Name:        "SalesAPI",
+		Path:        "/rest/sales/v1",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, svc.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListPublishedRestServicesFunc: func() ([]*model.PublishedRestService, error) {
+			return []*model.PublishedRestService{svc}, nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listPublishedRestServices(ctx, "Sales"))
+	assertContainsStr(t, buf.String(), "Sales.SalesAPI")
+}

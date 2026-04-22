@@ -104,3 +104,6 @@ func TestDescribeConstant_Mock_NotFound(t *testing.T) {
 	err := describeConstant(ctx, ast.QualifiedName{Module: "MyModule", Name: "Missing"})
 	assertError(t, err)
 }
+
+// Backend error: cmd_error_mock_test.go (TestShowConstants_Mock_BackendError)
+// JSON: cmd_json_mock_test.go (TestShowConstants_Mock_JSON)

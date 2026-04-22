@@ -111,3 +111,6 @@ func TestDescribeMicroflow_Mock_NotFound(t *testing.T) {
 	err := describeMicroflow(ctx, ast.QualifiedName{Module: "MyModule", Name: "Missing"})
 	assertError(t, err)
 }
+
+// Backend error: cmd_error_mock_test.go (TestShowMicroflows_Mock_BackendError, TestShowNanoflows_Mock_BackendError)
+// JSON: cmd_json_mock_test.go (TestShowMicroflows_Mock_JSON, TestShowNanoflows_Mock_JSON)

@@ -77,3 +77,36 @@ func TestDescribeBusinessEventService_Mock(t *testing.T) {
 	assertContainsStr(t, out, "create or replace business event service")
 	assertContainsStr(t, out, "MyModule.OrderEvents")
 }
+
+func TestDescribeBusinessEventService_NotFound(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListBusinessEventServicesFunc: func() ([]*model.BusinessEventService, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, describeBusinessEventService(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
+}
+
+func TestShowBusinessEventServices_FilterByModule(t *testing.T) {
+	mod := mkModule("Orders")
+	svc := &model.BusinessEventService{
+		BaseElement: model.BaseElement{ID: nextID("bes")},
+		ContainerID: mod.ID,
+		Name:        "OrderEvents",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, svc.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListBusinessEventServicesFunc: func() ([]*model.BusinessEventService, error) {
+			return []*model.BusinessEventService{svc}, nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listBusinessEventServices(ctx, "Orders"))
+	assertContainsStr(t, buf.String(), "Orders.OrderEvents")
+}

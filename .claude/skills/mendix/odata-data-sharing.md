@@ -10,6 +10,61 @@ This skill covers how to use OData services to share data between Mendix applica
 - User asks about external entities, consumed/published OData services
 - User wants to decouple modules or apps for independent deployment
 - User asks about the view entity pattern for OData services
+- User asks about local metadata files or offline OData development
+
+## MetadataUrl Formats
+
+`CREATE ODATA CLIENT` supports three formats for the `MetadataUrl` parameter:
+
+| Format | Example | Stored In Model |
+|--------|---------|-----------------|
+| **HTTP(S) URL** | `https://api.example.com/odata/v4/$metadata` | Unchanged |
+| **Absolute file:// URI** | `file:///Users/team/contracts/service.xml` | Unchanged |
+| **Relative path** | `./metadata/service.xml` or `metadata/service.xml` | **Normalized to absolute `file://`** |
+
+**Path Normalization:**
+- Relative paths (with or without `./`) are **automatically converted** to absolute `file://` URLs in the Mendix model
+- This ensures Studio Pro can properly detect local file vs HTTP metadata sources (radio button in UI)
+- Example: `./metadata/service.xml` → `file:///absolute/path/to/project/metadata/service.xml`
+
+**Path Resolution (before normalization):**
+- With project loaded (`-p` flag or REPL): relative paths are resolved against the `.mpr` file's directory
+- Without project: relative paths are resolved against the current working directory
+
+**Use Cases for Local Metadata:**
+- **Offline development** — no network access required
+- **Testing and CI/CD** — reproducible builds with metadata snapshots
+- **Version control** — commit metadata files alongside code
+- **Pre-production** — test against upcoming API changes before deployment
+- **Firewall-friendly** — works in locked-down corporate environments
+
+## ServiceUrl Must Be a Constant
+
+**IMPORTANT:** The `ServiceUrl` parameter **must always be a constant reference** (prefixed with `@`). Direct URLs are not allowed.
+
+**Correct:**
+```sql
+CREATE CONSTANT ProductClient.ProductDataApiLocation
+  TYPE String
+  DEFAULT 'http://localhost:8080/odata/productdataapi/v1/';
+
+CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: 'https://api.example.com/$metadata',
+  ServiceUrl: '@ProductClient.ProductDataApiLocation'  -- ✅ Constant reference
+);
+```
+
+**Incorrect:**
+```sql
+CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: 'https://api.example.com/$metadata',
+  ServiceUrl: 'https://api.example.com/odata'  -- ❌ Direct URL not allowed
+);
+```
+
+This enforces Mendix best practice of externalizing configuration values for different environments.
 
 ## Architecture Overview
 
@@ -228,6 +283,40 @@ create odata client ProductClient.ProductDataApiClient (
   ODataVersion: OData4,
   MetadataUrl: 'http://localhost:8080/odata/productdataapi/v1/$metadata',
   timeout: 300,
+  ServiceUrl: '@ProductClient.ProductDataApiLocation',
+  UseAuthentication: Yes,
+  HttpUsername: 'MxAdmin',
+  HttpPassword: '1'
+);
+
+-- OData client with local file - relative path (offline development)
+-- Resolved relative to .mpr directory when project is loaded
+CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: './metadata/productdataapi.xml',
+  Timeout: 300,
+  ServiceUrl: '@ProductClient.ProductDataApiLocation',
+  UseAuthentication: Yes,
+  HttpUsername: 'MxAdmin',
+  HttpPassword: '1'
+);
+
+-- OData client with local file - relative path without ./
+CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: 'metadata/productdataapi.xml',
+  Timeout: 300,
+  ServiceUrl: '@ProductClient.ProductDataApiLocation',
+  UseAuthentication: Yes,
+  HttpUsername: 'MxAdmin',
+  HttpPassword: '1'
+);
+
+-- OData client with local file - absolute file:// URI
+CREATE ODATA CLIENT ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: 'file:///Users/team/contracts/productdataapi.xml',
+  Timeout: 300,
   ServiceUrl: '@ProductClient.ProductDataApiLocation',
   UseAuthentication: Yes,
   HttpUsername: 'MxAdmin',
@@ -460,13 +549,40 @@ authentication basic
 
 ## Folder Organization
 
-Use the `folder` property to organize OData documents within modules:
+Use the `Folder` property to organize OData documents within modules.
+
+**MetadataUrl accepts three formats:**
+1. **HTTP(S) URL** — fetches from remote service (production)
+2. **file:///absolute/path** — reads from local absolute path
+3. **./path or path/file.xml** — reads from local relative path (resolved against .mpr directory)
 
 ```sql
+-- Format 1: HTTP(S) URL
 create odata client ProductClient.ProductDataApiClient (
   ODataVersion: OData4,
-  MetadataUrl: 'http://localhost:8080/odata/productdataapi/v1/$metadata',
-  folder: 'Integration/ProductAPI'
+  MetadataUrl: 'https://api.example.com/odata/v4/$metadata',
+  Folder: 'Integration/ProductAPI'
+);
+
+-- Format 2: Absolute file:// URI
+create odata client ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: 'file:///Users/team/contracts/productdataapi.xml',
+  Folder: 'Integration/ProductAPI'
+);
+
+-- Format 3a: Relative path with ./
+create odata client ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: './metadata/productdataapi.xml',
+  Folder: 'Integration/ProductAPI'
+);
+
+-- Format 3b: Relative path without ./
+create odata client ProductClient.ProductDataApiClient (
+  ODataVersion: OData4,
+  MetadataUrl: 'metadata/productdataapi.xml',
+  Folder: 'Integration/ProductAPI'
 );
 
 create odata service ProductApi.ProductDataApi (
@@ -506,7 +622,11 @@ Before publishing:
 
 Before consuming:
 - [ ] Location constant created for environment-specific URLs
-- [ ] OData client points to `$metadata` URL and uses `ServiceUrl: '@Module.Constant'`
+- [ ] OData client `MetadataUrl` points to either:
+  - HTTP(S) URL: `https://api.example.com/$metadata`
+  - Local file (absolute): `file:///path/to/metadata.xml`
+  - Local file (relative): `./metadata/service.xml` (resolved against `.mpr` directory)
+- [ ] OData client uses `ServiceUrl: '@Module.Constant'` for runtime endpoint
 - [ ] External entities match the published exposed names and types
 - [ ] Module role created and granted on external entities (READ, optionally CREATE/WRITE/DELETE)
 

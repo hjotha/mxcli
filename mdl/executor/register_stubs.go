@@ -376,7 +376,7 @@ func registerSessionHandlers(r *Registry) {
 		return execSet(ctx, stmt.(*ast.SetStmt))
 	})
 	r.Register(&ast.HelpStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execHelp(ctx)
+		return execHelp(ctx, stmt.(*ast.HelpStmt))
 	})
 	r.Register(&ast.ExitStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execExit(ctx)

@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
@@ -74,4 +75,41 @@ func TestShowAssociations_Mock_FilterByModule(t *testing.T) {
 	assertNotContainsStr(t, out, "Sales.Order_Product")
 	assertContainsStr(t, out, "HR.Employee_Dept")
 	assertContainsStr(t, out, "(1 associations)")
+}
+
+// NOTE: listAssociations and describeAssociation have no Connected() guard.
+// They call backend directly — error propagation is the only failure mode.
+
+func TestShowAssociations_BackendError(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return nil, fmt.Errorf("connection lost") },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	assertError(t, listAssociations(ctx, ""))
+}
+
+func TestShowAssociations_JSON(t *testing.T) {
+	mod := mkModule("App")
+	ent1 := mkEntity(mod.ID, "A")
+	ent2 := mkEntity(mod.ID, "B")
+	assoc := mkAssociation(mod.ID, "A_B", ent1.ID, ent2.ID)
+
+	dm := &domainmodel.DomainModel{
+		BaseElement:  model.BaseElement{ID: nextID("dm")},
+		ContainerID:  mod.ID,
+		Entities:     []*domainmodel.Entity{ent1, ent2},
+		Associations: []*domainmodel.Association{assoc},
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:      func() bool { return true },
+		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return []*domainmodel.DomainModel{dm}, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON))
+	assertNoError(t, listAssociations(ctx, ""))
+	assertValidJSON(t, buf.String())
+	assertContainsStr(t, buf.String(), "A_B")
 }
