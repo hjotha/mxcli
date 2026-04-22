@@ -3,11 +3,14 @@
 package executor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/pages"
 )
 
 func TestDescribeMermaid_DomainModel_Mock(t *testing.T) {
@@ -49,4 +52,69 @@ func TestDescribeMermaid_DomainModel_Mock(t *testing.T) {
 	assertContainsStr(t, out, "Customer")
 	assertContainsStr(t, out, "Order")
 	assertContainsStr(t, out, "Order_Customer")
+}
+
+func TestDescribeMermaid_Microflow_Mock(t *testing.T) {
+	mod := mkModule("MyModule")
+	mf := &microflows.Microflow{
+		BaseElement: model.BaseElement{ID: nextID("mf")},
+		ContainerID: mod.ID,
+		Name:        "ACT_Process",
+	}
+
+	h := mkHierarchy(mod)
+	withContainer(h, mf.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:      func() bool { return true },
+		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListMicroflowsFunc:   func() ([]*microflows.Microflow, error) { return []*microflows.Microflow{mf}, nil },
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, describeMermaid(ctx, "microflow", "MyModule.ACT_Process"))
+
+	out := buf.String()
+	assertContainsStr(t, out, "flowchart")
+}
+
+func TestDescribeMermaid_Microflow_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:      func() bool { return true },
+		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListMicroflowsFunc:   func() ([]*microflows.Microflow, error) { return nil, nil },
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeMermaid(ctx, "microflow", "MyModule.NoSuch"))
+}
+
+func TestDescribeMermaid_Page_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListPagesFunc:   func() ([]*pages.Page, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeMermaid(ctx, "page", "MyModule.NoSuch"))
+}
+
+func TestDescribeMermaid_UnsupportedType(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	err := describeMermaid(ctx, "nanoflow", "MyModule.Something")
+	assertError(t, err)
+	assertContainsStr(t, fmt.Sprint(err), "not supported")
 }

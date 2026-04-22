@@ -36,6 +36,52 @@ func TestShowImageCollections_Mock(t *testing.T) {
 	assertContainsStr(t, out, "Icons.AppIcons")
 }
 
+func TestShowImageCollections_FilterByModule(t *testing.T) {
+	mod1 := mkModule("Icons")
+	mod2 := mkModule("Other")
+	ic1 := &types.ImageCollection{
+		BaseElement: model.BaseElement{ID: nextID("ic")},
+		ContainerID: mod1.ID,
+		Name:        "AppIcons",
+		ExportLevel: "Hidden",
+	}
+	ic2 := &types.ImageCollection{
+		BaseElement: model.BaseElement{ID: nextID("ic")},
+		ContainerID: mod2.ID,
+		Name:        "OtherIcons",
+		ExportLevel: "Hidden",
+	}
+
+	h := mkHierarchy(mod1, mod2)
+	withContainer(h, ic1.ContainerID, mod1.ID)
+	withContainer(h, ic2.ContainerID, mod2.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic1, ic2}, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, listImageCollections(ctx, "Icons"))
+
+	out := buf.String()
+	assertContainsStr(t, out, "Icons.AppIcons")
+	assertNotContainsStr(t, out, "Other.OtherIcons")
+}
+
+func TestDescribeImageCollection_NotFound(t *testing.T) {
+	mod := mkModule("Icons")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeImageCollection(ctx, ast.QualifiedName{Module: "Icons", Name: "NoSuch"}))
+}
+
 func TestDescribeImageCollection_Mock(t *testing.T) {
 	mod := mkModule("Icons")
 	ic := &types.ImageCollection{
