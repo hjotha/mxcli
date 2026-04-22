@@ -62,6 +62,15 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	fb.objects = append(fb.objects, split)
 	splitID := split.ID
 
+	// Apply this IF's own annotations (e.g. @caption, @annotation) to the split
+	// BEFORE recursing into branch bodies. Otherwise a nested statement's annotations
+	// would overwrite fb.pendingAnnotations (shared state) and the outer loop in
+	// buildFlowGraph would then attach the wrong caption/annotation to this split.
+	if fb.pendingAnnotations != nil {
+		fb.applyAnnotations(splitID, fb.pendingAnnotations)
+		fb.pendingAnnotations = nil
+	}
+
 	// Calculate merge position (after the longest branch)
 	mergeX := splitX + SplitWidth + HorizontalSpacing/2 + branchWidth + HorizontalSpacing/2
 
@@ -251,6 +260,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 // addLoopStatement creates a LOOP statement using LoopedActivity.
 // Layout: Auto-sizes the loop box to fit content with padding
 func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
+	// Snapshot & clear this loop's own annotations so the body's recursive
+	// addStatement calls can't consume them. We re-apply to the loop activity
+	// after it's created below.
+	savedLoopAnnotations := fb.pendingAnnotations
+	fb.pendingAnnotations = nil
+
 	// First, measure the loop body to determine size
 	bodyBounds := fb.measurer.measureStatements(s.Body)
 
@@ -342,6 +357,11 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 	// This is how Mendix stores them - all flows at the microflow level
 	fb.flows = append(fb.flows, loopBuilder.flows...)
 
+	// Re-apply this loop's own annotations now that its activity exists.
+	if savedLoopAnnotations != nil {
+		fb.applyAnnotations(loop.ID, savedLoopAnnotations)
+	}
+
 	fb.posX = loopLeftX + loopWidth + HorizontalSpacing
 
 	return loop.ID
@@ -350,6 +370,11 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 // addWhileStatement creates a WHILE loop using LoopedActivity with WhileLoopCondition.
 // Layout matches addLoopStatement but without iterator icon space.
 func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
+	// Snapshot & clear this WHILE's own annotations so the body's recursive
+	// addStatement calls can't consume them (see addLoopStatement).
+	savedWhileAnnotations := fb.pendingAnnotations
+	fb.pendingAnnotations = nil
+
 	bodyBounds := fb.measurer.measureStatements(s.Body)
 
 	loopWidth := max(bodyBounds.Width+2*LoopPadding, MinLoopWidth)
@@ -416,6 +441,11 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 
 	fb.objects = append(fb.objects, loop)
 	fb.flows = append(fb.flows, loopBuilder.flows...)
+
+	if savedWhileAnnotations != nil {
+		fb.applyAnnotations(loop.ID, savedWhileAnnotations)
+	}
+
 	fb.posX = loopLeftX + loopWidth + HorizontalSpacing
 
 	return loop.ID
