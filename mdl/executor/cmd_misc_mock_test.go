@@ -5,6 +5,7 @@ package executor
 import (
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/types"
 )
@@ -64,7 +65,7 @@ func TestShowVersion_NoSchemaHash(t *testing.T) {
 
 func TestHelp_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t)
-	assertNoError(t, execHelp(ctx))
+	assertNoError(t, execHelp(ctx, &ast.HelpStmt{}))
 
 	out := buf.String()
 	assertContainsStr(t, out, "MDL Commands")
