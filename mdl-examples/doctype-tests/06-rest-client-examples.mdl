@@ -1314,7 +1314,7 @@ create import mapping RestTest.IMM_UpsertPet
   find or create RestTest.PetRecord {
     PetId = id key,
     Name = name,
-    status = status
+    Status = status
   }
 };
 

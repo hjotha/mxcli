@@ -35,10 +35,10 @@ CREATE MICROFLOW WFTarget.ACT_GetGroups (
   $Workflow: System.Workflow,
   $Context: WFTarget.Request
 )
-RETURNS List of System.UserGroup AS $Groups
+RETURNS List of System.WorkflowGroup AS $Groups
 BEGIN
   @position(200,200)
-  RETRIEVE $Groups FROM System.UserGroup;
+  RETRIEVE $Groups FROM System.WorkflowGroup;
   @position(400,200) RETURN $Groups;
 END;
 /
