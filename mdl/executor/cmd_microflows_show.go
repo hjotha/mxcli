@@ -276,6 +276,15 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 	// Generate activities
 	if targetMf.ObjectCollection != nil && len(targetMf.ObjectCollection.Objects) > 0 {
 		activityLines := formatMicroflowActivities(ctx, targetMf, entityNames, microflowNames)
+		freeAnnots := collectFreeAnnotations(targetMf.ObjectCollection)
+		if len(freeAnnots) > 0 && len(activityLines) > 0 {
+			prefix := make([]string, 0, len(freeAnnots))
+			for _, text := range freeAnnots {
+				escaped := strings.ReplaceAll(text, "'", "''")
+				prefix = append(prefix, fmt.Sprintf("@annotation '%s'", escaped))
+			}
+			activityLines = append(prefix, activityLines...)
+		}
 		for _, line := range activityLines {
 			lines = append(lines, "  "+line)
 		}
@@ -532,6 +541,15 @@ func renderMicroflowMDL(
 			activityLines = formatMicroflowActivitiesWithSourceMap(ctx, mf, entityNames, microflowNames, sourceMap, headerLineCount)
 		} else {
 			activityLines = formatMicroflowActivities(ctx, mf, entityNames, microflowNames)
+		}
+		freeAnnots := collectFreeAnnotations(mf.ObjectCollection)
+		if len(freeAnnots) > 0 && len(activityLines) > 0 {
+			prefix := make([]string, 0, len(freeAnnots))
+			for _, text := range freeAnnots {
+				escaped := strings.ReplaceAll(text, "'", "''")
+				prefix = append(prefix, fmt.Sprintf("@annotation '%s'", escaped))
+			}
+			activityLines = append(prefix, activityLines...)
 		}
 		for _, line := range activityLines {
 			lines = append(lines, "  "+line)

@@ -83,6 +83,15 @@ func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, inde
 		}
 	}
 
+	if split, ok := obj.(*microflows.ExclusiveSplit); ok && split.Caption != "" {
+		escapedCaption := strings.ReplaceAll(split.Caption, "'", "''")
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption '%s'", escapedCaption))
+	}
+	if split, ok := obj.(*microflows.InheritanceSplit); ok && split.Caption != "" {
+		escapedCaption := strings.ReplaceAll(split.Caption, "'", "''")
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption '%s'", escapedCaption))
+	}
+
 	// @annotation (attached Annotation objects)
 	if annotationsByTarget != nil {
 		for _, caption := range annotationsByTarget[currentID] {

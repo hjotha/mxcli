@@ -15,6 +15,10 @@ import (
 // idToBsonBinary converts a UUID string to BSON Binary format.
 // For invalid or empty UUIDs (e.g. test placeholders), generates a random ID
 // to maintain backward compatibility with existing serialization paths.
+//
+// WARNING: an empty id here is almost always a bug (e.g. an unset pointer on a
+// SequenceFlow) and produces a random UUID that references nothing — which
+// Studio Pro surfaces as "KeyNotFoundException". Fix callers to pass a real ID.
 func idToBsonBinary(id string) primitive.Binary {
 	blob := types.UUIDToBlob(id)
 	if blob == nil || len(blob) != 16 {
