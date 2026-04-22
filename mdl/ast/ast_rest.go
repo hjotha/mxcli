@@ -15,6 +15,7 @@ type CreateRestClientStmt struct {
 	Documentation  string
 	Folder         string // Folder path within module
 	CreateOrModify bool   // True if CREATE OR MODIFY was used
+	OpenApiPath    string // Non-empty = spec-driven; operations come from spec not OPERATION blocks
 }
 
 func (s *CreateRestClientStmt) isStatement() {}
@@ -84,6 +85,14 @@ type DropRestClientStmt struct {
 }
 
 func (s *DropRestClientStmt) isStatement() {}
+
+// DescribeContractFromOpenAPIStmt represents: DESCRIBE CONTRACT OPERATIONS FROM OPENAPI '/path/to/spec.json'
+// No project connection required; outputs the MDL that would be generated from the spec.
+type DescribeContractFromOpenAPIStmt struct {
+	SpecPath string
+}
+
+func (s *DescribeContractFromOpenAPIStmt) isStatement() {}
 
 // ============================================================================
 // Published REST Service Statements

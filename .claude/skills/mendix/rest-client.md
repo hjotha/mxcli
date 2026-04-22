@@ -2,20 +2,52 @@
 
 Use this skill when integrating with external REST APIs from Mendix.
 
-## Two Approaches
+## Three Approaches
 
-Mendix offers two ways to call REST APIs from microflows. Choose based on the use case:
+Mendix offers three ways to call REST APIs from microflows. Choose based on the use case:
 
 | Approach | When to Use | Artifacts |
 |----------|-------------|-----------|
-| **REST Client + SEND REST REQUEST** | Structured APIs with multiple operations, reusable across microflows, Studio Pro UI support | REST client document + microflow |
+| **OpenAPI import** | API has an OpenAPI 3.0 spec — auto-generate from the spec | REST client document generated in one command |
+| **REST Client (manual)** | No spec available, or need fine-grained control | REST client document + microflow |
 | **REST CALL (inline)** | One-off calls, quick prototyping, dynamic URLs, low-level HTTP control | Microflow only |
 
-Both can be combined with **Data Transformers** (Mendix 11.9+) and **Import/Export Mappings** to map between JSON and entities.
+Both REST Client approaches can be combined with **Data Transformers** (Mendix 11.9+) and **Import/Export Mappings** to map between JSON and entities.
 
 ---
 
-## Approach 1: REST Client (Recommended)
+## Approach 0: OpenAPI Import (Fastest)
+
+If the API has an OpenAPI 3.0 spec (JSON or YAML), generate the REST client in one command:
+
+```sql
+-- From a local file (relative to the .mpr file)
+create or modify rest client CapitalModule.CapitalAPI (
+  OpenAPI: 'specs/capital.json'
+);
+
+-- From a URL
+create or modify rest client PetStoreModule.PetStoreAPI (
+  OpenAPI: 'https://petstore3.swagger.io/api/v3/openapi.json'
+);
+```
+
+This generates:
+- All operations with correct HTTP method, path, parameters, headers, body, and response type
+- Resource groups based on OpenAPI `tags`
+- Basic auth if the spec declares it at the top level
+- The spec stored inside the document for Studio Pro parity
+
+**Preview without writing:**
+```sql
+describe contract operation from openapi 'specs/capital.json';
+```
+
+**After import:** the REST client is ready to use with `SEND REST REQUEST`. No manual operation definition needed.
+
+---
+
+## Approach 1: REST Client (Manual)
 
 Define the API once as a REST client document, then call its operations from microflows.
 

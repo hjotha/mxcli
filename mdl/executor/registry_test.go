@@ -206,6 +206,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.CreateWorkflowStmt{},
 		&ast.DefineFragmentStmt{},
 		&ast.DescribeCatalogTableStmt{},
+		&ast.DescribeContractFromOpenAPIStmt{},
 		&ast.DescribeFragmentFromStmt{},
 		&ast.DescribeStmt{},
 		&ast.DescribeStylingStmt{},

@@ -1,0 +1,33 @@
+-- SPDX-License-Identifier: Apache-2.0
+--
+-- OpenAPI import examples for CREATE REST CLIENT (OpenAPI: '...').
+-- These examples verify syntax and roundtrip behavior.
+
+-- ============================================================================
+-- DESCRIBE CONTRACT OPERATION FROM OPENAPI
+-- Reads a spec file and outputs the MDL that would be generated.
+-- No project connection required.
+-- ============================================================================
+
+describe contract operation from openapi 'https://petstore3.swagger.io/api/v3/openapi.json';
+
+-- ============================================================================
+-- CREATE REST CLIENT with OpenAPI source
+-- ============================================================================
+
+-- Minimal: spec drives everything (operations, BaseUrl, auth)
+create or modify rest client ClaudeKhodeLab.PetStoreMinimal (
+  OpenAPI: 'https://petstore3.swagger.io/api/v3/openapi.json'
+);
+
+-- With BaseUrl override: replaces servers[0].url from the spec
+create or modify rest client ClaudeKhodeLab.PetStoreV4 (
+  OpenAPI: 'https://petstore3.swagger.io/api/v3/openapi.json',
+  BaseUrl: 'https://petstore3.swagger.io/api/v4'
+);
+
+-- Verify the created service is visible
+show rest clients in ClaudeKhodeLab;
+
+-- Describe the created service (roundtrip)
+describe rest client ClaudeKhodeLab.PetStoreMinimal;

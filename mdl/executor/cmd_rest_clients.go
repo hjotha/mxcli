@@ -5,11 +5,17 @@ package executor
 import (
 	"fmt"
 	"io"
+	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/mendixlabs/mxcli/internal/pathutil"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/openapi"
 	"github.com/mendixlabs/mxcli/model"
 )
 
@@ -281,6 +287,10 @@ func writeExportMappings(w io.Writer, mappings []*model.RestResponseMapping, ind
 
 // createRestClient handles CREATE REST CLIENT statement.
 func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
+	// Spec-driven path: OpenAPI: property present
+	if stmt.OpenApiPath != "" {
+		return createRestClientFromSpec(ctx, stmt)
+	}
 
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
@@ -580,6 +590,235 @@ func resolveAndFormatRestAuthValue(ctx *ExecContext, value string) string {
 		}
 	}
 	return "@" + qualifiedName
+}
+
+// createRestClientFromSpec handles CREATE REST CLIENT (OpenAPI: '...') by parsing the spec
+// and generating operations from it automatically.
+func createRestClientFromSpec(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	if err := checkFeature(ctx, "integration", "rest_client_basic",
+		"create rest client",
+		"upgrade your project to 10.1+"); err != nil {
+		return err
+	}
+
+	mprDir := ""
+	if ctx.MprPath != "" {
+		mprDir = filepath.Dir(ctx.MprPath)
+	}
+	specBytes, rawURL, err := fetchSpecBytes(stmt.OpenApiPath, mprDir)
+	if err != nil {
+		return fmt.Errorf("failed to read OpenAPI spec: %w", err)
+	}
+
+	spec, err := openapi.ParseSpecFromURL(specBytes, rawURL)
+	if err != nil {
+		return fmt.Errorf("failed to parse OpenAPI spec: %w", err)
+	}
+
+	parsed, warnings, err := openapi.ToRestClientModel(spec, stmt.Name.Name, stmt.BaseUrl)
+	if err != nil {
+		return fmt.Errorf("failed to convert OpenAPI spec: %w", err)
+	}
+	for _, w := range warnings {
+		fmt.Fprintf(ctx.Output, "Warning: %s\n", w)
+	}
+
+	// Resolve container (module / folder)
+	moduleName := stmt.Name.Module
+	module, err := findModule(ctx, moduleName)
+	if err != nil {
+		return mdlerrors.NewNotFound("module", moduleName)
+	}
+	containerID := module.ID
+	if stmt.Folder != "" {
+		folderID, err := resolveFolder(ctx, module.ID, stmt.Folder)
+		if err != nil {
+			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder '%s'", stmt.Folder), err)
+		}
+		containerID = folderID
+	}
+
+	// Convert openapi intermediate types to model types
+	svc := convertOpenAPIToModel(parsed, containerID)
+
+	// Store raw spec content so Studio Pro can show "View OpenAPI"
+	svc.OpenApiContent = string(specBytes)
+
+	// MDL statement properties override spec-derived values
+	if stmt.Documentation != "" {
+		svc.Documentation = stmt.Documentation
+	}
+	if stmt.Authentication != nil {
+		svc.Authentication = &model.RestAuthentication{Scheme: stmt.Authentication.Scheme}
+	}
+
+	// Handle OR MODIFY: delete existing if present
+	existingServices, _ := ctx.Backend.ListConsumedRestServices()
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	for _, existing := range existingServices {
+		existModID := h.FindModuleID(existing.ContainerID)
+		existModName := h.GetModuleName(existModID)
+		if strings.EqualFold(existModName, moduleName) && strings.EqualFold(existing.Name, stmt.Name.Name) {
+			if stmt.CreateOrModify {
+				if err := ctx.Backend.DeleteConsumedRestService(existing.ID); err != nil {
+					return mdlerrors.NewBackend("delete existing rest client", err)
+				}
+			} else {
+				return mdlerrors.NewAlreadyExistsMsg("rest client", moduleName+"."+stmt.Name.Name,
+					fmt.Sprintf("rest client already exists: %s.%s (use create or modify to overwrite)", moduleName, stmt.Name.Name))
+			}
+		}
+	}
+
+	if err := ctx.Backend.CreateConsumedRestService(svc); err != nil {
+		return mdlerrors.NewBackend("create rest client", err)
+	}
+
+	fmt.Fprintf(ctx.Output, "Created rest client: %s.%s (%d operations from OpenAPI spec)\n",
+		moduleName, stmt.Name.Name, len(svc.Operations))
+	return nil
+}
+
+// describeContractFromOpenAPI handles DESCRIBE CONTRACT OPERATION FROM OPENAPI '/path/to/spec.json'.
+// No project connection required — outputs the MDL that would be generated from the spec.
+func describeContractFromOpenAPI(ctx *ExecContext, stmt *ast.DescribeContractFromOpenAPIStmt) error {
+	mprDir := ""
+	if ctx.MprPath != "" {
+		mprDir = filepath.Dir(ctx.MprPath)
+	}
+	specBytes, rawURL, err := fetchSpecBytes(stmt.SpecPath, mprDir)
+	if err != nil {
+		return fmt.Errorf("failed to read OpenAPI spec: %w", err)
+	}
+
+	spec, err := openapi.ParseSpecFromURL(specBytes, rawURL)
+	if err != nil {
+		return fmt.Errorf("failed to parse OpenAPI spec: %w", err)
+	}
+
+	serviceName := sanitizeModuleName(spec.Info.Title)
+	parsed, warnings, err := openapi.ToRestClientModel(spec, serviceName, "")
+	if err != nil {
+		return fmt.Errorf("failed to convert OpenAPI spec: %w", err)
+	}
+	for _, w := range warnings {
+		fmt.Fprintf(ctx.Output, "-- Warning: %s\n", w)
+	}
+
+	svc := convertOpenAPIToModel(parsed, "")
+	return outputConsumedRestServiceMDL(ctx, svc, "MyModule")
+}
+
+// convertOpenAPIToModel converts an openapi.ConsumedRestService to a model.ConsumedRestService.
+func convertOpenAPIToModel(parsed *openapi.ConsumedRestService, containerID model.ID) *model.ConsumedRestService {
+	svc := &model.ConsumedRestService{
+		ContainerID:   containerID,
+		Name:          parsed.Name,
+		Documentation: parsed.Documentation,
+		BaseUrl:       parsed.BaseUrl,
+	}
+	if parsed.Authentication != nil {
+		svc.Authentication = &model.RestAuthentication{Scheme: parsed.Authentication.Scheme}
+	}
+	for _, op := range parsed.Operations {
+		modelOp := &model.RestClientOperation{
+			Name:          op.Name,
+			Documentation: op.Documentation,
+			HttpMethod:    op.HttpMethod,
+			Path:          op.Path,
+			Tags:          op.Tags,
+			BodyType:      op.BodyType,
+			BodyVariable:  op.BodyVariable,
+			ResponseType:  op.ResponseType,
+		}
+		for _, p := range op.Parameters {
+			modelOp.Parameters = append(modelOp.Parameters, &model.RestClientParameter{
+				Name:     p.Name,
+				DataType: p.DataType,
+			})
+		}
+		for _, q := range op.QueryParameters {
+			modelOp.QueryParameters = append(modelOp.QueryParameters, &model.RestClientParameter{
+				Name:     q.Name,
+				DataType: q.DataType,
+			})
+		}
+		for _, h := range op.Headers {
+			modelOp.Headers = append(modelOp.Headers, &model.RestClientHeader{
+				Name:  h.Name,
+				Value: h.Value,
+			})
+		}
+		svc.Operations = append(svc.Operations, modelOp)
+	}
+	return svc
+}
+
+// sanitizeModuleName converts a spec title to a valid MDL identifier suitable as a service name.
+func sanitizeModuleName(title string) string {
+	// Replace spaces and non-alphanumeric with nothing (PascalCase-ish)
+	var b strings.Builder
+	upper := true
+	for _, r := range title {
+		if r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
+			if upper {
+				if r >= 'a' && r <= 'z' {
+					r -= 32
+				}
+				upper = false
+			}
+			b.WriteRune(r)
+		} else {
+			upper = true
+		}
+	}
+	name := b.String()
+	if name == "" {
+		name = "Service"
+	}
+	return name
+}
+
+// fetchSpecBytes retrieves raw spec bytes from a local path or HTTP(S) URL.
+// baseDir is used to resolve relative paths (pass filepath.Dir(ctx.MprPath) when available).
+// Returns the bytes, the resolved URL (for format detection), and any error.
+func fetchSpecBytes(specPath, baseDir string) ([]byte, string, error) {
+	normalised, err := pathutil.NormalizeURL(specPath, baseDir)
+	if err != nil {
+		return nil, "", fmt.Errorf("invalid spec source %q: %w", specPath, err)
+	}
+
+	filePath := pathutil.PathFromURL(normalised)
+	if filePath != "" {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, normalised, fmt.Errorf("read spec file %s: %w", filePath, err)
+		}
+		return data, normalised, nil
+	}
+
+	// HTTP(S) fetch
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(normalised)
+	if err != nil {
+		return nil, normalised, fmt.Errorf("fetch spec from %s: %w", normalised, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, normalised, fmt.Errorf("spec fetch returned HTTP %d from %s", resp.StatusCode, normalised)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, normalised, fmt.Errorf("read spec response: %w", err)
+	}
+	return data, normalised, nil
 }
 
 // Executor wrappers for unmigrated callers.

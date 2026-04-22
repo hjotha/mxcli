@@ -2504,7 +2504,7 @@ createConfigurationStatement
 createRestClientStatement
     : REST CLIENT qualifiedName
       LPAREN restClientProperty (COMMA restClientProperty)* RPAREN
-      LBRACE restClientOperation* RBRACE
+      (LBRACE restClientOperation* RBRACE)?
     ;
 
 restClientProperty
@@ -3168,6 +3168,7 @@ describeStatement
     | DESCRIBE IMPORT MAPPING qualifiedName             // DESCRIBE IMPORT MAPPING Module.Name
     | DESCRIBE EXPORT MAPPING qualifiedName             // DESCRIBE EXPORT MAPPING Module.Name
     | DESCRIBE REST CLIENT qualifiedName                // DESCRIBE REST CLIENT Module.Name
+    | DESCRIBE CONTRACT OPERATION FROM OPENAPI STRING_LITERAL   // DESCRIBE CONTRACT OPERATION FROM OPENAPI '/path/to/spec.json'
     | DESCRIBE PUBLISHED REST SERVICE qualifiedName    // DESCRIBE PUBLISHED REST SERVICE Module.Name
     | DESCRIBE DATA TRANSFORMER qualifiedName          // DESCRIBE DATA TRANSFORMER Module.Name
     | DESCRIBE FRAGMENT identifierOrKeyword            // DESCRIBE FRAGMENT Name
@@ -3890,7 +3891,7 @@ keyword
     | CRITICAL | DEBUG | ERROR | INFO | SUCCESS | WARNING
 
     // OData / REST / API
-    | API | BASE | BODY | CHANNELS | CLIENT | CLIENTS | CONTRACT
+    | API | BASE | BODY | CHANNELS | CLIENT | CLIENTS | CONTRACT | OPENAPI
     | DEPRECATED | EXPOSE | EXPOSED | EXTERNAL | HEADERS | JSON
     | MAP | MAPPING | MAPPINGS | MESSAGES | METHOD | NAMESPACE_KW
     | NOT_SUPPORTED | ODATA | OAUTH | OPERATION | PAGING

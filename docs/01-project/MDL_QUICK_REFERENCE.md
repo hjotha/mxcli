@@ -557,6 +557,8 @@ Respond in {{Language}}.$$,
 | Create client | See syntax below | Property-based `{}` syntax |
 | Create or modify | `create or modify rest client ...` | Replaces existing |
 | Drop client | `drop rest client Module.Name;` | |
+| Import from OpenAPI | See OpenAPI import below | Auto-generate from spec |
+| Preview OpenAPI | `describe contract operation from openapi 'path';` | Preview without writing |
 
 ```sql
 create rest client Module.Api (
@@ -593,6 +595,27 @@ create rest client Module.Api (
 **Body types:** `json from $var`, `template '...'`, `mapping entity { jsonField = attr, ... }`
 **Response types:** `json as $var`, `string as $var`, `file as $var`, `status as $var`, `none`, `mapping entity { attr = jsonField, ... }`
 **Authentication:** `none`, `basic (username: '...', password: '...')`
+
+### OpenAPI Import
+
+Generate a consumed REST service document directly from an OpenAPI 3.0 spec (JSON or YAML):
+
+```sql
+-- From a local file (relative to the .mpr file)
+create or modify rest client CapitalModule.CapitalAPI (
+  OpenAPI: 'specs/capital.json'
+);
+
+-- From a URL
+create or modify rest client PetStoreModule.PetStoreAPI (
+  OpenAPI: 'https://petstore3.swagger.io/api/v3/openapi.json'
+);
+
+-- Preview without writing to the project
+describe contract operation from openapi 'specs/capital.json';
+```
+
+Operations, path/query parameters, headers, request body, response type, resource groups (from OpenAPI `tags`), and Basic auth are all derived automatically. The spec is stored inside the REST client document for Studio Pro parity.
 
 ## Published REST Services
 

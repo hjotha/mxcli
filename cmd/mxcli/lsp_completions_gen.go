@@ -360,6 +360,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "SERVICE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "SERVICES", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "ODATA", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
+	{Label: "OPENAPI", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "BASE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "AUTH", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "AUTHENTICATION", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
