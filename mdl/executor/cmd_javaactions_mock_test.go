@@ -59,9 +59,11 @@ func TestDescribeJavaAction_Mock(t *testing.T) {
 }
 
 // NOTE: listJavaActions has no explicit not-connected guard. It calls
-// getHierarchy (returns nil when disconnected) then proceeds to call
-// ListJavaActions on the backend. The handler degrades gracefully —
-// with an empty result set it succeeds with a nil hierarchy.
+// getHierarchy (which returns nil when disconnected) and is intended to
+// be reached through execShow, which enforces a connected backend first.
+// A nil hierarchy is only harmless when the backend returns no Java
+// actions; if Java actions are returned while disconnected, dereferencing
+// the nil hierarchy would panic.
 
 func TestShowJavaActions_BackendError(t *testing.T) {
 	mod := mkModule("MyModule")
