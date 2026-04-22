@@ -770,7 +770,9 @@ func convertOpenAPIToModel(parsed *openapi.ConsumedRestService, containerID mode
 	return svc
 }
 
-// sanitizeModuleName converts a spec title to a valid MDL identifier suitable as a service name.
+// sanitizeModuleName converts a spec title to a PascalCase MDL identifier suitable as a service/module name.
+// This is intentionally different from openapi.sanitizeIdent (which produces snake_case for operation names):
+// service names follow Mendix PascalCase convention while operation names follow snake_case.
 func sanitizeModuleName(title string) string {
 	// Replace spaces and non-alphanumeric with nothing (PascalCase-ish)
 	var b strings.Builder
@@ -823,7 +825,7 @@ func fetchSpecBytes(specPath, baseDir string) ([]byte, string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, normalised, fmt.Errorf("spec fetch returned HTTP %d from %s", resp.StatusCode, normalised)
 	}
-	data, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10 MB cap
 	if err != nil {
 		return nil, normalised, fmt.Errorf("read spec response: %w", err)
 	}
