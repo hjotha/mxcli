@@ -27,9 +27,12 @@
 create module BugTest261;
 
 create microflow BugTest261.MF_Demo (
-    customer: BugTest261.Customer
+  $name: string
 )
-    returns string
-(
-    set $return = 'ok'
-);
+returns string as $result
+begin
+  declare $result string = empty;
+  set $result = $name;
+  return $result;
+end;
+/
