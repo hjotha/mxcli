@@ -898,6 +898,13 @@ func parseAggregateListAction(raw map[string]any) *microflows.AggregateListActio
 		action.Function = microflows.AggregateFunction(fn)
 	}
 
+	if useExpr, ok := raw["UseExpression"].(bool); ok {
+		action.UseExpression = useExpr
+	}
+	if action.UseExpression {
+		action.Expression = extractString(raw["Expression"])
+	}
+
 	return action
 }
 

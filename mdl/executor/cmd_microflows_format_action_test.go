@@ -316,6 +316,21 @@ func TestFormatAction_AggregateList_Sum(t *testing.T) {
 	}
 }
 
+func TestFormatAction_AggregateList_SumExpression(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.AggregateListAction{
+		InputVariable:  "Orders",
+		OutputVariable: "TotalTax",
+		Function:       microflows.AggregateFunctionSum,
+		UseExpression:  true,
+		Expression:     "$currentObject/Amount * 0.21",
+	}
+	got := e.formatAction(action, nil, nil)
+	if got != "$TotalTax = sum($Orders, $currentObject/Amount * 0.21);" {
+		t.Errorf("got %q", got)
+	}
+}
+
 // =============================================================================
 // formatAction — Call actions
 // =============================================================================

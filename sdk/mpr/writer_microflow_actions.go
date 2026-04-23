@@ -294,8 +294,11 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		}
 		doc = append(doc, bson.E{Key: "AggregateFunction", Value: string(a.Function)})
 		doc = append(doc, bson.E{Key: "AggregateVariableName", Value: a.InputVariable}) // storageName for inputListVariableName
-		// Attribute is BY_NAME_REFERENCE
-		if a.AttributeQualifiedName != "" {
+		if a.UseExpression {
+			doc = append(doc, bson.E{Key: "UseExpression", Value: true})
+			doc = append(doc, bson.E{Key: "Expression", Value: a.Expression})
+		} else if a.AttributeQualifiedName != "" {
+			// Attribute is BY_NAME_REFERENCE
 			doc = append(doc, bson.E{Key: "Attribute", Value: a.AttributeQualifiedName})
 		}
 		doc = append(doc, bson.E{Key: "VariableName", Value: a.OutputVariable}) // storageName for outputVariableName
