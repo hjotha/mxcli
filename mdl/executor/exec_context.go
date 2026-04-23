@@ -68,10 +68,6 @@ type ExecContext struct {
 	// BackendFactory creates new backend instances (used by connect/reconnect).
 	BackendFactory BackendFactory
 
-	// OutputGuard is the line-limit guard wrapping Output (nil-safe).
-	// Used by writeDescribeJSON to temporarily disable line limiting during capture.
-	OutputGuard *outputGuard
-
 	// ExecuteFn dispatches a single statement through the Executor's full
 	// pipeline (line-limit reset, wall-clock timeout, logging). Set by
 	// newExecContext; used by script execution and generated-MDL dispatch.

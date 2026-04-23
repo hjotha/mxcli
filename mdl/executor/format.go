@@ -123,17 +123,8 @@ func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() erro
 	origOutput := ctx.Output
 	ctx.Output = &buf
 
-	// Disable line guard during capture so the captured text isn't truncated.
-	var origGuard *outputGuard
-	if ctx.OutputGuard != nil {
-		origGuard = ctx.OutputGuard
-		ctx.OutputGuard = nil
-	}
 	err := fn()
 	ctx.Output = origOutput
-	if origGuard != nil {
-		ctx.OutputGuard = origGuard
-	}
 	if err != nil {
 		return err
 	}

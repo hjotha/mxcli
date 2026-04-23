@@ -454,7 +454,8 @@ func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) erro
 	// wrote to ctx.Output from the goroutine. A synchronized writer would
 	// fix this but is out of scope for the executor cleanup.
 	if stmt.Background {
-		bgCtx := *ctx // shallow copy — isolates Catalog, Cache, etc.
+		bgCtx := *ctx   // shallow copy — isolates scalar fields
+		bgCtx.Cache = nil // detach shared cache so preWarmCache writes stay local
 		go func() {
 			if err := buildCatalog(&bgCtx, stmt.Full, stmt.Source); err != nil {
 				fmt.Fprintf(bgCtx.Output, "Background catalog build failed: %v\n", err)
