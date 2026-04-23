@@ -165,6 +165,86 @@ func mendixFunctionName(name string) string {
 	return name
 }
 
+// quoteExpressionLiteral wraps a Mendix expression string literal in single
+// quotes and applies the narrowest possible escaping needed for MDL roundtrip:
+//
+//   - ASCII control characters that STRING_LITERAL does not accept raw — 0x0A
+//     (newline), 0x0D (carriage return), 0x09 (tab) — are written as `\n`, `\r`,
+//     `\t`. The MDL lexer rejects raw newlines inside single-quoted literals,
+//     so emitting them verbatim produces parse errors on re-execute.
+//   - Apostrophes are doubled (MDL's own delimiter-escape convention).
+//   - Backslashes followed by one of the recognised escape letters (n/r/t/\/')
+//     are doubled so the visitor's unquoteString preserves them — without this,
+//     the source literal `\\n` would come back as a real newline on reparse.
+//   - Any other backslash-prefixed sequence (e.g. `\d`, `\w`, `\p{...}` inside
+//     regexes) is passed through unchanged so describe→exec roundtrips of
+//     Mendix regular-expression arguments stay bit-exact.
+//
+// This is narrower than mdlQuote (used for @annotation / @caption text where
+// the AST value is a plain string): mdlQuote unconditionally doubles every
+// backslash, which would break expression literals containing regex escape
+// sequences that the Mendix engine consumes literally.
+func quoteExpressionLiteral(s string) string {
+	var b strings.Builder
+	b.Grow(len(s) + 2)
+	b.WriteByte('\'')
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch c {
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		case '\'':
+			b.WriteString(`''`)
+		case '\\':
+			// Double the backslash only when the next byte would otherwise be
+			// interpreted as an escape by unquoteString — that is, n/r/t/\/'.
+			// For any other follower (letters like d/w, punctuation) the
+			// backslash can pass through verbatim so regex escape characters
+			// roundtrip without mutation.
+			if i+1 < len(s) {
+				switch s[i+1] {
+				case 'n', 'r', 't':
+					b.WriteString(`\\`)
+					b.WriteByte(s[i+1])
+					i++
+					continue
+				case '\\':
+					// Literal backslash-backslash in AST. To survive roundtrip
+					// it must be written as four backslashes: unquoteString
+					// decodes `\\` twice, producing two backslashes again.
+					b.WriteString(`\\\\`)
+					i++
+					continue
+				case '\'':
+					// Literal backslash-apostrophe: double the backslash and
+					// double the apostrophe, so the reparsed value stays
+					// [\, '].
+					b.WriteString(`\\`)
+					b.WriteString(`''`)
+					i++
+					continue
+				}
+				b.WriteByte('\\')
+				continue
+			}
+			// Trailing backslash at end-of-string: the lexer's `'\\' .` escape
+			// rule requires a following character, so emitting a bare `\'`
+			// terminator would be reinterpreted as an escape pair and never
+			// close the literal. Double the backslash — unquoteString decodes
+			// `\\` back to a single backslash.
+			b.WriteString(`\\`)
+		default:
+			b.WriteByte(c)
+		}
+	}
+	b.WriteByte('\'')
+	return b.String()
+}
+
 // expressionToString converts an AST Expression to a Mendix expression string.
 // Note: string literals are quoted via mdlQuote, which escapes backslashes,
 // newlines, tabs, and carriage returns for MDL round-trip safety. Mendix's
@@ -189,7 +269,7 @@ func expressionToString(expr ast.Expression) string {
 	case *ast.LiteralExpr:
 		switch e.Kind {
 		case ast.LiteralString:
-			return mdlQuote(fmt.Sprintf("%v", e.Value))
+			return quoteExpressionLiteral(fmt.Sprintf("%v", e.Value))
 		case ast.LiteralBoolean:
 			if e.Value.(bool) {
 				return "true"

@@ -54,8 +54,18 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 
 	// Process each statement
 	// pendingCase holds the case value for the NEXT flow (set by merge-less splits)
+	// pendingFlowAnchor carries branch anchors from a guard-pattern IF so the
+	// deferred split→nextActivity flow honours @anchor(true: ..., false: ...).
 	pendingCase := ""
+	var pendingFlowAnchor *ast.FlowAnchors
 	for _, stmt := range stmts {
+		// Snapshot the current statement's anchor annotation before addStatement
+		// can reset pendingAnnotations via recursive processing. The incoming
+		// side (To) is applied when this statement is the destination of the
+		// flow we're about to create; the outgoing side (From) is stashed in
+		// previousStmtAnchor so the NEXT iteration can apply it.
+		stmtAnchor := stmtOwnAnchor(stmt)
+
 		activityID := fb.addStatement(stmt)
 		if activityID != "" {
 			// If there are pending annotations, apply them to this activity
@@ -64,19 +74,45 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 				fb.pendingAnnotations = nil
 			}
 			// Connect to previous object with horizontal SequenceFlow
+			var flow *microflows.SequenceFlow
 			if pendingCase != "" {
-				fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, activityID, pendingCase))
+				flow = newHorizontalFlowWithCase(lastID, activityID, pendingCase)
 				pendingCase = ""
 			} else {
-				fb.flows = append(fb.flows, newHorizontalFlow(lastID, activityID))
+				flow = newHorizontalFlow(lastID, activityID)
 			}
+			// Prefer the pendingFlowAnchor (carried from a guard-pattern IF's
+			// branch) over the previous statement's own anchor — it encodes
+			// exactly the @anchor(true/false: ...) the user asked for on the
+			// deferred flow. When the pending anchor is present it applies to
+			// both From (origin side on the split) and To (the side of the
+			// continuing activity), unless the incoming statement explicitly
+			// overrides its own To.
+			originAnchor := fb.previousStmtAnchor
+			destAnchor := stmtAnchor
+			if pendingFlowAnchor != nil {
+				originAnchor = pendingFlowAnchor
+				if destAnchor == nil || destAnchor.To == ast.AnchorSideUnset {
+					destAnchor = pendingFlowAnchor
+				}
+				pendingFlowAnchor = nil
+			}
+			applyUserAnchors(flow, originAnchor, destAnchor)
+			fb.flows = append(fb.flows, flow)
+			fb.previousStmtAnchor = stmtAnchor
+
 			// For compound statements (IF, LOOP), the exit point differs from entry point
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
 				fb.nextConnectionPoint = ""
-				// Save nextFlowCase for the NEXT iteration's flow creation
+				// Save nextFlowCase / nextFlowAnchor for the NEXT iteration's flow creation
 				pendingCase = fb.nextFlowCase
 				fb.nextFlowCase = ""
+				pendingFlowAnchor = fb.nextFlowAnchor
+				fb.nextFlowAnchor = nil
+				// Compound statements control their own internal anchors; don't
+				// let the outer From leak into the flow leaving the merge.
+				fb.previousStmtAnchor = nil
 			} else {
 				lastID = activityID
 			}
@@ -108,11 +144,20 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		fb.objects = append(fb.objects, endEvent)
 
 		// Connect last activity to end event
+		var endFlow *microflows.SequenceFlow
 		if pendingCase != "" {
-			fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, endEvent.ID, pendingCase))
+			endFlow = newHorizontalFlowWithCase(lastID, endEvent.ID, pendingCase)
 		} else {
-			fb.flows = append(fb.flows, newHorizontalFlow(lastID, endEvent.ID))
+			endFlow = newHorizontalFlow(lastID, endEvent.ID)
 		}
+		originAnchor := fb.previousStmtAnchor
+		if pendingFlowAnchor != nil {
+			originAnchor = pendingFlowAnchor
+			pendingFlowAnchor = nil
+		}
+		applyUserAnchors(endFlow, originAnchor, nil)
+		fb.flows = append(fb.flows, endFlow)
+		fb.previousStmtAnchor = nil
 	}
 
 	return &microflows.MicroflowObjectCollection{

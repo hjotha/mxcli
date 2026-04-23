@@ -205,6 +205,17 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 			// @excluded — no value needed
 			result.Excluded = true
 			hasAny = true
+
+		case "anchor":
+			// @anchor(from: right, to: left) — simple form for the outgoing flow.
+			// @anchor(true: (from: right, to: left), false: (from: bottom, to: left))
+			//   — split form for IF statements.
+			// @anchor(iterator: (from: ..., to: ...), tail: (from: ..., to: ...))
+			//   — loop form for LOOP/WHILE body flows.
+			if params := ann.AnnotationParams(); params != nil {
+				parseAnchorAnnotation(params.(*parser.AnnotationParamsContext), result)
+				hasAny = true
+			}
 		}
 	}
 
@@ -212,6 +223,124 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 		return nil
 	}
 	return result
+}
+
+// parseAnchorAnnotation populates Anchor / TrueBranchAnchor / FalseBranchAnchor /
+// IteratorAnchor / BodyTailAnchor fields on result from the @anchor(...) params.
+func parseAnchorAnnotation(params *parser.AnnotationParamsContext, result *ast.ActivityAnnotations) {
+	flat := &ast.FlowAnchors{From: ast.AnchorSideUnset, To: ast.AnchorSideUnset}
+	flatSet := false
+
+	for _, p := range params.AllAnnotationParam() {
+		pCtx := p.(*parser.AnnotationParamContext)
+		nameCtx := pCtx.AnnotationParamName()
+		if nameCtx == nil {
+			continue // positional form not supported for @anchor
+		}
+		key := strings.ToLower(nameCtx.GetText())
+
+		switch key {
+		case "from":
+			if side, ok := parseAnchorSideFromValue(pCtx.AnnotationValue()); ok {
+				flat.From = side
+				flatSet = true
+			}
+		case "to":
+			if side, ok := parseAnchorSideFromValue(pCtx.AnnotationValue()); ok {
+				flat.To = side
+				flatSet = true
+			}
+		case "true":
+			if nested := pCtx.AnnotationParenValue(); nested != nil {
+				result.TrueBranchAnchor = parseNestedFlowAnchors(nested.(*parser.AnnotationParenValueContext))
+			}
+		case "false":
+			if nested := pCtx.AnnotationParenValue(); nested != nil {
+				result.FalseBranchAnchor = parseNestedFlowAnchors(nested.(*parser.AnnotationParenValueContext))
+			}
+		case "iterator":
+			if nested := pCtx.AnnotationParenValue(); nested != nil {
+				result.IteratorAnchor = parseNestedFlowAnchors(nested.(*parser.AnnotationParenValueContext))
+			}
+		case "tail":
+			if nested := pCtx.AnnotationParenValue(); nested != nil {
+				result.BodyTailAnchor = parseNestedFlowAnchors(nested.(*parser.AnnotationParenValueContext))
+			}
+		}
+	}
+
+	if flatSet {
+		result.Anchor = flat
+	}
+}
+
+// parseNestedFlowAnchors parses a `(from: X, to: Y)` sub-expression into FlowAnchors.
+func parseNestedFlowAnchors(p *parser.AnnotationParenValueContext) *ast.FlowAnchors {
+	inner := p.AnnotationParams()
+	if inner == nil {
+		return nil
+	}
+	fa := &ast.FlowAnchors{From: ast.AnchorSideUnset, To: ast.AnchorSideUnset}
+	set := false
+	for _, pp := range inner.(*parser.AnnotationParamsContext).AllAnnotationParam() {
+		ppCtx := pp.(*parser.AnnotationParamContext)
+		nameCtx := ppCtx.AnnotationParamName()
+		if nameCtx == nil {
+			continue
+		}
+		key := strings.ToLower(nameCtx.GetText())
+		side, ok := parseAnchorSideFromValue(ppCtx.AnnotationValue())
+		if !ok {
+			continue
+		}
+		switch key {
+		case "from":
+			fa.From = side
+			set = true
+		case "to":
+			fa.To = side
+			set = true
+		}
+	}
+	if !set {
+		return nil
+	}
+	return fa
+}
+
+// parseAnchorSideFromValue extracts a side keyword from an annotationValue.
+// Accepts top | right | bottom | left.
+func parseAnchorSideFromValue(val parser.IAnnotationValueContext) (ast.AnchorSide, bool) {
+	if val == nil {
+		return ast.AnchorSideUnset, false
+	}
+	valCtx := val.(*parser.AnnotationValueContext)
+	if as := valCtx.AnchorSide(); as != nil {
+		switch strings.ToLower(as.GetText()) {
+		case "top":
+			return ast.AnchorSideTop, true
+		case "right":
+			return ast.AnchorSideRight, true
+		case "bottom":
+			return ast.AnchorSideBottom, true
+		case "left":
+			return ast.AnchorSideLeft, true
+		}
+	}
+	// Fallback — accept plain identifier via qualifiedName for user robustness.
+	if qn := valCtx.QualifiedName(); qn != nil {
+		switch strings.ToLower(qn.GetText()) {
+		case "top":
+			return ast.AnchorSideTop, true
+		case "right":
+			return ast.AnchorSideRight, true
+		case "bottom":
+			return ast.AnchorSideBottom, true
+		case "left":
+			return ast.AnchorSideLeft, true
+		}
+	}
+	return ast.AnchorSideUnset, false
 }
 
 // extractAnnotationValueString extracts a string value from an annotationValue context.

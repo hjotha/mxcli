@@ -67,7 +67,13 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	// BEFORE recursing into branch bodies. Otherwise a nested statement's annotations
 	// would overwrite fb.pendingAnnotations (shared state) and the outer loop in
 	// buildFlowGraph would then attach the wrong caption/annotation to this split.
+	//
+	// Capture per-branch anchor overrides before pendingAnnotations is cleared so
+	// the TRUE/FALSE flows emitted below can pick them up.
+	var trueBranchAnchor, falseBranchAnchor *ast.FlowAnchors
 	if fb.pendingAnnotations != nil {
+		trueBranchAnchor = fb.pendingAnnotations.TrueBranchAnchor
+		falseBranchAnchor = fb.pendingAnnotations.FalseBranchAnchor
 		fb.applyAnnotations(splitID, fb.pendingAnnotations)
 		fb.pendingAnnotations = nil
 	}
@@ -108,15 +114,28 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		fb.endsWithReturn = false
 
 		var lastThenID model.ID
+		var prevThenAnchor *ast.FlowAnchors
 		for _, stmt := range s.ThenBody {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
 				if lastThenID == "" {
-					// First statement in THEN - connect from split with "true" case
-					fb.flows = append(fb.flows, newHorizontalFlowWithCase(splitID, actID, "true"))
+					// First statement in THEN - connect from split with "true" case.
+					// Origin: trueBranchAnchor.From (if set) — anchor on the split side.
+					// Destination: prefer the first statement's own @anchor(to: ...) if it
+					// has one; otherwise fall back to trueBranchAnchor.To.
+					flow := newHorizontalFlowWithCase(splitID, actID, "true")
+					applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
+					if thisAnchor != nil && thisAnchor.To != ast.AnchorSideUnset {
+						flow.DestinationConnectionIndex = int(thisAnchor.To)
+					}
+					fb.flows = append(fb.flows, flow)
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastThenID, actID))
+					flow := newHorizontalFlow(lastThenID, actID)
+					applyUserAnchors(flow, prevThenAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 				}
+				prevThenAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastThenID = fb.nextConnectionPoint
@@ -132,10 +151,14 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// nextConnectionPoint/nextFlowCase, so we must not emit a dangling flow here.
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
-				fb.flows = append(fb.flows, newHorizontalFlow(lastThenID, mergeID))
+				flow := newHorizontalFlow(lastThenID, mergeID)
+				applyUserAnchors(flow, prevThenAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			} else {
 				// Empty THEN body - connect split directly to merge with true case
-				fb.flows = append(fb.flows, newHorizontalFlowWithCase(splitID, mergeID, "true"))
+				flow := newHorizontalFlowWithCase(splitID, mergeID, "true")
+				applyUserAnchors(flow, trueBranchAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			}
 		}
 
@@ -146,15 +169,26 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		fb.endsWithReturn = false
 
 		var lastElseID model.ID
+		var prevElseAnchor *ast.FlowAnchors
 		for _, stmt := range s.ElseBody {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
 				if lastElseID == "" {
-					// First statement in ELSE - connect from split going down (false path)
-					fb.flows = append(fb.flows, newDownwardFlowWithCase(splitID, actID, "false"))
+					// First statement in ELSE - connect from split going down (false path).
+					// Same compositional rule as the THEN branch.
+					flow := newDownwardFlowWithCase(splitID, actID, "false")
+					applyUserAnchors(flow, falseBranchAnchor, falseBranchAnchor)
+					if thisAnchor != nil && thisAnchor.To != ast.AnchorSideUnset {
+						flow.DestinationConnectionIndex = int(thisAnchor.To)
+					}
+					fb.flows = append(fb.flows, flow)
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastElseID, actID))
+					flow := newHorizontalFlow(lastElseID, actID)
+					applyUserAnchors(flow, prevElseAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 				}
+				prevElseAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastElseID = fb.nextConnectionPoint
@@ -170,7 +204,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// a flow with an empty mergeID would create an orphan SequenceFlow.
 		if !elseReturns && needMerge {
 			if lastElseID != "" {
-				fb.flows = append(fb.flows, newUpwardFlow(lastElseID, mergeID))
+				flow := newUpwardFlow(lastElseID, mergeID)
+				applyUserAnchors(flow, prevElseAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			}
 		}
 	} else {
@@ -179,7 +215,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 		if needMerge {
 			// FALSE path: connect split directly to merge horizontally
-			fb.flows = append(fb.flows, newHorizontalFlowWithCase(splitID, mergeID, "false"))
+			flow := newHorizontalFlowWithCase(splitID, mergeID, "false")
+			applyUserAnchors(flow, falseBranchAnchor, nil)
+			fb.flows = append(fb.flows, flow)
 		}
 		// When !needMerge (thenReturns): FALSE flow is deferred — the parent will
 		// connect splitID to the next activity with nextFlowCase="false".
@@ -191,15 +229,25 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		fb.endsWithReturn = false
 
 		var lastThenID model.ID
+		var prevThenAnchor *ast.FlowAnchors
 		for _, stmt := range s.ThenBody {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
 				if lastThenID == "" {
 					// First statement in THEN - connect from split going down with "true" case
-					fb.flows = append(fb.flows, newDownwardFlowWithCase(splitID, actID, "true"))
+					flow := newDownwardFlowWithCase(splitID, actID, "true")
+					applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
+					if thisAnchor != nil && thisAnchor.To != ast.AnchorSideUnset {
+						flow.DestinationConnectionIndex = int(thisAnchor.To)
+					}
+					fb.flows = append(fb.flows, flow)
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastThenID, actID))
+					flow := newHorizontalFlow(lastThenID, actID)
+					applyUserAnchors(flow, prevThenAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 				}
+				prevThenAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastThenID = fb.nextConnectionPoint
@@ -215,10 +263,14 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// the parent — any flow emitted here would dangle with mergeID="".
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
-				fb.flows = append(fb.flows, newUpwardFlow(lastThenID, mergeID))
+				flow := newUpwardFlow(lastThenID, mergeID)
+				applyUserAnchors(flow, prevThenAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			} else {
 				// Empty THEN body - connect split directly to merge going down and back up
-				fb.flows = append(fb.flows, newDownwardFlowWithCase(splitID, mergeID, "true"))
+				flow := newDownwardFlowWithCase(splitID, mergeID, "true")
+				applyUserAnchors(flow, trueBranchAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			}
 		}
 	}
@@ -249,15 +301,21 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		}
 		fb.posY = centerY
 		fb.nextConnectionPoint = splitID
-		// Tell parent to attach the case value on the next flow
+		// Tell parent to attach the case value on the next flow, and pass the
+		// matching branch anchor so @anchor(true: ..., false: ...) survives to
+		// the deferred splitID→nextActivity flow.
 		if hasElseBody {
 			if thenReturns {
 				fb.nextFlowCase = "false"
+				fb.nextFlowAnchor = falseBranchAnchor
 			} else {
 				fb.nextFlowCase = "true"
+				fb.nextFlowAnchor = trueBranchAnchor
 			}
 		} else {
-			fb.nextFlowCase = "false" // IF without ELSE: false is the continuing path
+			// IF without ELSE: false is the continuing path
+			fb.nextFlowCase = "false"
+			fb.nextFlowAnchor = falseBranchAnchor
 		}
 	}
 
