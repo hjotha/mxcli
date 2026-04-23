@@ -24,22 +24,26 @@
 
 create module BugTest258;
 
-create microflow BugTest258.MF_Original
-    returns string
-(
-    set $return = 'original'
-);
+create microflow BugTest258.MF_Original ()
+returns string as $result
+begin
+  declare $result string = 'original';
+  return $result;
+end;
+/
 
 -- Drop + recreate in the same session. Before the fix, this produced a
 -- dangling Unit row with a fresh UUID and the project became unopenable in
 -- Studio Pro. After the fix, the new microflow reuses the original UnitID.
 drop microflow BugTest258.MF_Original;
 
-create or modify microflow BugTest258.MF_Original
-    returns string
-(
-    set $return = 'replaced'
-);
+create or modify microflow BugTest258.MF_Original ()
+returns string as $result
+begin
+  declare $result string = 'replaced';
+  return $result;
+end;
+/
 
 -- DESCRIBE must round-trip cleanly (no placeholder UUIDs leaking).
 describe microflow BugTest258.MF_Original;
