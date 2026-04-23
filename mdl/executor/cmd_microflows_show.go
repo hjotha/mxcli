@@ -650,10 +650,13 @@ func formatMicroflowActivities(
 		}
 	}
 
-	// Build flow graph: map from origin ID to flows (sorted by OriginConnectionIndex)
+	// Build flow graph: map from origin ID to flows (sorted by OriginConnectionIndex).
+	// Build the inverse destination→flows map for @anchor emission.
 	flowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
+	flowsByDest := make(map[model.ID][]*microflows.SequenceFlow)
 	for _, flow := range mf.ObjectCollection.Flows {
 		flowsByOrigin[flow.OriginID] = append(flowsByOrigin[flow.OriginID], flow)
+		flowsByDest[flow.DestinationID] = append(flowsByDest[flow.DestinationID], flow)
 	}
 
 	var lines []string
@@ -679,6 +682,10 @@ func formatMicroflowActivities(
 
 	// Build annotation map for @annotation emission
 	annotationsByTarget := buildAnnotationsByTarget(mf.ObjectCollection)
+
+	// Install flow maps for @anchor emission during traversal.
+	restore := setDescriberFlowMaps(flowsByOrigin, flowsByDest)
+	defer restore()
 
 	traverseFlow(ctx, startID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, &lines, 0, nil, 0, annotationsByTarget)
 
@@ -711,8 +718,10 @@ func formatMicroflowActivitiesWithSourceMap(
 	}
 
 	flowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
+	flowsByDest := make(map[model.ID][]*microflows.SequenceFlow)
 	for _, flow := range mf.ObjectCollection.Flows {
 		flowsByOrigin[flow.OriginID] = append(flowsByOrigin[flow.OriginID], flow)
+		flowsByDest[flow.DestinationID] = append(flowsByDest[flow.DestinationID], flow)
 	}
 
 	var lines []string
@@ -733,6 +742,10 @@ func formatMicroflowActivitiesWithSourceMap(
 
 	// Build annotation map for @annotation emission
 	annotationsByTarget := buildAnnotationsByTarget(mf.ObjectCollection)
+
+	// Install flow maps for @anchor emission during traversal.
+	restore := setDescriberFlowMaps(flowsByOrigin, flowsByDest)
+	defer restore()
 
 	traverseFlow(ctx, startID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, &lines, 0, sourceMap, headerLineCount, annotationsByTarget)
 

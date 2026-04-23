@@ -80,6 +80,18 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 	}
 }
 
+// stmtOwnAnchor returns the primary FlowAnchors declared on this statement's
+// @anchor annotation, or nil if absent. This is the flow-level anchor that
+// applies to the single SequenceFlow leaving the statement (and whose To
+// applies to the incoming flow when this statement is the destination).
+func stmtOwnAnchor(stmt ast.MicroflowStatement) *ast.FlowAnchors {
+	ann := getStatementAnnotations(stmt)
+	if ann == nil {
+		return nil
+	}
+	return ann.Anchor
+}
+
 // mergeStatementAnnotations extracts annotations from a statement and merges into pendingAnnotations.
 func (fb *flowBuilder) mergeStatementAnnotations(stmt ast.MicroflowStatement) {
 	ann := getStatementAnnotations(stmt)
@@ -100,6 +112,21 @@ func (fb *flowBuilder) mergeStatementAnnotations(stmt ast.MicroflowStatement) {
 	}
 	if ann.AnnotationText != "" {
 		fb.pendingAnnotations.AnnotationText = ann.AnnotationText
+	}
+	if ann.Anchor != nil {
+		fb.pendingAnnotations.Anchor = ann.Anchor
+	}
+	if ann.TrueBranchAnchor != nil {
+		fb.pendingAnnotations.TrueBranchAnchor = ann.TrueBranchAnchor
+	}
+	if ann.FalseBranchAnchor != nil {
+		fb.pendingAnnotations.FalseBranchAnchor = ann.FalseBranchAnchor
+	}
+	if ann.IteratorAnchor != nil {
+		fb.pendingAnnotations.IteratorAnchor = ann.IteratorAnchor
+	}
+	if ann.BodyTailAnchor != nil {
+		fb.pendingAnnotations.BodyTailAnchor = ann.BodyTailAnchor
 	}
 }
 

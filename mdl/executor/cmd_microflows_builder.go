@@ -36,6 +36,10 @@ type flowBuilder struct {
 	hierarchy           *ContainerHierarchy          // For resolving container IDs to module names
 	pendingAnnotations  *ast.ActivityAnnotations     // Pending annotations to attach to next activity
 	restServices        []*model.ConsumedRestService // Cached REST services for parameter classification
+	// previousStmtAnchor holds the Anchor annotation of the statement that
+	// just emitted an activity, so the next flow's OriginConnectionIndex can
+	// be overridden by the user. Cleared after each flow is created.
+	previousStmtAnchor *ast.FlowAnchors
 }
 
 // addError records a validation error during flow building.

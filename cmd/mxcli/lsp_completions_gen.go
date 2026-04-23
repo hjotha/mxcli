@@ -103,6 +103,9 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "FULL", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "CROSS", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "ON", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
+	{Label: "TOP", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
+	{Label: "BOTTOM", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
+	{Label: "ANCHOR", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "ASC", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "DESC", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 

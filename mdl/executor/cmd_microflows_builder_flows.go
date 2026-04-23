@@ -172,6 +172,25 @@ func newUpwardFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	}
 }
 
+// applyUserAnchors overrides a SequenceFlow's Origin/Destination connection
+// indices with user-specified values from @anchor annotations. An AnchorSideUnset
+// value leaves the builder-chosen default in place.
+//
+// Arguments are taken as *ast.FlowAnchors pointers for the origin and
+// destination statements. Either can be nil (no annotation on that side).
+// If both are non-nil, the origin's From and destination's To are applied.
+func applyUserAnchors(flow *microflows.SequenceFlow, origin *ast.FlowAnchors, destination *ast.FlowAnchors) {
+	if flow == nil {
+		return
+	}
+	if origin != nil && origin.From != ast.AnchorSideUnset {
+		flow.OriginConnectionIndex = int(origin.From)
+	}
+	if destination != nil && destination.To != ast.AnchorSideUnset {
+		flow.DestinationConnectionIndex = int(destination.To)
+	}
+}
+
 // lastStmtIsReturn reports whether execution of a body is guaranteed to terminate
 // (via RETURN or RAISE ERROR) on every path — i.e. control can never fall off the
 // end of the body into the parent flow.

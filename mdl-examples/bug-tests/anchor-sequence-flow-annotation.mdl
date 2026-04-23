@@ -1,0 +1,59 @@
+-- ============================================================================
+-- Feature: @anchor annotation for sequence flow endpoints
+-- ============================================================================
+--
+-- Motivation:
+--   Studio Pro renders SequenceFlows connecting to one of the four sides of
+--   each activity box (top, right, bottom, left). Until this annotation was
+--   added, the builder always chose the anchor side from the flow direction
+--   (horizontal → right-to-left, upward → right-to-bottom, etc.) and the
+--   describer dropped the information entirely. A DESCRIBE → re-execute
+--   round-trip therefore lost every manual anchor adjustment and the flow
+--   diagram had to be re-tidied by hand after each iteration.
+--
+-- Syntax:
+--   @anchor(from: X, to: Y)       — anchors for the single outgoing flow
+--   @anchor(true: (from:..., to:...), false: (from:..., to:...))  — IF
+--
+-- Each side is independently optional. Missing sides fall back to the
+-- builder's default for the visual flow direction.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/anchor-sequence-flow-annotation.mdl -p app.mpr
+--   Then: mxcli describe microflow BugTestAnchor.MF_CustomAnchors -p app.mpr
+--   The describe output must include the @anchor(...) lines below verbatim.
+-- ============================================================================
+
+create module BugTestAnchor;
+
+create microflow BugTestAnchor.MF_CustomAnchors ()
+returns string as $result
+begin
+  declare $result string = empty;
+
+  @anchor(from: bottom)
+  log info node 'App' 'first';
+
+  @anchor(to: top)
+  log info node 'App' 'second';
+
+  set $result = 'done';
+  return $result;
+end;
+/
+
+create microflow BugTestAnchor.MF_IfBranchAnchors ()
+returns string as $result
+begin
+  declare $result string = empty;
+
+  @anchor(true: (from: right, to: left), false: (from: bottom, to: top))
+  if true then
+    set $result = 'yes';
+  else
+    set $result = 'no';
+  end if;
+
+  return $result;
+end;
+/

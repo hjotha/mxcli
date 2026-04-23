@@ -61,14 +61,110 @@ func collectFreeAnnotations(oc *microflows.MicroflowObjectCollection) []string {
 	return result
 }
 
-// emitObjectAnnotations emits @position, @caption, @color, and @annotation lines
-// for a microflow object before its statement.
+// anchorSideKeyword returns the MDL keyword (top/right/bottom/left) for a
+// connection-index value. Returns "" for unknown values.
+func anchorSideKeyword(idx int) string {
+	switch idx {
+	case AnchorTop:
+		return "top"
+	case AnchorRight:
+		return "right"
+	case AnchorBottom:
+		return "bottom"
+	case AnchorLeft:
+		return "left"
+	default:
+		return ""
+	}
+}
+
+// emitAnchorAnnotation emits an @anchor(from: X, to: Y) line based on the
+// incoming and outgoing SequenceFlows for this object. Either side is omitted
+// when its flow does not exist (e.g. the StartEvent has no incoming flow).
+// Nothing is emitted when the object has no attached flows.
+func emitAnchorAnnotation(
+	obj microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	lines *[]string,
+	indentStr string,
+) {
+	id := obj.GetID()
+
+	// @anchor describes the primary flow leaving this object and the primary
+	// incoming flow. For splits we skip the simple form — TRUE/FALSE per-branch
+	// anchors are emitted on the statements inside each branch instead.
+	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
+		return
+	}
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit {
+		return
+	}
+
+	var from, to string
+	if outgoing := flowsByOrigin[id]; len(outgoing) > 0 {
+		from = anchorSideKeyword(outgoing[0].OriginConnectionIndex)
+	}
+	if incoming := flowsByDest[id]; len(incoming) > 0 {
+		to = anchorSideKeyword(incoming[0].DestinationConnectionIndex)
+	}
+
+	if from == "" && to == "" {
+		return
+	}
+	var parts []string
+	if from != "" {
+		parts = append(parts, "from: "+from)
+	}
+	if to != "" {
+		parts = append(parts, "to: "+to)
+	}
+	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
+}
+
+// currentFlowsByDest / currentFlowsByOrigin are optional describer-global maps
+// (set up by the top-level describer entry point). emitObjectAnnotations reads
+// them when emitting @anchor lines so the existing callers don't have to be
+// retrofitted with an extra argument. When the maps are nil, @anchor emission
+// is skipped — this keeps unit tests of emitObjectAnnotations self-contained.
+//
+// Not ideal, but keeps the blast radius of this change confined to the two
+// entry points in cmd_microflows_show.go that set them up and clear them.
+var (
+	currentFlowsByOrigin map[model.ID][]*microflows.SequenceFlow
+	currentFlowsByDest   map[model.ID][]*microflows.SequenceFlow
+)
+
+// setDescriberFlowMaps installs the flow maps used by @anchor emission and
+// returns a cleanup function the caller should defer to restore the previous
+// (usually nil) state.
+func setDescriberFlowMaps(
+	byOrigin map[model.ID][]*microflows.SequenceFlow,
+	byDest map[model.ID][]*microflows.SequenceFlow,
+) func() {
+	prevOrigin := currentFlowsByOrigin
+	prevDest := currentFlowsByDest
+	currentFlowsByOrigin = byOrigin
+	currentFlowsByDest = byDest
+	return func() {
+		currentFlowsByOrigin = prevOrigin
+		currentFlowsByDest = prevDest
+	}
+}
+
+// emitObjectAnnotations emits @position, @caption, @color, @annotation, and
+// @anchor lines for a microflow object before its statement.
 func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, indentStr string, annotationsByTarget map[model.ID][]string) {
 	currentID := obj.GetID()
 
 	// @position (always emit)
 	pos := obj.GetPosition()
 	*lines = append(*lines, indentStr+fmt.Sprintf("@position(%d, %d)", pos.X, pos.Y))
+
+	// @anchor (emit whenever attached flows exist, for roundtrip fidelity)
+	if currentFlowsByOrigin != nil && currentFlowsByDest != nil {
+		emitAnchorAnnotation(obj, currentFlowsByOrigin, currentFlowsByDest, lines, indentStr)
+	}
 
 	// @excluded, @caption, and @color (only for ActionActivity)
 	if activity, ok := obj.(*microflows.ActionActivity); ok {

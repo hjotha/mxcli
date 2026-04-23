@@ -56,6 +56,13 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	// pendingCase holds the case value for the NEXT flow (set by merge-less splits)
 	pendingCase := ""
 	for _, stmt := range stmts {
+		// Snapshot the current statement's anchor annotation before addStatement
+		// can reset pendingAnnotations via recursive processing. The incoming
+		// side (To) is applied when this statement is the destination of the
+		// flow we're about to create; the outgoing side (From) is stashed in
+		// previousStmtAnchor so the NEXT iteration can apply it.
+		stmtAnchor := stmtOwnAnchor(stmt)
+
 		activityID := fb.addStatement(stmt)
 		if activityID != "" {
 			// If there are pending annotations, apply them to this activity
@@ -64,12 +71,17 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 				fb.pendingAnnotations = nil
 			}
 			// Connect to previous object with horizontal SequenceFlow
+			var flow *microflows.SequenceFlow
 			if pendingCase != "" {
-				fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, activityID, pendingCase))
+				flow = newHorizontalFlowWithCase(lastID, activityID, pendingCase)
 				pendingCase = ""
 			} else {
-				fb.flows = append(fb.flows, newHorizontalFlow(lastID, activityID))
+				flow = newHorizontalFlow(lastID, activityID)
 			}
+			applyUserAnchors(flow, fb.previousStmtAnchor, stmtAnchor)
+			fb.flows = append(fb.flows, flow)
+			fb.previousStmtAnchor = stmtAnchor
+
 			// For compound statements (IF, LOOP), the exit point differs from entry point
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
@@ -77,6 +89,9 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 				// Save nextFlowCase for the NEXT iteration's flow creation
 				pendingCase = fb.nextFlowCase
 				fb.nextFlowCase = ""
+				// Compound statements control their own internal anchors; don't
+				// let the outer From leak into the flow leaving the merge.
+				fb.previousStmtAnchor = nil
 			} else {
 				lastID = activityID
 			}
@@ -108,11 +123,15 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		fb.objects = append(fb.objects, endEvent)
 
 		// Connect last activity to end event
+		var endFlow *microflows.SequenceFlow
 		if pendingCase != "" {
-			fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, endEvent.ID, pendingCase))
+			endFlow = newHorizontalFlowWithCase(lastID, endEvent.ID, pendingCase)
 		} else {
-			fb.flows = append(fb.flows, newHorizontalFlow(lastID, endEvent.ID))
+			endFlow = newHorizontalFlow(lastID, endEvent.ID)
 		}
+		applyUserAnchors(endFlow, fb.previousStmtAnchor, nil)
+		fb.flows = append(fb.flows, endFlow)
+		fb.previousStmtAnchor = nil
 	}
 
 	return &microflows.MicroflowObjectCollection{
