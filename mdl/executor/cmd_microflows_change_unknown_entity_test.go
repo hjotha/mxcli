@@ -65,3 +65,26 @@ func TestResolveMemberChange_UnknownEntityEmptyMemberName(t *testing.T) {
 			mc.AttributeQualifiedName, mc.AssociationQualifiedName)
 	}
 }
+
+// TestResolveMemberChange_UnknownEntityQualifiedAttributeStaysAttribute covers
+// the codex review finding: a name with two or more dots is a qualified
+// attribute (`Module.Entity.Attribute`), not an association. MDL association
+// names always have exactly one dot (`Module.AssociationName`) because they
+// are qualified by module only; any additional dot indicates an
+// entity.attribute path.
+func TestResolveMemberChange_UnknownEntityQualifiedAttributeStaysAttribute(t *testing.T) {
+	fb := &flowBuilder{}
+	mc := &microflows.MemberChange{}
+	// Authored shape: `change $x (MyModule.MyEntity.Offset = 1)` with
+	// entityQN unknown (variable type not registered).
+	fb.resolveMemberChange(mc, "MyModule.MyEntity.Offset", "")
+
+	if mc.AttributeQualifiedName != "MyModule.MyEntity.Offset" {
+		t.Errorf("qualified attribute: got %q, want %q",
+			mc.AttributeQualifiedName, "MyModule.MyEntity.Offset")
+	}
+	if mc.AssociationQualifiedName != "" {
+		t.Errorf("qualified attribute was mistakenly classified as association: %q",
+			mc.AssociationQualifiedName)
+	}
+}
