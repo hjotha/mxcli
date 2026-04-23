@@ -128,3 +128,115 @@ func TestAnchorAnnotation_MissingLeavesUnset(t *testing.T) {
 		t.Errorf("expected Anchor nil on statement without @anchor, got %+v", log.Annotations.Anchor)
 	}
 }
+
+// Parser/visitor regression coverage for the LOOP/WHILE form
+// @anchor(iterator: (...), tail: (...)). Feeding real MDL text pins the
+// grammar and visitor wiring so the AST fields IteratorAnchor /
+// BodyTailAnchor are populated — the executor-side tests only exercise
+// synthetic AST values and would not catch a grammar regression.
+
+func TestAnchorAnnotation_LoopIteratorAndTail(t *testing.T) {
+	src := `retrieve $items from MfTest.Entity;
+@anchor(iterator: (from: bottom, to: top), tail: (from: right, to: bottom))
+loop $item in $items begin
+  log info node 'App' 'step';
+end loop;`
+	prog, errs := Build("create microflow MfTest.M () begin\n" + src + "\nend;")
+	if len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("parse: %v", e)
+		}
+		t.FailNow()
+	}
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	// Body[0] is the retrieve, Body[1] is the loop — the annotation sits on the loop.
+	if len(mf.Body) < 2 {
+		t.Fatalf("expected at least 2 body statements, got %d", len(mf.Body))
+	}
+	loop, ok := mf.Body[1].(*ast.LoopStmt)
+	if !ok {
+		t.Fatalf("expected Body[1] to be LoopStmt, got %T", mf.Body[1])
+	}
+	if loop.Annotations == nil {
+		t.Fatal("expected LoopStmt.Annotations, got nil")
+	}
+	if loop.Annotations.IteratorAnchor == nil {
+		t.Fatal("expected IteratorAnchor to be populated")
+	}
+	if loop.Annotations.IteratorAnchor.From != ast.AnchorSideBottom ||
+		loop.Annotations.IteratorAnchor.To != ast.AnchorSideTop {
+		t.Errorf("iterator anchor: got from=%v to=%v; want Bottom/Top",
+			loop.Annotations.IteratorAnchor.From, loop.Annotations.IteratorAnchor.To)
+	}
+	if loop.Annotations.BodyTailAnchor == nil {
+		t.Fatal("expected BodyTailAnchor to be populated")
+	}
+	if loop.Annotations.BodyTailAnchor.From != ast.AnchorSideRight ||
+		loop.Annotations.BodyTailAnchor.To != ast.AnchorSideBottom {
+		t.Errorf("tail anchor: got from=%v to=%v; want Right/Bottom",
+			loop.Annotations.BodyTailAnchor.From, loop.Annotations.BodyTailAnchor.To)
+	}
+}
+
+func TestAnchorAnnotation_WhileIteratorAndTail(t *testing.T) {
+	src := `@anchor(iterator: (from: top, to: left), tail: (from: bottom, to: right))
+while true begin
+  log info node 'App' 'tick';
+end while;`
+	prog, errs := Build("create microflow MfTest.M () begin\n" + src + "\nend;")
+	if len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("parse: %v", e)
+		}
+		t.FailNow()
+	}
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	while, ok := mf.Body[0].(*ast.WhileStmt)
+	if !ok {
+		t.Fatalf("expected Body[0] to be WhileStmt, got %T", mf.Body[0])
+	}
+	if while.Annotations == nil {
+		t.Fatal("expected WhileStmt.Annotations, got nil")
+	}
+	if while.Annotations.IteratorAnchor == nil {
+		t.Fatal("expected IteratorAnchor to be populated")
+	}
+	if while.Annotations.IteratorAnchor.From != ast.AnchorSideTop ||
+		while.Annotations.IteratorAnchor.To != ast.AnchorSideLeft {
+		t.Errorf("iterator anchor: got from=%v to=%v; want Top/Left",
+			while.Annotations.IteratorAnchor.From, while.Annotations.IteratorAnchor.To)
+	}
+	if while.Annotations.BodyTailAnchor == nil {
+		t.Fatal("expected BodyTailAnchor to be populated")
+	}
+	if while.Annotations.BodyTailAnchor.From != ast.AnchorSideBottom ||
+		while.Annotations.BodyTailAnchor.To != ast.AnchorSideRight {
+		t.Errorf("tail anchor: got from=%v to=%v; want Bottom/Right",
+			while.Annotations.BodyTailAnchor.From, while.Annotations.BodyTailAnchor.To)
+	}
+}
+
+func TestAnchorAnnotation_LoopIteratorOnly(t *testing.T) {
+	// Only iterator is provided — tail stays nil.
+	src := `retrieve $items from MfTest.Entity;
+@anchor(iterator: (from: top, to: left))
+loop $item in $items begin
+  log info node 'App' 'step';
+end loop;`
+	prog, errs := Build("create microflow MfTest.M () begin\n" + src + "\nend;")
+	if len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("parse: %v", e)
+		}
+		t.FailNow()
+	}
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	loop := mf.Body[1].(*ast.LoopStmt)
+	if loop.Annotations.IteratorAnchor == nil {
+		t.Fatal("expected IteratorAnchor, got nil")
+	}
+	if loop.Annotations.BodyTailAnchor != nil {
+		t.Errorf("expected BodyTailAnchor nil when `tail:` omitted, got %+v",
+			loop.Annotations.BodyTailAnchor)
+	}
+}

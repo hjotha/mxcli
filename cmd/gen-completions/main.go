@@ -304,6 +304,8 @@ func normalizeCategoryName(raw string) string {
 		return "Connection keyword"
 	case strings.Contains(raw, "OQL"), strings.Contains(raw, "QUERY"):
 		return "Query keyword"
+	case strings.Contains(raw, "ANCHOR"):
+		return "Flow annotation keyword"
 	case strings.Contains(raw, "MICROFLOW"):
 		return "Microflow keyword"
 	case strings.Contains(raw, "PAGE"), strings.Contains(raw, "WIDGET"):
