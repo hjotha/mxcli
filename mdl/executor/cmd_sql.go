@@ -16,11 +16,7 @@ import (
 
 // ensureSQLManager lazily initializes the SQL connection manager.
 func ensureSQLManager(ctx *ExecContext) *sqllib.Manager {
-	e := ctx.executor
-	if e.sqlMgr == nil {
-		e.sqlMgr = sqllib.NewManager()
-	}
-	return e.sqlMgr
+	return ctx.EnsureSqlMgr()
 }
 
 // getOrAutoConnect returns an existing connection or auto-connects using connections.yaml.

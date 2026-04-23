@@ -11,7 +11,22 @@ import (
 // executeInner dispatches a statement to its registered handler.
 func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
 	ectx := e.newExecContext(ctx)
-	return e.registry.Dispatch(ectx, stmt)
+	err := e.registry.Dispatch(ectx, stmt)
+	e.syncBack(ectx)
+	return err
+}
+
+// syncBack copies mutated ExecContext fields back to the Executor so that
+// the next newExecContext call picks up handler-side state changes.
+// This replaces the scattered ctx.executor.field = ctx.Field write-backs
+// that previously lived inside individual handlers.
+func (e *Executor) syncBack(ctx *ExecContext) {
+	e.cache = ctx.Cache
+	e.catalog = ctx.Catalog
+	e.settings = ctx.Settings
+	e.fragments = ctx.Fragments
+	e.sqlMgr = ctx.SqlMgr
+	e.themeRegistry = ctx.ThemeRegistry
 }
 
 // newExecContext builds an ExecContext from the current Executor state.

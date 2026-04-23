@@ -285,7 +285,6 @@ func isCacheValid(ctx *ExecContext, cachePath string, requiredMode string) (bool
 
 // loadCachedCatalog loads a catalog from the cache file.
 func loadCachedCatalog(ctx *ExecContext, cachePath string) error {
-	e := ctx.executor
 	cat, err := catalog.NewFromFile(cachePath)
 	if err != nil {
 		return err
@@ -298,7 +297,6 @@ func loadCachedCatalog(ctx *ExecContext, cachePath string) error {
 	}
 
 	ctx.Catalog = cat
-	e.catalog = cat
 	if !ctx.Quiet {
 		age := time.Since(info.BuildTime)
 		fmt.Fprintf(ctx.Output, "Loading cached catalog (built %s ago, %s mode)...\n",
@@ -324,7 +322,6 @@ func formatDuration(d time.Duration) string {
 
 // buildCatalog builds the catalog from the project.
 func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
-	e := ctx.executor
 	isSource := len(source) > 0 && source[0]
 	if isSource {
 		full = true // source implies full
@@ -382,7 +379,6 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 
 	cat.SetBuilt(true)
 	ctx.Catalog = cat
-	e.catalog = cat
 
 	if !ctx.Quiet {
 		fmt.Fprintf(ctx.Output, "✓ Catalog ready (%.1fs)\n", elapsed.Seconds())
@@ -408,7 +404,6 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 
 // execRefreshCatalogStmt handles REFRESH CATALOG [FULL] [SOURCE] [FORCE] [BACKGROUND] command.
 func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -431,7 +426,6 @@ func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) erro
 				if ctx.Catalog != nil {
 					ctx.Catalog.Close()
 					ctx.Catalog = nil
-					e.catalog = nil
 				}
 				return loadCachedCatalog(ctx, cachePath)
 			}
@@ -451,7 +445,6 @@ func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) erro
 	if ctx.Catalog != nil {
 		ctx.Catalog.Close()
 		ctx.Catalog = nil
-		e.catalog = nil
 	}
 
 	// Handle background mode

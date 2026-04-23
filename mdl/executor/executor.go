@@ -447,9 +447,6 @@ func rememberDroppedMicroflow(ctx *ExecContext, qualifiedName string, id, contai
 	}
 	if ctx.Cache == nil {
 		ctx.Cache = &executorCache{}
-		if ctx.executor != nil {
-			ctx.executor.cache = ctx.Cache
-		}
 	}
 	if ctx.Cache.droppedMicroflows == nil {
 		ctx.Cache.droppedMicroflows = make(map[string]*droppedUnitInfo)

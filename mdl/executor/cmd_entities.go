@@ -46,7 +46,6 @@ func buildEventHandlers(ctx *ExecContext, defs []ast.EventHandlerDef) ([]*domain
 }
 
 func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -288,7 +287,7 @@ func execCreateEntity(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)
 	}
 
-	e.trackModifiedDomainModel(module.ID, module.Name)
+	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
 }
 
@@ -463,7 +462,6 @@ func execCreateViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) error {
 
 // execAlterEntity handles ALTER ENTITY statements.
 func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -911,7 +909,7 @@ func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		return mdlerrors.NewUnsupported("unsupported alter entity operation")
 	}
 
-	e.trackModifiedDomainModel(module.ID, module.Name)
+	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
 }
 

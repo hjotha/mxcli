@@ -16,7 +16,6 @@ import (
 
 // execCreateAssociation handles CREATE ASSOCIATION statements.
 func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -138,7 +137,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 		}
 	}
 
-	e.trackModifiedDomainModel(module.ID, module.Name)
+	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	fmt.Fprintf(ctx.Output, "Created association: %s\n", s.Name)
 	return nil
 }
