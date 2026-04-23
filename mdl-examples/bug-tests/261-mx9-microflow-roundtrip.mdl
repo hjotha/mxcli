@@ -1,0 +1,38 @@
+-- ============================================================================
+-- Bug #261: Mx 9 microflow roundtrip keys gated by project version
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Writing a microflow to a Mendix 9 project unconditionally emitted
+--   ReturnVariableName / StableId / Url / UrlSearchParameters on the
+--   Microflow document and DefaultValue / IsRequired on its parameters.
+--   Studio Pro on Mx 9 treats those as unknown metamodel keys and raises
+--   schema validation errors on open.
+--
+--   Similarly, SequenceFlow and AnnotationFlow were always emitted with
+--   the Mx 10+ shape (CaseValues array, Line document), so a Mx 9 project
+--   re-parsed them as malformed and dropped case values / bezier vectors.
+--
+-- After fix:
+--   The writer reads the project's major version from the reader and emits
+--   the matching key set:
+--     - Mx 9: legacy NewCaseValue + top-level {Origin,Destination}BezierVector
+--     - Mx 10+: modern CaseValues + Line: Microflows$BezierCurve
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/261-mx9-microflow-roundtrip.mdl -p mx9-app.mpr
+--   Open in Studio Pro 9 — project must load without metamodel errors.
+-- ============================================================================
+
+create module BugTest261;
+
+create microflow BugTest261.MF_Demo (
+  $name: string
+)
+returns string as $result
+begin
+  declare $result string = empty;
+  set $result = $name;
+  return $result;
+end;
+/
