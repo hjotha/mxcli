@@ -148,7 +148,9 @@ FULL: F U L L;
 CROSS: C R O S S;
 ON: O N;
 
-// Anchor sides (for @anchor annotation)
+// Anchor annotation keywords.
+// Sides of an activity box a SequenceFlow can attach to, used by the
+// @anchor(from: X, to: Y) annotation and its per-branch variants.
 TOP: T O P;
 BOTTOM: B O T T O M;
 ANCHOR: A N C H O R;

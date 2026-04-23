@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Path normalization** — Relative paths in `MetadataUrl` are automatically converted to absolute `file://` URLs for Studio Pro compatibility
 - **ServiceUrl validation** — `ServiceUrl` parameter must now be a constant reference (e.g., `@Module.ConstantName`) to enforce Mendix best practice
 - **Shared URL utilities** — `internal/pathutil` package with `NormalizeURL()`, `URIToPath()`, and `PathFromURL()` for reuse across components
+- **@anchor sequence flow annotation** — optional `@anchor(from: X, to: Y)` annotation on microflow statements that pins the side of the activity box a SequenceFlow attaches to (top / right / bottom / left). Split (`if`) statements support the combined form `@anchor(to: X, true: (from: ..., to: ...), false: (from: ..., to: ...))` so the incoming and per-branch outgoing anchors survive describe → exec round-trip. When omitted, the builder derives the anchor from the visual flow direction (existing behaviour is unchanged). Keeps the flow diagram stable across patches when an agent-generated microflow is applied back to a project
+- **@anchor loop form** — `LOOP`/`WHILE` statements accept `@anchor(iterator: (...), tail: (...))` in the grammar so authoring tools can forward-propagate the intent. Today the builder deliberately does not translate those into SequenceFlows: Studio Pro rejects edges between a `LoopedActivity` and its body statements with CE0709 ("Sequence flow is not accepted by origin or destination"), since the iterator icon is drawn implicitly from the loop geometry. Reserving the grammar slot keeps scripts forward-compatible with any future Mendix capability
 
 ### Changed
 

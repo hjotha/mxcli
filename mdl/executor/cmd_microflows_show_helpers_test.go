@@ -148,7 +148,8 @@ func TestEmitObjectAnnotations_EscapesMultilineText(t *testing.T) {
 	}
 
 	var lines []string
-	emitObjectAnnotations(obj, &lines, "", annotationsByTarget)
+	// Pass nil flow maps — @anchor emission is intentionally suppressed here.
+	emitObjectAnnotations(obj, &lines, "", annotationsByTarget, nil, nil)
 
 	got := strings.Join(lines, "\n")
 	if !strings.Contains(got, "@caption 'Caption\\nLine'") {

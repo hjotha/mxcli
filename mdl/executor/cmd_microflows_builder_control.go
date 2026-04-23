@@ -377,7 +377,7 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		restServices: fb.restServices, // Share REST services for parameter classification
 	}
 
-	// Process loop body statements and connect them with flows
+	// Process loop body statements and connect them with flows.
 	var lastBodyID model.ID
 	for _, stmt := range s.Body {
 		actID := loopBuilder.addStatement(stmt)
@@ -415,6 +415,13 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		},
 		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
 	}
+
+	// @anchor(iterator: ..., tail: ...) parses and survives on
+	// savedLoopAnnotations for forward compatibility, but we deliberately do
+	// not serialise either edge as a SequenceFlow: Studio Pro rejects loop→body
+	// and body→loop with CE0709 "Sequence flow is not accepted by origin or
+	// destination", since the iterator icon is drawn implicitly by the loop
+	// geometry.
 
 	fb.objects = append(fb.objects, loop)
 
@@ -503,6 +510,10 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 		},
 		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
 	}
+
+	// See addLoopStatement — @anchor(iterator/tail) is parsed but not
+	// serialised, since Studio Pro does not permit explicit edges between a
+	// LoopedActivity and its body statements.
 
 	fb.objects = append(fb.objects, loop)
 	fb.flows = append(fb.flows, loopBuilder.flows...)

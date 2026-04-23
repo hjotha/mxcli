@@ -681,11 +681,10 @@ func formatMicroflowActivities(
 	// Build annotation map for @annotation emission
 	annotationsByTarget := buildAnnotationsByTarget(mf.ObjectCollection)
 
-	// Install flow maps for @anchor emission during traversal.
-	restore := setDescriberFlowMaps(flowsByOrigin, flowsByDest)
-	defer restore()
-
-	traverseFlow(ctx, startID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, &lines, 0, nil, 0, annotationsByTarget)
+	// flowsByOrigin / flowsByDest are threaded into traverseFlow so @anchor
+	// emission is per-call — no package-level globals, safe under concurrent
+	// describe (e.g. captureDescribeParallel).
+	traverseFlow(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, &lines, 0, nil, 0, annotationsByTarget)
 
 	return lines
 }
@@ -741,11 +740,7 @@ func formatMicroflowActivitiesWithSourceMap(
 	// Build annotation map for @annotation emission
 	annotationsByTarget := buildAnnotationsByTarget(mf.ObjectCollection)
 
-	// Install flow maps for @anchor emission during traversal.
-	restore := setDescriberFlowMaps(flowsByOrigin, flowsByDest)
-	defer restore()
-
-	traverseFlow(ctx, startID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, &lines, 0, sourceMap, headerLineCount, annotationsByTarget)
+	traverseFlow(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, &lines, 0, sourceMap, headerLineCount, annotationsByTarget)
 
 	return lines
 }

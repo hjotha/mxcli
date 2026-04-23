@@ -134,57 +134,22 @@ func TestBuilder_IfBranchAnchorOverrides(t *testing.T) {
 	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
 	oc := fb.buildFlowGraph(body, nil)
 
-	// Scan for the split→activity "true" and "false" flows and check their
-	// OriginConnectionIndex matches the per-branch anchors.
-	var trueFlow, falseFlow bool
-	for _, f := range oc.Flows {
-		if ec, ok := f.CaseValue.(ast.Expression); ok {
-			_ = ec
-		}
-		switch cv := f.CaseValue.(type) {
-		case nil:
-			// skip
-		default:
-			_ = cv
-		}
-		// The split's outgoing flows carry an EnumerationCase with "true" / "false".
-		if cv, ok := f.CaseValue.(interface{ GetValue() string }); ok {
-			switch cv.GetValue() {
-			case "true":
-				if f.OriginConnectionIndex == AnchorTop && f.DestinationConnectionIndex == AnchorLeft {
-					trueFlow = true
-				}
-			case "false":
-				if f.OriginConnectionIndex == AnchorBottom && f.DestinationConnectionIndex == AnchorTop {
-					falseFlow = true
-				}
-			}
-		}
+	// Identify the TRUE/FALSE split outgoing flows via the describer's own
+	// helper so we match every CaseValue variant the builder can emit
+	// (ExpressionCase, EnumerationCase — value and pointer forms, BooleanCase).
+	trueF, falseF := findBranchFlows(oc.Flows)
+	if trueF == nil {
+		t.Fatalf("expected a TRUE split flow, got none among %+v", oc.Flows)
 	}
-
-	// Fallback if the CaseValue interface doesn't expose GetValue — just check
-	// that AT LEAST one flow with Top origin and one with Bottom origin exist.
-	if !trueFlow {
-		for _, f := range oc.Flows {
-			if f.OriginConnectionIndex == AnchorTop && f.DestinationConnectionIndex == AnchorLeft {
-				trueFlow = true
-				break
-			}
-		}
+	if falseF == nil {
+		t.Fatalf("expected a FALSE split flow, got none among %+v", oc.Flows)
 	}
-	if !falseFlow {
-		for _, f := range oc.Flows {
-			if f.OriginConnectionIndex == AnchorBottom && f.DestinationConnectionIndex == AnchorTop {
-				falseFlow = true
-				break
-			}
-		}
+	if trueF.OriginConnectionIndex != AnchorTop || trueF.DestinationConnectionIndex != AnchorLeft {
+		t.Errorf("true branch anchors: got from=%d to=%d, want Top(%d)/Left(%d)",
+			trueF.OriginConnectionIndex, trueF.DestinationConnectionIndex, AnchorTop, AnchorLeft)
 	}
-
-	if !trueFlow {
-		t.Error("expected a split outgoing flow with origin=Top, destination=Left (true branch anchor)")
-	}
-	if !falseFlow {
-		t.Error("expected a split outgoing flow with origin=Bottom, destination=Top (false branch anchor)")
+	if falseF.OriginConnectionIndex != AnchorBottom || falseF.DestinationConnectionIndex != AnchorTop {
+		t.Errorf("false branch anchors: got from=%d to=%d, want Bottom(%d)/Top(%d)",
+			falseF.OriginConnectionIndex, falseF.DestinationConnectionIndex, AnchorBottom, AnchorTop)
 	}
 }

@@ -14,14 +14,31 @@
 -- Syntax:
 --   @anchor(from: X, to: Y)       — anchors for the single outgoing flow
 --   @anchor(true: (from:..., to:...), false: (from:..., to:...))  — IF
+--   @anchor(iterator: (from:..., to:...), tail: (from:..., to:...)) — LOOP/WHILE
 --
 -- Each side is independently optional. Missing sides fall back to the
 -- builder's default for the visual flow direction.
 --
 -- Usage:
 --   mxcli exec mdl-examples/bug-tests/anchor-sequence-flow-annotation.mdl -p app.mpr
---   Then: mxcli describe microflow BugTestAnchor.MF_CustomAnchors -p app.mpr
---   The describe output must include the @anchor(...) lines below verbatim.
+--   Then describe each microflow below with `mxcli describe microflow ...`.
+--
+--   The file has two sections with different roundtrip guarantees:
+--
+--     A) Roundtrip-preserving examples (flat @anchor + IF split form) — the
+--        describe output MUST include the @anchor(...) lines verbatim.
+--        Executing describe's output back into the project is bit-exact.
+--
+--     B) Parse-only forward-compatibility examples (LOOP / WHILE iterator
+--        and tail sides) — the grammar accepts @anchor(iterator: ..., tail: ...)
+--        but the builder intentionally does NOT emit those SequenceFlows today
+--        (see the note at the top of section B). Describe therefore will NOT
+--        echo iterator/tail back; the annotation is accepted so existing
+--        scripts keep parsing if Mendix ever starts recording those edges.
+-- ============================================================================
+
+-- ============================================================================
+-- Section A — roundtrip-preserving examples
 -- ============================================================================
 
 create module BugTestAnchor;
@@ -55,5 +72,43 @@ begin
   end if;
 
   return $result;
+end;
+/
+
+-- ============================================================================
+-- Section B — parse-only forward-compatibility examples (LOOP / WHILE)
+-- ============================================================================
+-- The grammar accepts @anchor(iterator: (...), tail: (...)) on LOOP and
+-- WHILE statements so authoring tools can forward-propagate the intent, but
+-- the builder deliberately does NOT translate them into SequenceFlows.
+-- Mendix rejects edges between a LoopedActivity and its body statements with
+-- CE0709 "Sequence flow is not accepted by origin or destination" — the
+-- iterator icon is drawn implicitly from the LoopedActivity geometry.
+--
+-- NOTE: describe will not echo `iterator: (...)` / `tail: (...)` in the
+-- output for the two microflows below. That is expected — see the usage
+-- text above.
+
+create entity BugTestAnchor.Item (
+  Label: String(100)
+);
+
+create microflow BugTestAnchor.MF_LoopAnchors ()
+begin
+  retrieve $items from BugTestAnchor.Item;
+
+  @anchor(iterator: (from: bottom, to: top), tail: (from: right, to: bottom))
+  loop $item in $items begin
+    log info node 'App' 'step';
+  end loop;
+end;
+/
+
+create microflow BugTestAnchor.MF_WhileAnchors ()
+begin
+  @anchor(iterator: (from: bottom, to: left), tail: (from: top, to: right))
+  while true begin
+    log info node 'App' 'tick';
+  end while;
 end;
 /
