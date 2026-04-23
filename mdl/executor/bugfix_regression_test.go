@@ -549,7 +549,7 @@ func TestDeriveColumnName_CaptionSpecialChars(t *testing.T) {
 // =============================================================================
 
 // TestResolveMemberChange_FallbackWithoutReader verifies that resolveMemberChange
-// falls back to dot-contains heuristic when no reader is available.
+// falls back to the member-name shape heuristic when no metadata is available.
 // Regression: https://github.com/mendixlabs/mxcli/issues/50
 func TestResolveMemberChange_FallbackWithoutReader(t *testing.T) {
 	fb := &flowBuilder{
@@ -574,6 +574,20 @@ func TestResolveMemberChange_FallbackWithoutReader(t *testing.T) {
 	}
 	if mc2.AttributeQualifiedName != "" {
 		t.Errorf("expected empty attribute, got %q", mc2.AttributeQualifiedName)
+	}
+}
+
+func TestResolveMemberChange_FallbackWithoutReader_QualifiedAttributeStaysAttribute(t *testing.T) {
+	fb := &flowBuilder{}
+
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "Demo.Child.Label", "Demo.Child")
+
+	if mc.AttributeQualifiedName != "Demo.Child.Label" {
+		t.Errorf("expected qualified attribute preserved, got %q", mc.AttributeQualifiedName)
+	}
+	if mc.AssociationQualifiedName != "" {
+		t.Errorf("expected empty association, got %q", mc.AssociationQualifiedName)
 	}
 }
 
