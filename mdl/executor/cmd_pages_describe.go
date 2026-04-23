@@ -529,6 +529,10 @@ type rawWidget struct {
 	// GroupBox properties
 	Collapsible string // "No", "YesInitiallyExpanded", "YesInitiallyCollapsed"
 	HeaderMode  string // "Div", "H1"-"H6"
+	// TabPage property (only set on synthetic rawWidget wrappers emitted by
+	// TabControl parsing — preserves the original tab page name/caption so
+	// DESCRIBE output shows which tab each nested widget belongs to).
+	TabCaption string
 	// Conditional visibility/editability
 	VisibleIf  string // Expression from ConditionalVisibilitySettings
 	EditableIf string // Expression from ConditionalEditabilitySettings

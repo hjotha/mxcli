@@ -1,0 +1,44 @@
+-- ============================================================================
+-- Bug #219: DESCRIBE PAGE misses widgets inside ScrollContainer / TabControl
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `DESCRIBE PAGE` walks the widget tree via Widgets[] on every container.
+--   ScrollContainer stores children under CenterRegion.Widgets and TabControl
+--   under TabPages[].Widgets — neither path was traversed, so every widget
+--   nested inside those two container types was invisible in the describe
+--   output. Any external tool that relied on DESCRIBE output to map widget
+--   IDs to pages (e.g. test impact analysis linkage maps) had silent gaps.
+--
+-- After fix:
+--   parseRawWidget now recurses into CenterRegion.Widgets for ScrollContainer
+--   (with a fallback to Widgets for older BSON) and iterates TabPages[] for
+--   TabControl, emitting a synthetic Pages$TabPage intermediate so DESCRIBE
+--   output shows which tab each widget belongs to.
+--
+-- Usage:
+--   mxcli describe page BugTest219.PageWithTabs -p app.mpr
+--   The describe output must include the inner widget names on each tab;
+--   before the fix these were dropped.
+-- ============================================================================
+
+create module BugTest219;
+
+create page BugTest219.PageWithTabs
+(
+  title: 'Page with tabs',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'bugtest219/tabs',
+  folder: 'Pages'
+)
+{
+  tabcontainer tabs {
+    tabpage tab1 (caption: 'General') {
+      dynamictext generalField (content: 'Hi from tab 1', rendermode: paragraph)
+    }
+    tabpage tab2 (caption: 'Details') {
+      dynamictext detailsField (content: 'Hi from tab 2', rendermode: paragraph)
+    }
+  }
+};
+/

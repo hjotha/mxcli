@@ -31,6 +31,86 @@ func parseRawWidget(ctx *ExecContext, w map[string]any, parentEntityContext ...s
 	typeName, _ := w["$Type"].(string)
 	name, _ := w["Name"].(string)
 
+	// ScrollContainer: children are nested inside CenterRegion.Widgets
+	// rather than Widgets directly, so recurse into CenterRegion so nested
+	// widget IDs are visible in DESCRIBE PAGE output.
+	if typeName == "Forms$ScrollContainer" || typeName == "Pages$ScrollContainer" {
+		widget := rawWidget{
+			Type: typeName,
+			Name: name,
+		}
+		if appearance, ok := w["Appearance"].(map[string]any); ok {
+			if class, ok := appearance["Class"].(string); ok && class != "" {
+				widget.Class = class
+			}
+			if style, ok := appearance["Style"].(string); ok && style != "" {
+				widget.Style = style
+			}
+			widget.DesignProperties = extractDesignProperties(appearance)
+		}
+		extractConditionalSettings(&widget, w)
+		// Primary location: CenterRegion.Widgets (Mendix 9+)
+		var children []any
+		if centerRegion, ok := w["CenterRegion"].(map[string]any); ok {
+			children = getBsonArrayElements(centerRegion["Widgets"])
+		}
+		// Fallback for older BSON layouts that stored children directly.
+		if len(children) == 0 {
+			children = getBsonArrayElements(w["Widgets"])
+		}
+		for _, c := range children {
+			if cMap, ok := c.(map[string]any); ok {
+				widget.Children = append(widget.Children, parseRawWidget(ctx, cMap, inheritedCtx)...)
+			}
+		}
+		return []rawWidget{widget}
+	}
+
+	// TabControl: children are grouped under TabPages[]. Preserve each tab
+	// page as a synthetic intermediate widget so the output distinguishes
+	// which tab each nested widget belongs to.
+	if typeName == "Forms$TabControl" || typeName == "Pages$TabControl" {
+		widget := rawWidget{
+			Type: typeName,
+			Name: name,
+		}
+		if appearance, ok := w["Appearance"].(map[string]any); ok {
+			if class, ok := appearance["Class"].(string); ok && class != "" {
+				widget.Class = class
+			}
+			if style, ok := appearance["Style"].(string); ok && style != "" {
+				widget.Style = style
+			}
+			widget.DesignProperties = extractDesignProperties(appearance)
+		}
+		extractConditionalSettings(&widget, w)
+		for _, tp := range getBsonArrayElements(w["TabPages"]) {
+			tpMap, ok := tp.(map[string]any)
+			if !ok {
+				continue
+			}
+			tabPage := rawWidget{
+				Type: "Pages$TabPage",
+			}
+			if n, ok := tpMap["Name"].(string); ok {
+				tabPage.Name = n
+			}
+			if ct, ok := tpMap["CaptionTemplate"].(map[string]any); ok {
+				tabPage.TabCaption = extractTextFromTemplate(ctx, ct)
+			}
+			if tabPage.TabCaption == "" {
+				tabPage.TabCaption = extractTextCaption(ctx, tpMap)
+			}
+			for _, tw := range getBsonArrayElements(tpMap["Widgets"]) {
+				if twMap, ok := tw.(map[string]any); ok {
+					tabPage.Children = append(tabPage.Children, parseRawWidget(ctx, twMap, inheritedCtx)...)
+				}
+			}
+			widget.Children = append(widget.Children, tabPage)
+		}
+		return []rawWidget{widget}
+	}
+
 	// Parse DivContainer as a proper CONTAINER widget with children
 	if typeName == "Forms$DivContainer" || typeName == "Pages$DivContainer" ||
 		typeName == "Forms$GroupBox" || typeName == "Pages$GroupBox" {
