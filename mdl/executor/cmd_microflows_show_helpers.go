@@ -455,8 +455,23 @@ func traverseFlow(
 		return
 	}
 
-	// Check if this is a merge point - if so, don't process it here (it will be handled by the split)
+	// Merge points are normally processed by the matching split's traversal —
+	// returning here avoids emitting an `end if;` twice. But a merge can also
+	// appear as a pure junction (multiple incoming flows converging outside
+	// of an IF), e.g. a manual retry loop where a "Call REST → decide → loop
+	// back" pattern routes the back-edge into a merge. Those merges are not
+	// values in splitMergeMap, and stopping there drops every activity after
+	// them (see issue #281). When that happens, walk through as a pass-
+	// through — same as traverseFlowUntilMerge already does for intermediate
+	// merges.
 	if _, isMerge := obj.(*microflows.ExclusiveMerge); isMerge {
+		if isMergePairedWithSplit(currentID, splitMergeMap) {
+			return
+		}
+		visited[currentID] = true
+		for _, flow := range flowsByOrigin[currentID] {
+			traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		}
 		return
 	}
 
@@ -875,6 +890,24 @@ func emitLoopBody(
 		loopVisited := make(map[model.ID]bool)
 		traverseLoopBody(ctx, firstID, loopActivityMap, loopFlowsByOrigin, loopFlowsByDest, loopVisited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 	}
+}
+
+// isMergePairedWithSplit reports whether an ExclusiveMerge appears as the
+// matching end-of-branch point for some ExclusiveSplit recorded in
+// splitMergeMap (i.e., it closes an IF/ELSE block). Merges that aren't paired
+// — e.g. a junction used as the loop-back target of a manual retry pattern —
+// must be traversed as pass-through, otherwise every activity after them is
+// dropped from describe output (issue #281).
+//
+// splitMergeMap is split-ID → merge-ID, so the merge is paired iff it appears
+// as a value in the map.
+func isMergePairedWithSplit(mergeID model.ID, splitMergeMap map[model.ID]model.ID) bool {
+	for _, v := range splitMergeMap {
+		if v == mergeID {
+			return true
+		}
+	}
+	return false
 }
 
 // findBranchFlows separates flows from a split into TRUE and FALSE branches based on CaseValue.
