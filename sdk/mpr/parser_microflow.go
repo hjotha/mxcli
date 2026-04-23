@@ -456,20 +456,26 @@ func parseSplitCondition(raw map[string]any) microflows.SplitCondition {
 			Expression: extractString(raw["Expression"]),
 		}
 	case "Microflows$RuleSplitCondition":
-		cond := &microflows.RuleSplitCondition{
-			RuleID: model.ID(extractBsonID(raw["Rule"])),
+		cond := &microflows.RuleSplitCondition{}
+		// Mendix nests the rule reference under a RuleCall sub-document whose
+		// "Microflow" field holds the rule's qualified name (rules share the
+		// microflow namespace). Parameter mappings are scoped inside RuleCall too.
+		rcSource := raw
+		if rc := extractBsonMap(raw["RuleCall"]); rc != nil {
+			cond.RuleQualifiedName = extractString(rc["Microflow"])
+			rcSource = rc
 		}
-		// Parse parameter mappings if present
-		if mappings, ok := raw["ParameterMappings"].([]any); ok {
-			for _, m := range mappings {
-				if mMap, ok := m.(map[string]any); ok {
-					mapping := &microflows.RuleCallParameterMapping{
-						ParameterID: model.ID(extractBsonID(mMap["Parameter"])),
-						Argument:    extractString(mMap["Argument"]),
-					}
-					cond.ParameterMappings = append(cond.ParameterMappings, mapping)
-				}
+		for _, m := range extractBsonArray(rcSource["ParameterMappings"]) {
+			mMap := extractBsonMap(m)
+			if mMap == nil {
+				continue
 			}
+			mapping := &microflows.RuleCallParameterMapping{
+				ParameterID:   model.ID(extractBsonID(mMap["Parameter"])),
+				ParameterName: extractString(mMap["Parameter"]),
+				Argument:      extractString(mMap["Argument"]),
+			}
+			cond.ParameterMappings = append(cond.ParameterMappings, mapping)
 		}
 		return cond
 	default:

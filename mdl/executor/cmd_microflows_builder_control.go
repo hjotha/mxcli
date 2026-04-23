@@ -43,11 +43,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	splitX := fb.posX
 	centerY := fb.posY // This is the center line for the happy path
 
-	// Create ExclusiveSplit with expression condition
-	splitCondition := &microflows.ExpressionSplitCondition{
-		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-		Expression:  fb.exprToString(s.Condition),
-	}
+	// Decide whether the IF condition is a rule call or a plain expression.
+	// A rule-based split must be serialized as Microflows$RuleSplitCondition;
+	// emitting ExpressionSplitCondition for a rule call causes Studio Pro to
+	// raise CE0117 "Error(s) in expression".
+	caption := fb.exprToString(s.Condition)
+	splitCondition := fb.buildSplitCondition(s.Condition, caption)
 
 	split := &microflows.ExclusiveSplit{
 		BaseMicroflowObject: microflows.BaseMicroflowObject{
@@ -55,7 +56,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			Position:    model.Point{X: splitX, Y: centerY},
 			Size:        model.Size{Width: SplitWidth, Height: SplitHeight},
 		},
-		Caption:           fb.exprToString(s.Condition),
+		Caption:           caption,
 		SplitCondition:    splitCondition,
 		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
 	}

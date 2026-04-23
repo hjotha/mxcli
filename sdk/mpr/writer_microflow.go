@@ -531,6 +531,37 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 					{Key: "$Type", Value: "Microflows$ExpressionSplitCondition"},
 					{Key: "Expression", Value: sc.Expression},
 				}})
+			case *microflows.RuleSplitCondition:
+				// Mendix nests the rule reference under a RuleCall sub-document
+				// whose Microflow field holds the rule's qualified name
+				// (rules share the microflow namespace). ParameterMappings are
+				// scoped inside RuleCall too — see parser_microflow.go.
+				ruleCall := bson.D{
+					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+					{Key: "$Type", Value: "Microflows$RuleCall"},
+					{Key: "Microflow", Value: sc.RuleQualifiedName},
+				}
+				if len(sc.ParameterMappings) > 0 {
+					var mappings bson.A
+					mappings = append(mappings, int32(2)) // Array marker
+					for _, pm := range sc.ParameterMappings {
+						mapping := bson.D{
+							{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
+							{Key: "$Type", Value: "Microflows$RuleCallParameterMapping"},
+							{Key: "Parameter", Value: pm.ParameterName},
+							{Key: "Argument", Value: pm.Argument},
+						}
+						mappings = append(mappings, mapping)
+					}
+					ruleCall = append(ruleCall, bson.E{Key: "ParameterMappings", Value: mappings})
+				} else {
+					ruleCall = append(ruleCall, bson.E{Key: "ParameterMappings", Value: bson.A{int32(2)}})
+				}
+				doc = append(doc, bson.E{Key: "SplitCondition", Value: bson.D{
+					{Key: "$ID", Value: idToBsonBinary(string(sc.ID))},
+					{Key: "$Type", Value: "Microflows$RuleSplitCondition"},
+					{Key: "RuleCall", Value: ruleCall},
+				}})
 			}
 		}
 		return doc
