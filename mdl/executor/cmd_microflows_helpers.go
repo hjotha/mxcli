@@ -202,9 +202,9 @@ func quoteExpressionLiteral(s string) string {
 		case '\\':
 			// Double the backslash only when the next byte would otherwise be
 			// interpreted as an escape by unquoteString — that is, n/r/t/\/'.
-			// For any other follower (letters like d/w, punctuation, or a
-			// trailing backslash at EOF), keep the sequence as-is so regex
-			// escape characters roundtrip verbatim.
+			// For any other follower (letters like d/w, punctuation) the
+			// backslash can pass through verbatim so regex escape characters
+			// roundtrip without mutation.
 			if i+1 < len(s) {
 				switch s[i+1] {
 				case 'n', 'r', 't':
@@ -228,8 +228,15 @@ func quoteExpressionLiteral(s string) string {
 					i++
 					continue
 				}
+				b.WriteByte('\\')
+				continue
 			}
-			b.WriteByte('\\')
+			// Trailing backslash at end-of-string: the lexer's `'\\' .` escape
+			// rule requires a following character, so emitting a bare `\'`
+			// terminator would be reinterpreted as an escape pair and never
+			// close the literal. Double the backslash — unquoteString decodes
+			// `\\` back to a single backslash.
+			b.WriteString(`\\`)
 		default:
 			b.WriteByte(c)
 		}

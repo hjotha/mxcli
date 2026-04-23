@@ -133,6 +133,11 @@ func emitAnchorAnnotation(
 // `to: X` plus per-branch `true: (...)` / `false: (...)` — whenever any of the
 // three has a non-default value. The rendering matches the grammar accepted
 // by parseAnchorAnnotation so describe → exec roundtrips bit-exactly.
+//
+// The TRUE/FALSE branches are identified by findBranchFlows, which already
+// handles every CaseValue variant the parser produces (ExpressionCase,
+// EnumerationCase, BooleanCase — both value and pointer forms). Sharing that
+// helper keeps the anchor emission consistent with the rest of the describer.
 func emitSplitAnchorAnnotation(
 	id model.ID,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
@@ -146,26 +151,16 @@ func emitSplitAnchorAnnotation(
 		inTo = anchorSideKeyword(incoming[0].DestinationConnectionIndex)
 	}
 
-	// Scan outgoing flows: identify the TRUE and FALSE branches by their
-	// CaseValue (EnumerationCase with Value "true" / "false").
+	trueFlow, falseFlow := findBranchFlows(flowsByOrigin[id])
+
 	var trueFrom, trueTo, falseFrom, falseTo string
-	for _, f := range flowsByOrigin[id] {
-		branchValue := ""
-		switch c := f.CaseValue.(type) {
-		case *microflows.EnumerationCase:
-			branchValue = c.Value
-		case microflows.EnumerationCase:
-			branchValue = c.Value
-		}
-		switch branchValue {
-		case "true":
-			trueFrom = anchorSideKeyword(f.OriginConnectionIndex)
-			// The destination activity's incoming anchor is stored on the flow.
-			trueTo = anchorSideKeyword(f.DestinationConnectionIndex)
-		case "false":
-			falseFrom = anchorSideKeyword(f.OriginConnectionIndex)
-			falseTo = anchorSideKeyword(f.DestinationConnectionIndex)
-		}
+	if trueFlow != nil {
+		trueFrom = anchorSideKeyword(trueFlow.OriginConnectionIndex)
+		trueTo = anchorSideKeyword(trueFlow.DestinationConnectionIndex)
+	}
+	if falseFlow != nil {
+		falseFrom = anchorSideKeyword(falseFlow.OriginConnectionIndex)
+		falseTo = anchorSideKeyword(falseFlow.DestinationConnectionIndex)
 	}
 
 	if inTo == "" && trueFrom == "" && trueTo == "" && falseFrom == "" && falseTo == "" {

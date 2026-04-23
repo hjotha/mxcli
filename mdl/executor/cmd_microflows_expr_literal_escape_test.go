@@ -92,6 +92,27 @@ func TestQuoteExpressionLiteral_EscapesBackslashBeforeEscapeLetter(t *testing.T)
 	}
 }
 
+func TestQuoteExpressionLiteral_TrailingBackslashDoubled(t *testing.T) {
+	// A trailing backslash in the AST value cannot be emitted raw: the lexer
+	// reads the closing `\'` as an escape pair (`\\ .`), never terminating the
+	// literal. Doubling is the only safe representation — unquoteString
+	// decodes `\\` back to a single backslash, preserving the value.
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{`abc\`, `'abc\\'`},
+		{`\`, `'\\'`},
+		{`regex \d\`, `'regex \d\\'`},
+	}
+	for _, tc := range cases {
+		got := quoteExpressionLiteral(tc.in)
+		if got != tc.want {
+			t.Errorf("quoteExpressionLiteral(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestQuoteExpressionLiteral_IdempotentForDecodeThenEncode(t *testing.T) {
 	// Critical invariant: any value that the visitor could produce as a
 	// decoded LiteralString must reserialise to a form the lexer accepts,
