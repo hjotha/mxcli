@@ -49,6 +49,9 @@ var scriptKnownCEErrors = map[string][]string{
 		"CE0463", // Widget definition changed (TEXTFILTER template property count mismatch)
 		"CE1613", // ComboBox enum attribute written as association pointer
 	},
+	"workflow-user-targeting.mdl": {
+		"CE1613", // System.UserGroup does not exist in the test Mendix version
+	},
 }
 
 // TestMxCheck_DoctypeScripts executes each doctype-tests/*.mdl example script
