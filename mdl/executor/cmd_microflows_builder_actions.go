@@ -765,6 +765,35 @@ func (fb *flowBuilder) isEntity(moduleName, entityName string) bool {
 // memberName can be either bare ("Order_Customer") or qualified ("MfTest.Order_Customer").
 func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberName string, entityQN string) {
 	if entityQN == "" {
+		// Entity type of $variable is unknown (e.g., the variable comes from a
+		// java action whose return type isn't registered, or from the iterator
+		// of an untyped loop). Without the entity we cannot query the domain
+		// model — but we must NOT silently drop the member name, otherwise
+		// `change $x (Module.Assoc = $y)` would round-trip as `change $x ( = $y)`
+		// which is invalid MDL. Fall back to a shape heuristic:
+		//
+		//   * no dot                 -> bare attribute name
+		//   * exactly one dot        -> `Module.Assoc` (association)
+		//   * two or more dots       -> `Module.Entity.Attribute` (qualified attribute)
+		//
+		// Two-dot names are never associations in MDL (association names carry a
+		// single qualifier — the module), so they must stay on AttributeQualified-
+		// Name even when the entity type is unknown. This avoids miscategorising
+		// something like `change $x (MyModule.MyEntity.Offset = 1)` as an
+		// association change.
+		if memberName == "" {
+			return
+		}
+		switch strings.Count(memberName, ".") {
+		case 0:
+			mc.AttributeQualifiedName = memberName
+		case 1:
+			mc.AssociationQualifiedName = memberName
+		default:
+			// Two or more dots: definitely not an association; preserve as
+			// qualified attribute.
+			mc.AttributeQualifiedName = memberName
+		}
 		return
 	}
 
