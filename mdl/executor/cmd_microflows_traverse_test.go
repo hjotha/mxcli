@@ -124,6 +124,62 @@ func TestTraverseFlow_IfElse(t *testing.T) {
 	}
 }
 
+// TestTraverseFlow_IfWithoutElse verifies that when the FALSE branch jumps
+// straight to the merge point (as emitted by the builder for `if X then ... end if`),
+// the describer does not print an empty `else` — the previous behavior produced
+// `if X then ... else end if;` which re-parses as an IF with an empty else body
+// that is indistinguishable from the original.
+func TestTraverseFlow_IfWithoutElse(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$x > 0"},
+		},
+		mkID("true_act"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("true_act")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "positive"}}},
+		},
+		mkID("merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+		mkID("end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "split")},
+		mkID("split"): {
+			mkBranchFlow("split", "true_act", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("split", "merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("true_act"): {mkFlow("true_act", "merge")},
+		mkID("merge"):    {mkFlow("merge", "end")},
+	}
+
+	splitMergeMap := map[model.ID]model.ID{
+		mkID("split"): mkID("merge"),
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 1, nil, 0, nil)
+
+	for _, line := range lines {
+		if contains(line, "else") {
+			t.Errorf("expected no else branch in output, got: %v", lines)
+		}
+	}
+	foundENDIF := false
+	for _, line := range lines {
+		if contains(line, "end if;") {
+			foundENDIF = true
+		}
+	}
+	if !foundENDIF {
+		t.Errorf("expected end if in output: %v", lines)
+	}
+}
+
 // =============================================================================
 // collectErrorHandlerStatements
 // =============================================================================
