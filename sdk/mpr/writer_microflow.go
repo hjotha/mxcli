@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -106,7 +107,8 @@ func (w *Writer) serializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
 
 	// Add Flows array (SequenceFlows and AnnotationFlows go here, not in ObjectCollection)
 	// The serialized shape depends on the project's Mendix major version.
-	majorVersion := 11 // modern default when version metadata is unavailable (e.g. in-memory tests)
+	// Fall back to the project default when no MPR is attached (in-memory tests).
+	majorVersion := version.DefaultVersion().MajorVersion
 	if pv := w.reader.ProjectVersion(); pv != nil {
 		majorVersion = pv.MajorVersion
 	}
@@ -220,6 +222,14 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow, majorVersion int) bson
 // When no case has been set on the flow, a NoCase document is synthesised —
 // Studio Pro requires every SequenceFlow to carry an explicit case object.
 func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
+	// Normalise value receivers to pointers so each case is handled once.
+	switch c := cv.(type) {
+	case microflows.EnumerationCase:
+		cv = &c
+	case microflows.NoCase:
+		cv = &c
+	}
+
 	switch c := cv.(type) {
 	case *microflows.EnumerationCase:
 		id := string(c.ID)
@@ -231,26 +241,7 @@ func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
 			{Key: "$Type", Value: "Microflows$EnumerationCase"},
 			{Key: "Value", Value: c.Value},
 		}
-	case microflows.EnumerationCase:
-		id := string(c.ID)
-		if id == "" {
-			id = generateUUID()
-		}
-		return bson.D{
-			{Key: "$ID", Value: idToBsonBinary(id)},
-			{Key: "$Type", Value: "Microflows$EnumerationCase"},
-			{Key: "Value", Value: c.Value},
-		}
 	case *microflows.NoCase:
-		id := string(c.ID)
-		if id == "" {
-			id = generateUUID()
-		}
-		return bson.D{
-			{Key: "$ID", Value: idToBsonBinary(id)},
-			{Key: "$Type", Value: "Microflows$NoCase"},
-		}
-	case microflows.NoCase:
 		id := string(c.ID)
 		if id == "" {
 			id = generateUUID()
@@ -539,37 +530,6 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 					{Key: "$ID", Value: idToBsonBinary(string(sc.ID))},
 					{Key: "$Type", Value: "Microflows$ExpressionSplitCondition"},
 					{Key: "Expression", Value: sc.Expression},
-				}})
-			case *microflows.RuleSplitCondition:
-				// Mendix nests the rule reference under a RuleCall sub-document
-				// whose Microflow field holds the rule's qualified name
-				// (rules share the microflow namespace). ParameterMappings are
-				// scoped inside RuleCall too — see parser_microflow.go.
-				ruleCall := bson.D{
-					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-					{Key: "$Type", Value: "Microflows$RuleCall"},
-					{Key: "Microflow", Value: sc.RuleQualifiedName},
-				}
-				if len(sc.ParameterMappings) > 0 {
-					var mappings bson.A
-					mappings = append(mappings, int32(2)) // Array marker
-					for _, pm := range sc.ParameterMappings {
-						mapping := bson.D{
-							{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
-							{Key: "$Type", Value: "Microflows$RuleCallParameterMapping"},
-							{Key: "Parameter", Value: pm.ParameterName},
-							{Key: "Argument", Value: pm.Argument},
-						}
-						mappings = append(mappings, mapping)
-					}
-					ruleCall = append(ruleCall, bson.E{Key: "ParameterMappings", Value: mappings})
-				} else {
-					ruleCall = append(ruleCall, bson.E{Key: "ParameterMappings", Value: bson.A{int32(2)}})
-				}
-				doc = append(doc, bson.E{Key: "SplitCondition", Value: bson.D{
-					{Key: "$ID", Value: idToBsonBinary(string(sc.ID))},
-					{Key: "$Type", Value: "Microflows$RuleSplitCondition"},
-					{Key: "RuleCall", Value: ruleCall},
 				}})
 			}
 		}
