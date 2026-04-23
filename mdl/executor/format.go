@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -115,33 +114,17 @@ func writeResultJSON(ctx *ExecContext, r *TableResult) error {
 // In table/text mode it calls fn directly. In JSON mode it captures fn's output
 // and wraps it as {"name": ..., "type": ..., "mdl": ...}.
 func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() error) error {
-	e := ctx.executor
 	if ctx.Format != FormatJSON {
 		return fn()
 	}
 
 	// Capture the text output from fn.
-	// TODO: Once all handlers write to ctx.Output exclusively, the e.output/e.guard
-	// swap can be removed. Currently needed because some closures still write to e.output.
 	var buf bytes.Buffer
 	origOutput := ctx.Output
 	ctx.Output = &buf
 
-	// Swap executor output/guard only when a backing Executor exists.
-	var origEOutput io.Writer
-	var origGuard *outputGuard
-	if e != nil {
-		origEOutput = e.output
-		origGuard = e.guard
-		e.output = &buf // sync executor output for closures that write to e.output
-		e.guard = nil   // disable line guard for capture
-	}
 	err := fn()
 	ctx.Output = origOutput
-	if e != nil {
-		e.output = origEOutput
-		e.guard = origGuard
-	}
 	if err != nil {
 		return err
 	}
@@ -162,10 +145,6 @@ func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() erro
 
 func (e *Executor) writeResult(r *TableResult) error {
 	return writeResult(e.newExecContext(context.Background()), r)
-}
-
-func (e *Executor) writeDescribeJSON(name, objectType string, fn func() error) error {
-	return writeDescribeJSON(e.newExecContext(context.Background()), name, objectType, fn)
 }
 
 // formatCellValue formats a value for table cell display.

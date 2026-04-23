@@ -162,7 +162,7 @@ func ResolveMxForVersion(mxbuildPath, preferredVersion string) (string, error) {
 		if exact := exactVersionedPath(matches, preferredVersion); exact != "" {
 			return exact, nil
 		}
-		if newest := newestVersionedPath(matches); newest != "" {
+		if newest := NewestVersionedPath(matches); newest != "" {
 			return newest, nil
 		}
 	}

@@ -16,11 +16,7 @@ import (
 
 // ensureSQLManager lazily initializes the SQL connection manager.
 func ensureSQLManager(ctx *ExecContext) *sqllib.Manager {
-	e := ctx.executor
-	if e.sqlMgr == nil {
-		e.sqlMgr = sqllib.NewManager()
-	}
-	return e.sqlMgr
+	return ctx.EnsureSqlMgr()
 }
 
 // getOrAutoConnect returns an existing connection or auto-connects using connections.yaml.
@@ -242,12 +238,14 @@ func execSQLGenerateConnector(ctx *ExecContext, s *ast.SQLGenerateConnectorStmt)
 
 // executeGeneratedMDL parses and executes MDL text as if it were a script.
 func executeGeneratedMDL(ctx *ExecContext, mdl string) error {
-	e := ctx.executor
 	prog, errs := visitor.Build(mdl)
 	if len(errs) > 0 {
 		return mdlerrors.NewBackend("parse generated MDL", fmt.Errorf("%v", errs[0]))
 	}
-	return e.ExecuteProgram(prog)
+	if ctx.ExecuteProgramFn == nil {
+		return mdlerrors.NewBackend("execute generated MDL", fmt.Errorf("ExecuteProgramFn not set — ExecContext was not created via Executor dispatch"))
+	}
+	return ctx.ExecuteProgramFn(prog)
 }
 
 // execSQLDescribeTable handles SQL <alias> DESCRIBE <table>

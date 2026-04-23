@@ -52,9 +52,9 @@ func TestLint_ShowRules(t *testing.T) {
 // ---------------------------------------------------------------------------
 // execLint — full lint path
 //
-// NOTE: The full lint path (ShowRules=false) requires ctx.executor,
+// NOTE: The full lint path (ShowRules=false) requires ctx.Reader(),
 // ctx.Catalog, buildCatalog, and the linter package pipeline. The current
-// mock infrastructure does not expose executor or catalog mocks, so only
+// mock infrastructure does not expose catalog mocks, so only
 // the ShowRules branch can be exercised. Expanding coverage requires
-// building executor/catalog mock support (tracked separately).
+// building catalog mock support (tracked separately).
 // ---------------------------------------------------------------------------

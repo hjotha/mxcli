@@ -345,7 +345,7 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 		lines = append(lines, indentStr+"end loop;")
 
 	case *ast.LogStmt:
-		nodeStr := "'Application'"
+		nodeStr := defaultLogNodeExpression
 		if s.Node != nil {
 			nodeStr = diffExpressionToString(ctx, s.Node)
 		}

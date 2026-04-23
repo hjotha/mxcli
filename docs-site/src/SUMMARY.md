@@ -326,3 +326,10 @@
 - [Glossary](appendixes/glossary.md)
 - [TypeScript SDK Equivalence](appendixes/sdk-equivalence.md)
 - [Changelog](appendixes/changelog.md)
+
+---
+
+# Blog
+
+- [Blog](blog/index.md)
+  - [Introducing mxcli](blog/introduction.md)

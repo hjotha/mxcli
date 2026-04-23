@@ -457,6 +457,7 @@ const (
 	AggregateAverage
 	AggregateMinimum
 	AggregateMaximum
+	AggregateReduce
 )
 
 func (t AggregateListOperationType) String() string {
@@ -471,6 +472,8 @@ func (t AggregateListOperationType) String() string {
 		return "MINIMUM"
 	case AggregateMaximum:
 		return "MAXIMUM"
+	case AggregateReduce:
+		return "REDUCE"
 	default:
 		return "UNKNOWN"
 	}
@@ -479,11 +482,14 @@ func (t AggregateListOperationType) String() string {
 // AggregateListStmt represents aggregate operations: COUNT, SUM, AVERAGE, etc.
 // $Count = COUNT($List)
 // $Sum = SUM($List/Attr)
+// $Sum = SUM($List, $currentObject/Price * 2)  // expression form
 type AggregateListStmt struct {
 	OutputVariable string                     // Output variable name
 	Operation      AggregateListOperationType // Operation type
 	InputVariable  string                     // Input list variable
-	Attribute      string                     // Attribute name for SUM/AVG/MIN/MAX (empty for COUNT)
+	Attribute      string                     // Attribute name for SUM/AVG/MIN/MAX (empty for COUNT or expression form)
+	IsExpression   bool                       // true when Expression is used instead of Attribute
+	Expression     Expression                 // Mendix expression (when IsExpression=true)
 	Annotations    *ActivityAnnotations       // Optional @position, @caption, @color, @annotation
 }
 

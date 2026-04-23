@@ -1823,17 +1823,27 @@ sortSpec
  * $MinPrice = MINIMUM($Products.Price);
  * $MaxPrice = MAXIMUM($Products.Price);
  * ```
+ *
+ * @example Expression-based aggregates (any Mendix expression)
+ * ```mdl
+ * $TotalTax = SUM($Products, $currentObject/Price * 0.21);
+ * $AvgDisc = AVERAGE($Orders, $currentObject/Discount + 5);
+ * ```
  */
 aggregateListStatement
     : VARIABLE EQUALS listAggregateOperation
     ;
 
 listAggregateOperation
-    : COUNT LPAREN VARIABLE RPAREN                                     // $count = COUNT($list)
-    | SUM LPAREN attributePath RPAREN                                  // $sum = SUM($list.attr)
-    | AVERAGE LPAREN attributePath RPAREN                              // $avg = AVERAGE($list.attr)
-    | MINIMUM LPAREN attributePath RPAREN                              // $min = MINIMUM($list.attr)
-    | MAXIMUM LPAREN attributePath RPAREN                              // $max = MAXIMUM($list.attr)
+    : COUNT LPAREN VARIABLE RPAREN                                                    // $count = COUNT($list)
+    | SUM LPAREN VARIABLE COMMA expression RPAREN                                     // $sum = SUM($list, expr)
+    | SUM LPAREN attributePath RPAREN                                                 // $sum = SUM($list.attr)
+    | AVERAGE LPAREN VARIABLE COMMA expression RPAREN                                 // $avg = AVERAGE($list, expr)
+    | AVERAGE LPAREN attributePath RPAREN                                             // $avg = AVERAGE($list.attr)
+    | MINIMUM LPAREN VARIABLE COMMA expression RPAREN                                 // $min = MINIMUM($list, expr)
+    | MINIMUM LPAREN attributePath RPAREN                                             // $min = MINIMUM($list.attr)
+    | MAXIMUM LPAREN VARIABLE COMMA expression RPAREN                                 // $max = MAXIMUM($list, expr)
+    | MAXIMUM LPAREN attributePath RPAREN                                             // $max = MAXIMUM($list.attr)
     ;
 
 /**

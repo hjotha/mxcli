@@ -11,6 +11,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/mpr"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
@@ -63,11 +65,19 @@ type ExecContext struct {
 	// Settings holds session-scoped key-value settings (SET command).
 	Settings map[string]any
 
-	// executor is a temporary back-reference used during incremental migration.
-	// Handlers that have not yet been migrated to use Backend can access the
-	// original Executor through this field. Remove once all handlers are fully
-	// migrated to ctx.Backend (tracked: ~27 e := ctx.executor sites remain).
-	executor *Executor
+	// BackendFactory creates new backend instances (used by connect/reconnect).
+	BackendFactory BackendFactory
+
+	// ExecuteFn dispatches a single statement through the Executor's full
+	// pipeline (line-limit reset, wall-clock timeout, logging). Set by
+	// newExecContext; used by script execution and generated-MDL dispatch.
+	ExecuteFn func(ast.Statement) error
+
+	// ExecuteProgramFn dispatches a full program (all statements + finalization).
+	ExecuteProgramFn func(*ast.Program) error
+
+	// FinalizeFn runs post-execution reconciliation (security rule sync).
+	FinalizeFn func() error
 }
 
 // Connected returns true if a project is connected via the Backend.
@@ -82,14 +92,10 @@ func (ctx *ExecContext) ConnectedForWrite() bool {
 	return ctx.Connected()
 }
 
-// InvalidateCache clears the hierarchy/entity/microflow cache on both the
-// ExecContext and the underlying Executor so that subsequent statements see
-// fresh data.
+// InvalidateCache clears the hierarchy/entity/microflow cache so that
+// subsequent statements see fresh data.
 func (ctx *ExecContext) InvalidateCache() {
 	ctx.Cache = nil
-	if ctx.executor != nil {
-		ctx.executor.cache = nil
-	}
 }
 
 // GetThemeRegistry returns the cached theme registry, loading it lazily
@@ -110,10 +116,113 @@ func (ctx *ExecContext) GetThemeRegistry() *ThemeRegistry {
 		return nil
 	}
 	ctx.ThemeRegistry = registry
-	// Persist back to Executor so subsequent statements pick up the cached value
-	// via newExecContext without reloading.
-	if ctx.executor != nil {
-		ctx.executor.themeRegistry = registry
-	}
 	return ctx.ThemeRegistry
+}
+
+// ensureCache initializes the ExecContext cache if nil.
+func (ctx *ExecContext) ensureCache() {
+	if ctx.Cache == nil {
+		ctx.Cache = &executorCache{}
+	}
+}
+
+// trackModifiedDomainModel records a domain model that was modified during
+// execution, so it can be reconciled at the end of the program.
+func (ctx *ExecContext) trackModifiedDomainModel(moduleID model.ID, moduleName string) {
+	if ctx.Backend == nil || !ctx.Backend.IsConnected() {
+		return
+	}
+	ctx.ensureCache()
+	if ctx.Cache.modifiedDomainModels == nil {
+		ctx.Cache.modifiedDomainModels = make(map[model.ID]string)
+	}
+	ctx.Cache.modifiedDomainModels[moduleID] = moduleName
+}
+
+// trackCreatedMicroflow registers a microflow created during this session.
+func (ctx *ExecContext) trackCreatedMicroflow(moduleName, mfName string, id, containerID model.ID, returnEntityName string) {
+	ctx.ensureCache()
+	if ctx.Cache.createdMicroflows == nil {
+		ctx.Cache.createdMicroflows = make(map[string]*createdMicroflowInfo)
+	}
+	qualifiedName := moduleName + "." + mfName
+	ctx.Cache.createdMicroflows[qualifiedName] = &createdMicroflowInfo{
+		ID:               id,
+		Name:             mfName,
+		ModuleName:       moduleName,
+		ContainerID:      containerID,
+		ReturnEntityName: returnEntityName,
+	}
+}
+
+// trackCreatedPage registers a page created during this session.
+func (ctx *ExecContext) trackCreatedPage(moduleName, pageName string, id, containerID model.ID) {
+	ctx.ensureCache()
+	if ctx.Cache.createdPages == nil {
+		ctx.Cache.createdPages = make(map[string]*createdPageInfo)
+	}
+	qualifiedName := moduleName + "." + pageName
+	ctx.Cache.createdPages[qualifiedName] = &createdPageInfo{
+		ID:          id,
+		Name:        pageName,
+		ModuleName:  moduleName,
+		ContainerID: containerID,
+	}
+}
+
+// trackCreatedSnippet registers a snippet created during this session.
+func (ctx *ExecContext) trackCreatedSnippet(moduleName, snippetName string, id, containerID model.ID) {
+	ctx.ensureCache()
+	if ctx.Cache.createdSnippets == nil {
+		ctx.Cache.createdSnippets = make(map[string]*createdSnippetInfo)
+	}
+	qualifiedName := moduleName + "." + snippetName
+	ctx.Cache.createdSnippets[qualifiedName] = &createdSnippetInfo{
+		ID:          id,
+		Name:        snippetName,
+		ModuleName:  moduleName,
+		ContainerID: containerID,
+	}
+}
+
+// getCreatedMicroflow returns info about a microflow created during this
+// session, or nil if not found.
+func (ctx *ExecContext) getCreatedMicroflow(qualifiedName string) *createdMicroflowInfo {
+	if ctx.Cache == nil || ctx.Cache.createdMicroflows == nil {
+		return nil
+	}
+	return ctx.Cache.createdMicroflows[qualifiedName]
+}
+
+// getCreatedPage returns info about a page created during this session,
+// or nil if not found.
+func (ctx *ExecContext) getCreatedPage(qualifiedName string) *createdPageInfo {
+	if ctx.Cache == nil || ctx.Cache.createdPages == nil {
+		return nil
+	}
+	return ctx.Cache.createdPages[qualifiedName]
+}
+
+// EnsureSqlMgr lazily initializes and returns the SQL connection manager.
+func (ctx *ExecContext) EnsureSqlMgr() *sqllib.Manager {
+	if ctx.SqlMgr == nil {
+		ctx.SqlMgr = sqllib.NewManager()
+	}
+	return ctx.SqlMgr
+}
+
+// Reader returns the MPR reader, or nil if not connected.
+// Deprecated: External callers should migrate to using Backend methods directly.
+// TODO(shared-types): remove once all callers use Backend — target: v0.next milestone.
+func (ctx *ExecContext) Reader() *mpr.Reader {
+	if ctx.Backend == nil {
+		return nil
+	}
+	type readerProvider interface {
+		MprReader() *mpr.Reader
+	}
+	if rp, ok := ctx.Backend.(readerProvider); ok {
+		return rp.MprReader()
+	}
+	return nil
 }

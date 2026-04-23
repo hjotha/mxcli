@@ -499,16 +499,14 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		},
 	}
 
-	// Need an Executor so ctx.executor is set (trackCreatedMicroflow uses it).
-	exec := New(&bytesWriter{})
+	// Create ExecContext directly — trackCreatedMicroflow is now a method on ExecContext.
+	var out bytesWriter
 	ctx := &ExecContext{
-		Context:  t.Context(),
-		Backend:  mb,
-		Output:   exec.output,
-		Format:   FormatTable,
-		executor: exec,
+		Context: t.Context(),
+		Backend: mb,
+		Output:  &out,
+		Format:  FormatTable,
 	}
-	exec.backend = mb
 	withHierarchy(h)(ctx)
 
 	if err := execDropMicroflow(ctx, &ast.DropMicroflowStmt{
@@ -582,13 +580,11 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 
 	exec := New(&bytesWriter{})
 	ctx := &ExecContext{
-		Context:  t.Context(),
-		Backend:  mb,
-		Output:   exec.output,
-		Format:   FormatTable,
-		executor: exec,
+		Context: t.Context(),
+		Backend: mb,
+		Output:  exec.output,
+		Format:  FormatTable,
 	}
-	exec.backend = mb
 	withHierarchy(h)(ctx)
 
 	if err := execCreateMicroflow(ctx, &ast.CreateMicroflowStmt{

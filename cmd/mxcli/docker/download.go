@@ -76,7 +76,7 @@ func anyCachedBinaryPath(names []string) string {
 		found, _ := filepath.Glob(pattern)
 		matches = append(matches, found...)
 	}
-	return newestVersionedPath(matches)
+	return NewestVersionedPath(matches)
 }
 
 func globVersionedMatches(patterns []string) []string {
@@ -98,10 +98,16 @@ func exactVersionedPath(paths []string, version string) string {
 			exact = append(exact, path)
 		}
 	}
-	return newestVersionedPath(exact)
+	return NewestVersionedPath(exact)
 }
 
-func newestVersionedPath(paths []string) string {
+// NewestVersionedPath selects the lexicographically-highest "versioned"
+// directory from paths, where "versioned" means the grandparent directory
+// name parses as a dotted numeric version (`11.9.0`). Paths whose version
+// cannot be parsed compare as a pure lexicographic fallback, but always rank
+// below any parseable version. Used by both the mx-binary resolver and the
+// integration test harness.
+func NewestVersionedPath(paths []string) string {
 	var best string
 	var bestVersion []int
 	bestValid := false

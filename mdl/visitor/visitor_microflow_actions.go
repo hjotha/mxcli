@@ -535,22 +535,46 @@ func buildAggregateListStatement(ctx parser.IAggregateListStatementContext) *ast
 			}
 		} else if op.SUM() != nil {
 			stmt.Operation = ast.AggregateSum
-			if path := op.AttributePath(); path != nil {
+			if exprCtx := op.Expression(); exprCtx != nil {
+				stmt.IsExpression = true
+				stmt.Expression = buildExpression(exprCtx)
+				if v := op.VARIABLE(); v != nil {
+					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
+				}
+			} else if path := op.AttributePath(); path != nil {
 				stmt.InputVariable, stmt.Attribute = parseAttributePath(path.GetText())
 			}
 		} else if op.AVERAGE() != nil {
 			stmt.Operation = ast.AggregateAverage
-			if path := op.AttributePath(); path != nil {
+			if exprCtx := op.Expression(); exprCtx != nil {
+				stmt.IsExpression = true
+				stmt.Expression = buildExpression(exprCtx)
+				if v := op.VARIABLE(); v != nil {
+					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
+				}
+			} else if path := op.AttributePath(); path != nil {
 				stmt.InputVariable, stmt.Attribute = parseAttributePath(path.GetText())
 			}
 		} else if op.MINIMUM() != nil {
 			stmt.Operation = ast.AggregateMinimum
-			if path := op.AttributePath(); path != nil {
+			if exprCtx := op.Expression(); exprCtx != nil {
+				stmt.IsExpression = true
+				stmt.Expression = buildExpression(exprCtx)
+				if v := op.VARIABLE(); v != nil {
+					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
+				}
+			} else if path := op.AttributePath(); path != nil {
 				stmt.InputVariable, stmt.Attribute = parseAttributePath(path.GetText())
 			}
 		} else if op.MAXIMUM() != nil {
 			stmt.Operation = ast.AggregateMaximum
-			if path := op.AttributePath(); path != nil {
+			if exprCtx := op.Expression(); exprCtx != nil {
+				stmt.IsExpression = true
+				stmt.Expression = buildExpression(exprCtx)
+				if v := op.VARIABLE(); v != nil {
+					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
+				}
+			} else if path := op.AttributePath(); path != nil {
 				stmt.InputVariable, stmt.Attribute = parseAttributePath(path.GetText())
 			}
 		}

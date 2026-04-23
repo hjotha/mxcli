@@ -17,8 +17,6 @@ import (
 func execDefineFragment(ctx *ExecContext, s *ast.DefineFragmentStmt) error {
 	if ctx.Fragments == nil {
 		ctx.Fragments = make(map[string]*ast.DefineFragmentStmt)
-		// Also update the executor's fragments map so newExecContext picks it up.
-		ctx.executor.fragments = ctx.Fragments
 	}
 	if _, exists := ctx.Fragments[s.Name]; exists {
 		return mdlerrors.NewAlreadyExists("fragment", s.Name)

@@ -3,6 +3,8 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
@@ -54,6 +56,13 @@ func (m *MockBackend) ParseMicroflowFromRaw(raw map[string]any, unitID, containe
 		return m.ParseMicroflowFromRawFunc(raw, unitID, containerID)
 	}
 	panic("mock ParseMicroflowFromRaw called but ParseMicroflowFromRawFunc is not set")
+}
+
+func (m *MockBackend) ParseMicroflowBSON(contents []byte, unitID, containerID model.ID) (*microflows.Microflow, error) {
+	if m.ParseMicroflowBSONFunc != nil {
+		return m.ParseMicroflowBSONFunc(contents, unitID, containerID)
+	}
+	return nil, fmt.Errorf("MockBackend.ParseMicroflowBSON not configured")
 }
 
 func (m *MockBackend) ListNanoflows() ([]*microflows.Nanoflow, error) {

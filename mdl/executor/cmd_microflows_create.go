@@ -33,7 +33,6 @@ func loadRestServices(ctx *ExecContext) ([]*model.ConsumedRestService, error) {
 }
 
 func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -270,7 +269,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 
 	// Track the created microflow so it can be resolved by subsequent page creations
 	returnEntityName := extractEntityFromReturnType(mf.ReturnType)
-	e.trackCreatedMicroflow(s.Name.Module, s.Name.Name, mf.ID, containerID, returnEntityName)
+	ctx.trackCreatedMicroflow(s.Name.Module, s.Name.Name, mf.ID, containerID, returnEntityName)
 
 	// Invalidate hierarchy cache so the new microflow's container is visible
 	invalidateHierarchy(ctx)

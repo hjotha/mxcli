@@ -16,7 +16,6 @@ import (
 
 // execCreatePageV3 handles CREATE PAGE statement with V3 syntax.
 func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -101,7 +100,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	}
 
 	// Track the created page so it can be resolved by subsequent page references
-	e.trackCreatedPage(s.Name.Module, s.Name.Name, page.ID, moduleID)
+	ctx.trackCreatedPage(s.Name.Module, s.Name.Name, page.ID, moduleID)
 
 	// Invalidate hierarchy cache so the new page's container is visible
 	invalidateHierarchy(ctx)
@@ -112,7 +111,6 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 
 // execCreateSnippetV3 handles CREATE SNIPPET statement with V3 syntax.
 func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -170,7 +168,7 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 	}
 
 	// Track the created snippet so it can be resolved by subsequent snippet references
-	e.trackCreatedSnippet(s.Name.Module, s.Name.Name, snippet.ID, moduleID)
+	ctx.trackCreatedSnippet(s.Name.Module, s.Name.Name, snippet.ID, moduleID)
 
 	// Invalidate hierarchy cache so the new snippet's container is visible
 	invalidateHierarchy(ctx)

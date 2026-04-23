@@ -15,7 +15,6 @@ import (
 
 // execLint executes a LINT statement.
 func execLint(ctx *ExecContext, s *ast.LintStmt) error {
-	e := ctx.executor
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -35,7 +34,7 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 
 	// Create lint context
 	lintCtx := linter.NewLintContext(ctx.Catalog)
-	lintCtx.SetReader(e.Reader())
+	lintCtx.SetReader(ctx.Reader())
 
 	// Load configuration
 	projectDir := filepath.Dir(ctx.MprPath)

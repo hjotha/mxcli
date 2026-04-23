@@ -304,7 +304,6 @@ func execDropUserRole(ctx *ExecContext, s *ast.DropUserRoleStmt) error {
 
 // execGrantEntityAccess handles GRANT roles ON Module.Entity (rights) [WHERE '...'].
 func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -458,7 +457,7 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 		fmt.Fprintf(ctx.Output, "Reconciled %d access rule(s) in module %s\n", count, module.Name)
 	}
 
-	e.trackModifiedDomainModel(module.ID, module.Name)
+	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	fmt.Fprintf(ctx.Output, "Granted access on %s.%s to %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
 	if !ctx.Quiet {
 		fmt.Fprint(ctx.Output, formatAccessRuleResult(ctx, s.Entity.Module, s.Entity.Name, roleNames))
@@ -468,7 +467,6 @@ func execGrantEntityAccess(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error
 
 // execRevokeEntityAccess handles REVOKE roles ON Module.Entity [(rights...)].
 func execRevokeEntityAccess(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) error {
-	e := ctx.executor
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -550,7 +548,7 @@ func execRevokeEntityAccess(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) err
 			}
 		}
 	}
-	e.trackModifiedDomainModel(module.ID, module.Name)
+	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
 }
 

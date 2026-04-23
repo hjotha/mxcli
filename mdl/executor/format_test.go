@@ -112,10 +112,13 @@ func TestWriteResultJSONEmpty(t *testing.T) {
 
 func TestWriteDescribeJSON(t *testing.T) {
 	var buf bytes.Buffer
-	e := &Executor{output: &buf, format: FormatJSON}
+	ctx := &ExecContext{
+		Output: &buf,
+		Format: FormatJSON,
+	}
 
-	err := e.writeDescribeJSON("Sales.Customer", "entity", func() error {
-		_, err := e.output.Write([]byte("create entity Sales.Customer;\n"))
+	err := writeDescribeJSON(ctx, "Sales.Customer", "entity", func() error {
+		_, err := ctx.Output.Write([]byte("create entity Sales.Customer;\n"))
 		return err
 	})
 	if err != nil {
@@ -140,10 +143,13 @@ func TestWriteDescribeJSON(t *testing.T) {
 
 func TestWriteDescribeJSONPassthrough(t *testing.T) {
 	var buf bytes.Buffer
-	e := &Executor{output: &buf} // format is default (table)
+	ctx := &ExecContext{
+		Output: &buf,
+		Format: FormatTable,
+	}
 
-	err := e.writeDescribeJSON("Sales.Customer", "entity", func() error {
-		_, err := e.output.Write([]byte("create entity Sales.Customer;\n"))
+	err := writeDescribeJSON(ctx, "Sales.Customer", "entity", func() error {
+		_, err := ctx.Output.Write([]byte("create entity Sales.Customer;\n"))
 		return err
 	})
 	if err != nil {

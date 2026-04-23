@@ -116,7 +116,7 @@ func resolveMxBuild(explicitPath string, preferredVersion ...string) (string, er
 		if exact := exactVersionedPath(matches, targetVersion); exact != "" {
 			return exact, nil
 		}
-		if newest := newestVersionedPath(matches); newest != "" {
+		if newest := NewestVersionedPath(matches); newest != "" {
 			return newest, nil
 		}
 	}

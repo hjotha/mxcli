@@ -272,22 +272,6 @@ func (e *Executor) ExecuteProgram(prog *ast.Program) error {
 	return e.finalizeProgramExecution()
 }
 
-// trackModifiedDomainModel records a domain model that was modified during execution,
-// so it can be reconciled at the end of the program.
-func (e *Executor) trackModifiedDomainModel(moduleID model.ID, moduleName string) {
-	if e.backend == nil || !e.backend.IsConnected() {
-		return
-	}
-	if e.cache == nil {
-		e.cache = &executorCache{}
-	}
-	if e.cache.modifiedDomainModels == nil {
-		e.cache.modifiedDomainModels = make(map[model.ID]string)
-	}
-	// We store the module ID as key temporarily; we'll resolve to DM ID during finalization
-	e.cache.modifiedDomainModels[moduleID] = moduleName
-}
-
 // finalizeProgramExecution runs post-execution reconciliation on modified domain models.
 func (e *Executor) finalizeProgramExecution() error {
 	if e.backend == nil || !e.backend.IsConnected() || e.cache == nil || len(e.cache.modifiedDomainModels) == 0 {
@@ -358,83 +342,6 @@ func (e *Executor) Close() error {
 // Cache and Tracking
 // ----------------------------------------------------------------------------
 
-// trackCreatedMicroflow registers a microflow that was created during this session.
-// This allows subsequent page creations to resolve references to the microflow
-// even though the backend cache hasn't been updated.
-func (e *Executor) trackCreatedMicroflow(moduleName, mfName string, id, containerID model.ID, returnEntityName string) {
-	e.ensureCache()
-	if e.cache.createdMicroflows == nil {
-		e.cache.createdMicroflows = make(map[string]*createdMicroflowInfo)
-	}
-	qualifiedName := moduleName + "." + mfName
-	e.cache.createdMicroflows[qualifiedName] = &createdMicroflowInfo{
-		ID:               id,
-		Name:             mfName,
-		ModuleName:       moduleName,
-		ContainerID:      containerID,
-		ReturnEntityName: returnEntityName,
-	}
-}
-
-// trackCreatedPage registers a page that was created during this session.
-// This allows subsequent page creations to resolve SHOW_PAGE references
-// even though the backend cache hasn't been updated.
-func (e *Executor) trackCreatedPage(moduleName, pageName string, id, containerID model.ID) {
-	e.ensureCache()
-	if e.cache.createdPages == nil {
-		e.cache.createdPages = make(map[string]*createdPageInfo)
-	}
-	qualifiedName := moduleName + "." + pageName
-	e.cache.createdPages[qualifiedName] = &createdPageInfo{
-		ID:          id,
-		Name:        pageName,
-		ModuleName:  moduleName,
-		ContainerID: containerID,
-	}
-}
-
-// trackCreatedSnippet registers a snippet that was created during this session.
-// This allows subsequent creations to resolve snippet references
-// even though the backend cache hasn't been updated.
-func (e *Executor) trackCreatedSnippet(moduleName, snippetName string, id, containerID model.ID) {
-	e.ensureCache()
-	if e.cache.createdSnippets == nil {
-		e.cache.createdSnippets = make(map[string]*createdSnippetInfo)
-	}
-	qualifiedName := moduleName + "." + snippetName
-	e.cache.createdSnippets[qualifiedName] = &createdSnippetInfo{
-		ID:          id,
-		Name:        snippetName,
-		ModuleName:  moduleName,
-		ContainerID: containerID,
-	}
-}
-
-// getCreatedMicroflow returns info about a microflow created during this session,
-// or nil if not found.
-func (e *Executor) getCreatedMicroflow(qualifiedName string) *createdMicroflowInfo {
-	if e.cache == nil || e.cache.createdMicroflows == nil {
-		return nil
-	}
-	return e.cache.createdMicroflows[qualifiedName]
-}
-
-// getCreatedPage returns info about a page created during this session,
-// or nil if not found.
-func (e *Executor) getCreatedPage(qualifiedName string) *createdPageInfo {
-	if e.cache == nil || e.cache.createdPages == nil {
-		return nil
-	}
-	return e.cache.createdPages[qualifiedName]
-}
-
-// ensureCache initializes the executor cache if not already initialized.
-func (e *Executor) ensureCache() {
-	if e.cache == nil {
-		e.cache = &executorCache{}
-	}
-}
-
 // rememberDroppedMicroflow records the UnitID and ContainerID of a microflow
 // that is about to be deleted via DROP MICROFLOW. A follow-up CREATE OR
 // REPLACE/MODIFY for the same qualified name will reuse both instead of
@@ -447,9 +354,6 @@ func rememberDroppedMicroflow(ctx *ExecContext, qualifiedName string, id, contai
 	}
 	if ctx.Cache == nil {
 		ctx.Cache = &executorCache{}
-		if ctx.executor != nil {
-			ctx.executor.cache = ctx.Cache
-		}
 	}
 	if ctx.Cache.droppedMicroflows == nil {
 		ctx.Cache.droppedMicroflows = make(map[string]*droppedUnitInfo)

@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
@@ -133,9 +132,6 @@ func getHierarchy(ctx *ExecContext) (*ContainerHierarchy, error) {
 	}
 	if ctx.Cache == nil {
 		ctx.Cache = &executorCache{}
-		if ctx.executor != nil {
-			ctx.executor.cache = ctx.Cache
-		}
 	}
 	if ctx.Cache.hierarchy != nil {
 		return ctx.Cache.hierarchy, nil
@@ -164,10 +160,4 @@ func invalidateDomainModelsCache(ctx *ExecContext) {
 	}
 }
 
-// ----------------------------------------------------------------------------
-// Executor method wrappers (for callers in unmigrated files)
-// ----------------------------------------------------------------------------
 
-func (e *Executor) getHierarchy() (*ContainerHierarchy, error) {
-	return getHierarchy(e.newExecContext(context.Background()))
-}

@@ -605,6 +605,8 @@ func (fb *flowBuilder) addAggregateListAction(s *ast.AggregateListStmt) model.ID
 		function = microflows.AggregateFunctionMin
 	case ast.AggregateMaximum:
 		function = microflows.AggregateFunctionMax
+	case ast.AggregateReduce:
+		function = microflows.AggregateFunctionReduce
 	default:
 		return ""
 	}
@@ -616,9 +618,11 @@ func (fb *flowBuilder) addAggregateListAction(s *ast.AggregateListStmt) model.ID
 		Function:       function,
 	}
 
-	// For SUM/AVG/MIN/MAX, we need the attribute
-	if s.Attribute != "" {
-		// Build qualified name: need entity type from variable
+	if s.IsExpression && s.Expression != nil {
+		action.UseExpression = true
+		action.Expression = expressionToString(s.Expression)
+	} else if s.Attribute != "" {
+		// For SUM/AVG/MIN/MAX, build qualified attribute name from variable type
 		if fb.varTypes != nil {
 			listType := fb.varTypes[s.InputVariable]
 			if after, ok := strings.CutPrefix(listType, "List of "); ok {

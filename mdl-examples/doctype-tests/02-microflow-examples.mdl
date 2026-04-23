@@ -1681,7 +1681,23 @@ end;
 /
 
 /**
- * Example 11.6: Combined list operations
+ * Example 11.6: Expression-based aggregates
+ *
+ * SUM/AVERAGE/MINIMUM/MAXIMUM with arbitrary Mendix expressions.
+ * $currentObject refers to the current item in the list.
+ */
+create microflow MfTest.M055b_AggregateExpression (
+  $ProductList: list of MfTest.Product
+)
+returns decimal as $TotalTax
+begin
+  $TotalTax = sum($ProductList, $currentObject/Price * 0.21);
+  return $TotalTax;
+end;
+/
+
+/**
+ * Example 11.7: Combined list operations
  *
  * Demonstrates chaining multiple list operations.
  */

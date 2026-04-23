@@ -70,7 +70,7 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 		templateParams = []string{fb.exprToString(s.Message)}
 	}
 
-	logNodeName := "'Application'"
+	logNodeName := defaultLogNodeExpression
 	if s.Node != nil {
 		logNodeName = fb.exprToString(s.Node)
 	}

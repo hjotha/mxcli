@@ -18,10 +18,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
@@ -160,88 +160,17 @@ func findMxBinary() string {
 	if home, err := os.UserHomeDir(); err == nil {
 		pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx")
 		if matches, _ := filepath.Glob(pattern); len(matches) > 0 {
-			return newestVersionedPath(matches)
+			return docker.NewestVersionedPath(matches)
 		}
 	}
 
 	return ""
 }
 
-func newestVersionedPath(paths []string) string {
-	var best string
-	var bestVersion []int
-	bestValid := false
-
-	for _, path := range paths {
-		versionParts, ok := parseVersionParts(versionFromPath(path))
-		switch {
-		case best == "":
-			best = path
-			bestVersion = versionParts
-			bestValid = ok
-		case ok && !bestValid:
-			best = path
-			bestVersion = versionParts
-			bestValid = true
-		case ok && bestValid:
-			if cmp := compareVersionParts(versionParts, bestVersion); cmp > 0 || (cmp == 0 && path > best) {
-				best = path
-				bestVersion = versionParts
-			}
-		case !ok && !bestValid && path > best:
-			best = path
-		}
-	}
-
-	return best
-}
-
-func versionFromPath(path string) string {
-	versionDir := filepath.Dir(filepath.Dir(path))
-	return filepath.Base(versionDir)
-}
-
-func parseVersionParts(version string) ([]int, bool) {
-	if version == "" {
-		return nil, false
-	}
-	parts := strings.Split(version, ".")
-	values := make([]int, 0, len(parts))
-	for _, part := range parts {
-		if part == "" {
-			return nil, false
-		}
-		value, err := strconv.Atoi(part)
-		if err != nil {
-			return nil, false
-		}
-		values = append(values, value)
-	}
-	return values, true
-}
-
-func compareVersionParts(left, right []int) int {
-	maxLen := len(left)
-	if len(right) > maxLen {
-		maxLen = len(right)
-	}
-	for i := 0; i < maxLen; i++ {
-		var l, r int
-		if i < len(left) {
-			l = left[i]
-		}
-		if i < len(right) {
-			r = right[i]
-		}
-		switch {
-		case l < r:
-			return -1
-		case l > r:
-			return 1
-		}
-	}
-	return 0
-}
+// newestVersionedPath / versionFromPath / parseVersionParts / compareVersionParts
+// used to be duplicated here. They now live as exported helpers in
+// cmd/mxcli/docker (docker.NewestVersionedPath). The integration-test harness
+// call-site was adjusted to use the exported helper instead.
 
 // copyFile copies a single file from src to dst.
 func copyFile(src, dst string) error {
