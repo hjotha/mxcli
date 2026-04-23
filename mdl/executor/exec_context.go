@@ -216,7 +216,8 @@ func (ctx *ExecContext) EnsureSqlMgr() *sqllib.Manager {
 }
 
 // Reader returns the MPR reader, or nil if not connected.
-// Deprecated: Callers should migrate to Backend methods directly.
+// Deprecated: External callers should migrate to using Backend methods directly.
+// TODO(shared-types): remove once all callers use Backend — target: v0.next milestone.
 func (ctx *ExecContext) Reader() *mpr.Reader {
 	if ctx.Backend == nil {
 		return nil

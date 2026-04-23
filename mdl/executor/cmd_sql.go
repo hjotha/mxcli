@@ -242,6 +242,9 @@ func executeGeneratedMDL(ctx *ExecContext, mdl string) error {
 	if len(errs) > 0 {
 		return mdlerrors.NewBackend("parse generated MDL", fmt.Errorf("%v", errs[0]))
 	}
+	if ctx.ExecuteProgramFn == nil {
+		return mdlerrors.NewBackend("execute generated MDL", fmt.Errorf("no program dispatcher configured"))
+	}
 	return ctx.ExecuteProgramFn(prog)
 }
 

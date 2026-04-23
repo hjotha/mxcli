@@ -18,6 +18,12 @@ func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
 
 // syncBack copies mutated ExecContext fields back to the Executor so that
 // the next newExecContext call picks up handler-side state changes.
+//
+// Fields intentionally NOT synced back (read-only from handler perspective):
+//   - Output, Format, Quiet, Logger — set once at Executor construction
+//   - BackendFactory — set once at Executor construction
+//   - OutputGuard — temporary swaps are always restored within the same handler
+//   - ExecuteFn, ExecuteProgramFn, FinalizeFn — bound to Executor methods, immutable
 func (e *Executor) syncBack(ctx *ExecContext) {
 	e.backend = ctx.Backend
 	e.mprPath = ctx.MprPath

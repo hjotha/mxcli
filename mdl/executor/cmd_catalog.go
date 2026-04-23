@@ -447,11 +447,17 @@ func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) erro
 		ctx.Catalog = nil
 	}
 
-	// Handle background mode
+	// Handle background mode — clone ctx so the goroutine doesn't race
+	// with the main dispatch loop (which may syncBack and mutate fields).
+	// NOTE: bgCtx.Output still shares the underlying writer with the main
+	// goroutine. This is a pre-existing limitation — the original code also
+	// wrote to ctx.Output from the goroutine. A synchronized writer would
+	// fix this but is out of scope for the executor cleanup.
 	if stmt.Background {
+		bgCtx := *ctx // shallow copy — isolates Catalog, Cache, etc.
 		go func() {
-			if err := buildCatalog(ctx, stmt.Full, stmt.Source); err != nil {
-				fmt.Fprintf(ctx.Output, "Background catalog build failed: %v\n", err)
+			if err := buildCatalog(&bgCtx, stmt.Full, stmt.Source); err != nil {
+				fmt.Fprintf(bgCtx.Output, "Background catalog build failed: %v\n", err)
 			}
 		}()
 		fmt.Fprintln(ctx.Output, "Catalog build started in background...")

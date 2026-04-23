@@ -423,6 +423,9 @@ func execExecuteScript(ctx *ExecContext, s *ast.ExecuteScriptStmt) error {
 
 	// Execute all statements in the script
 	fmt.Fprintf(ctx.Output, "Executing script: %s\n", s.Path)
+	if ctx.ExecuteFn == nil {
+		return mdlerrors.NewBackend("execute script", errors.New("no statement dispatcher configured"))
+	}
 	for _, stmt := range prog.Statements {
 		if err := ctx.ExecuteFn(stmt); err != nil {
 			// Exit within a script just stops the script, doesn't exit mxcli
