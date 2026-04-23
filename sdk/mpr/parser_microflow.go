@@ -714,8 +714,9 @@ func parseCommitAction(raw map[string]any) *microflows.CommitObjectsAction {
 	action.CommitVariable = extractString(raw["CommitVariableName"])
 	action.WithEvents = extractBool(raw["WithEvents"], false)
 	action.RefreshInClient = extractBool(raw["RefreshInClient"], false)
-	if errType, ok := raw["ErrorHandlingType"].(string); ok {
-		action.ErrorHandlingType = microflows.ErrorHandlingType(errType)
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	if action.ErrorHandlingType == "" {
+		action.ErrorHandlingType = microflows.ErrorHandlingTypeRollback
 	}
 	return action
 }
