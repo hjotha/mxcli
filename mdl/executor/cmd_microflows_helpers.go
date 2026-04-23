@@ -176,9 +176,12 @@ func mendixFunctionName(name string) string {
 //   - Backslashes followed by one of the recognised escape letters (n/r/t/\/')
 //     are doubled so the visitor's unquoteString preserves them — without this,
 //     the source literal `\\n` would come back as a real newline on reparse.
-//   - Any other backslash-prefixed sequence (e.g. `\d`, `\w`, `\p{...}` inside
-//     regexes) is passed through unchanged so describe→exec roundtrips of
-//     Mendix regular-expression arguments stay bit-exact.
+//   - For any other backslash-prefixed byte (e.g. `\d`, `\w`, `\p{...}` inside
+//     regexes) the backslash is emitted as-is and the follower is written by the
+//     next loop iteration via the default arm, so the two bytes end up in the
+//     output unchanged. This keeps Mendix regular-expression escape sequences
+//     bit-exact across describe→exec roundtrips; the output is byte-identical
+//     to passthrough even though the implementation walks the bytes separately.
 //
 // This is narrower than mdlQuote (used for @annotation / @caption text where
 // the AST value is a plain string): mdlQuote unconditionally doubles every

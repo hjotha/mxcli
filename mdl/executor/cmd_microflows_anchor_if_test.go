@@ -53,6 +53,17 @@ func hasFlow(flows []anchorFlow, origin, dest int) bool {
 	return false
 }
 
+// countFlows counts how many flows have the given anchor pair.
+func countFlows(flows []anchorFlow, origin, dest int) int {
+	n := 0
+	for _, f := range flows {
+		if f.OriginIdx == origin && f.DestIdx == dest {
+			n++
+		}
+	}
+	return n
+}
+
 func TestBuilder_AnchorInsideElseBranch(t *testing.T) {
 	// Reproduces the pattern from attempt #35:
 	//   if cond then { set ... }
@@ -88,14 +99,13 @@ func TestBuilder_AnchorInsideElseBranch(t *testing.T) {
 
 	oc := buildWithAnchors(body)
 
-	// The else-first-statement flow must land on the log's top anchor.
-	if !hasFlow(oc.Flows, AnchorBottom, AnchorTop) {
-		t.Errorf("expected split→log flow with Bottom→Top (from user's own @anchor), got %+v", oc.Flows)
-	}
-	// The log→return flow inside the else branch must emit from=bottom
-	// (previous statement's From) and to=top (return's own To).
-	if !hasFlow(oc.Flows, AnchorBottom, AnchorTop) {
-		t.Errorf("expected log→return flow with Bottom→Top inside else branch, got %+v", oc.Flows)
+	// Two distinct Bottom→Top flows must exist:
+	//   1. split → log   (from the user's @anchor on the log statement)
+	//   2. log   → return (propagating the log's From=Bottom and the return's To=Top)
+	// A single hasFlow check would pass with just one match, so count explicitly
+	// to pin the regression — see ako review note on TestBuilder_AnchorInsideElseBranch.
+	if got := countFlows(oc.Flows, AnchorBottom, AnchorTop); got != 2 {
+		t.Errorf("expected 2 Bottom→Top flows (split→log and log→return), got %d: %+v", got, oc.Flows)
 	}
 }
 
