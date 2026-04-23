@@ -166,6 +166,13 @@ func mendixFunctionName(name string) string {
 }
 
 // expressionToString converts an AST Expression to a Mendix expression string.
+// Note: string literals are quoted via mdlQuote, which escapes backslashes,
+// newlines, tabs, and carriage returns for MDL round-trip safety. Mendix's
+// expression engine does not treat `\n` etc. as escapes, so a string literal
+// with an embedded raw newline round-trips as `\n` in the MDL source (parseable)
+// but is re-serialised into BSON as a two-character `\n` sequence rather than a
+// real newline. This is the correct trade-off for describe→re-execute flows;
+// the alternative (emitting raw control chars in MDL) would break the parser.
 func expressionToString(expr ast.Expression) string {
 	// Check for nil interface
 	if expr == nil {

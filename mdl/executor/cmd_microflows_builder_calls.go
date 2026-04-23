@@ -14,6 +14,11 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
+// defaultLogNodeExpression is the quoted Mendix expression used for the log
+// node when none is specified on a LOG statement. Single source of truth shared
+// by the builder, the formatter, and cmd_diff_mdl.
+const defaultLogNodeExpression = "'Application'"
+
 // addLogMessageAction creates a LOG statement as a LogMessageAction.
 func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 	logLevel := microflows.LogLevelInfo
