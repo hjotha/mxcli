@@ -10,7 +10,7 @@ func init() {
 			"workflow", "business process", "approval", "review",
 			"user task", "decision", "parallel",
 		},
-		Syntax: "CREATE WORKFLOW Module.Name\n  PARAMETER $Context: Module.Entity\nBEGIN\n  <activities>\nEND WORKFLOW;",
+		Syntax:  "CREATE WORKFLOW Module.Name\n  PARAMETER $Context: Module.Entity\nBEGIN\n  <activities>\nEND WORKFLOW;",
 		Example: "CREATE WORKFLOW HR.LeaveApproval\n  PARAMETER $Context: HR.LeaveRequest\nBEGIN\n  USER TASK Review 'Review request'\n    PAGE HR.ReviewPage\n    OUTCOMES 'Approve' { } 'Reject' { };\nEND WORKFLOW;",
 		SeeAlso: []string{"workflow.user-task", "workflow.decision", "workflow.parallel-split"},
 	})
@@ -21,7 +21,7 @@ func init() {
 		Keywords: []string{
 			"list workflows", "show workflows", "describe workflow",
 		},
-		Syntax: "SHOW WORKFLOWS;\nSHOW WORKFLOWS IN <module>;\nDESCRIBE WORKFLOW Module.Name;",
+		Syntax:  "SHOW WORKFLOWS;\nSHOW WORKFLOWS IN <module>;\nDESCRIBE WORKFLOW Module.Name;",
 		Example: "SHOW WORKFLOWS IN HR;\nDESCRIBE WORKFLOW HR.LeaveApproval;",
 	})
 
@@ -32,7 +32,7 @@ func init() {
 			"create workflow", "new workflow", "define workflow",
 			"parameter", "overview page", "due date",
 		},
-		Syntax: "CREATE [OR MODIFY] WORKFLOW Module.Name\n  PARAMETER $Context: Module.Entity\n  [OVERVIEW PAGE Module.OverviewPage]\n  [DUE DATE '<expression>']\nBEGIN\n  <activities>\nEND WORKFLOW;",
+		Syntax:  "CREATE [OR MODIFY] WORKFLOW Module.Name\n  PARAMETER $Context: Module.Entity\n  [OVERVIEW PAGE Module.OverviewPage]\n  [DUE DATE '<expression>']\nBEGIN\n  <activities>\nEND WORKFLOW;",
 		Example: "CREATE WORKFLOW Module.ApprovalFlow\n  PARAMETER $Context: Module.Request\n  OVERVIEW PAGE Module.WF_Overview\nBEGIN\n  USER TASK ReviewTask 'Review the request'\n    PAGE Module.ReviewPage\n    OUTCOMES 'Approve' { } 'Reject' { };\nEND WORKFLOW;",
 		SeeAlso: []string{"workflow.user-task", "workflow.decision", "workflow.drop"},
 	})
@@ -44,7 +44,7 @@ func init() {
 			"user task", "human task", "assign", "assignee",
 			"outcomes", "approve", "reject", "page",
 		},
-		Syntax: "USER TASK <name> '<caption>'\n  [PAGE Module.Page]\n  [TARGETING MICROFLOW Module.MF | TARGETING XPATH '<xpath>']\n  [ENTITY Module.Entity]\n  OUTCOMES '<outcome1>' { <activities> } '<outcome2>' { <activities> };",
+		Syntax:  "USER TASK <name> '<caption>'\n  [PAGE Module.Page]\n  [TARGETING MICROFLOW Module.MF | TARGETING XPATH '<xpath>']\n  [ENTITY Module.Entity]\n  OUTCOMES '<outcome1>' { <activities> } '<outcome2>' { <activities> };",
 		Example: "USER TASK ReviewTask 'Review the request'\n  PAGE HR.ReviewPage\n  TARGETING XPATH '[Module.Employee/Active = true()]'\n  OUTCOMES 'Approve' { } 'Reject' { };",
 		SeeAlso: []string{"workflow.user-task.targeting", "workflow.create"},
 	})
@@ -57,8 +57,8 @@ func init() {
 			"assignee", "candidate", "xpath", "microflow",
 			"task assignment", "user filter",
 		},
-		Syntax: "TARGETING MICROFLOW Module.MF\nTARGETING XPATH '<xpath-expression>'",
-		Example: "-- XPath targeting: only active managers\nUSER TASK Approve 'Approve request'\n  TARGETING XPATH '[HR.Employee/Role = \"Manager\" and Active = true()]'\n  OUTCOMES 'Done' { };\n\n-- Microflow targeting: custom logic\nUSER TASK Approve 'Approve request'\n  TARGETING MICROFLOW HR.GetApprovers\n  OUTCOMES 'Done' { };",
+		Syntax:     "TARGETING MICROFLOW Module.MF\nTARGETING XPATH '<xpath-expression>'",
+		Example:    "-- XPath targeting: only active managers\nUSER TASK Approve 'Approve request'\n  TARGETING XPATH '[HR.Employee/Role = \"Manager\" and Active = true()]'\n  OUTCOMES 'Done' { };\n\n-- Microflow targeting: custom logic\nUSER TASK Approve 'Approve request'\n  TARGETING MICROFLOW HR.GetApprovers\n  OUTCOMES 'Done' { };",
 		MinVersion: "9.0.0",
 		SeeAlso:    []string{"workflow.user-task"},
 	})
@@ -70,7 +70,7 @@ func init() {
 			"decision", "conditional", "branch", "if", "condition",
 			"exclusive gateway", "XOR",
 		},
-		Syntax: "DECISION ['<caption>'] [COMMENT '<text>']\n  OUTCOMES '<outcome>' { <activities> } ...;",
+		Syntax:  "DECISION ['<caption>'] [COMMENT '<text>']\n  OUTCOMES '<outcome>' { <activities> } ...;",
 		Example: "DECISION 'Check amount'\n  OUTCOMES 'Under 1000' { } 'Over 1000' {\n    USER TASK ManagerApproval 'Manager must approve'\n      OUTCOMES 'OK' { };\n  };",
 		SeeAlso: []string{"workflow.create", "workflow.parallel-split"},
 	})
@@ -82,7 +82,7 @@ func init() {
 			"parallel", "concurrent", "split", "fork", "join",
 			"parallel gateway", "AND",
 		},
-		Syntax: "PARALLEL SPLIT [COMMENT '<text>']\n  PATH 1 { <activities> }\n  PATH 2 { <activities> };",
+		Syntax:  "PARALLEL SPLIT [COMMENT '<text>']\n  PATH 1 { <activities> }\n  PATH 2 { <activities> };",
 		Example: "PARALLEL SPLIT\n  PATH 1 {\n    USER TASK LegalReview 'Legal review'\n      OUTCOMES 'Done' { };\n  }\n  PATH 2 {\n    USER TASK TechReview 'Technical review'\n      OUTCOMES 'Done' { };\n  };",
 		SeeAlso: []string{"workflow.decision", "workflow.create"},
 	})
@@ -94,7 +94,7 @@ func init() {
 			"call microflow", "microflow task", "automated step",
 			"system task",
 		},
-		Syntax: "CALL MICROFLOW Module.MF [COMMENT '<text>']\n  [OUTCOMES '<outcome>' { <activities> } ...];",
+		Syntax:  "CALL MICROFLOW Module.MF [COMMENT '<text>']\n  [OUTCOMES '<outcome>' { <activities> } ...];",
 		Example: "CALL MICROFLOW HR.SendNotification\n  COMMENT 'Notify manager';",
 		SeeAlso: []string{"workflow.create", "workflow.call-workflow"},
 	})
@@ -105,7 +105,7 @@ func init() {
 		Keywords: []string{
 			"call workflow", "sub-workflow", "nested workflow",
 		},
-		Syntax: "CALL WORKFLOW Module.WF [COMMENT '<text>'];",
+		Syntax:  "CALL WORKFLOW Module.WF [COMMENT '<text>'];",
 		Example: "CALL WORKFLOW HR.SubApproval COMMENT 'Delegate to sub-process';",
 		SeeAlso: []string{"workflow.create", "workflow.call-microflow"},
 	})
@@ -116,7 +116,7 @@ func init() {
 		Keywords: []string{
 			"drop workflow", "delete workflow", "remove workflow",
 		},
-		Syntax: "DROP WORKFLOW Module.Name;",
+		Syntax:  "DROP WORKFLOW Module.Name;",
 		Example: "DROP WORKFLOW HR.LeaveApproval;",
 		SeeAlso: []string{"workflow.create"},
 	})
@@ -128,7 +128,7 @@ func init() {
 			"catalog", "query workflows", "workflow metadata",
 			"cross-reference", "callers", "callees",
 		},
-		Syntax: "REFRESH CATALOG FULL;\nSELECT * FROM CATALOG.WORKFLOWS;\nSHOW CALLERS OF Module.WorkflowName;\nSHOW REFERENCES TO Module.WorkflowName;",
+		Syntax:  "REFRESH CATALOG FULL;\nSELECT * FROM CATALOG.WORKFLOWS;\nSHOW CALLERS OF Module.WorkflowName;\nSHOW REFERENCES TO Module.WorkflowName;",
 		Example: "REFRESH CATALOG FULL;\nSELECT QualifiedName, ActivityCount, UserTaskCount\n  FROM CATALOG.WORKFLOWS WHERE UserTaskCount > 0;",
 		SeeAlso: []string{"workflow.show"},
 	})
@@ -140,8 +140,8 @@ func init() {
 			"boundary event", "timer", "timeout", "deadline",
 			"SLA", "escalation",
 		},
-		Syntax: "BOUNDARY TIMER ON <task-name> AFTER '<duration>' {\n  <activities>\n}",
-		Example: "BOUNDARY TIMER ON ReviewTask AFTER 'P3D' {\n  CALL MICROFLOW Module.Escalate;\n}",
+		Syntax:     "BOUNDARY TIMER ON <task-name> AFTER '<duration>' {\n  <activities>\n}",
+		Example:    "BOUNDARY TIMER ON ReviewTask AFTER 'P3D' {\n  CALL MICROFLOW Module.Escalate;\n}",
 		MinVersion: "10.6.0",
 		SeeAlso:    []string{"workflow.user-task"},
 	})
@@ -153,7 +153,7 @@ func init() {
 			"alter workflow", "modify workflow", "update workflow",
 			"add activity", "drop activity", "replace activity",
 		},
-		Syntax: "ALTER WORKFLOW Module.Name SET <property> = <value>;\nALTER WORKFLOW Module.Name INSERT <activity> [BEFORE|AFTER <name>];\nALTER WORKFLOW Module.Name DROP <activity-name>;\nALTER WORKFLOW Module.Name REPLACE <name> WITH <activity>;",
+		Syntax:  "ALTER WORKFLOW Module.Name SET <property> = <value>;\nALTER WORKFLOW Module.Name INSERT <activity> [BEFORE|AFTER <name>];\nALTER WORKFLOW Module.Name DROP <activity-name>;\nALTER WORKFLOW Module.Name REPLACE <name> WITH <activity>;",
 		Example: "ALTER WORKFLOW HR.LeaveApproval SET DUE DATE = 'addDays([%CurrentDateTime%], 7)';\nALTER WORKFLOW HR.LeaveApproval INSERT\n  CALL MICROFLOW HR.NotifyHR\n  AFTER ReviewTask;",
 		SeeAlso: []string{"workflow.create", "workflow.drop"},
 	})
