@@ -126,17 +126,14 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		return doc
 
 	case *microflows.CommitObjectsAction:
-		doc := bson.D{
+		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$CommitAction"},
 			{Key: "CommitVariableName", Value: a.CommitVariable},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+			{Key: "RefreshInClient", Value: a.RefreshInClient},
+			{Key: "WithEvents", Value: a.WithEvents},
 		}
-		if a.ErrorHandlingType != "" && a.ErrorHandlingType != microflows.ErrorHandlingTypeRollback {
-			doc = append(doc, bson.E{Key: "ErrorHandlingType", Value: string(a.ErrorHandlingType)})
-		}
-		doc = append(doc, bson.E{Key: "RefreshInClient", Value: a.RefreshInClient})
-		doc = append(doc, bson.E{Key: "WithEvents", Value: a.WithEvents})
-		return doc
 
 	case *microflows.DeleteObjectAction:
 		return bson.D{

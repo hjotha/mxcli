@@ -47,3 +47,37 @@ func TestParseSequenceFlow_NewCaseValueNoCase(t *testing.T) {
 		t.Fatalf("expected *NoCase, got %T", flow.CaseValue)
 	}
 }
+
+func TestParseCommitAction_ErrorHandlingTypeExplicit(t *testing.T) {
+	action := parseCommitAction(map[string]any{
+		"$ID":                "commit-1",
+		"CommitVariableName": "Order",
+		"WithEvents":         true,
+		"RefreshInClient":    false,
+		"ErrorHandlingType":  "Continue",
+	})
+
+	if action.ErrorHandlingType != microflows.ErrorHandlingTypeContinue {
+		t.Errorf("expected Continue, got %q", action.ErrorHandlingType)
+	}
+	if action.CommitVariable != "Order" {
+		t.Errorf("expected CommitVariable Order, got %q", action.CommitVariable)
+	}
+}
+
+func TestParseCommitAction_ErrorHandlingTypeDefaultsToRollback(t *testing.T) {
+	// When ErrorHandlingType is absent from BSON, the describer must still
+	// emit "on error rollback" — matching Mendix Studio Pro's default.
+	// Without this default, describe → exec → describe drops the suffix
+	// because the writer omits the field when it equals Rollback.
+	action := parseCommitAction(map[string]any{
+		"$ID":                "commit-1",
+		"CommitVariableName": "Order",
+		"WithEvents":         false,
+		"RefreshInClient":    false,
+	})
+
+	if action.ErrorHandlingType != microflows.ErrorHandlingTypeRollback {
+		t.Errorf("expected default Rollback, got %q", action.ErrorHandlingType)
+	}
+}
