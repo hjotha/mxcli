@@ -54,7 +54,10 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 
 	// Process each statement
 	// pendingCase holds the case value for the NEXT flow (set by merge-less splits)
+	// pendingFlowAnchor carries branch anchors from a guard-pattern IF so the
+	// deferred split→nextActivity flow honours @anchor(true: ..., false: ...).
 	pendingCase := ""
+	var pendingFlowAnchor *ast.FlowAnchors
 	for _, stmt := range stmts {
 		// Snapshot the current statement's anchor annotation before addStatement
 		// can reset pendingAnnotations via recursive processing. The incoming
@@ -78,7 +81,23 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 			} else {
 				flow = newHorizontalFlow(lastID, activityID)
 			}
-			applyUserAnchors(flow, fb.previousStmtAnchor, stmtAnchor)
+			// Prefer the pendingFlowAnchor (carried from a guard-pattern IF's
+			// branch) over the previous statement's own anchor — it encodes
+			// exactly the @anchor(true/false: ...) the user asked for on the
+			// deferred flow. When the pending anchor is present it applies to
+			// both From (origin side on the split) and To (the side of the
+			// continuing activity), unless the incoming statement explicitly
+			// overrides its own To.
+			originAnchor := fb.previousStmtAnchor
+			destAnchor := stmtAnchor
+			if pendingFlowAnchor != nil {
+				originAnchor = pendingFlowAnchor
+				if destAnchor == nil || destAnchor.To == ast.AnchorSideUnset {
+					destAnchor = pendingFlowAnchor
+				}
+				pendingFlowAnchor = nil
+			}
+			applyUserAnchors(flow, originAnchor, destAnchor)
 			fb.flows = append(fb.flows, flow)
 			fb.previousStmtAnchor = stmtAnchor
 
@@ -86,9 +105,11 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
 				fb.nextConnectionPoint = ""
-				// Save nextFlowCase for the NEXT iteration's flow creation
+				// Save nextFlowCase / nextFlowAnchor for the NEXT iteration's flow creation
 				pendingCase = fb.nextFlowCase
 				fb.nextFlowCase = ""
+				pendingFlowAnchor = fb.nextFlowAnchor
+				fb.nextFlowAnchor = nil
 				// Compound statements control their own internal anchors; don't
 				// let the outer From leak into the flow leaving the merge.
 				fb.previousStmtAnchor = nil
@@ -129,7 +150,12 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		} else {
 			endFlow = newHorizontalFlow(lastID, endEvent.ID)
 		}
-		applyUserAnchors(endFlow, fb.previousStmtAnchor, nil)
+		originAnchor := fb.previousStmtAnchor
+		if pendingFlowAnchor != nil {
+			originAnchor = pendingFlowAnchor
+			pendingFlowAnchor = nil
+		}
+		applyUserAnchors(endFlow, originAnchor, nil)
 		fb.flows = append(fb.flows, endFlow)
 		fb.previousStmtAnchor = nil
 	}

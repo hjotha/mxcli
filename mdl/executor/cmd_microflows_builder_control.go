@@ -301,15 +301,21 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		}
 		fb.posY = centerY
 		fb.nextConnectionPoint = splitID
-		// Tell parent to attach the case value on the next flow
+		// Tell parent to attach the case value on the next flow, and pass the
+		// matching branch anchor so @anchor(true: ..., false: ...) survives to
+		// the deferred splitID→nextActivity flow.
 		if hasElseBody {
 			if thenReturns {
 				fb.nextFlowCase = "false"
+				fb.nextFlowAnchor = falseBranchAnchor
 			} else {
 				fb.nextFlowCase = "true"
+				fb.nextFlowAnchor = trueBranchAnchor
 			}
 		} else {
-			fb.nextFlowCase = "false" // IF without ELSE: false is the continuing path
+			// IF without ELSE: false is the continuing path
+			fb.nextFlowCase = "false"
+			fb.nextFlowAnchor = falseBranchAnchor
 		}
 	}
 

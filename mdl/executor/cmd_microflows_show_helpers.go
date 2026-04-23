@@ -463,6 +463,7 @@ func traverseFlow(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
+		*lines = append(*lines, indentStr+"begin")
 		emitLoopBody(ctx, loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
 		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
@@ -610,6 +611,7 @@ func traverseFlowUntilMerge(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
+		*lines = append(*lines, indentStr+"begin")
 		emitLoopBody(ctx, loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
 		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
@@ -673,6 +675,7 @@ func traverseLoopBody(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
+		*lines = append(*lines, indentStr+"begin")
 		emitLoopBody(ctx, loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
 		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
