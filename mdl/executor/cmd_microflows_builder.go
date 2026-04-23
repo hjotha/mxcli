@@ -12,7 +12,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 )
 
 // flowBuilder helps construct the flow graph from AST statements.
@@ -131,7 +130,7 @@ func (fb *flowBuilder) lookupMicroflowReturnType(qualifiedName string) microflow
 	}
 
 	if rawUnit, err := fb.backend.GetRawUnitByName("microflow", qualifiedName); err == nil && rawUnit != nil && len(rawUnit.Contents) > 0 {
-		if mf, err := mpr.ParseMicroflowBSON(rawUnit.Contents, model.ID(rawUnit.ID), ""); err == nil && mf != nil {
+		if mf, err := fb.backend.ParseMicroflowBSON(rawUnit.Contents, model.ID(rawUnit.ID), ""); err == nil && mf != nil {
 			return mf.ReturnType
 		}
 	}

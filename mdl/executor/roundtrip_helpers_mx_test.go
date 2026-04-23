@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 )
 
 func TestNewestVersionedPath_PicksNewestNumericVersion(t *testing.T) {
@@ -19,10 +21,10 @@ func TestNewestVersionedPath_PicksNewestNumericVersion(t *testing.T) {
 		"/tmp/.mxcli/mxbuild/9.24.40.80973/modeler/mx",
 	}
 
-	got := newestVersionedPath(paths)
+	got := docker.NewestVersionedPath(paths)
 	want := "/tmp/.mxcli/mxbuild/11.9.0/modeler/mx"
 	if got != want {
-		t.Fatalf("newestVersionedPath() = %q, want %q", got, want)
+		t.Fatalf("docker.NewestVersionedPath() = %q, want %q", got, want)
 	}
 }
 

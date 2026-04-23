@@ -231,6 +231,9 @@ func (b *MprBackend) ListNanoflows() ([]*microflows.Nanoflow, error) {
 func (b *MprBackend) ParseMicroflowFromRaw(raw map[string]any, unitID, containerID model.ID) *microflows.Microflow {
 	return mpr.ParseMicroflowFromRaw(raw, unitID, containerID)
 }
+func (b *MprBackend) ParseMicroflowBSON(contents []byte, unitID, containerID model.ID) (*microflows.Microflow, error) {
+	return mpr.ParseMicroflowBSON(contents, unitID, containerID)
+}
 func (b *MprBackend) GetNanoflow(id model.ID) (*microflows.Nanoflow, error) {
 	return b.reader.GetNanoflow(id)
 }

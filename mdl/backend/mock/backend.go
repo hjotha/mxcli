@@ -82,6 +82,7 @@ type MockBackend struct {
 	DeleteMicroflowFunc       func(id model.ID) error
 	MoveMicroflowFunc         func(mf *microflows.Microflow) error
 	ParseMicroflowFromRawFunc func(raw map[string]any, unitID, containerID model.ID) *microflows.Microflow
+	ParseMicroflowBSONFunc    func(contents []byte, unitID, containerID model.ID) (*microflows.Microflow, error)
 	ListNanoflowsFunc         func() ([]*microflows.Nanoflow, error)
 	GetNanoflowFunc           func(id model.ID) (*microflows.Nanoflow, error)
 	CreateNanoflowFunc        func(nf *microflows.Nanoflow) error
