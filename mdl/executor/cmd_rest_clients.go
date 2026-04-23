@@ -310,7 +310,10 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 	}
 
 	// Check for existing service with same name
-	existingServices, _ := ctx.Backend.ListConsumedRestServices()
+	existingServices, err := ctx.Backend.ListConsumedRestServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list rest clients", err)
+	}
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -664,7 +667,10 @@ func createRestClientFromSpec(ctx *ExecContext, stmt *ast.CreateRestClientStmt) 
 
 	// Handle OR MODIFY: delete existing if present, preserving UnitID so any
 	// SEND REST REQUEST microflows that reference this service by ID remain valid.
-	existingServices, _ := ctx.Backend.ListConsumedRestServices()
+	existingServices, err := ctx.Backend.ListConsumedRestServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list rest clients", err)
+	}
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
