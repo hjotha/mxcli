@@ -3740,6 +3740,7 @@ annotationParamName
     | TO
     | TRUE
     | FALSE
+    | TAIL        // @anchor(... tail: (...))
     ;
 
 annotationValue

@@ -87,9 +87,13 @@ func anchorSideKeyword(idx int) string {
 //
 //	@anchor(to: X, true: (from: Y, to: Z), false: (from: Y, to: Z))
 //
-// Any of the three groups is omitted when its constituent values are both
-// default (so a non-annotated split produces no line). Non-split objects use
-// the simple @anchor(from: X, to: Y) form.
+// For LoopedActivity we emit the loop form when any iterator/tail flow exists:
+//
+//	@anchor(from: X, to: Y, iterator: (from: Y, to: Z), tail: (from: Y, to: Z))
+//
+// Any of the groups is omitted when its constituent values are both default
+// (so a non-annotated split/loop produces no line). Non-split/non-loop objects
+// use the simple @anchor(from: X, to: Y) form.
 func emitAnchorAnnotation(
 	obj microflows.MicroflowObject,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
@@ -105,6 +109,10 @@ func emitAnchorAnnotation(
 	}
 	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit {
 		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr)
+		return
+	}
+	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
+		emitLoopAnchorAnnotation(loop, flowsByOrigin, flowsByDest, lines, indentStr)
 		return
 	}
 
@@ -199,6 +207,100 @@ func branchAnchorFragment(label, from, to string) string {
 	return fmt.Sprintf("%s: (%s)", label, strings.Join(inner, ", "))
 }
 
+// emitLoopAnchorAnnotation emits the loop form of @anchor for a LoopedActivity.
+// A LoopedActivity has up to four flows worth describing:
+//   - the incoming flow from the previous activity (normal `to:`)
+//   - the outgoing flow to the next activity (normal `from:`)
+//   - the iterator flow (loop boundary → first body statement), emitted as
+//     `iterator: (from: X, to: Y)` when present
+//   - the tail flow (last body statement → loop boundary), emitted as
+//     `tail: (from: X, to: Y)` when present
+//
+// The iterator/tail edges are optional — Mendix normally renders them
+// implicitly from the LoopedActivity geometry — so they appear only when the
+// flows actually exist in the parent collection. This keeps plain loops
+// free of `@anchor(iterator: ..., tail: ...)` noise on describe while still
+// round-tripping projects that explicitly pinned them via @anchor annotations.
+func emitLoopAnchorAnnotation(
+	loop *microflows.LoopedActivity,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	lines *[]string,
+	indentStr string,
+) {
+	id := loop.ID
+
+	innerIDs := make(map[model.ID]bool)
+	if loop.ObjectCollection != nil {
+		for _, o := range loop.ObjectCollection.Objects {
+			innerIDs[o.GetID()] = true
+		}
+	}
+
+	// Outer incoming / outgoing (flows between this loop and its siblings).
+	// Only the first non-iterator edge counts as the external connection.
+	var outerFrom, outerTo string
+	for _, f := range flowsByOrigin[id] {
+		if innerIDs[f.DestinationID] {
+			continue // iterator edge, handled below
+		}
+		outerFrom = anchorSideKeyword(f.OriginConnectionIndex)
+		break
+	}
+	for _, f := range flowsByDest[id] {
+		if innerIDs[f.OriginID] {
+			continue // tail edge, handled below
+		}
+		outerTo = anchorSideKeyword(f.DestinationConnectionIndex)
+		break
+	}
+
+	// Iterator edge: loop → inner. There can only be one in a well-formed
+	// project; if the builder ever emits more we keep the first for now.
+	var iterFrom, iterTo string
+	for _, f := range flowsByOrigin[id] {
+		if !innerIDs[f.DestinationID] {
+			continue
+		}
+		iterFrom = anchorSideKeyword(f.OriginConnectionIndex)
+		iterTo = anchorSideKeyword(f.DestinationConnectionIndex)
+		break
+	}
+
+	// Tail edge: inner → loop.
+	var tailFrom, tailTo string
+	for _, f := range flowsByDest[id] {
+		if !innerIDs[f.OriginID] {
+			continue
+		}
+		tailFrom = anchorSideKeyword(f.OriginConnectionIndex)
+		tailTo = anchorSideKeyword(f.DestinationConnectionIndex)
+		break
+	}
+
+	if outerFrom == "" && outerTo == "" && iterFrom == "" && iterTo == "" && tailFrom == "" && tailTo == "" {
+		return
+	}
+
+	var parts []string
+	if outerFrom != "" {
+		parts = append(parts, "from: "+outerFrom)
+	}
+	if outerTo != "" {
+		parts = append(parts, "to: "+outerTo)
+	}
+	if p := branchAnchorFragment("iterator", iterFrom, iterTo); p != "" {
+		parts = append(parts, p)
+	}
+	if p := branchAnchorFragment("tail", tailFrom, tailTo); p != "" {
+		parts = append(parts, p)
+	}
+	if len(parts) == 0 {
+		return
+	}
+	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
+}
+
 // currentFlowsByDest / currentFlowsByOrigin are optional describer-global maps
 // (set up by the top-level describer entry point). emitObjectAnnotations reads
 // them when emitting @anchor lines so the existing callers don't have to be
@@ -234,16 +336,16 @@ func setDescriberFlowMaps(
 func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, indentStr string, annotationsByTarget map[model.ID][]string) {
 	currentID := obj.GetID()
 
-	// @position (always emit)
 	pos := obj.GetPosition()
 	*lines = append(*lines, indentStr+fmt.Sprintf("@position(%d, %d)", pos.X, pos.Y))
 
-	// @anchor (emit whenever attached flows exist, for roundtrip fidelity)
 	if currentFlowsByOrigin != nil && currentFlowsByDest != nil {
+		// @anchor — emit whenever attached flows exist, for roundtrip fidelity.
+		// The emitter sorts out the right form (simple / split / loop) based on
+		// the object type.
 		emitAnchorAnnotation(obj, currentFlowsByOrigin, currentFlowsByDest, lines, indentStr)
 	}
 
-	// @excluded, @caption, and @color (only for ActionActivity)
 	if activity, ok := obj.(*microflows.ActionActivity); ok {
 		if activity.Disabled {
 			*lines = append(*lines, indentStr+"@excluded")
