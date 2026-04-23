@@ -175,6 +175,8 @@ type AggregateListAction struct {
 	Function               AggregateFunction `json:"function"`
 	AttributeID            model.ID          `json:"attributeId,omitempty"`
 	AttributeQualifiedName string            `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
+	UseExpression          bool              `json:"useExpression,omitempty"`           // true when Expression is used instead of Attribute
+	Expression             string            `json:"expression,omitempty"`              // Mendix expression string (when UseExpression=true)
 }
 
 func (AggregateListAction) isMicroflowAction() {}
@@ -188,6 +190,7 @@ const (
 	AggregateFunctionAverage AggregateFunction = "Average"
 	AggregateFunctionMin     AggregateFunction = "Minimum"
 	AggregateFunctionMax     AggregateFunction = "Maximum"
+	AggregateFunctionReduce  AggregateFunction = "Reduce"
 )
 
 // ListOperationAction performs list operations.

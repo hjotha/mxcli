@@ -273,7 +273,11 @@ func formatAction(
 				attrName = parts[len(parts)-1]
 			}
 		}
-		// For aggregate functions that require an attribute (Sum, Average, Min, Max), show the attribute
+		// Expression-based aggregate: SUM($list, $currentObject/Attr + 1)
+		if a.UseExpression && a.Expression != "" {
+			return fmt.Sprintf("$%s = %s($%s, %s);", outputVar, strings.ToLower(fn), a.InputVariable, a.Expression)
+		}
+		// Attribute-based aggregate: SUM($list.Attr)
 		if attrName != "" && a.Function != microflows.AggregateFunctionCount {
 			return fmt.Sprintf("$%s = %s($%s.%s);", outputVar, strings.ToLower(fn), a.InputVariable, attrName)
 		}
