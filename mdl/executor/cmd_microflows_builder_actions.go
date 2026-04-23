@@ -759,8 +759,8 @@ func (fb *flowBuilder) isEntity(moduleName, entityName string) bool {
 
 // resolveMemberChange determines whether a member name is an association or attribute
 // and sets the appropriate field on the MemberChange. It queries the domain model
-// to check if the name matches an association on the entity; if no backend is available,
-// it falls back to the dot-contains heuristic.
+// to check if the name matches an association on the entity; if no metadata is
+// available, it falls back to a name-shape heuristic.
 //
 // memberName can be either bare ("Order_Customer") or qualified ("MfTest.Order_Customer").
 func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberName string, entityQN string) {
@@ -781,19 +781,7 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 		// Name even when the entity type is unknown. This avoids miscategorising
 		// something like `change $x (MyModule.MyEntity.Offset = 1)` as an
 		// association change.
-		if memberName == "" {
-			return
-		}
-		switch strings.Count(memberName, ".") {
-		case 0:
-			mc.AttributeQualifiedName = memberName
-		case 1:
-			mc.AssociationQualifiedName = memberName
-		default:
-			// Two or more dots: definitely not an association; preserve as
-			// qualified attribute.
-			mc.AttributeQualifiedName = memberName
-		}
+		resolveMemberChangeFallback(mc, memberName, "")
 		return
 	}
 
@@ -844,11 +832,31 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 		}
 	}
 
-	// Fallback: if already qualified (contains dot), treat as association
-	if strings.Contains(memberName, ".") {
+	resolveMemberChangeFallback(mc, memberName, entityQN)
+}
+
+// resolveMemberChangeFallback preserves the authored member name shape when the
+// entity metadata is unavailable.
+//
+//   - 0 dots  => bare attribute name. If entityQN is known, qualify it as
+//     `Module.Entity.Attribute`; otherwise preserve the bare attribute.
+//   - 1 dot   => association qualified by module (`Module.Association`).
+//   - >=2 dots => fully qualified attribute (`Module.Entity.Attribute`).
+func resolveMemberChangeFallback(mc *microflows.MemberChange, memberName string, entityQN string) {
+	if memberName == "" {
+		return
+	}
+	switch strings.Count(memberName, ".") {
+	case 0:
+		if entityQN == "" {
+			mc.AttributeQualifiedName = memberName
+		} else {
+			mc.AttributeQualifiedName = entityQN + "." + memberName
+		}
+	case 1:
 		mc.AssociationQualifiedName = memberName
-	} else {
-		mc.AttributeQualifiedName = entityQN + "." + memberName
+	default:
+		mc.AttributeQualifiedName = memberName
 	}
 }
 
