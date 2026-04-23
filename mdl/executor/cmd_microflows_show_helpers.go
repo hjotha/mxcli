@@ -180,12 +180,10 @@ func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, inde
 	}
 
 	if split, ok := obj.(*microflows.ExclusiveSplit); ok && split.Caption != "" {
-		escapedCaption := strings.ReplaceAll(split.Caption, "'", "''")
-		*lines = append(*lines, indentStr+fmt.Sprintf("@caption '%s'", escapedCaption))
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
 	}
 	if split, ok := obj.(*microflows.InheritanceSplit); ok && split.Caption != "" {
-		escapedCaption := strings.ReplaceAll(split.Caption, "'", "''")
-		*lines = append(*lines, indentStr+fmt.Sprintf("@caption '%s'", escapedCaption))
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
 	}
 
 	// @annotation (attached Annotation objects)

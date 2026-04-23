@@ -114,17 +114,28 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		fb.endsWithReturn = false
 
 		var lastThenID model.ID
+		var prevThenAnchor *ast.FlowAnchors
 		for _, stmt := range s.ThenBody {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
 				if lastThenID == "" {
-					// First statement in THEN - connect from split with "true" case
+					// First statement in THEN - connect from split with "true" case.
+					// Origin: trueBranchAnchor.From (if set) — anchor on the split side.
+					// Destination: prefer the first statement's own @anchor(to: ...) if it
+					// has one; otherwise fall back to trueBranchAnchor.To.
 					flow := newHorizontalFlowWithCase(splitID, actID, "true")
 					applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
+					if thisAnchor != nil && thisAnchor.To != ast.AnchorSideUnset {
+						flow.DestinationConnectionIndex = int(thisAnchor.To)
+					}
 					fb.flows = append(fb.flows, flow)
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastThenID, actID))
+					flow := newHorizontalFlow(lastThenID, actID)
+					applyUserAnchors(flow, prevThenAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 				}
+				prevThenAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastThenID = fb.nextConnectionPoint
@@ -140,7 +151,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// nextConnectionPoint/nextFlowCase, so we must not emit a dangling flow here.
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
-				fb.flows = append(fb.flows, newHorizontalFlow(lastThenID, mergeID))
+				flow := newHorizontalFlow(lastThenID, mergeID)
+				applyUserAnchors(flow, prevThenAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			} else {
 				// Empty THEN body - connect split directly to merge with true case
 				flow := newHorizontalFlowWithCase(splitID, mergeID, "true")
@@ -156,17 +169,26 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		fb.endsWithReturn = false
 
 		var lastElseID model.ID
+		var prevElseAnchor *ast.FlowAnchors
 		for _, stmt := range s.ElseBody {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
 				if lastElseID == "" {
-					// First statement in ELSE - connect from split going down (false path)
+					// First statement in ELSE - connect from split going down (false path).
+					// Same compositional rule as the THEN branch.
 					flow := newDownwardFlowWithCase(splitID, actID, "false")
 					applyUserAnchors(flow, falseBranchAnchor, falseBranchAnchor)
+					if thisAnchor != nil && thisAnchor.To != ast.AnchorSideUnset {
+						flow.DestinationConnectionIndex = int(thisAnchor.To)
+					}
 					fb.flows = append(fb.flows, flow)
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastElseID, actID))
+					flow := newHorizontalFlow(lastElseID, actID)
+					applyUserAnchors(flow, prevElseAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 				}
+				prevElseAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastElseID = fb.nextConnectionPoint
@@ -182,7 +204,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// a flow with an empty mergeID would create an orphan SequenceFlow.
 		if !elseReturns && needMerge {
 			if lastElseID != "" {
-				fb.flows = append(fb.flows, newUpwardFlow(lastElseID, mergeID))
+				flow := newUpwardFlow(lastElseID, mergeID)
+				applyUserAnchors(flow, prevElseAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			}
 		}
 	} else {
@@ -205,17 +229,25 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		fb.endsWithReturn = false
 
 		var lastThenID model.ID
+		var prevThenAnchor *ast.FlowAnchors
 		for _, stmt := range s.ThenBody {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
 				if lastThenID == "" {
 					// First statement in THEN - connect from split going down with "true" case
 					flow := newDownwardFlowWithCase(splitID, actID, "true")
 					applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
+					if thisAnchor != nil && thisAnchor.To != ast.AnchorSideUnset {
+						flow.DestinationConnectionIndex = int(thisAnchor.To)
+					}
 					fb.flows = append(fb.flows, flow)
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastThenID, actID))
+					flow := newHorizontalFlow(lastThenID, actID)
+					applyUserAnchors(flow, prevThenAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 				}
+				prevThenAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastThenID = fb.nextConnectionPoint
@@ -231,7 +263,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// the parent — any flow emitted here would dangle with mergeID="".
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
-				fb.flows = append(fb.flows, newUpwardFlow(lastThenID, mergeID))
+				flow := newUpwardFlow(lastThenID, mergeID)
+				applyUserAnchors(flow, prevThenAnchor, nil)
+				fb.flows = append(fb.flows, flow)
 			} else {
 				// Empty THEN body - connect split directly to merge going down and back up
 				flow := newDownwardFlowWithCase(splitID, mergeID, "true")

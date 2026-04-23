@@ -189,7 +189,14 @@ func expressionToString(expr ast.Expression) string {
 	case *ast.LiteralExpr:
 		switch e.Kind {
 		case ast.LiteralString:
-			return mdlQuote(fmt.Sprintf("%v", e.Value))
+			// Mendix expression string literals are not MDL-escaped — the
+			// expression engine interprets backslash characters literally
+			// (e.g. `\d` is two chars inside a regex, not an escape). Using
+			// mdlQuote here would duplicate every `\`, breaking regexes and
+			// any other string that relies on backslash passthrough. We only
+			// escape the apostrophe because that is the literal's own
+			// delimiter.
+			return "'" + strings.ReplaceAll(fmt.Sprintf("%v", e.Value), "'", "''") + "'"
 		case ast.LiteralBoolean:
 			if e.Value.(bool) {
 				return "true"

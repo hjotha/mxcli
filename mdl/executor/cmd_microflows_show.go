@@ -280,8 +280,7 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 		if len(freeAnnots) > 0 && len(activityLines) > 0 {
 			prefix := make([]string, 0, len(freeAnnots))
 			for _, text := range freeAnnots {
-				escaped := strings.ReplaceAll(text, "'", "''")
-				prefix = append(prefix, fmt.Sprintf("@annotation '%s'", escaped))
+				prefix = append(prefix, fmt.Sprintf("@annotation %s", mdlQuote(text)))
 			}
 			activityLines = append(prefix, activityLines...)
 		}
@@ -546,8 +545,7 @@ func renderMicroflowMDL(
 		if len(freeAnnots) > 0 && len(activityLines) > 0 {
 			prefix := make([]string, 0, len(freeAnnots))
 			for _, text := range freeAnnots {
-				escaped := strings.ReplaceAll(text, "'", "''")
-				prefix = append(prefix, fmt.Sprintf("@annotation '%s'", escaped))
+				prefix = append(prefix, fmt.Sprintf("@annotation %s", mdlQuote(text)))
 			}
 			activityLines = append(prefix, activityLines...)
 		}
