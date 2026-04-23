@@ -365,7 +365,7 @@ func formatAction(
 		// Output it as-is since it's already stored as an expression
 		node := a.LogNodeName
 		if node == "" {
-			node = "'Application'" // Default value as a string literal expression
+			node = defaultLogNodeExpression
 		}
 		message := "'Message'"
 		if a.MessageTemplate != nil && len(a.MessageTemplate.Translations) > 0 {
