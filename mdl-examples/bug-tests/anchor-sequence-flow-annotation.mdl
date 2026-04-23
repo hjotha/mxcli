@@ -14,6 +14,7 @@
 -- Syntax:
 --   @anchor(from: X, to: Y)       — anchors for the single outgoing flow
 --   @anchor(true: (from:..., to:...), false: (from:..., to:...))  — IF
+--   @anchor(iterator: (from:..., to:...), tail: (from:..., to:...)) — LOOP/WHILE
 --
 -- Each side is independently optional. Missing sides fall back to the
 -- builder's default for the visual flow direction.
@@ -55,5 +56,41 @@ begin
   end if;
 
   return $result;
+end;
+/
+
+-- ============================================================================
+-- LOOP / WHILE body anchors
+-- ============================================================================
+-- The grammar accepts @anchor(iterator: (...), tail: (...)) on LOOP and
+-- WHILE statements so authoring tools can forward-propagate the intent, but
+-- the builder deliberately does NOT translate them into SequenceFlows.
+-- Mendix rejects edges between a LoopedActivity and its body statements with
+-- CE0709 "Sequence flow is not accepted by origin or destination" — the
+-- iterator icon is drawn implicitly from the LoopedActivity geometry.
+-- Keeping the grammar slot reserved means existing scripts continue to parse
+-- if a future Mendix version starts supporting these edges.
+
+create entity BugTestAnchor.Item (
+  Label: String(100)
+);
+
+create microflow BugTestAnchor.MF_LoopAnchors ()
+begin
+  retrieve $items from BugTestAnchor.Item;
+
+  @anchor(iterator: (from: bottom, to: top), tail: (from: right, to: bottom))
+  loop $item in $items begin
+    log info node 'App' 'step';
+  end loop;
+end;
+/
+
+create microflow BugTestAnchor.MF_WhileAnchors ()
+begin
+  @anchor(iterator: (from: bottom, to: left), tail: (from: top, to: right))
+  while true begin
+    log info node 'App' 'tick';
+  end while;
 end;
 /
