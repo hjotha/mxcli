@@ -531,7 +531,12 @@ func traverseFlow(
 				traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
-			if falseFlow != nil {
+			// Emit the ELSE branch only if it has statements. When the false
+			// flow jumps straight to the merge (the MDL was `if X then ... end if`
+			// with no else), emitting `else` with no body produces an empty
+			// branch that normalizes away on re-parse.
+			falseHasBody := falseFlow != nil && falseFlow.DestinationID != mergeID
+			if falseHasBody {
 				*lines = append(*lines, indentStr+"else")
 				visitedFalseBranch := make(map[model.ID]bool)
 				for id := range visited {
