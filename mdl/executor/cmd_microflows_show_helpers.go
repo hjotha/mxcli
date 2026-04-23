@@ -78,10 +78,18 @@ func anchorSideKeyword(idx int) string {
 	}
 }
 
-// emitAnchorAnnotation emits an @anchor(from: X, to: Y) line based on the
-// incoming and outgoing SequenceFlows for this object. Either side is omitted
-// when its flow does not exist (e.g. the StartEvent has no incoming flow).
-// Nothing is emitted when the object has no attached flows.
+// emitAnchorAnnotation emits an @anchor(...) line describing the incoming and
+// outgoing SequenceFlow anchors for this object. Nothing is emitted when the
+// object has no attached flows.
+//
+// For ExclusiveSplit / InheritanceSplit the split has up to two outgoing flows
+// (true/false), so instead of the simple from/to form we emit the branch form:
+//
+//	@anchor(to: X, true: (from: Y, to: Z), false: (from: Y, to: Z))
+//
+// Any of the three groups is omitted when its constituent values are both
+// default (so a non-annotated split produces no line). Non-split objects use
+// the simple @anchor(from: X, to: Y) form.
 func emitAnchorAnnotation(
 	obj microflows.MicroflowObject,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
@@ -91,13 +99,12 @@ func emitAnchorAnnotation(
 ) {
 	id := obj.GetID()
 
-	// @anchor describes the primary flow leaving this object and the primary
-	// incoming flow. For splits we skip the simple form — TRUE/FALSE per-branch
-	// anchors are emitted on the statements inside each branch instead.
 	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
+		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr)
 		return
 	}
 	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit {
+		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr)
 		return
 	}
 
@@ -120,6 +127,81 @@ func emitAnchorAnnotation(
 		parts = append(parts, "to: "+to)
 	}
 	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
+}
+
+// emitSplitAnchorAnnotation emits the split form of @anchor — the incoming
+// `to: X` plus per-branch `true: (...)` / `false: (...)` — whenever any of the
+// three has a non-default value. The rendering matches the grammar accepted
+// by parseAnchorAnnotation so describe → exec roundtrips bit-exactly.
+func emitSplitAnchorAnnotation(
+	id model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	lines *[]string,
+	indentStr string,
+) {
+	// Incoming flow anchor (where the previous activity's flow lands on the split).
+	var inTo string
+	if incoming := flowsByDest[id]; len(incoming) > 0 {
+		inTo = anchorSideKeyword(incoming[0].DestinationConnectionIndex)
+	}
+
+	// Scan outgoing flows: identify the TRUE and FALSE branches by their
+	// CaseValue (EnumerationCase with Value "true" / "false").
+	var trueFrom, trueTo, falseFrom, falseTo string
+	for _, f := range flowsByOrigin[id] {
+		branchValue := ""
+		switch c := f.CaseValue.(type) {
+		case *microflows.EnumerationCase:
+			branchValue = c.Value
+		case microflows.EnumerationCase:
+			branchValue = c.Value
+		}
+		switch branchValue {
+		case "true":
+			trueFrom = anchorSideKeyword(f.OriginConnectionIndex)
+			// The destination activity's incoming anchor is stored on the flow.
+			trueTo = anchorSideKeyword(f.DestinationConnectionIndex)
+		case "false":
+			falseFrom = anchorSideKeyword(f.OriginConnectionIndex)
+			falseTo = anchorSideKeyword(f.DestinationConnectionIndex)
+		}
+	}
+
+	if inTo == "" && trueFrom == "" && trueTo == "" && falseFrom == "" && falseTo == "" {
+		return
+	}
+
+	var parts []string
+	if inTo != "" {
+		parts = append(parts, "to: "+inTo)
+	}
+	if p := branchAnchorFragment("true", trueFrom, trueTo); p != "" {
+		parts = append(parts, p)
+	}
+	if p := branchAnchorFragment("false", falseFrom, falseTo); p != "" {
+		parts = append(parts, p)
+	}
+	if len(parts) == 0 {
+		return
+	}
+	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
+}
+
+// branchAnchorFragment builds a `key: (from: X, to: Y)` fragment for a branch
+// anchor. Returns "" when both sides are empty (default).
+func branchAnchorFragment(label, from, to string) string {
+	if from == "" && to == "" {
+		return ""
+	}
+	var inner []string
+	if from != "" {
+		inner = append(inner, "from: "+from)
+	}
+	if to != "" {
+		inner = append(inner, "to: "+to)
+	}
+	return fmt.Sprintf("%s: (%s)", label, strings.Join(inner, ", "))
 }
 
 // currentFlowsByDest / currentFlowsByOrigin are optional describer-global maps
