@@ -155,9 +155,11 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				applyUserAnchors(flow, prevThenAnchor, nil)
 				fb.flows = append(fb.flows, flow)
 			} else {
-				// Empty THEN body - connect split directly to merge with true case
+				// Empty THEN body - connect split directly to merge with true case.
+				// Pass trueBranchAnchor as destination too so the @anchor(true: (..., to: Y))
+				// from the describer round-trips into the merge side of the flow.
 				flow := newHorizontalFlowWithCase(splitID, mergeID, "true")
-				applyUserAnchors(flow, trueBranchAnchor, nil)
+				applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
 				fb.flows = append(fb.flows, flow)
 			}
 		}
@@ -214,9 +216,11 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// This keeps the "do nothing" path straight and the "do something" path below
 
 		if needMerge {
-			// FALSE path: connect split directly to merge horizontally
+			// FALSE path: connect split directly to merge horizontally.
+			// Pass falseBranchAnchor as destination too so @anchor(false: (..., to: Y))
+			// round-trips through the merge side of the split-to-merge flow.
 			flow := newHorizontalFlowWithCase(splitID, mergeID, "false")
-			applyUserAnchors(flow, falseBranchAnchor, nil)
+			applyUserAnchors(flow, falseBranchAnchor, falseBranchAnchor)
 			fb.flows = append(fb.flows, flow)
 		}
 		// When !needMerge (thenReturns): FALSE flow is deferred — the parent will
@@ -267,9 +271,11 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				applyUserAnchors(flow, prevThenAnchor, nil)
 				fb.flows = append(fb.flows, flow)
 			} else {
-				// Empty THEN body - connect split directly to merge going down and back up
+				// Empty THEN body - connect split directly to merge going down and back up.
+				// Pass trueBranchAnchor as destination too so @anchor(true: (..., to: Y))
+				// round-trips into the merge side of the flow.
 				flow := newDownwardFlowWithCase(splitID, mergeID, "true")
-				applyUserAnchors(flow, trueBranchAnchor, nil)
+				applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
 				fb.flows = append(fb.flows, flow)
 			}
 		}
