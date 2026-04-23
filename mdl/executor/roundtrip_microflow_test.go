@@ -148,7 +148,7 @@ func TestRoundtripMicroflow_LogWithNodeExpression(t *testing.T) {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
-	if !containsProperty(output, "LOG INFO NODE @"+testModule+".SecurityLogNode") {
+	if !containsProperty(output, "log info node @"+testModule+".SecurityLogNode") {
 		t.Fatalf("Expected constant node expression in output, got:\n%s", output)
 	}
 
