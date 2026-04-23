@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Path normalization** — Relative paths in `MetadataUrl` are automatically converted to absolute `file://` URLs for Studio Pro compatibility
 - **ServiceUrl validation** — `ServiceUrl` parameter must now be a constant reference (e.g., `@Module.ConstantName`) to enforce Mendix best practice
 - **Shared URL utilities** — `internal/pathutil` package with `NormalizeURL()`, `URIToPath()`, and `PathFromURL()` for reuse across components
+
+### Changed
+
+- **MDL string literal escapes** — `mdlQuote`/`unquoteString` now treat `\n`, `\r`, `\t`, and `\\` inside single-quoted literals as escape sequences (previously a literal backslash followed by the letter). This is a compatibility break for any MDL script that intentionally embedded a raw `\n` / `\t` / `\\` as two characters; such scripts must now double the backslash (`\\n` to preserve the two-character form). Applies to `LOG` messages, `@caption`/`@annotation` text, and other string literals round-tripped via the describer.
+
 ## [0.7.0] - 2026-04-21
 
 ### Added
