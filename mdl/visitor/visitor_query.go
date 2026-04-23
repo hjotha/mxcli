@@ -829,6 +829,17 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 		return
 	}
 
+	// Handle DESCRIBE CONTRACT OPERATION FROM OPENAPI '/path/to/spec.json'
+	// This rule uses a STRING_LITERAL (not a qualifiedName) and needs no project connection.
+	if ctx.CONTRACT() != nil && ctx.OPERATION() != nil && ctx.FROM() != nil && ctx.OPENAPI() != nil {
+		if sl := ctx.STRING_LITERAL(); sl != nil {
+			b.statements = append(b.statements, &ast.DescribeContractFromOpenAPIStmt{
+				SpecPath: unquoteString(sl.GetText()),
+			})
+		}
+		return
+	}
+
 	// All other DESCRIBE statements use qualifiedName
 	qn := ctx.QualifiedName()
 	if qn == nil {

@@ -12,7 +12,7 @@ func init() {
 			"integration", "services", "external", "contract",
 			"odata", "rest", "business events", "database",
 		},
-		Syntax: "SHOW ODATA CLIENTS [IN Module];\nSHOW REST CLIENTS [IN Module];\nSHOW PUBLISHED REST SERVICES [IN Module];\nSHOW BUSINESS EVENT SERVICES [IN Module];\nSHOW DATABASE CONNECTIONS [IN Module];\nSHOW EXTERNAL ENTITIES [IN Module];\nSHOW EXTERNAL ACTIONS [IN Module];",
+		Syntax:  "SHOW ODATA CLIENTS [IN Module];\nSHOW REST CLIENTS [IN Module];\nSHOW PUBLISHED REST SERVICES [IN Module];\nSHOW BUSINESS EVENT SERVICES [IN Module];\nSHOW DATABASE CONNECTIONS [IN Module];\nSHOW EXTERNAL ENTITIES [IN Module];\nSHOW EXTERNAL ACTIONS [IN Module];",
 		Example: "SHOW ODATA CLIENTS;\nSHOW REST CLIENTS IN MyModule;\nSHOW EXTERNAL ENTITIES;\nSELECT * FROM CATALOG.REST_CLIENTS;",
 		SeeAlso: []string{"odata", "rest", "sql", "business-events"},
 	})
@@ -26,7 +26,7 @@ func init() {
 			"odata", "consumed odata", "published odata",
 			"external entity", "external entities", "metadata",
 		},
-		Syntax: "SHOW ODATA CLIENTS [IN Module];\nSHOW ODATA SERVICES [IN Module];\nSHOW EXTERNAL ENTITIES [IN Module];\nSHOW EXTERNAL ACTIONS [IN Module];\nDESCRIBE ODATA CLIENT Module.Name;\nDESCRIBE ODATA SERVICE Module.Name;",
+		Syntax:  "SHOW ODATA CLIENTS [IN Module];\nSHOW ODATA SERVICES [IN Module];\nSHOW EXTERNAL ENTITIES [IN Module];\nSHOW EXTERNAL ACTIONS [IN Module];\nDESCRIBE ODATA CLIENT Module.Name;\nDESCRIBE ODATA SERVICE Module.Name;",
 		Example: "SHOW ODATA CLIENTS;\nDESCRIBE ODATA CLIENT MyModule.ExternalAPI;\nSHOW EXTERNAL ENTITIES IN MyModule;",
 		SeeAlso: []string{"odata.consume", "odata.show", "integration"},
 	})
@@ -38,7 +38,7 @@ func init() {
 			"create odata client", "consume odata", "external entity",
 			"metadata url", "odata4", "headers", "proxy",
 		},
-		Syntax: "CREATE ODATA CLIENT Module.Name (\n  Version: '1.0',\n  ODataVersion: OData4,\n  MetadataUrl: 'https://.../$metadata',\n  Timeout: 300\n)\n[HEADERS ('Key': 'Value')];\n\nCREATE EXTERNAL ENTITY Module.Name\n  FROM ODATA CLIENT Module.Client\n  (EntitySet: 'Name', RemoteName: 'Name')\n  (Attr: Type, ...);\n\nCREATE EXTERNAL ENTITIES FROM Module.Client\n  [INTO Module] [ENTITIES (Name1, Name2)];",
+		Syntax:  "CREATE ODATA CLIENT Module.Name (\n  Version: '1.0',\n  ODataVersion: OData4,\n  MetadataUrl: 'https://.../$metadata',\n  Timeout: 300\n)\n[HEADERS ('Key': 'Value')];\n\nCREATE EXTERNAL ENTITY Module.Name\n  FROM ODATA CLIENT Module.Client\n  (EntitySet: 'Name', RemoteName: 'Name')\n  (Attr: Type, ...);\n\nCREATE EXTERNAL ENTITIES FROM Module.Client\n  [INTO Module] [ENTITIES (Name1, Name2)];",
 		Example: "CREATE ODATA CLIENT MyModule.SalesforceAPI (\n  Version: '1.0',\n  ODataVersion: OData4,\n  MetadataUrl: 'https://api.example.com/odata/$metadata',\n  Timeout: 300\n);\n\nCREATE EXTERNAL ENTITIES FROM MyModule.SalesforceAPI INTO Integration;",
 		SeeAlso: []string{"odata", "odata.show"},
 	})
@@ -50,7 +50,7 @@ func init() {
 			"contract", "show contract", "describe contract",
 			"metadata", "entity type", "action", "navigation property",
 		},
-		Syntax: "SHOW CONTRACT ENTITIES FROM Module.Client;\nSHOW CONTRACT ACTIONS FROM Module.Client;\nDESCRIBE CONTRACT ENTITY Module.Client.EntityName;\nDESCRIBE CONTRACT ENTITY Module.Client.EntityName FORMAT mdl;\nDESCRIBE CONTRACT ACTION Module.Client.ActionName;",
+		Syntax:  "SHOW CONTRACT ENTITIES FROM Module.Client;\nSHOW CONTRACT ACTIONS FROM Module.Client;\nDESCRIBE CONTRACT ENTITY Module.Client.EntityName;\nDESCRIBE CONTRACT ENTITY Module.Client.EntityName FORMAT mdl;\nDESCRIBE CONTRACT ACTION Module.Client.ActionName;",
 		Example: "SHOW CONTRACT ENTITIES FROM MyModule.SalesforceAPI;\nDESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.Product;\nDESCRIBE CONTRACT ENTITY MyModule.SalesforceAPI.Product FORMAT mdl;",
 		SeeAlso: []string{"odata", "odata.consume"},
 	})
@@ -64,7 +64,7 @@ func init() {
 			"rest", "rest client", "rest service",
 			"published rest", "api", "http",
 		},
-		Syntax: "SHOW REST CLIENTS [IN Module];\nSHOW PUBLISHED REST SERVICES [IN Module];\nDESCRIBE REST CLIENT Module.Name;\nDESCRIBE PUBLISHED REST SERVICE Module.Name;",
+		Syntax:  "SHOW REST CLIENTS [IN Module];\nSHOW PUBLISHED REST SERVICES [IN Module];\nDESCRIBE REST CLIENT Module.Name;\nDESCRIBE PUBLISHED REST SERVICE Module.Name;",
 		Example: "SHOW REST CLIENTS;\nDESCRIBE REST CLIENT MyModule.PetStoreAPI;\nSHOW PUBLISHED REST SERVICES IN MyModule;",
 		SeeAlso: []string{"rest.consumed", "rest.published", "integration"},
 	})
@@ -78,7 +78,7 @@ func init() {
 			"body", "response", "mapping", "authentication",
 			"json structure", "import mapping", "export mapping",
 		},
-		Syntax: "CREATE [OR MODIFY] REST CLIENT Module.Name (\n  BaseUrl: 'https://...',\n  Authentication: NONE | BASIC (...)\n)\n{\n  OPERATION Name {\n    Method: GET|POST|PUT|DELETE|PATCH,\n    Path: '/path/{param}',\n    Parameters: ($param: Type),\n    Headers: ('Key' = 'Value'),\n    Body: JSON FROM $var | MAPPING Entity { ... },\n    Response: JSON AS $var | MAPPING Entity { ... }\n  }\n};",
+		Syntax:  "CREATE [OR MODIFY] REST CLIENT Module.Name (\n  BaseUrl: 'https://...',\n  Authentication: NONE | BASIC (...)\n)\n{\n  OPERATION Name {\n    Method: GET|POST|PUT|DELETE|PATCH,\n    Path: '/path/{param}',\n    Parameters: ($param: Type),\n    Headers: ('Key' = 'Value'),\n    Body: JSON FROM $var | MAPPING Entity { ... },\n    Response: JSON AS $var | MAPPING Entity { ... }\n  }\n};",
 		Example: "CREATE REST CLIENT Module.PetStore (\n  BaseUrl: 'https://petstore.example.com/api',\n  Authentication: NONE\n)\n{\n  OPERATION GetPet {\n    Method: GET,\n    Path: '/pets/{id}',\n    Parameters: ($id: String),\n    Response: JSON AS $Result\n  }\n};",
 		SeeAlso: []string{"rest", "rest.published"},
 	})
@@ -91,7 +91,7 @@ func init() {
 			"rest operation", "microflow", "path parameter",
 			"grant access", "revoke access",
 		},
-		Syntax: "CREATE [OR REPLACE] PUBLISHED REST SERVICE Module.Name (\n  Path: 'rest/api/v1',\n  Version: '1.0.0',\n  ServiceName: 'My API'\n)\n{\n  RESOURCE 'name' {\n    GET '' MICROFLOW Module.GetAll;\n    GET '{id}' MICROFLOW Module.GetById;\n    POST '' MICROFLOW Module.Create;\n  }\n};\n\nALTER PUBLISHED REST SERVICE Module.Name SET Version = '2.0.0';\nALTER PUBLISHED REST SERVICE Module.Name ADD RESOURCE 'items' { ... };\nALTER PUBLISHED REST SERVICE Module.Name DROP RESOURCE 'legacy';\nDROP PUBLISHED REST SERVICE Module.Name;",
+		Syntax:  "CREATE [OR REPLACE] PUBLISHED REST SERVICE Module.Name (\n  Path: 'rest/api/v1',\n  Version: '1.0.0',\n  ServiceName: 'My API'\n)\n{\n  RESOURCE 'name' {\n    GET '' MICROFLOW Module.GetAll;\n    GET '{id}' MICROFLOW Module.GetById;\n    POST '' MICROFLOW Module.Create;\n  }\n};\n\nALTER PUBLISHED REST SERVICE Module.Name SET Version = '2.0.0';\nALTER PUBLISHED REST SERVICE Module.Name ADD RESOURCE 'items' { ... };\nALTER PUBLISHED REST SERVICE Module.Name DROP RESOURCE 'legacy';\nDROP PUBLISHED REST SERVICE Module.Name;",
 		Example: "CREATE PUBLISHED REST SERVICE Module.OrderAPI (\n  Path: 'rest/orders/v1',\n  Version: '1.0.0',\n  ServiceName: 'Order API'\n)\n{\n  RESOURCE 'orders' {\n    GET '' MICROFLOW Module.GetAllOrders;\n    GET '{id}' MICROFLOW Module.GetOrderById;\n    POST '' MICROFLOW Module.CreateOrder;\n    DELETE '{id}' MICROFLOW Module.DeleteOrder;\n  }\n};\n\nGRANT ACCESS ON PUBLISHED REST SERVICE Module.OrderAPI\n  TO Module.User, Module.Admin;",
 		SeeAlso: []string{"rest", "rest.consumed"},
 	})
@@ -105,7 +105,7 @@ func init() {
 			"sql", "external sql", "database", "postgres",
 			"oracle", "sqlserver", "mssql", "query",
 		},
-		Syntax: "SQL CONNECT <driver> '<dsn>' AS <alias>;\nSQL <alias> SHOW TABLES;\nSQL <alias> SELECT ...;\nSQL CONNECTIONS;\nSQL DISCONNECT <alias>;",
+		Syntax:  "SQL CONNECT <driver> '<dsn>' AS <alias>;\nSQL <alias> SHOW TABLES;\nSQL <alias> SELECT ...;\nSQL CONNECTIONS;\nSQL DISCONNECT <alias>;",
 		Example: "SQL CONNECT postgres 'postgres://user:pass@localhost:5432/mydb' AS source;\nSQL source SHOW TABLES;\nSQL source SELECT * FROM users WHERE active = true LIMIT 10;\nSQL DISCONNECT source;",
 		SeeAlso: []string{"sql.connect", "sql.query", "sql.import", "sql.generate"},
 	})
@@ -118,7 +118,7 @@ func init() {
 			"postgres", "oracle", "sqlserver", "driver",
 			"connections.yaml", "credential",
 		},
-		Syntax: "SQL CONNECT <driver> '<dsn>' AS <alias>;\nSQL CONNECT postgres '<dsn>' AS <alias>;\nSQL CONNECT oracle '<dsn>' AS <alias>;\nSQL CONNECT sqlserver '<dsn>' AS <alias>;\nSQL CONNECTIONS;\nSQL DISCONNECT <alias>;",
+		Syntax:  "SQL CONNECT <driver> '<dsn>' AS <alias>;\nSQL CONNECT postgres '<dsn>' AS <alias>;\nSQL CONNECT oracle '<dsn>' AS <alias>;\nSQL CONNECT sqlserver '<dsn>' AS <alias>;\nSQL CONNECTIONS;\nSQL DISCONNECT <alias>;",
 		Example: "SQL CONNECT postgres 'postgres://user:pass@localhost:5432/mydb' AS source;\nSQL CONNECTIONS;\nSQL DISCONNECT source;",
 		SeeAlso: []string{"sql", "sql.query"},
 	})
@@ -130,7 +130,7 @@ func init() {
 			"sql query", "sql select", "show tables",
 			"describe table", "sql insert", "sql execute",
 		},
-		Syntax: "SQL <alias> SHOW TABLES;\nSQL <alias> SHOW VIEWS;\nSQL <alias> SHOW FUNCTIONS;\nSQL <alias> DESCRIBE <table>;\nSQL <alias> SELECT ...;\nSQL <alias> INSERT ...;",
+		Syntax:  "SQL <alias> SHOW TABLES;\nSQL <alias> SHOW VIEWS;\nSQL <alias> SHOW FUNCTIONS;\nSQL <alias> DESCRIBE <table>;\nSQL <alias> SELECT ...;\nSQL <alias> INSERT ...;",
 		Example: "SQL source SHOW TABLES;\nSQL source DESCRIBE users;\nSQL source SELECT * FROM users WHERE active = true LIMIT 10;",
 		SeeAlso: []string{"sql.connect", "sql.import"},
 	})
@@ -142,7 +142,7 @@ func init() {
 			"import", "import from", "import into", "map",
 			"batch", "link", "association", "data migration",
 		},
-		Syntax: "IMPORT FROM <alias> QUERY '<sql>'\n  INTO Module.Entity\n  MAP (col AS Attr, ...)\n  [LINK (col TO Assoc ON Attr, ...)]\n  [BATCH n]\n  [LIMIT n];",
+		Syntax:  "IMPORT FROM <alias> QUERY '<sql>'\n  INTO Module.Entity\n  MAP (col AS Attr, ...)\n  [LINK (col TO Assoc ON Attr, ...)]\n  [BATCH n]\n  [LIMIT n];",
 		Example: "IMPORT FROM source QUERY 'SELECT name, email FROM employees'\n  INTO HR.Employee\n  MAP (name AS Name, email AS Email);\n\nIMPORT FROM source QUERY 'SELECT name, dept_name FROM employees'\n  INTO HR.Employee\n  MAP (name AS Name)\n  LINK (dept_name TO Employee_Department ON Name)\n  BATCH 500\n  LIMIT 10000;",
 		SeeAlso: []string{"sql", "sql.connect"},
 	})
@@ -154,7 +154,7 @@ func init() {
 			"generate connector", "database connector",
 			"constants", "non-persistent entity", "jdbc",
 		},
-		Syntax: "SQL <alias> GENERATE CONNECTOR INTO Module\n  [TABLES (t1, t2)]\n  [VIEWS (v1, v2)]\n  [EXEC];",
+		Syntax:  "SQL <alias> GENERATE CONNECTOR INTO Module\n  [TABLES (t1, t2)]\n  [VIEWS (v1, v2)]\n  [EXEC];",
 		Example: "SQL source GENERATE CONNECTOR INTO HRModule;\nSQL source GENERATE CONNECTOR INTO HRModule TABLES (employees, departments) EXEC;",
 		SeeAlso: []string{"sql", "sql.connect"},
 	})
@@ -168,7 +168,7 @@ func init() {
 			"oql", "query", "runtime", "m2ee",
 			"aggregate", "view entity", "mxcli oql",
 		},
-		Syntax: "mxcli oql -p app.mpr \"SELECT ...\";\nmxcli oql -p app.mpr --json \"SELECT ...\";\nmxcli oql --direct --host localhost --port 8090 --token 'pass' \"SELECT ...\";",
+		Syntax:  "mxcli oql -p app.mpr \"SELECT ...\";\nmxcli oql -p app.mpr --json \"SELECT ...\";\nmxcli oql --direct --host localhost --port 8090 --token 'pass' \"SELECT ...\";",
 		Example: "mxcli oql -p app.mpr \"SELECT Name, Email FROM MyModule.Customer\";\nmxcli oql -p app.mpr --json \"SELECT count(c.ID) FROM MyModule.Order AS c\" | jq '.[0]';",
 		SeeAlso: []string{"sql"},
 	})
@@ -182,7 +182,7 @@ func init() {
 			"business event", "business events", "kafka",
 			"publish", "subscribe", "message", "event channel",
 		},
-		Syntax: "SHOW BUSINESS EVENT SERVICES [IN Module];\nSHOW BUSINESS EVENTS [IN Module];\nDESCRIBE BUSINESS EVENT SERVICE Module.Name;\nCREATE [OR REPLACE] BUSINESS EVENT SERVICE Module.Name (...) { ... };\nDROP BUSINESS EVENT SERVICE Module.Name;",
+		Syntax:  "SHOW BUSINESS EVENT SERVICES [IN Module];\nSHOW BUSINESS EVENTS [IN Module];\nDESCRIBE BUSINESS EVENT SERVICE Module.Name;\nCREATE [OR REPLACE] BUSINESS EVENT SERVICE Module.Name (...) { ... };\nDROP BUSINESS EVENT SERVICE Module.Name;",
 		Example: "SHOW BUSINESS EVENT SERVICES;\nDESCRIBE BUSINESS EVENT SERVICE Module.CustomerEventsApi;",
 		SeeAlso: []string{"business-events.create", "integration"},
 	})
@@ -195,7 +195,7 @@ func init() {
 			"message", "publish", "subscribe", "entity",
 			"event name prefix",
 		},
-		Syntax: "CREATE [OR REPLACE] BUSINESS EVENT SERVICE Module.Name\n(\n  ServiceName: 'Name',\n  EventNamePrefix: ''\n)\n{\n  MESSAGE EventName (Attr: Type, ...) PUBLISH|SUBSCRIBE\n    ENTITY Module.PBE_Entity;\n};\n\nDROP BUSINESS EVENT SERVICE Module.Name;",
+		Syntax:  "CREATE [OR REPLACE] BUSINESS EVENT SERVICE Module.Name\n(\n  ServiceName: 'Name',\n  EventNamePrefix: ''\n)\n{\n  MESSAGE EventName (Attr: Type, ...) PUBLISH|SUBSCRIBE\n    ENTITY Module.PBE_Entity;\n};\n\nDROP BUSINESS EVENT SERVICE Module.Name;",
 		Example: "CREATE BUSINESS EVENT SERVICE Module.CustomerEventsApi\n(\n  ServiceName: 'CustomerEventsApi',\n  EventNamePrefix: ''\n)\n{\n  MESSAGE CustomerChangedEvent (CustomerId: Long) PUBLISH\n    ENTITY Module.PBE_CustomerChangedEvent;\n};\n\nDROP BUSINESS EVENT SERVICE Module.CustomerEventsApi;",
 		SeeAlso: []string{"business-events"},
 	})
@@ -209,7 +209,7 @@ func init() {
 			"xpath", "constraint", "where", "predicate",
 			"filter", "retrieve", "association path",
 		},
-		Syntax: "WHERE [condition]\nWHERE [cond1][cond2]          -- implicit AND\nWHERE [cond1] AND [cond2]\nWHERE [cond1] OR [cond2]",
+		Syntax:  "WHERE [condition]\nWHERE [cond1][cond2]          -- implicit AND\nWHERE [cond1] AND [cond2]\nWHERE [cond1] OR [cond2]",
 		Example: "RETRIEVE $Orders FROM Module.Order\n  WHERE [State = 'Completed'][IsPaid = true]\n  SORT BY OrderDate DESC;\n\n-- Association path traversal\nWHERE [Module.Order_Customer/Module.Customer/Name = $Name]\n\n-- Mendix tokens\nWHERE [System.owner = '[%CurrentUser%]']",
 		SeeAlso: []string{"xpath.functions"},
 	})
@@ -222,7 +222,7 @@ func init() {
 			"not", "true", "false", "operators",
 			"comparison", "boolean",
 		},
-		Syntax: "=, !=, <, >, <=, >=          Comparison\nand, or                      Boolean (lowercase)\nnot(expr)                    Negation\ncontains(attr, 'text')       String contains\nstarts-with(attr, 'text')    String starts-with\ntrue(), false()              Boolean literals",
+		Syntax:  "=, !=, <, >, <=, >=          Comparison\nand, or                      Boolean (lowercase)\nnot(expr)                    Negation\ncontains(attr, 'text')       String contains\nstarts-with(attr, 'text')    String starts-with\ntrue(), false()              Boolean literals",
 		Example: "WHERE [not(IsArchived)]\nWHERE [contains(Name, 'Corp')]\nWHERE [starts-with(Code, 'PRD')]\nWHERE [State = 'Ready' and Priority > 5]",
 		SeeAlso: []string{"xpath"},
 	})
@@ -236,7 +236,7 @@ func init() {
 			"java action", "java", "call java",
 			"type parameter", "exposed as", "javaaction",
 		},
-		Syntax: "SHOW JAVA ACTIONS [IN Module];\nDESCRIBE JAVA ACTION Module.Name;\nCREATE JAVA ACTION Module.Name(...) RETURNS Type AS $$ ... $$;\nDROP JAVA ACTION Module.Name;",
+		Syntax:  "SHOW JAVA ACTIONS [IN Module];\nDESCRIBE JAVA ACTION Module.Name;\nCREATE JAVA ACTION Module.Name(...) RETURNS Type AS $$ ... $$;\nDROP JAVA ACTION Module.Name;",
 		Example: "SHOW JAVA ACTIONS;\nDESCRIBE JAVA ACTION Utils.FormatCurrency;",
 		SeeAlso: []string{"java-action.create"},
 	})
@@ -248,7 +248,7 @@ func init() {
 			"create java action", "type parameter", "entity parameter",
 			"exposed as", "returns", "generics", "drop java action",
 		},
-		Syntax: "CREATE JAVA ACTION Module.Name(\n  Param: Type [NOT NULL],\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity\n) RETURNS ReturnType\n[EXPOSED AS 'Label' IN 'Category']\nAS $$\n// Java code\n$$;",
+		Syntax:  "CREATE JAVA ACTION Module.Name(\n  Param: Type [NOT NULL],\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity\n) RETURNS ReturnType\n[EXPOSED AS 'Label' IN 'Category']\nAS $$\n// Java code\n$$;",
 		Example: "CREATE JAVA ACTION Utils.FormatCurrency(\n  Amount: Decimal NOT NULL\n) RETURNS String\nEXPOSED AS 'Format Currency' IN 'Formatting'\nAS $$\nreturn String.format(\"%.2f\", Amount);\n$$;\n\n-- Generic entity validator with type parameter\nCREATE JAVA ACTION Utils.IsValid(\n  EntityType: ENTITY <pEntity> NOT NULL,\n  Obj: pEntity NOT NULL\n) RETURNS Boolean\nAS $$\nreturn Obj != null;\n$$;",
 		SeeAlso: []string{"java-action"},
 	})
@@ -268,30 +268,30 @@ func init() {
 	})
 
 	Register(SyntaxFeature{
-		Path:    "agents.model",
-		Summary: "CREATE/DROP MODEL documents for AI agents",
+		Path:     "agents.model",
+		Summary:  "CREATE/DROP MODEL documents for AI agents",
 		Keywords: []string{"create model", "drop model", "describe model", "list models", "provider", "mxcloudgenai"},
-		Syntax:  "CREATE [OR MODIFY] MODEL Module.Name (\n  Provider: MxCloudGenAI,\n  Key: Module.ApiKeyConstant\n);\nDESCRIBE MODEL Module.Name;\nLIST MODELS [IN Module];\nDROP MODEL Module.Name;",
-		Example: "create model MyModule.GPT4 (\n  Provider: MxCloudGenAI,\n  Key: MyModule.ModelApiKey\n);",
-		SeeAlso: []string{"agents"},
+		Syntax:   "CREATE [OR MODIFY] MODEL Module.Name (\n  Provider: MxCloudGenAI,\n  Key: Module.ApiKeyConstant\n);\nDESCRIBE MODEL Module.Name;\nLIST MODELS [IN Module];\nDROP MODEL Module.Name;",
+		Example:  "create model MyModule.GPT4 (\n  Provider: MxCloudGenAI,\n  Key: MyModule.ModelApiKey\n);",
+		SeeAlso:  []string{"agents"},
 	})
 
 	Register(SyntaxFeature{
-		Path:    "agents.knowledge-base",
-		Summary: "CREATE/DROP KNOWLEDGE BASE documents for AI agents",
+		Path:     "agents.knowledge-base",
+		Summary:  "CREATE/DROP KNOWLEDGE BASE documents for AI agents",
 		Keywords: []string{"create knowledge base", "drop knowledge base", "knowledge base", "kb", "rag"},
-		Syntax:  "CREATE [OR MODIFY] KNOWLEDGE BASE Module.Name (\n  Provider: MxCloudGenAI,\n  Key: Module.KBApiKeyConstant\n);\nDESCRIBE KNOWLEDGE BASE Module.Name;\nLIST KNOWLEDGE BASES [IN Module];\nDROP KNOWLEDGE BASE Module.Name;",
-		Example: "create knowledge base MyModule.ProductDocs (\n  Provider: MxCloudGenAI,\n  Key: MyModule.KBApiKey\n);",
-		SeeAlso: []string{"agents"},
+		Syntax:   "CREATE [OR MODIFY] KNOWLEDGE BASE Module.Name (\n  Provider: MxCloudGenAI,\n  Key: Module.KBApiKeyConstant\n);\nDESCRIBE KNOWLEDGE BASE Module.Name;\nLIST KNOWLEDGE BASES [IN Module];\nDROP KNOWLEDGE BASE Module.Name;",
+		Example:  "create knowledge base MyModule.ProductDocs (\n  Provider: MxCloudGenAI,\n  Key: MyModule.KBApiKey\n);",
+		SeeAlso:  []string{"agents"},
 	})
 
 	Register(SyntaxFeature{
-		Path:    "agents.mcp-service",
-		Summary: "CREATE/DROP CONSUMED MCP SERVICE documents for AI agents",
+		Path:     "agents.mcp-service",
+		Summary:  "CREATE/DROP CONSUMED MCP SERVICE documents for AI agents",
 		Keywords: []string{"consumed mcp service", "mcp", "mcp service", "protocol version"},
-		Syntax:  "CREATE [OR MODIFY] CONSUMED MCP SERVICE Module.Name (\n  ProtocolVersion: v2025_03_26,\n  Version: '1.0',\n  ConnectionTimeoutSeconds: 30,\n  Documentation: 'description'\n);\nDESCRIBE CONSUMED MCP SERVICE Module.Name;\nLIST CONSUMED MCP SERVICES [IN Module];\nDROP CONSUMED MCP SERVICE Module.Name;",
-		Example: "create consumed mcp service MyModule.WebSearch (\n  ProtocolVersion: v2025_03_26,\n  Version: '1.0',\n  ConnectionTimeoutSeconds: 30\n);",
-		SeeAlso: []string{"agents"},
+		Syntax:   "CREATE [OR MODIFY] CONSUMED MCP SERVICE Module.Name (\n  ProtocolVersion: v2025_03_26,\n  Version: '1.0',\n  ConnectionTimeoutSeconds: 30,\n  Documentation: 'description'\n);\nDESCRIBE CONSUMED MCP SERVICE Module.Name;\nLIST CONSUMED MCP SERVICES [IN Module];\nDROP CONSUMED MCP SERVICE Module.Name;",
+		Example:  "create consumed mcp service MyModule.WebSearch (\n  ProtocolVersion: v2025_03_26,\n  Version: '1.0',\n  ConnectionTimeoutSeconds: 30\n);",
+		SeeAlso:  []string{"agents"},
 	})
 
 	Register(SyntaxFeature{

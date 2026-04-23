@@ -280,6 +280,9 @@ func registerRESTHandlers(r *Registry) {
 	r.Register(&ast.DropRestClientStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return dropRestClient(ctx, stmt.(*ast.DropRestClientStmt))
 	})
+	r.Register(&ast.DescribeContractFromOpenAPIStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		return describeContractFromOpenAPI(ctx, stmt.(*ast.DescribeContractFromOpenAPIStmt))
+	})
 	r.Register(&ast.CreatePublishedRestServiceStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execCreatePublishedRestService(ctx, stmt.(*ast.CreatePublishedRestServiceStmt))
 	})

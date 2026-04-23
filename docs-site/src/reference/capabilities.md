@@ -84,6 +84,7 @@ Everything mxcli can do, organized by use case.
 | Capability | Command | Status |
 |---|---|---|
 | REST clients | `CREATE REST CLIENT` | Consumed REST services |
+| OpenAPI import | `CREATE REST CLIENT (OpenAPI: '...')` | Generate REST client from OpenAPI 3.0 spec |
 | Business events | `CREATE BUSINESS EVENT SERVICE` | Event definitions |
 | Database connections | `CREATE DATABASE CONNECTION` | External SQL |
 | OData services | `LIST ODATA CLIENTS/SERVICES` | Read-only browsing |
