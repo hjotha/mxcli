@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: Apache-2.0
+
+// Regression test for the "change with association loses member name" drift.
+//
+// Scenario: a microflow iterates a list whose element type cannot be determined
+// at build time (e.g., the list came from a java action whose return type
+// isn't registered in varTypes). The CHANGE statement inside the loop receives
+// `entityQN == ""` in resolveMemberChange — the old code returned early,
+// leaving both AssociationQualifiedName and AttributeQualifiedName empty.
+// The writer then emitted `"Association": ""` / no `"Attribute"` at all, and
+// the describer re-rendered the change as `change $var ( = $value)` — invalid
+// MDL that won't re-execute.
+//
+// Fix: when the entity type is unknown, fall back to the dot-contains heuristic
+// so the qualified name the user authored is preserved.
+package executor
+
+import (
+	"testing"
+
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+)
+
+func TestResolveMemberChange_UnknownEntityPreservesQualifiedAssociationName(t *testing.T) {
+	fb := &flowBuilder{
+		// backend is nil AND entityQN is empty — this is the exact case
+		// hit when the change target's variable type wasn't registered.
+	}
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "MxKafka.Message_MessageOverview", "")
+
+	if mc.AssociationQualifiedName != "MxKafka.Message_MessageOverview" {
+		t.Errorf("expected association name preserved, got %q", mc.AssociationQualifiedName)
+	}
+	if mc.AttributeQualifiedName != "" {
+		t.Errorf("expected empty attribute, got %q", mc.AttributeQualifiedName)
+	}
+}
+
+func TestResolveMemberChange_UnknownEntityPreservesBareAttributeName(t *testing.T) {
+	fb := &flowBuilder{}
+	mc := &microflows.MemberChange{}
+	// Bare member name with unknown entity type — should be treated as attribute
+	// (bare names are attributes in MDL; associations require a Module. prefix).
+	fb.resolveMemberChange(mc, "Offset", "")
+
+	if mc.AttributeQualifiedName != "Offset" {
+		t.Errorf("expected attribute name preserved, got %q", mc.AttributeQualifiedName)
+	}
+	if mc.AssociationQualifiedName != "" {
+		t.Errorf("expected empty association, got %q", mc.AssociationQualifiedName)
+	}
+}
+
+func TestResolveMemberChange_UnknownEntityEmptyMemberName(t *testing.T) {
+	// Defensive: empty member name stays empty on both fields — better to emit
+	// nothing than fabricate a phantom attribute. The caller is responsible for
+	// not invoking us with empty names, but we keep the guard.
+	fb := &flowBuilder{}
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "", "")
+
+	if mc.AttributeQualifiedName != "" || mc.AssociationQualifiedName != "" {
+		t.Errorf("expected both empty on empty input, got attr=%q assoc=%q",
+			mc.AttributeQualifiedName, mc.AssociationQualifiedName)
+	}
+}
