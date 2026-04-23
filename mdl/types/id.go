@@ -105,15 +105,3 @@ func ValidateID(id string) bool {
 	}
 	return true
 }
-
-// Hash computes a hash for content (used for content deduplication).
-// TODO: replace with SHA-256 (or similar) — the current positional checksum is
-// weak and produces collisions easily. Deferred to avoid breaking callers that
-// may depend on the output format/length.
-func Hash(content []byte) string {
-	var sum uint64
-	for i, b := range content {
-		sum += uint64(b) * uint64(i+1)
-	}
-	return fmt.Sprintf("%016x", sum)
-}

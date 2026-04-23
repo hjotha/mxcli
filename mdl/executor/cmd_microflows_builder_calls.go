@@ -5,6 +5,7 @@ package executor
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -174,7 +175,11 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 	// Try to look up the Java action definition to detect EntityTypeParameterType parameters
 	var jaDef *javaactions.JavaAction
 	if fb.backend != nil {
-		jaDef, _ = fb.backend.ReadJavaActionByName(actionQN)
+		var err error
+		jaDef, err = fb.backend.ReadJavaActionByName(actionQN)
+		if err != nil {
+			log.Printf("warning: could not look up Java action %s: %v (entity type params will be empty)", actionQN, err)
+		}
 	}
 
 	// Build a map of parameter name -> param type for the Java action

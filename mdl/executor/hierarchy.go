@@ -159,5 +159,3 @@ func invalidateDomainModelsCache(ctx *ExecContext) {
 		ctx.Cache.domainModels = nil
 	}
 }
-
-

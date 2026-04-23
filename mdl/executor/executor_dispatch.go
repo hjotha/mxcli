@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/catalog"
 )
 
 // executeInner dispatches a statement to its registered handler.
@@ -16,6 +17,8 @@ func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
 	// executeInner in a goroutine with a wall-clock timeout; if the timeout
 	// fires, the goroutine keeps running but Execute() has already returned.
 	// Syncing stale state back at that point would race with subsequent calls.
+	// Any handler-side state changes made after cancellation are intentionally
+	// lost — this is expected behavior, not a regression.
 	if ctx.Err() == nil {
 		e.syncBack(ectx)
 	}
@@ -34,7 +37,20 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	e.backend = ctx.Backend
 	e.mprPath = ctx.MprPath
 	e.cache = ctx.Cache
+	e.catalogMu.Lock()
+	old := e.catalog
 	e.catalog = ctx.Catalog
+	if old != ctx.Catalog {
+		e.catalogGen++
+	}
+	e.catalogMu.Unlock()
+	// Close the previously installed catalog whenever ownership moved to a
+	// different catalog value. This includes transitions to nil; otherwise the
+	// previous catalog can leak if a handler clears ctx.Catalog without closing
+	// the old instance itself.
+	if old != nil && old != ctx.Catalog {
+		old.Close()
+	}
 	e.settings = ctx.Settings
 	e.fragments = ctx.Fragments
 	e.sqlMgr = ctx.SqlMgr
@@ -43,6 +59,10 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 
 // newExecContext builds an ExecContext from the current Executor state.
 func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
+	e.catalogMu.RLock()
+	cat := e.catalog
+	gen := e.catalogGen
+	e.catalogMu.RUnlock()
 	return &ExecContext{
 		Context:          ctx,
 		Backend:          e.backend,
@@ -51,7 +71,7 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		Quiet:            e.quiet,
 		Logger:           e.logger,
 		Fragments:        e.fragments,
-		Catalog:          e.catalog,
+		Catalog:          cat,
 		Cache:            e.cache,
 		MprPath:          e.mprPath,
 		SqlMgr:           e.sqlMgr,
@@ -61,6 +81,24 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		ExecuteFn:        e.Execute,
 		ExecuteProgramFn: e.ExecuteProgram,
 		FinalizeFn:       e.finalizeProgramExecution,
+		SyncCatalog: func(cat *catalog.Catalog) {
+			e.catalogMu.Lock()
+			defer e.catalogMu.Unlock()
+			// Only apply the background result if no newer catalog has been
+			// installed since the build started (generation check). This
+			// prevents an out-of-date background build from overwriting a
+			// fresher foreground refresh.
+			if e.catalogGen != gen {
+				cat.Close()
+				return
+			}
+			old := e.catalog
+			e.catalog = cat
+			e.catalogGen++
+			if old != nil && old != cat {
+				old.Close()
+			}
+		},
 	}
 }
 

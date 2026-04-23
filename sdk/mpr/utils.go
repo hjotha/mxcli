@@ -37,11 +37,6 @@ func BsonBinaryToID(bin primitive.Binary) string {
 	return bsonutil.BsonBinaryToID(bin)
 }
 
-// Hash computes a hash for content (used for content deduplication).
-func Hash(content []byte) string {
-	return types.Hash(content)
-}
-
 // ValidateID checks if an ID is valid.
 func ValidateID(id string) bool {
 	return types.ValidateID(id)

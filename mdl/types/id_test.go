@@ -168,26 +168,3 @@ func TestValidateID(t *testing.T) {
 		}
 	}
 }
-
-func TestHash_Deterministic(t *testing.T) {
-	h1 := Hash([]byte("hello"))
-	h2 := Hash([]byte("hello"))
-	if h1 != h2 {
-		t.Fatalf("Hash not deterministic: %q vs %q", h1, h2)
-	}
-}
-
-func TestHash_DifferentInputs(t *testing.T) {
-	h1 := Hash([]byte("hello"))
-	h2 := Hash([]byte("world"))
-	if h1 == h2 {
-		t.Fatal("Hash collision on different inputs")
-	}
-}
-
-func TestHash_EmptyInput(t *testing.T) {
-	h := Hash([]byte{})
-	if h != "0000000000000000" {
-		t.Errorf("expected zero hash for empty input, got %q", h)
-	}
-}

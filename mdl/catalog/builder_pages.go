@@ -5,6 +5,7 @@ package catalog
 import (
 	"database/sql"
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -103,7 +104,7 @@ func (b *Builder) buildPages() error {
 		// Insert widgets only in full mode
 		if b.fullMode && len(rawWidgets) > 0 {
 			for _, w := range rawWidgets {
-				_, _ = widgetStmt.Exec(
+				if _, err := widgetStmt.Exec(
 					w.ID,
 					w.Name,
 					w.WidgetType,
@@ -117,7 +118,9 @@ func (b *Builder) buildPages() error {
 					"",
 					projectID, projectName, snapshotID, snapshotDate, snapshotSource,
 					sourceID, sourceBranch, sourceRevision,
-				)
+				); err != nil {
+					return fmt.Errorf("insert widget %s for page %s: %w", w.Name, qualifiedName, err)
+				}
 				widgetCount++
 			}
 		}
