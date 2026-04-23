@@ -374,6 +374,18 @@ func emitActivityStatement(
 		return
 	}
 
+	// When the activity is unsupported by the describer (e.g. CallWebServiceAction,
+	// CastAction, InheritanceSplit placeholder) we fall back to emitting just an
+	// MDL line comment. Decorating that comment with @position/@anchor/@annotation
+	// leaves the annotations orphaned — the grammar only accepts `annotation*`
+	// as a prefix of a real microflowStatement, so line comments preceded by
+	// annotations cause "no viable alternative at input '@position...end'" during
+	// exec. Emit the comment on its own instead.
+	if strings.HasPrefix(strings.TrimSpace(stmt), "--") {
+		*lines = append(*lines, indentStr+stmt)
+		return
+	}
+
 	// Emit @ annotations before the statement
 	emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
 

@@ -180,6 +180,49 @@ func TestTraverseFlow_IfWithoutElse(t *testing.T) {
 	}
 }
 
+// TestTraverseFlow_UnsupportedActivitySkipsAnnotations verifies that when the
+// describer falls back to a `-- Unsupported action type: ...` placeholder, it
+// does NOT also emit @position / @anchor before the comment. Annotations are
+// only valid as a prefix of real MDL statements; orphaning them above a pure
+// line comment triggers `no viable alternative at input '@position...end'`
+// during `exec`. Covers audit cluster A6 (ANNOT_GLUED).
+func TestTraverseFlow_UnsupportedActivitySkipsAnnotations(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("soap"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("soap")},
+			Action:       &microflows.UnknownAction{TypeName: "Microflows$CallWebServiceAction"},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "soap")},
+		mkID("soap"):  {mkFlow("soap", "end")},
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	for _, line := range lines {
+		if contains(line, "@position") {
+			t.Errorf("expected no @position prefix before unsupported-action comment, got: %v", lines)
+		}
+	}
+	found := false
+	for _, line := range lines {
+		if contains(line, "Unsupported action type") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected unsupported-action comment, got: %v", lines)
+	}
+}
+
 // =============================================================================
 // collectErrorHandlerStatements
 // =============================================================================
