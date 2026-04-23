@@ -3,7 +3,6 @@
 package catalog
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -79,7 +78,7 @@ type Builder struct {
 	snapshot     *Snapshot
 	progress     ProgressFunc
 	hierarchy    *hierarchy
-	tx           *sql.Tx // Transaction for batched inserts
+	tx           CatalogTx // Transaction for batched inserts
 	fullMode     bool    // If true, do full parsing (activities/widgets)
 	sourceMode   bool    // If true, build source FTS table (implies full)
 	describeFunc DescribeFunc

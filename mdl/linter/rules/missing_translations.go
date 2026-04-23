@@ -29,7 +29,7 @@ func (r *MissingTranslationsRule) Description() string {
 // Check runs the missing translations check.
 // Requires REFRESH CATALOG FULL to populate the strings table.
 func (r *MissingTranslationsRule) Check(ctx *linter.LintContext) []linter.Violation {
-	db := ctx.DB()
+	db := ctx.CatalogDB()
 	if db == nil {
 		return nil
 	}

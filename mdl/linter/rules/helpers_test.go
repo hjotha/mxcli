@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 
 	_ "modernc.org/sqlite"
@@ -22,7 +23,7 @@ func testMicroflow() linter.Microflow {
 }
 
 // setupEntitiesDB creates an in-memory SQLite database with entities and modules tables.
-func setupEntitiesDB(t *testing.T, entities [][]any) *sql.DB {
+func setupEntitiesDB(t *testing.T, entities [][]any) catalog.CatalogDB {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -56,5 +57,5 @@ func setupEntitiesDB(t *testing.T, entities [][]any) *sql.DB {
 		}
 	}
 
-	return db
+	return catalog.WrapSqlDB(db)
 }

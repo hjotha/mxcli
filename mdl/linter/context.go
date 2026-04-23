@@ -13,7 +13,7 @@ import (
 // LintContext wraps a catalog and provides rule-friendly APIs.
 type LintContext struct {
 	catalog  *catalog.Catalog
-	db       *sql.DB
+	db       catalog.CatalogDB
 	excluded map[string]bool
 	reader   *mpr.Reader
 }
@@ -32,14 +32,14 @@ func (ctx *LintContext) Reader() *mpr.Reader {
 func NewLintContext(cat *catalog.Catalog) *LintContext {
 	return &LintContext{
 		catalog:  cat,
-		db:       cat.DB(),
+		db:       cat.CatalogDB(),
 		excluded: make(map[string]bool),
 	}
 }
 
-// NewLintContextFromDB creates a new LintContext from a raw database connection.
+// NewLintContextFromDB creates a new LintContext from a CatalogDB.
 // Used in tests to provide an in-memory database with test data.
-func NewLintContextFromDB(db *sql.DB) *LintContext {
+func NewLintContextFromDB(db catalog.CatalogDB) *LintContext {
 	return &LintContext{
 		db:       db,
 		excluded: make(map[string]bool),
@@ -64,8 +64,8 @@ func (ctx *LintContext) Catalog() *catalog.Catalog {
 	return ctx.catalog
 }
 
-// DB returns the underlying database connection for advanced queries.
-func (ctx *LintContext) DB() *sql.DB {
+// CatalogDB returns the underlying database abstraction for advanced queries.
+func (ctx *LintContext) CatalogDB() catalog.CatalogDB {
 	return ctx.db
 }
 

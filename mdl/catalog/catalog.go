@@ -8,13 +8,11 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	_ "modernc.org/sqlite"
 )
 
 // Catalog provides SQL querying over Mendix project metadata.
 type Catalog struct {
-	db            *sql.DB
+	db            CatalogDB
 	projectID     string
 	projectName   string
 	mendixVersion string
@@ -58,17 +56,15 @@ type ProgressFunc func(table string, count int)
 
 // New creates a new catalog with an in-memory SQLite database.
 func New() (*Catalog, error) {
-	db, err := sql.Open("sqlite", ":memory:")
+	db, err := NewSqliteCatalogDB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open in-memory database: %w", err)
 	}
+	return NewFromDB(db)
+}
 
-	// Enable foreign keys
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
-	}
-
+// NewFromDB creates a catalog from an existing CatalogDB.
+func NewFromDB(db CatalogDB) (*Catalog, error) {
 	c := &Catalog{
 		db:        db,
 		projectID: "default",
@@ -193,8 +189,8 @@ func (c *Catalog) Query(sqlQuery string) (*QueryResult, error) {
 	return result, rows.Err()
 }
 
-// DB returns the underlying database connection for direct access.
-func (c *Catalog) DB() *sql.DB {
+// CatalogDB returns the underlying database abstraction.
+func (c *Catalog) CatalogDB() CatalogDB {
 	return c.db
 }
 
@@ -263,15 +259,9 @@ type CacheInfo struct {
 
 // NewFromFile opens a catalog from a persisted SQLite file.
 func NewFromFile(path string) (*Catalog, error) {
-	db, err := sql.Open("sqlite", path)
+	db, err := NewSqliteCatalogDBFromFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open catalog file: %w", err)
-	}
-
-	// Enable foreign keys
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
 	}
 
 	c := &Catalog{
@@ -286,7 +276,14 @@ func NewFromFile(path string) (*Catalog, error) {
 
 // SaveToFile saves the catalog to a SQLite file.
 // This copies the in-memory database to a file for persistence.
+// Requires the underlying CatalogDB to be a *SqliteCatalogDB.
 func (c *Catalog) SaveToFile(path string) error {
+	sdb, ok := c.db.(*SqliteCatalogDB)
+	if !ok {
+		return fmt.Errorf("SaveToFile requires a SQLite-backed catalog")
+	}
+	rawDB := sdb.RawDB()
+
 	// Open destination file database
 	destDB, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -296,17 +293,17 @@ func (c *Catalog) SaveToFile(path string) error {
 
 	// Use SQLite backup API via VACUUM INTO (SQLite 3.27+)
 	// Fall back to manual copy if not available
-	_, err = c.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", path))
+	_, err = rawDB.Exec(fmt.Sprintf("VACUUM INTO '%s'", path))
 	if err != nil {
 		// Fall back: export and import
-		return c.saveToFileManual(path)
+		return c.saveToFileManual(path, rawDB)
 	}
 
 	return nil
 }
 
 // saveToFileManual saves by dumping and restoring (fallback method).
-func (c *Catalog) saveToFileManual(path string) error {
+func (c *Catalog) saveToFileManual(path string, rawDB *sql.DB) error {
 	// Open destination
 	destDB, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -315,7 +312,7 @@ func (c *Catalog) saveToFileManual(path string) error {
 	defer destDB.Close()
 
 	// Get list of tables
-	rows, err := c.db.Query("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+	rows, err := rawDB.Query("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
 	if err != nil {
 		return err
 	}
@@ -339,7 +336,7 @@ func (c *Catalog) saveToFileManual(path string) error {
 		}
 
 		// Copy data
-		srcRows, err := c.db.Query(fmt.Sprintf("SELECT * FROM %s", t.name))
+		srcRows, err := rawDB.Query(fmt.Sprintf("SELECT * FROM %s", t.name))
 		if err != nil {
 			return err
 		}
@@ -377,7 +374,7 @@ func (c *Catalog) saveToFileManual(path string) error {
 	}
 
 	// Copy views
-	rows, err = c.db.Query("SELECT sql FROM sqlite_master WHERE type='view'")
+	rows, err = rawDB.Query("SELECT sql FROM sqlite_master WHERE type='view'")
 	if err != nil {
 		return err
 	}
@@ -394,7 +391,7 @@ func (c *Catalog) saveToFileManual(path string) error {
 	rows.Close()
 
 	// Copy indexes
-	rows, err = c.db.Query("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")
+	rows, err = rawDB.Query("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")
 	if err != nil {
 		return err
 	}

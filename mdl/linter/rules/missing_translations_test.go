@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 
 	_ "modernc.org/sqlite"
@@ -14,7 +15,7 @@ import (
 // setupTranslationsDB creates an in-memory SQLite database with the strings FTS5 table
 // and inserts test data. Rows are [QualifiedName, ObjectType, StringValue, StringContext, Language, ModuleName].
 // ElementId is auto-generated from QualifiedName+StringContext for simplicity.
-func setupTranslationsDB(t *testing.T, rows [][]string) *sql.DB {
+func setupTranslationsDB(t *testing.T, rows [][]string) catalog.CatalogDB {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -46,7 +47,7 @@ func setupTranslationsDB(t *testing.T, rows [][]string) *sql.DB {
 		}
 	}
 
-	return db
+	return catalog.WrapSqlDB(db)
 }
 
 func TestMissingTranslations_NoViolationsWhenComplete(t *testing.T) {

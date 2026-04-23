@@ -124,7 +124,7 @@ func TestQueryWithData(t *testing.T) {
 	defer cat.Close()
 
 	// Insert test data
-	_, err = cat.DB().Exec(
+	_, err = cat.CatalogDB().Exec(
 		"INSERT INTO modules (Id, Name, QualifiedName, ModuleName) VALUES (?, ?, ?, ?)",
 		"mod-1", "TestModule", "TestModule", "TestModule",
 	)
@@ -280,7 +280,7 @@ func TestSaveAndLoadFromFile(t *testing.T) {
 	}
 
 	cat.SetProject("proj-1", "TestApp", "10.0.0")
-	_, err = cat.DB().Exec(
+	_, err = cat.CatalogDB().Exec(
 		"INSERT INTO modules (Id, Name, QualifiedName, ModuleName) VALUES (?, ?, ?, ?)",
 		"mod-1", "MyModule", "MyModule", "MyModule",
 	)
@@ -359,7 +359,7 @@ func TestRoleMappingsTable(t *testing.T) {
 	}
 
 	for _, m := range mappings {
-		_, err := cat.DB().Exec(
+		_, err := cat.CatalogDB().Exec(
 			"INSERT INTO role_mappings (UserRoleName, ModuleRoleName, ModuleName) VALUES (?, ?, ?)",
 			m.userRole, m.moduleRole, m.module,
 		)

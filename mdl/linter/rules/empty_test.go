@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 
 	_ "modernc.org/sqlite"
@@ -13,7 +14,7 @@ import (
 
 // setupMicroflowsDB creates an in-memory SQLite database with the microflows and modules tables.
 // Each row is [Id, Name, QualifiedName, ModuleName, Folder, MicroflowType, Description, ReturnType, ParameterCount, ActivityCount, Complexity].
-func setupMicroflowsDB(t *testing.T, rows [][]any) *sql.DB {
+func setupMicroflowsDB(t *testing.T, rows [][]any) catalog.CatalogDB {
 	t.Helper()
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -47,7 +48,7 @@ func setupMicroflowsDB(t *testing.T, rows [][]any) *sql.DB {
 		}
 	}
 
-	return db
+	return catalog.WrapSqlDB(db)
 }
 
 func TestEmptyMicroflowRule_NoViolations(t *testing.T) {
