@@ -1,0 +1,45 @@
+-- ============================================================================
+-- Bug #263: Preserve decision/loop captions across nested control flow
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `@caption` on an outer IF/LOOP/WHILE was being overwritten by the inner
+--   IF/LOOP's caption because `pendingAnnotations` was shared mutable state
+--   across recursive addStatement calls. Annotations attached to the outer
+--   split ended up bound to the inner split, and the outer split inherited
+--   whatever caption the inner statement carried.
+--
+-- After fix:
+--   addIfStatement / addLoopStatement / addWhileStatement snapshot + clear
+--   `pendingAnnotations` before recursing, then re-apply to their own activity
+--   after it's created. The WHILE case also gained explicit handling in
+--   mergeStatementAnnotations (previously fell through to `default: nil`).
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/263-nested-caption-preservation.mdl -p app.mpr
+--   Open in Studio Pro — each split/loop displays its own caption, not
+--   inherited from a nested statement.
+-- ============================================================================
+
+create module BugTest263;
+
+create microflow BugTest263.MF_NestedCaptions (
+  $S: string
+)
+returns boolean as $ok
+begin
+  declare $ok boolean = false;
+
+  @caption 'String not empty?'
+  if $S != empty then
+    @caption 'Right format?'
+    if isMatch($S, 'x') then
+      return true;
+    else
+      return false;
+    end if;
+  else
+    return false;
+  end if;
+end;
+/

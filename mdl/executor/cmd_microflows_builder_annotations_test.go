@@ -219,3 +219,94 @@ func TestIfAnnotationStaysWithCorrectSplit(t *testing.T) {
 		t.Errorf("inner note destination: got %q, want %q (inner split)", innerNoteDestID, innerSplit.ID)
 	}
 }
+
+// TestLoopCaptionPreserved covers the loop caption case — previously untested
+// per PR review. The fix for the outer-IF caption contamination bug also applied
+// the same snapshot/restore pattern to addLoopStatement and addWhileStatement.
+func TestLoopCaptionPreserved(t *testing.T) {
+	innerReturn := &ast.ReturnStmt{Value: &ast.LiteralExpr{Value: true, Kind: ast.LiteralBoolean}}
+	loop := &ast.LoopStmt{
+		LoopVariable: "item",
+		ListVariable: "items",
+		Body:         []ast.MicroflowStatement{innerReturn},
+		Annotations:  &ast.ActivityAnnotations{Caption: "Process each item"},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"items": "List of MyMod.Item"},
+		declaredVars: map[string]string{"items": "List of MyMod.Item"},
+	}
+	fb.buildFlowGraph([]ast.MicroflowStatement{loop}, nil)
+
+	var loops []*microflows.LoopedActivity
+	for _, obj := range fb.objects {
+		if l, ok := obj.(*microflows.LoopedActivity); ok {
+			loops = append(loops, l)
+		}
+	}
+
+	if len(loops) != 1 {
+		t.Fatalf("expected 1 LoopedActivity, got %d", len(loops))
+	}
+	if loops[0].Caption != "Process each item" {
+		t.Errorf("loop caption: got %q, want %q", loops[0].Caption, "Process each item")
+	}
+}
+
+// TestWhileLoopCaptionPreserved — same coverage for the WHILE shape.
+func TestWhileLoopCaptionPreserved(t *testing.T) {
+	whileStmt := &ast.WhileStmt{
+		Condition: &ast.BinaryExpr{
+			Left:     &ast.VariableExpr{Name: "n"},
+			Operator: "<",
+			Right:    &ast.LiteralExpr{Value: int64(10), Kind: ast.LiteralInteger},
+		},
+		Body: []ast.MicroflowStatement{
+			&ast.ReturnStmt{Value: &ast.LiteralExpr{Value: true, Kind: ast.LiteralBoolean}},
+		},
+		Annotations: &ast.ActivityAnnotations{Caption: "Until n >= 10"},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"n": "Integer"},
+		declaredVars: map[string]string{"n": "Integer"},
+	}
+	fb.buildFlowGraph([]ast.MicroflowStatement{whileStmt}, nil)
+
+	var loops []*microflows.LoopedActivity
+	for _, obj := range fb.objects {
+		if l, ok := obj.(*microflows.LoopedActivity); ok {
+			loops = append(loops, l)
+		}
+	}
+
+	if len(loops) != 1 {
+		t.Fatalf("expected 1 LoopedActivity (WHILE), got %d", len(loops))
+	}
+	if loops[0].Caption != "Until n >= 10" {
+		t.Errorf("while caption: got %q, want %q", loops[0].Caption, "Until n >= 10")
+	}
+}
+
+// TestInheritanceSplitCaptionApplied — InheritanceSplit is not produced by the
+// executor builder (only parsed from BSON for roundtrip), but applyAnnotations
+// gained an InheritanceSplit case in the fix. Test the applicator directly.
+func TestInheritanceSplitCaptionApplied(t *testing.T) {
+	split := &microflows.InheritanceSplit{}
+	split.ID = "inh-split-1"
+
+	fb := &flowBuilder{}
+	fb.objects = append(fb.objects, split)
+
+	fb.applyAnnotations(split.ID, &ast.ActivityAnnotations{Caption: "Customer type?"})
+
+	if split.Caption != "Customer type?" {
+		t.Errorf("inheritance split caption: got %q, want %q", split.Caption, "Customer type?")
+	}
+}
