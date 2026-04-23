@@ -770,18 +770,28 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 		// of an untyped loop). Without the entity we cannot query the domain
 		// model — but we must NOT silently drop the member name, otherwise
 		// `change $x (Module.Assoc = $y)` would round-trip as `change $x ( = $y)`
-		// which is invalid MDL. Fall back to the dot-contains heuristic so the
-		// writer can still emit `Association = ...` / `Attribute = ...` with
-		// the qualified name the user authored.
+		// which is invalid MDL. Fall back to a shape heuristic:
+		//
+		//   * no dot                 -> bare attribute name
+		//   * exactly one dot        -> `Module.Assoc` (association)
+		//   * two or more dots       -> `Module.Entity.Attribute` (qualified attribute)
+		//
+		// Two-dot names are never associations in MDL (association names carry a
+		// single qualifier — the module), so they must stay on AttributeQualified-
+		// Name even when the entity type is unknown. This avoids miscategorising
+		// something like `change $x (MyModule.MyEntity.Offset = 1)` as an
+		// association change.
 		if memberName == "" {
 			return
 		}
-		if strings.Contains(memberName, ".") {
-			// Qualified names in the AST for member changes come from
-			// associations (attributes are bare identifiers). Preserve the
-			// name; the describer and writer rely on it for MDL output.
+		switch strings.Count(memberName, ".") {
+		case 0:
+			mc.AttributeQualifiedName = memberName
+		case 1:
 			mc.AssociationQualifiedName = memberName
-		} else {
+		default:
+			// Two or more dots: definitely not an association; preserve as
+			// qualified attribute.
 			mc.AttributeQualifiedName = memberName
 		}
 		return
