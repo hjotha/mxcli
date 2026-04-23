@@ -1,0 +1,53 @@
+-- ============================================================================
+-- Bug #262: Treat terminal nested IF as returning in flow builder
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   A microflow whose body ends in `if { return } else { return }` was not
+--   detected as terminal. The outer flow builder created a merge node and a
+--   dangling continuation edge that pointed at no activity. Studio Pro raised
+--   "KeyNotFoundException" / "Sequence contains no matching element" on open.
+--
+-- After fix:
+--   lastStmtIsReturn recurses through IfStmt via the new isTerminalStmt helper,
+--   so an IF with an ELSE where both branches return is treated as terminal —
+--   no merge emitted, no dangling edge.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/262-terminal-nested-if-no-dangling-merge.mdl -p app.mpr
+--   Open in Studio Pro — no dangling edge, flow graph is clean.
+-- ============================================================================
+
+create module BugTest262;
+
+create microflow BugTest262.MF_BothBranchesReturn (
+  $input: string
+)
+returns string as $result
+begin
+  declare $result string = empty;
+
+  if $input = 'a' then
+    return 'was a';
+  else
+    return 'not a';
+  end if;
+end;
+/
+
+create microflow BugTest262.MF_ElseIfChainAllReturn (
+  $input: string
+)
+returns string as $result
+begin
+  declare $result string = empty;
+
+  if $input = 'a' then
+    return 'a';
+  elsif $input = 'b' then
+    return 'b';
+  else
+    return 'other';
+  end if;
+end;
+/
