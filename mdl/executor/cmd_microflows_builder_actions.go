@@ -761,6 +761,25 @@ func (fb *flowBuilder) isEntity(moduleName, entityName string) bool {
 // memberName can be either bare ("Order_Customer") or qualified ("MfTest.Order_Customer").
 func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberName string, entityQN string) {
 	if entityQN == "" {
+		// Entity type of $variable is unknown (e.g., the variable comes from a
+		// java action whose return type isn't registered, or from the iterator
+		// of an untyped loop). Without the entity we cannot query the domain
+		// model — but we must NOT silently drop the member name, otherwise
+		// `change $x (Module.Assoc = $y)` would round-trip as `change $x ( = $y)`
+		// which is invalid MDL. Fall back to the dot-contains heuristic so the
+		// writer can still emit `Association = ...` / `Attribute = ...` with
+		// the qualified name the user authored.
+		if memberName == "" {
+			return
+		}
+		if strings.Contains(memberName, ".") {
+			// Qualified names in the AST for member changes come from
+			// associations (attributes are bare identifiers). Preserve the
+			// name; the describer and writer rely on it for MDL output.
+			mc.AssociationQualifiedName = memberName
+		} else {
+			mc.AttributeQualifiedName = memberName
+		}
 		return
 	}
 
