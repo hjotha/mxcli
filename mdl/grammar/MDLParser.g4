@@ -3730,6 +3730,7 @@ annotationName
     | REQUIRED
     | CAPTION
     | ANNOTATION
+    | ANCHOR
     ;
 
 annotationParams
@@ -3737,14 +3738,38 @@ annotationParams
     ;
 
 annotationParam
-    : IDENTIFIER COLON annotationValue   // Named parameter
-    | annotationValue                     // Positional parameter
+    : annotationParamName COLON (annotationValue | annotationParenValue)   // Named parameter
+    | annotationValue                                                      // Positional parameter
+    ;
+
+// Keywords that are permitted as annotation parameter keys. The set is
+// intentionally narrow — only keywords that annotations actually use.
+annotationParamName
+    : IDENTIFIER
+    | FROM
+    | TO
+    | TRUE
+    | FALSE
     ;
 
 annotationValue
     : literal
+    | anchorSide       // top | right | bottom | left (must come before expression)
     | expression
     | qualifiedName
+    ;
+
+anchorSide
+    : TOP
+    | RIGHT
+    | BOTTOM
+    | LEFT
+    ;
+
+// A parenthesised value for nested annotation parameters like:
+//   @anchor(true: (from: right, to: left), false: (from: bottom, to: left))
+annotationParenValue
+    : LPAREN annotationParams RPAREN
     ;
 
 /** Keywords that can be used as identifiers in certain contexts (module/entity names via qualifiedName,
@@ -3896,6 +3921,9 @@ keyword
     | DESIGN | DRY | EXEC | FEATURES | ADDED | SINCE | FORCE
     | LANGUAGES | LINT | PROPERTIES | READ | RULES | RUN | SARIF | SCRIPT
     | SHOW | USE | STATUS | WRITE | VIA | VIEWS | TABLES
+
+    // Sequence flow anchors (for @anchor annotation)
+    | ANCHOR | TOP | BOTTOM
 
     // Fragment / ALTER PAGE
     | AFTER | BEFORE | DEFINE | FRAGMENT | FRAGMENTS

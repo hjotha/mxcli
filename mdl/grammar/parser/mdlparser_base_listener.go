@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -2708,11 +2708,29 @@ func (s *BaseMDLParserListener) EnterAnnotationParam(ctx *AnnotationParamContext
 // ExitAnnotationParam is called when production annotationParam is exited.
 func (s *BaseMDLParserListener) ExitAnnotationParam(ctx *AnnotationParamContext) {}
 
+// EnterAnnotationParamName is called when production annotationParamName is entered.
+func (s *BaseMDLParserListener) EnterAnnotationParamName(ctx *AnnotationParamNameContext) {}
+
+// ExitAnnotationParamName is called when production annotationParamName is exited.
+func (s *BaseMDLParserListener) ExitAnnotationParamName(ctx *AnnotationParamNameContext) {}
+
 // EnterAnnotationValue is called when production annotationValue is entered.
 func (s *BaseMDLParserListener) EnterAnnotationValue(ctx *AnnotationValueContext) {}
 
 // ExitAnnotationValue is called when production annotationValue is exited.
 func (s *BaseMDLParserListener) ExitAnnotationValue(ctx *AnnotationValueContext) {}
+
+// EnterAnchorSide is called when production anchorSide is entered.
+func (s *BaseMDLParserListener) EnterAnchorSide(ctx *AnchorSideContext) {}
+
+// ExitAnchorSide is called when production anchorSide is exited.
+func (s *BaseMDLParserListener) ExitAnchorSide(ctx *AnchorSideContext) {}
+
+// EnterAnnotationParenValue is called when production annotationParenValue is entered.
+func (s *BaseMDLParserListener) EnterAnnotationParenValue(ctx *AnnotationParenValueContext) {}
+
+// ExitAnnotationParenValue is called when production annotationParenValue is exited.
+func (s *BaseMDLParserListener) ExitAnnotationParenValue(ctx *AnnotationParenValueContext) {}
 
 // EnterKeyword is called when production keyword is entered.
 func (s *BaseMDLParserListener) EnterKeyword(ctx *KeywordContext) {}

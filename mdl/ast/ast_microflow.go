@@ -105,14 +105,48 @@ type RaiseErrorStmt struct {
 
 func (s *RaiseErrorStmt) isMicroflowStatement() {}
 
+// AnchorSide identifies one of the four sides of an activity's visual box
+// that a SequenceFlow attaches to.
+type AnchorSide int
+
+const (
+	AnchorSideUnset  AnchorSide = -1
+	AnchorSideTop    AnchorSide = 0
+	AnchorSideRight  AnchorSide = 1
+	AnchorSideBottom AnchorSide = 2
+	AnchorSideLeft   AnchorSide = 3
+)
+
+// FlowAnchors captures the origin/destination anchors for a single
+// SequenceFlow. Each side is independently optional: Unset means the builder
+// should derive the anchor from the visual direction.
+type FlowAnchors struct {
+	From AnchorSide // OriginConnectionIndex on the outgoing SequenceFlow
+	To   AnchorSide // DestinationConnectionIndex on the outgoing SequenceFlow
+}
+
 // ActivityAnnotations holds metadata annotations for microflow activities.
-// These are emitted as @position, @caption, @color, @annotation, @excluded lines in MDL.
+// These are emitted as @position, @caption, @color, @annotation, @excluded, @anchor lines in MDL.
 type ActivityAnnotations struct {
-	Position       *Position // @position(x, y)
-	Caption        string    // @caption 'text'
-	Color          string    // @color Green
-	AnnotationText string    // @annotation 'text'
-	Excluded       bool      // @excluded
+	Position       *Position    // @position(x, y)
+	Caption        string       // @caption 'text'
+	Color          string       // @color Green
+	AnnotationText string       // @annotation 'text'
+	Excluded       bool         // @excluded
+	Anchor         *FlowAnchors // @anchor(from: X, to: Y) — anchors of the flow leaving this statement
+
+	// Split-specific anchors for IF statements. When the statement is not an
+	// IF these remain nil. The grammar accepts them on IfStmt only:
+	//   @anchor(true: (from: right, to: left), false: (from: bottom, to: left))
+	TrueBranchAnchor  *FlowAnchors
+	FalseBranchAnchor *FlowAnchors
+
+	// Loop body anchors for LOOP/WHILE. IteratorAnchor is the flow that
+	// enters the loop body from the iterator; BodyTailAnchor is the flow
+	// from the last body statement back to the loop boundary. Both are only
+	// populated on LoopStmt/WhileStmt.
+	IteratorAnchor *FlowAnchors
+	BodyTailAnchor *FlowAnchors
 }
 
 // ChangeItem represents a single assignment in CREATE/CHANGE: Attr = expr

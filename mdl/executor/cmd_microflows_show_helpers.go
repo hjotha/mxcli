@@ -61,14 +61,187 @@ func collectFreeAnnotations(oc *microflows.MicroflowObjectCollection) []string {
 	return result
 }
 
-// emitObjectAnnotations emits @position, @caption, @color, and @annotation lines
-// for a microflow object before its statement.
+// anchorSideKeyword returns the MDL keyword (top/right/bottom/left) for a
+// connection-index value. Returns "" for unknown values.
+func anchorSideKeyword(idx int) string {
+	switch idx {
+	case AnchorTop:
+		return "top"
+	case AnchorRight:
+		return "right"
+	case AnchorBottom:
+		return "bottom"
+	case AnchorLeft:
+		return "left"
+	default:
+		return ""
+	}
+}
+
+// emitAnchorAnnotation emits an @anchor(...) line describing the incoming and
+// outgoing SequenceFlow anchors for this object. Nothing is emitted when the
+// object has no attached flows.
+//
+// For ExclusiveSplit / InheritanceSplit the split has up to two outgoing flows
+// (true/false), so instead of the simple from/to form we emit the branch form:
+//
+//	@anchor(to: X, true: (from: Y, to: Z), false: (from: Y, to: Z))
+//
+// Any of the three groups is omitted when its constituent values are both
+// default (so a non-annotated split produces no line). Non-split objects use
+// the simple @anchor(from: X, to: Y) form.
+func emitAnchorAnnotation(
+	obj microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	lines *[]string,
+	indentStr string,
+) {
+	id := obj.GetID()
+
+	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
+		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr)
+		return
+	}
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit {
+		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr)
+		return
+	}
+
+	var from, to string
+	if outgoing := flowsByOrigin[id]; len(outgoing) > 0 {
+		from = anchorSideKeyword(outgoing[0].OriginConnectionIndex)
+	}
+	if incoming := flowsByDest[id]; len(incoming) > 0 {
+		to = anchorSideKeyword(incoming[0].DestinationConnectionIndex)
+	}
+
+	if from == "" && to == "" {
+		return
+	}
+	var parts []string
+	if from != "" {
+		parts = append(parts, "from: "+from)
+	}
+	if to != "" {
+		parts = append(parts, "to: "+to)
+	}
+	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
+}
+
+// emitSplitAnchorAnnotation emits the split form of @anchor — the incoming
+// `to: X` plus per-branch `true: (...)` / `false: (...)` — whenever any of the
+// three has a non-default value. The rendering matches the grammar accepted
+// by parseAnchorAnnotation so describe → exec roundtrips bit-exactly.
+//
+// The TRUE/FALSE branches are identified by findBranchFlows, which already
+// handles every CaseValue variant the parser produces (ExpressionCase,
+// EnumerationCase, BooleanCase — both value and pointer forms). Sharing that
+// helper keeps the anchor emission consistent with the rest of the describer.
+func emitSplitAnchorAnnotation(
+	id model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	lines *[]string,
+	indentStr string,
+) {
+	// Incoming flow anchor (where the previous activity's flow lands on the split).
+	var inTo string
+	if incoming := flowsByDest[id]; len(incoming) > 0 {
+		inTo = anchorSideKeyword(incoming[0].DestinationConnectionIndex)
+	}
+
+	trueFlow, falseFlow := findBranchFlows(flowsByOrigin[id])
+
+	var trueFrom, trueTo, falseFrom, falseTo string
+	if trueFlow != nil {
+		trueFrom = anchorSideKeyword(trueFlow.OriginConnectionIndex)
+		trueTo = anchorSideKeyword(trueFlow.DestinationConnectionIndex)
+	}
+	if falseFlow != nil {
+		falseFrom = anchorSideKeyword(falseFlow.OriginConnectionIndex)
+		falseTo = anchorSideKeyword(falseFlow.DestinationConnectionIndex)
+	}
+
+	if inTo == "" && trueFrom == "" && trueTo == "" && falseFrom == "" && falseTo == "" {
+		return
+	}
+
+	var parts []string
+	if inTo != "" {
+		parts = append(parts, "to: "+inTo)
+	}
+	if p := branchAnchorFragment("true", trueFrom, trueTo); p != "" {
+		parts = append(parts, p)
+	}
+	if p := branchAnchorFragment("false", falseFrom, falseTo); p != "" {
+		parts = append(parts, p)
+	}
+	if len(parts) == 0 {
+		return
+	}
+	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
+}
+
+// branchAnchorFragment builds a `key: (from: X, to: Y)` fragment for a branch
+// anchor. Returns "" when both sides are empty (default).
+func branchAnchorFragment(label, from, to string) string {
+	if from == "" && to == "" {
+		return ""
+	}
+	var inner []string
+	if from != "" {
+		inner = append(inner, "from: "+from)
+	}
+	if to != "" {
+		inner = append(inner, "to: "+to)
+	}
+	return fmt.Sprintf("%s: (%s)", label, strings.Join(inner, ", "))
+}
+
+// currentFlowsByDest / currentFlowsByOrigin are optional describer-global maps
+// (set up by the top-level describer entry point). emitObjectAnnotations reads
+// them when emitting @anchor lines so the existing callers don't have to be
+// retrofitted with an extra argument. When the maps are nil, @anchor emission
+// is skipped — this keeps unit tests of emitObjectAnnotations self-contained.
+//
+// Not ideal, but keeps the blast radius of this change confined to the two
+// entry points in cmd_microflows_show.go that set them up and clear them.
+var (
+	currentFlowsByOrigin map[model.ID][]*microflows.SequenceFlow
+	currentFlowsByDest   map[model.ID][]*microflows.SequenceFlow
+)
+
+// setDescriberFlowMaps installs the flow maps used by @anchor emission and
+// returns a cleanup function the caller should defer to restore the previous
+// (usually nil) state.
+func setDescriberFlowMaps(
+	byOrigin map[model.ID][]*microflows.SequenceFlow,
+	byDest map[model.ID][]*microflows.SequenceFlow,
+) func() {
+	prevOrigin := currentFlowsByOrigin
+	prevDest := currentFlowsByDest
+	currentFlowsByOrigin = byOrigin
+	currentFlowsByDest = byDest
+	return func() {
+		currentFlowsByOrigin = prevOrigin
+		currentFlowsByDest = prevDest
+	}
+}
+
+// emitObjectAnnotations emits @position, @caption, @color, @annotation, and
+// @anchor lines for a microflow object before its statement.
 func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, indentStr string, annotationsByTarget map[model.ID][]string) {
 	currentID := obj.GetID()
 
 	// @position (always emit)
 	pos := obj.GetPosition()
 	*lines = append(*lines, indentStr+fmt.Sprintf("@position(%d, %d)", pos.X, pos.Y))
+
+	// @anchor (emit whenever attached flows exist, for roundtrip fidelity)
+	if currentFlowsByOrigin != nil && currentFlowsByDest != nil {
+		emitAnchorAnnotation(obj, currentFlowsByOrigin, currentFlowsByDest, lines, indentStr)
+	}
 
 	// @excluded, @caption, and @color (only for ActionActivity)
 	if activity, ok := obj.(*microflows.ActionActivity); ok {
@@ -84,12 +257,10 @@ func emitObjectAnnotations(obj microflows.MicroflowObject, lines *[]string, inde
 	}
 
 	if split, ok := obj.(*microflows.ExclusiveSplit); ok && split.Caption != "" {
-		escapedCaption := strings.ReplaceAll(split.Caption, "'", "''")
-		*lines = append(*lines, indentStr+fmt.Sprintf("@caption '%s'", escapedCaption))
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
 	}
 	if split, ok := obj.(*microflows.InheritanceSplit); ok && split.Caption != "" {
-		escapedCaption := strings.ReplaceAll(split.Caption, "'", "''")
-		*lines = append(*lines, indentStr+fmt.Sprintf("@caption '%s'", escapedCaption))
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
 	}
 
 	// @annotation (attached Annotation objects)
@@ -292,6 +463,7 @@ func traverseFlow(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
+		*lines = append(*lines, indentStr+"begin")
 		emitLoopBody(ctx, loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
 		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
@@ -439,6 +611,7 @@ func traverseFlowUntilMerge(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
+		*lines = append(*lines, indentStr+"begin")
 		emitLoopBody(ctx, loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
 		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
@@ -502,6 +675,7 @@ func traverseLoopBody(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
+		*lines = append(*lines, indentStr+"begin")
 		emitLoopBody(ctx, loop, flowsByOrigin, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 
 		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")

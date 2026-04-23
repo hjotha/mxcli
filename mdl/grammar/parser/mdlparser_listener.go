@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -1300,8 +1300,17 @@ type MDLParserListener interface {
 	// EnterAnnotationParam is called when entering the annotationParam production.
 	EnterAnnotationParam(c *AnnotationParamContext)
 
+	// EnterAnnotationParamName is called when entering the annotationParamName production.
+	EnterAnnotationParamName(c *AnnotationParamNameContext)
+
 	// EnterAnnotationValue is called when entering the annotationValue production.
 	EnterAnnotationValue(c *AnnotationValueContext)
+
+	// EnterAnchorSide is called when entering the anchorSide production.
+	EnterAnchorSide(c *AnchorSideContext)
+
+	// EnterAnnotationParenValue is called when entering the annotationParenValue production.
+	EnterAnnotationParenValue(c *AnnotationParenValueContext)
 
 	// EnterKeyword is called when entering the keyword production.
 	EnterKeyword(c *KeywordContext)
@@ -2599,8 +2608,17 @@ type MDLParserListener interface {
 	// ExitAnnotationParam is called when exiting the annotationParam production.
 	ExitAnnotationParam(c *AnnotationParamContext)
 
+	// ExitAnnotationParamName is called when exiting the annotationParamName production.
+	ExitAnnotationParamName(c *AnnotationParamNameContext)
+
 	// ExitAnnotationValue is called when exiting the annotationValue production.
 	ExitAnnotationValue(c *AnnotationValueContext)
+
+	// ExitAnchorSide is called when exiting the anchorSide production.
+	ExitAnchorSide(c *AnchorSideContext)
+
+	// ExitAnnotationParenValue is called when exiting the annotationParenValue production.
+	ExitAnnotationParenValue(c *AnnotationParenValueContext)
 
 	// ExitKeyword is called when exiting the keyword production.
 	ExitKeyword(c *KeywordContext)

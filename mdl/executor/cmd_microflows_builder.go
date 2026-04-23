@@ -31,10 +31,21 @@ type flowBuilder struct {
 	measurer            *layoutMeasurer              // For measuring statement dimensions
 	nextConnectionPoint model.ID                     // For compound statements: the exit point differs from entry point
 	nextFlowCase        string                       // If set, next connecting flow uses this case value (for merge-less splits)
+	// nextFlowAnchor carries the branch-specific FlowAnchors that should be
+	// applied to the flow created by the NEXT iteration of buildFlowGraph.
+	// Used by guard-pattern IFs (where one branch returns and the other
+	// continues) so the continuing branch's @anchor survives to the actual
+	// splitID→nextActivity flow — which is emitted one iteration later by the
+	// outer loop, not by addIfStatement.
+	nextFlowAnchor      *ast.FlowAnchors
 	backend             backend.FullBackend          // For looking up page/microflow references
 	hierarchy           *ContainerHierarchy          // For resolving container IDs to module names
 	pendingAnnotations  *ast.ActivityAnnotations     // Pending annotations to attach to next activity
 	restServices        []*model.ConsumedRestService // Cached REST services for parameter classification
+	// previousStmtAnchor holds the Anchor annotation of the statement that
+	// just emitted an activity, so the next flow's OriginConnectionIndex can
+	// be overridden by the user. Cleared after each flow is created.
+	previousStmtAnchor *ast.FlowAnchors
 }
 
 // addError records a validation error during flow building.
