@@ -491,7 +491,11 @@ func (pb *pageBuilder) buildDataSourceV3(ds *ast.DataSourceV3) (pages.DataSource
 
 		// Fallback to lookup if entity name not stored
 		if entityName == "" {
-			entityName, _ = pb.getEntityNameByID(entityID)
+			var err error
+			entityName, err = pb.getEntityNameByID(entityID)
+			if err != nil {
+				log.Printf("warning: could not resolve entity name for ID %s: %v", entityID, err)
+			}
 		}
 
 		// Use DataViewSource with IsSnippetParameter flag

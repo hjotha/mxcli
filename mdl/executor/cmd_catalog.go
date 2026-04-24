@@ -7,9 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -17,6 +20,19 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 )
+
+// syncWriter wraps an io.Writer with a mutex so concurrent goroutines
+// (e.g. background catalog build) can write without racing.
+type syncWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (sw *syncWriter) Write(p []byte) (int, error) {
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+	return sw.w.Write(p)
+}
 
 // execShowCatalogTables handles SHOW CATALOG TABLES.
 func execShowCatalogTables(ctx *ExecContext) error {
@@ -449,19 +465,29 @@ func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) erro
 
 	// Handle background mode — clone ctx so the goroutine doesn't race
 	// with the main dispatch loop (which may syncBack and mutate fields).
-	// NOTE: bgCtx.Output still shares the underlying writer with the main
-	// goroutine. This is a pre-existing limitation — the original code also
-	// wrote to ctx.Output from the goroutine. A synchronized writer would
-	// fix this but is out of scope for the executor cleanup.
 	if stmt.Background {
-		bgCtx := *ctx   // shallow copy — isolates scalar fields
-		bgCtx.Cache = nil // detach shared cache so preWarmCache writes stay local
+		bgCtx := *ctx                    // shallow copy — isolates scalar fields
+		bgCtx.Cache = nil                // detach shared cache so preWarmCache writes stay local
+		sw := &syncWriter{w: ctx.Output} // shared mutex-wrapped writer
+		bgCtx.Output = sw                // background goroutine writes through sw
+		syncCatalog := ctx.SyncCatalog   // capture callback before returning
 		go func() {
 			if err := buildCatalog(&bgCtx, stmt.Full, stmt.Source); err != nil {
 				fmt.Fprintf(bgCtx.Output, "Background catalog build failed: %v\n", err)
+				return
+			}
+			// Propagate the built catalog back to the Executor so the next
+			// command picks it up. syncBack has already run for this statement,
+			// so we use the SyncCatalog callback to write directly to e.catalog.
+			if bgCtx.Catalog != nil {
+				if syncCatalog != nil {
+					syncCatalog(bgCtx.Catalog)
+				} else {
+					bgCtx.Catalog.Close()
+				}
 			}
 		}()
-		fmt.Fprintln(ctx.Output, "Catalog build started in background...")
+		fmt.Fprintln(sw, "Catalog build started in background...")
 		return nil
 	}
 
@@ -618,7 +644,9 @@ func outputCatalogResults(ctx *ExecContext, result *catalog.QueryResult) {
 		}
 		tr.Rows = append(tr.Rows, outRow)
 	}
-	_ = writeResult(ctx, tr)
+	if err := writeResult(ctx, tr); err != nil {
+		log.Printf("warning: failed to write catalog results: %v", err)
+	}
 }
 
 // formatValue formats a value for display.

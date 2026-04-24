@@ -79,8 +79,8 @@ type Builder struct {
 	progress     ProgressFunc
 	hierarchy    *hierarchy
 	tx           CatalogTx // Transaction for batched inserts
-	fullMode     bool    // If true, do full parsing (activities/widgets)
-	sourceMode   bool    // If true, build source FTS table (implies full)
+	fullMode     bool      // If true, do full parsing (activities/widgets)
+	sourceMode   bool      // If true, build source FTS table (implies full)
 	describeFunc DescribeFunc
 
 	// Document caches — avoid redundant BSON parsing across builder phases.

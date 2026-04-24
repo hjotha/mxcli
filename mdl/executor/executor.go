@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -184,6 +185,8 @@ type Executor struct {
 	sqlMgr         *sqllib.Manager                    // external SQL connection manager (lazy init)
 	themeRegistry  *ThemeRegistry                     // cached theme design property definitions (lazy init)
 	registry       *Registry                          // statement dispatch registry
+	catalogMu      sync.RWMutex                       // protects catalog field from background goroutine writes
+	catalogGen     uint64                             // monotonic generation counter for catalog swaps
 }
 
 // New creates a new executor with the given output writer.
@@ -300,7 +303,10 @@ func (e *Executor) finalizeProgramExecution() error {
 
 // Catalog returns the catalog, or nil if not built.
 func (e *Executor) Catalog() *catalog.Catalog {
-	return e.catalog
+	e.catalogMu.RLock()
+	c := e.catalog
+	e.catalogMu.RUnlock()
+	return c
 }
 
 // Reader returns the MPR reader, or nil if not connected.

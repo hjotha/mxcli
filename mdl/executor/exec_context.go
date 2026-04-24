@@ -78,6 +78,11 @@ type ExecContext struct {
 
 	// FinalizeFn runs post-execution reconciliation (security rule sync).
 	FinalizeFn func() error
+
+	// SyncCatalog propagates an asynchronously built catalog back to the
+	// Executor. Used by REFRESH CATALOG BACKGROUND so the goroutine can
+	// deliver the result after syncBack has already run.
+	SyncCatalog func(*catalog.Catalog)
 }
 
 // Connected returns true if a project is connected via the Backend.
@@ -203,8 +208,8 @@ func (ctx *ExecContext) getCreatedPage(qualifiedName string) *createdPageInfo {
 	return ctx.Cache.createdPages[qualifiedName]
 }
 
-// EnsureSqlMgr lazily initializes and returns the SQL connection manager.
-func (ctx *ExecContext) EnsureSqlMgr() *sqllib.Manager {
+// ensureSqlMgr lazily initializes and returns the SQL connection manager.
+func (ctx *ExecContext) ensureSqlMgr() *sqllib.Manager {
 	if ctx.SqlMgr == nil {
 		ctx.SqlMgr = sqllib.NewManager()
 	}

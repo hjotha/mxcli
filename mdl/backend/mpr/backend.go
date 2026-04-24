@@ -768,11 +768,11 @@ func (b *MprBackend) OpenWorkflowForMutation(unitID model.ID) (backend.WorkflowM
 // WidgetSerializationBackend
 
 func (b *MprBackend) SerializeWidget(w pages.Widget) (any, error) {
-	panic("MprBackend.SerializeWidget not yet implemented") // TODO: implement in PR #237
+	return mpr.SerializeWidget(w), nil
 }
 
 func (b *MprBackend) SerializeClientAction(a pages.ClientAction) (any, error) {
-	panic("MprBackend.SerializeClientAction not yet implemented") // TODO: implement in PR #237
+	return mpr.SerializeClientAction(a), nil
 }
 
 func (b *MprBackend) SerializeDataSource(ds pages.DataSource) (any, error) {
@@ -780,5 +780,5 @@ func (b *MprBackend) SerializeDataSource(ds pages.DataSource) (any, error) {
 }
 
 func (b *MprBackend) SerializeWorkflowActivity(a workflows.WorkflowActivity) (any, error) {
-	panic("MprBackend.SerializeWorkflowActivity not yet implemented") // TODO: implement in PR #237
+	return mpr.SerializeWorkflowActivity(a), nil
 }

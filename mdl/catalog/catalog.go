@@ -284,16 +284,10 @@ func (c *Catalog) SaveToFile(path string) error {
 	}
 	rawDB := sdb.RawDB()
 
-	// Open destination file database
-	destDB, err := sql.Open("sqlite", path)
-	if err != nil {
-		return fmt.Errorf("failed to create catalog file: %w", err)
-	}
-	defer destDB.Close()
-
 	// Use SQLite backup API via VACUUM INTO (SQLite 3.27+)
 	// Fall back to manual copy if not available
-	_, err = rawDB.Exec(fmt.Sprintf("VACUUM INTO '%s'", path))
+	safePath := strings.ReplaceAll(path, "'", "''")
+	_, err := rawDB.Exec(fmt.Sprintf("VACUUM INTO '%s'", safePath))
 	if err != nil {
 		// Fall back: export and import
 		return c.saveToFileManual(path, rawDB)

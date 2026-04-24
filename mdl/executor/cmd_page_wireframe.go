@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -485,7 +486,9 @@ func pageToMdlString(ctx *ExecContext, name ast.QualifiedName, root []wireframeN
 	var buf strings.Builder
 	origOutput := ctx.Output
 	ctx.Output = &buf
-	_ = describePage(ctx, name)
+	if err := describePage(ctx, name); err != nil {
+		log.Printf("warning: describePage failed for %s.%s: %v", name.Module, name.Name, err)
+	}
 	ctx.Output = origOutput
 
 	mdlSource := buf.String()
