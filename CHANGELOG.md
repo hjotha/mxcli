@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **OpenAPI import for REST clients** — `CREATE REST CLIENT` now accepts `OpenAPI: 'path/or/url'` to auto-generate a consumed REST service document from an OpenAPI 3.0 spec (JSON or YAML); operations, path/query parameters, request bodies, response types, resource groups (tags), and Basic auth are derived automatically; spec content is stored in `OpenApiFile` for Studio Pro parity (#207)
 - **DESCRIBE CONTRACT OPERATION FROM OPENAPI** — Preview what would be generated from an OpenAPI spec without writing to the project
 
+- **Nanoflow bug fixes** — Module existence validation for SHOW NANOFLOWS/MICROFLOWS, numeric return literals no longer get spurious `$` prefix, empty nanoflow/microflow names rejected at create time, `NanoflowCallAction` error handling type resolved correctly, `not()` expression spacing preserved on roundtrip, JavaScript action call rendering in DESCRIBE output
+- **Nanoflow diff support** — `mxcli diff` now detects and displays nanoflow changes (previously silently skipped)
+- **DESCRIBE empty-then optimization** — If/else blocks with empty true branches are swapped and condition negated for readable output
+
 ### Changed
 
 - **MDL string literal escapes** — `mdlQuote`/`unquoteString` now treat `\n`, `\r`, `\t`, and `\\` inside single-quoted literals as escape sequences (previously a literal backslash followed by the letter). This is a compatibility break for any MDL script that intentionally embedded a raw `\n` / `\t` / `\\` as two characters; such scripts must now double the backslash (`\\n` to preserve the two-character form). Applies to `LOG` messages, `@caption`/`@annotation` text, and other string literals round-tripped via the describer.

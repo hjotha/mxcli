@@ -194,6 +194,8 @@ actionbutton widgetName (caption: 'Caption', action: ACTION_TYPE [, buttonstyle:
 - `action: delete` - Delete object
 - `action: microflow Module.MicroflowName` - Call microflow
 - `action: microflow Module.MicroflowName(Param: $value)` - Call microflow with parameters
+- `action: nanoflow Module.NanoflowName` - Call nanoflow (client-side)
+- `action: nanoflow Module.NanoflowName(Param: $value)` - Call nanoflow with parameters
 - `action: show_page Module.PageName` - Navigate to page
 - `action: show_page Module.PageName(Param: $value)` - Navigate with parameters
 - `action: show_page Module.PageName($Param = $value)` - Also accepted (microflow-style)

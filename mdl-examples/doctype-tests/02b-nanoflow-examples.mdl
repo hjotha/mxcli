@@ -1,0 +1,81 @@
+-- Nanoflow examples — client-side flows
+-- Nanoflows share microflow body syntax but restrict server-side actions.
+
+-- Setup
+create module NanoflowExamples;
+create entity NanoflowExamples.Product (
+    Name : String(200),
+    Price : Decimal,
+    IsValid : Boolean
+);
+
+-- Minimal nanoflow (empty body)
+create nanoflow NanoflowExamples.NF_Empty () begin end;
+
+-- Nanoflow with parameters and return type
+create nanoflow NanoflowExamples.NF_ValidateProduct
+    ($Product : NanoflowExamples.Product)
+    returns Boolean
+    folder 'Validation'
+begin
+    if $Product/Name = '' then
+        validation feedback $Product/Name message 'Name is required';
+        return false;
+    end if;
+    if $Product/Price < 0 then
+        validation feedback $Product/Price message 'Price must be non-negative';
+        return false;
+    end if;
+    return true;
+end;
+
+-- Nanoflow calling another nanoflow
+create nanoflow NanoflowExamples.NF_SaveProduct
+    ($Product : NanoflowExamples.Product)
+    folder 'Actions'
+begin
+    declare $IsValid Boolean;
+    call nanoflow NanoflowExamples.NF_ValidateProduct($Product: $Product)
+        returns $IsValid;
+    if not($IsValid) then
+        return;
+    end if;
+    change $Product (IsValid: true);
+    log info 'Product validated and saved';
+end;
+
+-- Nanoflow with multiple parameters
+create nanoflow NanoflowExamples.NF_FormatPrice
+    ($Amount : Decimal, $Currency : String)
+    returns String
+    folder 'Helpers'
+begin
+    return $Currency + ' ' + formatDecimal($Amount, 2);
+end;
+
+-- Security
+grant execute on nanoflow NanoflowExamples.NF_ValidateProduct to NanoflowExamples.User;
+grant execute on nanoflow NanoflowExamples.NF_SaveProduct to NanoflowExamples.User;
+grant execute on nanoflow NanoflowExamples.NF_FormatPrice to NanoflowExamples.User, NanoflowExamples.Admin;
+
+-- Show nanoflows
+show nanoflows;
+show nanoflows in NanoflowExamples;
+
+-- Describe
+describe nanoflow NanoflowExamples.NF_ValidateProduct;
+
+-- Rename
+rename nanoflow NanoflowExamples.NF_Empty to NF_Placeholder;
+
+-- Move
+move nanoflow NanoflowExamples.NF_Placeholder to NanoflowExamples;
+
+-- Drop
+drop nanoflow NanoflowExamples.NF_Placeholder;
+
+-- Show access
+show access on nanoflow NanoflowExamples.NF_ValidateProduct;
+
+-- Revoke
+revoke execute on nanoflow NanoflowExamples.NF_ValidateProduct from NanoflowExamples.User;

@@ -205,6 +205,8 @@ Test nanoflow with Excluded=true. Verify property appears in output.
 
 **Source:** `cmd_nanoflows_create.go` — `execCreateNanoflow()` (225 lines)
 
+> **Note:** Parentheses are required even for parameterless nanoflows: `create nanoflow M.N () begin end;`. This is grammar-by-design — the parser expects `'(' params? ')'` unconditionally.
+
 ### 3.1 Minimal nanoflow
 ```
 create nanoflow MyModule.TestNano ()
@@ -468,6 +470,8 @@ end;
 
 **Source:** `cmd_security_write.go:674` (grant), `:733` (revoke)
 
+> **Note:** Drop/recreate of the same nanoflow name preserves security roles by design. The executor caches `AllowedModuleRoles` on DROP and restores them on the next CREATE with the same qualified name (`rememberDroppedNanoflow`/`consumeDroppedNanoflow` pattern). Use REVOKE after recreate if roles should change.
+
 ### 7.1 Grant to single role
 ```
 grant execute on nanoflow MyModule.TestNano to MyModule.User;
@@ -600,7 +604,9 @@ create nanoflow M.Good1 () begin end;
 create nanoflow M.Bad () begin call java action SomeModule.JavaAction (); end;
 create nanoflow M.Good3 () begin end;
 ```
-**Expected:** Good1 created, Bad rejected with clear error, Good3 created (batch continues past error).
+**Expected:** Good1 created, Bad rejected with clear error, Good3 **not created** — batch aborts on first error.
+
+> **Note:** Batch mode (`mxcli exec`) is fail-fast — the first error aborts all remaining statements. REPL mode (interactive or piped) continues on error per-line. This is consistent across all entity types. `IF EXISTS` / `IF NOT EXISTS` syntax does not exist yet.
 
 ### 21.2 CREATE with non-existent entity parameter
 ```
@@ -946,6 +952,8 @@ Copy and fill in after running manual tests. Include in PR description under `##
 | MOVE NANOFLOW | ✅/❌ | |
 
 ### Bulk Roundtrip Results
+
+> **Note:** Expression whitespace is intentionally normalized during roundtrip. Function arguments get a space after commas: `find($x,'y')` → `find($x, 'y')`. This is by-design normalization for readability, not a fidelity bug.
 
 ```
 # Command used:

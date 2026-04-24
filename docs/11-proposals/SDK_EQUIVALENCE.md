@@ -153,6 +153,7 @@ modelsdk-go/
 | Attribute types | ✅ Complete | 9 types |
 | Association CRUD | ✅ Complete | |
 | Microflow basic | ⚠️ Partial | Basic structure only |
+| Nanoflow CRUD | ⚠️ Partial | CREATE/DROP/DESCRIBE/SHOW/RENAME/MOVE, GRANT/REVOKE, diff support |
 | Page basic | ⚠️ Partial | Basic structure only |
 | JSON export | ✅ Complete | |
 

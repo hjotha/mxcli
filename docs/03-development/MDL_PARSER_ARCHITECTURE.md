@@ -66,12 +66,13 @@ mdl/
 │       └── mdlparser_base_listener.go
 ├── ast/
 │   └── ast.go, ast_microflow.go, ast_expression.go, ast_datatype.go, ...
+│       # ast_microflow.go covers both CreateMicroflowStmt and CreateNanoflowStmt
 ├── visitor/
 │   └── visitor.go          # ANTLR listener implementation
 ├── executor/
 │   ├── executor.go              # AST execution logic
-│   ├── cmd_microflows_builder.go  # microflow builder (variable tracking)
-│   └── validate_microflow.go     # AST-level semantic checks (mxcli check)
+│   ├── cmd_microflows_builder.go  # microflow/nanoflow builder (variable tracking)
+│   └── validate_microflow.go     # AST-level semantic checks (mxcli check) — covers both microflows and nanoflows
 ├── catalog/
 │   └── catalog.go          # SQLite-based project metadata catalog
 ├── linter/

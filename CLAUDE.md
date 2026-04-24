@@ -439,9 +439,9 @@ Regenerate after modifying `MDLLexer.g4` or `MDLParser.g4`: `make grammar`. See 
 - `.claude/skills/database-connections.md` - External database connections from microflows
 - `.claude/skills/test-microflows.md` - **READ for testing work** - Test annotations, file formats, Docker setup requirement
 
-### Mendix Microflow Idioms (MUST follow)
+### Mendix Microflow/Nanoflow Idioms (MUST follow)
 
-These rules apply whenever generating microflow MDL. Violations are caught by `mxcli check`.
+These rules apply whenever generating microflow or nanoflow MDL. Violations are caught by `mxcli check`.
 
 1. **NEVER create empty list variables as loop sources.** If processing imported data, accept the list as a microflow parameter — `declare $Items list of ... = empty` followed by `loop $item in $Items` is always wrong.
 2. **NEVER use nested LOOPs for list matching.** Loop over the primary list and use `retrieve $match from $TargetList where key = $item/key limit 1` for O(N) lookup. Nested loops are O(N^2).
