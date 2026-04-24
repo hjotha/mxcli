@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package bsonutil provides BSON-aware ID conversion utilities for model elements.
+// Package bsonutil provides BSON-aware ID conversion and type-extraction utilities
+// for model elements.
 // It depends on mdl/types (WASM-safe) and the BSON driver (also WASM-safe),
 // but does NOT depend on sdk/mpr (which pulls in SQLite/CGO).
 package bsonutil
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -55,4 +57,32 @@ func NewIDBsonBinaryErr() (primitive.Binary, error) {
 		return primitive.Binary{}, fmt.Errorf("generating ID: %w", err)
 	}
 	return IDToBsonBinaryErr(id)
+}
+
+// String extracts a string from an interface value.
+// Returns the zero value and logs a diagnostic warning on type mismatch.
+func String(v any, field string) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	if v == nil {
+		log.Printf("warning: bsonutil: expected string for %q, got <nil>", field)
+	} else {
+		log.Printf("warning: bsonutil: expected string for %q, got %T", field, v)
+	}
+	return ""
+}
+
+// Bool extracts a bool from an interface value.
+// Returns the zero value and logs a diagnostic warning on type mismatch.
+func Bool(v any, field string) bool {
+	if b, ok := v.(bool); ok {
+		return b
+	}
+	if v == nil {
+		log.Printf("warning: bsonutil: expected bool for %q, got <nil>", field)
+	} else {
+		log.Printf("warning: bsonutil: expected bool for %q, got %T", field, v)
+	}
+	return false
 }

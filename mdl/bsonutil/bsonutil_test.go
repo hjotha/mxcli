@@ -3,6 +3,9 @@
 package bsonutil
 
 import (
+	"bytes"
+	"log"
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -104,5 +107,55 @@ func TestIDToBsonBinaryErr_EmptyString(t *testing.T) {
 	_, err := IDToBsonBinaryErr("")
 	if err == nil {
 		t.Fatal("expected error for empty string, got nil")
+	}
+}
+
+// =============================================================================
+// String / Bool — unexpected types must not panic
+// =============================================================================
+
+// Not parallel-safe: redirects global log output.
+func TestStringBool_UnexpectedTypes_NoPanic(t *testing.T) {
+	var buf bytes.Buffer
+	origOutput := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(origOutput)
+
+	// String with non-string values
+	if s := String(42, "test"); s != "" {
+		t.Errorf("expected empty string, got %q", s)
+	}
+	if s := String(nil, "test"); s != "" {
+		t.Errorf("expected empty string for nil, got %q", s)
+	}
+	if s := String(true, "test"); s != "" {
+		t.Errorf("expected empty string for bool, got %q", s)
+	}
+
+	// Bool with non-bool values
+	if b := Bool("true", "test"); b {
+		t.Error("expected false for string input")
+	}
+	if b := Bool(nil, "test"); b {
+		t.Error("expected false for nil")
+	}
+	if b := Bool(42, "test"); b {
+		t.Error("expected false for int input")
+	}
+
+	// Verify diagnostic warnings were emitted
+	logged := buf.String()
+	expectedWarnings := []string{
+		`expected string for "test", got int`,
+		`expected string for "test", got <nil>`,
+		`expected string for "test", got bool`,
+		`expected bool for "test", got string`,
+		`expected bool for "test", got <nil>`,
+		`expected bool for "test", got int`,
+	}
+	for _, w := range expectedWarnings {
+		if !strings.Contains(logged, w) {
+			t.Errorf("expected warning containing %q in log output", w)
+		}
 	}
 }

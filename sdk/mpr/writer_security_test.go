@@ -3,6 +3,8 @@
 package mpr
 
 import (
+	"io"
+	"log"
 	"testing"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -122,5 +124,35 @@ func TestRemoveRolesFromAccessRule_ThreeRoles_RemoveMiddle(t *testing.T) {
 	names := getRoleNames(rule)
 	if len(names) != 2 || names[0] != "Mod.A" || names[1] != "Mod.C" {
 		t.Errorf("expected [Mod.A, Mod.C], got %v", names)
+	}
+}
+
+// =============================================================================
+// mergeAccessRule — malformed BSON must not panic
+// =============================================================================
+
+// Not parallel-safe: redirects global log output.
+func TestMergeAccessRule_UnexpectedTypes_NoPanic(t *testing.T) {
+	origOutput := log.Writer()
+	log.SetOutput(io.Discard)
+	defer log.SetOutput(origOutput)
+
+	existing := bson.D{
+		{Key: "$Type", Value: "DomainModels$AccessRule"},
+		{Key: "AllowCreate", Value: 42},           // wrong type: int instead of bool
+		{Key: "AllowDelete", Value: "not-a-bool"}, // wrong type: string instead of bool
+		{Key: "DefaultMemberAccessRights", Value: 99},
+	}
+	newRule := bson.D{
+		{Key: "$Type", Value: "DomainModels$AccessRule"},
+		{Key: "AllowCreate", Value: true},
+		{Key: "AllowDelete", Value: false},
+		{Key: "DefaultMemberAccessRights", Value: "ReadWrite"},
+	}
+
+	// Must not panic
+	result := mergeAccessRule(existing, newRule)
+	if result == nil {
+		t.Error("expected non-nil result")
 	}
 }
