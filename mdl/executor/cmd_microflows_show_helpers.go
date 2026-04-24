@@ -494,7 +494,7 @@ func traverseFlow(
 		// the condition and swap branches for more readable output.
 		// "if cond then else <body> end if;" → "if not(cond) then <body> end if;"
 		if trueFlow != nil && falseFlow != nil && mergeID != "" {
-			if trueFlow.DestinationID == mergeID {
+			if trueFlow.DestinationID == mergeID && falseFlow.DestinationID != mergeID {
 				stmt = negateIfCondition(stmt)
 				trueFlow, falseFlow = falseFlow, trueFlow
 			}
@@ -657,9 +657,10 @@ func traverseFlowUntilMerge(
 
 		trueFlow, falseFlow := findBranchFlows(flows)
 
-		// Empty-then swap: same logic as traverseFlow above.
+		// Empty-then swap: negate when true branch is empty but false branch has content.
+		// Skip when both branches go directly to merge (both empty).
 		if trueFlow != nil && falseFlow != nil && nestedMergeID != "" {
-			if trueFlow.DestinationID == nestedMergeID {
+			if trueFlow.DestinationID == nestedMergeID && falseFlow.DestinationID != nestedMergeID {
 				stmt = negateIfCondition(stmt)
 				trueFlow, falseFlow = falseFlow, trueFlow
 			}
@@ -1153,8 +1154,25 @@ func negateIfCondition(stmt string) string {
 	if strings.HasPrefix(stmt, prefix) && strings.HasSuffix(stmt, suffix) {
 		cond := stmt[len(prefix) : len(stmt)-len(suffix)]
 		// Avoid double-negation: not(not(x)) → x
+		// Only unwrap if the outer parens are balanced (depth returns to 0 at the final char)
 		if strings.HasPrefix(cond, "not(") && strings.HasSuffix(cond, ")") {
-			return prefix + cond[4:len(cond)-1] + suffix
+			inner := cond[4 : len(cond)-1]
+			depth := 0
+			balanced := true
+			for _, ch := range inner {
+				if ch == '(' {
+					depth++
+				} else if ch == ')' {
+					depth--
+					if depth < 0 {
+						balanced = false
+						break
+					}
+				}
+			}
+			if balanced && depth == 0 {
+				return prefix + inner + suffix
+			}
 		}
 		return prefix + "not(" + cond + ")" + suffix
 	}

@@ -351,10 +351,14 @@ func diffNanoflow(ctx *ExecContext, s *ast.CreateNanoflowStmt) (*DiffResult, err
 		if modName == s.Name.Module && nf.Name == s.Name.Name {
 			// Capture current MDL representation
 			var buf bytes.Buffer
-			oldOutput := ctx.Output
-			ctx.Output = &buf
-			describeNanoflow(ctx, s.Name)
-			ctx.Output = oldOutput
+			if err := func() error {
+				oldOutput := ctx.Output
+				ctx.Output = &buf
+				defer func() { ctx.Output = oldOutput }()
+				return describeNanoflow(ctx, s.Name)
+			}(); err != nil {
+				return nil, err
+			}
 			result.Current = strings.TrimSuffix(buf.String(), "\n")
 			result.Changes = compareMicroflows(ctx, result.Current, result.Proposed)
 			return result, nil
@@ -543,7 +547,8 @@ func extractParameters(_ *ExecContext, lines []string) map[string]bool {
 	inParams := false
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "create microflow") || strings.HasPrefix(line, "create nanoflow") {
+		if strings.HasPrefix(line, "create microflow") || strings.HasPrefix(line, "create nanoflow") ||
+			strings.HasPrefix(line, "create or modify microflow") || strings.HasPrefix(line, "create or modify nanoflow") {
 			inParams = true
 			continue
 		}

@@ -957,6 +957,51 @@ func TestFormatAction_JavaScriptActionCall_WithParams(t *testing.T) {
 	}
 }
 
+func TestFormatAction_JavaScriptActionCall_NilParamValue(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.JavaScriptActionCallAction{
+		JavaScriptAction: "MyModule.MyJSAction",
+		ParameterMappings: []*microflows.JavaScriptActionParameterMapping{
+			{
+				Parameter: "MyModule.MyJSAction.Input",
+				Value:     nil,
+			},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "call javascript action MyModule.MyJSAction(Input = ...);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_JavaScriptActionCall_EmptyName(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.JavaScriptActionCallAction{
+		JavaScriptAction: "",
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "-- JavaScriptAction: missing action reference"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_JavaScriptActionCall_EmptyNameWithParams(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.JavaScriptActionCallAction{
+		JavaScriptAction: "",
+		ParameterMappings: []*microflows.JavaScriptActionParameterMapping{
+			{Parameter: "Mod.Action.P1"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "-- JavaScriptAction: missing action reference (1 param)"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestGetActionErrorHandlingType_JavaScriptActionCallAction(t *testing.T) {
 	activity := &microflows.ActionActivity{
 		Action: &microflows.JavaScriptActionCallAction{

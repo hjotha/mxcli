@@ -341,7 +341,10 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Build entity name lookup
 	entityNames := make(map[model.ID]string)
-	domainModels, _ := ctx.Backend.ListDomainModels()
+	domainModels, err := ctx.Backend.ListDomainModels()
+	if err != nil {
+		return mdlerrors.NewBackend("list domain models", err)
+	}
 	for _, dm := range domainModels {
 		modName := h.GetModuleName(dm.ContainerID)
 		for _, entity := range dm.Entities {
@@ -351,7 +354,10 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 
 	// Build microflow/nanoflow name lookup (used for call actions)
 	microflowNames := make(map[model.ID]string)
-	allMicroflows, _ := ctx.Backend.ListMicroflows()
+	allMicroflows, err := ctx.Backend.ListMicroflows()
+	if err != nil {
+		return mdlerrors.NewBackend("list microflows", err)
+	}
 	for _, mf := range allMicroflows {
 		microflowNames[mf.ID] = h.GetQualifiedName(mf.ContainerID, mf.Name)
 	}

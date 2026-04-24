@@ -198,6 +198,11 @@ func associationStmtToMDL(ctx *ExecContext, s *ast.CreateAssociationStmt) string
 func microflowStmtToMDL(ctx *ExecContext, s *ast.CreateMicroflowStmt) string {
 	var lines []string
 
+	// Annotations
+	if s.Excluded {
+		lines = append(lines, "@excluded")
+	}
+
 	// Documentation
 	if s.Documentation != "" {
 		lines = append(lines, "/**")
@@ -207,9 +212,13 @@ func microflowStmtToMDL(ctx *ExecContext, s *ast.CreateMicroflowStmt) string {
 		lines = append(lines, " */")
 	}
 
-	// CREATE MICROFLOW header with parameters
+	// CREATE [OR MODIFY] MICROFLOW header with parameters
+	header := "create"
+	if s.CreateOrModify {
+		header = "create or modify"
+	}
 	if len(s.Parameters) > 0 {
-		lines = append(lines, fmt.Sprintf("create microflow %s (", s.Name))
+		lines = append(lines, fmt.Sprintf("%s microflow %s (", header, s.Name))
 		for i, param := range s.Parameters {
 			paramType := dataTypeToString(ctx, param.Type)
 			comma := ","
@@ -220,7 +229,17 @@ func microflowStmtToMDL(ctx *ExecContext, s *ast.CreateMicroflowStmt) string {
 		}
 		lines = append(lines, ")")
 	} else {
-		lines = append(lines, fmt.Sprintf("create microflow %s ()", s.Name))
+		lines = append(lines, fmt.Sprintf("%s microflow %s ()", header, s.Name))
+	}
+
+	// Folder
+	if s.Folder != "" {
+		lines = append(lines, fmt.Sprintf("folder '%s'", s.Folder))
+	}
+
+	// Comment
+	if s.Comment != "" {
+		lines = append(lines, fmt.Sprintf("comment '%s'", s.Comment))
 	}
 
 	// Return type
@@ -254,6 +273,11 @@ func microflowStmtToMDL(ctx *ExecContext, s *ast.CreateMicroflowStmt) string {
 func nanoflowStmtToMDL(ctx *ExecContext, s *ast.CreateNanoflowStmt) string {
 	var lines []string
 
+	// Annotations
+	if s.Excluded {
+		lines = append(lines, "@excluded")
+	}
+
 	// Documentation
 	if s.Documentation != "" {
 		lines = append(lines, "/**")
@@ -263,9 +287,13 @@ func nanoflowStmtToMDL(ctx *ExecContext, s *ast.CreateNanoflowStmt) string {
 		lines = append(lines, " */")
 	}
 
-	// CREATE NANOFLOW header with parameters
+	// CREATE [OR MODIFY] NANOFLOW header with parameters
+	header := "create"
+	if s.CreateOrModify {
+		header = "create or modify"
+	}
 	if len(s.Parameters) > 0 {
-		lines = append(lines, fmt.Sprintf("create nanoflow %s (", s.Name))
+		lines = append(lines, fmt.Sprintf("%s nanoflow %s (", header, s.Name))
 		for i, param := range s.Parameters {
 			paramType := dataTypeToString(ctx, param.Type)
 			comma := ","
@@ -276,7 +304,17 @@ func nanoflowStmtToMDL(ctx *ExecContext, s *ast.CreateNanoflowStmt) string {
 		}
 		lines = append(lines, ")")
 	} else {
-		lines = append(lines, fmt.Sprintf("create nanoflow %s ()", s.Name))
+		lines = append(lines, fmt.Sprintf("%s nanoflow %s ()", header, s.Name))
+	}
+
+	// Folder
+	if s.Folder != "" {
+		lines = append(lines, fmt.Sprintf("folder '%s'", s.Folder))
+	}
+
+	// Comment
+	if s.Comment != "" {
+		lines = append(lines, fmt.Sprintf("comment '%s'", s.Comment))
 	}
 
 	// Return type

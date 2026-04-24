@@ -350,6 +350,7 @@ func TestNegateIfCondition(t *testing.T) {
 		{"if true then", "if not(true) then"},                             // literal
 		{"something else", "something else"},                              // no match — passthrough
 		{"if find($S,'{{') >= 0 then", "if not(find($S,'{{') >= 0) then"}, // complex expression
+		{"if not($A) or $B) then", "if not(not($A) or $B)) then"},         // unbalanced — do NOT unwrap
 	}
 	for _, tt := range tests {
 		got := negateIfCondition(tt.in)
@@ -416,5 +417,47 @@ func TestTraverseFlow_EmptyThenSwap(t *testing.T) {
 	}
 	if strings.Contains(output, "else") {
 		t.Errorf("expected no empty else block, got:\n%s", output)
+	}
+}
+
+func TestTraverseFlow_BothBranchesToMerge_NoSwap(t *testing.T) {
+	e := newTestExecutor()
+
+	// Graph: start → split → (true) → merge → end
+	//                      → (false) → merge
+	// Both branches empty — no swap should occur, condition stays positive.
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Flag"},
+		},
+		mkID("merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+		mkID("end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {{OriginID: mkID("start"), DestinationID: mkID("split")}},
+		mkID("split"): {
+			{OriginID: mkID("split"), DestinationID: mkID("merge"), CaseValue: microflows.EnumerationCase{Value: "true"}},
+			{OriginID: mkID("split"), DestinationID: mkID("merge"), CaseValue: microflows.EnumerationCase{Value: "false"}},
+		},
+		mkID("merge"): {{OriginID: mkID("merge"), DestinationID: mkID("end")}},
+	}
+	splitMergeMap := map[model.ID]model.ID{mkID("split"): mkID("merge")}
+
+	var lines []string
+	visited := map[model.ID]bool{}
+
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	output := ""
+	for _, l := range lines {
+		output += l + "\n"
+	}
+
+	// Condition should NOT be negated — both branches are empty
+	if strings.Contains(output, "not($Flag)") {
+		t.Errorf("expected no negation when both branches go to merge, got:\n%s", output)
 	}
 }

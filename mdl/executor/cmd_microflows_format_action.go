@@ -719,7 +719,14 @@ func formatAction(
 	case *microflows.JavaScriptActionCallAction:
 		jsActionName := a.JavaScriptAction
 		if jsActionName == "" {
-			jsActionName = "JavaScriptAction"
+			if n := len(a.ParameterMappings); n > 0 {
+				label := "params"
+				if n == 1 {
+					label = "param"
+				}
+				return fmt.Sprintf("-- JavaScriptAction: missing action reference (%d %s)", n, label)
+			}
+			return "-- JavaScriptAction: missing action reference"
 		}
 
 		var params []string
@@ -1162,14 +1169,17 @@ func isNumericLiteral(s string) bool {
 		}
 	}
 	dotSeen := false
+	hasDigit := false
 	for i := start; i < len(s); i++ {
 		if s[i] == '.' && !dotSeen {
 			dotSeen = true
-		} else if s[i] < '0' || s[i] > '9' {
+		} else if s[i] >= '0' && s[i] <= '9' {
+			hasDigit = true
+		} else {
 			return false
 		}
 	}
-	return true
+	return hasDigit
 }
 
 // formatImportXmlAction formats an import mapping action as MDL.
