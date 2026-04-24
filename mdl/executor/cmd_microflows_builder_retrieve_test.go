@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -57,5 +60,78 @@ func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 	}
 	if got := source.Sorting[1].AttributeQualifiedName; got != "AppsCombinedView.AppView.AppName" {
 		t.Fatalf("second sort attribute = %q", got)
+	}
+}
+
+func TestAddRetrieveAction_CompactReverseReferenceUsesAssociationSource(t *testing.T) {
+	moduleID := model.ID("academy-module")
+	profileID := model.ID("profile-entity")
+	certificateID := model.ID("certificate-entity")
+	fb := &flowBuilder{
+		varTypes: map[string]string{
+			"Iteratorcertificates": "AcademyIntegration.Certificate",
+		},
+		backend: &mock.MockBackend{
+			GetModuleByNameFunc: func(name string) (*model.Module, error) {
+				if name != "AcademyIntegration" {
+					return nil, nil
+				}
+				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: name}, nil
+			},
+			GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+				if id != moduleID {
+					return nil, nil
+				}
+				return &domainmodel.DomainModel{
+					ContainerID: moduleID,
+					Entities: []*domainmodel.Entity{
+						{BaseElement: model.BaseElement{ID: profileID}, Name: "userprofiles"},
+						{BaseElement: model.BaseElement{ID: certificateID}, Name: "Certificate"},
+					},
+					Associations: []*domainmodel.Association{
+						{
+							Name:     "HighestCertificate_UserProfile",
+							ParentID: profileID,
+							ChildID:  certificateID,
+							Type:     domainmodel.AssociationTypeReference,
+						},
+					},
+				}, nil
+			},
+		},
+	}
+
+	fb.addRetrieveAction(&ast.RetrieveStmt{
+		Variable:      "UserToUpdateCertificate",
+		StartVariable: "Iteratorcertificates",
+		Source: ast.QualifiedName{
+			Module: "AcademyIntegration",
+			Name:   "HighestCertificate_UserProfile",
+		},
+	})
+
+	if len(fb.objects) != 1 {
+		t.Fatalf("got %d objects, want 1", len(fb.objects))
+	}
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("got object %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.RetrieveAction)
+	if !ok {
+		t.Fatalf("got action %T, want *microflows.RetrieveAction", activity.Action)
+	}
+	source, ok := action.Source.(*microflows.AssociationRetrieveSource)
+	if !ok {
+		t.Fatalf("got source %T, want *microflows.AssociationRetrieveSource", action.Source)
+	}
+	if source.StartVariable != "Iteratorcertificates" {
+		t.Fatalf("StartVariable = %q, want Iteratorcertificates", source.StartVariable)
+	}
+	if source.AssociationQualifiedName != "AcademyIntegration.HighestCertificate_UserProfile" {
+		t.Fatalf("AssociationQualifiedName = %q", source.AssociationQualifiedName)
+	}
+	if got := fb.varTypes["UserToUpdateCertificate"]; got != "AcademyIntegration.userprofiles" {
+		t.Fatalf("var type = %q, want AcademyIntegration.userprofiles", got)
 	}
 }

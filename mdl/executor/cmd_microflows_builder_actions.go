@@ -129,6 +129,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 	allBranchesReturn := true
 	branchStartX := splitX + ActivityWidth + HorizontalSpacing/2
 	branchIndex := 0
+	var branchTails []model.ID
 
 	addBranch := func(caseValue string, body []ast.MicroflowStatement) {
 		branchY := centerY + branchIndex*VerticalSpacing
@@ -177,6 +178,9 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		}
 		if !lastStmtIsReturn(body) {
 			allBranchesReturn = false
+			if lastID != "" {
+				branchTails = append(branchTails, lastID)
+			}
 		}
 	}
 
@@ -192,6 +196,21 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 	fb.endsWithReturn = savedEndsWithReturn
 	if allBranchesReturn {
 		fb.endsWithReturn = true
+	} else if len(branchTails) == 1 {
+		fb.nextConnectionPoint = branchTails[0]
+	} else if len(branchTails) > 1 {
+		merge := &microflows.ExclusiveMerge{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: centerY},
+				Size:        model.Size{Width: MergeSize, Height: MergeSize},
+			},
+		}
+		fb.objects = append(fb.objects, merge)
+		for _, tailID := range branchTails {
+			fb.flows = append(fb.flows, newHorizontalFlow(tailID, merge.ID))
+		}
+		fb.nextConnectionPoint = merge.ID
 	}
 	return splitID
 }
@@ -395,7 +414,7 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 		BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
 		ChangeVariable:  s.Variable,
 		Commit:          microflows.CommitTypeNo,
-		RefreshInClient: false,
+		RefreshInClient: len(s.Changes) == 0,
 	}
 
 	// Look up entity type from variable scope
@@ -440,49 +459,33 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		// Association retrieve: RETRIEVE $List FROM $Parent/Module.AssocName
 		assocQN := s.Source.Module + "." + s.Source.Name
 
-		// Look up association to determine type and direction.
-		// For Reference associations, AssociationRetrieveSource always returns a single
-		// object (the entity on the other end). When the user navigates from the child
-		// (non-owner) side, the intent is to get a list of parent entities — we must use
-		// a DatabaseRetrieveSource with XPath constraint instead.
+		// Compact association retrieves must roundtrip as AssociationRetrieveSource.
+		// The formatter may also render simple reverse-association database retrieves
+		// in this compact form, and Mendix still infers the cardinality from the
+		// association metadata. Re-expanding it to a database/XPath retrieve loses that
+		// type inference for object-valued reverse references.
 		assocInfo := fb.lookupAssociation(s.Source.Module, s.Source.Name)
 		startVarType := ""
 		if fb.varTypes != nil {
 			startVarType = fb.varTypes[s.StartVariable]
 		}
 
-		if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReference &&
-			assocInfo.childEntityQN != "" && startVarType == assocInfo.childEntityQN {
-			// Reverse traversal on Reference: child → parent (one-to-many)
-			// Use DatabaseRetrieveSource with XPath to get a list of parent entities
-			dbSource := &microflows.DatabaseRetrieveSource{
-				BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
-				EntityQualifiedName: assocInfo.parentEntityQN,
-				XPathConstraint:     "[" + assocQN + " = $" + s.StartVariable + "]",
-			}
-			source = dbSource
-			if fb.varTypes != nil {
-				fb.varTypes[s.Variable] = "List of " + assocInfo.parentEntityQN
-			}
-		} else {
-			// Forward traversal or ReferenceSet: use AssociationRetrieveSource
-			source = &microflows.AssociationRetrieveSource{
-				BaseElement:              model.BaseElement{ID: model.ID(types.GenerateID())},
-				StartVariable:            s.StartVariable,
-				AssociationQualifiedName: assocQN,
-			}
-			if fb.varTypes != nil {
-				if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReference {
-					// Reference forward traversal: returns single object
-					otherEntity := assocInfo.childEntityQN
-					if startVarType == assocInfo.childEntityQN {
-						otherEntity = assocInfo.parentEntityQN
-					}
-					fb.varTypes[s.Variable] = otherEntity
-				} else {
-					// ReferenceSet or unknown: returns a list
-					fb.varTypes[s.Variable] = "List of " + assocQN
+		source = &microflows.AssociationRetrieveSource{
+			BaseElement:              model.BaseElement{ID: model.ID(types.GenerateID())},
+			StartVariable:            s.StartVariable,
+			AssociationQualifiedName: assocQN,
+		}
+		if fb.varTypes != nil {
+			if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReference {
+				// Reference traversal returns the entity on the other end.
+				otherEntity := assocInfo.childEntityQN
+				if startVarType == assocInfo.childEntityQN {
+					otherEntity = assocInfo.parentEntityQN
 				}
+				fb.varTypes[s.Variable] = otherEntity
+			} else {
+				// ReferenceSet or unknown: returns a list.
+				fb.varTypes[s.Variable] = "List of " + assocQN
 			}
 		}
 	} else {
@@ -600,16 +603,24 @@ func (fb *flowBuilder) addListOperationAction(s *ast.ListOperationStmt) model.ID
 			ListVariable: s.InputVariable,
 		}
 	case ast.ListOpFind:
-		operation = &microflows.FindOperation{
-			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-			ListVariable: s.InputVariable,
-			Expression:   fb.exprToString(s.Condition),
+		if op := fb.listAttributeOperation(s, false); op != nil {
+			operation = op
+		} else {
+			operation = &microflows.FindOperation{
+				BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+				ListVariable: s.InputVariable,
+				Expression:   fb.exprToString(s.Condition),
+			}
 		}
 	case ast.ListOpFilter:
-		operation = &microflows.FilterOperation{
-			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-			ListVariable: s.InputVariable,
-			Expression:   fb.exprToString(s.Condition),
+		if op := fb.listAttributeOperation(s, true); op != nil {
+			operation = op
+		} else {
+			operation = &microflows.FilterOperation{
+				BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+				ListVariable: s.InputVariable,
+				Expression:   fb.exprToString(s.Condition),
+			}
 		}
 	case ast.ListOpSort:
 		// Resolve entity type from input variable for qualified attribute names
@@ -729,6 +740,80 @@ func (fb *flowBuilder) addListOperationAction(s *ast.ListOperationStmt) model.ID
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 	return activity.ID
+}
+
+func (fb *flowBuilder) listAttributeOperation(s *ast.ListOperationStmt, filter bool) microflows.ListOperation {
+	binary, ok := unwrapSourceExpr(s.Condition).(*ast.BinaryExpr)
+	if !ok || binary.Operator != "=" {
+		return nil
+	}
+	fieldName, ok := listOperationFieldName(unwrapSourceExpr(binary.Left))
+	if !ok || fieldName == "" {
+		return nil
+	}
+	expression := fb.exprToString(binary.Right)
+	if expression == "" {
+		return nil
+	}
+
+	attributeName, associationName := fb.resolveListOperationMember(s.InputVariable, fieldName)
+	if filter {
+		return &microflows.FilterByAttributeOperation{
+			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+			ListVariable: s.InputVariable,
+			Attribute:    attributeName,
+			Association:  associationName,
+			Expression:   expression,
+		}
+	}
+	return &microflows.FindByAttributeOperation{
+		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+		ListVariable: s.InputVariable,
+		Attribute:    attributeName,
+		Association:  associationName,
+		Expression:   expression,
+	}
+}
+
+func unwrapSourceExpr(expr ast.Expression) ast.Expression {
+	for {
+		source, ok := expr.(*ast.SourceExpr)
+		if !ok || source.Expression == nil {
+			return expr
+		}
+		expr = source.Expression
+	}
+}
+
+func listOperationFieldName(expr ast.Expression) (string, bool) {
+	switch e := expr.(type) {
+	case *ast.IdentifierExpr:
+		return e.Name, true
+	case *ast.QualifiedNameExpr:
+		return e.QualifiedName.String(), true
+	default:
+		return "", false
+	}
+}
+
+func (fb *flowBuilder) resolveListOperationMember(listVariable, memberName string) (attributeName, associationName string) {
+	entityQN := ""
+	if fb.varTypes != nil {
+		if listType := fb.varTypes[listVariable]; strings.HasPrefix(listType, "List of ") {
+			entityQN = strings.TrimPrefix(listType, "List of ")
+		}
+	}
+	if entityQN == "" || strings.Count(memberName, ".") > 0 {
+		return memberName, ""
+	}
+	resolved := fb.resolveBareMember(memberName, entityQN)
+	if resolved.kind == resolvedMemberAssociation {
+		return "", resolved.qualifiedName
+	}
+	if resolved.kind == resolvedMemberAttribute && resolved.qualifiedName != "" {
+		return resolved.qualifiedName, ""
+	}
+	return entityQN + "." + memberName, ""
 }
 
 // addAggregateListAction creates aggregate operations like COUNT, SUM, AVERAGE, etc.

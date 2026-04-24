@@ -135,7 +135,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		MicroflowCall:      mfCall,
 		ResultVariableName: s.OutputVariable,
-		UseReturnVariable:  s.OutputVariable != "",
+		UseReturnVariable:  true,
 	}
 
 	activityX := fb.posX

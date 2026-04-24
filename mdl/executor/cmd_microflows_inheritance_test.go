@@ -69,3 +69,65 @@ func TestBuilder_InheritanceSplitAndCastAction(t *testing.T) {
 		t.Fatalf("cast vars: got output=%q object=%q", cast.OutputVariable, cast.ObjectVariable)
 	}
 }
+
+func TestBuilder_InheritanceSplit_NonReturningBranchesMerge(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "currentUser",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "Administration", Name: "Account"},
+					Body: []ast.MicroflowStatement{
+						&ast.ShowMessageStmt{
+							Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "account"},
+							Type:    "Information",
+						},
+					},
+				},
+				{
+					Entity: ast.QualifiedName{Module: "System", Name: "User"},
+					Body: []ast.MicroflowStatement{
+						&ast.ShowMessageStmt{
+							Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "user"},
+							Type:    "Information",
+						},
+					},
+				},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:    100,
+		posY:    100,
+		spacing: HorizontalSpacing,
+	}
+
+	oc := fb.buildFlowGraph(body, nil)
+	var mergeID string
+	for _, obj := range oc.Objects {
+		if merge, ok := obj.(*microflows.ExclusiveMerge); ok {
+			mergeID = string(merge.ID)
+			break
+		}
+	}
+	if mergeID == "" {
+		t.Fatal("expected non-returning inheritance split branches to converge through an ExclusiveMerge")
+	}
+
+	inbound := 0
+	outbound := 0
+	for _, flow := range oc.Flows {
+		if string(flow.DestinationID) == mergeID {
+			inbound++
+		}
+		if string(flow.OriginID) == mergeID {
+			outbound++
+		}
+	}
+	if inbound != 2 {
+		t.Fatalf("merge inbound flows: got %d, want 2", inbound)
+	}
+	if outbound != 1 {
+		t.Fatalf("merge outbound flows: got %d, want 1", outbound)
+	}
+}
