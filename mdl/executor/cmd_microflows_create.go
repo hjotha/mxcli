@@ -118,45 +118,8 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		mf.AllowedModuleRoles = defaultDocumentAccessRoles(ctx, module)
 	}
 
-	// Build entity resolver function for parameter/return types
-	entityResolver := func(qn ast.QualifiedName) model.ID {
-		// Get all domain models and build module name map
-		dms, err := ctx.Backend.ListDomainModels()
-		if err != nil {
-			return ""
-		}
-		modules, _ := ctx.Backend.ListModules()
-		moduleNames := make(map[model.ID]string)
-		for _, m := range modules {
-			moduleNames[m.ID] = m.Name
-		}
-		// Search for entity in all domain models
-		for _, dm := range dms {
-			modName := moduleNames[dm.ContainerID]
-			if modName != qn.Module {
-				continue
-			}
-			for _, ent := range dm.Entities {
-				if ent.Name == qn.Name {
-					return ent.ID
-				}
-			}
-		}
-		return ""
-	}
-
 	// Validate and add parameters
 	for _, p := range s.Parameters {
-		// Validate entity references for List and Entity types.
-		// Built-in modules (e.g. System) are not stored in the MPR domain models;
-		// their types are serialized by qualified name and resolved at runtime.
-		if p.Type.EntityRef != nil && !isBuiltinModuleEntity(p.Type.EntityRef.Module) {
-			entityID := entityResolver(*p.Type.EntityRef)
-			if entityID == "" {
-				return mdlerrors.NewNotFoundMsg("entity", p.Type.EntityRef.Module+"."+p.Type.EntityRef.Name,
-					fmt.Sprintf("entity '%s.%s' not found for parameter '%s'", p.Type.EntityRef.Module, p.Type.EntityRef.Name, p.Name))
-			}
-		}
 		// Validate enumeration references for Enumeration types
 		if p.Type.Kind == ast.TypeEnumeration && p.Type.EnumRef != nil {
 			if found := findEnumeration(ctx, p.Type.EnumRef.Module, p.Type.EnumRef.Name); found == nil {
@@ -170,23 +133,13 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 			},
 			ContainerID: mf.ID,
 			Name:        p.Name,
-			Type:        convertASTToMicroflowDataType(p.Type, entityResolver),
+			Type:        convertASTToMicroflowDataType(p.Type, nil),
 		}
 		mf.Parameters = append(mf.Parameters, param)
 	}
 
 	// Validate and set return type
 	if s.ReturnType != nil {
-		// Validate entity references for return type.
-		// Built-in modules (e.g. System) are not stored in the MPR domain models;
-		// their types are serialized by qualified name and resolved at runtime.
-		if s.ReturnType.Type.EntityRef != nil && !isBuiltinModuleEntity(s.ReturnType.Type.EntityRef.Module) {
-			entityID := entityResolver(*s.ReturnType.Type.EntityRef)
-			if entityID == "" {
-				return mdlerrors.NewNotFoundMsg("entity", s.ReturnType.Type.EntityRef.Module+"."+s.ReturnType.Type.EntityRef.Name,
-					fmt.Sprintf("entity '%s.%s' not found for return type", s.ReturnType.Type.EntityRef.Module, s.ReturnType.Type.EntityRef.Name))
-			}
-		}
 		// Validate enumeration references for return type
 		if s.ReturnType.Type.Kind == ast.TypeEnumeration && s.ReturnType.Type.EnumRef != nil {
 			if found := findEnumeration(ctx, s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name); found == nil {
@@ -194,7 +147,7 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 					fmt.Sprintf("enumeration '%s.%s' not found for return type", s.ReturnType.Type.EnumRef.Module, s.ReturnType.Type.EnumRef.Name))
 			}
 		}
-		mf.ReturnType = convertASTToMicroflowDataType(s.ReturnType.Type, entityResolver)
+		mf.ReturnType = convertASTToMicroflowDataType(s.ReturnType.Type, nil)
 		// Set return variable name if provided (AS $VarName)
 		if s.ReturnType.Variable != "" {
 			mf.ReturnVariableName = s.ReturnType.Variable

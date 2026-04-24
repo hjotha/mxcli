@@ -318,6 +318,11 @@ func expressionToString(expr ast.Expression) string {
 		thenStr := expressionToString(e.ThenExpr)
 		elseStr := expressionToString(e.ElseExpr)
 		return "if " + cond + " then " + thenStr + " else " + elseStr
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return e.Source
+		}
+		return expressionToString(e.Expression)
 	default:
 		return ""
 	}
@@ -370,6 +375,11 @@ func expressionToXPath(expr ast.Expression) string {
 		return expressionToString(expr)
 	case *ast.QualifiedNameExpr:
 		return qualifiedNameToXPath(e)
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return e.Source
+		}
+		return expressionToXPath(e.Expression)
 	default:
 		// For all other expression types, the standard serialization is correct
 		return expressionToString(expr)

@@ -79,6 +79,31 @@ type DeclareStmt struct {
 
 func (s *DeclareStmt) isMicroflowStatement() {}
 
+// InheritanceSplitCase represents one typed branch in an InheritanceSplit.
+type InheritanceSplitCase struct {
+	Entity QualifiedName
+	Body   []MicroflowStatement
+}
+
+// InheritanceSplitStmt represents: SPLIT TYPE $Var ... END SPLIT
+type InheritanceSplitStmt struct {
+	Variable    string // Variable name (without $ prefix)
+	Cases       []InheritanceSplitCase
+	ElseBody    []MicroflowStatement
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *InheritanceSplitStmt) isMicroflowStatement() {}
+
+// CastObjectStmt represents: $Output = CAST $Object
+type CastObjectStmt struct {
+	OutputVariable string               // Output variable name (without $ prefix)
+	ObjectVariable string               // Source object variable name (without $ prefix)
+	Annotations    *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *CastObjectStmt) isMicroflowStatement() {}
+
 // MfSetStmt represents: SET $Var = expr or SET $Var/Attr = expr
 // (Named MfSetStmt to avoid conflict with existing SetStmt for SET key = value)
 type MfSetStmt struct {

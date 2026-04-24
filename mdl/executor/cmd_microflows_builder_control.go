@@ -106,6 +106,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	}
 
 	thenStartX := splitX + SplitWidth + HorizontalSpacing/2
+	var noMergeExitID model.ID
+	var noMergeExitCase string
+	var noMergeExitAnchor *ast.FlowAnchors
 
 	if hasElseBody {
 		// IF WITH ELSE: TRUE path horizontal (happy path), FALSE path below
@@ -115,10 +118,13 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 		var lastThenID model.ID
 		var prevThenAnchor *ast.FlowAnchors
+		var pendingThenCase string
+		var pendingThenAnchor *ast.FlowAnchors
 		for _, stmt := range s.ThenBody {
 			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
+				fb.applyPendingAnnotations(actID)
 				if lastThenID == "" {
 					// First statement in THEN - connect from split with "true" case.
 					// Origin: trueBranchAnchor.From (if set) — anchor on the split side.
@@ -130,16 +136,32 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 						flow.DestinationConnectionIndex = int(thisAnchor.To)
 					}
 					fb.flows = append(fb.flows, flow)
+					fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 				} else {
-					flow := newHorizontalFlow(lastThenID, actID)
+					var flow *microflows.SequenceFlow
+					if pendingThenCase != "" {
+						flow = newHorizontalFlowWithCase(lastThenID, actID, pendingThenCase)
+						if pendingThenAnchor != nil {
+							prevThenAnchor = pendingThenAnchor
+						}
+						pendingThenCase = ""
+						pendingThenAnchor = nil
+					} else {
+						flow = newHorizontalFlow(lastThenID, actID)
+					}
 					applyUserAnchors(flow, prevThenAnchor, thisAnchor)
 					fb.flows = append(fb.flows, flow)
+					fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 				}
 				prevThenAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastThenID = fb.nextConnectionPoint
 					fb.nextConnectionPoint = ""
+					pendingThenCase = fb.nextFlowCase
+					fb.nextFlowCase = ""
+					pendingThenAnchor = fb.nextFlowAnchor
+					fb.nextFlowAnchor = nil
 				} else {
 					lastThenID = actID
 				}
@@ -154,11 +176,15 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				flow := newHorizontalFlow(lastThenID, mergeID)
 				applyUserAnchors(flow, prevThenAnchor, nil)
 				fb.flows = append(fb.flows, flow)
+				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			} else {
-				// Empty THEN body - connect split directly to merge with true case
+				// Empty THEN body - connect split directly to merge with true case.
+				// Pass trueBranchAnchor as destination too so the @anchor(true: (..., to: Y))
+				// from the describer round-trips into the merge side of the flow.
 				flow := newHorizontalFlowWithCase(splitID, mergeID, "true")
-				applyUserAnchors(flow, trueBranchAnchor, nil)
+				applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
 				fb.flows = append(fb.flows, flow)
+				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			}
 		}
 
@@ -170,10 +196,13 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 		var lastElseID model.ID
 		var prevElseAnchor *ast.FlowAnchors
+		var pendingElseCase string
+		var pendingElseAnchor *ast.FlowAnchors
 		for _, stmt := range s.ElseBody {
 			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
+				fb.applyPendingAnnotations(actID)
 				if lastElseID == "" {
 					// First statement in ELSE - connect from split going down (false path).
 					// Same compositional rule as the THEN branch.
@@ -183,16 +212,32 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 						flow.DestinationConnectionIndex = int(thisAnchor.To)
 					}
 					fb.flows = append(fb.flows, flow)
+					fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 				} else {
-					flow := newHorizontalFlow(lastElseID, actID)
+					var flow *microflows.SequenceFlow
+					if pendingElseCase != "" {
+						flow = newHorizontalFlowWithCase(lastElseID, actID, pendingElseCase)
+						if pendingElseAnchor != nil {
+							prevElseAnchor = pendingElseAnchor
+						}
+						pendingElseCase = ""
+						pendingElseAnchor = nil
+					} else {
+						flow = newHorizontalFlow(lastElseID, actID)
+					}
 					applyUserAnchors(flow, prevElseAnchor, thisAnchor)
 					fb.flows = append(fb.flows, flow)
+					fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 				}
 				prevElseAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastElseID = fb.nextConnectionPoint
 					fb.nextConnectionPoint = ""
+					pendingElseCase = fb.nextFlowCase
+					fb.nextFlowCase = ""
+					pendingElseAnchor = fb.nextFlowAnchor
+					fb.nextFlowAnchor = nil
 				} else {
 					lastElseID = actID
 				}
@@ -207,6 +252,26 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				flow := newUpwardFlow(lastElseID, mergeID)
 				applyUserAnchors(flow, prevElseAnchor, nil)
 				fb.flows = append(fb.flows, flow)
+				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
+			}
+		}
+		if !needMerge {
+			if thenReturns && !elseReturns {
+				if lastElseID != "" {
+					noMergeExitID = lastElseID
+				} else {
+					noMergeExitID = splitID
+					noMergeExitCase = "false"
+					noMergeExitAnchor = falseBranchAnchor
+				}
+			} else if elseReturns && !thenReturns {
+				if lastThenID != "" {
+					noMergeExitID = lastThenID
+				} else {
+					noMergeExitID = splitID
+					noMergeExitCase = "true"
+					noMergeExitAnchor = trueBranchAnchor
+				}
 			}
 		}
 	} else {
@@ -214,10 +279,13 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// This keeps the "do nothing" path straight and the "do something" path below
 
 		if needMerge {
-			// FALSE path: connect split directly to merge horizontally
+			// FALSE path: connect split directly to merge horizontally.
+			// Pass falseBranchAnchor as destination too so @anchor(false: (..., to: Y))
+			// round-trips through the merge side of the split-to-merge flow.
 			flow := newHorizontalFlowWithCase(splitID, mergeID, "false")
-			applyUserAnchors(flow, falseBranchAnchor, nil)
+			applyUserAnchors(flow, falseBranchAnchor, falseBranchAnchor)
 			fb.flows = append(fb.flows, flow)
+			fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 		}
 		// When !needMerge (thenReturns): FALSE flow is deferred — the parent will
 		// connect splitID to the next activity with nextFlowCase="false".
@@ -230,10 +298,13 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 		var lastThenID model.ID
 		var prevThenAnchor *ast.FlowAnchors
+		var pendingThenCase string
+		var pendingThenAnchor *ast.FlowAnchors
 		for _, stmt := range s.ThenBody {
 			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
+				fb.applyPendingAnnotations(actID)
 				if lastThenID == "" {
 					// First statement in THEN - connect from split going down with "true" case
 					flow := newDownwardFlowWithCase(splitID, actID, "true")
@@ -242,16 +313,32 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 						flow.DestinationConnectionIndex = int(thisAnchor.To)
 					}
 					fb.flows = append(fb.flows, flow)
+					fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 				} else {
-					flow := newHorizontalFlow(lastThenID, actID)
+					var flow *microflows.SequenceFlow
+					if pendingThenCase != "" {
+						flow = newHorizontalFlowWithCase(lastThenID, actID, pendingThenCase)
+						if pendingThenAnchor != nil {
+							prevThenAnchor = pendingThenAnchor
+						}
+						pendingThenCase = ""
+						pendingThenAnchor = nil
+					} else {
+						flow = newHorizontalFlow(lastThenID, actID)
+					}
 					applyUserAnchors(flow, prevThenAnchor, thisAnchor)
 					fb.flows = append(fb.flows, flow)
+					fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 				}
 				prevThenAnchor = thisAnchor
 				// For nested compound statements, use their exit point
 				if fb.nextConnectionPoint != "" {
 					lastThenID = fb.nextConnectionPoint
 					fb.nextConnectionPoint = ""
+					pendingThenCase = fb.nextFlowCase
+					fb.nextFlowCase = ""
+					pendingThenAnchor = fb.nextFlowAnchor
+					fb.nextFlowAnchor = nil
 				} else {
 					lastThenID = actID
 				}
@@ -266,12 +353,21 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				flow := newUpwardFlow(lastThenID, mergeID)
 				applyUserAnchors(flow, prevThenAnchor, nil)
 				fb.flows = append(fb.flows, flow)
+				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			} else {
-				// Empty THEN body - connect split directly to merge going down and back up
+				// Empty THEN body - connect split directly to merge going down and back up.
+				// Pass trueBranchAnchor as destination too so @anchor(true: (..., to: Y))
+				// round-trips into the merge side of the flow.
 				flow := newDownwardFlowWithCase(splitID, mergeID, "true")
-				applyUserAnchors(flow, trueBranchAnchor, nil)
+				applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
 				fb.flows = append(fb.flows, flow)
+				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			}
+		}
+		if !needMerge {
+			noMergeExitID = splitID
+			noMergeExitCase = "false"
+			noMergeExitAnchor = falseBranchAnchor
 		}
 	}
 
@@ -300,22 +396,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			fb.posX = max(afterSplit, afterBranch)
 		}
 		fb.posY = centerY
-		fb.nextConnectionPoint = splitID
-		// Tell parent to attach the case value on the next flow, and pass the
-		// matching branch anchor so @anchor(true: ..., false: ...) survives to
-		// the deferred splitID→nextActivity flow.
-		if hasElseBody {
-			if thenReturns {
-				fb.nextFlowCase = "false"
-				fb.nextFlowAnchor = falseBranchAnchor
-			} else {
-				fb.nextFlowCase = "true"
-				fb.nextFlowAnchor = trueBranchAnchor
-			}
+		if noMergeExitID != "" {
+			fb.nextConnectionPoint = noMergeExitID
+			fb.nextFlowCase = noMergeExitCase
+			fb.nextFlowAnchor = noMergeExitAnchor
 		} else {
-			// IF without ELSE: false is the continuing path
-			fb.nextFlowCase = "false"
-			fb.nextFlowAnchor = falseBranchAnchor
+			fb.nextConnectionPoint = splitID
 		}
 	}
 
@@ -379,16 +465,39 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 
 	// Process loop body statements and connect them with flows.
 	var lastBodyID model.ID
+	var pendingBodyCase string
+	var pendingBodyAnchor *ast.FlowAnchors
+	var prevBodyAnchor *ast.FlowAnchors
 	for _, stmt := range s.Body {
+		thisAnchor := stmtOwnAnchor(stmt)
 		actID := loopBuilder.addStatement(stmt)
 		if actID != "" {
+			loopBuilder.applyPendingAnnotations(actID)
 			if lastBodyID != "" {
-				loopBuilder.flows = append(loopBuilder.flows, newHorizontalFlow(lastBodyID, actID))
+				var flow *microflows.SequenceFlow
+				if pendingBodyCase != "" {
+					flow = newHorizontalFlowWithCase(lastBodyID, actID, pendingBodyCase)
+					if pendingBodyAnchor != nil {
+						prevBodyAnchor = pendingBodyAnchor
+					}
+					pendingBodyCase = ""
+					pendingBodyAnchor = nil
+				} else {
+					flow = newHorizontalFlow(lastBodyID, actID)
+				}
+				applyUserAnchors(flow, prevBodyAnchor, thisAnchor)
+				loopBuilder.flows = append(loopBuilder.flows, flow)
+				loopBuilder.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			}
+			prevBodyAnchor = thisAnchor
 			// Handle nextConnectionPoint for compound statements (nested IF, etc.)
 			if loopBuilder.nextConnectionPoint != "" {
 				lastBodyID = loopBuilder.nextConnectionPoint
 				loopBuilder.nextConnectionPoint = ""
+				pendingBodyCase = loopBuilder.nextFlowCase
+				loopBuilder.nextFlowCase = ""
+				pendingBodyAnchor = loopBuilder.nextFlowAnchor
+				loopBuilder.nextFlowAnchor = nil
 			} else {
 				lastBodyID = actID
 			}
@@ -439,9 +548,133 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 	return loop.ID
 }
 
+func isManualWhileTrueCandidate(s *ast.WhileStmt) bool {
+	if s == nil || !containsContinueStmt(s.Body) {
+		return false
+	}
+	lit, ok := s.Condition.(*ast.LiteralExpr)
+	if !ok || lit.Kind != ast.LiteralBoolean {
+		return false
+	}
+	value, ok := lit.Value.(bool)
+	return ok && value
+}
+
+func containsContinueStmt(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.ContinueStmt:
+			return true
+		case *ast.IfStmt:
+			if containsContinueStmt(s.ThenBody) || containsContinueStmt(s.ElseBody) {
+				return true
+			}
+		case *ast.LoopStmt:
+			if containsContinueStmt(s.Body) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if containsContinueStmt(s.Body) {
+				return true
+			}
+		case *ast.InheritanceSplitStmt:
+			if containsContinueStmt(s.ElseBody) {
+				return true
+			}
+			for _, c := range s.Cases {
+				if containsContinueStmt(c.Body) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (fb *flowBuilder) addManualWhileTrueStatement(s *ast.WhileStmt) model.ID {
+	mergeX := fb.posX
+	mergeY := fb.posY
+	if s.Annotations != nil && s.Annotations.Position != nil {
+		mergeX = s.Annotations.Position.X
+		mergeY = s.Annotations.Position.Y
+	}
+
+	merge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: mergeX, Y: mergeY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, merge)
+	if fb.pendingAnnotations != nil {
+		fb.applyAnnotations(merge.ID, fb.pendingAnnotations)
+		fb.pendingAnnotations = nil
+	}
+
+	savedBackTarget := fb.manualLoopBackTarget
+	fb.manualLoopBackTarget = merge.ID
+	defer func() { fb.manualLoopBackTarget = savedBackTarget }()
+
+	fb.posX = mergeX + MergeSize + HorizontalSpacing/2
+	fb.posY = mergeY
+
+	lastBodyID := merge.ID
+	var pendingBodyCase string
+	var pendingBodyAnchor *ast.FlowAnchors
+	var prevBodyAnchor *ast.FlowAnchors
+	for _, stmt := range s.Body {
+		thisAnchor := stmtOwnAnchor(stmt)
+		actID := fb.addStatement(stmt)
+		if actID == "" {
+			continue
+		}
+		fb.applyPendingAnnotations(actID)
+		if lastBodyID != "" && lastBodyID != actID {
+			var flow *microflows.SequenceFlow
+			if pendingBodyCase != "" {
+				flow = newHorizontalFlowWithCase(lastBodyID, actID, pendingBodyCase)
+				if pendingBodyAnchor != nil {
+					prevBodyAnchor = pendingBodyAnchor
+				}
+				pendingBodyCase = ""
+				pendingBodyAnchor = nil
+			} else {
+				flow = newHorizontalFlow(lastBodyID, actID)
+			}
+			applyUserAnchors(flow, prevBodyAnchor, thisAnchor)
+			fb.flows = append(fb.flows, flow)
+			fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
+		}
+		prevBodyAnchor = thisAnchor
+		if fb.nextConnectionPoint != "" {
+			lastBodyID = fb.nextConnectionPoint
+			fb.nextConnectionPoint = ""
+			pendingBodyCase = fb.nextFlowCase
+			fb.nextFlowCase = ""
+			pendingBodyAnchor = fb.nextFlowAnchor
+			fb.nextFlowAnchor = nil
+		} else {
+			lastBodyID = actID
+		}
+	}
+
+	if lastBodyID != "" && lastBodyID != merge.ID {
+		fb.nextConnectionPoint = lastBodyID
+		fb.nextFlowCase = pendingBodyCase
+		fb.nextFlowAnchor = pendingBodyAnchor
+	}
+
+	return merge.ID
+}
+
 // addWhileStatement creates a WHILE loop using LoopedActivity with WhileLoopCondition.
 // Layout matches addLoopStatement but without iterator icon space.
 func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
+	if isManualWhileTrueCandidate(s) {
+		return fb.addManualWhileTrueStatement(s)
+	}
+
 	// Snapshot & clear this WHILE's own annotations so the body's recursive
 	// addStatement calls can't consume them (see addLoopStatement).
 	savedWhileAnnotations := fb.pendingAnnotations
@@ -476,15 +709,38 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 	}
 
 	var lastBodyID model.ID
+	var pendingBodyCase string
+	var pendingBodyAnchor *ast.FlowAnchors
+	var prevBodyAnchor *ast.FlowAnchors
 	for _, stmt := range s.Body {
+		thisAnchor := stmtOwnAnchor(stmt)
 		actID := loopBuilder.addStatement(stmt)
 		if actID != "" {
+			loopBuilder.applyPendingAnnotations(actID)
 			if lastBodyID != "" {
-				loopBuilder.flows = append(loopBuilder.flows, newHorizontalFlow(lastBodyID, actID))
+				var flow *microflows.SequenceFlow
+				if pendingBodyCase != "" {
+					flow = newHorizontalFlowWithCase(lastBodyID, actID, pendingBodyCase)
+					if pendingBodyAnchor != nil {
+						prevBodyAnchor = pendingBodyAnchor
+					}
+					pendingBodyCase = ""
+					pendingBodyAnchor = nil
+				} else {
+					flow = newHorizontalFlow(lastBodyID, actID)
+				}
+				applyUserAnchors(flow, prevBodyAnchor, thisAnchor)
+				loopBuilder.flows = append(loopBuilder.flows, flow)
+				loopBuilder.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			}
+			prevBodyAnchor = thisAnchor
 			if loopBuilder.nextConnectionPoint != "" {
 				lastBodyID = loopBuilder.nextConnectionPoint
 				loopBuilder.nextConnectionPoint = ""
+				pendingBodyCase = loopBuilder.nextFlowCase
+				loopBuilder.nextFlowCase = ""
+				pendingBodyAnchor = loopBuilder.nextFlowAnchor
+				loopBuilder.nextFlowAnchor = nil
 			} else {
 				lastBodyID = actID
 			}
@@ -525,4 +781,34 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 	fb.posX = loopLeftX + loopWidth + HorizontalSpacing
 
 	return loop.ID
+}
+
+func (fb *flowBuilder) addBreakEvent() model.ID {
+	event := &microflows.BreakEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX, Y: fb.posY},
+			Size:        model.Size{Width: EventSize, Height: EventSize},
+		},
+	}
+	fb.objects = append(fb.objects, event)
+	fb.posX += fb.spacing
+	return event.ID
+}
+
+func (fb *flowBuilder) addContinueEvent() model.ID {
+	if fb.manualLoopBackTarget != "" {
+		return fb.manualLoopBackTarget
+	}
+
+	event := &microflows.ContinueEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX, Y: fb.posY},
+			Size:        model.Size{Width: EventSize, Height: EventSize},
+		},
+	}
+	fb.objects = append(fb.objects, event)
+	fb.posX += fb.spacing
+	return event.ID
 }

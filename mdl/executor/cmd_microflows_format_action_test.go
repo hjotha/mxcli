@@ -5,7 +5,9 @@ package executor
 import (
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -37,6 +39,24 @@ func TestFormatAction_CreateObject_WithMembers(t *testing.T) {
 	}
 	got := e.formatAction(action, nil, nil)
 	want := "$NewCustomer = create MyModule.Customer (Name = 'John', Age = 25);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_CreateObject_MultilineMemberKeepsCommaOnNextLine(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.CreateObjectAction{
+		EntityQualifiedName: "MyModule.Token",
+		OutputVariable:      "Token",
+		InitialMembers: []*microflows.MemberChange{
+			{AttributeQualifiedName: "MyModule.Token.Value", Value: "if $Count = 0\nthen $Fallback\nelse $Actual"},
+			{AttributeQualifiedName: "MyModule.Token.TimeStamp", Value: "$Now"},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "$Token = create MyModule.Token (Value = if $Count = 0\nthen $Fallback\nelse $Actual\n, TimeStamp = $Now);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -82,6 +102,41 @@ func TestFormatAction_ChangeObject(t *testing.T) {
 	got := e.formatAction(action, nil, nil)
 	if got != "change $Customer (Name = 'Jane');" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestFormatAction_ChangeObject_EscapesRawControlCharsInExpressionLiterals(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ChangeObjectAction{
+		ChangeVariable: "ValidationFeedback",
+		Changes: []*microflows.MemberChange{
+			{
+				AttributeQualifiedName: "MyModule.ValidationFeedback.FeedbackContent",
+				Value:                  "$ValidationFeedback/FeedbackContent + '\n' + $ErrorMessage",
+			},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "change $ValidationFeedback (FeedbackContent = $ValidationFeedback/FeedbackContent + '\\n' + $ErrorMessage);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_ChangeObject_MultilineMemberKeepsCommaOnNextLine(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ChangeObjectAction{
+		ChangeVariable: "Response",
+		Changes: []*microflows.MemberChange{
+			{AttributeQualifiedName: "MyModule.Response.StatusCode", Value: "if ($Latest = empty)\nthen 500\nelse $Latest/StatusCode"},
+			{AttributeQualifiedName: "MyModule.Response.ReasonPhrase", Value: "if ($Latest = empty)\nthen $latestError/Message\nelse $Latest/ReasonPhrase"},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "change $Response (StatusCode = if ($Latest = empty)\nthen 500\nelse $Latest/StatusCode\n, ReasonPhrase = if ($Latest = empty)\nthen $latestError/Message\nelse $Latest/ReasonPhrase);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
@@ -348,6 +403,25 @@ func TestFormatAction_MicroflowCall_WithResult(t *testing.T) {
 	}
 	got := e.formatAction(action, nil, nil)
 	want := "$Result = call microflow MyModule.ProcessOrder(Order = $Order);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_MicroflowCall_TrimsTrailingArgumentWhitespace(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.MicroflowCallAction{
+		MicroflowCall: &microflows.MicroflowCall{
+			Microflow: "MyModule.Handle",
+			ParameterMappings: []*microflows.MicroflowCallParameterMapping{
+				{Parameter: "MyModule.Handle.Path", Argument: "$Path\n"},
+				{Parameter: "MyModule.Handle.Timestamp", Argument: "[%CurrentDateTime%]"},
+			},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "call microflow MyModule.Handle(Path = $Path, Timestamp = [%CurrentDateTime%]);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -623,6 +697,38 @@ func TestFormatAction_Retrieve_WithXPath(t *testing.T) {
 	}
 }
 
+func TestFormatAction_Retrieve_WithMultipleXPathPredicates(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.RetrieveAction{
+		OutputVariable: "ActiveCustomers",
+		Source: &microflows.DatabaseRetrieveSource{
+			EntityQualifiedName: "MyModule.Customer",
+			XPathConstraint:     "[IsActive=true()][LastLogin > '[%CurrentDateTime%]'][Owner = $CurrentUser]",
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "retrieve $ActiveCustomers from MyModule.Customer\n    where IsActive=true() and LastLogin > '[%CurrentDateTime%]' and Owner = $CurrentUser;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatXPathConstraintForWhere_KeepsBracketMacrosInsideStrings(t *testing.T) {
+	got := formatXPathConstraintForWhere("[CalculatedAt < '[%CurrentDateTime%]'][ArtifactId!=empty]")
+	want := "CalculatedAt < '[%CurrentDateTime%]' and ArtifactId!=empty"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestNormalizeExpressionSource_EscapesOnlyControlCharsInsideStringLiterals(t *testing.T) {
+	got := normalizeExpressionSource("if $Flag then 'Line 1\nLine 2'\nelse $Other")
+	want := "if $Flag then 'Line 1\\nLine 2'\nelse $Other"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_Retrieve_WithLimit(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.RetrieveAction{
@@ -671,5 +777,119 @@ func TestFormatAction_Retrieve_Association(t *testing.T) {
 	want := "retrieve $Address from $Customer/MyModule.Customer_Address;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_Retrieve_ReverseAssociationDatabaseSourceUsesCompactForm(t *testing.T) {
+	e := newTestExecutor()
+	e.backend = reverseAssociationBackend(t)
+	action := &microflows.RetrieveAction{
+		OutputVariable: "Domains",
+		Source: &microflows.DatabaseRetrieveSource{
+			EntityQualifiedName: "CloudData.Domain",
+			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			Range:               &microflows.Range{RangeType: microflows.RangeTypeAll},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "retrieve $Domains from $Environment/CloudData.Domain_Environment;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_Retrieve_ReverseAssociationRequiresSimpleAllRange(t *testing.T) {
+	e := newTestExecutor()
+	e.backend = reverseAssociationBackend(t)
+	action := &microflows.RetrieveAction{
+		OutputVariable: "Domains",
+		Source: &microflows.DatabaseRetrieveSource{
+			EntityQualifiedName: "CloudData.Domain",
+			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			Range:               &microflows.Range{RangeType: microflows.RangeTypeFirst},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "retrieve $Domains from CloudData.Domain\n    where CloudData.Domain_Environment = $Environment\n    limit 1;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_Retrieve_ReverseAssociationRequiresMatchingEntity(t *testing.T) {
+	e := newTestExecutor()
+	e.backend = reverseAssociationBackend(t)
+	action := &microflows.RetrieveAction{
+		OutputVariable: "Domains",
+		Source: &microflows.DatabaseRetrieveSource{
+			EntityQualifiedName: "CloudData.Environment",
+			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "retrieve $Domains from CloudData.Environment\n    where CloudData.Domain_Environment = $Environment;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParseReverseAssociationXPathRejectsComplexPredicates(t *testing.T) {
+	tests := []string{
+		"[CloudData.Domain_Environment = $Environment][Active = true]",
+		"[CloudData.Domain_Environment != $Environment]",
+		"[CloudData.Domain_Environment = $Environment/Other.Assoc]",
+		"[CloudData.Domain_Environment = 'literal']",
+		"CloudData.Domain_Environment = $Environment",
+	}
+
+	for _, tt := range tests {
+		if assoc, start, ok := parseReverseAssociationXPath(tt); ok {
+			t.Fatalf("parseReverseAssociationXPath(%q) = %q, %q, true; want false", tt, assoc, start)
+		}
+	}
+}
+
+func reverseAssociationBackend(t *testing.T) *mock.MockBackend {
+	t.Helper()
+	moduleID := model.ID("clouddata-module")
+	return &mock.MockBackend{
+		GetModuleByNameFunc: func(name string) (*model.Module, error) {
+			if name != "CloudData" {
+				return nil, nil
+			}
+			return &model.Module{
+				BaseElement: model.BaseElement{ID: moduleID},
+				Name:        "CloudData",
+			}, nil
+		},
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+			if id != moduleID {
+				return nil, nil
+			}
+			return &domainmodel.DomainModel{
+				ContainerID: moduleID,
+				Entities: []*domainmodel.Entity{
+					{
+						BaseElement: model.BaseElement{ID: "domain-entity"},
+						Name:        "Domain",
+					},
+					{
+						BaseElement: model.BaseElement{ID: "environment-entity"},
+						Name:        "Environment",
+					},
+				},
+				Associations: []*domainmodel.Association{
+					{
+						Name:     "Domain_Environment",
+						ParentID: "domain-entity",
+						ChildID:  "environment-entity",
+						Type:     domainmodel.AssociationTypeReference,
+					},
+				},
+			}, nil
+		},
 	}
 }

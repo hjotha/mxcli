@@ -223,6 +223,16 @@ func parseCaseValue(raw any) microflows.CaseValue {
 				Value:       val,
 			}
 		}
+	case "Microflows$InheritanceCase":
+		entityQName := extractString(caseMap["Value"])
+		if entityQName == "" {
+			entityQName = extractString(caseMap["Entity"])
+		}
+		return &microflows.InheritanceCase{
+			BaseElement:         model.BaseElement{ID: id},
+			EntityID:            model.ID(extractBsonID(caseMap["Entity"])),
+			EntityQualifiedName: entityQName,
+		}
 	}
 	return nil
 }
@@ -502,8 +512,8 @@ func parseActionActivity(raw map[string]any) *microflows.ActionActivity {
 		activity.ErrorHandlingType = microflows.ErrorHandlingType(errorHandling)
 	}
 
-	// Parse the action
-	if action, ok := raw["Action"].(map[string]any); ok {
+	// Parse the action.
+	if action := extractBsonMap(raw["Action"]); action != nil {
 		activity.Action = parseMicroflowAction(action)
 	}
 
@@ -714,8 +724,9 @@ func parseCommitAction(raw map[string]any) *microflows.CommitObjectsAction {
 	action.CommitVariable = extractString(raw["CommitVariableName"])
 	action.WithEvents = extractBool(raw["WithEvents"], false)
 	action.RefreshInClient = extractBool(raw["RefreshInClient"], false)
-	if errType, ok := raw["ErrorHandlingType"].(string); ok {
-		action.ErrorHandlingType = microflows.ErrorHandlingType(errType)
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	if action.ErrorHandlingType == "" {
+		action.ErrorHandlingType = microflows.ErrorHandlingTypeRollback
 	}
 	return action
 }

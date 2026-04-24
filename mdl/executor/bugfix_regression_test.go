@@ -13,6 +13,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -591,6 +592,100 @@ func TestResolveMemberChange_FallbackWithoutReader_QualifiedAttributeStaysAttrib
 	}
 }
 
+func TestResolveMemberChange_BareAssociationUsesDomainMetadata(t *testing.T) {
+	moduleID := model.ID("module-1")
+	childID := model.ID("child-1")
+	parentID := model.ID("parent-1")
+	fb := &flowBuilder{
+		backend: &mock.MockBackend{
+			GetModuleByNameFunc: func(name string) (*model.Module, error) {
+				if name != "Demo" {
+					return nil, nil
+				}
+				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: "Demo"}, nil
+			},
+			GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+				if id != moduleID {
+					return nil, nil
+				}
+				return &domainmodel.DomainModel{
+					ContainerID: moduleID,
+					Entities: []*domainmodel.Entity{
+						{BaseElement: model.BaseElement{ID: childID}, Name: "Child"},
+						{BaseElement: model.BaseElement{ID: parentID}, Name: "Parent"},
+					},
+					Associations: []*domainmodel.Association{
+						{
+							Name:     "Child_Parent",
+							ParentID: childID,
+							ChildID:  parentID,
+							Type:     domainmodel.AssociationTypeReference,
+						},
+					},
+				}, nil
+			},
+		},
+	}
+
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "Child_Parent", "Demo.Child")
+
+	if mc.AssociationQualifiedName != "Demo.Child_Parent" {
+		t.Fatalf("expected association Demo.Child_Parent, got attr=%q assoc=%q",
+			mc.AttributeQualifiedName, mc.AssociationQualifiedName)
+	}
+	if mc.AttributeQualifiedName != "" {
+		t.Fatalf("expected no attribute, got %q", mc.AttributeQualifiedName)
+	}
+}
+
+func TestResolveMemberChange_BareInheritedAttributeUsesDeclaringEntity(t *testing.T) {
+	moduleID := model.ID("system-module")
+	messageID := model.ID("http-message")
+	responseID := model.ID("http-response")
+	fb := &flowBuilder{
+		backend: &mock.MockBackend{
+			GetModuleByNameFunc: func(name string) (*model.Module, error) {
+				if name != "System" {
+					return nil, nil
+				}
+				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: "System"}, nil
+			},
+			GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+				if id != moduleID {
+					return nil, nil
+				}
+				return &domainmodel.DomainModel{
+					ContainerID: moduleID,
+					Entities: []*domainmodel.Entity{
+						{
+							BaseElement: model.BaseElement{ID: messageID},
+							Name:        "HttpMessage",
+							Attributes:  []*domainmodel.Attribute{{Name: "Content"}},
+						},
+						{
+							BaseElement:       model.BaseElement{ID: responseID},
+							Name:              "HttpResponse",
+							GeneralizationRef: "System.HttpMessage",
+						},
+					},
+				}, nil
+			},
+		},
+	}
+
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "Content", "System.HttpResponse")
+
+	if mc.AttributeQualifiedName != "System.HttpMessage.Content" {
+		t.Fatalf("expected inherited attribute System.HttpMessage.Content, got attr=%q assoc=%q",
+			mc.AttributeQualifiedName, mc.AssociationQualifiedName)
+	}
+	if mc.AssociationQualifiedName != "" {
+		t.Fatalf("expected no association, got %q", mc.AssociationQualifiedName)
+	}
+}
+
 func TestCallMicroflowResultType_ResolvesSubsequentChangeMember(t *testing.T) {
 	moduleID := model.ID("module-1")
 	backend := &mock.MockBackend{
@@ -694,5 +789,59 @@ func TestCallMicroflowUnknownResultTypeStillDeclaresVariable(t *testing.T) {
 	}
 	if !fb.isVariableDeclared("Result") {
 		t.Fatal("expected Result to remain declared after unresolved call return type")
+	}
+}
+
+func TestCallJavaAction_MicroflowParameterTypePreserved(t *testing.T) {
+	backend := &mock.MockBackend{
+		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
+			if qualifiedName != "MxDock.CreateLocalAdminOption" {
+				return nil, nil
+			}
+			return &javaactions.JavaAction{
+				Parameters: []*javaactions.JavaActionParameter{
+					{
+						Name:          "openPageMf",
+						ParameterType: &javaactions.MicroflowType{},
+					},
+				},
+			}, nil
+		},
+	}
+
+	fb := &flowBuilder{
+		backend:      backend,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+	}
+
+	fb.addCallJavaActionAction(&ast.CallJavaActionStmt{
+		OutputVariable: "PlatformAdmin",
+		ActionName:     ast.QualifiedName{Module: "MxDock", Name: "CreateLocalAdminOption"},
+		Arguments: []ast.CallArgument{
+			{
+				Name:  "openPageMf",
+				Value: &ast.QualifiedNameExpr{QualifiedName: ast.QualifiedName{Module: "MxDock", Name: "Example_OpenAdminPage"}},
+			},
+		},
+	})
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected last object to be ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+	action, ok := activity.Action.(*microflows.JavaActionCallAction)
+	if !ok {
+		t.Fatalf("expected JavaActionCallAction, got %T", activity.Action)
+	}
+	if len(action.ParameterMappings) != 1 {
+		t.Fatalf("expected one parameter mapping, got %d", len(action.ParameterMappings))
+	}
+	value, ok := action.ParameterMappings[0].Value.(*microflows.MicroflowParameterValue)
+	if !ok {
+		t.Fatalf("expected MicroflowParameterValue, got %T", action.ParameterMappings[0].Value)
+	}
+	if value.Microflow != "MxDock.Example_OpenAdminPage" {
+		t.Fatalf("expected qualified microflow preserved, got %q", value.Microflow)
 	}
 }

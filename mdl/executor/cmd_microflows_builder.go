@@ -45,7 +45,11 @@ type flowBuilder struct {
 	// previousStmtAnchor holds the Anchor annotation of the statement that
 	// just emitted an activity, so the next flow's OriginConnectionIndex can
 	// be overridden by the user. Cleared after each flow is created.
-	previousStmtAnchor *ast.FlowAnchors
+	previousStmtAnchor    *ast.FlowAnchors
+	assocLookupCache      map[string]*assocLookupResult
+	memberResolutionCache map[string]resolvedMember
+	manualLoopBackTarget  model.ID
+	emptyErrorHandlerFrom model.ID
 }
 
 // addError records a validation error during flow building.
@@ -266,6 +270,14 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 			ThenExpr:  fb.resolveAssociationPaths(e.ThenExpr),
 			ElseExpr:  fb.resolveAssociationPaths(e.ElseExpr),
 		}
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return e
+		}
+		return &ast.SourceExpr{
+			Expression: fb.resolveAssociationPaths(e.Expression),
+			Source:     e.Source,
+		}
 	default:
 		return expr
 	}
@@ -380,6 +392,8 @@ func unwrapParenCall(expr ast.Expression) *ast.FunctionCallExpr {
 			return e
 		case *ast.ParenExpr:
 			expr = e.Inner
+		case *ast.SourceExpr:
+			expr = e.Expression
 		default:
 			return nil
 		}

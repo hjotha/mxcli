@@ -84,6 +84,158 @@ func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
 	return activity.ID
 }
 
+func (fb *flowBuilder) addInheritanceSplit(s *ast.InheritanceSplitStmt) model.ID {
+	if len(s.Cases) > 0 || len(s.ElseBody) > 0 {
+		return fb.addStructuredInheritanceSplit(s)
+	}
+
+	split := &microflows.InheritanceSplit{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX, Y: fb.posY},
+			Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+		},
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+		VariableName:      s.Variable,
+	}
+
+	fb.objects = append(fb.objects, split)
+	fb.posX += fb.spacing
+	return split.ID
+}
+
+func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt) model.ID {
+	splitX := fb.posX
+	centerY := fb.posY
+	split := &microflows.InheritanceSplit{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: splitX, Y: centerY},
+			Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+		},
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+		VariableName:      s.Variable,
+	}
+	fb.objects = append(fb.objects, split)
+
+	splitID := split.ID
+	if fb.pendingAnnotations != nil {
+		fb.applyAnnotations(splitID, fb.pendingAnnotations)
+		fb.pendingAnnotations = nil
+	}
+
+	savedEndsWithReturn := fb.endsWithReturn
+	fb.endsWithReturn = false
+	allBranchesReturn := true
+	branchStartX := splitX + ActivityWidth + HorizontalSpacing/2
+	branchIndex := 0
+
+	addBranch := func(caseValue string, body []ast.MicroflowStatement) {
+		branchY := centerY + branchIndex*VerticalSpacing
+		branchIndex++
+		if len(body) == 0 {
+			allBranchesReturn = false
+			return
+		}
+
+		fb.posX = branchStartX
+		fb.posY = branchY
+		fb.endsWithReturn = false
+
+		var lastID model.ID
+		var prevAnchor *ast.FlowAnchors
+		for _, stmt := range body {
+			thisAnchor := stmtOwnAnchor(stmt)
+			actID := fb.addStatement(stmt)
+			if actID == "" {
+				continue
+			}
+			fb.applyPendingAnnotations(actID)
+			if lastID == "" {
+				var flow *microflows.SequenceFlow
+				if branchIndex == 1 {
+					flow = newHorizontalFlowWithInheritanceCase(splitID, actID, caseValue)
+				} else {
+					flow = newDownwardFlowWithInheritanceCase(splitID, actID, caseValue)
+				}
+				if thisAnchor != nil && thisAnchor.To != ast.AnchorSideUnset {
+					flow.DestinationConnectionIndex = int(thisAnchor.To)
+				}
+				fb.flows = append(fb.flows, flow)
+			} else {
+				flow := newHorizontalFlow(lastID, actID)
+				applyUserAnchors(flow, prevAnchor, thisAnchor)
+				fb.flows = append(fb.flows, flow)
+			}
+			prevAnchor = thisAnchor
+			if fb.nextConnectionPoint != "" {
+				lastID = fb.nextConnectionPoint
+				fb.nextConnectionPoint = ""
+			} else {
+				lastID = actID
+			}
+		}
+		if !lastStmtIsReturn(body) {
+			allBranchesReturn = false
+		}
+	}
+
+	for _, c := range s.Cases {
+		addBranch(qualifiedNameString(c.Entity), c.Body)
+	}
+	if len(s.ElseBody) > 0 {
+		addBranch("", s.ElseBody)
+	}
+
+	fb.posX = branchStartX + fb.measurer.measureStatements(appendInheritanceBodies(s)).Width + HorizontalSpacing/2
+	fb.posY = centerY
+	fb.endsWithReturn = savedEndsWithReturn
+	if allBranchesReturn {
+		fb.endsWithReturn = true
+	}
+	return splitID
+}
+
+func appendInheritanceBodies(s *ast.InheritanceSplitStmt) []ast.MicroflowStatement {
+	var stmts []ast.MicroflowStatement
+	for _, c := range s.Cases {
+		stmts = append(stmts, c.Body...)
+	}
+	stmts = append(stmts, s.ElseBody...)
+	return stmts
+}
+
+func qualifiedNameString(qn ast.QualifiedName) string {
+	if qn.Module == "" {
+		return qn.Name
+	}
+	return qn.Module + "." + qn.Name
+}
+
+func (fb *flowBuilder) addCastAction(s *ast.CastObjectStmt) model.ID {
+	action := &microflows.CastAction{
+		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
+		ObjectVariable: s.ObjectVariable,
+		OutputVariable: s.OutputVariable,
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+	return activity.ID
+}
+
 // addCreateObjectAction creates a CREATE OBJECT statement.
 func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 	action := &microflows.CreateObjectAction{
@@ -369,22 +521,10 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 				attrPath := col.Attribute
 				if !strings.Contains(attrPath, ".") {
 					attrPath = entityQN + "." + attrPath
-				} else {
-					// Validate that qualified attribute path belongs to the retrieved entity
-					// Expected format: Module.Entity.Attribute
-					parts := strings.Split(attrPath, ".")
-					if len(parts) >= 3 {
-						// Extract entity from attribute path (first two parts)
-						attrEntityQN := parts[0] + "." + parts[1]
-						if attrEntityQN != entityQN {
-							fb.addError("sort by attribute '%s' does not belong to entity '%s'", col.Attribute, entityQN)
-							continue // Skip this sort column but continue processing others
-						}
-					}
 				}
 
 				direction := microflows.SortDirectionAscending
-				if col.Order == "desc" {
+				if strings.EqualFold(col.Order, "desc") {
 					direction = microflows.SortDirectionDescending
 				}
 
@@ -757,10 +897,27 @@ func (fb *flowBuilder) isEntity(moduleName, entityName string) bool {
 	return false
 }
 
+type resolvedMemberKind int
+
+const (
+	resolvedMemberUnknown resolvedMemberKind = iota
+	resolvedMemberAttribute
+	resolvedMemberAssociation
+)
+
+type resolvedMember struct {
+	kind          resolvedMemberKind
+	qualifiedName string
+}
+
+type domainEntityRef struct {
+	moduleName string
+	dm         *domainmodel.DomainModel
+	entity     *domainmodel.Entity
+}
+
 // resolveMemberChange determines whether a member name is an association or attribute
-// and sets the appropriate field on the MemberChange. It queries the domain model
-// to check if the name matches an association on the entity; if no metadata is
-// available, it falls back to a name-shape heuristic.
+// and sets the appropriate field on the MemberChange.
 //
 // memberName can be either bare ("Order_Customer") or qualified ("MfTest.Order_Customer").
 func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberName string, entityQN string) {
@@ -785,54 +942,197 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 		return
 	}
 
-	// Split entity qualified name into module and entity
-	parts := strings.SplitN(entityQN, ".", 2)
-	if len(parts) != 2 {
-		mc.AttributeQualifiedName = entityQN + "." + memberName
+	switch strings.Count(memberName, ".") {
+	case 0:
+		resolved := fb.resolveBareMember(memberName, entityQN)
+		if resolved.kind == resolvedMemberAssociation {
+			mc.AssociationQualifiedName = resolved.qualifiedName
+			if mc.AssociationQualifiedName == "" {
+				moduleName := entityQN
+				if dot := strings.Index(moduleName, "."); dot >= 0 {
+					moduleName = moduleName[:dot]
+				}
+				mc.AssociationQualifiedName = moduleName + "." + memberName
+			}
+			return
+		}
+		if resolved.kind == resolvedMemberAttribute && resolved.qualifiedName != "" {
+			mc.AttributeQualifiedName = resolved.qualifiedName
+		} else {
+			mc.AttributeQualifiedName = entityQN + "." + memberName
+		}
+		return
+	case 1:
+		mc.AssociationQualifiedName = memberName
+		return
+	default:
+		mc.AttributeQualifiedName = memberName
 		return
 	}
-	moduleName := parts[0]
+}
 
-	// If memberName is already qualified (e.g., "MfTest.Order_Customer"),
-	// extract the bare name for association lookup.
-	bareName := memberName
-	qualifiedName := memberName
-	if dot := strings.Index(memberName, "."); dot >= 0 {
-		bareName = memberName[dot+1:]
-		// qualifiedName is already set to the full memberName
+func (fb *flowBuilder) resolveBareMember(memberName string, entityQN string) resolvedMember {
+	if memberName == "" || entityQN == "" || fb.backend == nil {
+		return resolvedMember{kind: resolvedMemberUnknown}
+	}
+	cacheKey := entityQN + "." + memberName
+	if fb.memberResolutionCache != nil {
+		if cached, ok := fb.memberResolutionCache[cacheKey]; ok {
+			return cached
+		}
 	} else {
-		qualifiedName = moduleName + "." + memberName
+		fb.memberResolutionCache = make(map[string]resolvedMember)
 	}
 
-	// Query domain model to check if this member is an association
-	if fb.backend != nil {
-		if mod, err := fb.backend.GetModuleByName(moduleName); err == nil && mod != nil {
-			if dm, err := fb.backend.GetDomainModel(mod.ID); err == nil && dm != nil {
-				for _, a := range dm.Associations {
-					if a.Name == bareName {
-						mc.AssociationQualifiedName = qualifiedName
-						return
-					}
+	result := fb.lookupBareMember(memberName, entityQN)
+	fb.memberResolutionCache[cacheKey] = result
+	return result
+}
+
+func (fb *flowBuilder) lookupBareMember(memberName string, entityQN string) resolvedMember {
+	entityRef, ok := fb.lookupDomainEntity(entityQN)
+	if !ok {
+		return resolvedMember{kind: resolvedMemberUnknown}
+	}
+
+	if attrQN, ok := fb.lookupAttributeQualifiedName(memberName, entityRef, map[string]bool{}); ok {
+		return resolvedMember{kind: resolvedMemberAttribute, qualifiedName: attrQN}
+	}
+
+	hierarchy := fb.collectEntityHierarchy(entityRef, map[string]bool{})
+	entityIDs := make(map[model.ID]bool, len(hierarchy))
+	for _, ref := range hierarchy {
+		if ref.entity != nil && ref.entity.ID != "" {
+			entityIDs[ref.entity.ID] = true
+		}
+	}
+	for _, ref := range hierarchy {
+		if ref.dm == nil {
+			continue
+		}
+		for _, assoc := range ref.dm.Associations {
+			if assoc.Name == memberName && (entityIDs[assoc.ParentID] || entityIDs[assoc.ChildID]) {
+				return resolvedMember{
+					kind:          resolvedMemberAssociation,
+					qualifiedName: ref.moduleName + "." + assoc.Name,
 				}
-				for _, a := range dm.CrossAssociations {
-					if a.Name == bareName {
-						mc.AssociationQualifiedName = qualifiedName
-						return
-					}
+			}
+		}
+		for _, assoc := range ref.dm.CrossAssociations {
+			if assoc.Name == memberName && entityIDs[assoc.ParentID] {
+				return resolvedMember{
+					kind:          resolvedMemberAssociation,
+					qualifiedName: ref.moduleName + "." + assoc.Name,
 				}
-				// Not an association — it's an attribute
-				if strings.Contains(memberName, ".") {
-					// Already qualified, don't double-qualify
-					mc.AttributeQualifiedName = memberName
-				} else {
-					mc.AttributeQualifiedName = entityQN + "." + memberName
-				}
-				return
 			}
 		}
 	}
 
-	resolveMemberChangeFallback(mc, memberName, entityQN)
+	return resolvedMember{kind: resolvedMemberUnknown}
+}
+
+func (fb *flowBuilder) lookupDomainEntity(entityQN string) (domainEntityRef, bool) {
+	parts := strings.SplitN(entityQN, ".", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return domainEntityRef{}, false
+	}
+	moduleName, entityName := parts[0], parts[1]
+	mod, err := fb.backend.GetModuleByName(moduleName)
+	if err != nil || mod == nil {
+		return domainEntityRef{}, false
+	}
+	dm, err := fb.backend.GetDomainModel(mod.ID)
+	if err != nil || dm == nil {
+		return domainEntityRef{}, false
+	}
+
+	entity := dm.FindEntityByName(entityName)
+	if entity == nil {
+		return domainEntityRef{}, false
+	}
+	return domainEntityRef{moduleName: moduleName, dm: dm, entity: entity}, true
+}
+
+func (fb *flowBuilder) lookupAttributeQualifiedName(memberName string, ref domainEntityRef, visited map[string]bool) (string, bool) {
+	if ref.entity == nil {
+		return "", false
+	}
+	key := ref.moduleName + "." + ref.entity.Name
+	if visited[key] {
+		return "", false
+	}
+	visited[key] = true
+
+	for _, attr := range ref.entity.Attributes {
+		if attr.Name == memberName {
+			return key + "." + memberName, true
+		}
+	}
+
+	if parentRef, ok := fb.lookupGeneralization(ref); ok {
+		return fb.lookupAttributeQualifiedName(memberName, parentRef, visited)
+	}
+	return "", false
+}
+
+func (fb *flowBuilder) collectEntityHierarchy(ref domainEntityRef, visited map[string]bool) []domainEntityRef {
+	if ref.entity == nil {
+		return nil
+	}
+	key := ref.moduleName + "." + ref.entity.Name
+	if visited[key] {
+		return nil
+	}
+	visited[key] = true
+
+	refs := []domainEntityRef{ref}
+	if parentRef, ok := fb.lookupGeneralization(ref); ok {
+		refs = append(refs, fb.collectEntityHierarchy(parentRef, visited)...)
+	}
+	return refs
+}
+
+func (fb *flowBuilder) lookupGeneralization(ref domainEntityRef) (domainEntityRef, bool) {
+	if ref.entity == nil {
+		return domainEntityRef{}, false
+	}
+
+	parentQN := ref.entity.GeneralizationRef
+	if parentQN == "" && ref.entity.GeneralizationID != "" {
+		if parent := findEntityByID(ref.dm, ref.entity.GeneralizationID); parent != nil {
+			parentQN = ref.moduleName + "." + parent.Name
+		}
+	}
+	if parentQN == "" {
+		switch gen := ref.entity.Generalization.(type) {
+		case domainmodel.GeneralizationBase:
+			if parent := findEntityByID(ref.dm, gen.GeneralizationID); parent != nil {
+				parentQN = ref.moduleName + "." + parent.Name
+			}
+		case *domainmodel.GeneralizationBase:
+			if gen != nil {
+				if parent := findEntityByID(ref.dm, gen.GeneralizationID); parent != nil {
+					parentQN = ref.moduleName + "." + parent.Name
+				}
+			}
+		}
+	}
+	if parentQN == "" {
+		return domainEntityRef{}, false
+	}
+	return fb.lookupDomainEntity(parentQN)
+}
+
+func findEntityByID(dm *domainmodel.DomainModel, entityID model.ID) *domainmodel.Entity {
+	if dm == nil || entityID == "" {
+		return nil
+	}
+	for _, entity := range dm.Entities {
+		if entity.ID == entityID {
+			return entity
+		}
+	}
+	return nil
 }
 
 // resolveMemberChangeFallback preserves the authored member name shape when the
@@ -874,12 +1174,23 @@ func (fb *flowBuilder) lookupAssociation(moduleName, assocName string) *assocLoo
 	if fb.backend == nil {
 		return nil
 	}
+	cacheKey := moduleName + "." + assocName
+	if fb.assocLookupCache != nil {
+		if cached, ok := fb.assocLookupCache[cacheKey]; ok {
+			return cached
+		}
+	} else {
+		fb.assocLookupCache = make(map[string]*assocLookupResult)
+	}
+
 	mod, err := fb.backend.GetModuleByName(moduleName)
 	if err != nil || mod == nil {
+		fb.assocLookupCache[cacheKey] = nil
 		return nil
 	}
 	dm, err := fb.backend.GetDomainModel(mod.ID)
 	if err != nil || dm == nil {
+		fb.assocLookupCache[cacheKey] = nil
 		return nil
 	}
 
@@ -891,12 +1202,15 @@ func (fb *flowBuilder) lookupAssociation(moduleName, assocName string) *assocLoo
 
 	for _, a := range dm.Associations {
 		if a.Name == assocName {
-			return &assocLookupResult{
+			result := &assocLookupResult{
 				Type:           a.Type,
 				parentEntityQN: entityNames[a.ParentID],
 				childEntityQN:  entityNames[a.ChildID],
 			}
+			fb.assocLookupCache[cacheKey] = result
+			return result
 		}
 	}
+	fb.assocLookupCache[cacheKey] = nil
 	return nil
 }

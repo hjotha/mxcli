@@ -189,7 +189,8 @@ func (EnumerationCase) isCaseValue() {}
 // InheritanceCase represents an inheritance/type case value.
 type InheritanceCase struct {
 	model.BaseElement
-	EntityID model.ID `json:"entityId"`
+	EntityID            model.ID `json:"entityId"`
+	EntityQualifiedName string   `json:"entityQualifiedName,omitempty"`
 }
 
 func (InheritanceCase) isCaseValue() {}

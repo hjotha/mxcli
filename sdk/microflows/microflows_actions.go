@@ -576,6 +576,14 @@ type EntityTypeCodeActionParameterValue struct {
 
 func (EntityTypeCodeActionParameterValue) isCodeActionParameterValue() {}
 
+// MicroflowParameterValue is a microflow reference passed to a Java action.
+type MicroflowParameterValue struct {
+	model.BaseElement
+	Microflow string `json:"microflow,omitempty"` // BY_NAME_REFERENCE: qualified microflow name
+}
+
+func (MicroflowParameterValue) isCodeActionParameterValue() {}
+
 // CallExternalAction calls an external action on a consumed OData service.
 type CallExternalAction struct {
 	model.BaseElement

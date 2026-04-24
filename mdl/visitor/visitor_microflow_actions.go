@@ -89,11 +89,15 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 
 		// Parse the expression and check for data source attribute reference
 		if exprCtx := paramCtx.Expression(); exprCtx != nil {
-			expr := buildExpression(exprCtx)
+			expr := buildSourceExpression(exprCtx)
 			tp.Value = expr
 
 			// Check if this is a $Widget.Attr pattern (AttributePathExpr with Path)
-			if pathExpr, ok := expr.(*ast.AttributePathExpr); ok && len(pathExpr.Path) > 0 {
+			inspectionExpr := expr
+			if sourceExpr, ok := inspectionExpr.(*ast.SourceExpr); ok {
+				inspectionExpr = sourceExpr.Expression
+			}
+			if pathExpr, ok := inspectionExpr.(*ast.AttributePathExpr); ok && len(pathExpr.Path) > 0 {
 				// This is a data source attribute reference
 				tp.DataSourceName = pathExpr.Variable
 				tp.AttributeName = pathExpr.Path[len(pathExpr.Path)-1]
@@ -302,7 +306,7 @@ func buildCallArgumentList(ctx parser.ICallArgumentListContext) []ast.CallArgume
 			ca.Name = parameterNameText(pn)
 		}
 		if expr := arg.Expression(); expr != nil {
-			ca.Value = buildExpression(expr)
+			ca.Value = buildSourceExpression(expr)
 		}
 
 		args = append(args, ca)
@@ -328,7 +332,7 @@ func buildMemberAssignmentList(ctx parser.IMemberAssignmentListContext) []ast.Ch
 			ci.Attribute = memberAttributeNameText(name)
 		}
 		if expr := assign.Expression(); expr != nil {
-			ci.Value = buildExpression(expr)
+			ci.Value = buildSourceExpression(expr)
 		}
 
 		items = append(items, ci)
@@ -353,7 +357,7 @@ func buildChangeList(ctx parser.IChangeListContext) []ast.ChangeItem {
 			ci.Attribute = id.GetText()
 		}
 		if expr := item.Expression(); expr != nil {
-			ci.Value = buildExpression(expr)
+			ci.Value = buildSourceExpression(expr)
 		}
 
 		items = append(items, ci)

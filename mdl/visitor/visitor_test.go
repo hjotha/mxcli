@@ -881,6 +881,154 @@ END;`
 	t.Log("RETRIEVE with LIMIT parsed correctly")
 }
 
+func TestRetrieveWithInlineIfLimitPreservesSpaces(t *testing.T) {
+	input := `CREATE MICROFLOW Test.TestRetrieve ()
+RETURNS Boolean AS $Success
+BEGIN
+  RETRIEVE $Products FROM Test.Product LIMIT if $pageSize != 0 and $pageSize != empty then $pageSize else @Test.DefaultPageSize OFFSET 0;
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	retrieveStmt, ok := stmt.Body[0].(*ast.RetrieveStmt)
+	if !ok {
+		t.Fatalf("Expected RetrieveStmt, got %T", stmt.Body[0])
+	}
+
+	wantLimit := "if $pageSize != 0 and $pageSize != empty then $pageSize else @Test.DefaultPageSize"
+	if retrieveStmt.Limit != wantLimit {
+		t.Errorf("Limit: got %q, want %q", retrieveStmt.Limit, wantLimit)
+	}
+	if retrieveStmt.Offset != "0" {
+		t.Errorf("Offset: got %q, want %q", retrieveStmt.Offset, "0")
+	}
+}
+
+func TestIfConditionPreservesOriginalSourceWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  IF $A = $B and
+$C = $D THEN
+    RETURN true;
+  END IF;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	ifStmt, ok := stmt.Body[0].(*ast.IfStmt)
+	if !ok {
+		t.Fatalf("Expected IfStmt, got %T", stmt.Body[0])
+	}
+	source, ok := ifStmt.Condition.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr condition, got %T", ifStmt.Condition)
+	}
+
+	want := "$A = $B and\n$C = $D"
+	if source.Source != want {
+		t.Fatalf("condition source = %q, want %q", source.Source, want)
+	}
+}
+
+func TestMemberAndCallArgumentsPreserveOriginalSourceWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  $Obj = CREATE Test.Entity (Value = if $Count = 0
+then $Fallback
+else $Actual);
+  CALL MICROFLOW Test.Handle(Value = if $Count = 0
+then $Fallback
+else $Actual);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	createStmt, ok := stmt.Body[0].(*ast.CreateObjectStmt)
+	if !ok {
+		t.Fatalf("Expected CreateObjectStmt, got %T", stmt.Body[0])
+	}
+	callStmt, ok := stmt.Body[1].(*ast.CallMicroflowStmt)
+	if !ok {
+		t.Fatalf("Expected CallMicroflowStmt, got %T", stmt.Body[1])
+	}
+
+	want := "if $Count = 0\nthen $Fallback\nelse $Actual"
+	memberSource, ok := createStmt.Changes[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr member value, got %T", createStmt.Changes[0].Value)
+	}
+	if memberSource.Source != want {
+		t.Fatalf("member source = %q, want %q", memberSource.Source, want)
+	}
+	argSource, ok := callStmt.Arguments[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr call argument, got %T", callStmt.Arguments[0].Value)
+	}
+	if argSource.Source != want {
+		t.Fatalf("argument source = %q, want %q", argSource.Source, want)
+	}
+}
+
+func TestSetAndLogTemplatePreserveCompactOperatorSource(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  SET $Batch = $Batch+1;
+  LOG INFO NODE 'Node' 'Offset {1}' WITH ({1} = $Offset+$TotalCommittedApp);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	setStmt, ok := stmt.Body[0].(*ast.MfSetStmt)
+	if !ok {
+		t.Fatalf("Expected MfSetStmt, got %T", stmt.Body[0])
+	}
+	logStmt, ok := stmt.Body[1].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[1])
+	}
+
+	setSource, ok := setStmt.Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr set value, got %T", setStmt.Value)
+	}
+	if setSource.Source != "$Batch+1" {
+		t.Fatalf("set source = %q, want %q", setSource.Source, "$Batch+1")
+	}
+
+	tplSource, ok := logStmt.Template[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr template value, got %T", logStmt.Template[0].Value)
+	}
+	if tplSource.Source != "$Offset+$TotalCommittedApp" {
+		t.Fatalf("template source = %q, want %q", tplSource.Source, "$Offset+$TotalCommittedApp")
+	}
+}
+
 // TestDeclareEntityWithoutAS verifies entity declaration without AS keyword.
 func TestDeclareEntityWithoutAS(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestDeclare ()
