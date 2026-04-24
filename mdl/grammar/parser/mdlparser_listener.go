@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -408,6 +408,15 @@ type MDLParserListener interface {
 
 	// EnterDeclareStatement is called when entering the declareStatement production.
 	EnterDeclareStatement(c *DeclareStatementContext)
+
+	// EnterInheritanceSplitStatement is called when entering the inheritanceSplitStatement production.
+	EnterInheritanceSplitStatement(c *InheritanceSplitStatementContext)
+
+	// EnterInheritanceSplitCase is called when entering the inheritanceSplitCase production.
+	EnterInheritanceSplitCase(c *InheritanceSplitCaseContext)
+
+	// EnterCastObjectStatement is called when entering the castObjectStatement production.
+	EnterCastObjectStatement(c *CastObjectStatementContext)
 
 	// EnterSetStatement is called when entering the setStatement production.
 	EnterSetStatement(c *SetStatementContext)
@@ -1716,6 +1725,15 @@ type MDLParserListener interface {
 
 	// ExitDeclareStatement is called when exiting the declareStatement production.
 	ExitDeclareStatement(c *DeclareStatementContext)
+
+	// ExitInheritanceSplitStatement is called when exiting the inheritanceSplitStatement production.
+	ExitInheritanceSplitStatement(c *InheritanceSplitStatementContext)
+
+	// ExitInheritanceSplitCase is called when exiting the inheritanceSplitCase production.
+	ExitInheritanceSplitCase(c *InheritanceSplitCaseContext)
+
+	// ExitCastObjectStatement is called when exiting the castObjectStatement production.
+	ExitCastObjectStatement(c *CastObjectStatementContext)
 
 	// ExitSetStatement is called when exiting the setStatement production.
 	ExitSetStatement(c *SetStatementContext)

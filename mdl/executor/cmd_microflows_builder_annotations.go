@@ -15,6 +15,10 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		return s.Annotations
+	case *ast.InheritanceSplitStmt:
+		return s.Annotations
+	case *ast.CastObjectStmt:
+		return s.Annotations
 	case *ast.MfSetStmt:
 		return s.Annotations
 	case *ast.ReturnStmt:
@@ -74,6 +78,14 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 	case *ast.ValidationFeedbackStmt:
 		return s.Annotations
 	case *ast.RestCallStmt:
+		return s.Annotations
+	case *ast.SendRestRequestStmt:
+		return s.Annotations
+	case *ast.ImportFromMappingStmt:
+		return s.Annotations
+	case *ast.ExportToMappingStmt:
+		return s.Annotations
+	case *ast.TransformJsonStmt:
 		return s.Annotations
 	default:
 		return nil
@@ -183,6 +195,14 @@ func (fb *flowBuilder) applyAnnotations(activityID model.ID, ann *ast.ActivityAn
 	if ann.AnnotationText != "" {
 		fb.attachAnnotation(ann.AnnotationText, activityID)
 	}
+}
+
+func (fb *flowBuilder) applyPendingAnnotations(activityID model.ID) {
+	if fb.pendingAnnotations == nil {
+		return
+	}
+	fb.applyAnnotations(activityID, fb.pendingAnnotations)
+	fb.pendingAnnotations = nil
 }
 
 // addEndEventWithReturn creates an EndEvent with the specified return value.

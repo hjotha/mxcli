@@ -15,6 +15,9 @@ func convertErrorHandlingType(eh *ast.ErrorHandlingClause) microflows.ErrorHandl
 	if eh == nil {
 		return microflows.ErrorHandlingTypeRollback
 	}
+	if isEmptyCustomErrorHandler(eh) {
+		return microflows.ErrorHandlingTypeContinue
+	}
 	switch eh.Type {
 	case ast.ErrorHandlingContinue:
 		return microflows.ErrorHandlingTypeContinue
@@ -26,6 +29,26 @@ func convertErrorHandlingType(eh *ast.ErrorHandlingClause) microflows.ErrorHandl
 		return microflows.ErrorHandlingTypeCustomWithoutRollback
 	default:
 		return microflows.ErrorHandlingTypeRollback
+	}
+}
+
+func isEmptyCustomErrorHandler(eh *ast.ErrorHandlingClause) bool {
+	if eh == nil || len(eh.Body) != 0 {
+		return false
+	}
+	return eh.Type == ast.ErrorHandlingCustom || eh.Type == ast.ErrorHandlingCustomWithoutRollback
+}
+
+func (fb *flowBuilder) registerEmptyCustomErrorHandler(activityID model.ID, eh *ast.ErrorHandlingClause) {
+	if isEmptyCustomErrorHandler(eh) {
+		fb.emptyErrorHandlerFrom = activityID
+	}
+}
+
+func (fb *flowBuilder) addPendingEmptyErrorHandlerFlow(originID, destinationID model.ID) {
+	if fb.emptyErrorHandlerFrom != "" && fb.emptyErrorHandlerFrom == originID && destinationID != "" {
+		fb.flows = append(fb.flows, newErrorHandlerFlow(originID, destinationID))
+		fb.emptyErrorHandlerFrom = ""
 	}
 }
 
@@ -144,6 +167,15 @@ func newHorizontalFlowWithCase(originID, destinationID model.ID, caseValue strin
 	return flow
 }
 
+func newHorizontalFlowWithInheritanceCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
+	flow := newHorizontalFlow(originID, destinationID)
+	flow.CaseValue = microflows.InheritanceCase{
+		BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
+		EntityQualifiedName: caseValue,
+	}
+	return flow
+}
+
 // newDownwardFlowWithCase creates a SequenceFlow going down from origin (Bottom) to destination (Left)
 // Used when TRUE path goes below the main line
 func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
@@ -156,6 +188,20 @@ func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string)
 		CaseValue: microflows.EnumerationCase{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Value:       caseValue, // "true" or "false" as string
+		},
+	}
+}
+
+func newDownwardFlowWithInheritanceCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
+	return &microflows.SequenceFlow{
+		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
+		OriginID:                   originID,
+		DestinationID:              destinationID,
+		OriginConnectionIndex:      AnchorBottom,
+		DestinationConnectionIndex: AnchorLeft,
+		CaseValue: microflows.InheritanceCase{
+			BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
+			EntityQualifiedName: caseValue,
 		},
 	}
 }
@@ -192,12 +238,13 @@ func applyUserAnchors(flow *microflows.SequenceFlow, origin *ast.FlowAnchors, de
 }
 
 // lastStmtIsReturn reports whether execution of a body is guaranteed to terminate
-// (via RETURN or RAISE ERROR) on every path — i.e. control can never fall off the
-// end of the body into the parent flow.
+// (via RETURN, RAISE ERROR, BREAK, or CONTINUE) on every path — i.e. control can
+// never fall off the end of the body into the parent flow.
 //
-// Terminal statements: ReturnStmt, RaiseErrorStmt. An IfStmt is terminal iff it
-// has an ELSE and both branches are terminal (recursively). A LoopStmt is never
-// terminal — BREAK can exit the loop even if the body returns.
+// Terminal statements: ReturnStmt, RaiseErrorStmt, BreakStmt, ContinueStmt. An
+// IfStmt is terminal iff it has an ELSE and both branches are terminal
+// (recursively). A LoopStmt is never terminal — BREAK can exit the loop even if
+// the body returns.
 //
 // Naming kept for history; the predicate is really "last stmt is a guaranteed
 // terminator". Missing this case causes the outer IF to emit a dangling
@@ -216,11 +263,25 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 		return true
 	case *ast.RaiseErrorStmt:
 		return true
+	case *ast.BreakStmt:
+		return true
+	case *ast.ContinueStmt:
+		return true
 	case *ast.IfStmt:
 		if len(s.ElseBody) == 0 {
 			return false
 		}
 		return lastStmtIsReturn(s.ThenBody) && lastStmtIsReturn(s.ElseBody)
+	case *ast.InheritanceSplitStmt:
+		if len(s.ElseBody) == 0 {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !lastStmtIsReturn(c.Body) {
+				return false
+			}
+		}
+		return lastStmtIsReturn(s.ElseBody)
 	default:
 		return false
 	}

@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -877,6 +877,26 @@ func (s *BaseMDLParserListener) EnterDeclareStatement(ctx *DeclareStatementConte
 
 // ExitDeclareStatement is called when production declareStatement is exited.
 func (s *BaseMDLParserListener) ExitDeclareStatement(ctx *DeclareStatementContext) {}
+
+// EnterInheritanceSplitStatement is called when production inheritanceSplitStatement is entered.
+func (s *BaseMDLParserListener) EnterInheritanceSplitStatement(ctx *InheritanceSplitStatementContext) {
+}
+
+// ExitInheritanceSplitStatement is called when production inheritanceSplitStatement is exited.
+func (s *BaseMDLParserListener) ExitInheritanceSplitStatement(ctx *InheritanceSplitStatementContext) {
+}
+
+// EnterInheritanceSplitCase is called when production inheritanceSplitCase is entered.
+func (s *BaseMDLParserListener) EnterInheritanceSplitCase(ctx *InheritanceSplitCaseContext) {}
+
+// ExitInheritanceSplitCase is called when production inheritanceSplitCase is exited.
+func (s *BaseMDLParserListener) ExitInheritanceSplitCase(ctx *InheritanceSplitCaseContext) {}
+
+// EnterCastObjectStatement is called when production castObjectStatement is entered.
+func (s *BaseMDLParserListener) EnterCastObjectStatement(ctx *CastObjectStatementContext) {}
+
+// ExitCastObjectStatement is called when production castObjectStatement is exited.
+func (s *BaseMDLParserListener) ExitCastObjectStatement(ctx *CastObjectStatementContext) {}
 
 // EnterSetStatement is called when production setStatement is entered.
 func (s *BaseMDLParserListener) EnterSetStatement(ctx *SetStatementContext) {}

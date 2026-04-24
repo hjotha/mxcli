@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -180,6 +181,78 @@ func TestTraverseFlow_IfWithoutElse(t *testing.T) {
 	}
 }
 
+func TestTraverseFlow_IfInsideLoop(t *testing.T) {
+	e := newTestExecutor()
+
+	loop := &microflows.LoopedActivity{
+		BaseMicroflowObject: mkObj("loop"),
+		LoopSource: &microflows.IterableList{
+			BaseElement:      model.BaseElement{ID: mkID("src")},
+			VariableName:     "item",
+			ListVariableName: "items",
+		},
+		ObjectCollection: &microflows.MicroflowObjectCollection{
+			BaseElement: model.BaseElement{ID: mkID("loop-oc")},
+			Objects: []microflows.MicroflowObject{
+				&microflows.ExclusiveSplit{
+					BaseMicroflowObject: mkObj("split"),
+					SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$item/Flag"},
+				},
+				&microflows.ActionActivity{
+					BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("then")},
+					Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "then"}}},
+				},
+				&microflows.ActionActivity{
+					BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("else")},
+					Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "else"}}},
+				},
+				&microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+				&microflows.EndEvent{BaseMicroflowObject: mkObj("loop-end")},
+			},
+			Flows: []*microflows.SequenceFlow{
+				mkBranchFlow("split", "then", &microflows.ExpressionCase{Expression: "true"}),
+				mkBranchFlow("split", "else", &microflows.ExpressionCase{Expression: "false"}),
+				mkFlow("then", "merge"),
+				mkFlow("else", "merge"),
+				mkFlow("merge", "loop-end"),
+			},
+		},
+	}
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("loop"):  loop,
+		mkID("end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "loop")},
+		mkID("loop"):  {mkFlow("loop", "end")},
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	foundIf := false
+	foundElse := false
+	foundEndIf := false
+	for _, line := range lines {
+		if contains(line, "if $item/Flag then") {
+			foundIf = true
+		}
+		if contains(line, "else") {
+			foundElse = true
+		}
+		if contains(line, "end if;") {
+			foundEndIf = true
+		}
+	}
+	if !foundIf || !foundElse || !foundEndIf {
+		t.Fatalf("expected structured if inside loop, got: %v", lines)
+	}
+}
+
 // TestTraverseFlow_UnsupportedActivitySkipsAnnotations verifies that when the
 // describer falls back to a `-- Unsupported action type: ...` placeholder, it
 // does NOT also emit @position / @anchor before the comment. Annotations are
@@ -281,6 +354,59 @@ func TestCollectErrorHandlerStatements_StopsAtMerge(t *testing.T) {
 	if len(stmts) != 1 {
 		t.Fatalf("expected 1 statement (stop at merge), got %d: %v", len(stmts), stmts)
 	}
+}
+
+func TestTraverseFlow_CustomErrorHandlerWithIfElse(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("commit"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("commit")},
+			Action: &microflows.CommitObjectsAction{
+				CommitVariable:    "Obj",
+				ErrorHandlingType: microflows.ErrorHandlingTypeCustomWithoutRollback,
+			},
+		},
+		mkID("split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$HasFallback"},
+		},
+		mkID("warn"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("warn")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Warning", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "warn"}}},
+		},
+		mkID("err"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("err")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Error", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "err"}}},
+		},
+		mkID("merge"):   &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+		mkID("err-end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("err-end")},
+		mkID("end"):     &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"):  {mkFlow("start", "commit")},
+		mkID("commit"): {mkFlow("commit", "end"), mkErrorFlow("commit", "split")},
+		mkID("split"): {
+			mkBranchFlow("split", "warn", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("split", "err", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("warn"):  {mkFlow("warn", "merge")},
+		mkID("err"):   {mkFlow("err", "merge")},
+		mkID("merge"): {mkFlow("merge", "err-end")},
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	joined := strings.Join(lines, "\n")
+	assertContains(t, joined, "commit $Obj on error without rollback {")
+	assertContains(t, joined, "if $HasFallback then")
+	assertContains(t, joined, "else")
+	assertContains(t, joined, "end if;")
+	assertContains(t, joined, "};")
 }
 
 func TestCollectErrorHandlerStatements_EmptyID(t *testing.T) {

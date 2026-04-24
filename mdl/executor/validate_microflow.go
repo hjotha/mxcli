@@ -89,6 +89,11 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 		case *ast.IfStmt:
 			v.walkBody(stmt.ThenBody)
 			v.walkBody(stmt.ElseBody)
+		case *ast.InheritanceSplitStmt:
+			for _, c := range stmt.Cases {
+				v.walkBody(c.Body)
+			}
+			v.walkBody(stmt.ElseBody)
 		case *ast.DeclareStmt:
 			// Track list variables declared as empty (candidates for the empty-list-in-loop anti-pattern)
 			if stmt.Type.Kind == ast.TypeListOf {
@@ -279,6 +284,56 @@ func bodyReturns(stmts []ast.MicroflowStatement) bool {
 	case *ast.IfStmt:
 		// Both branches must return, and ELSE must be present
 		return len(s.ElseBody) > 0 && bodyReturns(s.ThenBody) && bodyReturns(s.ElseBody)
+	case *ast.InheritanceSplitStmt:
+		if len(s.ElseBody) == 0 {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyReturns(c.Body) {
+				return false
+			}
+		}
+		return bodyReturns(s.ElseBody)
+	case *ast.WhileStmt:
+		return isLiteralTrue(s.Condition) && bodyDoesNotFallThrough(s.Body)
+	}
+	return false
+}
+
+func bodyDoesNotFallThrough(stmts []ast.MicroflowStatement) bool {
+	if len(stmts) == 0 {
+		return false
+	}
+	last := stmts[len(stmts)-1]
+	switch s := last.(type) {
+	case *ast.ReturnStmt, *ast.ContinueStmt, *ast.RaiseErrorStmt:
+		return true
+	case *ast.IfStmt:
+		return len(s.ElseBody) > 0 && bodyDoesNotFallThrough(s.ThenBody) && bodyDoesNotFallThrough(s.ElseBody)
+	case *ast.InheritanceSplitStmt:
+		if len(s.ElseBody) == 0 {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyDoesNotFallThrough(c.Body) {
+				return false
+			}
+		}
+		return bodyDoesNotFallThrough(s.ElseBody)
+	case *ast.WhileStmt:
+		return isLiteralTrue(s.Condition) && bodyDoesNotFallThrough(s.Body)
+	}
+	return false
+}
+
+func isLiteralTrue(expr ast.Expression) bool {
+	if source, ok := expr.(*ast.SourceExpr); ok {
+		expr = source.Expression
+	}
+	if lit, ok := expr.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralBoolean {
+		if value, ok := lit.Value.(bool); ok {
+			return value
+		}
 	}
 	return false
 }
@@ -302,6 +357,17 @@ func (v *microflowValidator) checkBranchScoping(body []ast.MicroflowStatement) {
 			}
 			// Recurse into branches for nested scoping checks
 			v.checkBranchScoping(stmt.ThenBody)
+			v.checkBranchScoping(stmt.ElseBody)
+		case *ast.InheritanceSplitStmt:
+			for _, c := range stmt.Cases {
+				for varName := range collectDeclaredVars(c.Body) {
+					branchVars[varName] = "split type branch"
+				}
+				v.checkBranchScoping(c.Body)
+			}
+			for varName := range collectDeclaredVars(stmt.ElseBody) {
+				branchVars[varName] = "split type else branch"
+			}
 			v.checkBranchScoping(stmt.ElseBody)
 		case *ast.LoopStmt:
 			v.checkBranchScoping(stmt.Body)

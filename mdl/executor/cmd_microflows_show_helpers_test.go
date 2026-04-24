@@ -213,6 +213,36 @@ func TestHasCustomErrorHandler(t *testing.T) {
 	}
 }
 
+func TestAppendFormattedStatement_EmptyCustomErrorHandlerKeepsBlock(t *testing.T) {
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: mkObj("act"),
+		},
+		Action: &microflows.MicroflowCallAction{
+			ErrorHandlingType: microflows.ErrorHandlingTypeCustomWithoutRollback,
+		},
+	}
+
+	var lines []string
+	appendFormattedStatement(
+		nil,
+		activity,
+		"$Result = call microflow Module.GetToken();",
+		map[model.ID]microflows.MicroflowObject{mkID("act"): activity},
+		map[model.ID][]*microflows.SequenceFlow{},
+		nil,
+		nil,
+		&lines,
+		"",
+	)
+
+	got := strings.Join(lines, "\n")
+	want := "$Result = call microflow Module.GetToken() on error without rollback { };"
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
 // =============================================================================
 // getActionErrorHandlingType
 // =============================================================================

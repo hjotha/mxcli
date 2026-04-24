@@ -130,6 +130,86 @@ func TestIfCaptionWithoutNesting(t *testing.T) {
 	t.Fatal("no ExclusiveSplit found")
 }
 
+func TestIfBranchActionConsumesOwnCaption(t *testing.T) {
+	ifStmt := &ast.IfStmt{
+		Condition: &ast.VariableExpr{Name: "Authorized"},
+		ThenBody: []ast.MicroflowStatement{
+			&ast.ReturnStmt{Value: &ast.LiteralExpr{Value: true, Kind: ast.LiteralBoolean}},
+		},
+		ElseBody: []ast.MicroflowStatement{
+			&ast.CallMicroflowStmt{
+				MicroflowName: ast.QualifiedName{Module: "API", Name: "ErrorHTTPResponse"},
+				Annotations:   &ast.ActivityAnnotations{Caption: "ErrorHTTPResponse-401"},
+			},
+			&ast.ReturnStmt{Value: &ast.LiteralExpr{Value: false, Kind: ast.LiteralBoolean}},
+		},
+		Annotations: &ast.ActivityAnnotations{Caption: "Is Authorized?"},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"Authorized": "Boolean"},
+		declaredVars: map[string]string{"Authorized": "Boolean"},
+	}
+	fb.buildFlowGraph([]ast.MicroflowStatement{ifStmt}, nil)
+
+	var split *microflows.ExclusiveSplit
+	var call *microflows.ActionActivity
+	for _, obj := range fb.objects {
+		switch o := obj.(type) {
+		case *microflows.ExclusiveSplit:
+			split = o
+		case *microflows.ActionActivity:
+			if _, ok := o.Action.(*microflows.MicroflowCallAction); ok {
+				call = o
+			}
+		}
+	}
+
+	if split == nil {
+		t.Fatal("expected ExclusiveSplit")
+	}
+	if call == nil {
+		t.Fatal("expected CallMicroflow action")
+	}
+	if split.Caption != "Is Authorized?" {
+		t.Errorf("split caption: got %q, want %q", split.Caption, "Is Authorized?")
+	}
+	if call.Caption != "ErrorHTTPResponse-401" {
+		t.Errorf("call caption: got %q, want %q", call.Caption, "ErrorHTTPResponse-401")
+	}
+}
+
+func TestExportToMappingConsumesPositionAnnotation(t *testing.T) {
+	stmt := &ast.ExportToMappingStmt{
+		OutputVariable: "Json",
+		Mapping:        ast.QualifiedName{Module: "API", Name: "Export"},
+		SourceVariable: "Response",
+		Annotations:    &ast.ActivityAnnotations{Position: &ast.Position{X: 1995, Y: 80}},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"Response": "API.Response"},
+		declaredVars: map[string]string{"Response": "API.Response"},
+	}
+	fb.buildFlowGraph([]ast.MicroflowStatement{stmt}, nil)
+
+	for _, obj := range fb.objects {
+		if act, ok := obj.(*microflows.ActionActivity); ok {
+			if act.Position.X != 1995 || act.Position.Y != 80 {
+				t.Fatalf("export action position = (%d, %d), want (1995, 80)", act.Position.X, act.Position.Y)
+			}
+			return
+		}
+	}
+	t.Fatal("expected export ActionActivity")
+}
+
 // TestIfAnnotationStaysWithCorrectSplit confirms @annotation on a nested IF
 // attaches to that IF's split, not to the outer one.
 func TestIfAnnotationStaysWithCorrectSplit(t *testing.T) {

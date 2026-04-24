@@ -223,6 +223,16 @@ func parseCaseValue(raw any) microflows.CaseValue {
 				Value:       val,
 			}
 		}
+	case "Microflows$InheritanceCase":
+		entityQName := extractString(caseMap["Value"])
+		if entityQName == "" {
+			entityQName = extractString(caseMap["Entity"])
+		}
+		return &microflows.InheritanceCase{
+			BaseElement:         model.BaseElement{ID: id},
+			EntityID:            model.ID(extractBsonID(caseMap["Entity"])),
+			EntityQualifiedName: entityQName,
+		}
 	}
 	return nil
 }
@@ -502,8 +512,8 @@ func parseActionActivity(raw map[string]any) *microflows.ActionActivity {
 		activity.ErrorHandlingType = microflows.ErrorHandlingType(errorHandling)
 	}
 
-	// Parse the action
-	if action, ok := raw["Action"].(map[string]any); ok {
+	// Parse the action.
+	if action := extractBsonMap(raw["Action"]); action != nil {
 		activity.Action = parseMicroflowAction(action)
 	}
 

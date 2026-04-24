@@ -68,11 +68,8 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 
 		activityID := fb.addStatement(stmt)
 		if activityID != "" {
-			// If there are pending annotations, apply them to this activity
-			if fb.pendingAnnotations != nil {
-				fb.applyAnnotations(activityID, fb.pendingAnnotations)
-				fb.pendingAnnotations = nil
-			}
+			// If there are pending annotations, apply them to this activity.
+			fb.applyPendingAnnotations(activityID)
 			// Connect to previous object with horizontal SequenceFlow
 			var flow *microflows.SequenceFlow
 			if pendingCase != "" {
@@ -99,6 +96,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 			}
 			applyUserAnchors(flow, originAnchor, destAnchor)
 			fb.flows = append(fb.flows, flow)
+			fb.addPendingEmptyErrorHandlerFlow(lastID, activityID)
 			fb.previousStmtAnchor = stmtAnchor
 
 			// For compound statements (IF, LOOP), the exit point differs from entry point
@@ -157,6 +155,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		}
 		applyUserAnchors(endFlow, originAnchor, nil)
 		fb.flows = append(fb.flows, endFlow)
+		fb.addPendingEmptyErrorHandlerFlow(lastID, endEvent.ID)
 		fb.previousStmtAnchor = nil
 	}
 
@@ -182,6 +181,10 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		return fb.addCreateVariableAction(s)
+	case *ast.InheritanceSplitStmt:
+		return fb.addInheritanceSplit(s)
+	case *ast.CastObjectStmt:
+		return fb.addCastAction(s)
 	case *ast.MfSetStmt:
 		return fb.addChangeVariableAction(s)
 	case *ast.ReturnStmt:
@@ -246,6 +249,10 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addExportToMappingAction(s)
 	case *ast.TransformJsonStmt:
 		return fb.addTransformJsonAction(s)
+	case *ast.BreakStmt:
+		return fb.addBreakEvent()
+	case *ast.ContinueStmt:
+		return fb.addContinueEvent()
 	// Workflow microflow actions
 	case *ast.CallWorkflowStmt:
 		return fb.addCallWorkflowAction(s)

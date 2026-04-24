@@ -31,6 +31,14 @@ import (
 // When adding new action types, check existing MPR files or reflection data for the storage name.
 func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 	switch a := action.(type) {
+	case *microflows.CastAction:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+			{Key: "$Type", Value: "Microflows$CastAction"},
+			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "VariableName", Value: a.OutputVariable},
+		}
+
 	case *microflows.CreateVariableAction:
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
@@ -1082,6 +1090,12 @@ func serializeCodeActionParameterValue(v microflows.CodeActionParameterValue) bs
 			{Key: "$ID", Value: idToBsonBinary(string(value.ID))},
 			{Key: "$Type", Value: "Microflows$EntityTypeCodeActionParameterValue"},
 			{Key: "Entity", Value: value.Entity},
+		}
+	case *microflows.MicroflowParameterValue:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(value.ID))},
+			{Key: "$Type", Value: "Microflows$MicroflowParameterValue"},
+			{Key: "Microflow", Value: value.Microflow},
 		}
 	}
 	return nil

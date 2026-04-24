@@ -184,10 +184,14 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 
 	// Build a map of parameter name -> param type for the Java action
 	entityTypeParams := make(map[string]bool)
+	microflowParams := make(map[string]bool)
 	if jaDef != nil {
 		for _, p := range jaDef.Parameters {
-			if _, ok := p.ParameterType.(*javaactions.EntityTypeParameterType); ok {
+			switch p.ParameterType.(type) {
+			case *javaactions.EntityTypeParameterType:
 				entityTypeParams[p.Name] = true
+			case *javaactions.MicroflowType:
+				microflowParams[p.Name] = true
 			}
 		}
 	}
@@ -215,6 +219,11 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 			value = &microflows.EntityTypeCodeActionParameterValue{
 				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Entity:      entityName,
+			}
+		} else if microflowParams[arg.Name] {
+			value = &microflows.MicroflowParameterValue{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Microflow:   strings.Trim(fb.exprToString(arg.Value), "'"),
 			}
 		} else {
 			// Regular parameter: expression-based value
