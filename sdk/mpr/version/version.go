@@ -9,32 +9,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/versions"
 )
 
-// ProjectVersion contains version information for a Mendix project.
-type ProjectVersion struct {
-	// ProductVersion is the full Mendix version string (e.g., "10.18.0", "11.6.0")
-	ProductVersion string
-
-	// BuildVersion is the build version, usually same as ProductVersion
-	BuildVersion string
-
-	// FormatVersion is the MPR format version (1 for legacy, 2 for mprcontents)
-	FormatVersion int
-
-	// SchemaHash is the SHA256 hash of the metamodel schema
-	SchemaHash string
-
-	// MajorVersion is the major version number (e.g., 10, 11)
-	MajorVersion int
-
-	// MinorVersion is the minor version number (e.g., 18, 6)
-	MinorVersion int
-
-	// PatchVersion is the patch version number (e.g., 0, 1)
-	PatchVersion int
-}
+// ProjectVersion is an alias for types.ProjectVersion.
+// All version comparison methods (IsAtLeast, IsAtLeastFull, String, IsMPRv2)
+// are defined on types.ProjectVersion directly.
+type ProjectVersion = types.ProjectVersion
 
 // DefaultVersion returns the default version (11.6.0) used when detection fails.
 func DefaultVersion() *ProjectVersion {
@@ -102,41 +84,6 @@ func parseVersion(version string) (major, minor, patch int) {
 	return
 }
 
-// String returns the product version string.
-func (v *ProjectVersion) String() string {
-	return v.ProductVersion
-}
-
-// IsMPRv2 returns true if the project uses MPR v2 format (mprcontents folder).
-func (v *ProjectVersion) IsMPRv2() bool {
-	return v.FormatVersion >= 2
-}
-
-// IsAtLeast returns true if this version is at least the specified major.minor version.
-func (v *ProjectVersion) IsAtLeast(major, minor int) bool {
-	if v.MajorVersion > major {
-		return true
-	}
-	if v.MajorVersion == major && v.MinorVersion >= minor {
-		return true
-	}
-	return false
-}
-
-// IsAtLeastFull returns true if this version is at least the specified major.minor.patch version.
-func (v *ProjectVersion) IsAtLeastFull(major, minor, patch int) bool {
-	if v.MajorVersion > major {
-		return true
-	}
-	if v.MajorVersion == major && v.MinorVersion > minor {
-		return true
-	}
-	if v.MajorVersion == major && v.MinorVersion == minor && v.PatchVersion >= patch {
-		return true
-	}
-	return false
-}
-
 // SupportedVersionRange defines the range of Mendix versions supported for read/write.
 var SupportedVersionRange = struct {
 	MinMajor int
@@ -146,22 +93,22 @@ var SupportedVersionRange = struct {
 	MaxMajor: 11,
 }
 
-// IsSupported returns true if this version is within the supported range for writing.
-func (v *ProjectVersion) IsSupported() bool {
-	return v.MajorVersion >= SupportedVersionRange.MinMajor &&
-		v.MajorVersion <= SupportedVersionRange.MaxMajor
+// IsSupported returns true if pv is within the supported range for writing.
+func IsSupported(pv *ProjectVersion) bool {
+	return pv.MajorVersion >= SupportedVersionRange.MinMajor &&
+		pv.MajorVersion <= SupportedVersionRange.MaxMajor
 }
 
-// SupportsFeature checks if a specific feature is available in this version.
+// SupportsFeature checks if a specific feature is available in the given version.
 // It first checks the YAML-based version registry, falling back to the
 // hardcoded featureVersions map for features not yet in the registry.
-func (v *ProjectVersion) SupportsFeature(feature Feature) bool {
+func SupportsFeature(pv *ProjectVersion, feature Feature) bool {
 	// Try the YAML registry first via the feature-to-registry mapping.
 	if mapping, ok := featureRegistry[feature]; ok {
 		reg, err := versions.Load()
 		if err == nil {
-			pv := versions.SemVer{Major: v.MajorVersion, Minor: v.MinorVersion, Patch: v.PatchVersion}
-			return reg.IsAvailable(mapping.Area, mapping.Name, pv)
+			sv := versions.SemVer{Major: pv.MajorVersion, Minor: pv.MinorVersion, Patch: pv.PatchVersion}
+			return reg.IsAvailable(mapping.Area, mapping.Name, sv)
 		}
 	}
 
@@ -170,7 +117,7 @@ func (v *ProjectVersion) SupportsFeature(feature Feature) bool {
 	if !ok {
 		return false
 	}
-	return v.IsAtLeast(minVersion.Major, minVersion.Minor)
+	return pv.IsAtLeast(minVersion.Major, minVersion.Minor)
 }
 
 // Feature represents a Mendix feature that may or may not be available.

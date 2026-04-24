@@ -23,6 +23,38 @@ type ProjectVersion struct {
 	PatchVersion   int
 }
 
+// IsAtLeast returns true if this version is at least the specified major.minor version.
+func (v *ProjectVersion) IsAtLeast(major, minor int) bool {
+	if v.MajorVersion > major {
+		return true
+	}
+	return v.MajorVersion == major && v.MinorVersion >= minor
+}
+
+// IsAtLeastFull returns true if this version is at least the specified major.minor.patch version.
+func (v *ProjectVersion) IsAtLeastFull(major, minor, patch int) bool {
+	if v.MajorVersion > major {
+		return true
+	}
+	if v.MajorVersion == major && v.MinorVersion > minor {
+		return true
+	}
+	if v.MajorVersion == major && v.MinorVersion == minor && v.PatchVersion >= patch {
+		return true
+	}
+	return false
+}
+
+// String returns the product version string.
+func (v *ProjectVersion) String() string {
+	return v.ProductVersion
+}
+
+// IsMPRv2 returns true if the project uses MPR v2 format (mprcontents folder).
+func (v *ProjectVersion) IsMPRv2() bool {
+	return v.FormatVersion >= 2
+}
+
 // FolderInfo is a lightweight folder descriptor.
 type FolderInfo struct {
 	ID          model.ID

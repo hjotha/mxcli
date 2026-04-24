@@ -7,6 +7,7 @@ package mprbackend
 
 import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
+	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/agenteditor"
@@ -20,6 +21,7 @@ import (
 )
 
 var _ backend.FullBackend = (*MprBackend)(nil)
+var _ linter.LintReader = (*MprBackend)(nil)
 
 // MprBackend implements backend.FullBackend by delegating to mpr.Reader
 // and mpr.Writer.
@@ -87,7 +89,7 @@ func (b *MprBackend) MprReader() *mpr.Reader { return b.reader }
 
 func (b *MprBackend) Version() types.MPRVersion { return convertMPRVersion(b.reader.Version()) }
 func (b *MprBackend) ProjectVersion() *types.ProjectVersion {
-	return convertProjectVersion(b.reader.ProjectVersion())
+	return b.reader.ProjectVersion()
 }
 func (b *MprBackend) GetMendixVersion() (string, error) { return b.reader.GetMendixVersion() }
 
