@@ -5,7 +5,6 @@ package mprbackend
 import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 )
 
 // ---------------------------------------------------------------------------
@@ -13,21 +12,6 @@ import (
 // ---------------------------------------------------------------------------
 
 func convertMPRVersion(v mpr.MPRVersion) types.MPRVersion { return types.MPRVersion(v) }
-
-func convertProjectVersion(v *version.ProjectVersion) *types.ProjectVersion {
-	if v == nil {
-		return nil
-	}
-	return &types.ProjectVersion{
-		ProductVersion: v.ProductVersion,
-		BuildVersion:   v.BuildVersion,
-		FormatVersion:  v.FormatVersion,
-		SchemaHash:     v.SchemaHash,
-		MajorVersion:   v.MajorVersion,
-		MinorVersion:   v.MinorVersion,
-		PatchVersion:   v.PatchVersion,
-	}
-}
 
 func convertFolderInfoSlice(in []*mpr.FolderInfo, err error) ([]*types.FolderInfo, error) {
 	if err != nil || in == nil {

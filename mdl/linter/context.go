@@ -40,6 +40,7 @@ func (ctx *LintContext) Reader() LintReader {
 }
 
 // NewLintContext creates a new LintContext from a catalog and an optional reader.
+// reader may be nil; rules that require backend access must check Reader() != nil.
 func NewLintContext(cat *catalog.Catalog, reader LintReader) *LintContext {
 	return &LintContext{
 		catalog:  cat,

@@ -321,12 +321,6 @@ func (e *Executor) Backend() backend.FullBackend {
 	return e.backend
 }
 
-// Reader returns the backend for backward compatibility with callers
-// that used the former sdk/mpr.Reader accessor. Prefer Backend() in new code.
-func (e *Executor) Reader() backend.FullBackend {
-	return e.Backend()
-}
-
 // Close closes the connection to the project and all SQL connections.
 func (e *Executor) Close() error {
 	var closeErr error

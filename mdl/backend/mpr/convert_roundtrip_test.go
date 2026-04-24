@@ -13,7 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/mpr"
-	"github.com/mendixlabs/mxcli/sdk/mpr/version"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -22,26 +21,6 @@ var errTest = errors.New("test error")
 // ---------------------------------------------------------------------------
 // Forward conversions: sdk/mpr -> mdl/types
 // ---------------------------------------------------------------------------
-
-func TestConvertProjectVersion(t *testing.T) {
-	in := &version.ProjectVersion{
-		ProductVersion: "10.18.0", BuildVersion: "1234",
-		FormatVersion: 42, SchemaHash: "abc123",
-		MajorVersion: 10, MinorVersion: 18, PatchVersion: 0,
-	}
-	out := convertProjectVersion(in)
-	if out.ProductVersion != "10.18.0" || out.BuildVersion != "1234" ||
-		out.FormatVersion != 42 || out.SchemaHash != "abc123" ||
-		out.MajorVersion != 10 || out.MinorVersion != 18 || out.PatchVersion != 0 {
-		t.Errorf("field mismatch: %+v", out)
-	}
-}
-
-func TestConvertProjectVersion_Nil(t *testing.T) {
-	if convertProjectVersion(nil) != nil {
-		t.Error("expected nil for nil input")
-	}
-}
 
 func TestConvertFolderInfoSlice(t *testing.T) {
 	in := []*mpr.FolderInfo{
