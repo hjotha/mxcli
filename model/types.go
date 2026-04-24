@@ -625,6 +625,7 @@ type ConsumedRestService struct {
 	BaseUrl        string                 `json:"baseUrl"`
 	Authentication *RestAuthentication    `json:"authentication,omitempty"`
 	Operations     []*RestClientOperation `json:"operations,omitempty"`
+	OpenApiContent string                 `json:"openApiContent,omitempty"` // raw spec text (stored in OpenApiFile.Content BSON field)
 }
 
 // GetName returns the service's name.
@@ -650,6 +651,7 @@ type RestClientOperation struct {
 	Documentation    string                 `json:"documentation,omitempty"`
 	HttpMethod       string                 `json:"httpMethod"`                // "GET", "POST", etc.
 	Path             string                 `json:"path"`                      // e.g. "/pet/{petId}"
+	Tags             []string               `json:"tags,omitempty"`            // resource group labels (from OpenAPI tags[0])
 	Parameters       []*RestClientParameter `json:"parameters,omitempty"`      // path parameters
 	QueryParameters  []*RestClientParameter `json:"queryParameters,omitempty"` // query parameters
 	Headers          []*RestClientHeader    `json:"headers,omitempty"`

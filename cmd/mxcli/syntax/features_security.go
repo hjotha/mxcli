@@ -10,7 +10,7 @@ func init() {
 			"security", "access control", "roles", "permissions",
 			"grant", "revoke", "authentication", "authorization",
 		},
-		Syntax: "SHOW PROJECT SECURITY;\nSHOW MODULE ROLES [IN <module>];\nSHOW USER ROLES;\nSHOW SECURITY MATRIX [IN <module>];",
+		Syntax:  "SHOW PROJECT SECURITY;\nSHOW MODULE ROLES [IN <module>];\nSHOW USER ROLES;\nSHOW SECURITY MATRIX [IN <module>];",
 		Example: "SHOW PROJECT SECURITY;\nSHOW SECURITY MATRIX IN Shop;",
 		SeeAlso: []string{"security.module-role", "security.entity-access", "security.user-role"},
 	})
@@ -21,7 +21,7 @@ func init() {
 		Keywords: []string{
 			"module role", "create role", "drop role",
 		},
-		Syntax: "CREATE MODULE ROLE <module>.<role> [DESCRIPTION '<text>'];\nDROP MODULE ROLE <module>.<role>;",
+		Syntax:  "CREATE MODULE ROLE <module>.<role> [DESCRIPTION '<text>'];\nDROP MODULE ROLE <module>.<role>;",
 		Example: "CREATE MODULE ROLE Shop.Admin DESCRIPTION 'Full access';\nCREATE MODULE ROLE Shop.User DESCRIPTION 'Read-only access';",
 		SeeAlso: []string{"security.user-role", "security.entity-access"},
 	})
@@ -33,7 +33,7 @@ func init() {
 			"entity access", "grant", "revoke", "read", "write",
 			"create", "delete", "xpath", "row-level security",
 		},
-		Syntax: "GRANT <role> ON <module>.<entity> (<rights>) [WHERE '<xpath>'];\nREVOKE <role> ON <module>.<entity>;\nREVOKE <role> ON <module>.<entity> (<rights>);\n\nRights: CREATE, DELETE, READ *, READ (<attr>,...), WRITE *, WRITE (<attr>,...)",
+		Syntax:  "GRANT <role> ON <module>.<entity> (<rights>) [WHERE '<xpath>'];\nREVOKE <role> ON <module>.<entity>;\nREVOKE <role> ON <module>.<entity> (<rights>);\n\nRights: CREATE, DELETE, READ *, READ (<attr>,...), WRITE *, WRITE (<attr>,...)",
 		Example: "GRANT Shop.Admin ON Shop.Customer (CREATE, DELETE, READ *, WRITE *);\nGRANT Shop.User ON Shop.Customer (READ *) WHERE '[Active = true()]';",
 		SeeAlso: []string{"security.module-role", "security.microflow-access"},
 	})
@@ -45,7 +45,7 @@ func init() {
 			"microflow access", "execute", "grant microflow",
 			"revoke microflow",
 		},
-		Syntax: "GRANT EXECUTE ON MICROFLOW <module>.<name> TO <role> [, <role>...];\nREVOKE EXECUTE ON MICROFLOW <module>.<name> FROM <role> [, <role>...];",
+		Syntax:  "GRANT EXECUTE ON MICROFLOW <module>.<name> TO <role> [, <role>...];\nREVOKE EXECUTE ON MICROFLOW <module>.<name> FROM <role> [, <role>...];",
 		Example: "GRANT EXECUTE ON MICROFLOW Shop.ProcessOrder TO Shop.Admin, Shop.User;\nREVOKE EXECUTE ON MICROFLOW Shop.ProcessOrder FROM Shop.User;",
 		SeeAlso: []string{"security.page-access", "security.entity-access"},
 	})
@@ -56,7 +56,7 @@ func init() {
 		Keywords: []string{
 			"page access", "view", "grant page", "revoke page",
 		},
-		Syntax: "GRANT VIEW ON PAGE <module>.<name> TO <role> [, <role>...];\nREVOKE VIEW ON PAGE <module>.<name> FROM <role> [, <role>...];",
+		Syntax:  "GRANT VIEW ON PAGE <module>.<name> TO <role> [, <role>...];\nREVOKE VIEW ON PAGE <module>.<name> FROM <role> [, <role>...];",
 		Example: "GRANT VIEW ON PAGE Shop.OrderOverview TO Shop.Admin, Shop.User;",
 		SeeAlso: []string{"security.microflow-access", "security.entity-access"},
 	})
@@ -68,7 +68,7 @@ func init() {
 			"user role", "application role", "manage roles",
 			"add module roles", "remove module roles",
 		},
-		Syntax: "CREATE USER ROLE <name> (<role> [, ...]) [MANAGE ALL ROLES];\nALTER USER ROLE <name> ADD MODULE ROLES (<role> [, ...]);\nALTER USER ROLE <name> REMOVE MODULE ROLES (<role> [, ...]);\nDROP USER ROLE <name>;",
+		Syntax:  "CREATE USER ROLE <name> (<role> [, ...]) [MANAGE ALL ROLES];\nALTER USER ROLE <name> ADD MODULE ROLES (<role> [, ...]);\nALTER USER ROLE <name> REMOVE MODULE ROLES (<role> [, ...]);\nDROP USER ROLE <name>;",
 		Example: "CREATE USER ROLE AppAdmin (Shop.Admin, HR.Admin) MANAGE ALL ROLES;\nALTER USER ROLE AppAdmin ADD MODULE ROLES (Reporting.Viewer);",
 		SeeAlso: []string{"security.module-role", "security.demo-user"},
 	})
@@ -80,7 +80,7 @@ func init() {
 			"project security", "security level", "prototype",
 			"production", "off",
 		},
-		Syntax: "ALTER PROJECT SECURITY LEVEL OFF|PROTOTYPE|PRODUCTION;\nALTER PROJECT SECURITY DEMO USERS ON|OFF;",
+		Syntax:  "ALTER PROJECT SECURITY LEVEL OFF|PROTOTYPE|PRODUCTION;\nALTER PROJECT SECURITY DEMO USERS ON|OFF;",
 		Example: "ALTER PROJECT SECURITY LEVEL PRODUCTION;\nALTER PROJECT SECURITY DEMO USERS OFF;",
 		SeeAlso: []string{"security.demo-user"},
 	})
@@ -92,7 +92,7 @@ func init() {
 			"demo user", "test user", "demo account",
 			"password", "login",
 		},
-		Syntax: "CREATE DEMO USER '<name>' PASSWORD '<pass>' [ENTITY Module.Entity] (<userrole> [, ...]);\nDROP DEMO USER '<name>';",
+		Syntax:  "CREATE DEMO USER '<name>' PASSWORD '<pass>' [ENTITY Module.Entity] (<userrole> [, ...]);\nDROP DEMO USER '<name>';",
 		Example: "CREATE DEMO USER 'admin' PASSWORD 'Admin1!' (AppAdmin);\nCREATE DEMO USER 'user' PASSWORD 'User1!' (AppUser);",
 		SeeAlso: []string{"security.user-role", "security.project-security"},
 	})

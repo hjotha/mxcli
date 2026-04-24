@@ -54,7 +54,17 @@ func (w *Writer) serializeConsumedRestService(svc *model.ConsumedRestService) ([
 		// to cause runtime auth issues (#200).
 		"ExportLevel":      "Hidden",
 		"BaseUrlParameter": nil,
-		"OpenApiFile":      nil,
+	}
+
+	// OpenApiFile: only present when the service was created from an OpenAPI spec.
+	// Field name and subfield are PascalCase to match Studio Pro serialization.
+	// Do NOT write a null entry for manually-created services — Studio Pro omits this field entirely.
+	if svc.OpenApiContent != "" {
+		doc["OpenApiFile"] = bson.M{
+			"$ID":     idToBsonBinary(generateUUID()),
+			"$Type":   "Rest$OpenApiFile",
+			"Content": svc.OpenApiContent,
+		}
 	}
 
 	// BaseUrl as Rest$ValueTemplate
@@ -133,8 +143,12 @@ func serializeRestOperation(op *model.RestClientOperation) bson.M {
 	}
 	doc["Timeout"] = timeout
 
-	// Tags: Studio Pro always writes this field (versioned string array).
-	doc["Tags"] = bson.A{int32(1)}
+	// Tags: versioned string array; used by Studio Pro as resource group labels.
+	tags := bson.A{int32(1)}
+	for _, t := range op.Tags {
+		tags = append(tags, t)
+	}
+	doc["Tags"] = tags
 
 	// Method: polymorphic (WithBody or WithoutBody)
 	doc["Method"] = serializeRestMethod(op)

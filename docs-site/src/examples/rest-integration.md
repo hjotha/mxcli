@@ -182,6 +182,31 @@ CREATE IMPORT MAPPING Integration.IMM_Order
 
 ## Consuming a REST API
 
+### From an OpenAPI Spec (Recommended)
+
+If the API has an OpenAPI 3.0 spec (JSON or YAML), generate the REST client in one command:
+
+```sql
+-- From a local file (relative to the .mpr file)
+CREATE OR MODIFY REST CLIENT CapitalModule.CapitalAPI (
+  OpenAPI: 'specs/capital.json'
+);
+
+-- From a URL
+CREATE OR MODIFY REST CLIENT PetStoreModule.PetStoreAPI (
+  OpenAPI: 'https://petstore3.swagger.io/api/v3/openapi.json'
+);
+```
+
+Operations, path/query parameters, request bodies, response types, resource groups (from `tags`), and Basic auth are all derived automatically from the spec.
+
+**Preview without writing:**
+```sql
+DESCRIBE CONTRACT OPERATION FROM OPENAPI 'specs/capital.json';
+```
+
+### Manual Definition
+
 Define a reusable REST client with typed operations using `CREATE REST CLIENT`. Each operation declares its method, path, optional parameters, headers, body, and response mapping.
 
 ```sql

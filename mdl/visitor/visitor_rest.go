@@ -40,6 +40,10 @@ func (b *Builder) ExitCreateRestClientStatement(ctx *parser.CreateRestClientStat
 			if sl := pc.STRING_LITERAL(); sl != nil {
 				stmt.Folder = unquoteString(sl.GetText())
 			}
+		case "openapi":
+			if sl := pc.STRING_LITERAL(); sl != nil {
+				stmt.OpenApiPath = unquoteString(sl.GetText())
+			}
 		case "authentication":
 			if pc.BASIC() != nil {
 				authDef := &ast.RestAuthDef{Scheme: "BASIC"}
