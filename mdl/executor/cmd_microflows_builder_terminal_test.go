@@ -284,6 +284,40 @@ func TestBuildFlowGraph_ManualWhileTrueContinueUsesBackEdgeMerge(t *testing.T) {
 	}
 }
 
+func TestBuildFlowGraph_ManualWhileTrueTerminalDoesNotAddFallthroughEnd(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.WhileStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			Body: []ast.MicroflowStatement{
+				&ast.IfStmt{
+					Condition: &ast.VariableExpr{Name: "Done"},
+					ThenBody:  []ast.MicroflowStatement{&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}}},
+				},
+				&ast.ContinueStmt{},
+			},
+		},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"Done": "Boolean"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeBoolean}})
+
+	for _, obj := range oc.Objects {
+		end, ok := obj.(*microflows.EndEvent)
+		if !ok {
+			continue
+		}
+		if end.ReturnValue == "" {
+			t.Fatal("manual while true ending in continue must not add a fallthrough EndEvent without return value")
+		}
+	}
+}
+
 func TestConvertErrorHandlingType_EmptyCustomUsesContinue(t *testing.T) {
 	got := convertErrorHandlingType(&ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback})
 	if got != microflows.ErrorHandlingTypeContinue {

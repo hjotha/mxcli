@@ -664,6 +664,9 @@ func (fb *flowBuilder) addManualWhileTrueStatement(s *ast.WhileStmt) model.ID {
 		fb.nextFlowCase = pendingBodyCase
 		fb.nextFlowAnchor = pendingBodyAnchor
 	}
+	if lastStmtIsReturn(s.Body) {
+		fb.endsWithReturn = true
+	}
 
 	return merge.ID
 }
