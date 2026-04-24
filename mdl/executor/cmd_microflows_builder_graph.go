@@ -26,10 +26,14 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	if fb.listInputVariables == nil {
 		fb.listInputVariables = collectListInputVariables(stmts)
 	}
+	if fb.objectInputVariables == nil {
+		fb.objectInputVariables = collectObjectInputVariables(stmts)
+	}
 	// Set return value expression for error handler EndEvents
 	if returns != nil && returns.Variable != "" {
 		fb.returnValue = "$" + returns.Variable
 	}
+	fb.hasReturnValue = returns != nil && returns.Type.Kind != ast.TypeVoid
 	// Set baseY for branch restoration (this is the center line)
 	fb.baseY = fb.posY
 
@@ -186,10 +190,17 @@ func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 				if s.InputVariable != "" {
 					inputs[s.InputVariable] = true
 				}
+			case *ast.AggregateListStmt:
+				if s.InputVariable != "" {
+					inputs[s.InputVariable] = true
+				}
 			case *ast.IfStmt:
 				walk(s.ThenBody)
 				walk(s.ElseBody)
 			case *ast.LoopStmt:
+				if s.ListVariable != "" {
+					inputs[s.ListVariable] = true
+				}
 				walk(s.Body)
 			case *ast.WhileStmt:
 				walk(s.Body)
@@ -217,6 +228,10 @@ func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 				if s.ErrorHandling != nil {
 					walk(s.ErrorHandling.Body)
 				}
+			case *ast.CallWebServiceStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
 			case *ast.CallExternalActionStmt:
 				if s.ErrorHandling != nil {
 					walk(s.ErrorHandling.Body)
@@ -230,6 +245,141 @@ func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 	}
 	walk(stmts)
 	return inputs
+}
+
+func collectObjectInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
+	inputs := make(map[string]bool)
+	var walkExpr func(ast.Expression)
+	walkExpr = func(expr ast.Expression) {
+		switch e := expr.(type) {
+		case *ast.AttributePathExpr:
+			if e.Variable != "" {
+				inputs[e.Variable] = true
+			}
+		case *ast.BinaryExpr:
+			walkExpr(e.Left)
+			walkExpr(e.Right)
+		case *ast.UnaryExpr:
+			walkExpr(e.Operand)
+		case *ast.FunctionCallExpr:
+			for _, arg := range e.Arguments {
+				walkExpr(arg)
+			}
+		case *ast.ParenExpr:
+			walkExpr(e.Inner)
+		case *ast.IfThenElseExpr:
+			walkExpr(e.Condition)
+			walkExpr(e.ThenExpr)
+			walkExpr(e.ElseExpr)
+		case *ast.SourceExpr:
+			walkExpr(e.Expression)
+			for _, ref := range sourceAttributeVarRefs(e.Source) {
+				inputs[ref] = true
+			}
+		}
+	}
+	var walk func([]ast.MicroflowStatement)
+	walk = func(body []ast.MicroflowStatement) {
+		for _, stmt := range body {
+			switch s := stmt.(type) {
+			case *ast.IfStmt:
+				walkExpr(s.Condition)
+				walk(s.ThenBody)
+				walk(s.ElseBody)
+			case *ast.WhileStmt:
+				walkExpr(s.Condition)
+				walk(s.Body)
+			case *ast.LoopStmt:
+				walk(s.Body)
+			case *ast.ChangeObjectStmt:
+				inputs[s.Variable] = true
+				for _, change := range s.Changes {
+					walkExpr(change.Value)
+				}
+			case *ast.CreateObjectStmt:
+				for _, change := range s.Changes {
+					walkExpr(change.Value)
+				}
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.LogStmt:
+				walkExpr(s.Node)
+				walkExpr(s.Message)
+				for _, param := range s.Template {
+					walkExpr(param.Value)
+				}
+			case *ast.CallMicroflowStmt:
+				for _, arg := range s.Arguments {
+					walkExpr(arg.Value)
+				}
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallJavaActionStmt:
+				for _, arg := range s.Arguments {
+					walkExpr(arg.Value)
+				}
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallWebServiceStmt:
+				walkExpr(s.Timeout)
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.RestCallStmt:
+				walkExpr(s.URL)
+				for _, param := range s.URLParams {
+					walkExpr(param.Value)
+				}
+				for _, header := range s.Headers {
+					walkExpr(header.Value)
+				}
+				if s.Body != nil {
+					walkExpr(s.Body.Template)
+					for _, param := range s.Body.TemplateParams {
+						walkExpr(param.Value)
+					}
+				}
+				walkExpr(s.Timeout)
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.ReturnStmt:
+				walkExpr(s.Value)
+			case *ast.ImportFromMappingStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			}
+		}
+	}
+	walk(stmts)
+	return inputs
+}
+
+func sourceAttributeVarRefs(source string) []string {
+	var refs []string
+	for i := 0; i < len(source); i++ {
+		if source[i] != '$' {
+			continue
+		}
+		j := i + 1
+		for j < len(source) {
+			c := source[j]
+			if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' {
+				j++
+				continue
+			}
+			break
+		}
+		if j > i+1 && j < len(source) && source[j] == '/' {
+			refs = append(refs, source[i+1:j])
+		}
+		i = j
+	}
+	return refs
 }
 
 func countMicroflowCallOutputs(stmts []ast.MicroflowStatement) map[string]int {
@@ -269,6 +419,10 @@ func countMicroflowCallOutputs(stmts []ast.MicroflowStatement) map[string]int {
 					walk(s.ErrorHandling.Body)
 				}
 			case *ast.CallJavaActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallWebServiceStmt:
 				if s.ErrorHandling != nil {
 					walk(s.ErrorHandling.Body)
 				}
@@ -381,6 +535,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addCallMicroflowAction(s)
 	case *ast.CallJavaActionStmt:
 		return fb.addCallJavaActionAction(s)
+	case *ast.CallWebServiceStmt:
+		return fb.addCallWebServiceAction(s)
 	case *ast.ExecuteDatabaseQueryStmt:
 		return fb.addExecuteDatabaseQueryAction(s)
 	case *ast.CallExternalActionStmt:

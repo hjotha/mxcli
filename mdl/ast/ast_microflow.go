@@ -359,6 +359,23 @@ type CallJavaActionStmt struct {
 
 func (s *CallJavaActionStmt) isMicroflowStatement() {}
 
+// CallWebServiceStmt represents a legacy SOAP web service call.
+// The service and mapping references are raw Mendix IDs because older MPRs store
+// these calls by ID rather than by stable qualified names.
+type CallWebServiceStmt struct {
+	OutputVariable   string               // Optional output variable
+	RawBSONBase64    string               // Raw Microflows$CallWebServiceAction BSON for lossless roundtrip
+	ServiceID        string               // Consumed web service ID
+	OperationName    string               // Operation name
+	SendMappingID    string               // Optional export mapping ID
+	ReceiveMappingID string               // Optional import mapping ID
+	Timeout          Expression           // Optional timeout expression
+	ErrorHandling    *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations      *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *CallWebServiceStmt) isMicroflowStatement() {}
+
 // ExecuteDatabaseQueryStmt represents: EXECUTE DATABASE QUERY Module.Connection.QueryName ...
 type ExecuteDatabaseQueryStmt struct {
 	OutputVariable      string               // Optional output variable

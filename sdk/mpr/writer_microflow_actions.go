@@ -434,6 +434,9 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 	case *microflows.RestCallAction:
 		return serializeRestCallAction(a)
 
+	case *microflows.WebServiceCallAction:
+		return serializeWebServiceCallAction(a)
+
 	case *microflows.RestOperationCallAction:
 		return serializeRestOperationCallAction(a)
 
@@ -605,6 +608,23 @@ func serializeRestCallAction(a *microflows.RestCallAction) bson.D {
 	}
 
 	return doc
+}
+
+func serializeWebServiceCallAction(a *microflows.WebServiceCallAction) bson.D {
+	if len(a.RawBSON) > 0 {
+		var raw bson.D
+		if err := bson.Unmarshal(a.RawBSON, &raw); err == nil {
+			return raw
+		}
+	}
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "ImportedService", Value: string(a.ServiceID)},
+		{Key: "OperationName", Value: a.OperationName},
+		{Key: "TimeOutExpression", Value: a.TimeoutExpression},
+		{Key: "UseRequestTimeOut", Value: a.TimeoutExpression != ""},
+	}
 }
 
 // serializeRestOperationCallAction serializes a Microflows$RestOperationCallAction to BSON.
@@ -1223,19 +1243,23 @@ func serializeExecuteDatabaseQueryAction(a *microflows.ExecuteDatabaseQueryActio
 }
 
 func serializeImportXmlAction(a *microflows.ImportXmlAction) bson.D {
+	forceSingleOccurrence := false
+	if a.ResultHandling.ForceSingleOccurrence != nil {
+		forceSingleOccurrence = *a.ResultHandling.ForceSingleOccurrence
+	}
 	// Build ImportMappingCall
 	importCall := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 		{Key: "$Type", Value: "Microflows$ImportMappingCall"},
 		{Key: "Commit", Value: "YesWithoutEvents"},
 		{Key: "ContentType", Value: "Json"},
-		{Key: "ForceSingleOccurrence", Value: false},
+		{Key: "ForceSingleOccurrence", Value: forceSingleOccurrence},
 		{Key: "ObjectHandlingBackup", Value: "Create"},
 		{Key: "ParameterVariableName", Value: ""},
 		{Key: "Range", Value: bson.D{
 			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 			{Key: "$Type", Value: "Microflows$ConstantRange"},
-			{Key: "SingleObject", Value: false},
+			{Key: "SingleObject", Value: a.ResultHandling.SingleObject},
 		}},
 		{Key: "ReturnValueMapping", Value: string(a.ResultHandling.MappingID)},
 	}

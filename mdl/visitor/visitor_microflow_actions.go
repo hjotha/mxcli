@@ -187,6 +187,54 @@ func buildCallJavaActionStatement(ctx parser.ICallJavaActionStatementContext) *a
 	return stmt
 }
 
+// buildCallWebServiceStatement converts CALL WEB SERVICE statement context to CallWebServiceStmt.
+func buildCallWebServiceStatement(ctx parser.ICallWebServiceStatementContext) *ast.CallWebServiceStmt {
+	if ctx == nil {
+		return nil
+	}
+	callCtx := ctx.(*parser.CallWebServiceStatementContext)
+
+	stmt := &ast.CallWebServiceStmt{}
+	if v := callCtx.VARIABLE(); v != nil {
+		stmt.OutputVariable = strings.TrimPrefix(v.GetText(), "$")
+	}
+
+	literals := callCtx.AllSTRING_LITERAL()
+	idx := 0
+	if callCtx.RAW() != nil {
+		if len(literals) > 0 {
+			stmt.RawBSONBase64 = unquoteString(literals[0].GetText())
+		}
+		if errClause := callCtx.OnErrorClause(); errClause != nil {
+			stmt.ErrorHandling = buildOnErrorClause(errClause)
+		}
+		return stmt
+	}
+	if len(literals) > idx {
+		stmt.ServiceID = unquoteString(literals[idx].GetText())
+		idx++
+	}
+	if callCtx.OPERATION() != nil && len(literals) > idx {
+		stmt.OperationName = unquoteString(literals[idx].GetText())
+		idx++
+	}
+	if callCtx.SEND() != nil && len(literals) > idx {
+		stmt.SendMappingID = unquoteString(literals[idx].GetText())
+		idx++
+	}
+	if callCtx.RECEIVE() != nil && len(literals) > idx {
+		stmt.ReceiveMappingID = unquoteString(literals[idx].GetText())
+	}
+	if expr := callCtx.Expression(); expr != nil {
+		stmt.Timeout = buildExpression(expr)
+	}
+	if errClause := callCtx.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+
+	return stmt
+}
+
 // buildExecuteDatabaseQueryStatement converts EXECUTE DATABASE QUERY context to ExecuteDatabaseQueryStmt.
 func buildExecuteDatabaseQueryStatement(ctx parser.IExecuteDatabaseQueryStatementContext) *ast.ExecuteDatabaseQueryStmt {
 	if ctx == nil {

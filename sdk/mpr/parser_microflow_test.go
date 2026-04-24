@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -172,6 +173,74 @@ func TestSerializeRestResultHandlingPreservesForceSingleOccurrenceSeparately(t *
 	}
 	if got := bsonDMap(varType)["$Type"]; got != "DataTypes$ObjectType" {
 		t.Fatalf("VariableType.$Type = %v, want DataTypes$ObjectType", got)
+	}
+}
+
+func TestSerializeImportXmlActionPreservesSingleObjectRange(t *testing.T) {
+	forceSingleOccurrence := false
+	doc := serializeImportXmlAction(&microflows.ImportXmlAction{
+		BaseElement: model.BaseElement{ID: model.ID("import-action-1")},
+		ResultHandling: &microflows.ResultHandlingMapping{
+			BaseElement:           model.BaseElement{ID: model.ID("result-handling-1")},
+			MappingID:             model.ID("RestAPICommons.IMM_ErrorResponse"),
+			ResultEntityID:        model.ID("RestAPICommons.Error"),
+			ResultVariable:        "ErrorResponse",
+			SingleObject:          true,
+			ForceSingleOccurrence: &forceSingleOccurrence,
+		},
+		XmlDocumentVariable: "HttpErrorResponse",
+	})
+
+	rh, ok := bsonDMap(doc)["ResultHandling"].(primitive.D)
+	if !ok {
+		t.Fatalf("ResultHandling missing or wrong type: %T", bsonDMap(doc)["ResultHandling"])
+	}
+	importCall, ok := bsonDMap(rh)["ImportMappingCall"].(primitive.D)
+	if !ok {
+		t.Fatalf("ImportMappingCall missing or wrong type: %T", bsonDMap(rh)["ImportMappingCall"])
+	}
+	callFields := bsonDMap(importCall)
+	if got := callFields["ForceSingleOccurrence"]; got != false {
+		t.Fatalf("ForceSingleOccurrence = %v, want false", got)
+	}
+	rangeDoc, ok := callFields["Range"].(primitive.D)
+	if !ok {
+		t.Fatalf("Range missing or wrong type: %T", callFields["Range"])
+	}
+	if got := bsonDMap(rangeDoc)["SingleObject"]; got != true {
+		t.Fatalf("Range.SingleObject = %v, want true", got)
+	}
+	varType, ok := bsonDMap(rh)["VariableType"].(primitive.D)
+	if !ok {
+		t.Fatalf("VariableType missing or wrong type: %T", bsonDMap(rh)["VariableType"])
+	}
+	if got := bsonDMap(varType)["$Type"]; got != "DataTypes$ObjectType" {
+		t.Fatalf("VariableType.$Type = %v, want DataTypes$ObjectType", got)
+	}
+}
+
+func TestSerializeWebServiceCallActionPreservesRawBSON(t *testing.T) {
+	raw, err := bson.Marshal(bson.D{
+		{Key: "$ID", Value: "web-service-action-1"},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "ImportedService", Value: "LamaIntegration.AccessGroupManagement"},
+		{Key: "OperationName", Value: "GetGroupsByCompany"},
+		{Key: "TimeOutExpression", Value: "@ControlCenterCommons.StandardTimeoutValue"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc := serializeWebServiceCallAction(&microflows.WebServiceCallAction{RawBSON: raw})
+	fields := bsonDMap(doc)
+	if got := fields["$Type"]; got != "Microflows$CallWebServiceAction" {
+		t.Fatalf("$Type = %v, want Microflows$CallWebServiceAction", got)
+	}
+	if got := fields["ImportedService"]; got != "LamaIntegration.AccessGroupManagement" {
+		t.Fatalf("ImportedService = %v", got)
+	}
+	if got := fields["OperationName"]; got != "GetGroupsByCompany" {
+		t.Fatalf("OperationName = %v", got)
 	}
 }
 

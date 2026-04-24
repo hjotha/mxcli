@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strings"
@@ -338,6 +339,61 @@ func (fb *flowBuilder) inferGenericJavaActionReturnType(jaDef *javaactions.JavaA
 		}
 	}
 	return ""
+}
+
+// addCallWebServiceAction creates a legacy SOAP WebServiceCallAction.
+func (fb *flowBuilder) addCallWebServiceAction(s *ast.CallWebServiceStmt) model.ID {
+	activityX := fb.posX
+	action := &microflows.WebServiceCallAction{
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
+		ServiceID:         model.ID(s.ServiceID),
+		OperationName:     s.OperationName,
+		SendMappingID:     model.ID(s.SendMappingID),
+		ReceiveMappingID:  model.ID(s.ReceiveMappingID),
+		OutputVariable:    s.OutputVariable,
+		UseReturnVariable: s.OutputVariable != "",
+	}
+	if s.RawBSONBase64 != "" {
+		if raw, err := base64.StdEncoding.DecodeString(s.RawBSONBase64); err == nil {
+			action.RawBSON = raw
+		} else {
+			fb.addError("invalid raw web service action payload: %v", err)
+		}
+	}
+	if s.Timeout != nil {
+		action.TimeoutExpression = fb.exprToString(s.Timeout)
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+			ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	if s.OutputVariable != "" && fb.declaredVars != nil {
+		fb.declaredVars[s.OutputVariable] = "Object"
+	}
+
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
+	}
+
+	return activity.ID
 }
 
 // addCallExternalActionAction creates a CALL EXTERNAL ACTION statement.
@@ -768,6 +824,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 
 	// Build result handling
 	var resultHandling microflows.ResultHandling
+	restMappingSingleObject := true
 	switch s.Result.Type {
 	case ast.RestResultString:
 		resultHandling = &microflows.ResultHandlingString{
@@ -800,6 +857,12 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 				}
 			}
 		}
+		if s.OutputVariable != "" && fb.listInputVariables != nil && fb.listInputVariables[s.OutputVariable] {
+			singleObject = false
+		} else if s.OutputVariable != "" && fb.objectInputVariables != nil && fb.objectInputVariables[s.OutputVariable] {
+			singleObject = true
+		}
+		restMappingSingleObject = singleObject
 		resultHandling = &microflows.ResultHandlingMapping{
 			BaseElement:           model.BaseElement{ID: model.ID(types.GenerateID())},
 			MappingID:             model.ID(mappingQN),
@@ -842,7 +905,11 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			fb.registerResultVariableType(s.OutputVariable, &microflows.ObjectType{EntityQualifiedName: "System.HttpResponse"})
 		case ast.RestResultMapping:
 			entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name
-			fb.registerResultVariableType(s.OutputVariable, &microflows.ObjectType{EntityQualifiedName: entityQN})
+			if restMappingSingleObject {
+				fb.registerResultVariableType(s.OutputVariable, &microflows.ObjectType{EntityQualifiedName: entityQN})
+			} else {
+				fb.registerResultVariableType(s.OutputVariable, &microflows.ListType{EntityQualifiedName: entityQN})
+			}
 		default:
 			if fb.declaredVars != nil {
 				fb.declaredVars[s.OutputVariable] = "String"
@@ -1131,6 +1198,8 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	}
 	if s.OutputVariable != "" && fb.listInputVariables != nil && fb.listInputVariables[s.OutputVariable] {
 		resultHandling.SingleObject = false
+	} else if s.OutputVariable != "" && fb.objectInputVariables != nil && fb.objectInputVariables[s.OutputVariable] {
+		resultHandling.SingleObject = true
 	}
 
 	action.ResultHandling = resultHandling

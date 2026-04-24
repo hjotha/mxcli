@@ -185,7 +185,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
 				flow := newHorizontalFlow(lastThenID, mergeID)
-				applyUserAnchors(flow, prevThenAnchor, nil)
+				applyUserAnchors(flow, prevThenAnchor, prevThenAnchor)
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			} else {
@@ -264,7 +264,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		if !elseReturns && needMerge {
 			if lastElseID != "" {
 				flow := newUpwardFlow(lastElseID, mergeID)
-				applyUserAnchors(flow, prevElseAnchor, nil)
+				applyUserAnchors(flow, prevElseAnchor, prevElseAnchor)
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			}
@@ -365,7 +365,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
 				flow := newUpwardFlow(lastThenID, mergeID)
-				applyUserAnchors(flow, prevThenAnchor, nil)
+				applyUserAnchors(flow, prevThenAnchor, prevThenAnchor)
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			} else {
@@ -527,7 +527,7 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		}
 		loopBuilder.objects = append(loopBuilder.objects, merge)
 		flow := newHorizontalFlowWithCase(lastBodyID, merge.ID, pendingBodyCase)
-		applyUserAnchors(flow, pendingBodyAnchor, nil)
+		applyUserAnchors(flow, pendingBodyAnchor, pendingBodyAnchor)
 		loopBuilder.flows = append(loopBuilder.flows, flow)
 		loopBuilder.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 	}

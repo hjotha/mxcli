@@ -273,6 +273,12 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 	// BEGIN block
 	lines = append(lines, "begin")
 
+	prevDescribingReturnValue := ctx.DescribingMicroflowHasReturnValue
+	ctx.DescribingMicroflowHasReturnValue = microflowHasReturnValue(targetMf)
+	defer func() {
+		ctx.DescribingMicroflowHasReturnValue = prevDescribingReturnValue
+	}()
+
 	// Generate activities
 	if targetMf.ObjectCollection != nil && len(targetMf.ObjectCollection.Objects) > 0 {
 		activityLines := formatMicroflowActivities(ctx, targetMf, entityNames, microflowNames)
@@ -487,6 +493,12 @@ func renderMicroflowMDL(
 	microflowNames map[model.ID]string,
 	sourceMap map[string]elkSourceRange,
 ) string {
+	prevDescribingReturnValue := ctx.DescribingMicroflowHasReturnValue
+	ctx.DescribingMicroflowHasReturnValue = microflowHasReturnValue(mf)
+	defer func() {
+		ctx.DescribingMicroflowHasReturnValue = prevDescribingReturnValue
+	}()
+
 	var lines []string
 
 	if mf.Documentation != "" {
@@ -571,6 +583,14 @@ func renderMicroflowMDL(
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
+}
+
+func microflowHasReturnValue(mf *microflows.Microflow) bool {
+	if mf == nil || mf.ReturnType == nil {
+		return false
+	}
+	_, isVoid := mf.ReturnType.(*microflows.VoidType)
+	return !isVoid
 }
 
 // formatMicroflowDataType formats a microflow data type for MDL output.

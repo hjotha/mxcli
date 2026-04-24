@@ -677,6 +677,37 @@ func TestFormatAction_UnknownAction(t *testing.T) {
 	}
 }
 
+func TestFormatAction_WebServiceCall(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.WebServiceCallAction{
+		ServiceID:         "service-1",
+		OperationName:     "GetAccessGroups",
+		SendMappingID:     "send-1",
+		ReceiveMappingID:  "receive-1",
+		OutputVariable:    "Root",
+		UseReturnVariable: true,
+		TimeoutExpression: "30",
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "$Root = call web service 'service-1'\noperation 'GetAccessGroups'\nsend mapping 'send-1'\nreceive mapping 'receive-1'\ntimeout 30;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_WebServiceCallRaw(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.WebServiceCallAction{
+		OutputVariable: "Root",
+		RawBSON:        []byte{1, 2, 3},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "$Root = call web service raw 'AQID';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_Nil(t *testing.T) {
 	e := newTestExecutor()
 	got := e.formatAction(nil, nil, nil)

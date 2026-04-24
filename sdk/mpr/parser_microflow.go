@@ -570,6 +570,9 @@ var microflowActionParsers = map[string]func(map[string]any) microflows.Microflo
 
 	// REST call action (inline HTTP)
 	"Microflows$RestCallAction": func(r map[string]any) microflows.MicroflowAction { return parseRestCallAction(r) },
+	"Microflows$CallWebServiceAction": func(r map[string]any) microflows.MicroflowAction {
+		return parseWebServiceCallAction(r)
+	},
 
 	// REST operation call action (consumed REST service)
 	"Microflows$RestOperationCallAction": func(r map[string]any) microflows.MicroflowAction {

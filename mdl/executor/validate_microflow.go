@@ -168,6 +168,8 @@ func stmtActivityName(stmt ast.MicroflowStatement) string {
 		return "call microflow"
 	case *ast.CallJavaActionStmt:
 		return "call java action"
+	case *ast.CallWebServiceStmt:
+		return "call web service"
 	case *ast.ExecuteDatabaseQueryStmt:
 		return "execute database query"
 	default:
@@ -422,6 +424,10 @@ func collectDeclaredVars(body []ast.MicroflowStatement) map[string]bool {
 			if stmt.OutputVariable != "" {
 				vars[stmt.OutputVariable] = true
 			}
+		case *ast.CallWebServiceStmt:
+			if stmt.OutputVariable != "" {
+				vars[stmt.OutputVariable] = true
+			}
 		case *ast.ExecuteDatabaseQueryStmt:
 			if stmt.OutputVariable != "" {
 				vars[stmt.OutputVariable] = true
@@ -552,6 +558,8 @@ func stmtErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
 	case *ast.CallMicroflowStmt:
 		return s.ErrorHandling
 	case *ast.CallJavaActionStmt:
+		return s.ErrorHandling
+	case *ast.CallWebServiceStmt:
 		return s.ErrorHandling
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.ErrorHandling

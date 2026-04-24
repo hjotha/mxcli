@@ -6,6 +6,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -369,6 +370,30 @@ func parseRestCallAction(raw map[string]any) *microflows.RestCallAction {
 		action.RequestHandling = parseRequestHandling(requestHandling, requestHandlingType)
 	} else if requestHandlingD, ok := raw["RequestHandling"].(primitive.D); ok {
 		action.RequestHandling = parseRequestHandling(requestHandlingD.Map(), requestHandlingType)
+	}
+
+	return action
+}
+
+func parseWebServiceCallAction(raw map[string]any) *microflows.WebServiceCallAction {
+	action := &microflows.WebServiceCallAction{}
+	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	action.OperationName = extractString(raw["OperationName"])
+	action.TimeoutExpression = extractString(raw["TimeOutExpression"])
+
+	if rh := extractBsonMap(raw["NewResultHandling"]); rh != nil {
+		action.OutputVariable = extractString(rh["ResultVariableName"])
+		action.UseReturnVariable = action.OutputVariable != ""
+		if call := extractBsonMap(rh["ImportMappingCall"]); call != nil {
+			action.ReceiveMappingID = model.ID(extractString(call["ReturnValueMapping"]))
+		}
+	}
+	if importedService := extractString(raw["ImportedService"]); importedService != "" {
+		action.ServiceID = model.ID(importedService)
+	}
+	if rawBSON, err := bson.Marshal(raw); err == nil {
+		action.RawBSON = rawBSON
 	}
 
 	return action

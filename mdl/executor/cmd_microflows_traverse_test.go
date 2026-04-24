@@ -44,15 +44,18 @@ func TestTraverseFlow_LinearSequence(t *testing.T) {
 	visited := make(map[model.ID]bool)
 	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, visited, nil, nil, &lines, 1, nil, 0, nil)
 
-	// StartEvent produces no output, EndEvent with no return produces no output.
-	// Each activity now has a @position line before it.
-	if len(lines) != 4 {
-		t.Fatalf("expected 4 lines, got %d: %v", len(lines), lines)
+	// StartEvent produces no output. Empty EndEvents are emitted as bare
+	// returns so terminal void branches survive roundtrip instead of falling
+	// through into later statements.
+	if len(lines) != 6 {
+		t.Fatalf("expected 6 lines, got %d: %v", len(lines), lines)
 	}
 	assertContains(t, lines[0], "@position(0, 0)")
 	assertContains(t, lines[1], "$Obj = create Mod.Entity;")
 	assertContains(t, lines[2], "@position(0, 0)")
 	assertContains(t, lines[3], "commit $Obj;")
+	assertContains(t, lines[4], "@position(0, 0)")
+	assertContains(t, lines[5], "return;")
 }
 
 // =============================================================================
@@ -280,14 +283,12 @@ func TestTraverseFlow_UnsupportedActivitySkipsAnnotations(t *testing.T) {
 	visited := make(map[model.ID]bool)
 	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, visited, nil, nil, &lines, 0, nil, 0, nil)
 
-	for _, line := range lines {
-		if contains(line, "@position") {
-			t.Errorf("expected no @position prefix before unsupported-action comment, got: %v", lines)
-		}
-	}
 	found := false
-	for _, line := range lines {
+	for i, line := range lines {
 		if contains(line, "Unsupported action type") {
+			if i > 0 && contains(lines[i-1], "@position") {
+				t.Errorf("expected no @position prefix before unsupported-action comment, got: %v", lines)
+			}
 			found = true
 		}
 	}
@@ -322,11 +323,12 @@ func TestCollectErrorHandlerStatements_Simple(t *testing.T) {
 	}
 
 	stmts := e.collectErrorHandlerStatements(mkID("err_log"), activityMap, flowsByOrigin, nil, nil)
-	if len(stmts) != 1 {
-		t.Fatalf("expected 1 statement, got %d: %v", len(stmts), stmts)
+	if len(stmts) != 2 {
+		t.Fatalf("expected 2 statements, got %d: %v", len(stmts), stmts)
 	}
 	assertContains(t, stmts[0], "log error")
 	assertContains(t, stmts[0], "Something failed")
+	assertContains(t, stmts[1], "return;")
 }
 
 func TestCollectErrorHandlerStatements_StopsAtMerge(t *testing.T) {

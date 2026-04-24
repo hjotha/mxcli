@@ -161,6 +161,36 @@ func TestBuilder_AnchorTrueBranchTo_EmptyThenIfWithElse(t *testing.T) {
 	}
 }
 
+func TestBuilder_IfBranchTailToMergeHonorsAnchorDestination(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "then"}},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.LogStmt{
+					Level:   ast.LogInfo,
+					Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "else"},
+					Annotations: &ast.ActivityAnnotations{
+						Anchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+					},
+				},
+			},
+		},
+	}
+
+	oc := buildWithAnchors(body)
+
+	// The else branch has one statement, so its own anchor applies both to the
+	// split->statement flow and to the statement->merge tail flow. Dropping the
+	// destination side on the tail produced ActionActivity(bottom)->Merge(bottom),
+	// which Studio Pro rejects as CE0709.
+	if got := countFlows(oc.Flows, AnchorBottom, AnchorTop); got != 2 {
+		t.Errorf("expected split→else and else→merge Bottom→Top flows, got %d: %+v", got, oc.Flows)
+	}
+}
+
 func TestBuilder_AnchorToTopOnReturnPreservedInsideElse(t *testing.T) {
 	// Minimal case: single-statement ELSE whose only statement is a RETURN
 	// carrying @anchor(to: top). The flow from the split to that return's

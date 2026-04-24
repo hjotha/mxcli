@@ -24,6 +24,7 @@ type flowBuilder struct {
 	baseY               int // Base Y position (for returning after ELSE branches)
 	spacing             int
 	returnValue         string            // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	hasReturnValue      bool              // True when the microflow declares a non-void return type
 	endsWithReturn      bool              // True if the flow already ends with EndEvent(s) from RETURN statements
 	varTypes            map[string]string // Variable name -> entity qualified name (for CHANGE statements)
 	declaredVars        map[string]string // Declared primitive variables: name -> type (e.g., "$IsValid" -> "Boolean")
@@ -56,6 +57,7 @@ type flowBuilder struct {
 	errorHandlerTailIsSource bool
 	callOutputRemaining      map[string]int
 	listInputVariables       map[string]bool
+	objectInputVariables     map[string]bool
 }
 
 // addError records a validation error during flow building.

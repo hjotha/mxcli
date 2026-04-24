@@ -943,6 +943,144 @@ func TestAddRestCallAction_MappingResultPreservesExplicitOutputVariable(t *testi
 	}
 }
 
+func TestBuildFlowGraph_RestMappingUsedAsListForcesListResult(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "AppRoles",
+			Method:         "get",
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "MendixSSO", Name: "AppRolesResponse"},
+				ResultEntity: ast.QualifiedName{Module: "MendixSSO", Name: "AppRole"},
+			},
+		},
+		&ast.ListOperationStmt{
+			Operation:      ast.ListOpFind,
+			OutputVariable: "AdminRole",
+			InputVariable:  "AppRoles",
+			Condition: &ast.BinaryExpr{
+				Left:     &ast.IdentifierExpr{Name: "Name"},
+				Operator: "=",
+				Right:    &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Admin"},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.RestCallAction)
+		if !ok {
+			continue
+		}
+		mapping, ok := action.ResultHandling.(*microflows.ResultHandlingMapping)
+		if !ok {
+			t.Fatalf("result handling = %T, want *ResultHandlingMapping", action.ResultHandling)
+		}
+		if mapping.SingleObject {
+			t.Fatal("REST mapping output used by list operation must be emitted as list result")
+		}
+		if got := fb.varTypes["AppRoles"]; got != "List of MendixSSO.AppRole" {
+			t.Fatalf("registered REST mapping result type = %q, want list of MendixSSO.AppRole", got)
+		}
+		return
+	}
+	t.Fatal("expected REST call action")
+}
+
+func TestBuildFlowGraph_WebServiceCallCreatesRealAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallWebServiceStmt{
+			OutputVariable:   "Root",
+			ServiceID:        "service-1",
+			OperationName:    "GetAccessGroups",
+			SendMappingID:    "send-1",
+			ReceiveMappingID: "receive-1",
+			Timeout:          &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: int64(30)},
+			ErrorHandling:    &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.WebServiceCallAction)
+		if !ok {
+			continue
+		}
+		if action.ServiceID != "service-1" || action.OperationName != "GetAccessGroups" ||
+			action.SendMappingID != "send-1" || action.ReceiveMappingID != "receive-1" {
+			t.Fatalf("unexpected web service action: %#v", action)
+		}
+		if action.OutputVariable != "Root" || !action.UseReturnVariable {
+			t.Fatalf("output variable not preserved: %#v", action)
+		}
+		if got := fb.declaredVars["Root"]; got != "Object" {
+			t.Fatalf("declared Root type = %q, want Object", got)
+		}
+		return
+	}
+	t.Fatal("expected WebServiceCallAction")
+}
+
+func TestBuildFlowGraph_WebServiceCallPreservesRawBSON(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallWebServiceStmt{
+			OutputVariable: "Root",
+			RawBSONBase64:  "AQID",
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.WebServiceCallAction)
+		if !ok {
+			continue
+		}
+		if string(action.RawBSON) != string([]byte{1, 2, 3}) {
+			t.Fatalf("raw BSON = %v, want [1 2 3]", action.RawBSON)
+		}
+		return
+	}
+	t.Fatal("expected WebServiceCallAction")
+}
+
 func TestAddImportFromMappingAction_RegistersListResultType(t *testing.T) {
 	backend := &mock.MockBackend{
 		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
@@ -1034,6 +1172,68 @@ func TestBuildFlowGraph_ImportMappingUsedAsListForcesListResult(t *testing.T) {
 		}
 		if action.ResultHandling == nil || action.ResultHandling.SingleObject {
 			t.Fatal("import mapping used by list operation must be emitted as list result")
+		}
+		return
+	}
+	t.Fatal("expected import mapping action")
+}
+
+func TestBuildFlowGraph_ImportMappingUsedAsObjectForcesSingleResult(t *testing.T) {
+	backend := &mock.MockBackend{
+		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+			return &model.ImportMapping{
+				JsonStructure: "RestAPICommons.ErrorResponseJson",
+				Elements: []*model.ImportMappingElement{
+					{Entity: "RestAPICommons.Error"},
+				},
+			}, nil
+		},
+		GetJsonStructureByQualifiedNameFunc: func(moduleName, name string) (*mdltypes.JsonStructure, error) {
+			return &mdltypes.JsonStructure{
+				Elements: []*mdltypes.JsonElement{{ElementType: "Array"}},
+			}, nil
+		},
+	}
+	body := []ast.MicroflowStatement{
+		&ast.ImportFromMappingStmt{
+			OutputVariable: "ErrorResponse",
+			Mapping:        ast.QualifiedName{Module: "RestAPICommons", Name: "IMM_ErrorResponse"},
+			SourceVariable: "HttpErrorResponse",
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+		},
+		&ast.ChangeObjectStmt{
+			Variable: "MemberStatusContext",
+			Changes: []ast.ChangeItem{{
+				Attribute: "Reason",
+				Value:     &ast.AttributePathExpr{Variable: "ErrorResponse", Path: []string{"Detail"}},
+			}},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"MemberStatusContext": "Members.MemberStatusContext"},
+		declaredVars: map[string]string{},
+		backend:      backend,
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.ImportXmlAction)
+		if !ok {
+			continue
+		}
+		if action.ResultHandling == nil || !action.ResultHandling.SingleObject {
+			t.Fatal("import mapping used through an attribute path must be emitted as a single-object result")
+		}
+		if got := fb.varTypes["ErrorResponse"]; got != "RestAPICommons.Error" {
+			t.Fatalf("import mapping object result type = %q, want RestAPICommons.Error", got)
 		}
 		return
 	}

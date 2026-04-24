@@ -503,6 +503,72 @@ func TestBuildFlowGraph_CustomErrorHandlerContinuesToNextStatement(t *testing.T)
 	}
 }
 
+func TestBuildFlowGraph_VoidCustomErrorHandlerTerminates(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "AppsCombinedView", Name: "CommitAppViewDataChanges"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.ChangeObjectStmt{
+						Variable: "AppProcessingResult",
+						Changes:  []ast.ChangeItem{{Attribute: "IsSuccessful", Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: false}}},
+					},
+				},
+			},
+		},
+		&ast.ChangeObjectStmt{
+			Variable: "AppProcessingResult",
+			Changes:  []ast.ChangeItem{{Attribute: "IsSuccessful", Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}}},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var errorChangeID, successChangeID, errorEndID model.ID
+	incomingError := map[model.ID]bool{}
+	for _, flow := range oc.Flows {
+		if flow.IsErrorHandler {
+			incomingError[flow.DestinationID] = true
+		}
+	}
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		change, ok := activity.Action.(*microflows.ChangeObjectAction)
+		if !ok || change.ChangeVariable != "AppProcessingResult" {
+			continue
+		}
+		if incomingError[activity.ID] {
+			errorChangeID = activity.ID
+		} else {
+			successChangeID = activity.ID
+		}
+	}
+	endIDs := map[model.ID]bool{}
+	for _, obj := range oc.Objects {
+		if _, ok := obj.(*microflows.EndEvent); ok {
+			endIDs[obj.GetID()] = true
+		}
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID == errorChangeID {
+			if endIDs[flow.DestinationID] {
+				errorEndID = flow.DestinationID
+			}
+			if flow.DestinationID == successChangeID {
+				t.Fatal("void custom error handler must terminate instead of falling through to the success continuation")
+			}
+		}
+	}
+	if errorChangeID == "" || successChangeID == "" || errorEndID == "" {
+		t.Fatalf("expected error change, success change, and terminal error end; error=%q success=%q end=%q", errorChangeID, successChangeID, errorEndID)
+	}
+}
+
 func TestBuildFlowGraph_CustomErrorHandlerSkipsOutputDependentContinuation(t *testing.T) {
 	entityRef := ast.QualifiedName{Module: "System", Name: "HttpResponse"}
 	body := []ast.MicroflowStatement{
@@ -642,6 +708,70 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsOutputDependentContinuation(
 		if flow.IsErrorHandler && flow.OriginID == restID && flow.DestinationID == debugLogID {
 			t.Fatal("empty custom error handler must not flow into output-dependent debug statement")
 		}
+	}
+}
+
+func TestBuildFlowGraph_EmptyCustomErrorHandlerRejoinsThroughMerge(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "BrandConfiguration", Name: "ResizeCropImageIfNecessary"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+			},
+		},
+		&ast.CallJavaActionStmt{
+			OutputVariable: "Base64EncodedImage",
+			ActionName:     ast.QualifiedName{Module: "FileHandling", Name: "Base64EncodeFile"},
+		},
+		&ast.CreateObjectStmt{
+			Variable:   "NewBrand",
+			EntityType: ast.QualifiedName{Module: "CompanyServiceIntegration", Name: "UpdateBrandRequest"},
+		},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, javaID, mergeID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch o.Action.(type) {
+			case *microflows.MicroflowCallAction:
+				callID = o.ID
+			case *microflows.JavaActionCallAction:
+				javaID = o.ID
+			}
+		case *microflows.ExclusiveMerge:
+			mergeID = o.ID
+		}
+	}
+	if callID == "" || javaID == "" || mergeID == "" {
+		t.Fatalf("expected call, java action, and merge; got call=%q java=%q merge=%q", callID, javaID, mergeID)
+	}
+
+	var normalToMerge, errorToMerge, mergeToJava bool
+	for _, flow := range oc.Flows {
+		if flow.OriginID == callID && flow.DestinationID == javaID {
+			t.Fatal("empty custom handler must not create parallel normal/error flows directly to the next activity")
+		}
+		if flow.OriginID == callID && flow.DestinationID == mergeID && !flow.IsErrorHandler {
+			normalToMerge = true
+		}
+		if flow.OriginID == callID && flow.DestinationID == mergeID && flow.IsErrorHandler {
+			errorToMerge = true
+		}
+		if flow.OriginID == mergeID && flow.DestinationID == javaID {
+			mergeToJava = true
+		}
+	}
+	if !normalToMerge || !errorToMerge || !mergeToJava {
+		t.Fatalf("expected normal/error call flows to merge and merge to java; normal=%v error=%v mergeToJava=%v", normalToMerge, errorToMerge, mergeToJava)
 	}
 }
 

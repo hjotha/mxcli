@@ -92,7 +92,7 @@ func (fb *flowBuilder) clearPendingErrorHandler() {
 
 func (fb *flowBuilder) addPendingEmptyErrorHandlerFlow(originID, destinationID model.ID) {
 	if fb.emptyErrorHandlerFrom != "" && fb.emptyErrorHandlerFrom == originID && destinationID != "" {
-		fb.flows = append(fb.flows, newErrorHandlerFlow(originID, destinationID))
+		fb.addEmptyErrorHandlerRejoinFlow(originID, destinationID)
 		fb.emptyErrorHandlerFrom = ""
 	}
 	if fb.errorHandlerSource != "" && fb.errorHandlerSource == originID && fb.errorHandlerTailFrom != "" && destinationID != "" {
@@ -105,7 +105,7 @@ func (fb *flowBuilder) addPendingEmptyErrorHandlerFlow(originID, destinationID m
 
 func (fb *flowBuilder) addPendingErrorHandlerFlowForStatement(originID, destinationID model.ID, stmt ast.MicroflowStatement, futureReferencesSkipVar ...bool) {
 	if fb.emptyErrorHandlerFrom != "" && fb.emptyErrorHandlerFrom == originID && destinationID != "" {
-		fb.flows = append(fb.flows, newErrorHandlerFlow(originID, destinationID))
+		fb.addEmptyErrorHandlerRejoinFlow(originID, destinationID)
 		fb.emptyErrorHandlerFrom = ""
 	}
 	if fb.errorHandlerTailFrom == "" || destinationID == "" {
@@ -134,6 +134,43 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForStatement(originID, destinat
 		fb.errorHandlerTailFrom = ""
 		fb.errorHandlerTailIsSource = false
 	}
+}
+
+func (fb *flowBuilder) addEmptyErrorHandlerRejoinFlow(originID, destinationID model.ID) {
+	existingIdx := -1
+	for i := len(fb.flows) - 1; i >= 0; i-- {
+		flow := fb.flows[i]
+		if !flow.IsErrorHandler && flow.OriginID == originID && flow.DestinationID == destinationID {
+			existingIdx = i
+			break
+		}
+	}
+	if existingIdx == -1 {
+		fb.flows = append(fb.flows, newErrorHandlerFlow(originID, destinationID))
+		return
+	}
+
+	existing := fb.flows[existingIdx]
+	fb.flows = append(fb.flows[:existingIdx], fb.flows[existingIdx+1:]...)
+
+	merge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX - HorizontalSpacing/2, Y: fb.baseY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, merge)
+
+	normalFlow := newHorizontalFlow(originID, merge.ID)
+	normalFlow.OriginConnectionIndex = existing.OriginConnectionIndex
+	normalFlow.CaseValue = existing.CaseValue
+	fb.flows = append(fb.flows, normalFlow)
+	fb.flows = append(fb.flows, newErrorHandlerFlow(originID, merge.ID))
+
+	mergeFlow := newHorizontalFlow(merge.ID, destinationID)
+	mergeFlow.DestinationConnectionIndex = existing.DestinationConnectionIndex
+	fb.flows = append(fb.flows, mergeFlow)
 }
 
 func (fb *flowBuilder) addErrorHandlerRejoinFlow(originID, destinationID model.ID) {
@@ -258,6 +295,8 @@ func statementVarRefs(stmt ast.MicroflowStatement) []string {
 		for _, arg := range s.Arguments {
 			refs = append(refs, exprVarRefs(arg.Value)...)
 		}
+	case *ast.CallWebServiceStmt:
+		refs = append(refs, exprVarRefs(s.Timeout)...)
 	case *ast.RestCallStmt:
 		refs = append(refs, exprVarRefs(s.URL)...)
 		for _, param := range s.URLParams {
@@ -381,15 +420,31 @@ func (fb *flowBuilder) handleErrorHandlerMergeWithSkip(lastErrID model.ID, activ
 	if lastErrID == "" {
 		return // No merge needed (error handler terminates with RETURN or RAISE ERROR)
 	}
-	_ = errorY
 	if fb.manualLoopBackTarget != "" {
 		fb.flows = append(fb.flows, newHorizontalFlow(lastErrID, fb.manualLoopBackTarget))
 		return
 	}
+	if !fb.hasReturnValue {
+		fb.terminateErrorHandlerFlow(lastErrID, errorY)
+		return
+	}
+	_ = errorY
 	fb.errorHandlerSource = activityID
 	fb.errorHandlerTailFrom = lastErrID
 	fb.errorHandlerSkipVar = skipVar
 	fb.errorHandlerTailIsSource = false
+}
+
+func (fb *flowBuilder) terminateErrorHandlerFlow(lastErrID model.ID, errorY int) {
+	end := &microflows.EndEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX + HorizontalSpacing/2, Y: errorY},
+			Size:        model.Size{Width: EventSize, Height: EventSize},
+		},
+	}
+	fb.objects = append(fb.objects, end)
+	fb.flows = append(fb.flows, newHorizontalFlow(lastErrID, end.ID))
 }
 
 // newHorizontalFlow creates a SequenceFlow with anchors for horizontal left-to-right connection

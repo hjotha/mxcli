@@ -1271,6 +1271,7 @@ microflowStatement
     | annotation* logStatement SEMICOLON?
     | annotation* callMicroflowStatement SEMICOLON?
     | annotation* callJavaActionStatement SEMICOLON?
+    | annotation* callWebServiceStatement SEMICOLON?
     | annotation* executeDatabaseQueryStatement SEMICOLON?
     | annotation* callExternalActionStatement SEMICOLON?
     | annotation* showPageStatement SEMICOLON?
@@ -1451,6 +1452,19 @@ callMicroflowStatement
 // $Result = CALL JAVA ACTION CustomActivities.ExecuteOQL(OqlStatement = '...');
 callJavaActionStatement
     : (VARIABLE EQUALS)? CALL JAVA ACTION qualifiedName LPAREN callArgumentList? RPAREN onErrorClause?
+    ;
+
+// Legacy SOAP call. References are emitted as raw Mendix IDs because older MPRs
+// store consumed web service and mapping references by ID.
+callWebServiceStatement
+    : (VARIABLE EQUALS)? CALL WEB SERVICE
+      (RAW STRING_LITERAL
+      | STRING_LITERAL
+        (OPERATION STRING_LITERAL)?
+        (SEND MAPPING STRING_LITERAL)?
+        (RECEIVE MAPPING STRING_LITERAL)?
+        (TIMEOUT expression)?)
+      onErrorClause?
     ;
 
 // $Result = EXECUTE DATABASE QUERY Module.Connection.QueryName (param = 'value');
@@ -3912,8 +3926,8 @@ keyword
     | MAP | MAPPING | MAPPINGS | MESSAGES | METHOD | NAMESPACE_KW
     | NOT_SUPPORTED | ODATA | OAUTH | OPERATION | PAGING
     | PARAMETER | PARAMETERS | PATH | PUBLISH | PUBLISHED
-    | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
-    | SOURCE_KW | TIMEOUT | VERSION | XML
+    | RAW | RECEIVE | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
+    | SOURCE_KW | TIMEOUT | VERSION | WEB | XML
     | FILE_KW | LINK | DYNAMIC
 
     // HTTP methods

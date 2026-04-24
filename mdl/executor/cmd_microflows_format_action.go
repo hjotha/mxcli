@@ -5,6 +5,7 @@ package executor
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
@@ -34,7 +35,10 @@ func formatActivity(
 			}
 			return fmt.Sprintf("return %s;", returnVal)
 		}
-		return "" // Skip end events without return value
+		if ctx != nil && ctx.DescribingMicroflowHasReturnValue {
+			return ""
+		}
+		return "return;"
 
 	case *microflows.ActionActivity:
 		return formatAction(ctx, activity.Action, entityNames, microflowNames)
@@ -707,6 +711,34 @@ func formatAction(
 			return fmt.Sprintf("unlock workflow %s;", a.Workflow)
 		}
 		return fmt.Sprintf("unlock workflow $%s;", a.WorkflowVariable)
+
+	case *microflows.WebServiceCallAction:
+		if len(a.RawBSON) > 0 {
+			prefix := ""
+			if a.OutputVariable != "" {
+				prefix = fmt.Sprintf("$%s = ", a.OutputVariable)
+			}
+			return prefix + "call web service raw " + mdlQuote(base64.StdEncoding.EncodeToString(a.RawBSON)) + ";"
+		}
+		var parts []string
+		prefix := ""
+		if a.OutputVariable != "" {
+			prefix = fmt.Sprintf("$%s = ", a.OutputVariable)
+		}
+		parts = append(parts, prefix+"call web service "+mdlQuote(string(a.ServiceID)))
+		if a.OperationName != "" {
+			parts = append(parts, "operation "+mdlQuote(a.OperationName))
+		}
+		if a.SendMappingID != "" {
+			parts = append(parts, "send mapping "+mdlQuote(string(a.SendMappingID)))
+		}
+		if a.ReceiveMappingID != "" {
+			parts = append(parts, "receive mapping "+mdlQuote(string(a.ReceiveMappingID)))
+		}
+		if a.TimeoutExpression != "" {
+			parts = append(parts, "timeout "+normalizeExpressionSource(a.TimeoutExpression))
+		}
+		return strings.Join(parts, "\n") + ";"
 
 	case *microflows.UnknownAction:
 		return fmt.Sprintf("-- Unsupported action type: %s", a.TypeName)
