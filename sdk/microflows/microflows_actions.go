@@ -175,8 +175,8 @@ type AggregateListAction struct {
 	Function               AggregateFunction `json:"function"`
 	AttributeID            model.ID          `json:"attributeId,omitempty"`
 	AttributeQualifiedName string            `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
-	UseExpression          bool              `json:"useExpression,omitempty"`           // true when Expression is used instead of Attribute
-	Expression             string            `json:"expression,omitempty"`              // Mendix expression string (when UseExpression=true)
+	UseExpression          bool              `json:"useExpression,omitempty"`          // true when Expression is used instead of Attribute
+	Expression             string            `json:"expression,omitempty"`             // Mendix expression string (when UseExpression=true)
 }
 
 func (AggregateListAction) isMicroflowAction() {}
@@ -575,6 +575,14 @@ type EntityTypeCodeActionParameterValue struct {
 }
 
 func (EntityTypeCodeActionParameterValue) isCodeActionParameterValue() {}
+
+// MicroflowParameterValue is a microflow reference passed to a Java action.
+type MicroflowParameterValue struct {
+	model.BaseElement
+	Microflow string `json:"microflow,omitempty"` // BY_NAME_REFERENCE: qualified microflow name
+}
+
+func (MicroflowParameterValue) isCodeActionParameterValue() {}
 
 // CallExternalAction calls an external action on a consumed OData service.
 type CallExternalAction struct {

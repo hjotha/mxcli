@@ -81,3 +81,19 @@ func TestParseCommitAction_ErrorHandlingTypeDefaultsToRollback(t *testing.T) {
 		t.Errorf("expected default Rollback, got %q", action.ErrorHandlingType)
 	}
 }
+
+func TestParseCodeActionParameterValue_MicroflowParameterValue(t *testing.T) {
+	value := parseCodeActionParameterValue(map[string]any{
+		"$ID":       "pmv-1",
+		"$Type":     "Microflows$MicroflowParameterValue",
+		"Microflow": "MxDock.Example_OpenAdminPage",
+	})
+
+	got, ok := value.(*microflows.MicroflowParameterValue)
+	if !ok {
+		t.Fatalf("expected *MicroflowParameterValue, got %T", value)
+	}
+	if got.Microflow != "MxDock.Example_OpenAdminPage" {
+		t.Fatalf("expected microflow name preserved, got %q", got.Microflow)
+	}
+}

@@ -23,29 +23,33 @@ type flowBuilder struct {
 	posY                int
 	baseY               int // Base Y position (for returning after ELSE branches)
 	spacing             int
-	returnValue         string                       // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
-	endsWithReturn      bool                         // True if the flow already ends with EndEvent(s) from RETURN statements
-	varTypes            map[string]string            // Variable name -> entity qualified name (for CHANGE statements)
-	declaredVars        map[string]string            // Declared primitive variables: name -> type (e.g., "$IsValid" -> "Boolean")
-	errors              []string                     // Validation errors collected during build
-	measurer            *layoutMeasurer              // For measuring statement dimensions
-	nextConnectionPoint model.ID                     // For compound statements: the exit point differs from entry point
-	nextFlowCase        string                       // If set, next connecting flow uses this case value (for merge-less splits)
+	returnValue         string            // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	endsWithReturn      bool              // True if the flow already ends with EndEvent(s) from RETURN statements
+	varTypes            map[string]string // Variable name -> entity qualified name (for CHANGE statements)
+	declaredVars        map[string]string // Declared primitive variables: name -> type (e.g., "$IsValid" -> "Boolean")
+	errors              []string          // Validation errors collected during build
+	measurer            *layoutMeasurer   // For measuring statement dimensions
+	nextConnectionPoint model.ID          // For compound statements: the exit point differs from entry point
+	nextFlowCase        string            // If set, next connecting flow uses this case value (for merge-less splits)
 	// nextFlowAnchor carries the branch-specific FlowAnchors that should be
 	// applied to the flow created by the NEXT iteration of buildFlowGraph.
 	// Used by guard-pattern IFs (where one branch returns and the other
 	// continues) so the continuing branch's @anchor survives to the actual
 	// splitID→nextActivity flow — which is emitted one iteration later by the
 	// outer loop, not by addIfStatement.
-	nextFlowAnchor      *ast.FlowAnchors
-	backend             backend.FullBackend          // For looking up page/microflow references
-	hierarchy           *ContainerHierarchy          // For resolving container IDs to module names
-	pendingAnnotations  *ast.ActivityAnnotations     // Pending annotations to attach to next activity
-	restServices        []*model.ConsumedRestService // Cached REST services for parameter classification
+	nextFlowAnchor     *ast.FlowAnchors
+	backend            backend.FullBackend          // For looking up page/microflow references
+	hierarchy          *ContainerHierarchy          // For resolving container IDs to module names
+	pendingAnnotations *ast.ActivityAnnotations     // Pending annotations to attach to next activity
+	restServices       []*model.ConsumedRestService // Cached REST services for parameter classification
 	// previousStmtAnchor holds the Anchor annotation of the statement that
 	// just emitted an activity, so the next flow's OriginConnectionIndex can
 	// be overridden by the user. Cleared after each flow is created.
-	previousStmtAnchor *ast.FlowAnchors
+	previousStmtAnchor    *ast.FlowAnchors
+	assocLookupCache      map[string]*assocLookupResult
+	memberResolutionCache map[string]resolvedMember
+	manualLoopBackTarget  model.ID
+	emptyErrorHandlerFrom model.ID
 }
 
 // addError records a validation error during flow building.
@@ -266,6 +270,14 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 			ThenExpr:  fb.resolveAssociationPaths(e.ThenExpr),
 			ElseExpr:  fb.resolveAssociationPaths(e.ElseExpr),
 		}
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return e
+		}
+		return &ast.SourceExpr{
+			Expression: fb.resolveAssociationPaths(e.Expression),
+			Source:     e.Source,
+		}
 	default:
 		return expr
 	}
@@ -380,6 +392,8 @@ func unwrapParenCall(expr ast.Expression) *ast.FunctionCallExpr {
 			return e
 		case *ast.ParenExpr:
 			expr = e.Inner
+		case *ast.SourceExpr:
+			expr = e.Expression
 		default:
 			return nil
 		}

@@ -428,6 +428,9 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 	if len(refs.javaActions) > 0 {
 		known := buildJavaActionQualifiedNames(ctx)
 		for _, ref := range refs.javaActions {
+			if isBuiltinJavaActionReference(ref) {
+				continue
+			}
 			if !known[ref] {
 				errors = append(errors, fmt.Sprintf("java action not found: %s (referenced by call java action)", ref))
 			}
@@ -444,6 +447,11 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 	}
 
 	return errors
+}
+
+func isBuiltinJavaActionReference(ref string) bool {
+	module, _, ok := strings.Cut(ref, ".")
+	return ok && module == "System"
 }
 
 // microflowRefCollector collects qualified name references from microflow statements.

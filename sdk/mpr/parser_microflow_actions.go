@@ -123,6 +123,11 @@ func parseCodeActionParameterValue(raw map[string]any) microflows.CodeActionPara
 		value.ID = model.ID(extractBsonID(raw["$ID"]))
 		value.Entity = extractString(raw["Entity"])
 		return value
+	case "Microflows$MicroflowParameterValue":
+		value := &microflows.MicroflowParameterValue{}
+		value.ID = model.ID(extractBsonID(raw["$ID"]))
+		value.Microflow = extractString(raw["Microflow"])
+		return value
 	}
 	return nil
 }
@@ -330,6 +335,9 @@ func parseCastAction(raw map[string]any) *microflows.CastAction {
 	action.ID = model.ID(extractBsonID(raw["$ID"]))
 	action.ObjectVariable = extractString(raw["ObjectVariableName"])
 	action.OutputVariable = extractString(raw["OutputVariableName"])
+	if action.OutputVariable == "" {
+		action.OutputVariable = extractString(raw["VariableName"])
+	}
 	return action
 }
 

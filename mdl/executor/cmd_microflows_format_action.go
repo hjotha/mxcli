@@ -25,7 +25,7 @@ func formatActivity(
 
 	case *microflows.EndEvent:
 		if activity.ReturnValue != "" {
-			returnVal := strings.TrimSuffix(activity.ReturnValue, "\n")
+			returnVal := normalizeExpressionSource(strings.TrimSuffix(activity.ReturnValue, "\n"))
 			// Only add $ prefix for bare identifiers (no operators, quotes, or parens)
 			if !strings.HasPrefix(returnVal, "$") && !isMendixKeyword(returnVal) && !isQualifiedEnumLiteral(returnVal) &&
 				!strings.ContainsAny(returnVal, "+'\"()") {
@@ -42,13 +42,20 @@ func formatActivity(
 		condition := formatSplitCondition(activity.SplitCondition)
 		return fmt.Sprintf("if %s then", condition)
 
+	case *microflows.InheritanceSplit:
+		varName := activity.VariableName
+		if !strings.HasPrefix(varName, "$") {
+			varName = "$" + varName
+		}
+		return fmt.Sprintf("split type %s;", varName)
+
 	case *microflows.ExclusiveMerge:
 		return "end if;"
 
 	case *microflows.LoopedActivity:
 		switch ls := activity.LoopSource.(type) {
 		case *microflows.WhileLoopCondition:
-			return fmt.Sprintf("while %s", ls.WhileExpression)
+			return fmt.Sprintf("while %s", normalizeExpressionSource(ls.WhileExpression))
 		case *microflows.IterableList:
 			iterVar := "Item"
 			listVar := "List"
@@ -92,12 +99,29 @@ func formatAction(
 	}
 
 	switch a := action.(type) {
+	case *microflows.CastAction:
+		outputVar := a.OutputVariable
+		if outputVar != "" && !strings.HasPrefix(outputVar, "$") {
+			outputVar = "$" + outputVar
+		}
+		objectVar := a.ObjectVariable
+		if objectVar != "" && !strings.HasPrefix(objectVar, "$") {
+			objectVar = "$" + objectVar
+		}
+		if objectVar == "" {
+			return fmt.Sprintf("cast %s;", outputVar)
+		}
+		if outputVar == "" {
+			return fmt.Sprintf("cast %s;", objectVar)
+		}
+		return fmt.Sprintf("%s = cast %s;", outputVar, objectVar)
+
 	case *microflows.CreateVariableAction:
 		varType := "Object"
 		if a.DataType != nil {
 			varType = formatMicroflowDataType(ctx, a.DataType, entityNames)
 		}
-		initialValue := strings.TrimSuffix(a.InitialValue, "\n")
+		initialValue := normalizeExpressionSource(strings.TrimSuffix(a.InitialValue, "\n"))
 		if initialValue == "" {
 			initialValue = "empty"
 		}
@@ -105,6 +129,7 @@ func formatAction(
 
 	case *microflows.ChangeVariableAction:
 		varName := a.VariableName
+		value := normalizeExpressionSource(a.Value)
 		// Check if this is an XPath attribute access (contains /)
 		if strings.Contains(varName, "/") {
 			// XPath like "$Product/Price" or "$Order/Module.Assoc/Attr"
@@ -119,13 +144,13 @@ func formatAction(
 			if !strings.HasPrefix(objectName, "$") {
 				objectName = "$" + objectName
 			}
-			return fmt.Sprintf("change %s (%s = %s);", objectName, attrName, a.Value)
+			return fmt.Sprintf("change %s (%s = %s);", objectName, attrName, value)
 		}
 		// Simple variable change
 		if strings.HasPrefix(varName, "$") {
-			return fmt.Sprintf("set %s = %s;", varName, a.Value)
+			return fmt.Sprintf("set %s = %s;", varName, value)
 		}
-		return fmt.Sprintf("set $%s = %s;", varName, a.Value)
+		return fmt.Sprintf("set $%s = %s;", varName, value)
 
 	case *microflows.CreateObjectAction:
 		// Use EntityQualifiedName (BY_NAME_REFERENCE) or fall back to EntityID lookup
@@ -163,9 +188,9 @@ func formatAction(
 						memberName = parts[len(parts)-1]
 					}
 				}
-				members = append(members, fmt.Sprintf("%s = %s", memberName, m.Value))
+				members = append(members, fmt.Sprintf("%s = %s", memberName, normalizeExpressionSource(m.Value)))
 			}
-			return fmt.Sprintf("$%s = create %s (%s);", outputVar, entityName, strings.Join(members, ", "))
+			return fmt.Sprintf("$%s = create %s (%s);", outputVar, entityName, joinExpressionAssignments(members))
 		}
 		return fmt.Sprintf("$%s = create %s;", outputVar, entityName)
 
@@ -193,9 +218,9 @@ func formatAction(
 						memberName = parts[len(parts)-1]
 					}
 				}
-				members = append(members, fmt.Sprintf("%s = %s", memberName, m.Value))
+				members = append(members, fmt.Sprintf("%s = %s", memberName, normalizeExpressionSource(m.Value)))
 			}
-			return fmt.Sprintf("change $%s (%s);", varName, strings.Join(members, ", "))
+			return fmt.Sprintf("change $%s (%s);", varName, joinExpressionAssignments(members))
 		}
 		return fmt.Sprintf("change $%s;", varName)
 
@@ -237,13 +262,13 @@ func formatAction(
 		varName := a.ChangeVariable
 		switch a.Type {
 		case microflows.ChangeListTypeAdd:
-			return fmt.Sprintf("add %s to $%s;", a.Value, varName)
+			return fmt.Sprintf("add %s to $%s;", normalizeExpressionSource(a.Value), varName)
 		case microflows.ChangeListTypeRemove:
-			return fmt.Sprintf("remove %s from $%s;", a.Value, varName)
+			return fmt.Sprintf("remove %s from $%s;", normalizeExpressionSource(a.Value), varName)
 		case microflows.ChangeListTypeClear:
 			return fmt.Sprintf("clear $%s;", varName)
 		case microflows.ChangeListTypeSet:
-			return fmt.Sprintf("set $%s = %s;", varName, a.Value)
+			return fmt.Sprintf("set $%s = %s;", varName, normalizeExpressionSource(a.Value))
 		default:
 			return fmt.Sprintf("change list $%s (%s);", varName, a.Type)
 		}
@@ -275,7 +300,7 @@ func formatAction(
 		}
 		// Expression-based aggregate: SUM($list, $currentObject/Attr + 1)
 		if a.UseExpression && a.Expression != "" {
-			return fmt.Sprintf("$%s = %s($%s, %s);", outputVar, strings.ToLower(fn), a.InputVariable, a.Expression)
+			return fmt.Sprintf("$%s = %s($%s, %s);", outputVar, strings.ToLower(fn), a.InputVariable, normalizeExpressionSource(a.Expression))
 		}
 		// Attribute-based aggregate: SUM($list.Attr)
 		if attrName != "" && a.Function != microflows.AggregateFunctionCount {
@@ -299,13 +324,14 @@ func formatAction(
 				entityName = "Entity"
 			}
 
+			if startVar, assocName, ok := parseReverseAssociationRetrieve(ctx, dbSource, entityName); ok {
+				return fmt.Sprintf("retrieve $%s from $%s/%s;", outputVar, startVar, assocName)
+			}
+
 			stmt := fmt.Sprintf("retrieve $%s from %s", outputVar, entityName)
 
 			if dbSource.XPathConstraint != "" {
-				constraint := strings.TrimSpace(dbSource.XPathConstraint)
-				if strings.HasPrefix(constraint, "[") && strings.HasSuffix(constraint, "]") {
-					constraint = constraint[1 : len(constraint)-1]
-				}
+				constraint := formatXPathConstraintForWhere(dbSource.XPathConstraint)
 				stmt += fmt.Sprintf("\n    where %s", constraint)
 			}
 
@@ -329,10 +355,13 @@ func formatAction(
 					stmt += "\n    limit 1"
 				case microflows.RangeTypeCustom:
 					if dbSource.Range.Limit != "" {
-						stmt += fmt.Sprintf("\n    limit %s", dbSource.Range.Limit)
+						stmt += fmt.Sprintf("\n    limit %s", normalizeExpressionSource(dbSource.Range.Limit))
 					}
 					if dbSource.Range.Offset != "" {
-						stmt += fmt.Sprintf("\n    offset %s", dbSource.Range.Offset)
+						if strings.Contains(dbSource.Range.Limit, "\n") && !strings.HasSuffix(dbSource.Range.Limit, "\n") {
+							stmt += "\n"
+						}
+						stmt += fmt.Sprintf("\n    offset %s", normalizeExpressionSource(dbSource.Range.Offset))
 					}
 				}
 			}
@@ -366,6 +395,7 @@ func formatAction(
 		if node == "" {
 			node = defaultLogNodeExpression
 		}
+		node = normalizeExpressionSource(node)
 		message := "'Message'"
 		if a.MessageTemplate != nil && len(a.MessageTemplate.Translations) > 0 {
 			// Get message text from template (prefer en_US, fallback to any)
@@ -384,7 +414,7 @@ func formatAction(
 		if len(a.TemplateParameters) > 0 {
 			var params []string
 			for i, expr := range a.TemplateParameters {
-				params = append(params, fmt.Sprintf("{%d} = %s", i+1, expr))
+				params = append(params, fmt.Sprintf("{%d} = %s", i+1, normalizeExpressionSource(expr)))
 			}
 			withClause = fmt.Sprintf(" with (%s)", strings.Join(params, ", "))
 		}
@@ -407,7 +437,7 @@ func formatAction(
 				if idx := strings.LastIndex(paramName, "."); idx != -1 {
 					paramName = paramName[idx+1:]
 				}
-				params = append(params, fmt.Sprintf("%s = %s", paramName, pm.Argument))
+				params = append(params, fmt.Sprintf("%s = %s", paramName, normalizeCallArgumentExpression(pm.Argument)))
 			}
 		}
 
@@ -443,15 +473,19 @@ func formatAction(
 				}
 			case *microflows.ExpressionBasedCodeActionParameterValue:
 				if v.Expression != "" {
-					valueStr = v.Expression
+					valueStr = normalizeExpressionSource(v.Expression)
 				}
 			case *microflows.BasicCodeActionParameterValue:
 				if v.Argument != "" {
-					valueStr = v.Argument
+					valueStr = normalizeExpressionSource(v.Argument)
 				}
 			case *microflows.EntityTypeCodeActionParameterValue:
 				if v.Entity != "" {
 					valueStr = mdlQuote(v.Entity)
+				}
+			case *microflows.MicroflowParameterValue:
+				if v.Microflow != "" {
+					valueStr = v.Microflow
 				}
 			}
 			params = append(params, fmt.Sprintf("%s = %s", paramName, valueStr))
@@ -479,7 +513,7 @@ func formatAction(
 
 		var params []string
 		for _, pm := range a.ParameterMappings {
-			params = append(params, fmt.Sprintf("%s = %s", pm.ParameterName, pm.Argument))
+			params = append(params, fmt.Sprintf("%s = %s", pm.ParameterName, normalizeExpressionSource(pm.Argument)))
 		}
 
 		paramStr := ""
@@ -518,7 +552,7 @@ func formatAction(
 			// Extract just the parameter name from the qualified name
 			parts := strings.Split(pm.Parameter, ".")
 			paramName := parts[len(parts)-1]
-			params = append(params, fmt.Sprintf("$%s = %s", paramName, pm.Argument))
+			params = append(params, fmt.Sprintf("$%s = %s", paramName, normalizeExpressionSource(pm.Argument)))
 		}
 
 		// Build the statement
@@ -556,7 +590,11 @@ func formatAction(
 		}
 		result := fmt.Sprintf("show message %s type %s", message, msgType)
 		if len(a.TemplateParameters) > 0 {
-			result += " objects [" + strings.Join(a.TemplateParameters, ", ") + "]"
+			params := make([]string, 0, len(a.TemplateParameters))
+			for _, expr := range a.TemplateParameters {
+				params = append(params, normalizeExpressionSource(expr))
+			}
+			result += " objects [" + strings.Join(params, ", ") + "]"
 		}
 		return result + ";"
 
@@ -677,6 +715,241 @@ func formatAction(
 	}
 }
 
+func joinExpressionAssignments(parts []string) string {
+	if len(parts) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for i, part := range parts {
+		if i > 0 {
+			if strings.Contains(parts[i-1], "\n") {
+				if strings.HasSuffix(parts[i-1], "\n") {
+					b.WriteString(", ")
+				} else {
+					b.WriteString("\n, ")
+				}
+			} else {
+				b.WriteString(", ")
+			}
+		}
+		b.WriteString(part)
+	}
+	return b.String()
+}
+
+func normalizeCallArgumentExpression(expr string) string {
+	return strings.TrimRight(normalizeExpressionSource(expr), " \t\r\n")
+}
+
+func formatXPathConstraintForWhere(raw string) string {
+	constraint := strings.TrimSpace(raw)
+	if constraint == "" {
+		return ""
+	}
+
+	if parts, ok := splitTopLevelXPathPredicates(constraint); ok {
+		return strings.Join(parts, " and ")
+	}
+
+	if strings.HasPrefix(constraint, "[") && strings.HasSuffix(constraint, "]") {
+		return constraint[1 : len(constraint)-1]
+	}
+
+	return constraint
+}
+
+func parseReverseAssociationRetrieve(
+	ctx *ExecContext,
+	source *microflows.DatabaseRetrieveSource,
+	entityName string,
+) (string, string, bool) {
+	if ctx == nil || ctx.Backend == nil || source == nil || entityName == "" {
+		return "", "", false
+	}
+	if len(source.Sorting) > 0 || !isRangeAllOrNil(source.Range) {
+		return "", "", false
+	}
+
+	assocName, startVar, ok := parseReverseAssociationXPath(source.XPathConstraint)
+	if !ok || !databaseRetrieveMatchesAssociationTarget(ctx, entityName, assocName) {
+		return "", "", false
+	}
+	return startVar, assocName, true
+}
+
+func isRangeAllOrNil(r *microflows.Range) bool {
+	return r == nil || r.RangeType == "" || r.RangeType == microflows.RangeTypeAll
+}
+
+func parseReverseAssociationXPath(raw string) (string, string, bool) {
+	parts, ok := splitTopLevelXPathPredicates(raw)
+	if !ok || len(parts) != 1 {
+		return "", "", false
+	}
+
+	condition := strings.TrimSpace(parts[0])
+	if strings.ContainsAny(condition, "<>!") || strings.Count(condition, "=") != 1 {
+		return "", "", false
+	}
+
+	sides := strings.SplitN(condition, "=", 2)
+	assocName := strings.TrimSpace(sides[0])
+	startVar := strings.TrimSpace(sides[1])
+	if !isQualifiedAssociationName(assocName) || !strings.HasPrefix(startVar, "$") {
+		return "", "", false
+	}
+
+	startVar = strings.TrimPrefix(startVar, "$")
+	if !isSimpleMendixName(startVar) {
+		return "", "", false
+	}
+	return assocName, startVar, true
+}
+
+func isQualifiedAssociationName(name string) bool {
+	parts := strings.Split(name, ".")
+	return len(parts) == 2 && isSimpleMendixName(parts[0]) && isSimpleMendixName(parts[1])
+}
+
+func isSimpleMendixName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i, r := range name {
+		if r == '_' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || i > 0 && r >= '0' && r <= '9' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func databaseRetrieveMatchesAssociationTarget(ctx *ExecContext, entityName, assocQualifiedName string) bool {
+	moduleName, assocName, ok := strings.Cut(assocQualifiedName, ".")
+	if !ok {
+		return false
+	}
+
+	mod, err := ctx.Backend.GetModuleByName(moduleName)
+	if err != nil || mod == nil {
+		return false
+	}
+	dm, err := ctx.Backend.GetDomainModel(mod.ID)
+	if err != nil || dm == nil {
+		return false
+	}
+
+	entityNames := make(map[model.ID]string, len(dm.Entities))
+	for _, entity := range dm.Entities {
+		entityNames[entity.ID] = moduleName + "." + entity.Name
+	}
+	for _, assoc := range dm.Associations {
+		if assoc.Name == assocName {
+			return entityNames[assoc.ParentID] == entityName
+		}
+	}
+	return false
+}
+
+func splitTopLevelXPathPredicates(raw string) ([]string, bool) {
+	var parts []string
+	input := strings.TrimSpace(raw)
+	if input == "" {
+		return nil, false
+	}
+
+	i := 0
+	for i < len(input) {
+		for i < len(input) && (input[i] == ' ' || input[i] == '\t' || input[i] == '\r' || input[i] == '\n') {
+			i++
+		}
+		if i >= len(input) {
+			break
+		}
+		if input[i] != '[' {
+			return nil, false
+		}
+
+		start := i + 1
+		depth := 1
+		var quote byte
+		for i = start; i < len(input); i++ {
+			ch := input[i]
+			if quote != 0 {
+				if ch == quote {
+					quote = 0
+				}
+				continue
+			}
+			switch ch {
+			case '\'', '"':
+				quote = ch
+			case '[':
+				depth++
+			case ']':
+				depth--
+				if depth == 0 {
+					part := strings.TrimSpace(input[start:i])
+					parts = append(parts, part)
+					i++
+					goto nextPredicate
+				}
+			}
+		}
+		return nil, false
+
+	nextPredicate:
+	}
+
+	if len(parts) == 0 {
+		return nil, false
+	}
+
+	return parts, true
+}
+
+func normalizeExpressionSource(expr string) string {
+	if expr == "" {
+		return ""
+	}
+
+	var b strings.Builder
+	b.Grow(len(expr))
+	inString := false
+
+	for i := 0; i < len(expr); i++ {
+		ch := expr[i]
+		if !inString {
+			b.WriteByte(ch)
+			if ch == '\'' {
+				inString = true
+			}
+			continue
+		}
+
+		switch ch {
+		case '\'':
+			if i+1 < len(expr) && expr[i+1] == '\'' {
+				b.WriteString("''")
+				i++
+				continue
+			}
+			b.WriteByte(ch)
+			inString = false
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		default:
+			b.WriteByte(ch)
+		}
+	}
+
+	return b.String()
+}
+
 // formatWorkflowOperationAction formats a workflow operation action as MDL.
 func formatWorkflowOperationAction(ctx *ExecContext, a *microflows.WorkflowOperationAction) string {
 	if a.Operation == nil {
@@ -715,9 +988,9 @@ func formatListOperation(ctx *ExecContext, op microflows.ListOperation, outputVa
 	case *microflows.TailOperation:
 		return fmt.Sprintf("$%s = tail($%s);", outputVar, o.ListVariable)
 	case *microflows.FindOperation:
-		return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariable, o.Expression)
+		return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariable, normalizeExpressionSource(o.Expression))
 	case *microflows.FilterOperation:
-		return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariable, o.Expression)
+		return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariable, normalizeExpressionSource(o.Expression))
 	case *microflows.SortOperation:
 		if len(o.Sorting) > 0 {
 			var sortCols []string
@@ -755,26 +1028,26 @@ func formatListOperation(ctx *ExecContext, op microflows.ListOperation, outputVa
 	case *microflows.FindByAttributeOperation:
 		fieldName := extractFieldName(o.Attribute, o.Association)
 		if fieldName != "" && o.Expression != "" {
-			return fmt.Sprintf("$%s = find($%s, %s = %s);", outputVar, o.ListVariable, fieldName, o.Expression)
+			return fmt.Sprintf("$%s = find($%s, %s = %s);", outputVar, o.ListVariable, fieldName, normalizeExpressionSource(o.Expression))
 		} else if o.Expression != "" {
-			return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariable, o.Expression)
+			return fmt.Sprintf("$%s = find($%s, %s);", outputVar, o.ListVariable, normalizeExpressionSource(o.Expression))
 		}
 		return fmt.Sprintf("-- $%s = find($%s) — missing attribute/expression", outputVar, o.ListVariable)
 	case *microflows.FilterByAttributeOperation:
 		fieldName := extractFieldName(o.Attribute, o.Association)
 		if fieldName != "" && o.Expression != "" {
-			return fmt.Sprintf("$%s = filter($%s, %s = %s);", outputVar, o.ListVariable, fieldName, o.Expression)
+			return fmt.Sprintf("$%s = filter($%s, %s = %s);", outputVar, o.ListVariable, fieldName, normalizeExpressionSource(o.Expression))
 		} else if o.Expression != "" {
-			return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariable, o.Expression)
+			return fmt.Sprintf("$%s = filter($%s, %s);", outputVar, o.ListVariable, normalizeExpressionSource(o.Expression))
 		}
 		return fmt.Sprintf("-- $%s = filter($%s) — missing attribute/expression", outputVar, o.ListVariable)
 	case *microflows.ListRangeOperation:
 		if o.OffsetExpression != "" && o.LimitExpression != "" {
-			return fmt.Sprintf("$%s = range($%s, %s, %s);", outputVar, o.ListVariable, o.OffsetExpression, o.LimitExpression)
+			return fmt.Sprintf("$%s = range($%s, %s, %s);", outputVar, o.ListVariable, normalizeExpressionSource(o.OffsetExpression), normalizeExpressionSource(o.LimitExpression))
 		} else if o.OffsetExpression != "" {
-			return fmt.Sprintf("$%s = range($%s, %s);", outputVar, o.ListVariable, o.OffsetExpression)
+			return fmt.Sprintf("$%s = range($%s, %s);", outputVar, o.ListVariable, normalizeExpressionSource(o.OffsetExpression))
 		} else if o.LimitExpression != "" {
-			return fmt.Sprintf("$%s = range($%s, 0, %s);", outputVar, o.ListVariable, o.LimitExpression)
+			return fmt.Sprintf("$%s = range($%s, 0, %s);", outputVar, o.ListVariable, normalizeExpressionSource(o.LimitExpression))
 		}
 		return fmt.Sprintf("$%s = range($%s);", outputVar, o.ListVariable)
 	default:
@@ -855,7 +1128,7 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 			if i > 0 {
 				sb.WriteString(", ")
 			}
-			sb.WriteString(fmt.Sprintf("{%d} = %s", i+1, param))
+			sb.WriteString(fmt.Sprintf("{%d} = %s", i+1, normalizeExpressionSource(param)))
 		}
 		sb.WriteString(")")
 	}
@@ -866,16 +1139,16 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 			sb.WriteString("\n    header ")
 			sb.WriteString(mdlQuote(h.Name))
 			sb.WriteString(" = ")
-			sb.WriteString(h.Value)
+			sb.WriteString(normalizeExpressionSource(h.Value))
 		}
 	}
 
 	// Authentication
 	if a.HttpConfiguration != nil && a.HttpConfiguration.UseAuthentication {
 		sb.WriteString("\n    auth basic ")
-		sb.WriteString(a.HttpConfiguration.Username)
+		sb.WriteString(normalizeExpressionSource(a.HttpConfiguration.Username))
 		sb.WriteString(" password ")
-		sb.WriteString(a.HttpConfiguration.Password)
+		sb.WriteString(normalizeExpressionSource(a.HttpConfiguration.Password))
 	}
 
 	// Body
@@ -892,7 +1165,7 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 						if i > 0 {
 							sb.WriteString(", ")
 						}
-						sb.WriteString(fmt.Sprintf("{%d} = %s", i+1, param))
+						sb.WriteString(fmt.Sprintf("{%d} = %s", i+1, normalizeExpressionSource(param)))
 					}
 					sb.WriteString(")")
 				}
@@ -912,7 +1185,7 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 	// Timeout
 	if a.TimeoutExpression != "" {
 		sb.WriteString("\n    timeout ")
-		sb.WriteString(a.TimeoutExpression)
+		sb.WriteString(normalizeExpressionSource(a.TimeoutExpression))
 	}
 
 	// Returns
@@ -964,14 +1237,14 @@ func formatRestOperationCallAction(ctx *ExecContext, a *microflows.RestOperation
 		if idx := strings.LastIndex(name, "."); idx >= 0 {
 			name = name[idx+1:]
 		}
-		allParams = append(allParams, struct{ name, value string }{name, pm.Value})
+		allParams = append(allParams, struct{ name, value string }{name, normalizeExpressionSource(pm.Value)})
 	}
 	for _, qm := range a.QueryParameterMappings {
 		name := qm.Parameter
 		if idx := strings.LastIndex(name, "."); idx >= 0 {
 			name = name[idx+1:]
 		}
-		allParams = append(allParams, struct{ name, value string }{name, qm.Value})
+		allParams = append(allParams, struct{ name, value string }{name, normalizeExpressionSource(qm.Value)})
 	}
 	if len(allParams) > 0 {
 		sb.WriteString("\n    with (")
@@ -1012,7 +1285,7 @@ func formatExecuteDatabaseQueryAction(ctx *ExecContext, a *microflows.ExecuteDat
 
 	// Dynamic query override
 	if a.DynamicQuery != "" {
-		sb.WriteString(fmt.Sprintf(" dynamic %s", a.DynamicQuery))
+		sb.WriteString(fmt.Sprintf(" dynamic %s", normalizeExpressionSource(a.DynamicQuery)))
 	}
 
 	// Parameter mappings
@@ -1022,7 +1295,7 @@ func formatExecuteDatabaseQueryAction(ctx *ExecContext, a *microflows.ExecuteDat
 			if i > 0 {
 				sb.WriteString(", ")
 			}
-			sb.WriteString(fmt.Sprintf("%s = %s", pm.ParameterName, pm.Value))
+			sb.WriteString(fmt.Sprintf("%s = %s", pm.ParameterName, normalizeExpressionSource(pm.Value)))
 		}
 		sb.WriteString(")")
 	}
@@ -1034,7 +1307,7 @@ func formatExecuteDatabaseQueryAction(ctx *ExecContext, a *microflows.ExecuteDat
 			if i > 0 {
 				sb.WriteString(", ")
 			}
-			sb.WriteString(fmt.Sprintf("%s = %s", cm.ParameterName, cm.Value))
+			sb.WriteString(fmt.Sprintf("%s = %s", cm.ParameterName, normalizeExpressionSource(cm.Value)))
 		}
 		sb.WriteString(")")
 	}
@@ -1165,7 +1438,7 @@ func (e *Executor) formatRestCallAction(a *microflows.RestCallAction) string {
 func formatSplitCondition(cond microflows.SplitCondition) string {
 	switch c := cond.(type) {
 	case *microflows.ExpressionSplitCondition:
-		expr := strings.TrimRight(c.Expression, " \t\n\r")
+		expr := strings.TrimRight(normalizeExpressionSource(c.Expression), " \t\n\r")
 		if expr == "" {
 			return "true"
 		}
@@ -1181,7 +1454,7 @@ func formatSplitCondition(cond microflows.SplitCondition) string {
 			if idx := strings.LastIndex(paramName, "."); idx >= 0 {
 				paramName = paramName[idx+1:]
 			}
-			arg := strings.TrimRight(pm.Argument, " \t\n\r")
+			arg := strings.TrimRight(normalizeExpressionSource(pm.Argument), " \t\n\r")
 			if paramName != "" {
 				args = append(args, fmt.Sprintf("%s = %s", paramName, arg))
 			} else {

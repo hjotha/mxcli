@@ -387,6 +387,34 @@ func emitActivityStatement(
 
 	// Emit @ annotations before the statement
 	emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+	appendFormattedStatement(ctx, obj, stmt, activityMap, flowsByOrigin, entityNames, microflowNames, lines, indentStr)
+}
+
+// appendFormattedStatement appends the formatted activity statement itself,
+// including any ON ERROR suffix or custom error-handler block, but without
+// emitting leading annotations. This is shared by the main describer and the
+// error-handler collector, where annotations are intentionally suppressed.
+func appendFormattedStatement(
+	ctx *ExecContext,
+	obj microflows.MicroflowObject,
+	stmt string,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indentStr string,
+) {
+	if stmt == "" {
+		return
+	}
+
+	// Unsupported actions are rendered as MDL comments. They must stand alone;
+	// callers that want annotations emit them separately before reaching here.
+	if strings.HasPrefix(strings.TrimSpace(stmt), "--") {
+		*lines = append(*lines, indentStr+stmt)
+		return
+	}
 
 	currentID := obj.GetID()
 	flows := flowsByOrigin[currentID]
@@ -395,40 +423,42 @@ func emitActivityStatement(
 	activity, isAction := obj.(*microflows.ActionActivity)
 	if !isAction {
 		*lines = append(*lines, indentStr+stmt)
-		return
-	}
-
-	errType := getActionErrorHandlingType(activity)
-	suffix := formatErrorHandlingSuffix(errType)
-
-	if errorHandlerFlow != nil && hasCustomErrorHandler(errType) {
-		errStmts := collectErrorHandlerStatements(
-			ctx,
-			errorHandlerFlow.DestinationID,
-			activityMap, flowsByOrigin, entityNames, microflowNames,
-		)
-
-		stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
-
-		errorSuffix := suffix
-		if errorSuffix == "" {
-			errorSuffix = " on error without rollback"
-		}
-
-		if len(errStmts) == 0 {
-			*lines = append(*lines, indentStr+stmtWithoutSemi+errorSuffix+" { };")
-		} else {
-			*lines = append(*lines, indentStr+stmtWithoutSemi+errorSuffix+" {")
-			for _, errStmt := range errStmts {
-				*lines = append(*lines, indentStr+"  "+errStmt)
-			}
-			*lines = append(*lines, indentStr+"};")
-		}
-	} else if suffix != "" {
-		stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
-		*lines = append(*lines, indentStr+stmtWithoutSemi+suffix+";")
 	} else {
-		*lines = append(*lines, indentStr+stmt)
+		errType := getActionErrorHandlingType(activity)
+		suffix := formatErrorHandlingSuffix(errType)
+
+		if hasCustomErrorHandler(errType) && errorHandlerFlow == nil {
+			stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
+			*lines = append(*lines, indentStr+stmtWithoutSemi+suffix+" { };")
+		} else if errorHandlerFlow != nil && hasCustomErrorHandler(errType) {
+			errStmts := collectErrorHandlerStatements(
+				ctx,
+				errorHandlerFlow.DestinationID,
+				activityMap, flowsByOrigin, entityNames, microflowNames,
+			)
+
+			stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
+
+			errorSuffix := suffix
+			if errorSuffix == "" {
+				errorSuffix = " on error without rollback"
+			}
+
+			if len(errStmts) == 0 {
+				*lines = append(*lines, indentStr+stmtWithoutSemi+errorSuffix+" { };")
+			} else {
+				*lines = append(*lines, indentStr+stmtWithoutSemi+errorSuffix+" {")
+				for _, errStmt := range errStmts {
+					*lines = append(*lines, indentStr+"  "+errStmt)
+				}
+				*lines = append(*lines, indentStr+"};")
+			}
+		} else if suffix != "" {
+			stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
+			*lines = append(*lines, indentStr+stmtWithoutSemi+suffix+";")
+		} else {
+			*lines = append(*lines, indentStr+stmt)
+		}
 	}
 }
 
@@ -457,7 +487,34 @@ func traverseFlow(
 	headerLineCount int,
 	annotationsByTarget map[model.ID][]string,
 ) {
-	if currentID == "" || visited[currentID] {
+	traverseFlowLoopAware(ctx, currentID, "", activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+}
+
+func traverseFlowLoopAware(
+	ctx *ExecContext,
+	currentID model.ID,
+	loopHeaderID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	if currentID == "" {
+		return
+	}
+	if loopHeaderID != "" && currentID == loopHeaderID {
+		*lines = append(*lines, strings.Repeat("  ", indent)+"continue;")
+		return
+	}
+	if visited[currentID] {
 		return
 	}
 
@@ -479,9 +536,22 @@ func traverseFlow(
 		if isMergePairedWithSplit(currentID, splitMergeMap) {
 			return
 		}
+		if isManualLoopHeaderMerge(currentID, activityMap, flowsByOrigin, splitMergeMap) {
+			startLine := len(*lines) + headerLineCount
+			indentStr := strings.Repeat("  ", indent)
+			visited[currentID] = true
+			*lines = append(*lines, indentStr+"while true")
+			*lines = append(*lines, indentStr+"begin")
+			for _, flow := range flowsByOrigin[currentID] {
+				traverseFlowLoopAware(ctx, flow.DestinationID, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			}
+			*lines = append(*lines, indentStr+"end while;")
+			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+			return
+		}
 		visited[currentID] = true
 		for _, flow := range flowsByOrigin[currentID] {
-			traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			traverseFlowLoopAware(ctx, flow.DestinationID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		}
 		return
 	}
@@ -521,7 +591,7 @@ func traverseFlow(
 		}
 
 		if isGuard {
-			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			traverseFlowUntilMergeLoopAware(ctx, trueFlow.DestinationID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
@@ -535,11 +605,11 @@ func traverseFlow(
 						break
 					}
 				}
-				traverseFlow(ctx, contID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				traverseFlowLoopAware(ctx, contID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			}
 		} else {
 			if trueFlow != nil {
-				traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+				traverseFlowUntilMergeLoopAware(ctx, trueFlow.DestinationID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
 			// Emit the ELSE branch only if it has statements. When the false
@@ -553,7 +623,7 @@ func traverseFlow(
 				for id := range visited {
 					visitedFalseBranch[id] = true
 				}
-				traverseFlowUntilMerge(ctx, falseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+				traverseFlowUntilMergeLoopAware(ctx, falseFlow.DestinationID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
 			*lines = append(*lines, indentStr+"end if;")
@@ -564,10 +634,17 @@ func traverseFlow(
 				visited[mergeID] = true
 				nextFlows := flowsByOrigin[mergeID]
 				for _, flow := range nextFlows {
-					traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+					traverseFlowLoopAware(ctx, flow.DestinationID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 				}
 			}
 		}
+		return
+	}
+
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
+		startLine := len(*lines) + headerLineCount
+		emitInheritanceSplitStatement(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 		return
 	}
 
@@ -588,7 +665,7 @@ func traverseFlow(
 		// Continue after the loop
 		flows := flowsByOrigin[currentID]
 		for _, flow := range flows {
-			traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			traverseFlowLoopAware(ctx, flow.DestinationID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		}
 		return
 	}
@@ -601,7 +678,7 @@ func traverseFlow(
 
 	// Follow normal (non-error-handler) outgoing flows
 	for _, flow := range normalFlows {
-		traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		traverseFlowLoopAware(ctx, flow.DestinationID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 	}
 }
 
@@ -624,7 +701,35 @@ func traverseFlowUntilMerge(
 	headerLineCount int,
 	annotationsByTarget map[model.ID][]string,
 ) {
-	if currentID == "" || currentID == mergeID || visited[currentID] {
+	traverseFlowUntilMergeLoopAware(ctx, currentID, mergeID, "", activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+}
+
+func traverseFlowUntilMergeLoopAware(
+	ctx *ExecContext,
+	currentID model.ID,
+	mergeID model.ID,
+	loopHeaderID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	if currentID == "" || currentID == mergeID {
+		return
+	}
+	if loopHeaderID != "" && currentID == loopHeaderID {
+		*lines = append(*lines, strings.Repeat("  ", indent)+"continue;")
+		return
+	}
+	if visited[currentID] {
 		return
 	}
 
@@ -637,7 +742,7 @@ func traverseFlowUntilMerge(
 	if _, isMerge := obj.(*microflows.ExclusiveMerge); isMerge {
 		flows := flowsByOrigin[currentID]
 		for _, flow := range flows {
-			traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			traverseFlowUntilMergeLoopAware(ctx, flow.DestinationID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		}
 		return
 	}
@@ -675,7 +780,7 @@ func traverseFlowUntilMerge(
 		}
 
 		if isGuard {
-			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			traverseFlowUntilMergeLoopAware(ctx, trueFlow.DestinationID, nestedMergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
@@ -689,11 +794,11 @@ func traverseFlowUntilMerge(
 						break
 					}
 				}
-				traverseFlowUntilMerge(ctx, contID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				traverseFlowUntilMergeLoopAware(ctx, contID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			}
 		} else {
 			if trueFlow != nil {
-				traverseFlowUntilMerge(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+				traverseFlowUntilMergeLoopAware(ctx, trueFlow.DestinationID, nestedMergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
 			if falseFlow != nil {
@@ -702,7 +807,7 @@ func traverseFlowUntilMerge(
 				for id := range visited {
 					visitedFalseBranch[id] = true
 				}
-				traverseFlowUntilMerge(ctx, falseFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+				traverseFlowUntilMergeLoopAware(ctx, falseFlow.DestinationID, nestedMergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
 			*lines = append(*lines, indentStr+"end if;")
@@ -713,10 +818,17 @@ func traverseFlowUntilMerge(
 				visited[nestedMergeID] = true
 				nextFlows := flowsByOrigin[nestedMergeID]
 				for _, flow := range nextFlows {
-					traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+					traverseFlowUntilMergeLoopAware(ctx, flow.DestinationID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 				}
 			}
 		}
+		return
+	}
+
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
+		startLine := len(*lines) + headerLineCount
+		emitInheritanceSplitStatement(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 		return
 	}
 
@@ -737,7 +849,7 @@ func traverseFlowUntilMerge(
 		// Continue after the loop within the branch
 		flows := flowsByOrigin[currentID]
 		for _, flow := range flows {
-			traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			traverseFlowUntilMergeLoopAware(ctx, flow.DestinationID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		}
 		return
 	}
@@ -750,7 +862,67 @@ func traverseFlowUntilMerge(
 
 	// Follow normal (non-error-handler) outgoing flows until merge
 	for _, flow := range normalFlows {
-		traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		traverseFlowUntilMergeLoopAware(ctx, flow.DestinationID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+	}
+}
+
+func emitInheritanceSplitStatement(
+	ctx *ExecContext,
+	currentID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	obj := activityMap[currentID]
+	stmt := strings.TrimSuffix(strings.TrimSpace(formatActivity(ctx, obj, entityNames, microflowNames)), ";")
+	indentStr := strings.Repeat("  ", indent)
+	if stmt != "" {
+		emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+		*lines = append(*lines, indentStr+stmt)
+	}
+
+	mergeID := splitMergeMap[currentID]
+	var elseFlow *microflows.SequenceFlow
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+		caseValue := inheritanceCaseValue(flow.CaseValue)
+		if caseValue == "" {
+			elseFlow = flow
+			continue
+		}
+		*lines = append(*lines, indentStr+"case "+caseValue)
+		traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+	if elseFlow != nil {
+		*lines = append(*lines, indentStr+"else")
+		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+	*lines = append(*lines, indentStr+"end split;")
+
+	if mergeID != "" {
+		visited[mergeID] = true
+		for _, flow := range findNormalFlows(flowsByOrigin[mergeID]) {
+			traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		}
+	}
+}
+
+func inheritanceCaseValue(cv microflows.CaseValue) string {
+	switch c := cv.(type) {
+	case *microflows.InheritanceCase:
+		return c.EntityQualifiedName
+	case microflows.InheritanceCase:
+		return c.EntityQualifiedName
+	default:
+		return ""
 	}
 }
 
@@ -771,56 +943,11 @@ func traverseLoopBody(
 	headerLineCount int,
 	annotationsByTarget map[model.ID][]string,
 ) {
-	if currentID == "" || visited[currentID] {
-		return
-	}
-
-	obj := activityMap[currentID]
-	if obj == nil {
-		return
-	}
-
-	visited[currentID] = true
-
-	stmt := formatActivity(ctx, obj, entityNames, microflowNames)
-	indentStr := strings.Repeat("  ", indent)
-
-	// Handle nested LoopedActivity specially
-	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
-		startLine := len(*lines) + headerLineCount
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
-		*lines = append(*lines, indentStr+"begin")
-		emitLoopBody(ctx, loop, flowsByOrigin, flowsByDest, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-
-		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
-		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-
-		// Continue after the nested loop within the parent loop body
-		flows := flowsByOrigin[currentID]
-		for _, flow := range flows {
-			if _, inLoop := activityMap[flow.DestinationID]; inLoop {
-				traverseLoopBody(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-			}
-		}
-		return
-	}
-
-	// Regular activity
-	startLine := len(*lines) + headerLineCount
-	normalFlows := findNormalFlows(flowsByOrigin[currentID])
-	emitActivityStatement(ctx, obj, stmt, flowsByOrigin, flowsByDest, activityMap, entityNames, microflowNames, lines, indentStr, annotationsByTarget)
-	recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-
-	// Follow normal (non-error-handler) outgoing flows within the loop body
-	for _, flow := range normalFlows {
-		if _, inLoop := activityMap[flow.DestinationID]; inLoop {
-			traverseLoopBody(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-		}
-	}
+	// Loop bodies can contain the same structured control flow as top-level
+	// microflows. Reuse the main traversal with a loop-local split/merge map so
+	// nested IF/ELSE blocks emit `else` / `end if;` correctly.
+	splitMergeMap := findSplitMergePointsForGraph(ctx, activityMap, flowsByOrigin)
+	traverseFlow(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 }
 
 // emitLoopBody processes the inner objects of a LoopedActivity.
@@ -920,6 +1047,50 @@ func emitLoopBody(
 func isMergePairedWithSplit(mergeID model.ID, splitMergeMap map[model.ID]model.ID) bool {
 	for _, v := range splitMergeMap {
 		if v == mergeID {
+			return true
+		}
+	}
+	return false
+}
+
+func isManualLoopHeaderMerge(
+	mergeID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+) bool {
+	if _, ok := activityMap[mergeID].(*microflows.ExclusiveMerge); !ok {
+		return false
+	}
+	if isMergePairedWithSplit(mergeID, splitMergeMap) || len(flowsByOrigin[mergeID]) == 0 {
+		return false
+	}
+	for _, flow := range flowsByOrigin[mergeID] {
+		if canReachNode(flow.DestinationID, mergeID, flowsByOrigin, make(map[model.ID]bool)) {
+			return true
+		}
+	}
+	return false
+}
+
+func canReachNode(
+	currentID model.ID,
+	targetID model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	visited map[model.ID]bool,
+) bool {
+	if currentID == "" {
+		return false
+	}
+	if currentID == targetID {
+		return true
+	}
+	if visited[currentID] {
+		return false
+	}
+	visited[currentID] = true
+	for _, flow := range flowsByOrigin[currentID] {
+		if canReachNode(flow.DestinationID, targetID, flowsByOrigin, visited) {
 			return true
 		}
 	}
@@ -1044,6 +1215,188 @@ func getActionErrorHandlingType(activity *microflows.ActionActivity) microflows.
 	}
 }
 
+func cloneVisited(visited map[model.ID]bool) map[model.ID]bool {
+	cloned := make(map[model.ID]bool, len(visited))
+	for id := range visited {
+		cloned[id] = true
+	}
+	return cloned
+}
+
+func collectStructuredStatements(
+	ctx *ExecContext,
+	currentID model.ID,
+	stopID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+) {
+	if currentID == "" || currentID == stopID || visited[currentID] {
+		return
+	}
+
+	obj := activityMap[currentID]
+	if obj == nil {
+		return
+	}
+
+	if _, isMerge := obj.(*microflows.ExclusiveMerge); isMerge {
+		// Error-handler collection handles structured IFs by traversing to the
+		// known merge explicitly after each split. Any merge reached directly here
+		// is therefore the rejoin point back to the outer graph and must not leak
+		// statements from the main flow into the `on error { ... }` block.
+		return
+	}
+
+	visited[currentID] = true
+
+	stmt := formatActivity(ctx, obj, entityNames, microflowNames)
+	indentStr := strings.Repeat("  ", indent)
+
+	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
+		if stmt != "" {
+			*lines = append(*lines, indentStr+stmt)
+		}
+
+		flows := flowsByOrigin[currentID]
+		nestedMergeID := splitMergeMap[currentID]
+		trueFlow, falseFlow := findBranchFlows(flows)
+
+		isGuard := false
+		if trueFlow != nil {
+			if _, isEnd := activityMap[trueFlow.DestinationID].(*microflows.EndEvent); isEnd {
+				isGuard = true
+				if falseFlow != nil {
+					if _, falseIsEnd := activityMap[falseFlow.DestinationID].(*microflows.EndEvent); falseIsEnd {
+						isGuard = false
+					}
+				}
+			}
+		}
+
+		if isGuard {
+			traverseToID := trueFlow.DestinationID
+			collectStructuredStatements(ctx, traverseToID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1)
+			*lines = append(*lines, indentStr+"end if;")
+
+			if falseFlow != nil {
+				contID := falseFlow.DestinationID
+				if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
+					visited[contID] = true
+					for _, flow := range findNormalFlows(flowsByOrigin[contID]) {
+						contID = flow.DestinationID
+						break
+					}
+				}
+				collectStructuredStatements(ctx, contID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+			}
+		} else {
+			if trueFlow != nil {
+				collectStructuredStatements(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1)
+			}
+
+			falseHasBody := falseFlow != nil && falseFlow.DestinationID != nestedMergeID
+			if falseHasBody {
+				*lines = append(*lines, indentStr+"else")
+				collectStructuredStatements(ctx, falseFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1)
+			}
+
+			*lines = append(*lines, indentStr+"end if;")
+
+			if nestedMergeID != "" && nestedMergeID != stopID {
+				visited[nestedMergeID] = true
+				for _, flow := range findNormalFlows(flowsByOrigin[nestedMergeID]) {
+					collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+				}
+			}
+		}
+		return
+	}
+
+	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
+		if stmt != "" {
+			*lines = append(*lines, indentStr+stmt)
+		}
+		*lines = append(*lines, indentStr+"begin")
+		collectLoopBodyStatements(ctx, loop, flowsByOrigin, entityNames, microflowNames, lines, indent)
+		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
+
+		for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+			collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+		}
+		return
+	}
+
+	appendFormattedStatement(ctx, obj, stmt, activityMap, flowsByOrigin, entityNames, microflowNames, lines, indentStr)
+
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+		collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+	}
+}
+
+func collectLoopBodyStatements(
+	ctx *ExecContext,
+	loop *microflows.LoopedActivity,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+) {
+	if loop == nil || loop.ObjectCollection == nil || len(loop.ObjectCollection.Objects) == 0 {
+		return
+	}
+
+	loopActivityMap := make(map[model.ID]microflows.MicroflowObject)
+	for _, loopObj := range loop.ObjectCollection.Objects {
+		loopActivityMap[loopObj.GetID()] = loopObj
+	}
+
+	loopFlowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
+	for _, flow := range loop.ObjectCollection.Flows {
+		loopFlowsByOrigin[flow.OriginID] = append(loopFlowsByOrigin[flow.OriginID], flow)
+	}
+	for originID, flows := range flowsByOrigin {
+		if _, inLoop := loopActivityMap[originID]; inLoop {
+			if _, exists := loopFlowsByOrigin[originID]; !exists {
+				loopFlowsByOrigin[originID] = flows
+			}
+		}
+	}
+
+	incomingCount := make(map[model.ID]int)
+	for _, loopObj := range loop.ObjectCollection.Objects {
+		incomingCount[loopObj.GetID()] = 0
+	}
+	for _, flows := range loopFlowsByOrigin {
+		for _, flow := range flows {
+			if _, inLoop := loopActivityMap[flow.DestinationID]; inLoop {
+				incomingCount[flow.DestinationID]++
+			}
+		}
+	}
+
+	var firstID model.ID
+	for id, count := range incomingCount {
+		if count == 0 {
+			firstID = id
+			break
+		}
+	}
+	if firstID == "" {
+		return
+	}
+
+	loopVisited := make(map[model.ID]bool)
+	loopSplitMergeMap := findSplitMergePointsForGraph(ctx, loopActivityMap, loopFlowsByOrigin)
+	collectStructuredStatements(ctx, firstID, "", loopActivityMap, loopFlowsByOrigin, loopSplitMergeMap, loopVisited, entityNames, microflowNames, lines, indent+1)
+}
+
 // collectErrorHandlerStatements traverses the error handler flow and collects statements.
 // Returns a slice of MDL statements for the error handler block.
 func collectErrorHandlerStatements(
@@ -1056,39 +1409,8 @@ func collectErrorHandlerStatements(
 ) []string {
 	var statements []string
 	visited := make(map[model.ID]bool)
-
-	var traverse func(id model.ID)
-	traverse = func(id model.ID) {
-		if id == "" || visited[id] {
-			return
-		}
-
-		obj := activityMap[id]
-		if obj == nil {
-			return
-		}
-
-		// Stop at merge points (rejoin with main flow) or end events
-		if _, isMerge := obj.(*microflows.ExclusiveMerge); isMerge {
-			return
-		}
-
-		visited[id] = true
-
-		stmt := formatActivity(ctx, obj, entityNames, microflowNames)
-		if stmt != "" {
-			statements = append(statements, stmt)
-		}
-
-		// Follow normal (non-error) flows
-		flows := flowsByOrigin[id]
-		normalFlows := findNormalFlows(flows)
-		for _, flow := range normalFlows {
-			traverse(flow.DestinationID)
-		}
-	}
-
-	traverse(startID)
+	splitMergeMap := findSplitMergePointsForGraph(ctx, activityMap, flowsByOrigin)
+	collectStructuredStatements(ctx, startID, "", activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, &statements, 0)
 	return statements
 }
 
