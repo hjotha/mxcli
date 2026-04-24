@@ -20,6 +20,12 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	if fb.declaredVars == nil {
 		fb.declaredVars = make(map[string]string)
 	}
+	if fb.callOutputRemaining == nil {
+		fb.callOutputRemaining = countMicroflowCallOutputs(stmts)
+	}
+	if fb.listInputVariables == nil {
+		fb.listInputVariables = collectListInputVariables(stmts)
+	}
 	// Set return value expression for error handler EndEvents
 	if returns != nil && returns.Variable != "" {
 		fb.returnValue = "$" + returns.Variable
@@ -58,7 +64,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	// deferred split→nextActivity flow honours @anchor(true: ..., false: ...).
 	pendingCase := ""
 	var pendingFlowAnchor *ast.FlowAnchors
-	for _, stmt := range stmts {
+	for i, stmt := range stmts {
 		// Snapshot the current statement's anchor annotation before addStatement
 		// can reset pendingAnnotations via recursive processing. The incoming
 		// side (To) is applied when this statement is the destination of the
@@ -96,7 +102,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 			}
 			applyUserAnchors(flow, originAnchor, destAnchor)
 			fb.flows = append(fb.flows, flow)
-			fb.addPendingEmptyErrorHandlerFlow(lastID, activityID)
+			fb.addPendingErrorHandlerFlowForStatement(lastID, activityID, stmt, statementsReferenceVar(stmts[i+1:], fb.errorHandlerSkipVar))
 			fb.previousStmtAnchor = stmtAnchor
 
 			// For compound statements (IF, LOOP), the exit point differs from entry point
@@ -128,6 +134,9 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	// Create EndEvent only if the flow doesn't already end with RETURN EndEvent(s)
 	// (e.g., when both branches of an IF/ELSE end with RETURN, EndEvents are already created)
 	if !fb.endsWithReturn {
+		if fb.returnValue == "" {
+			fb.returnValue = fb.inferReturnValueFromScope(returns)
+		}
 		fb.posX += fb.spacing / 2
 		fb.posY = fb.baseY // Ensure end event is on the happy path center line
 		endEvent := &microflows.EndEvent{
@@ -155,7 +164,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		}
 		applyUserAnchors(endFlow, originAnchor, nil)
 		fb.flows = append(fb.flows, endFlow)
-		fb.addPendingEmptyErrorHandlerFlow(lastID, endEvent.ID)
+		fb.addPendingErrorHandlerFlowForStatement(lastID, endEvent.ID, nil)
 		fb.previousStmtAnchor = nil
 	}
 
@@ -165,6 +174,153 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		Flows:           fb.flows,
 		AnnotationFlows: fb.annotationFlows,
 	}
+}
+
+func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
+	inputs := make(map[string]bool)
+	var walk func([]ast.MicroflowStatement)
+	walk = func(body []ast.MicroflowStatement) {
+		for _, stmt := range body {
+			switch s := stmt.(type) {
+			case *ast.ListOperationStmt:
+				if s.InputVariable != "" {
+					inputs[s.InputVariable] = true
+				}
+			case *ast.IfStmt:
+				walk(s.ThenBody)
+				walk(s.ElseBody)
+			case *ast.LoopStmt:
+				walk(s.Body)
+			case *ast.WhileStmt:
+				walk(s.Body)
+			case *ast.CallMicroflowStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CreateObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.MfCommitStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.DeleteObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.RestCallStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallJavaActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallExternalActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.ImportFromMappingStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			}
+		}
+	}
+	walk(stmts)
+	return inputs
+}
+
+func countMicroflowCallOutputs(stmts []ast.MicroflowStatement) map[string]int {
+	counts := make(map[string]int)
+	var walk func([]ast.MicroflowStatement)
+	walk = func(body []ast.MicroflowStatement) {
+		for _, stmt := range body {
+			switch s := stmt.(type) {
+			case *ast.CallMicroflowStmt:
+				if s.OutputVariable != "" {
+					counts[s.OutputVariable]++
+				}
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.IfStmt:
+				walk(s.ThenBody)
+				walk(s.ElseBody)
+			case *ast.LoopStmt:
+				walk(s.Body)
+			case *ast.WhileStmt:
+				walk(s.Body)
+			case *ast.CreateObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.MfCommitStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.DeleteObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.RestCallStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallJavaActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallExternalActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.ImportFromMappingStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			}
+		}
+	}
+	walk(stmts)
+	return counts
+}
+
+func (fb *flowBuilder) inferReturnValueFromScope(returns *ast.MicroflowReturnType) string {
+	if returns == nil || returns.Variable != "" {
+		return ""
+	}
+	target := ""
+	switch returns.Type.Kind {
+	case ast.TypeEntity:
+		if returns.Type.EntityRef != nil {
+			target = returns.Type.EntityRef.Module + "." + returns.Type.EntityRef.Name
+		}
+	case ast.TypeListOf:
+		if returns.Type.EntityRef != nil {
+			target = "List of " + returns.Type.EntityRef.Module + "." + returns.Type.EntityRef.Name
+		}
+	default:
+		return ""
+	}
+	if target == "" || fb.varTypes == nil {
+		return ""
+	}
+	var candidate string
+	for name, typ := range fb.varTypes {
+		if typ != target {
+			continue
+		}
+		if candidate != "" {
+			return ""
+		}
+		candidate = name
+	}
+	if candidate == "" {
+		return ""
+	}
+	return "$" + candidate
 }
 
 // addStatement converts an AST statement to a microflow activity and returns its ID.

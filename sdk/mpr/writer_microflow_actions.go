@@ -765,6 +765,20 @@ func serializeRestResultHandling(rh microflows.ResultHandling, outputVar string)
 		}
 		return doc
 
+	case *microflows.ResultHandlingHttpResponse:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(h.ID))},
+			{Key: "$Type", Value: "Microflows$ResultHandling"},
+			{Key: "Bind", Value: outputVar != ""},
+			{Key: "ImportMappingCall", Value: nil},
+			{Key: "ResultVariableName", Value: outputVar},
+			{Key: "VariableType", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+				{Key: "$Type", Value: "DataTypes$ObjectType"},
+				{Key: "Entity", Value: "System.HttpResponse"},
+			}},
+		}
+
 	case *microflows.ResultHandlingMapping:
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(h.ID))},
@@ -773,13 +787,16 @@ func serializeRestResultHandling(rh microflows.ResultHandling, outputVar string)
 		}
 		// ImportMappingCall - uses ReturnValueMapping (Studio Pro field name)
 		// with all required fields to make the mapping link visible in Studio Pro.
-		// SingleObject drives ForceSingleOccurrence and Range.SingleObject.
+		forceSingleOccurrence := h.SingleObject
+		if h.ForceSingleOccurrence != nil {
+			forceSingleOccurrence = *h.ForceSingleOccurrence
+		}
 		importCall := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 			{Key: "$Type", Value: "Microflows$ImportMappingCall"},
 			{Key: "Commit", Value: "YesWithoutEvents"},
 			{Key: "ContentType", Value: "Json"},
-			{Key: "ForceSingleOccurrence", Value: h.SingleObject},
+			{Key: "ForceSingleOccurrence", Value: forceSingleOccurrence},
 			{Key: "ObjectHandlingBackup", Value: "Create"},
 			{Key: "ParameterVariableName", Value: ""},
 			{Key: "Range", Value: bson.D{
@@ -921,6 +938,9 @@ func serializeListOperation(op microflows.ListOperation) bson.D {
 					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 					{Key: "$Type", Value: "DomainModels$AttributeRef"},
 					{Key: "Attribute", Value: item.AttributeQualifiedName}, // BY_NAME_REFERENCE stored as string
+				}
+				if len(item.EntityRefSteps) > 0 {
+					attrRef = append(attrRef, bson.E{Key: "EntityRef", Value: serializeIndirectEntityRef(item.EntityRefSteps)})
 				}
 				sortItem = append(sortItem, bson.E{Key: "AttributeRef", Value: attrRef})
 			}
@@ -1078,6 +1098,9 @@ func serializeSortItem(s *microflows.SortItem) bson.D {
 			{Key: "$Type", Value: "DomainModels$AttributeRef"},
 			{Key: "Attribute", Value: s.AttributeQualifiedName}, // BY_NAME_REFERENCE stored as string
 		}
+		if len(s.EntityRefSteps) > 0 {
+			attrRef = append(attrRef, bson.E{Key: "EntityRef", Value: serializeIndirectEntityRef(s.EntityRefSteps)})
+		}
 		doc = append(doc, bson.E{Key: "AttributeRef", Value: attrRef})
 	} else if s.AttributeID != "" {
 		// Legacy fallback: binary ID reference
@@ -1086,6 +1109,23 @@ func serializeSortItem(s *microflows.SortItem) bson.D {
 
 	doc = append(doc, bson.E{Key: "SortOrder", Value: string(s.Direction)})
 	return doc
+}
+
+func serializeIndirectEntityRef(steps []microflows.EntityRefStep) bson.D {
+	items := bson.A{int32(2)}
+	for _, step := range steps {
+		items = append(items, bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "DomainModels$EntityRefStep"},
+			{Key: "Association", Value: step.Association},
+			{Key: "DestinationEntity", Value: step.DestinationEntity},
+		})
+	}
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},
+		{Key: "Steps", Value: items},
+	}
 }
 
 // serializeCodeActionParameterValue serializes a CodeActionParameterValue to BSON.

@@ -503,6 +503,37 @@ func exprVarRefs(expr ast.Expression) []string {
 		}
 	case *ast.ParenExpr:
 		refs = append(refs, exprVarRefs(e.Inner)...)
+	case *ast.IfThenElseExpr:
+		refs = append(refs, exprVarRefs(e.Condition)...)
+		refs = append(refs, exprVarRefs(e.ThenExpr)...)
+		refs = append(refs, exprVarRefs(e.ElseExpr)...)
+	case *ast.SourceExpr:
+		refs = append(refs, exprVarRefs(e.Expression)...)
+		refs = append(refs, sourceVarRefs(e.Source)...)
+	}
+	return refs
+}
+
+func sourceVarRefs(source string) []string {
+	var refs []string
+	for i := 0; i < len(source); i++ {
+		if source[i] != '$' {
+			continue
+		}
+		start := i + 1
+		end := start
+		for end < len(source) {
+			c := source[end]
+			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
+				end++
+				continue
+			}
+			break
+		}
+		if end > start {
+			refs = append(refs, source[start:end])
+			i = end - 1
+		}
 	}
 	return refs
 }

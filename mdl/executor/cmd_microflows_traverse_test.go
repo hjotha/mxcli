@@ -356,6 +356,41 @@ func TestCollectErrorHandlerStatements_StopsAtMerge(t *testing.T) {
 	}
 }
 
+func TestCollectErrorHandlerStatements_StopsAtSharedContinuation(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("source"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("source")},
+			Action:       &microflows.RestCallAction{ErrorHandlingType: microflows.ErrorHandlingTypeCustomWithoutRollback},
+		},
+		mkID("err_log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("err_log")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Error", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "err"}}},
+		},
+		mkID("after"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("after")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Debug", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "after"}}},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("end"), ReturnValue: "$Response"},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("source"):  {mkFlow("source", "after"), mkErrorFlow("source", "err_log")},
+		mkID("err_log"): {mkFlow("err_log", "after")},
+		mkID("after"):   {mkFlow("after", "end")},
+	}
+
+	stmts := e.collectErrorHandlerStatements(mkID("err_log"), activityMap, flowsByOrigin, nil, nil)
+	if len(stmts) != 1 {
+		t.Fatalf("expected only the error-handler statement, got %d: %v", len(stmts), stmts)
+	}
+	assertContains(t, stmts[0], "log error")
+	if strings.Contains(strings.Join(stmts, "\n"), "after") {
+		t.Fatalf("shared continuation leaked into error handler: %v", stmts)
+	}
+}
+
 func TestTraverseFlow_CustomErrorHandlerWithIfElse(t *testing.T) {
 	e := newTestExecutor()
 

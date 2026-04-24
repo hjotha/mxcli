@@ -95,6 +95,21 @@ func TestFormatRestCallAction_WithTimeout(t *testing.T) {
 	assertContains(t, got, "timeout 30")
 }
 
+func TestFormatRestCallAction_HttpResponseResult(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.RestCallAction{
+		HttpConfiguration: &microflows.HttpConfiguration{
+			HttpMethod:       microflows.HttpMethodPost,
+			LocationTemplate: "https://api.example.com",
+		},
+		OutputVariable: "Response",
+		ResultHandling: &microflows.ResultHandlingHttpResponse{VariableName: "Response"},
+	}
+	got := e.formatRestCallAction(action)
+	assertContains(t, got, "$Response = rest call post")
+	assertContains(t, got, "returns Response")
+}
+
 func TestFormatRestCallAction_EscapesRawControlCharsInsideBodyParamExpressions(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.RestCallAction{

@@ -129,13 +129,23 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		Microflow:         mfQN,
 		ParameterMappings: mappings,
 	}
+	useReturnVariable := true
+	if s.OutputVariable != "" && fb.callOutputRemaining != nil {
+		remaining := fb.callOutputRemaining[s.OutputVariable]
+		if remaining > 1 {
+			useReturnVariable = false
+		}
+		if remaining > 0 {
+			fb.callOutputRemaining[s.OutputVariable] = remaining - 1
+		}
+	}
 
 	action := &microflows.MicroflowCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		MicroflowCall:      mfCall,
 		ResultVariableName: s.OutputVariable,
-		UseReturnVariable:  true,
+		UseReturnVariable:  useReturnVariable,
 	}
 
 	activityX := fb.posX
@@ -162,7 +172,9 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -250,6 +262,13 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 		ResultVariableName: s.OutputVariable,
 		UseReturnVariable:  s.OutputVariable != "",
 	}
+	if s.OutputVariable != "" && jaDef != nil && fb.varTypes != nil {
+		if varType := javaActionReturnVarType(jaDef.ReturnType); varType != "" {
+			fb.varTypes[s.OutputVariable] = varType
+		} else if inferred := fb.inferGenericJavaActionReturnType(jaDef, s); inferred != "" {
+			fb.varTypes[s.OutputVariable] = inferred
+		}
+	}
 
 	activityX := fb.posX
 	activity := &microflows.ActionActivity{
@@ -271,10 +290,54 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
+}
+
+func javaActionReturnVarType(returnType javaactions.CodeActionReturnType) string {
+	switch t := returnType.(type) {
+	case *javaactions.EntityType:
+		return t.Entity
+	case *javaactions.ListType:
+		if t.Entity != "" {
+			return "List of " + t.Entity
+		}
+	case *javaactions.FileDocumentType:
+		return "System.FileDocument"
+	}
+	return ""
+}
+
+func (fb *flowBuilder) inferGenericJavaActionReturnType(jaDef *javaactions.JavaAction, s *ast.CallJavaActionStmt) string {
+	if jaDef == nil || fb.varTypes == nil || s == nil {
+		return ""
+	}
+	switch t := jaDef.ReturnType.(type) {
+	case *javaactions.ListType:
+		if t.Entity != "" {
+			return ""
+		}
+	case javaactions.ListType:
+		if t.Entity != "" {
+			return ""
+		}
+	default:
+		return ""
+	}
+	for _, arg := range s.Arguments {
+		valueExpr := strings.TrimPrefix(strings.Trim(fb.exprToString(arg.Value), "'"), "$")
+		if valueExpr == "" {
+			continue
+		}
+		if typ := fb.varTypes[valueExpr]; strings.HasPrefix(typ, "List of ") {
+			return typ
+		}
+	}
+	return ""
 }
 
 // addCallExternalActionAction creates a CALL EXTERNAL ACTION statement.
@@ -322,7 +385,9 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -709,36 +774,39 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
 	case ast.RestResultResponse:
-		resultHandling = &microflows.ResultHandlingString{
+		resultHandling = &microflows.ResultHandlingHttpResponse{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
-		// Note: For HttpResponse, we would need a different result type, but using String for now
 	case ast.RestResultMapping:
 		mappingQN := s.Result.MappingName.Module + "." + s.Result.MappingName.Name
 		entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name
-		// Derive the output variable name from the root entity's short name so
-		// callers don't need to hard-code it in the MDL assignment.
-		s.OutputVariable = s.Result.ResultEntity.Name
-		// Determine whether the import mapping returns a single object or a list by
-		// looking at the JSON structure it references. If the root JSON element is
-		// an Object, the mapping produces one object; if it is an Array, a list.
-		singleObject := false
+		// Derive the output variable name from the root entity's short name only
+		// when the MDL did not provide an explicit assignment target.
+		if s.OutputVariable == "" {
+			s.OutputVariable = s.Result.ResultEntity.Name
+		}
+		// MDL's "returns mapping ... as Entity" describes an object-valued result.
+		// The import mapping's JSON root can still be an array; in that case Studio
+		// Pro stores Range.SingleObject=true and ForceSingleOccurrence=false.
+		singleObject := true
+		forceSingleOccurrence := false
 		if fb.backend != nil {
 			if im, err := fb.backend.GetImportMappingByQualifiedName(s.Result.MappingName.Module, s.Result.MappingName.Name); err == nil && im.JsonStructure != "" {
 				// im.JsonStructure is "Module.Name" — split and look up the JSON structure.
 				if parts := strings.SplitN(im.JsonStructure, ".", 2); len(parts) == 2 {
 					if js, err := fb.backend.GetJsonStructureByQualifiedName(parts[0], parts[1]); err == nil && len(js.Elements) > 0 {
-						singleObject = js.Elements[0].ElementType == "Object"
+						forceSingleOccurrence = js.Elements[0].ElementType == "Object"
 					}
 				}
 			}
 		}
 		resultHandling = &microflows.ResultHandlingMapping{
-			BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-			MappingID:      model.ID(mappingQN),
-			ResultEntityID: model.ID(entityQN),
-			ResultVariable: s.OutputVariable,
-			SingleObject:   singleObject,
+			BaseElement:           model.BaseElement{ID: model.ID(types.GenerateID())},
+			MappingID:             model.ID(mappingQN),
+			ResultEntityID:        model.ID(entityQN),
+			ResultVariable:        s.OutputVariable,
+			SingleObject:          singleObject,
+			ForceSingleOccurrence: &forceSingleOccurrence,
 		}
 	case ast.RestResultNone:
 		resultHandling = &microflows.ResultHandlingNone{
@@ -768,6 +836,19 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 		UseReturnVariable: s.OutputVariable != "",
 		TimeoutExpression: timeoutExpr,
 	}
+	if s.OutputVariable != "" {
+		switch s.Result.Type {
+		case ast.RestResultResponse:
+			fb.registerResultVariableType(s.OutputVariable, &microflows.ObjectType{EntityQualifiedName: "System.HttpResponse"})
+		case ast.RestResultMapping:
+			entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name
+			fb.registerResultVariableType(s.OutputVariable, &microflows.ObjectType{EntityQualifiedName: entityQN})
+		default:
+			if fb.declaredVars != nil {
+				fb.declaredVars[s.OutputVariable] = "String"
+			}
+		}
+	}
 
 	activityX := fb.posX
 	activity := &microflows.ActionActivity{
@@ -789,7 +870,9 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -1022,6 +1105,7 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	}
 
 	// Determine single vs list and result entity from the import mapping
+	resultEntityQN := ""
 	if fb.backend != nil {
 		if im, err := fb.backend.GetImportMappingByQualifiedName(s.Mapping.Module, s.Mapping.Name); err == nil {
 			if im.JsonStructure != "" {
@@ -1035,9 +1119,18 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 				}
 			}
 			if len(im.Elements) > 0 && im.Elements[0].Entity != "" {
-				resultHandling.ResultEntityID = model.ID(im.Elements[0].Entity)
+				resultEntityQN = im.Elements[0].Entity
+				if !strings.Contains(resultEntityQN, ".") {
+					if resolved := fb.resolveEntityQualifiedName(model.ID(resultEntityQN)); resolved != "" {
+						resultEntityQN = resolved
+					}
+				}
+				resultHandling.ResultEntityID = model.ID(resultEntityQN)
 			}
 		}
+	}
+	if s.OutputVariable != "" && fb.listInputVariables != nil && fb.listInputVariables[s.OutputVariable] {
+		resultHandling.SingleObject = false
 	}
 
 	action.ResultHandling = resultHandling
@@ -1056,6 +1149,17 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
+	if s.OutputVariable != "" {
+		if resultEntityQN != "" && fb.varTypes != nil {
+			if resultHandling.SingleObject {
+				fb.varTypes[s.OutputVariable] = resultEntityQN
+			} else {
+				fb.varTypes[s.OutputVariable] = "List of " + resultEntityQN
+			}
+		} else if fb.declaredVars != nil {
+			fb.declaredVars[s.OutputVariable] = "Unknown"
+		}
+	}
 
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing

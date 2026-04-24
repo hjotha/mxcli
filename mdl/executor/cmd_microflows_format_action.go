@@ -6,6 +6,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -738,7 +739,24 @@ func joinExpressionAssignments(parts []string) string {
 }
 
 func normalizeCallArgumentExpression(expr string) string {
-	return strings.TrimRight(normalizeExpressionSource(expr), " \t\r\n")
+	return spaceCompactCallArgumentArithmetic(collapseCallArgumentWhitespace(strings.TrimRight(normalizeExpressionSource(expr), " \t\r\n")))
+}
+
+func collapseCallArgumentWhitespace(expr string) string {
+	if !strings.ContainsAny(expr, "\r\n\t") {
+		return expr
+	}
+	expr = strings.ReplaceAll(expr, "\r\n", " ")
+	expr = strings.ReplaceAll(expr, "\n", " ")
+	expr = strings.ReplaceAll(expr, "\r", " ")
+	expr = strings.ReplaceAll(expr, "\t", " ")
+	return strings.TrimSpace(expr)
+}
+
+var compactPathMinusNumberRE = regexp.MustCompile(`(\$[A-Za-z_][A-Za-z0-9_]*(?:/[A-Za-z_][A-Za-z0-9_]*)+)-([0-9]+)`)
+
+func spaceCompactCallArgumentArithmetic(expr string) string {
+	return compactPathMinusNumberRE.ReplaceAllString(expr, "$1 - $2")
 }
 
 func formatXPathConstraintForWhere(raw string) string {
@@ -1195,6 +1213,8 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 		case *microflows.ResultHandlingString:
 			sb.WriteString("String")
 			_ = rh // used for type assertion only
+		case *microflows.ResultHandlingHttpResponse:
+			sb.WriteString("Response")
 		case *microflows.ResultHandlingMapping:
 			sb.WriteString("mapping ")
 			sb.WriteString(string(rh.MappingID))

@@ -154,9 +154,15 @@ const (
 // SortItem represents a sort specification.
 type SortItem struct {
 	model.BaseElement
-	AttributeID            model.ID      `json:"attributeId"`
-	AttributeQualifiedName string        `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
-	Direction              SortDirection `json:"direction"`
+	AttributeID            model.ID        `json:"attributeId"`
+	AttributeQualifiedName string          `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
+	EntityRefSteps         []EntityRefStep `json:"entityRefSteps,omitempty"`
+	Direction              SortDirection   `json:"direction"`
+}
+
+type EntityRefStep struct {
+	Association       string `json:"association,omitempty"`
+	DestinationEntity string `json:"destinationEntity,omitempty"`
 }
 
 // SortDirection represents sort order.
@@ -782,10 +788,11 @@ func (ResultHandlingHttpResponse) isResultHandling() {}
 // ResultHandlingMapping uses an import mapping.
 type ResultHandlingMapping struct {
 	model.BaseElement
-	MappingID      model.ID `json:"mappingId"`
-	ResultEntityID model.ID `json:"resultEntityId,omitempty"`
-	ResultVariable string   `json:"resultVariable,omitempty"`
-	SingleObject   bool     `json:"singleObject,omitempty"` // true when mapping returns a single object (not a list)
+	MappingID             model.ID `json:"mappingId"`
+	ResultEntityID        model.ID `json:"resultEntityId,omitempty"`
+	ResultVariable        string   `json:"resultVariable,omitempty"`
+	SingleObject          bool     `json:"singleObject,omitempty"` // true when mapping returns a single object (not a list)
+	ForceSingleOccurrence *bool    `json:"forceSingleOccurrence,omitempty"`
 }
 
 func (ResultHandlingMapping) isResultHandling() {}

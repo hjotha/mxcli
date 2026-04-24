@@ -45,11 +45,17 @@ type flowBuilder struct {
 	// previousStmtAnchor holds the Anchor annotation of the statement that
 	// just emitted an activity, so the next flow's OriginConnectionIndex can
 	// be overridden by the user. Cleared after each flow is created.
-	previousStmtAnchor    *ast.FlowAnchors
-	assocLookupCache      map[string]*assocLookupResult
-	memberResolutionCache map[string]resolvedMember
-	manualLoopBackTarget  model.ID
-	emptyErrorHandlerFrom model.ID
+	previousStmtAnchor       *ast.FlowAnchors
+	assocLookupCache         map[string]*assocLookupResult
+	memberResolutionCache    map[string]resolvedMember
+	manualLoopBackTarget     model.ID
+	emptyErrorHandlerFrom    model.ID
+	errorHandlerTailFrom     model.ID
+	errorHandlerSource       model.ID
+	errorHandlerSkipVar      string
+	errorHandlerTailIsSource bool
+	callOutputRemaining      map[string]int
+	listInputVariables       map[string]bool
 }
 
 // addError records a validation error during flow building.

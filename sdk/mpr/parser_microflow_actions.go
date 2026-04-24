@@ -509,9 +509,17 @@ func parseResultHandling(raw map[string]any, handlingType string) microflows.Res
 				mappingRef = extractString(call["ReturnValueMapping"])
 			}
 			result.MappingID = model.ID(mappingRef)
+			forceSingleOccurrence := extractBool(call["ForceSingleOccurrence"], false)
+			result.ForceSingleOccurrence = &forceSingleOccurrence
+			if rangeMap := toMap(call["Range"]); rangeMap != nil {
+				result.SingleObject = extractBool(rangeMap["SingleObject"], false)
+			}
 		}
 		if varType := toMap(raw["VariableType"]); varType != nil {
 			result.ResultEntityID = model.ID(extractString(varType["Entity"]))
+			if extractString(varType["$Type"]) == "DataTypes$ObjectType" {
+				result.SingleObject = true
+			}
 		}
 		return result
 	case "None":
@@ -613,7 +621,14 @@ func parseImportXmlAction(raw map[string]any) *microflows.ImportXmlAction {
 			if varType := toMap(call["VariableType"]); varType != nil {
 				handling.ResultEntityID = model.ID(extractString(varType["Entity"]))
 			}
-			handling.SingleObject = extractBool(call["ForceSingleOccurrence"], false)
+			forceSingleOccurrence := extractBool(call["ForceSingleOccurrence"], false)
+			handling.ForceSingleOccurrence = &forceSingleOccurrence
+			if rangeMap := toMap(call["Range"]); rangeMap != nil {
+				handling.SingleObject = extractBool(rangeMap["SingleObject"], false)
+			}
+			if !handling.SingleObject {
+				handling.SingleObject = forceSingleOccurrence
+			}
 		}
 		action.ResultHandling = handling
 	}

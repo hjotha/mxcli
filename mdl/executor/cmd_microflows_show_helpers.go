@@ -1410,8 +1410,65 @@ func collectErrorHandlerStatements(
 	var statements []string
 	visited := make(map[model.ID]bool)
 	splitMergeMap := findSplitMergePointsForGraph(ctx, activityMap, flowsByOrigin)
-	collectStructuredStatements(ctx, startID, "", activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, &statements, 0)
+	stopID := findErrorHandlerRejoinID(startID, activityMap, flowsByOrigin)
+	collectStructuredStatements(ctx, startID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, &statements, 0)
 	return statements
+}
+
+func findErrorHandlerRejoinID(
+	startID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+) model.ID {
+	if startID == "" {
+		return ""
+	}
+
+	reachable := make(map[model.ID]bool)
+	var markReachable func(model.ID)
+	markReachable = func(id model.ID) {
+		if id == "" || reachable[id] {
+			return
+		}
+		reachable[id] = true
+		for _, flow := range findNormalFlows(flowsByOrigin[id]) {
+			markReachable(flow.DestinationID)
+		}
+	}
+	markReachable(startID)
+
+	flowsByDest := make(map[model.ID][]*microflows.SequenceFlow)
+	for _, flows := range flowsByOrigin {
+		for _, flow := range flows {
+			flowsByDest[flow.DestinationID] = append(flowsByDest[flow.DestinationID], flow)
+		}
+	}
+
+	visited := make(map[model.ID]bool)
+	queue := []model.ID{startID}
+	for len(queue) > 0 {
+		currentID := queue[0]
+		queue = queue[1:]
+		if currentID == "" || visited[currentID] {
+			continue
+		}
+		visited[currentID] = true
+
+		if currentID != startID {
+			if _, isMerge := activityMap[currentID].(*microflows.ExclusiveMerge); !isMerge {
+				for _, incoming := range findNormalFlows(flowsByDest[currentID]) {
+					if !reachable[incoming.OriginID] {
+						return currentID
+					}
+				}
+			}
+		}
+
+		for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+			queue = append(queue, flow.DestinationID)
+		}
+	}
+	return ""
 }
 
 // loopEndKeyword returns "END WHILE" for WHILE loops and "END LOOP" for FOR-EACH loops.

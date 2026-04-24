@@ -427,6 +427,28 @@ func TestFormatAction_MicroflowCall_TrimsTrailingArgumentWhitespace(t *testing.T
 	}
 }
 
+func TestFormatAction_MicroflowCall_CollapsesMultilineArgumentWhitespace(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.MicroflowCallAction{
+		ResultVariableName: "EnvironmentsRoot",
+		MicroflowCall: &microflows.MicroflowCall{
+			Microflow: "CloudIntegration.REST_RetrieveEnvironments",
+			ParameterMappings: []*microflows.MicroflowCallParameterMapping{
+				{
+					Parameter: "CloudIntegration.REST_RetrieveEnvironments.Offset",
+					Argument:  "if $ListContext/TriggeredBySearch then '0'\nelse\ntoString($EnvironmentListContext/PageSize * ($ListHeader/CurrentPageNumber-1))",
+				},
+			},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "$EnvironmentsRoot = call microflow CloudIntegration.REST_RetrieveEnvironments(Offset = if $ListContext/TriggeredBySearch then '0' else toString($EnvironmentListContext/PageSize * ($ListHeader/CurrentPageNumber - 1)));"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_MicroflowCall_NoResult(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.MicroflowCallAction{

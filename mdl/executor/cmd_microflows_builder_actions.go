@@ -129,13 +129,19 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 	allBranchesReturn := true
 	branchStartX := splitX + ActivityWidth + HorizontalSpacing/2
 	branchIndex := 0
-	var branchTails []model.ID
+	type branchTail struct {
+		id        model.ID
+		caseValue string
+		fromSplit bool
+	}
+	var branchTails []branchTail
 
 	addBranch := func(caseValue string, body []ast.MicroflowStatement) {
 		branchY := centerY + branchIndex*VerticalSpacing
 		branchIndex++
 		if len(body) == 0 {
 			allBranchesReturn = false
+			branchTails = append(branchTails, branchTail{id: splitID, caseValue: caseValue, fromSplit: true})
 			return
 		}
 
@@ -145,11 +151,16 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 
 		var lastID model.ID
 		var prevAnchor *ast.FlowAnchors
+		var pendingCase string
+		var pendingAnchor *ast.FlowAnchors
 		for _, stmt := range body {
 			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID == "" {
 				continue
+			}
+			if cast, ok := stmt.(*ast.CastObjectStmt); ok && cast.OutputVariable != "" && caseValue != "" && fb.varTypes != nil {
+				fb.varTypes[cast.OutputVariable] = caseValue
 			}
 			fb.applyPendingAnnotations(actID)
 			if lastID == "" {
@@ -164,7 +175,17 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 				}
 				fb.flows = append(fb.flows, flow)
 			} else {
-				flow := newHorizontalFlow(lastID, actID)
+				var flow *microflows.SequenceFlow
+				if pendingCase != "" {
+					flow = newHorizontalFlowWithCase(lastID, actID, pendingCase)
+					pendingCase = ""
+					if pendingAnchor != nil {
+						prevAnchor = pendingAnchor
+						pendingAnchor = nil
+					}
+				} else {
+					flow = newHorizontalFlow(lastID, actID)
+				}
 				applyUserAnchors(flow, prevAnchor, thisAnchor)
 				fb.flows = append(fb.flows, flow)
 			}
@@ -172,6 +193,10 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
 				fb.nextConnectionPoint = ""
+				pendingCase = fb.nextFlowCase
+				fb.nextFlowCase = ""
+				pendingAnchor = fb.nextFlowAnchor
+				fb.nextFlowAnchor = nil
 			} else {
 				lastID = actID
 			}
@@ -179,7 +204,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		if !lastStmtIsReturn(body) {
 			allBranchesReturn = false
 			if lastID != "" {
-				branchTails = append(branchTails, lastID)
+				branchTails = append(branchTails, branchTail{id: lastID})
 			}
 		}
 	}
@@ -187,18 +212,16 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 	for _, c := range s.Cases {
 		addBranch(qualifiedNameString(c.Entity), c.Body)
 	}
-	if len(s.ElseBody) > 0 {
-		addBranch("", s.ElseBody)
-	}
+	addBranch("", s.ElseBody)
 
 	fb.posX = branchStartX + fb.measurer.measureStatements(appendInheritanceBodies(s)).Width + HorizontalSpacing/2
 	fb.posY = centerY
 	fb.endsWithReturn = savedEndsWithReturn
 	if allBranchesReturn {
 		fb.endsWithReturn = true
-	} else if len(branchTails) == 1 {
-		fb.nextConnectionPoint = branchTails[0]
-	} else if len(branchTails) > 1 {
+	} else if len(branchTails) == 1 && !branchTails[0].fromSplit {
+		fb.nextConnectionPoint = branchTails[0].id
+	} else if len(branchTails) > 0 {
 		merge := &microflows.ExclusiveMerge{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
 				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
@@ -207,8 +230,16 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 			},
 		}
 		fb.objects = append(fb.objects, merge)
-		for _, tailID := range branchTails {
-			fb.flows = append(fb.flows, newHorizontalFlow(tailID, merge.ID))
+		for _, tail := range branchTails {
+			if tail.fromSplit {
+				if tail.caseValue != "" {
+					fb.flows = append(fb.flows, newDownwardFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue))
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlowWithInheritanceCase(splitID, merge.ID, ""))
+				}
+			} else {
+				fb.flows = append(fb.flows, newHorizontalFlow(tail.id, merge.ID))
+			}
 		}
 		fb.nextConnectionPoint = merge.ID
 	}
@@ -476,15 +507,28 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			AssociationQualifiedName: assocQN,
 		}
 		if fb.varTypes != nil {
-			if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReference {
-				// Reference traversal returns the entity on the other end.
+			if assocInfo != nil {
 				otherEntity := assocInfo.childEntityQN
 				if startVarType == assocInfo.childEntityQN {
 					otherEntity = assocInfo.parentEntityQN
 				}
-				fb.varTypes[s.Variable] = otherEntity
+				if assocInfo.Type == domainmodel.AssociationTypeReference {
+					if startVarType == assocInfo.childEntityQN {
+						// Reverse traversal over a Reference can yield multiple
+						// owners, so the result is list-valued.
+						fb.varTypes[s.Variable] = "List of " + otherEntity
+					} else {
+						// Forward Reference traversal returns at most one object.
+						fb.varTypes[s.Variable] = otherEntity
+					}
+				} else {
+					// ReferenceSet traversal returns a list of the entity on the other
+					// end. The association name itself is not a valid object type.
+					fb.varTypes[s.Variable] = "List of " + otherEntity
+				}
 			} else {
-				// ReferenceSet or unknown: returns a list.
+				// Unknown association metadata: keep the name as a best-effort list
+				// type instead of guessing an entity.
 				fb.varTypes[s.Variable] = "List of " + assocQN
 			}
 		}
@@ -534,6 +578,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 				dbSource.Sorting = append(dbSource.Sorting, &microflows.SortItem{
 					BaseElement:            model.BaseElement{ID: model.ID(types.GenerateID())},
 					AttributeQualifiedName: attrPath,
+					EntityRefSteps:         fb.inferSortEntityRefSteps(entityQN, attrPath),
 					Direction:              direction,
 				})
 			}
@@ -585,6 +630,54 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	}
 
 	return activity.ID
+}
+
+func (fb *flowBuilder) inferSortEntityRefSteps(sourceEntityQN, attrPath string) []microflows.EntityRefStep {
+	attrEntityQN := entityQualifiedNameFromAttribute(attrPath)
+	if attrEntityQN == "" || attrEntityQN == sourceEntityQN {
+		return nil
+	}
+	parts := strings.SplitN(sourceEntityQN, ".", 2)
+	if len(parts) != 2 || parts[0] == "" {
+		return nil
+	}
+	if fb.backend == nil {
+		return nil
+	}
+	mod, err := fb.backend.GetModuleByName(parts[0])
+	if err != nil || mod == nil {
+		return nil
+	}
+	dm, err := fb.backend.GetDomainModel(mod.ID)
+	if err != nil || dm == nil {
+		return nil
+	}
+	entityNames := make(map[model.ID]string, len(dm.Entities))
+	for _, e := range dm.Entities {
+		entityNames[e.ID] = parts[0] + "." + e.Name
+	}
+	for _, assoc := range dm.Associations {
+		parentQN := entityNames[assoc.ParentID]
+		childQN := entityNames[assoc.ChildID]
+		if parentQN == sourceEntityQN && childQN == attrEntityQN {
+			return []microflows.EntityRefStep{{Association: parts[0] + "." + assoc.Name, DestinationEntity: childQN}}
+		}
+	}
+	for _, assoc := range dm.CrossAssociations {
+		parentQN := entityNames[assoc.ParentID]
+		if parentQN == sourceEntityQN && assoc.ChildRef == attrEntityQN {
+			return []microflows.EntityRefStep{{Association: parts[0] + "." + assoc.Name, DestinationEntity: assoc.ChildRef}}
+		}
+	}
+	return nil
+}
+
+func entityQualifiedNameFromAttribute(attrPath string) string {
+	parts := strings.Split(attrPath, ".")
+	if len(parts) < 3 {
+		return ""
+	}
+	return parts[0] + "." + parts[1]
 }
 
 // addListOperationAction creates list operations like HEAD, TAIL, FIND, etc.
@@ -799,8 +892,12 @@ func listOperationFieldName(expr ast.Expression) (string, bool) {
 func (fb *flowBuilder) resolveListOperationMember(listVariable, memberName string) (attributeName, associationName string) {
 	entityQN := ""
 	if fb.varTypes != nil {
-		if listType := fb.varTypes[listVariable]; strings.HasPrefix(listType, "List of ") {
-			entityQN = strings.TrimPrefix(listType, "List of ")
+		if listType := fb.varTypes[listVariable]; listType != "" {
+			if strings.HasPrefix(listType, "List of ") {
+				entityQN = strings.TrimPrefix(listType, "List of ")
+			} else {
+				entityQN = listType
+			}
 		}
 	}
 	if entityQN == "" || strings.Count(memberName, ".") > 0 {
@@ -1112,8 +1209,44 @@ func (fb *flowBuilder) lookupBareMember(memberName string, entityQN string) reso
 			}
 		}
 	}
+	if assocQN, ok := fb.lookupCrossAssociationByRemoteChild(memberName, entityQN); ok {
+		return resolvedMember{kind: resolvedMemberAssociation, qualifiedName: assocQN}
+	}
 
 	return resolvedMember{kind: resolvedMemberUnknown}
+}
+
+func (fb *flowBuilder) lookupCrossAssociationByRemoteChild(memberName, entityQN string) (string, bool) {
+	if fb.backend == nil || memberName == "" || entityQN == "" {
+		return "", false
+	}
+	domainModels, err := fb.backend.ListDomainModels()
+	if err != nil {
+		return "", false
+	}
+	for _, dm := range domainModels {
+		if dm == nil {
+			continue
+		}
+		moduleName := ""
+		if fb.hierarchy != nil {
+			moduleName = fb.hierarchy.GetModuleName(dm.ContainerID)
+		}
+		if moduleName == "" {
+			if mod, err := fb.backend.GetModule(dm.ContainerID); err == nil && mod != nil {
+				moduleName = mod.Name
+			}
+		}
+		if moduleName == "" {
+			continue
+		}
+		for _, assoc := range dm.CrossAssociations {
+			if assoc.Name == memberName && assoc.ChildRef == entityQN {
+				return moduleName + "." + assoc.Name, true
+			}
+		}
+	}
+	return "", false
 }
 
 func (fb *flowBuilder) lookupDomainEntity(entityQN string) (domainEntityRef, bool) {
@@ -1291,6 +1424,17 @@ func (fb *flowBuilder) lookupAssociation(moduleName, assocName string) *assocLoo
 				Type:           a.Type,
 				parentEntityQN: entityNames[a.ParentID],
 				childEntityQN:  entityNames[a.ChildID],
+			}
+			fb.assocLookupCache[cacheKey] = result
+			return result
+		}
+	}
+	for _, a := range dm.CrossAssociations {
+		if a.Name == assocName {
+			result := &assocLookupResult{
+				Type:           a.Type,
+				parentEntityQN: entityNames[a.ParentID],
+				childEntityQN:  a.ChildRef,
 			}
 			fb.assocLookupCache[cacheKey] = result
 			return result
