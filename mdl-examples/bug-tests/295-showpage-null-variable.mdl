@@ -1,0 +1,21 @@
+-- Bug test: SHOW_PAGE inside a widget action must not produce null PageParameterMapping.Variable.
+-- Issue #295: buttons calling SHOW_PAGE with a variable argument serialized
+-- Variable: null in BSON (Forms$PageParameterMapping), causing Studio Pro to throw:
+--   ArgumentNullException: Value cannot be null (Parameter 'value')
+--   at PageParameterMapping.set_Variable(PageVariable value)
+--
+-- After the fix: every Forms$PageParameterMapping in a Forms$FormAction carries
+-- a non-null Forms$PageVariable embedded object in its Variable field.
+--
+-- Run with: mxcli check 295-showpage-null-variable.mdl
+
+CREATE SNIPPET AuditTrail.LogViewer (
+  Folder: 'Snippets'
+) {
+  DATAVIEW dv1 (DataSource: $Log, Editable: false) {
+    ACTIONBUTTON btn_open (
+      Caption: 'Open log detail',
+      Action: SHOW_PAGE AuditTrail.Log_View(Log: $currentObject)
+    )
+  }
+};
