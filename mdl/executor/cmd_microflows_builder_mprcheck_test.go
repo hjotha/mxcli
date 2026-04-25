@@ -35,20 +35,20 @@ func TestBuildListFind_AttributeEqualsExpressionUsesAttributeOperation(t *testin
 		posY:    100,
 		spacing: HorizontalSpacing,
 		varTypes: map[string]string{
-			"CertificateList": "List of AcademyIntegration.Certificate",
+			"SampleItemList": "List of SampleLearning.SampleItem",
 		},
 	}
 
 	id := fb.addListOperationAction(&ast.ListOperationStmt{
-		OutputVariable: "ExistingCertificate",
+		OutputVariable: "ExistingSampleItem",
 		Operation:      ast.ListOpFind,
-		InputVariable:  "CertificateList",
+		InputVariable:  "SampleItemList",
 		Condition: &ast.BinaryExpr{
 			Left:     &ast.IdentifierExpr{Name: "UUID"},
 			Operator: "=",
 			Right: &ast.AttributePathExpr{
-				Variable: "IteratorCertificate",
-				Path:     []string{"Certificate_ID"},
+				Variable: "IteratorSampleItem",
+				Path:     []string{"SampleItem_ID"},
 			},
 		},
 	})
@@ -67,10 +67,10 @@ func TestBuildListFind_AttributeEqualsExpressionUsesAttributeOperation(t *testin
 	if !ok {
 		t.Fatalf("operation type = %T, want *microflows.FindByAttributeOperation", action.Operation)
 	}
-	if op.Attribute != "AcademyIntegration.Certificate.UUID" {
-		t.Fatalf("Attribute = %q, want AcademyIntegration.Certificate.UUID", op.Attribute)
+	if op.Attribute != "SampleLearning.SampleItem.UUID" {
+		t.Fatalf("Attribute = %q, want SampleLearning.SampleItem.UUID", op.Attribute)
 	}
-	if op.Expression != "$IteratorCertificate/Certificate_ID" {
-		t.Fatalf("Expression = %q, want $IteratorCertificate/Certificate_ID", op.Expression)
+	if op.Expression != "$IteratorSampleItem/SampleItem_ID" {
+		t.Fatalf("Expression = %q, want $IteratorSampleItem/SampleItem_ID", op.Expression)
 	}
 }

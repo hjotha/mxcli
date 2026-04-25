@@ -223,7 +223,7 @@ func TestBuildFlowGraph_EmptyThenElseReturnNestedGuardKeepsTrueCase(t *testing.T
 			Condition: &ast.VariableExpr{Name: "Support"},
 			ElseBody: []ast.MicroflowStatement{
 				&ast.IfStmt{
-					Condition: &ast.VariableExpr{Name: "UserIsCompanyAdmin"},
+					Condition: &ast.VariableExpr{Name: "UserHasAdminRole"},
 					ElseBody:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
 				},
 			},
@@ -235,7 +235,7 @@ func TestBuildFlowGraph_EmptyThenElseReturnNestedGuardKeepsTrueCase(t *testing.T
 		posX:         100,
 		posY:         100,
 		spacing:      HorizontalSpacing,
-		declaredVars: map[string]string{"Support": "Boolean", "UserIsCompanyAdmin": "Boolean"},
+		declaredVars: map[string]string{"Support": "Boolean", "UserHasAdminRole": "Boolean"},
 		measurer:     &layoutMeasurer{},
 	}
 	oc := fb.buildFlowGraph(body, nil)
@@ -247,7 +247,7 @@ func TestBuildFlowGraph_EmptyThenElseReturnNestedGuardKeepsTrueCase(t *testing.T
 			continue
 		}
 		cond, ok := split.SplitCondition.(*microflows.ExpressionSplitCondition)
-		if ok && cond.Expression == "$UserIsCompanyAdmin" {
+		if ok && cond.Expression == "$UserHasAdminRole" {
 			nestedSplitID = split.ID
 			break
 		}
@@ -470,7 +470,7 @@ func TestBuildFlowGraph_ManualWhileTrueCustomErrorHandlerBacksToLoopMerge(t *tes
 			Body: []ast.MicroflowStatement{
 				&ast.CallMicroflowStmt{
 					OutputVariable: "Response",
-					MicroflowName:  ast.QualifiedName{Module: "CloudData", Name: "REST_GetEnviromentChangeEvents"},
+					MicroflowName:  ast.QualifiedName{Module: "SampleRuntime", Name: "REST_GetRuntimeChangeEvents"},
 					ErrorHandling: &ast.ErrorHandlingClause{
 						Type: ast.ErrorHandlingCustomWithoutRollback,
 						Body: []ast.MicroflowStatement{
@@ -526,7 +526,7 @@ func TestBuildFlowGraph_CustomErrorHandlerContinuesToNextStatement(t *testing.T)
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
 			OutputVariable: "Response",
-			MicroflowName:  ast.QualifiedName{Module: "AuditLogs", Name: "REST_Post"},
+			MicroflowName:  ast.QualifiedName{Module: "SampleAudit", Name: "REST_Post"},
 			ErrorHandling: &ast.ErrorHandlingClause{
 				Type: ast.ErrorHandlingCustomWithoutRollback,
 				Body: []ast.MicroflowStatement{
@@ -558,7 +558,7 @@ func TestBuildFlowGraph_CustomErrorHandlerContinuesToNextStatement(t *testing.T)
 func TestBuildFlowGraph_VoidCustomErrorHandlerTerminates(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
-			MicroflowName: ast.QualifiedName{Module: "AppsCombinedView", Name: "CommitAppViewDataChanges"},
+			MicroflowName: ast.QualifiedName{Module: "SampleApps", Name: "CommitApplicationViewDataChanges"},
 			ErrorHandling: &ast.ErrorHandlingClause{
 				Type: ast.ErrorHandlingCustomWithoutRollback,
 				Body: []ast.MicroflowStatement{
@@ -766,7 +766,7 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsOutputDependentContinuation(
 func TestBuildFlowGraph_EmptyCustomErrorHandlerRejoinsThroughMerge(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
-			MicroflowName: ast.QualifiedName{Module: "BrandConfiguration", Name: "ResizeCropImageIfNecessary"},
+			MicroflowName: ast.QualifiedName{Module: "SampleBranding", Name: "ResizeCropImageIfNecessary"},
 			ErrorHandling: &ast.ErrorHandlingClause{
 				Type: ast.ErrorHandlingCustomWithoutRollback,
 			},
@@ -777,7 +777,7 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerRejoinsThroughMerge(t *testing.T)
 		},
 		&ast.CreateObjectStmt{
 			Variable:   "NewBrand",
-			EntityType: ast.QualifiedName{Module: "CompanyServiceIntegration", Name: "UpdateBrandRequest"},
+			EntityType: ast.QualifiedName{Module: "SampleBrandApi", Name: "UpdateBrandRequest"},
 		},
 	}
 
@@ -828,15 +828,15 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerRejoinsThroughMerge(t *testing.T)
 }
 
 func TestBuildFlowGraph_EmptyCustomErrorHandlerPreservesDecisionCases(t *testing.T) {
-	entityRef := ast.QualifiedName{Module: "AuditLogs", Name: "ClientToken"}
+	entityRef := ast.QualifiedName{Module: "SampleAudit", Name: "ApiToken"}
 	body := []ast.MicroflowStatement{
 		&ast.RestCallStmt{
-			OutputVariable: "NewClientToken",
+			OutputVariable: "NewApiToken",
 			Method:         ast.HttpMethodPost,
 			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.test"},
 			Result: ast.RestResult{
 				Type:         ast.RestResultMapping,
-				MappingName:  ast.QualifiedName{Module: "AuditLogs", Name: "IMP_ClientToken"},
+				MappingName:  ast.QualifiedName{Module: "SampleAudit", Name: "IMP_ApiToken"},
 				ResultEntity: entityRef,
 			},
 			ErrorHandling: &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
@@ -849,10 +849,10 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerPreservesDecisionCases(t *testing
 			},
 			ThenBody: []ast.MicroflowStatement{
 				&ast.ChangeObjectStmt{
-					Variable: "NewClientToken",
+					Variable: "NewApiToken",
 					Changes:  []ast.ChangeItem{{Attribute: "StatusCode", Value: &ast.SourceExpr{Source: "$latestHttpResponse/StatusCode"}}},
 				},
-				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "NewClientToken"}},
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "NewApiToken"}},
 			},
 			ElseBody: []ast.MicroflowStatement{
 				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
@@ -899,21 +899,21 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerPreservesDecisionCases(t *testing
 }
 
 func TestBuildFlowGraph_EmptyCustomErrorHandlerRoutesOutputConditionToElse(t *testing.T) {
-	entityRef := ast.QualifiedName{Module: "AuditLogs", Name: "ClientToken"}
+	entityRef := ast.QualifiedName{Module: "SampleAudit", Name: "ApiToken"}
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
-			OutputVariable: "ClientToken",
-			MicroflowName:  ast.QualifiedName{Module: "AuditLogs", Name: "GetValidAccessClientToken"},
+			OutputVariable: "ApiToken",
+			MicroflowName:  ast.QualifiedName{Module: "SampleAudit", Name: "GetValidAccessApiToken"},
 			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
 		},
 		&ast.IfStmt{
 			Condition: &ast.BinaryExpr{
-				Left:     &ast.VariableExpr{Name: "ClientToken"},
+				Left:     &ast.VariableExpr{Name: "ApiToken"},
 				Operator: "!=",
 				Right:    &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"},
 			},
 			ThenBody: []ast.MicroflowStatement{
-				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ClientToken"}},
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ApiToken"}},
 			},
 			ElseBody: []ast.MicroflowStatement{
 				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
@@ -925,7 +925,7 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerRoutesOutputConditionToElse(t *te
 		posX:     100,
 		posY:     100,
 		spacing:  HorizontalSpacing,
-		varTypes: map[string]string{"ClientToken": "AuditLogs.ClientToken"},
+		varTypes: map[string]string{"ApiToken": "SampleAudit.ApiToken"},
 		measurer: &layoutMeasurer{},
 	}
 	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
@@ -953,15 +953,15 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerRoutesOutputConditionToElse(t *te
 }
 
 func TestBuildFlowGraph_CustomErrorHandlerWaitsPastFutureOutputReferences(t *testing.T) {
-	entityRef := ast.QualifiedName{Module: "CloudData", Name: "Environment"}
+	entityRef := ast.QualifiedName{Module: "SampleRuntime", Name: "Runtime"}
 	body := []ast.MicroflowStatement{
 		&ast.RestCallStmt{
-			OutputVariable: "Environment",
+			OutputVariable: "Runtime",
 			Method:         ast.HttpMethodGet,
 			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.test"},
 			Result: ast.RestResult{
 				Type:         ast.RestResultMapping,
-				MappingName:  ast.QualifiedName{Module: "CloudData", Name: "IMM_EnvironmentByUUID"},
+				MappingName:  ast.QualifiedName{Module: "SampleRuntime", Name: "IMM_RuntimeByUUID"},
 				ResultEntity: entityRef,
 			},
 			ErrorHandling: &ast.ErrorHandlingClause{
@@ -974,7 +974,7 @@ func TestBuildFlowGraph_CustomErrorHandlerWaitsPastFutureOutputReferences(t *tes
 		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "success"}},
 		&ast.ChangeObjectStmt{
 			Variable: "Response",
-			Changes:  []ast.ChangeItem{{Attribute: "EnvironmentResponse_Environment", Value: &ast.VariableExpr{Name: "Environment"}}},
+			Changes:  []ast.ChangeItem{{Attribute: "RuntimeResponse_Runtime", Value: &ast.VariableExpr{Name: "Runtime"}}},
 		},
 		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "Response"}},
 	}
@@ -983,10 +983,10 @@ func TestBuildFlowGraph_CustomErrorHandlerWaitsPastFutureOutputReferences(t *tes
 		posX:     100,
 		posY:     100,
 		spacing:  HorizontalSpacing,
-		varTypes: map[string]string{"Response": "CloudData.EnvironmentResponse"},
+		varTypes: map[string]string{"Response": "SampleRuntime.RuntimeResponse"},
 		measurer: &layoutMeasurer{},
 	}
-	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "CloudData", Name: "EnvironmentResponse"}}})
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "SampleRuntime", Name: "RuntimeResponse"}}})
 
 	var infoLogID, changeID model.ID
 	for _, obj := range oc.Objects {
@@ -1017,12 +1017,12 @@ func TestBuildFlowGraph_RepeatedMicroflowCallOutputOnlyDeclaresLastUse(t *testin
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
 			OutputVariable: "UpdatedApp",
-			MicroflowName:  ast.QualifiedName{Module: "RepositoryServiceIntegration", Name: "GetRepoTypeInfo"},
+			MicroflowName:  ast.QualifiedName{Module: "SampleRepositoryApi", Name: "GetRepositoryTypeInfo"},
 			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
 		},
 		&ast.CallMicroflowStmt{
 			OutputVariable: "UpdatedApp",
-			MicroflowName:  ast.QualifiedName{Module: "RepositoryServiceIntegration", Name: "GetLatestAppRepoInfo"},
+			MicroflowName:  ast.QualifiedName{Module: "SampleRepositoryApi", Name: "GetLatestRepositoryInfo"},
 			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
 		},
 		&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}},
@@ -1049,10 +1049,10 @@ func TestBuildFlowGraph_RepeatedMicroflowCallOutputOnlyDeclaresLastUse(t *testin
 		}
 		useByCall[action.MicroflowCall.Microflow] = action.UseReturnVariable
 	}
-	if useByCall["RepositoryServiceIntegration.GetRepoTypeInfo"] {
+	if useByCall["SampleRepositoryApi.GetRepositoryTypeInfo"] {
 		t.Fatal("first repeated output call must not redeclare the result variable")
 	}
-	if !useByCall["RepositoryServiceIntegration.GetLatestAppRepoInfo"] {
+	if !useByCall["SampleRepositoryApi.GetLatestRepositoryInfo"] {
 		t.Fatal("last repeated output call must declare the result variable")
 	}
 }
@@ -1080,10 +1080,10 @@ func TestBuildFlowGraph_EmptyIfIsNoOp(t *testing.T) {
 }
 
 func TestBuildFlowGraph_InfersUniqueEntityReturnAfterEmptyIfNoOp(t *testing.T) {
-	entityRef := ast.QualifiedName{Module: "CloudData", Name: "EnvironmentProcessingResult"}
+	entityRef := ast.QualifiedName{Module: "SampleRuntime", Name: "RuntimeProcessingResult"}
 	body := []ast.MicroflowStatement{
 		&ast.CreateObjectStmt{
-			Variable:   "EnvironmentProcessingResult",
+			Variable:   "RuntimeProcessingResult",
 			EntityType: entityRef,
 		},
 		&ast.IfStmt{Condition: &ast.VariableExpr{Name: "EventType"}},
@@ -1103,10 +1103,10 @@ func TestBuildFlowGraph_InfersUniqueEntityReturnAfterEmptyIfNoOp(t *testing.T) {
 		if !ok {
 			continue
 		}
-		if end.ReturnValue == "$EnvironmentProcessingResult" {
+		if end.ReturnValue == "$RuntimeProcessingResult" {
 			return
 		}
-		t.Fatalf("EndEvent return value = %q, want $EnvironmentProcessingResult", end.ReturnValue)
+		t.Fatalf("EndEvent return value = %q, want $RuntimeProcessingResult", end.ReturnValue)
 	}
 	t.Fatal("expected EndEvent")
 }

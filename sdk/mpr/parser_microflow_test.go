@@ -145,14 +145,14 @@ func TestParseCodeActionParameterValue_MicroflowParameterValue(t *testing.T) {
 	value := parseCodeActionParameterValue(map[string]any{
 		"$ID":       "pmv-1",
 		"$Type":     "Microflows$MicroflowParameterValue",
-		"Microflow": "MxDock.Example_OpenAdminPage",
+		"Microflow": "SampleAdmin.OpenAdminPage",
 	})
 
 	got, ok := value.(*microflows.MicroflowParameterValue)
 	if !ok {
 		t.Fatalf("expected *MicroflowParameterValue, got %T", value)
 	}
-	if got.Microflow != "MxDock.Example_OpenAdminPage" {
+	if got.Microflow != "SampleAdmin.OpenAdminPage" {
 		t.Fatalf("expected microflow name preserved, got %q", got.Microflow)
 	}
 }
@@ -171,9 +171,9 @@ func TestParseCodeActionParameterType_JavaActionMicroflowParameter(t *testing.T)
 func TestParseResultHandlingMappingUsesRangeForSingleObject(t *testing.T) {
 	got := parseResultHandling(map[string]any{
 		"$ID":                "result-handling-1",
-		"ResultVariableName": "CloudApp",
+		"ResultVariableName": "RemoteApp",
 		"ImportMappingCall": map[string]any{
-			"ReturnValueMapping":    "CloudIntegration.IMM_CloudApp",
+			"ReturnValueMapping":    "SampleRuntimeApi.IMM_RemoteApp",
 			"ForceSingleOccurrence": false,
 			"Range": map[string]any{
 				"SingleObject": true,
@@ -181,7 +181,7 @@ func TestParseResultHandlingMappingUsesRangeForSingleObject(t *testing.T) {
 		},
 		"VariableType": map[string]any{
 			"$Type":  "DataTypes$ObjectType",
-			"Entity": "CloudIntegration.CloudApp",
+			"Entity": "SampleRuntimeApi.RemoteApp",
 		},
 	}, "Mapping")
 
@@ -201,12 +201,12 @@ func TestSerializeRestResultHandlingPreservesForceSingleOccurrenceSeparately(t *
 	forceSingleOccurrence := false
 	doc := serializeRestResultHandling(&microflows.ResultHandlingMapping{
 		BaseElement:           model.BaseElement{ID: model.ID("result-handling-1")},
-		MappingID:             model.ID("CloudIntegration.IMM_CloudApp"),
-		ResultEntityID:        model.ID("CloudIntegration.CloudApp"),
-		ResultVariable:        "CloudApp",
+		MappingID:             model.ID("SampleRuntimeApi.IMM_RemoteApp"),
+		ResultEntityID:        model.ID("SampleRuntimeApi.RemoteApp"),
+		ResultVariable:        "RemoteApp",
 		SingleObject:          true,
 		ForceSingleOccurrence: &forceSingleOccurrence,
-	}, "CloudApp")
+	}, "RemoteApp")
 
 	importCall, ok := bsonDMap(doc)["ImportMappingCall"].(primitive.D)
 	if !ok {
@@ -238,8 +238,8 @@ func TestSerializeImportXmlActionPreservesSingleObjectRange(t *testing.T) {
 		BaseElement: model.BaseElement{ID: model.ID("import-action-1")},
 		ResultHandling: &microflows.ResultHandlingMapping{
 			BaseElement:           model.BaseElement{ID: model.ID("result-handling-1")},
-			MappingID:             model.ID("RestAPICommons.IMM_ErrorResponse"),
-			ResultEntityID:        model.ID("RestAPICommons.Error"),
+			MappingID:             model.ID("SampleRest.IMM_ErrorResponse"),
+			ResultEntityID:        model.ID("SampleRest.Error"),
 			ResultVariable:        "ErrorResponse",
 			SingleObject:          true,
 			ForceSingleOccurrence: &forceSingleOccurrence,
@@ -279,9 +279,9 @@ func TestSerializeWebServiceCallActionPreservesRawBSON(t *testing.T) {
 	raw, err := bson.Marshal(bson.D{
 		{Key: "$ID", Value: "web-service-action-1"},
 		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
-		{Key: "ImportedService", Value: "LamaIntegration.AccessGroupManagement"},
-		{Key: "OperationName", Value: "GetGroupsByCompany"},
-		{Key: "TimeOutExpression", Value: "@ControlCenterCommons.StandardTimeoutValue"},
+		{Key: "ImportedService", Value: "SampleAccess.GroupService"},
+		{Key: "OperationName", Value: "FetchItemsByTenant"},
+		{Key: "TimeOutExpression", Value: "@SampleAuth.StandardTimeout"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -292,10 +292,10 @@ func TestSerializeWebServiceCallActionPreservesRawBSON(t *testing.T) {
 	if got := fields["$Type"]; got != "Microflows$CallWebServiceAction" {
 		t.Fatalf("$Type = %v, want Microflows$CallWebServiceAction", got)
 	}
-	if got := fields["ImportedService"]; got != "LamaIntegration.AccessGroupManagement" {
+	if got := fields["ImportedService"]; got != "SampleAccess.GroupService" {
 		t.Fatalf("ImportedService = %v", got)
 	}
-	if got := fields["OperationName"]; got != "GetGroupsByCompany" {
+	if got := fields["OperationName"]; got != "FetchItemsByTenant" {
 		t.Fatalf("OperationName = %v", got)
 	}
 }
@@ -322,11 +322,11 @@ func TestSerializeRestResultHandlingHttpResponseUsesObjectType(t *testing.T) {
 func TestSerializeSortItemPreservesIndirectEntityRef(t *testing.T) {
 	doc := serializeSortItem(&microflows.SortItem{
 		BaseElement:            model.BaseElement{ID: model.ID("sort-1")},
-		AttributeQualifiedName: "AppsCombinedView.AppView.AppCreatedDate",
+		AttributeQualifiedName: "SampleApps.ApplicationView.CreatedAt",
 		EntityRefSteps: []microflows.EntityRefStep{
 			{
-				Association:       "AppsCombinedView.PrivateCloudEnvironment_AppView",
-				DestinationEntity: "AppsCombinedView.AppView",
+				Association:       "SampleApps.DeploymentTarget_ApplicationView",
+				DestinationEntity: "SampleApps.ApplicationView",
 			},
 		},
 		Direction: microflows.SortDirectionDescending,
@@ -352,10 +352,10 @@ func TestSerializeSortItemPreservesIndirectEntityRef(t *testing.T) {
 		t.Fatalf("step type = %T, want primitive.D", steps[1])
 	}
 	stepFields := bsonDMap(step)
-	if got := stepFields["Association"]; got != "AppsCombinedView.PrivateCloudEnvironment_AppView" {
+	if got := stepFields["Association"]; got != "SampleApps.DeploymentTarget_ApplicationView" {
 		t.Fatalf("Association = %v", got)
 	}
-	if got := stepFields["DestinationEntity"]; got != "AppsCombinedView.AppView" {
+	if got := stepFields["DestinationEntity"]; got != "SampleApps.ApplicationView" {
 		t.Fatalf("DestinationEntity = %v", got)
 	}
 }
@@ -371,15 +371,15 @@ func TestParseSortItemsPreservesIndirectEntityRef(t *testing.T) {
 					"SortOrder": "Descending",
 					"AttributeRef": map[string]any{
 						"$Type":     "DomainModels$AttributeRef",
-						"Attribute": "AppsCombinedView.AppView.AppCreatedDate",
+						"Attribute": "SampleApps.ApplicationView.CreatedAt",
 						"EntityRef": map[string]any{
 							"$Type": "DomainModels$IndirectEntityRef",
 							"Steps": []any{
 								int32(2),
 								map[string]any{
 									"$Type":             "DomainModels$EntityRefStep",
-									"Association":       "AppsCombinedView.PrivateCloudEnvironment_AppView",
-									"DestinationEntity": "AppsCombinedView.AppView",
+									"Association":       "SampleApps.DeploymentTarget_ApplicationView",
+									"DestinationEntity": "SampleApps.ApplicationView",
 								},
 							},
 						},
@@ -392,7 +392,7 @@ func TestParseSortItemsPreservesIndirectEntityRef(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("got %d sort items, want 1", len(got))
 	}
-	if steps := got[0].EntityRefSteps; len(steps) != 1 || steps[0].Association != "AppsCombinedView.PrivateCloudEnvironment_AppView" || steps[0].DestinationEntity != "AppsCombinedView.AppView" {
+	if steps := got[0].EntityRefSteps; len(steps) != 1 || steps[0].Association != "SampleApps.DeploymentTarget_ApplicationView" || steps[0].DestinationEntity != "SampleApps.ApplicationView" {
 		t.Fatalf("EntityRefSteps = %#v", steps)
 	}
 }

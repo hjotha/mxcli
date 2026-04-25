@@ -17,12 +17,12 @@ func TestMicroflowCallAction_WritesMendix9FieldOrder(t *testing.T) {
 		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
 		MicroflowCall: &microflows.MicroflowCall{
 			BaseElement: model.BaseElement{ID: "call-id"},
-			Microflow:   "AcademyIntegration.UpdateAllAccountsOfProfile",
+			Microflow:   "SampleLearning.UpdateProfileAccounts",
 			ParameterMappings: []*microflows.MicroflowCallParameterMapping{
 				{
 					BaseElement: model.BaseElement{ID: "mapping-id"},
-					Argument:    "$UserToUpdateCertificate/ProfileID",
-					Parameter:   "AcademyIntegration.UpdateAllAccountsOfProfile.userprofileID",
+					Argument:    "$UserToUpdateSample/ProfileID",
+					Parameter:   "SampleLearning.UpdateProfileAccounts.profileID",
 				},
 			},
 		},

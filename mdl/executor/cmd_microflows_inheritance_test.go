@@ -144,7 +144,7 @@ func TestTraverseFlow_InheritanceSplitPreservesEmptyCases(t *testing.T) {
 		},
 		mkID("cast"): &microflows.ActionActivity{
 			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("cast")},
-			Action:       &microflows.CastAction{OutputVariable: "EnvironmentListContext"},
+			Action:       &microflows.CastAction{OutputVariable: "RuntimeListContext"},
 		},
 		mkID("merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
 		mkID("end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
@@ -152,8 +152,8 @@ func TestTraverseFlow_InheritanceSplitPreservesEmptyCases(t *testing.T) {
 	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
 		mkID("start"): {mkFlow("start", "split")},
 		mkID("split"): {
-			mkBranchFlow("split", "cast", microflows.InheritanceCase{EntityQualifiedName: "Cloud.EnvironmentListContext"}),
-			mkBranchFlow("split", "merge", microflows.InheritanceCase{EntityQualifiedName: "MultiSelectionListView.ListContext"}),
+			mkBranchFlow("split", "cast", microflows.InheritanceCase{EntityQualifiedName: "SampleRuntime.RuntimeListContext"}),
+			mkBranchFlow("split", "merge", microflows.InheritanceCase{EntityQualifiedName: "SampleSelection.ListContext"}),
 		},
 		mkID("cast"):  {mkFlow("cast", "merge")},
 		mkID("merge"): {mkFlow("merge", "end")},
@@ -162,9 +162,9 @@ func TestTraverseFlow_InheritanceSplitPreservesEmptyCases(t *testing.T) {
 	var lines []string
 	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, map[model.ID]bool{}, nil, nil, &lines, 0, nil, 0, nil)
 	got := strings.Join(lines, "\n")
-	assertContains(t, got, "case Cloud.EnvironmentListContext")
-	assertContains(t, got, "case MultiSelectionListView.ListContext")
-	assertContains(t, got, "cast $EnvironmentListContext;")
+	assertContains(t, got, "case SampleRuntime.RuntimeListContext")
+	assertContains(t, got, "case SampleSelection.ListContext")
+	assertContains(t, got, "cast $RuntimeListContext;")
 }
 
 func TestBuilder_InheritanceSplit_EmptyCaseCreatesConfiguredFlow(t *testing.T) {
@@ -173,12 +173,12 @@ func TestBuilder_InheritanceSplit_EmptyCaseCreatesConfiguredFlow(t *testing.T) {
 			Variable: "ListContext",
 			Cases: []ast.InheritanceSplitCase{
 				{
-					Entity: ast.QualifiedName{Module: "Cloud", Name: "EnvironmentListContext"},
+					Entity: ast.QualifiedName{Module: "Cloud", Name: "RuntimeListContext"},
 					Body: []ast.MicroflowStatement{
-						&ast.CastObjectStmt{OutputVariable: "EnvironmentListContext"},
+						&ast.CastObjectStmt{OutputVariable: "RuntimeListContext"},
 					},
 				},
-				{Entity: ast.QualifiedName{Module: "MultiSelectionListView", Name: "ListContext"}},
+				{Entity: ast.QualifiedName{Module: "SampleSelection", Name: "ListContext"}},
 			},
 			ElseBody: []ast.MicroflowStatement{},
 		},
@@ -204,7 +204,7 @@ func TestBuilder_InheritanceSplit_EmptyCaseCreatesConfiguredFlow(t *testing.T) {
 		if flow.OriginID != splitID || flow.DestinationID != mergeID {
 			continue
 		}
-		if inheritanceCaseValue(flow.CaseValue) == "MultiSelectionListView.ListContext" {
+		if inheritanceCaseValue(flow.CaseValue) == "SampleSelection.ListContext" {
 			foundEmptyElse = true
 		}
 	}
@@ -230,7 +230,7 @@ func TestBuilder_InheritanceSplitPreservesGuardFalseContinuation(t *testing.T) {
 			Variable: "currentUser",
 			Cases: []ast.InheritanceSplitCase{
 				{
-					Entity: ast.QualifiedName{Module: "ControlCenterCommons", Name: "MendixSSOUser"},
+					Entity: ast.QualifiedName{Module: "SampleAuth", Name: "SampleIdentityUser"},
 					Body: []ast.MicroflowStatement{
 						&ast.IfStmt{
 							Condition: &ast.BinaryExpr{
@@ -256,10 +256,10 @@ func TestBuilder_InheritanceSplitPreservesGuardFalseContinuation(t *testing.T) {
 		posX:     100,
 		posY:     100,
 		spacing:  HorizontalSpacing,
-		varTypes: map[string]string{"Member": "SprintrIntegration.Member"},
+		varTypes: map[string]string{"Member": "SampleDirectory.Member"},
 		measurer: &layoutMeasurer{},
 	}
-	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "SprintrIntegration", Name: "Member"}}})
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "SampleDirectory", Name: "Member"}}})
 
 	var guardSplitID, logID model.ID
 	for _, obj := range oc.Objects {
@@ -295,11 +295,11 @@ func TestBuilder_InheritanceSplitCastRegistersCaseType(t *testing.T) {
 			Variable: "ListContext",
 			Cases: []ast.InheritanceSplitCase{
 				{
-					Entity: ast.QualifiedName{Module: "Groups", Name: "AccessGroupMemberListContext"},
+					Entity: ast.QualifiedName{Module: "SampleAccess", Name: "GroupMemberListContext"},
 					Body: []ast.MicroflowStatement{
-						&ast.CastObjectStmt{OutputVariable: "AccessGroupMemberListContext"},
+						&ast.CastObjectStmt{OutputVariable: "GroupMemberListContext"},
 						&ast.ChangeObjectStmt{
-							Variable: "AccessGroupMemberListContext",
+							Variable: "GroupMemberListContext",
 							Changes:  []ast.ChangeItem{{Attribute: "TotalListSize", Value: &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: "0"}}},
 						},
 					},
@@ -316,7 +316,7 @@ func TestBuilder_InheritanceSplitCastRegistersCaseType(t *testing.T) {
 	}
 	fb.buildFlowGraph(body, nil)
 
-	if got := fb.varTypes["AccessGroupMemberListContext"]; got != "Groups.AccessGroupMemberListContext" {
+	if got := fb.varTypes["GroupMemberListContext"]; got != "SampleAccess.GroupMemberListContext" {
 		t.Fatalf("cast variable type = %q, want inheritance case type", got)
 	}
 	for _, obj := range fb.objects {
@@ -328,7 +328,7 @@ func TestBuilder_InheritanceSplitCastRegistersCaseType(t *testing.T) {
 		if !ok || len(action.Changes) == 0 {
 			continue
 		}
-		if got := action.Changes[0].AttributeQualifiedName; got != "Groups.AccessGroupMemberListContext.TotalListSize" {
+		if got := action.Changes[0].AttributeQualifiedName; got != "SampleAccess.GroupMemberListContext.TotalListSize" {
 			t.Fatalf("change attribute = %q, want qualified cast case attribute", got)
 		}
 		return

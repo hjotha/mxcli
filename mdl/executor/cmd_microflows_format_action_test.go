@@ -430,20 +430,20 @@ func TestFormatAction_MicroflowCall_TrimsTrailingArgumentWhitespace(t *testing.T
 func TestFormatAction_MicroflowCall_CollapsesMultilineArgumentWhitespace(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.MicroflowCallAction{
-		ResultVariableName: "EnvironmentsRoot",
+		ResultVariableName: "RuntimesRoot",
 		MicroflowCall: &microflows.MicroflowCall{
-			Microflow: "CloudIntegration.REST_RetrieveEnvironments",
+			Microflow: "SampleRuntimeApi.REST_RetrieveRuntimes",
 			ParameterMappings: []*microflows.MicroflowCallParameterMapping{
 				{
-					Parameter: "CloudIntegration.REST_RetrieveEnvironments.Offset",
-					Argument:  "if $ListContext/TriggeredBySearch then '0'\nelse\ntoString($EnvironmentListContext/PageSize * ($ListHeader/CurrentPageNumber-1))",
+					Parameter: "SampleRuntimeApi.REST_RetrieveRuntimes.Offset",
+					Argument:  "if $ListContext/TriggeredBySearch then '0'\nelse\ntoString($RuntimeListContext/PageSize * ($ListHeader/CurrentPageNumber-1))",
 				},
 			},
 		},
 	}
 
 	got := e.formatAction(action, nil, nil)
-	want := "$EnvironmentsRoot = call microflow CloudIntegration.REST_RetrieveEnvironments(Offset = if $ListContext/TriggeredBySearch then '0' else toString($EnvironmentListContext/PageSize * ($ListHeader/CurrentPageNumber - 1)));"
+	want := "$RuntimesRoot = call microflow SampleRuntimeApi.REST_RetrieveRuntimes(Offset = if $ListContext/TriggeredBySearch then '0' else toString($RuntimeListContext/PageSize * ($ListHeader/CurrentPageNumber - 1)));"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -620,13 +620,13 @@ func TestFormatAction_ValidationFeedback(t *testing.T) {
 func TestFormatAction_ValidationFeedback_ObjectOnlyTarget(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ValidationFeedbackAction{
-		ObjectVariable: "CompanyAdminSuggestion",
+		ObjectVariable: "AdminCandidate",
 		Template: &model.Text{
-			Translations: map[string]string{"en_US": "Please select your desired company admin."},
+			Translations: map[string]string{"en_US": "Please select the requested user."},
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "validation feedback $CompanyAdminSuggestion message 'Please select your desired company admin.';"
+	want := "validation feedback $AdminCandidate message 'Please select the requested user.';"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -635,15 +635,15 @@ func TestFormatAction_ValidationFeedback_ObjectOnlyTarget(t *testing.T) {
 func TestFormatAction_ValidationFeedback_AssociationTarget(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ValidationFeedbackAction{
-		ObjectVariable:  "CompanyAdminSuggestion",
-		AssociationName: "CompanyLandingPage.CompanyAdminSuggestion_Member",
+		ObjectVariable:  "AdminCandidate",
+		AssociationName: "SampleRequests.AdminCandidate_User",
 		AttributeName:   "",
 		Template: &model.Text{
-			Translations: map[string]string{"en_US": "Please select your desired company admin."},
+			Translations: map[string]string{"en_US": "Please select the requested user."},
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "validation feedback $CompanyAdminSuggestion/CompanyLandingPage.CompanyAdminSuggestion_Member message 'Please select your desired company admin.';"
+	want := "validation feedback $AdminCandidate/SampleRequests.AdminCandidate_User message 'Please select the requested user.';"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -727,7 +727,7 @@ func TestFormatAction_WebServiceCall(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.WebServiceCallAction{
 		ServiceID:         "service-1",
-		OperationName:     "GetAccessGroups",
+		OperationName:     "FetchSampleItems",
 		SendMappingID:     "send-1",
 		ReceiveMappingID:  "receive-1",
 		OutputVariable:    "Root",
@@ -735,7 +735,7 @@ func TestFormatAction_WebServiceCall(t *testing.T) {
 		TimeoutExpression: "30",
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$Root = call web service 'service-1'\noperation 'GetAccessGroups'\nsend mapping 'send-1'\nreceive mapping 'receive-1'\ntimeout 30;"
+	want := "$Root = call web service 'service-1'\noperation 'FetchSampleItems'\nsend mapping 'send-1'\nreceive mapping 'receive-1'\ntimeout 30;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -885,14 +885,14 @@ func TestFormatAction_Retrieve_ReverseAssociationDatabaseSourceUsesCompactForm(t
 	action := &microflows.RetrieveAction{
 		OutputVariable: "Domains",
 		Source: &microflows.DatabaseRetrieveSource{
-			EntityQualifiedName: "CloudData.Domain",
-			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			EntityQualifiedName: "SampleRuntime.Domain",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
 			Range:               &microflows.Range{RangeType: microflows.RangeTypeAll},
 		},
 	}
 
 	got := e.formatAction(action, nil, nil)
-	want := "retrieve $Domains from $Environment/CloudData.Domain_Environment;"
+	want := "retrieve $Domains from $Runtime/SampleRuntime.Domain_Runtime;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -904,14 +904,14 @@ func TestFormatAction_Retrieve_ReverseAssociationRequiresSimpleAllRange(t *testi
 	action := &microflows.RetrieveAction{
 		OutputVariable: "Domains",
 		Source: &microflows.DatabaseRetrieveSource{
-			EntityQualifiedName: "CloudData.Domain",
-			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			EntityQualifiedName: "SampleRuntime.Domain",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
 			Range:               &microflows.Range{RangeType: microflows.RangeTypeFirst},
 		},
 	}
 
 	got := e.formatAction(action, nil, nil)
-	want := "retrieve $Domains from CloudData.Domain\n    where CloudData.Domain_Environment = $Environment\n    limit 1;"
+	want := "retrieve $Domains from SampleRuntime.Domain\n    where SampleRuntime.Domain_Runtime = $Runtime\n    limit 1;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -923,13 +923,13 @@ func TestFormatAction_Retrieve_ReverseAssociationRequiresMatchingEntity(t *testi
 	action := &microflows.RetrieveAction{
 		OutputVariable: "Domains",
 		Source: &microflows.DatabaseRetrieveSource{
-			EntityQualifiedName: "CloudData.Environment",
-			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			EntityQualifiedName: "SampleRuntime.Runtime",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
 		},
 	}
 
 	got := e.formatAction(action, nil, nil)
-	want := "retrieve $Domains from CloudData.Environment\n    where CloudData.Domain_Environment = $Environment;"
+	want := "retrieve $Domains from SampleRuntime.Runtime\n    where SampleRuntime.Domain_Runtime = $Runtime;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -937,11 +937,11 @@ func TestFormatAction_Retrieve_ReverseAssociationRequiresMatchingEntity(t *testi
 
 func TestParseReverseAssociationXPathRejectsComplexPredicates(t *testing.T) {
 	tests := []string{
-		"[CloudData.Domain_Environment = $Environment][Active = true]",
-		"[CloudData.Domain_Environment != $Environment]",
-		"[CloudData.Domain_Environment = $Environment/Other.Assoc]",
-		"[CloudData.Domain_Environment = 'literal']",
-		"CloudData.Domain_Environment = $Environment",
+		"[SampleRuntime.Domain_Runtime = $Runtime][Active = true]",
+		"[SampleRuntime.Domain_Runtime != $Runtime]",
+		"[SampleRuntime.Domain_Runtime = $Runtime/Other.Assoc]",
+		"[SampleRuntime.Domain_Runtime = 'literal']",
+		"SampleRuntime.Domain_Runtime = $Runtime",
 	}
 
 	for _, tt := range tests {
@@ -956,12 +956,12 @@ func reverseAssociationBackend(t *testing.T) *mock.MockBackend {
 	moduleID := model.ID("clouddata-module")
 	return &mock.MockBackend{
 		GetModuleByNameFunc: func(name string) (*model.Module, error) {
-			if name != "CloudData" {
+			if name != "SampleRuntime" {
 				return nil, nil
 			}
 			return &model.Module{
 				BaseElement: model.BaseElement{ID: moduleID},
-				Name:        "CloudData",
+				Name:        "SampleRuntime",
 			}, nil
 		},
 		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
@@ -977,12 +977,12 @@ func reverseAssociationBackend(t *testing.T) *mock.MockBackend {
 					},
 					{
 						BaseElement: model.BaseElement{ID: "environment-entity"},
-						Name:        "Environment",
+						Name:        "Runtime",
 					},
 				},
 				Associations: []*domainmodel.Association{
 					{
-						Name:     "Domain_Environment",
+						Name:     "Domain_Runtime",
 						ParentID: "domain-entity",
 						ChildID:  "environment-entity",
 						Type:     domainmodel.AssociationTypeReference,

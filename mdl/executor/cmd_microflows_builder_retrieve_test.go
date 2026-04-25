@@ -14,13 +14,13 @@ import (
 
 func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 	moduleID := model.ID("apps-combined-view-module")
-	privateCloudEnvironmentID := model.ID("private-cloud-environment-entity")
-	appViewID := model.ID("app-view-entity")
+	deploymentTargetID := model.ID("deployment-target-entity")
+	appViewID := model.ID("application-view-entity")
 	fb := &flowBuilder{
 		varTypes: map[string]string{},
 		backend: &mock.MockBackend{
 			GetModuleByNameFunc: func(name string) (*model.Module, error) {
-				if name != "AppsCombinedView" {
+				if name != "SampleApps" {
 					return nil, nil
 				}
 				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: name}, nil
@@ -32,13 +32,13 @@ func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 				return &domainmodel.DomainModel{
 					ContainerID: moduleID,
 					Entities: []*domainmodel.Entity{
-						{BaseElement: model.BaseElement{ID: privateCloudEnvironmentID}, Name: "PrivateCloudEnvironment"},
-						{BaseElement: model.BaseElement{ID: appViewID}, Name: "AppView"},
+						{BaseElement: model.BaseElement{ID: deploymentTargetID}, Name: "DeploymentTarget"},
+						{BaseElement: model.BaseElement{ID: appViewID}, Name: "ApplicationView"},
 					},
 					Associations: []*domainmodel.Association{
 						{
-							Name:     "PrivateCloudEnvironment_AppView",
-							ParentID: privateCloudEnvironmentID,
+							Name:     "DeploymentTarget_ApplicationView",
+							ParentID: deploymentTargetID,
 							ChildID:  appViewID,
 							Type:     domainmodel.AssociationTypeReference,
 						},
@@ -49,17 +49,17 @@ func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 	}
 
 	fb.addRetrieveAction(&ast.RetrieveStmt{
-		Variable: "PrivateCloudEnvironmentList",
+		Variable: "DeploymentTargetList",
 		Source: ast.QualifiedName{
-			Module: "AppsCombinedView",
-			Name:   "PrivateCloudEnvironment",
+			Module: "SampleApps",
+			Name:   "DeploymentTarget",
 		},
 		Where: &ast.SourceExpr{
-			Source: "AppsCombinedView.PrivateCloudEnvironment_AppView/AppsCombinedView.AppView/AppsCombinedView.AppView_Company = $Company",
+			Source: "SampleApps.DeploymentTarget_ApplicationView/SampleApps.ApplicationView/SampleApps.ApplicationView_Company = $Company",
 		},
 		SortColumns: []ast.SortColumnDef{
-			{Attribute: "AppsCombinedView.AppView.AppCreatedDate", Order: "DESC"},
-			{Attribute: "AppsCombinedView.AppView.AppName", Order: "ASC"},
+			{Attribute: "SampleApps.ApplicationView.CreatedAt", Order: "DESC"},
+			{Attribute: "SampleApps.ApplicationView.Name", Order: "ASC"},
 		},
 	})
 
@@ -85,16 +85,16 @@ func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 	if len(source.Sorting) != 2 {
 		t.Fatalf("got %d sort items, want 2", len(source.Sorting))
 	}
-	if got := source.Sorting[0].AttributeQualifiedName; got != "AppsCombinedView.AppView.AppCreatedDate" {
+	if got := source.Sorting[0].AttributeQualifiedName; got != "SampleApps.ApplicationView.CreatedAt" {
 		t.Fatalf("first sort attribute = %q", got)
 	}
-	if got := source.Sorting[0].EntityRefSteps; len(got) != 1 || got[0].Association != "AppsCombinedView.PrivateCloudEnvironment_AppView" || got[0].DestinationEntity != "AppsCombinedView.AppView" {
+	if got := source.Sorting[0].EntityRefSteps; len(got) != 1 || got[0].Association != "SampleApps.DeploymentTarget_ApplicationView" || got[0].DestinationEntity != "SampleApps.ApplicationView" {
 		t.Fatalf("first sort entity ref steps = %#v", got)
 	}
 	if got := source.Sorting[0].Direction; got != microflows.SortDirectionDescending {
 		t.Fatalf("first sort direction = %q, want %q", got, microflows.SortDirectionDescending)
 	}
-	if got := source.Sorting[1].AttributeQualifiedName; got != "AppsCombinedView.AppView.AppName" {
+	if got := source.Sorting[1].AttributeQualifiedName; got != "SampleApps.ApplicationView.Name" {
 		t.Fatalf("second sort attribute = %q", got)
 	}
 }
@@ -105,11 +105,11 @@ func TestAddRetrieveAction_CompactReverseReferenceUsesAssociationSource(t *testi
 	certificateID := model.ID("certificate-entity")
 	fb := &flowBuilder{
 		varTypes: map[string]string{
-			"Iteratorcertificates": "AcademyIntegration.Certificate",
+			"Iteratorcertificates": "SampleLearning.SampleItem",
 		},
 		backend: &mock.MockBackend{
 			GetModuleByNameFunc: func(name string) (*model.Module, error) {
-				if name != "AcademyIntegration" {
+				if name != "SampleLearning" {
 					return nil, nil
 				}
 				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: name}, nil
@@ -122,11 +122,11 @@ func TestAddRetrieveAction_CompactReverseReferenceUsesAssociationSource(t *testi
 					ContainerID: moduleID,
 					Entities: []*domainmodel.Entity{
 						{BaseElement: model.BaseElement{ID: profileID}, Name: "userprofiles"},
-						{BaseElement: model.BaseElement{ID: certificateID}, Name: "Certificate"},
+						{BaseElement: model.BaseElement{ID: certificateID}, Name: "SampleItem"},
 					},
 					Associations: []*domainmodel.Association{
 						{
-							Name:     "HighestCertificate_UserProfile",
+							Name:     "TopSampleItem_UserProfile",
 							ParentID: profileID,
 							ChildID:  certificateID,
 							Type:     domainmodel.AssociationTypeReference,
@@ -138,11 +138,11 @@ func TestAddRetrieveAction_CompactReverseReferenceUsesAssociationSource(t *testi
 	}
 
 	fb.addRetrieveAction(&ast.RetrieveStmt{
-		Variable:      "UserToUpdateCertificate",
+		Variable:      "UserToUpdateSample",
 		StartVariable: "Iteratorcertificates",
 		Source: ast.QualifiedName{
-			Module: "AcademyIntegration",
-			Name:   "HighestCertificate_UserProfile",
+			Module: "SampleLearning",
+			Name:   "TopSampleItem_UserProfile",
 		},
 	})
 
@@ -164,11 +164,11 @@ func TestAddRetrieveAction_CompactReverseReferenceUsesAssociationSource(t *testi
 	if source.StartVariable != "Iteratorcertificates" {
 		t.Fatalf("StartVariable = %q, want Iteratorcertificates", source.StartVariable)
 	}
-	if source.AssociationQualifiedName != "AcademyIntegration.HighestCertificate_UserProfile" {
+	if source.AssociationQualifiedName != "SampleLearning.TopSampleItem_UserProfile" {
 		t.Fatalf("AssociationQualifiedName = %q", source.AssociationQualifiedName)
 	}
-	if got := fb.varTypes["UserToUpdateCertificate"]; got != "List of AcademyIntegration.userprofiles" {
-		t.Fatalf("var type = %q, want List of AcademyIntegration.userprofiles", got)
+	if got := fb.varTypes["UserToUpdateSample"]; got != "List of SampleLearning.userprofiles" {
+		t.Fatalf("var type = %q, want List of SampleLearning.userprofiles", got)
 	}
 }
 
@@ -178,11 +178,11 @@ func TestAddRetrieveAction_ForwardReferenceRegistersSingleTargetEntityType(t *te
 	certificateID := model.ID("certificate-entity")
 	fb := &flowBuilder{
 		varTypes: map[string]string{
-			"UserProfile": "AcademyIntegration.userprofiles",
+			"UserProfile": "SampleLearning.userprofiles",
 		},
 		backend: &mock.MockBackend{
 			GetModuleByNameFunc: func(name string) (*model.Module, error) {
-				if name != "AcademyIntegration" {
+				if name != "SampleLearning" {
 					return nil, nil
 				}
 				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: name}, nil
@@ -195,11 +195,11 @@ func TestAddRetrieveAction_ForwardReferenceRegistersSingleTargetEntityType(t *te
 					ContainerID: moduleID,
 					Entities: []*domainmodel.Entity{
 						{BaseElement: model.BaseElement{ID: profileID}, Name: "userprofiles"},
-						{BaseElement: model.BaseElement{ID: certificateID}, Name: "Certificate"},
+						{BaseElement: model.BaseElement{ID: certificateID}, Name: "SampleItem"},
 					},
 					Associations: []*domainmodel.Association{
 						{
-							Name:     "HighestCertificate_UserProfile",
+							Name:     "TopSampleItem_UserProfile",
 							ParentID: profileID,
 							ChildID:  certificateID,
 							Type:     domainmodel.AssociationTypeReference,
@@ -211,30 +211,30 @@ func TestAddRetrieveAction_ForwardReferenceRegistersSingleTargetEntityType(t *te
 	}
 
 	fb.addRetrieveAction(&ast.RetrieveStmt{
-		Variable:      "Certificate",
+		Variable:      "SampleItem",
 		StartVariable: "UserProfile",
 		Source: ast.QualifiedName{
-			Module: "AcademyIntegration",
-			Name:   "HighestCertificate_UserProfile",
+			Module: "SampleLearning",
+			Name:   "TopSampleItem_UserProfile",
 		},
 	})
 
-	if got := fb.varTypes["Certificate"]; got != "AcademyIntegration.Certificate" {
-		t.Fatalf("var type = %q, want AcademyIntegration.Certificate", got)
+	if got := fb.varTypes["SampleItem"]; got != "SampleLearning.SampleItem" {
+		t.Fatalf("var type = %q, want SampleLearning.SampleItem", got)
 	}
 }
 
 func TestAddRetrieveAction_ReferenceSetRegistersTargetEntityListType(t *testing.T) {
-	moduleID := model.ID("data-lake-module")
-	coreEventID := model.ID("core-event-entity")
-	metaDataEventID := model.ID("metadata-event-entity")
+	moduleID := model.ID("sample-events-module")
+	coreEventID := model.ID("source-event-entity")
+	metaDataEventID := model.ID("derived-event-entity")
 	fb := &flowBuilder{
 		varTypes: map[string]string{
-			"IteratorCoreEvent": "DataLake.CoreEvent",
+			"IteratorSourceEvent": "SampleEvents.SourceEvent",
 		},
 		backend: &mock.MockBackend{
 			GetModuleByNameFunc: func(name string) (*model.Module, error) {
-				if name != "DataLake" {
+				if name != "SampleEvents" {
 					return nil, nil
 				}
 				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: name}, nil
@@ -246,12 +246,12 @@ func TestAddRetrieveAction_ReferenceSetRegistersTargetEntityListType(t *testing.
 				return &domainmodel.DomainModel{
 					ContainerID: moduleID,
 					Entities: []*domainmodel.Entity{
-						{BaseElement: model.BaseElement{ID: coreEventID}, Name: "CoreEvent"},
-						{BaseElement: model.BaseElement{ID: metaDataEventID}, Name: "MetaDataEvent"},
+						{BaseElement: model.BaseElement{ID: coreEventID}, Name: "SourceEvent"},
+						{BaseElement: model.BaseElement{ID: metaDataEventID}, Name: "DerivedEvent"},
 					},
 					Associations: []*domainmodel.Association{
 						{
-							Name:     "CoreEvent_MetaDataEvent",
+							Name:     "SourceEvent_DerivedEvent",
 							ParentID: coreEventID,
 							ChildID:  metaDataEventID,
 							Type:     domainmodel.AssociationTypeReferenceSet,
@@ -263,29 +263,29 @@ func TestAddRetrieveAction_ReferenceSetRegistersTargetEntityListType(t *testing.
 	}
 
 	fb.addRetrieveAction(&ast.RetrieveStmt{
-		Variable:      "MetaDataEventList",
-		StartVariable: "IteratorCoreEvent",
+		Variable:      "DerivedEventList",
+		StartVariable: "IteratorSourceEvent",
 		Source: ast.QualifiedName{
-			Module: "DataLake",
-			Name:   "CoreEvent_MetaDataEvent",
+			Module: "SampleEvents",
+			Name:   "SourceEvent_DerivedEvent",
 		},
 	})
 
-	if got := fb.varTypes["MetaDataEventList"]; got != "List of DataLake.MetaDataEvent" {
-		t.Fatalf("var type = %q, want List of DataLake.MetaDataEvent", got)
+	if got := fb.varTypes["DerivedEventList"]; got != "List of SampleEvents.DerivedEvent" {
+		t.Fatalf("var type = %q, want List of SampleEvents.DerivedEvent", got)
 	}
 }
 
 func TestAddRetrieveAction_CrossReferenceSetRegistersRemoteTargetEntityListType(t *testing.T) {
-	moduleID := model.ID("data-lake-module")
-	coreEventID := model.ID("core-event-entity")
+	moduleID := model.ID("sample-events-module")
+	coreEventID := model.ID("source-event-entity")
 	fb := &flowBuilder{
 		varTypes: map[string]string{
-			"IteratorCoreEvent": "DataLake.CoreEvent",
+			"IteratorSourceEvent": "SampleEvents.SourceEvent",
 		},
 		backend: &mock.MockBackend{
 			GetModuleByNameFunc: func(name string) (*model.Module, error) {
-				if name != "DataLake" {
+				if name != "SampleEvents" {
 					return nil, nil
 				}
 				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: name}, nil
@@ -297,13 +297,13 @@ func TestAddRetrieveAction_CrossReferenceSetRegistersRemoteTargetEntityListType(
 				return &domainmodel.DomainModel{
 					ContainerID: moduleID,
 					Entities: []*domainmodel.Entity{
-						{BaseElement: model.BaseElement{ID: coreEventID}, Name: "CoreEvent"},
+						{BaseElement: model.BaseElement{ID: coreEventID}, Name: "SourceEvent"},
 					},
 					CrossAssociations: []*domainmodel.CrossModuleAssociation{
 						{
-							Name:     "CoreEvent_MetaDataEvent",
+							Name:     "SourceEvent_DerivedEvent",
 							ParentID: coreEventID,
-							ChildRef: "DatalakeIntegration.MetaDataEvent",
+							ChildRef: "SampleEventIntegration.DerivedEvent",
 							Type:     domainmodel.AssociationTypeReferenceSet,
 						},
 					},
@@ -313,15 +313,15 @@ func TestAddRetrieveAction_CrossReferenceSetRegistersRemoteTargetEntityListType(
 	}
 
 	fb.addRetrieveAction(&ast.RetrieveStmt{
-		Variable:      "MetaDataEvent",
-		StartVariable: "IteratorCoreEvent",
+		Variable:      "DerivedEvent",
+		StartVariable: "IteratorSourceEvent",
 		Source: ast.QualifiedName{
-			Module: "DataLake",
-			Name:   "CoreEvent_MetaDataEvent",
+			Module: "SampleEvents",
+			Name:   "SourceEvent_DerivedEvent",
 		},
 	})
 
-	if got := fb.varTypes["MetaDataEvent"]; got != "List of DatalakeIntegration.MetaDataEvent" {
-		t.Fatalf("var type = %q, want List of DatalakeIntegration.MetaDataEvent", got)
+	if got := fb.varTypes["DerivedEvent"]; got != "List of SampleEventIntegration.DerivedEvent" {
+		t.Fatalf("var type = %q, want List of SampleEventIntegration.DerivedEvent", got)
 	}
 }

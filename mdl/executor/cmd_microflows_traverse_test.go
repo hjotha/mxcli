@@ -303,18 +303,18 @@ func TestTraverseFlow_NestedTerminalBranchUsesParentMerge(t *testing.T) {
 		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
 		mkID("support_split"): &microflows.ExclusiveSplit{
 			BaseMicroflowObject: mkObj("support_split"),
-			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "ControlCenterCommons.CurrentUserIsSupportEmployee()"},
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "SampleAuth.CurrentUserHasSupportRole()"},
 		},
 		mkID("admin_check"): &microflows.ActionActivity{
 			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("admin_check")},
 			Action: &microflows.MicroflowCallAction{
-				ResultVariableName: "UserIsCompanyAdmin",
-				MicroflowCall:      &microflows.MicroflowCall{Microflow: "ControlCenterCommons.UserIsCompanyAdmin"},
+				ResultVariableName: "UserHasAdminRole",
+				MicroflowCall:      &microflows.MicroflowCall{Microflow: "SampleAuth.UserHasAdminRole"},
 			},
 		},
 		mkID("admin_split"): &microflows.ExclusiveSplit{
 			BaseMicroflowObject: mkObj("admin_split"),
-			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UserIsCompanyAdmin"},
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UserHasAdminRole"},
 		},
 		mkID("denied"): &microflows.ActionActivity{
 			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("denied")},
