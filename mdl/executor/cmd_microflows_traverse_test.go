@@ -184,6 +184,118 @@ func TestTraverseFlow_IfWithoutElse(t *testing.T) {
 	}
 }
 
+func TestFindMergeForSplit_ChoosesNearestMergeBeforeDownstreamIf(t *testing.T) {
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("logo_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("logo_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Logo != empty"},
+		},
+		mkID("logo_then"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("logo_then")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "logo"}}},
+		},
+		mkID("logo_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("logo_merge")},
+		mkID("after_logo"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("after_logo")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "after logo"}}},
+		},
+		mkID("cover_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("cover_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Cover != empty"},
+		},
+		mkID("cover_then"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("cover_then")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "cover"}}},
+		},
+		mkID("cover_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("cover_merge")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("logo_split"): {
+			mkBranchFlow("logo_split", "logo_then", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("logo_split", "logo_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("logo_then"):  {mkFlow("logo_then", "logo_merge")},
+		mkID("logo_merge"): {mkFlow("logo_merge", "after_logo")},
+		mkID("after_logo"): {mkFlow("after_logo", "cover_split")},
+		mkID("cover_split"): {
+			mkBranchFlow("cover_split", "cover_then", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("cover_split", "cover_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("cover_then"): {mkFlow("cover_then", "cover_merge")},
+	}
+
+	got := findMergeForSplit(nil, mkID("logo_split"), flowsByOrigin, activityMap)
+	if got != mkID("logo_merge") {
+		t.Fatalf("logo split paired with %q, want nearest merge %q", got, mkID("logo_merge"))
+	}
+}
+
+func TestTraverseFlow_SequentialIfWithoutElseKeepsContinuationOutsideFirstIf(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("logo_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("logo_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Logo != empty"},
+		},
+		mkID("logo_then"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("logo_then")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "logo"}}},
+		},
+		mkID("logo_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("logo_merge")},
+		mkID("after_logo"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("after_logo")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "after logo"}}},
+		},
+		mkID("cover_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("cover_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Cover != empty"},
+		},
+		mkID("cover_then"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("cover_then")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "cover"}}},
+		},
+		mkID("cover_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("cover_merge")},
+		mkID("end"):         &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "logo_split")},
+		mkID("logo_split"): {
+			mkBranchFlow("logo_split", "logo_then", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("logo_split", "logo_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("logo_then"):  {mkFlow("logo_then", "logo_merge")},
+		mkID("logo_merge"): {mkFlow("logo_merge", "after_logo")},
+		mkID("after_logo"): {mkFlow("after_logo", "cover_split")},
+		mkID("cover_split"): {
+			mkBranchFlow("cover_split", "cover_then", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("cover_split", "cover_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("cover_then"):  {mkFlow("cover_then", "cover_merge")},
+		mkID("cover_merge"): {mkFlow("cover_merge", "end")},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	firstEndIf := strings.Index(out, "end if;")
+	afterLogo := strings.Index(out, "after logo")
+	if firstEndIf == -1 || afterLogo == -1 || firstEndIf > afterLogo {
+		t.Fatalf("continuation after first IF was emitted inside the IF:\n%s", out)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "after logo") && strings.HasPrefix(line, "  ") {
+			t.Fatalf("continuation after first IF must be top-level, got %q in:\n%s", line, out)
+		}
+	}
+}
+
 func TestTraverseFlow_IfInsideLoop(t *testing.T) {
 	e := newTestExecutor()
 

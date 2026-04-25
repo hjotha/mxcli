@@ -821,26 +821,17 @@ func findMergeForSplit(
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
 	activityMap map[model.ID]microflows.MicroflowObject,
 ) model.ID {
-	flows := flowsByOrigin[splitID]
+	flows := findNormalFlows(flowsByOrigin[splitID])
 	if len(flows) < 2 {
 		return ""
 	}
 
-	// Follow each branch and collect all reachable nodes
-	branch0Nodes := collectReachableNodes(ctx, flows[0].DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
-	branch1Nodes := collectReachableNodes(ctx, flows[1].DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
-
-	// Find the first common node that is an ExclusiveMerge
-	// This is a simplification - we look for the first merge point reachable from both branches
-	for nodeID := range branch0Nodes {
-		if branch1Nodes[nodeID] {
-			if _, ok := activityMap[nodeID].(*microflows.ExclusiveMerge); ok {
-				return nodeID
-			}
-		}
+	branchDistances := make([]map[model.ID]int, 0, len(flows))
+	for _, flow := range flows {
+		branchDistances = append(branchDistances, collectReachableDistances(ctx, flow.DestinationID, flowsByOrigin, activityMap))
 	}
 
-	return ""
+	return selectNearestCommonMerge(activityMap, branchDistances)
 }
 
 // collectReachableNodes collects all nodes reachable from a starting node.
@@ -868,6 +859,105 @@ func collectReachableNodes(
 
 	traverse(startID)
 	return result
+}
+
+// collectReachableDistances collects the shortest normal-flow distance from a
+// branch start to every reachable node. Error handler flows are excluded because
+// they do not participate in split/merge structural pairing.
+func collectReachableDistances(
+	ctx *ExecContext,
+	startID model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	activityMap map[model.ID]microflows.MicroflowObject,
+) map[model.ID]int {
+	_ = ctx
+	_ = activityMap
+
+	distances := map[model.ID]int{}
+	type queueItem struct {
+		id       model.ID
+		distance int
+	}
+	queue := []queueItem{{id: startID}}
+
+	for len(queue) > 0 {
+		item := queue[0]
+		queue = queue[1:]
+
+		if previous, ok := distances[item.id]; ok && previous <= item.distance {
+			continue
+		}
+		distances[item.id] = item.distance
+
+		for _, flow := range findNormalFlows(flowsByOrigin[item.id]) {
+			queue = append(queue, queueItem{
+				id:       flow.DestinationID,
+				distance: item.distance + 1,
+			})
+		}
+	}
+
+	return distances
+}
+
+func selectNearestCommonMerge(
+	activityMap map[model.ID]microflows.MicroflowObject,
+	branchDistances []map[model.ID]int,
+) model.ID {
+	if len(branchDistances) < 2 {
+		return ""
+	}
+
+	type candidate struct {
+		id          model.ID
+		maxDistance int
+		sumDistance int
+	}
+	candidates := []candidate{}
+
+	for nodeID, firstDistance := range branchDistances[0] {
+		if _, ok := activityMap[nodeID].(*microflows.ExclusiveMerge); !ok {
+			continue
+		}
+
+		maxDistance := firstDistance
+		sumDistance := firstDistance
+		common := true
+		for _, distances := range branchDistances[1:] {
+			distance, ok := distances[nodeID]
+			if !ok {
+				common = false
+				break
+			}
+			if distance > maxDistance {
+				maxDistance = distance
+			}
+			sumDistance += distance
+		}
+		if common {
+			candidates = append(candidates, candidate{
+				id:          nodeID,
+				maxDistance: maxDistance,
+				sumDistance: sumDistance,
+			})
+		}
+	}
+
+	if len(candidates) == 0 {
+		return ""
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].maxDistance != candidates[j].maxDistance {
+			return candidates[i].maxDistance < candidates[j].maxDistance
+		}
+		if candidates[i].sumDistance != candidates[j].sumDistance {
+			return candidates[i].sumDistance < candidates[j].sumDistance
+		}
+		return string(candidates[i].id) < string(candidates[j].id)
+	})
+
+	return candidates[0].id
 }
 
 // --- Executor method wrappers for callers in unmigrated code ---
