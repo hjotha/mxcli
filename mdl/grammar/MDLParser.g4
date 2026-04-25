@@ -1902,7 +1902,7 @@ createListStatement
  * ```
  */
 addToListStatement
-    : ADD VARIABLE TO VARIABLE
+    : ADD expression TO VARIABLE
     ;
 
 /**
@@ -3681,6 +3681,7 @@ argumentList
 
 atomicExpression
     : literal
+    | ELLIPSIS
     | VARIABLE (DOT attributeName)*    // $Var or $Widget.Attribute (data source ref)
     | AT qualifiedName                 // @Module.ConstantName (constant reference)
     | qualifiedName

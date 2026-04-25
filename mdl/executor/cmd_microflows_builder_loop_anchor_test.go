@@ -213,3 +213,33 @@ func TestBuilder_WhileTrueWithNestedReturnUsesManualLoopBack(t *testing.T) {
 	}
 	t.Fatal("expected false branch loop-back flow")
 }
+
+func TestBuilder_WhileTrueEndingInReturnDoesNotLoopBackFromEndEvent(t *testing.T) {
+	stmts := []ast.MicroflowStatement{
+		&ast.WhileStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			Body: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "batch"}},
+				&ast.ReturnStmt{},
+			},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+	oc := fb.buildFlowGraph(stmts, nil)
+
+	endEvents := map[model.ID]bool{}
+	for _, obj := range oc.Objects {
+		if _, ok := obj.(*microflows.EndEvent); ok {
+			endEvents[obj.GetID()] = true
+		}
+	}
+	if len(endEvents) == 0 {
+		t.Fatal("expected explicit return end event")
+	}
+	for _, flow := range oc.Flows {
+		if endEvents[flow.OriginID] {
+			t.Fatalf("EndEvent %s must not have outgoing loop-back flow to %s", flow.OriginID, flow.DestinationID)
+		}
+	}
+}

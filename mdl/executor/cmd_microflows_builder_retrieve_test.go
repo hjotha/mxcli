@@ -325,3 +325,83 @@ func TestAddRetrieveAction_CrossReferenceSetRegistersRemoteTargetEntityListType(
 		t.Fatalf("var type = %q, want List of SampleEventIntegration.DerivedEvent", got)
 	}
 }
+
+func TestAddRetrieveAction_ReverseReferenceFromSubtypeUsesParentListType(t *testing.T) {
+	moduleID := model.ID("system-module")
+	messageID := model.ID("message-entity")
+	responseID := model.ID("response-entity")
+	headerID := model.ID("header-entity")
+	fb := &flowBuilder{
+		varTypes: map[string]string{
+			"Response": "SampleSystem.Response",
+		},
+		backend: &mock.MockBackend{
+			GetModuleByNameFunc: func(name string) (*model.Module, error) {
+				if name != "SampleSystem" {
+					return nil, nil
+				}
+				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: name}, nil
+			},
+			GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+				if id != moduleID {
+					return nil, nil
+				}
+				return &domainmodel.DomainModel{
+					ContainerID: moduleID,
+					Entities: []*domainmodel.Entity{
+						{BaseElement: model.BaseElement{ID: messageID}, Name: "Message"},
+						{
+							BaseElement:      model.BaseElement{ID: responseID},
+							Name:             "Response",
+							GeneralizationID: messageID,
+						},
+						{
+							BaseElement: model.BaseElement{ID: headerID},
+							Name:        "Header",
+							Attributes:  []*domainmodel.Attribute{{Name: "Key"}},
+						},
+					},
+					Associations: []*domainmodel.Association{
+						{
+							Name:     "Message_Headers",
+							ParentID: headerID,
+							ChildID:  messageID,
+							Type:     domainmodel.AssociationTypeReference,
+						},
+					},
+				}, nil
+			},
+		},
+	}
+
+	fb.addRetrieveAction(&ast.RetrieveStmt{
+		Variable:      "HeaderList",
+		StartVariable: "Response",
+		Source:        ast.QualifiedName{Module: "SampleSystem", Name: "Message_Headers"},
+	})
+
+	if got := fb.varTypes["HeaderList"]; got != "List of SampleSystem.Header" {
+		t.Fatalf("var type = %q, want List of SampleSystem.Header", got)
+	}
+
+	fb.addListOperationAction(&ast.ListOperationStmt{
+		OutputVariable: "ContentTypeHeaders",
+		Operation:      ast.ListOpFilter,
+		InputVariable:  "HeaderList",
+		Condition: &ast.BinaryExpr{
+			Left:     &ast.IdentifierExpr{Name: "Key"},
+			Operator: "=",
+			Right:    &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Content-Type"},
+		},
+	})
+
+	activity := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	action := activity.Action.(*microflows.ListOperationAction)
+	op, ok := action.Operation.(*microflows.FilterByAttributeOperation)
+	if !ok {
+		t.Fatalf("operation type = %T, want *FilterByAttributeOperation", action.Operation)
+	}
+	if op.Attribute != "SampleSystem.Header.Key" {
+		t.Fatalf("filter attribute = %q, want SampleSystem.Header.Key", op.Attribute)
+	}
+}

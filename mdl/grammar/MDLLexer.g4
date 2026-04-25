@@ -723,6 +723,7 @@ DIV: D I V;
 
 SEMICOLON: ';';
 COMMA: ',';
+ELLIPSIS: '...';
 DOT: '.';
 LPAREN: '(';
 RPAREN: ')';

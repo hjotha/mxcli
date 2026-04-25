@@ -509,11 +509,12 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		if fb.varTypes != nil {
 			if assocInfo != nil {
 				otherEntity := assocInfo.childEntityQN
-				if startVarType == assocInfo.childEntityQN {
+				startOnChildSide := fb.entityTypeIsOrInherits(startVarType, assocInfo.childEntityQN)
+				if startOnChildSide {
 					otherEntity = assocInfo.parentEntityQN
 				}
 				if assocInfo.Type == domainmodel.AssociationTypeReference {
-					if startVarType == assocInfo.childEntityQN {
+					if startOnChildSide {
 						// Reverse traversal over a Reference can yield multiple
 						// owners, so the result is list-valued.
 						fb.varTypes[s.Variable] = "List of " + otherEntity
@@ -1008,11 +1009,15 @@ func (fb *flowBuilder) addCreateListAction(s *ast.CreateListStmt) model.ID {
 
 // addAddToListAction creates an ADD TO list statement.
 func (fb *flowBuilder) addAddToListAction(s *ast.AddToListStmt) model.ID {
+	value := fb.exprToString(s.Value)
+	if value == "" && s.Item != "" {
+		value = "$" + s.Item
+	}
 	action := &microflows.ChangeListAction{
 		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
 		Type:           microflows.ChangeListTypeAdd,
 		ChangeVariable: s.List,
-		Value:          "$" + s.Item,
+		Value:          value,
 	}
 
 	activity := &microflows.ActionActivity{
@@ -1269,6 +1274,25 @@ func (fb *flowBuilder) lookupDomainEntity(entityQN string) (domainEntityRef, boo
 		return domainEntityRef{}, false
 	}
 	return domainEntityRef{moduleName: moduleName, dm: dm, entity: entity}, true
+}
+
+func (fb *flowBuilder) entityTypeIsOrInherits(entityQN, targetQN string) bool {
+	if entityQN == "" || targetQN == "" {
+		return false
+	}
+	if entityQN == targetQN {
+		return true
+	}
+	ref, ok := fb.lookupDomainEntity(entityQN)
+	if !ok {
+		return false
+	}
+	for _, candidate := range fb.collectEntityHierarchy(ref, map[string]bool{}) {
+		if candidate.moduleName+"."+candidate.entity.Name == targetQN {
+			return true
+		}
+	}
+	return false
 }
 
 func (fb *flowBuilder) lookupAttributeQualifiedName(memberName string, ref domainEntityRef, visited map[string]bool) (string, bool) {

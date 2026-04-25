@@ -85,6 +85,20 @@ func TestBuilder_AnchorOmittedKeepsDefault(t *testing.T) {
 	}
 }
 
+func TestBuilder_ErrorHandlerFlowUsesStudioProAnchors(t *testing.T) {
+	flow := newErrorHandlerFlow(mkID("source"), mkID("handler"))
+
+	if !flow.IsErrorHandler {
+		t.Fatal("expected an error-handler sequence flow")
+	}
+	if flow.OriginConnectionIndex != AnchorBottom {
+		t.Fatalf("error handler origin anchor = %d, want bottom (%d)", flow.OriginConnectionIndex, AnchorBottom)
+	}
+	if flow.DestinationConnectionIndex != AnchorTop {
+		t.Fatalf("error handler destination anchor = %d, want top (%d)", flow.DestinationConnectionIndex, AnchorTop)
+	}
+}
+
 func TestBuilder_AnchorPartialOverride(t *testing.T) {
 	// Only the From side is overridden; the To side must remain at the default.
 	body := []ast.MicroflowStatement{

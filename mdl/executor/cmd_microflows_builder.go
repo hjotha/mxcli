@@ -23,11 +23,14 @@ type flowBuilder struct {
 	posY                int
 	baseY               int // Base Y position (for returning after ELSE branches)
 	spacing             int
-	returnValue         string            // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnValue         string // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnType          *ast.MicroflowReturnType
 	hasReturnValue      bool              // True when the microflow declares a non-void return type
 	endsWithReturn      bool              // True if the flow already ends with EndEvent(s) from RETURN statements
+	lastReturnEndID     model.ID          // Last explicit RETURN EndEvent, used as a fallback error-handler target
 	varTypes            map[string]string // Variable name -> entity qualified name (for CHANGE statements)
 	declaredVars        map[string]string // Declared primitive variables: name -> type (e.g., "$IsValid" -> "Boolean")
+	returnScopeBaseline map[string]string // Variable types visible before a nested handler starts
 	errors              []string          // Validation errors collected during build
 	measurer            *layoutMeasurer   // For measuring statement dimensions
 	nextConnectionPoint model.ID          // For compound statements: the exit point differs from entry point
@@ -55,7 +58,10 @@ type flowBuilder struct {
 	errorHandlerSource       model.ID
 	errorHandlerSkipVar      string
 	errorHandlerTailIsSource bool
+	errorHandlerReturnValue  string
+	pendingErrorHandlers     []pendingErrorHandlerState
 	callOutputRemaining      map[string]int
+	callOutputDeclarations   map[*ast.CallMicroflowStmt]bool
 	listInputVariables       map[string]bool
 	objectInputVariables     map[string]bool
 }
@@ -232,6 +238,10 @@ func (fb *flowBuilder) resolveEntityQualifiedName(entityID model.ID) string {
 func (fb *flowBuilder) exprToString(expr ast.Expression) string {
 	resolved := fb.resolveAssociationPaths(expr)
 	return expressionToString(resolved)
+}
+
+func cleanReturnValue(value string) string {
+	return strings.TrimRight(value, " \t\r\n")
 }
 
 // resolveAssociationPaths walks an expression tree and, for any AttributePathExpr

@@ -1093,6 +1093,7 @@ func buildIfStatement(ctx parser.IIfStatementContext) *ast.IfStmt {
 		stmt.ThenBody = buildMicroflowBody(bodies[0])
 	}
 	// Last body is ELSE if there's no ELSIF or if there are more bodies than expressions
+	stmt.HasElse = ifCtx.ELSE() != nil
 	if len(bodies) > len(exprs) {
 		stmt.ElseBody = buildMicroflowBody(bodies[len(bodies)-1])
 	}

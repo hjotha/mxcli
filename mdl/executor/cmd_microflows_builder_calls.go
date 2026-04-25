@@ -131,14 +131,10 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		ParameterMappings: mappings,
 	}
 	useReturnVariable := true
-	if s.OutputVariable != "" && fb.callOutputRemaining != nil {
-		remaining := fb.callOutputRemaining[s.OutputVariable]
-		if remaining > 1 {
-			useReturnVariable = false
-		}
-		if remaining > 0 {
-			fb.callOutputRemaining[s.OutputVariable] = remaining - 1
-		}
+	if s.OutputVariable != "" && fb.callOutputDeclarations != nil {
+		useReturnVariable = fb.callOutputDeclarations[s]
+	} else if s.OutputVariable != "" && fb.isVariableDeclared(s.OutputVariable) {
+		useReturnVariable = false
 	}
 
 	action := &microflows.MicroflowCallAction{
@@ -237,6 +233,11 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 			value = &microflows.MicroflowParameterValue{
 				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Microflow:   strings.Trim(fb.exprToString(arg.Value), "'"),
+			}
+		} else if isPlaceholderExpression(arg.Value) {
+			value = &microflows.BasicCodeActionParameterValue{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Argument:    "",
 			}
 		} else {
 			// Regular parameter: expression-based value
@@ -1177,7 +1178,9 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -1262,7 +1265,9 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -1340,4 +1345,9 @@ func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) mode
 	}
 
 	return activity.ID
+}
+
+func isPlaceholderExpression(expr ast.Expression) bool {
+	source, ok := expr.(*ast.SourceExpr)
+	return ok && strings.TrimSpace(source.Source) == "..."
 }

@@ -250,6 +250,7 @@ type IfStmt struct {
 	Condition   Expression           // IF condition
 	ThenBody    []MicroflowStatement // THEN branch
 	ElseBody    []MicroflowStatement // ELSE branch (optional)
+	HasElse     bool                 // True when source had an explicit ELSE, even if empty
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
@@ -546,9 +547,10 @@ type CreateListStmt struct {
 
 func (s *CreateListStmt) isMicroflowStatement() {}
 
-// AddToListStmt represents: ADD $Item TO $List
+// AddToListStmt represents: ADD expr TO $List
 type AddToListStmt struct {
-	Item        string               // Item variable to add
+	Item        string               // Item variable to add, kept for simple $Var compatibility
+	Value       Expression           // Item expression to add
 	List        string               // Target list variable
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }

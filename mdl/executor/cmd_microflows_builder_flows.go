@@ -38,6 +38,7 @@ func isEmptyCustomErrorHandler(eh *ast.ErrorHandlingClause) bool {
 
 func (fb *flowBuilder) registerEmptyCustomErrorHandler(activityID model.ID, eh *ast.ErrorHandlingClause) {
 	if isEmptyCustomErrorHandler(eh) {
+		fb.queueActivePendingErrorHandler()
 		fb.emptyErrorHandlerFrom = activityID
 	}
 }
@@ -46,6 +47,7 @@ func (fb *flowBuilder) registerEmptyCustomErrorHandlerWithSkip(activityID model.
 	if !isEmptyCustomErrorHandler(eh) {
 		return
 	}
+	fb.queueActivePendingErrorHandler()
 	if skipVar == "" {
 		fb.emptyErrorHandlerFrom = activityID
 		return
@@ -62,9 +64,15 @@ type pendingErrorHandlerState struct {
 	source       model.ID
 	skipVar      string
 	tailIsSource bool
+	returnValue  string
+	queue        []pendingErrorHandlerState
 }
 
 func (s pendingErrorHandlerState) isEmpty() bool {
+	return s.activeIsEmpty() && len(s.queue) == 0
+}
+
+func (s pendingErrorHandlerState) activeIsEmpty() bool {
 	return s.emptyFrom == "" && s.tailFrom == "" && s.source == "" && s.skipVar == ""
 }
 
@@ -75,6 +83,8 @@ func (fb *flowBuilder) capturePendingErrorHandler() pendingErrorHandlerState {
 		source:       fb.errorHandlerSource,
 		skipVar:      fb.errorHandlerSkipVar,
 		tailIsSource: fb.errorHandlerTailIsSource,
+		returnValue:  fb.errorHandlerReturnValue,
+		queue:        append([]pendingErrorHandlerState(nil), fb.pendingErrorHandlers...),
 	}
 }
 
@@ -84,69 +94,232 @@ func (fb *flowBuilder) restorePendingErrorHandler(state pendingErrorHandlerState
 	fb.errorHandlerSource = state.source
 	fb.errorHandlerSkipVar = state.skipVar
 	fb.errorHandlerTailIsSource = state.tailIsSource
+	fb.errorHandlerReturnValue = state.returnValue
+	fb.pendingErrorHandlers = append([]pendingErrorHandlerState(nil), state.queue...)
 }
 
 func (fb *flowBuilder) clearPendingErrorHandler() {
 	fb.restorePendingErrorHandler(pendingErrorHandlerState{})
 }
 
+func (fb *flowBuilder) activePendingErrorHandler() pendingErrorHandlerState {
+	return pendingErrorHandlerState{
+		emptyFrom:    fb.emptyErrorHandlerFrom,
+		tailFrom:     fb.errorHandlerTailFrom,
+		source:       fb.errorHandlerSource,
+		skipVar:      fb.errorHandlerSkipVar,
+		tailIsSource: fb.errorHandlerTailIsSource,
+		returnValue:  fb.errorHandlerReturnValue,
+	}
+}
+
+func (fb *flowBuilder) setActivePendingErrorHandler(state pendingErrorHandlerState) {
+	fb.emptyErrorHandlerFrom = state.emptyFrom
+	fb.errorHandlerTailFrom = state.tailFrom
+	fb.errorHandlerSource = state.source
+	fb.errorHandlerSkipVar = state.skipVar
+	fb.errorHandlerTailIsSource = state.tailIsSource
+	fb.errorHandlerReturnValue = state.returnValue
+}
+
+func (fb *flowBuilder) queueActivePendingErrorHandler() {
+	state := fb.activePendingErrorHandler()
+	if state.activeIsEmpty() {
+		return
+	}
+	fb.pendingErrorHandlers = append(fb.pendingErrorHandlers, state)
+	fb.setActivePendingErrorHandler(pendingErrorHandlerState{})
+}
+
 func (fb *flowBuilder) addPendingEmptyErrorHandlerFlow(originID, destinationID model.ID) {
-	if fb.emptyErrorHandlerFrom != "" && fb.emptyErrorHandlerFrom == originID && destinationID != "" {
-		fb.addEmptyErrorHandlerRejoinFlow(originID, destinationID)
-		fb.emptyErrorHandlerFrom = ""
-	}
-	if fb.errorHandlerSource != "" && fb.errorHandlerSource == originID && fb.errorHandlerTailFrom != "" && destinationID != "" {
-		fb.flows = append(fb.flows, newHorizontalFlow(fb.errorHandlerTailFrom, destinationID))
-		fb.errorHandlerSource = ""
-		fb.errorHandlerTailFrom = ""
-		fb.errorHandlerTailIsSource = false
-	}
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		return fb.addPendingEmptyErrorHandlerFlowForState(state, originID, destinationID)
+	})
 }
 
 func (fb *flowBuilder) addPendingErrorHandlerFlowForStatement(originID, destinationID model.ID, stmt ast.MicroflowStatement, futureReferencesSkipVar ...bool) {
-	if fb.emptyErrorHandlerFrom != "" && fb.emptyErrorHandlerFrom == originID && destinationID != "" {
-		fb.addEmptyErrorHandlerRejoinFlow(originID, destinationID)
-		fb.emptyErrorHandlerFrom = ""
-	}
-	if fb.errorHandlerTailFrom == "" || destinationID == "" {
+	futureReferences := len(futureReferencesSkipVar) > 0 && futureReferencesSkipVar[0]
+	pendingSkipVars := fb.pendingErrorHandlerSkipVars()
+	hasPendingOutput := len(pendingSkipVars) > 0
+	referencesPendingOutput := statementReferencesAnyVar(stmt, pendingSkipVars)
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		return fb.addPendingErrorHandlerFlowForState(state, originID, destinationID, stmt, futureReferences, hasPendingOutput, referencesPendingOutput)
+	})
+}
+
+func (fb *flowBuilder) addPendingErrorHandlerFlowTo(destinationID model.ID) {
+	if destinationID == "" {
 		return
 	}
-	if fb.errorHandlerSource != "" && destinationID == fb.errorHandlerSource {
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		if state.emptyFrom != "" {
+			fb.addEmptyErrorHandlerRejoinFlow(state.emptyFrom, destinationID)
+			state.emptyFrom = ""
+		}
+		if state.source != "" && state.tailFrom != "" {
+			fb.addErrorHandlerRejoinFlowForState(state, state.source, destinationID)
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailIsSource = false
+			state.returnValue = ""
+		}
+		return state
+	})
+}
+
+func (fb *flowBuilder) routePendingErrorHandlerToAlternative(originID, destinationID model.ID) {
+	if originID == "" || destinationID == "" {
 		return
+	}
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		if state.source != "" && state.tailFrom != "" {
+			fb.addErrorHandlerRejoinFlowForState(state, originID, destinationID)
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailIsSource = false
+			state.returnValue = ""
+		}
+		return state
+	})
+}
+
+func (fb *flowBuilder) rewritePendingErrorHandlers(rewrite func(pendingErrorHandlerState) pendingErrorHandlerState) {
+	queue := fb.pendingErrorHandlers[:0]
+	for _, state := range fb.pendingErrorHandlers {
+		state = rewrite(state)
+		if !state.activeIsEmpty() {
+			queue = append(queue, state)
+		}
+	}
+	fb.pendingErrorHandlers = queue
+
+	active := rewrite(fb.activePendingErrorHandler())
+	fb.setActivePendingErrorHandler(active)
+}
+
+func (fb *flowBuilder) pendingErrorHandlerSkipVars() []string {
+	var vars []string
+	for _, state := range fb.pendingErrorHandlers {
+		if state.skipVar != "" {
+			vars = append(vars, state.skipVar)
+		}
 	}
 	if fb.errorHandlerSkipVar != "" {
-		if statementReferencesVar(stmt, fb.errorHandlerSkipVar) {
-			return
-		}
-		if len(futureReferencesSkipVar) > 0 && futureReferencesSkipVar[0] {
-			return
-		}
-		fb.addErrorHandlerRejoinFlow(originID, destinationID)
-		fb.errorHandlerSource = ""
-		fb.errorHandlerTailFrom = ""
-		fb.errorHandlerSkipVar = ""
-		fb.errorHandlerTailIsSource = false
-		return
+		vars = append(vars, fb.errorHandlerSkipVar)
 	}
-	if fb.errorHandlerSource != "" && fb.errorHandlerSource == originID {
-		fb.flows = append(fb.flows, newHorizontalFlow(fb.errorHandlerTailFrom, destinationID))
-		fb.errorHandlerSource = ""
-		fb.errorHandlerTailFrom = ""
-		fb.errorHandlerTailIsSource = false
+	return vars
+}
+
+func (fb *flowBuilder) addPendingEmptyErrorHandlerFlowForState(state pendingErrorHandlerState, originID, destinationID model.ID) pendingErrorHandlerState {
+	if destinationID == "" {
+		return state
 	}
+	if state.emptyFrom != "" && state.emptyFrom == originID {
+		fb.addEmptyErrorHandlerRejoinFlow(originID, destinationID)
+		state.emptyFrom = ""
+	}
+	if state.source != "" && state.source == originID && state.tailFrom != "" {
+		fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, destinationID))
+		state.source = ""
+		state.tailFrom = ""
+		state.tailIsSource = false
+		state.returnValue = ""
+	}
+	return state
+}
+
+func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHandlerState, originID, destinationID model.ID, stmt ast.MicroflowStatement, futureReferencesSkipVar bool, hasPendingOutput bool, referencesPendingOutput bool) pendingErrorHandlerState {
+	_ = futureReferencesSkipVar
+	if destinationID == "" {
+		return state
+	}
+	if state.emptyFrom != "" {
+		if state.emptyFrom != originID {
+			return state
+		}
+		fb.addEmptyErrorHandlerRejoinFlowFrom(originID, state.emptyFrom, destinationID)
+		state.emptyFrom = ""
+	}
+	if state.tailFrom == "" {
+		return state
+	}
+	if state.source != "" && destinationID == state.source {
+		return state
+	}
+	if state.skipVar != "" {
+		if !statementReferencesVar(stmt, state.skipVar) {
+			return state
+		}
+		if state.returnValue != "" {
+			endID := fb.addTerminalEndEventForPendingHandler(fb.returnType, state.returnValue)
+			if state.tailIsSource {
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
+			} else {
+				fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+			}
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailIsSource = false
+			state.returnValue = ""
+			return state
+		}
+		if _, ok := stmt.(*ast.ReturnStmt); ok {
+			return state
+		}
+		if !fb.hasReturnValue {
+			endID := fb.addTerminalEndEventForPendingHandler(fb.returnType, "")
+			if state.tailIsSource {
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
+			} else {
+				fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+			}
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailIsSource = false
+			state.returnValue = ""
+			return state
+		}
+		fb.addErrorHandlerRejoinFlowForState(state, originID, destinationID)
+		state.source = ""
+		state.tailFrom = ""
+		state.skipVar = ""
+		state.tailIsSource = false
+		state.returnValue = ""
+		return state
+	}
+	if state.source != "" && state.source == originID {
+		fb.addErrorHandlerRejoinFlowForState(state, originID, destinationID)
+		state.source = ""
+		state.tailFrom = ""
+		state.tailIsSource = false
+		state.returnValue = ""
+	}
+	return state
 }
 
 func (fb *flowBuilder) addEmptyErrorHandlerRejoinFlow(originID, destinationID model.ID) {
+	fb.addEmptyErrorHandlerRejoinFlowFrom(originID, originID, destinationID)
+}
+
+func (fb *flowBuilder) addEmptyErrorHandlerRejoinFlowFrom(normalOriginID, errorOriginID, destinationID model.ID) {
 	existingIdx := -1
 	for i := len(fb.flows) - 1; i >= 0; i-- {
 		flow := fb.flows[i]
-		if !flow.IsErrorHandler && flow.OriginID == originID && flow.DestinationID == destinationID {
+		if !flow.IsErrorHandler && flow.OriginID == normalOriginID && flow.DestinationID == destinationID {
 			existingIdx = i
 			break
 		}
 	}
 	if existingIdx == -1 {
-		fb.flows = append(fb.flows, newErrorHandlerFlow(originID, destinationID))
+		if mergeID := fb.findExistingRejoinMerge(normalOriginID, destinationID); mergeID != "" {
+			fb.flows = append(fb.flows, newErrorHandlerFlow(errorOriginID, mergeID))
+			return
+		}
+		fb.flows = append(fb.flows, newErrorHandlerFlow(errorOriginID, destinationID))
 		return
 	}
 
@@ -162,18 +335,18 @@ func (fb *flowBuilder) addEmptyErrorHandlerRejoinFlow(originID, destinationID mo
 	}
 	fb.objects = append(fb.objects, merge)
 
-	normalFlow := newHorizontalFlow(originID, merge.ID)
+	normalFlow := newHorizontalFlow(normalOriginID, merge.ID)
 	normalFlow.OriginConnectionIndex = existing.OriginConnectionIndex
 	normalFlow.CaseValue = existing.CaseValue
 	fb.flows = append(fb.flows, normalFlow)
-	fb.flows = append(fb.flows, newErrorHandlerFlow(originID, merge.ID))
+	fb.flows = append(fb.flows, newErrorHandlerFlow(errorOriginID, merge.ID))
 
 	mergeFlow := newHorizontalFlow(merge.ID, destinationID)
 	mergeFlow.DestinationConnectionIndex = existing.DestinationConnectionIndex
 	fb.flows = append(fb.flows, mergeFlow)
 }
 
-func (fb *flowBuilder) addErrorHandlerRejoinFlow(originID, destinationID model.ID) {
+func (fb *flowBuilder) addErrorHandlerRejoinFlowForState(state pendingErrorHandlerState, originID, destinationID model.ID) {
 	existingIdx := -1
 	for i := len(fb.flows) - 1; i >= 0; i-- {
 		flow := fb.flows[i]
@@ -183,10 +356,18 @@ func (fb *flowBuilder) addErrorHandlerRejoinFlow(originID, destinationID model.I
 		}
 	}
 	if existingIdx == -1 {
-		if fb.errorHandlerTailIsSource {
-			fb.flows = append(fb.flows, newErrorHandlerFlow(fb.errorHandlerTailFrom, destinationID))
+		if mergeID := fb.findExistingRejoinMerge(originID, destinationID); mergeID != "" {
+			if state.tailIsSource {
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, mergeID))
+			} else {
+				fb.flows = append(fb.flows, newUpwardFlow(state.tailFrom, mergeID))
+			}
+			return
+		}
+		if state.tailIsSource {
+			fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, destinationID))
 		} else {
-			fb.flows = append(fb.flows, newHorizontalFlow(fb.errorHandlerTailFrom, destinationID))
+			fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, destinationID))
 		}
 		return
 	}
@@ -207,15 +388,43 @@ func (fb *flowBuilder) addErrorHandlerRejoinFlow(originID, destinationID model.I
 	normalFlow.OriginConnectionIndex = existing.OriginConnectionIndex
 	normalFlow.CaseValue = existing.CaseValue
 	fb.flows = append(fb.flows, normalFlow)
-	if fb.errorHandlerTailIsSource {
-		fb.flows = append(fb.flows, newErrorHandlerFlow(fb.errorHandlerTailFrom, merge.ID))
+	if state.tailIsSource {
+		fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, merge.ID))
 	} else {
-		fb.flows = append(fb.flows, newUpwardFlow(fb.errorHandlerTailFrom, merge.ID))
+		fb.flows = append(fb.flows, newUpwardFlow(state.tailFrom, merge.ID))
 	}
 
 	mergeFlow := newHorizontalFlow(merge.ID, destinationID)
 	mergeFlow.DestinationConnectionIndex = existing.DestinationConnectionIndex
 	fb.flows = append(fb.flows, mergeFlow)
+}
+
+func (fb *flowBuilder) findExistingRejoinMerge(originID, destinationID model.ID) model.ID {
+	for _, flow := range fb.flows {
+		if flow.OriginID != originID || flow.IsErrorHandler {
+			continue
+		}
+		if !fb.isExclusiveMerge(flow.DestinationID) {
+			continue
+		}
+		for _, mergeFlow := range fb.flows {
+			if mergeFlow.OriginID == flow.DestinationID && mergeFlow.DestinationID == destinationID && !mergeFlow.IsErrorHandler {
+				return flow.DestinationID
+			}
+		}
+	}
+	return ""
+}
+
+func (fb *flowBuilder) isExclusiveMerge(id model.ID) bool {
+	for _, obj := range fb.objects {
+		if obj.GetID() != id {
+			continue
+		}
+		_, ok := obj.(*microflows.ExclusiveMerge)
+		return ok
+	}
+	return false
 }
 
 func statementReferencesVar(stmt ast.MicroflowStatement, varName string) bool {
@@ -236,6 +445,24 @@ func statementsReferenceVar(stmts []ast.MicroflowStatement, varName string) bool
 	}
 	for _, stmt := range stmts {
 		if statementReferencesVar(stmt, varName) {
+			return true
+		}
+	}
+	return false
+}
+
+func statementReferencesAnyVar(stmt ast.MicroflowStatement, varNames []string) bool {
+	if len(varNames) == 0 {
+		return false
+	}
+	lookup := map[string]bool{}
+	for _, name := range varNames {
+		if name != "" {
+			lookup[name] = true
+		}
+	}
+	for _, ref := range statementVarRefs(stmt) {
+		if lookup[ref] {
 			return true
 		}
 	}
@@ -334,7 +561,11 @@ func statementVarRefs(stmt ast.MicroflowStatement) []string {
 	case *ast.DeleteObjectStmt:
 		refs = append(refs, s.Variable)
 	case *ast.AddToListStmt:
-		refs = append(refs, s.Item, s.List)
+		refs = append(refs, exprVarRefs(s.Value)...)
+		if s.Item != "" {
+			refs = append(refs, s.Item)
+		}
+		refs = append(refs, s.List)
 	case *ast.RemoveFromListStmt:
 		refs = append(refs, s.Item, s.List)
 	}
@@ -349,15 +580,16 @@ func statementsVarRefs(stmts []ast.MicroflowStatement) []string {
 	return refs
 }
 
-// newErrorHandlerFlow creates a SequenceFlow with IsErrorHandler=true,
-// connecting from the bottom of the source activity to the left of the error handler.
+// newErrorHandlerFlow creates a SequenceFlow with IsErrorHandler=true.
+// Studio Pro connects error-handler flows bottom-to-top; using a horizontal
+// destination can produce invalid sequence flows after roundtrip.
 func newErrorHandlerFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	return &microflows.SequenceFlow{
 		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
 		OriginID:                   originID,
 		DestinationID:              destinationID,
 		OriginConnectionIndex:      AnchorBottom,
-		DestinationConnectionIndex: AnchorLeft,
+		DestinationConnectionIndex: AnchorTop,
 		IsErrorHandler:             true,
 	}
 }
@@ -370,6 +602,11 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 	if len(errorBody) == 0 {
 		return ""
 	}
+	var sourceAnchor *ast.FlowAnchors
+	if fb.pendingAnnotations != nil && fb.pendingAnnotations.Anchor != nil &&
+		fb.pendingAnnotations.Anchor.From == ast.AnchorSideTop {
+		sourceAnchor = fb.pendingAnnotations.Anchor
+	}
 
 	// Position error handler below the main flow
 	errorY := fb.posY + VerticalSpacing
@@ -377,27 +614,43 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 
 	// Build error handler activities
 	errBuilder := &flowBuilder{
-		posX:         errorX,
-		posY:         errorY,
-		baseY:        errorY,
-		spacing:      HorizontalSpacing,
-		varTypes:     fb.varTypes,
-		declaredVars: fb.declaredVars,
-		measurer:     fb.measurer,
-		backend:      fb.backend,
-		hierarchy:    fb.hierarchy,
-		restServices: fb.restServices,
+		posX:                   errorX,
+		posY:                   errorY,
+		baseY:                  errorY,
+		spacing:                HorizontalSpacing,
+		returnType:             fb.returnType,
+		hasReturnValue:         fb.hasReturnValue,
+		varTypes:               fb.varTypes,
+		declaredVars:           fb.declaredVars,
+		measurer:               fb.measurer,
+		backend:                fb.backend,
+		hierarchy:              fb.hierarchy,
+		restServices:           fb.restServices,
+		returnScopeBaseline:    copyVarTypes(fb.varTypes),
+		callOutputDeclarations: fb.callOutputDeclarations,
 	}
 
 	var lastErrID model.ID
-	for _, stmt := range errorBody {
+	for i, stmt := range errorBody {
+		thisAnchor := stmtOwnAnchor(stmt)
 		actID := errBuilder.addStatement(stmt)
 		if actID != "" {
 			if lastErrID == "" {
 				// Connect source activity to first error handler activity
-				fb.flows = append(fb.flows, newErrorHandlerFlow(sourceActivityID, actID))
+				flow := newErrorHandlerFlow(sourceActivityID, actID)
+				applyUserAnchors(flow, sourceAnchor, thisAnchor)
+				if thisAnchor == nil && errBuilder.isShowMessageActivity(actID) {
+					flow.DestinationConnectionIndex = AnchorBottom
+				}
+				fb.flows = append(fb.flows, flow)
 			} else {
-				errBuilder.flows = append(errBuilder.flows, newHorizontalFlow(lastErrID, actID))
+				flow := newHorizontalFlow(lastErrID, actID)
+				if errBuilder.isShowMessageActivity(lastErrID) && errBuilder.isEndEvent(actID) {
+					flow.OriginConnectionIndex = AnchorTop
+					flow.DestinationConnectionIndex = AnchorBottom
+				}
+				errBuilder.flows = append(errBuilder.flows, flow)
+				errBuilder.addPendingErrorHandlerFlowForStatement(lastErrID, actID, stmt, statementsReferenceVar(errorBody[i+1:], errBuilder.errorHandlerSkipVar))
 			}
 			if errBuilder.nextConnectionPoint != "" {
 				lastErrID = errBuilder.nextConnectionPoint
@@ -418,6 +671,28 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 		return "" // Error handler terminates, no merge needed
 	}
 	return lastErrID // Error handler should merge back to main flow
+}
+
+func (fb *flowBuilder) isShowMessageActivity(activityID model.ID) bool {
+	for _, obj := range fb.objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok || activity.ID != activityID {
+			continue
+		}
+		_, ok = activity.Action.(*microflows.ShowMessageAction)
+		return ok
+	}
+	return false
+}
+
+func (fb *flowBuilder) isEndEvent(activityID model.ID) bool {
+	for _, obj := range fb.objects {
+		end, ok := obj.(*microflows.EndEvent)
+		if ok && end.ID == activityID {
+			return true
+		}
+	}
+	return false
 }
 
 // handleErrorHandlerMerge reconnects non-terminal custom error handlers to the
@@ -443,6 +718,7 @@ func (fb *flowBuilder) handleErrorHandlerMergeWithSkip(lastErrID model.ID, activ
 	fb.errorHandlerTailFrom = lastErrID
 	fb.errorHandlerSkipVar = skipVar
 	fb.errorHandlerTailIsSource = false
+	fb.errorHandlerReturnValue = fb.inferReturnValueFromScopeExcluding(fb.returnType, skipVar)
 }
 
 func (fb *flowBuilder) terminateErrorHandlerFlow(lastErrID model.ID, errorY int) {

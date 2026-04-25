@@ -1180,6 +1180,18 @@ func resolveNestedMergeID(
 	falseFlow *microflows.SequenceFlow,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
 ) model.ID {
+	if nestedMergeID != "" && parentMergeID != "" && nestedMergeID != parentMergeID &&
+		canReachNode(parentMergeID, nestedMergeID, flowsByOrigin, make(map[model.ID]bool)) {
+		for _, flow := range []*microflows.SequenceFlow{trueFlow, falseFlow} {
+			if flow == nil {
+				continue
+			}
+			if flow.DestinationID == parentMergeID ||
+				canReachNode(flow.DestinationID, parentMergeID, flowsByOrigin, make(map[model.ID]bool)) {
+				return parentMergeID
+			}
+		}
+	}
 	if nestedMergeID != "" || parentMergeID == "" {
 		return nestedMergeID
 	}
@@ -1411,13 +1423,13 @@ func collectStructuredStatements(
 			}
 		} else {
 			if trueFlow != nil {
-				collectStructuredStatements(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1)
+				collectStructuredBranchStatements(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1)
 			}
 
 			falseHasBody := falseFlow != nil && falseFlow.DestinationID != nestedMergeID
 			if falseHasBody {
 				*lines = append(*lines, indentStr+"else")
-				collectStructuredStatements(ctx, falseFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1)
+				collectStructuredBranchStatements(ctx, falseFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1)
 			}
 
 			*lines = append(*lines, indentStr+"end if;")
@@ -1451,6 +1463,34 @@ func collectStructuredStatements(
 	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
 		collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
 	}
+}
+
+func collectStructuredBranchStatements(
+	ctx *ExecContext,
+	currentID model.ID,
+	stopID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+) {
+	if currentID == "" {
+		return
+	}
+	if stopID == "" {
+		if _, isMerge := activityMap[currentID].(*microflows.ExclusiveMerge); isMerge {
+			visited[currentID] = true
+			for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+				collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+			}
+			return
+		}
+	}
+	collectStructuredStatements(ctx, currentID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
 }
 
 func collectLoopBodyStatements(

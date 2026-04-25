@@ -215,7 +215,7 @@ func (fb *flowBuilder) applyPendingAnnotations(activityID model.ID) {
 func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 	retVal := ""
 	if s.Value != nil {
-		retVal = fb.exprToString(s.Value)
+		retVal = cleanReturnValue(fb.exprToString(s.Value))
 	}
 
 	endEvent := &microflows.EndEvent{
@@ -229,6 +229,7 @@ func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 
 	fb.objects = append(fb.objects, endEvent)
 	fb.endsWithReturn = true
+	fb.lastReturnEndID = endEvent.ID
 	fb.posX += fb.spacing / 2
 	return endEvent.ID
 }

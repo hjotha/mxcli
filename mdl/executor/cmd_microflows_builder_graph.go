@@ -4,6 +4,8 @@
 package executor
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -23,6 +25,9 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	if fb.callOutputRemaining == nil {
 		fb.callOutputRemaining = countMicroflowCallOutputs(stmts)
 	}
+	if fb.callOutputDeclarations == nil {
+		fb.callOutputDeclarations = planMicroflowCallOutputDeclarations(stmts)
+	}
 	if fb.listInputVariables == nil {
 		fb.listInputVariables = collectListInputVariables(stmts)
 	}
@@ -30,6 +35,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		fb.objectInputVariables = collectObjectInputVariables(stmts)
 	}
 	// Set return value expression for error handler EndEvents
+	fb.returnType = returns
 	if returns != nil && returns.Variable != "" {
 		fb.returnValue = "$" + returns.Variable
 	}
@@ -143,6 +149,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		if fb.returnValue == "" {
 			fb.returnValue = fb.inferReturnValueFromScope(returns)
 		}
+		fb.returnValue = cleanReturnValue(fb.returnValue)
 		fb.posX += fb.spacing / 2
 		fb.posY = fb.baseY // Ensure end event is on the happy path center line
 		endEvent := &microflows.EndEvent{
@@ -170,8 +177,15 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		}
 		applyUserAnchors(endFlow, originAnchor, nil)
 		fb.flows = append(fb.flows, endFlow)
-		fb.addPendingErrorHandlerFlowForStatement(lastID, endEvent.ID, nil)
+		var endStmt ast.MicroflowStatement
+		if fb.returnValue != "" {
+			endStmt = &ast.ReturnStmt{Value: &ast.SourceExpr{Source: fb.returnValue}}
+		}
+		fb.addPendingErrorHandlerFlowForStatement(lastID, endEvent.ID, endStmt)
+		fb.terminatePendingErrorHandlersAtEnd(returns)
 		fb.previousStmtAnchor = nil
+	} else {
+		fb.terminatePendingErrorHandlersAtEnd(returns)
 	}
 
 	return &microflows.MicroflowObjectCollection{
@@ -180,6 +194,65 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		Flows:           fb.flows,
 		AnnotationFlows: fb.annotationFlows,
 	}
+}
+
+func (fb *flowBuilder) terminatePendingErrorHandlersAtEnd(returns *ast.MicroflowReturnType) {
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		if state.emptyFrom != "" {
+			if state.returnValue == "" && returns != nil && returns.Type.Kind != ast.TypeVoid && fb.lastReturnEndID != "" {
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.emptyFrom, fb.lastReturnEndID))
+				state.emptyFrom = ""
+				return state
+			}
+			endID := fb.addTerminalEndEventForPendingHandler(returns, state.returnValue)
+			fb.flows = append(fb.flows, newErrorHandlerFlow(state.emptyFrom, endID))
+			state.emptyFrom = ""
+			state.returnValue = ""
+		}
+		if state.tailFrom != "" {
+			if state.returnValue == "" && returns != nil && returns.Type.Kind != ast.TypeVoid && fb.lastReturnEndID != "" {
+				if state.tailIsSource {
+					fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, fb.lastReturnEndID))
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, fb.lastReturnEndID))
+				}
+				state.source = ""
+				state.tailFrom = ""
+				state.skipVar = ""
+				state.tailIsSource = false
+				return state
+			}
+			endID := fb.addTerminalEndEventForPendingHandler(returns, state.returnValue)
+			if state.tailIsSource {
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
+			} else {
+				fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+			}
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailIsSource = false
+			state.returnValue = ""
+		}
+		return state
+	})
+}
+
+func (fb *flowBuilder) addTerminalEndEventForPendingHandler(returns *ast.MicroflowReturnType, returnValue string) model.ID {
+	if returnValue == "" && returns != nil && returns.Type.Kind != ast.TypeVoid {
+		returnValue = fb.inferReturnValueFromScopeExcluding(returns)
+	}
+	returnValue = cleanReturnValue(returnValue)
+	end := &microflows.EndEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX + HorizontalSpacing/2, Y: fb.baseY + VerticalSpacing},
+			Size:        model.Size{Width: EventSize, Height: EventSize},
+		},
+		ReturnValue: returnValue,
+	}
+	fb.objects = append(fb.objects, end)
+	return end.ID
 }
 
 func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
@@ -350,6 +423,8 @@ func collectObjectInputVariables(stmts []ast.MicroflowStatement) map[string]bool
 				}
 			case *ast.ReturnStmt:
 				walkExpr(s.Value)
+			case *ast.AddToListStmt:
+				walkExpr(s.Value)
 			case *ast.ImportFromMappingStmt:
 				if s.ErrorHandling != nil {
 					walk(s.ErrorHandling.Body)
@@ -443,7 +518,83 @@ func countMicroflowCallOutputs(stmts []ast.MicroflowStatement) map[string]int {
 	return counts
 }
 
+func planMicroflowCallOutputDeclarations(stmts []ast.MicroflowStatement) map[*ast.CallMicroflowStmt]bool {
+	declare := make(map[*ast.CallMicroflowStmt]bool)
+	seen := make(map[string]bool)
+	var walk func([]ast.MicroflowStatement)
+	walk = func(body []ast.MicroflowStatement) {
+		for _, stmt := range body {
+			switch s := stmt.(type) {
+			case *ast.CallMicroflowStmt:
+				if s.OutputVariable != "" {
+					declare[s] = !seen[s.OutputVariable]
+					seen[s.OutputVariable] = true
+				}
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.IfStmt:
+				walk(s.ThenBody)
+				walk(s.ElseBody)
+			case *ast.LoopStmt:
+				walk(s.Body)
+			case *ast.WhileStmt:
+				walk(s.Body)
+			case *ast.CreateObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.MfCommitStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.DeleteObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.RestCallStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallJavaActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallWebServiceStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallExternalActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.ImportFromMappingStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			}
+		}
+	}
+	walk(stmts)
+	return declare
+}
+
 func (fb *flowBuilder) inferReturnValueFromScope(returns *ast.MicroflowReturnType) string {
+	return fb.inferReturnValueFromScopeExcluding(returns)
+}
+
+func copyVarTypes(src map[string]string) map[string]string {
+	if len(src) == 0 {
+		return nil
+	}
+	dst := make(map[string]string, len(src))
+	for name, typ := range src {
+		dst[name] = typ
+	}
+	return dst
+}
+
+func (fb *flowBuilder) inferReturnValueFromScopeExcluding(returns *ast.MicroflowReturnType, excludedVars ...string) string {
 	if returns == nil || returns.Variable != "" {
 		return ""
 	}
@@ -463,20 +614,42 @@ func (fb *flowBuilder) inferReturnValueFromScope(returns *ast.MicroflowReturnTyp
 	if target == "" || fb.varTypes == nil {
 		return ""
 	}
-	var candidate string
-	for name, typ := range fb.varTypes {
-		if typ != target {
-			continue
+	excluded := map[string]bool{}
+	for _, name := range excludedVars {
+		name = strings.TrimPrefix(name, "$")
+		if name != "" {
+			excluded[name] = true
 		}
-		if candidate != "" {
+	}
+
+	findCandidate := func(localOnly bool) string {
+		var candidate string
+		for name, typ := range fb.varTypes {
+			if excluded[name] || typ != target {
+				continue
+			}
+			if localOnly {
+				if previous, ok := fb.returnScopeBaseline[name]; ok && previous == typ {
+					continue
+				}
+			}
+			if candidate != "" {
+				return ""
+			}
+			candidate = name
+		}
+		if candidate == "" {
 			return ""
 		}
-		candidate = name
+		return "$" + candidate
 	}
-	if candidate == "" {
-		return ""
+
+	if fb.returnScopeBaseline != nil {
+		if candidate := findCandidate(true); candidate != "" {
+			return candidate
+		}
 	}
-	return "$" + candidate
+	return findCandidate(false)
 }
 
 // addStatement converts an AST statement to a microflow activity and returns its ID.

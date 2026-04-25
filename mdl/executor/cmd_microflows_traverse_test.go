@@ -513,6 +513,76 @@ func TestTraverseFlow_NestedSplitSharedTailStaysOutsideParentIf(t *testing.T) {
 	}
 }
 
+func TestTraverseFlow_NestedSplitStopsBeforeParentSharedFailureTail(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("outer_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("outer_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$OuterIsValid"},
+		},
+		mkID("inner_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("inner_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$InnerIsValid"},
+		},
+		mkID("success"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("success")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "success branch"}}},
+		},
+		mkID("parent_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("parent_merge")},
+		mkID("failure"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("failure")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared failure tail"}}},
+		},
+		mkID("final_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("final_merge")},
+		mkID("after"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("after")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "after shared join"}}},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "outer_split")},
+		mkID("outer_split"): {
+			mkBranchFlow("outer_split", "inner_split", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("outer_split", "parent_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("inner_split"): {
+			mkBranchFlow("inner_split", "success", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("inner_split", "parent_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("success"):      {mkFlow("success", "final_merge")},
+		mkID("parent_merge"): {mkFlow("parent_merge", "failure")},
+		mkID("failure"):      {mkFlow("failure", "final_merge")},
+		mkID("final_merge"):  {mkFlow("final_merge", "after")},
+		mkID("after"):        {mkFlow("after", "end")},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("outer_split")]; got != mkID("parent_merge") {
+		t.Fatalf("outer split paired with %q, want parent shared-tail merge %q", got, mkID("parent_merge"))
+	}
+	if got := splitMergeMap[mkID("inner_split")]; got != mkID("final_merge") {
+		t.Fatalf("inner split paired with %q, want final join %q", got, mkID("final_merge"))
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	if got := strings.Count(out, "shared failure tail"); got != 1 {
+		t.Fatalf("shared failure tail must be emitted once, got %d:\n%s", got, out)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "shared failure tail") && strings.HasPrefix(line, "    ") {
+			t.Fatalf("shared failure tail leaked inside nested branch, got %q in:\n%s", line, out)
+		}
+	}
+}
+
 func TestTraverseFlow_NestedGuardLocalMergeDoesNotConsumeParentTail(t *testing.T) {
 	e := newTestExecutor()
 
@@ -806,6 +876,53 @@ func TestCollectErrorHandlerStatements_StopsAtSharedContinuation(t *testing.T) {
 	assertContains(t, stmts[0], "log error")
 	if strings.Contains(strings.Join(stmts, "\n"), "after") {
 		t.Fatalf("shared continuation leaked into error handler: %v", stmts)
+	}
+}
+
+func TestCollectErrorHandlerStatements_IncludesTailAfterEmptyElseMerge(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("err_log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("err_log")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Error", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "request failed"}}},
+		},
+		mkID("split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$latestHttpResponse != empty"},
+		},
+		mkID("import_error"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("import_error")},
+			Action: &microflows.ImportXmlAction{
+				ErrorHandlingType: microflows.ErrorHandlingTypeCustomWithoutRollback,
+				ResultHandling:    &microflows.ResultHandlingMapping{ResultVariable: "ErrorPayload"},
+			},
+		},
+		mkID("payload_end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("payload_end"), ReturnValue: "$ErrorPayload"},
+		mkID("merge"):       &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+		mkID("fallback"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("fallback")},
+			Action:       &microflows.CreateObjectAction{OutputVariable: "GenericError", EntityQualifiedName: "SampleErrors.GenericError"},
+		},
+		mkID("fallback_end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("fallback_end"), ReturnValue: "$GenericError"},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("err_log"):      {mkFlow("err_log", "split")},
+		mkID("split"):        {mkBranchFlow("split", "import_error", &microflows.ExpressionCase{Expression: "true"}), mkBranchFlow("split", "merge", &microflows.ExpressionCase{Expression: "false"})},
+		mkID("import_error"): {mkFlow("import_error", "payload_end"), mkErrorFlow("import_error", "merge")},
+		mkID("merge"):        {mkFlow("merge", "fallback")},
+		mkID("fallback"):     {mkFlow("fallback", "fallback_end")},
+	}
+
+	stmts := e.collectErrorHandlerStatements(mkID("err_log"), activityMap, flowsByOrigin, nil, nil)
+	out := strings.Join(stmts, "\n")
+	assertContains(t, out, "if $latestHttpResponse != empty then")
+	assertContains(t, out, "else")
+	assertContains(t, out, "end if;")
+	assertContains(t, out, "$GenericError = create SampleErrors.GenericError")
+	if strings.Index(out, "$GenericError = create") < strings.Index(out, "else") {
+		t.Fatalf("fallback tail must be emitted on the fallback branch, got:\n%s", out)
 	}
 }
 

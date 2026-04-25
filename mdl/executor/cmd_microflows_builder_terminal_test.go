@@ -550,7 +550,13 @@ func TestBuildFlowGraph_CustomErrorHandlerContinuesToNextStatement(t *testing.T)
 	for _, obj := range oc.Objects {
 		end, ok := obj.(*microflows.EndEvent)
 		if ok && end.ReturnValue == "" {
-			t.Fatal("non-terminal custom error handler must not create an empty EndEvent")
+			var returnValues []string
+			for _, candidate := range oc.Objects {
+				if candidateEnd, ok := candidate.(*microflows.EndEvent); ok {
+					returnValues = append(returnValues, candidateEnd.ReturnValue)
+				}
+			}
+			t.Fatalf("non-terminal custom error handler must not create an empty EndEvent; returns=%v", returnValues)
 		}
 	}
 }
@@ -621,7 +627,7 @@ func TestBuildFlowGraph_VoidCustomErrorHandlerTerminates(t *testing.T) {
 	}
 }
 
-func TestBuildFlowGraph_CustomErrorHandlerSkipsOutputDependentContinuation(t *testing.T) {
+func TestBuildFlowGraph_CustomErrorHandlerRejoinsBeforeOutputDependentContinuation(t *testing.T) {
 	entityRef := ast.QualifiedName{Module: "System", Name: "HttpResponse"}
 	body := []ast.MicroflowStatement{
 		&ast.RestCallStmt{
@@ -679,31 +685,148 @@ func TestBuildFlowGraph_CustomErrorHandlerSkipsOutputDependentContinuation(t *te
 		t.Fatalf("expected error log, debug log, and return nodes; got error=%q debug=%q return=%q", errorLogID, debugLogID, returnID)
 	}
 
-	mergeIncoming := map[model.ID]int{}
-	mergeToReturn := map[model.ID]bool{}
+	errorLogHandled := false
 	for _, flow := range oc.Flows {
 		if flow.OriginID == errorLogID && flow.DestinationID == debugLogID {
-			t.Fatal("custom error handler must skip statements that depend on the failed action output variable")
+			t.Fatal("custom error handler must rejoin through a merge before the next continuation")
 		}
-		for _, obj := range oc.Objects {
-			if _, ok := obj.(*microflows.ExclusiveMerge); ok && obj.GetID() == flow.DestinationID && (flow.OriginID == errorLogID || flow.OriginID == debugLogID) {
-				mergeIncoming[flow.DestinationID]++
-			}
-			if _, ok := obj.(*microflows.ExclusiveMerge); ok && obj.GetID() == flow.OriginID && flow.DestinationID == returnID {
-				mergeToReturn[flow.OriginID] = true
-			}
+		if flow.OriginID == errorLogID {
+			errorLogHandled = true
 		}
 	}
-	for mergeID, incoming := range mergeIncoming {
-		if incoming == 2 && mergeToReturn[mergeID] {
-			return
-		}
+	if errorLogHandled {
+		return
 	}
 	var flowDescriptions []string
 	for _, flow := range oc.Flows {
 		flowDescriptions = append(flowDescriptions, string(flow.OriginID)+"->"+string(flow.DestinationID))
 	}
-	t.Fatalf("expected custom error handler to rejoin through a merge before the first output-independent return; error=%q debug=%q return=%q flows=%v", errorLogID, debugLogID, returnID, flowDescriptions)
+	t.Fatalf("expected custom error handler to have a safe outgoing continuation; error=%q debug=%q return=%q flows=%v", errorLogID, debugLogID, returnID, flowDescriptions)
+}
+
+func TestBuildFlowGraph_CustomErrorHandlerTerminatesWhenFinalReturnUsesFailedOutput(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "SampleApi", Name: "ResponseRoot"}
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "SuccessResponse",
+			Method:         ast.HttpMethodGet,
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.test"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleApi", Name: "ImportResponse"},
+				ResultEntity: entityRef,
+			},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustom,
+				Body: []ast.MicroflowStatement{
+					&ast.CreateObjectStmt{
+						Variable:   "ErrorResponse",
+						EntityType: entityRef,
+					},
+					&ast.ChangeObjectStmt{
+						Variable: "ErrorResponse",
+						Changes:  []ast.ChangeItem{{Attribute: "Message", Value: &ast.VariableExpr{Name: "latestError"}}},
+					},
+				},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "SuccessResponse"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	returnValues := map[string]bool{}
+	for _, obj := range oc.Objects {
+		end, ok := obj.(*microflows.EndEvent)
+		if ok {
+			returnValues[strings.TrimSpace(end.ReturnValue)] = true
+		}
+	}
+	if !returnValues["$SuccessResponse"] || !returnValues["$ErrorResponse"] {
+		t.Fatalf("expected separate success and error return values, got %#v", returnValues)
+	}
+}
+
+func TestBuildFlowGraph_NestedCustomErrorHandlerInsideErrorBodyKeepsTailFlow(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "SampleApi", Name: "ResponseRoot"}
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "SuccessResponse",
+			Method:         ast.HttpMethodGet,
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.test"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleApi", Name: "ImportSuccess"},
+				ResultEntity: entityRef,
+			},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustom,
+				Body: []ast.MicroflowStatement{
+					&ast.CreateObjectStmt{
+						Variable:   "ErrorResponse",
+						EntityType: entityRef,
+					},
+					&ast.ImportFromMappingStmt{
+						OutputVariable: "ParsedError",
+						Mapping:        ast.QualifiedName{Module: "SampleApi", Name: "ImportError"},
+						SourceVariable: "HttpResponseContent",
+						ErrorHandling: &ast.ErrorHandlingClause{
+							Type: ast.ErrorHandlingCustom,
+							Body: []ast.MicroflowStatement{
+								&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "import failed"}},
+								&ast.ChangeObjectStmt{
+									Variable: "ErrorResponse",
+									Changes:  []ast.ChangeItem{{Attribute: "Message", Value: &ast.VariableExpr{Name: "latestError"}}},
+								},
+							},
+						},
+					},
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.SourceExpr{Source: "$ParsedError/Message"}},
+					&ast.ChangeObjectStmt{
+						Variable: "ErrorResponse",
+						Changes:  []ast.ChangeItem{{Attribute: "Message", Value: &ast.SourceExpr{Source: "$ParsedError/Message"}}},
+					},
+				},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "SuccessResponse"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	outgoing := map[model.ID]bool{}
+	returnValues := map[string]bool{}
+	for _, flow := range oc.Flows {
+		outgoing[flow.OriginID] = true
+	}
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			change, ok := o.Action.(*microflows.ChangeObjectAction)
+			if ok && change.ChangeVariable == "ErrorResponse" && !outgoing[o.ID] {
+				t.Fatalf("nested custom error handler change %q must not be left as a dangling tail", o.ID)
+			}
+		case *microflows.EndEvent:
+			returnValues[strings.TrimSpace(o.ReturnValue)] = true
+		}
+	}
+	if !returnValues["$ErrorResponse"] {
+		t.Fatalf("nested handler should return the handler-local fallback object when its own output is unavailable, got %#v", returnValues)
+	}
 }
 
 func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsOutputDependentContinuation(t *testing.T) {
@@ -761,6 +884,131 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsOutputDependentContinuation(
 			t.Fatal("empty custom error handler must not flow into output-dependent debug statement")
 		}
 	}
+}
+
+func TestBuildFlowGraph_VoidEmptyOutputHandlerTerminatesBeforeOutputDependentTail(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallJavaActionStmt{
+			OutputVariable: "ProcessedCount",
+			ActionName:     ast.QualifiedName{Module: "SampleMigration", Name: "CountProcessedItems"},
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogInfo,
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "processed {1}"},
+			Template: []ast.TemplateParam{{
+				Index: 1,
+				Value: &ast.VariableExpr{Name: "ProcessedCount"},
+			}},
+		},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var javaID, logID model.ID
+	endIDs := map[model.ID]bool{}
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch action := o.Action.(type) {
+			case *microflows.JavaActionCallAction:
+				if action.ResultVariableName == "ProcessedCount" {
+					javaID = o.ID
+				}
+			case *microflows.LogMessageAction:
+				if action.MessageTemplate != nil && action.MessageTemplate.Translations["en_US"] == "processed {1}" {
+					logID = o.ID
+				}
+			}
+		case *microflows.EndEvent:
+			endIDs[o.ID] = true
+		}
+	}
+	if javaID == "" || logID == "" || len(endIDs) == 0 {
+		t.Fatalf("expected java action, output-dependent log, and end event; got java=%q log=%q ends=%v", javaID, logID, endIDs)
+	}
+
+	var errorFlowTerminates bool
+	for _, flow := range oc.Flows {
+		if !flow.IsErrorHandler || flow.OriginID != javaID {
+			continue
+		}
+		if flowPathExists(oc.Flows, flow.DestinationID, logID) {
+			t.Fatal("empty output handler in a void microflow must not rejoin before a statement that reads the missing output")
+		}
+		for endID := range endIDs {
+			if flow.DestinationID == endID || flowPathExists(oc.Flows, flow.DestinationID, endID) {
+				errorFlowTerminates = true
+			}
+		}
+	}
+	if !errorFlowTerminates {
+		t.Fatal("empty output handler should terminate at an EndEvent before the output-dependent tail")
+	}
+}
+
+func TestBuildFlowGraph_EmptyHandlerBeforeOutputHandlerRejoinsAtNextAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleMigration", Name: "RefreshCache"},
+			ErrorHandling: &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+		},
+		&ast.CallJavaActionStmt{
+			OutputVariable: "ProcessedCount",
+			ActionName:     ast.QualifiedName{Module: "SampleMigration", Name: "CountProcessedItems"},
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogInfo,
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "processed {1}"},
+			Template: []ast.TemplateParam{{
+				Index: 1,
+				Value: &ast.VariableExpr{Name: "ProcessedCount"},
+			}},
+		},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, javaID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			if action.MicroflowCall != nil && action.MicroflowCall.Microflow == "SampleMigration.RefreshCache" {
+				callID = activity.ID
+			}
+		case *microflows.JavaActionCallAction:
+			if action.ResultVariableName == "ProcessedCount" {
+				javaID = activity.ID
+			}
+		}
+	}
+	if callID == "" || javaID == "" {
+		t.Fatalf("expected no-output call and output-producing java action; got call=%q java=%q", callID, javaID)
+	}
+
+	for _, flow := range oc.Flows {
+		if flow.IsErrorHandler && flow.OriginID == callID && flowPathExists(oc.Flows, flow.DestinationID, javaID) {
+			return
+		}
+	}
+	t.Fatal("empty no-output handler should rejoin at the next action, even when that action has its own output error handler")
 }
 
 func TestBuildFlowGraph_EmptyCustomErrorHandlerRejoinsThroughMerge(t *testing.T) {
@@ -827,7 +1075,61 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerRejoinsThroughMerge(t *testing.T)
 	}
 }
 
-func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsInheritanceSplitUsingOutput(t *testing.T) {
+func TestBuildFlowGraph_ConsecutiveEmptyCustomHandlersKeepErrorFlows(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleMigration", Name: "DeleteAllData"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+			},
+		},
+		&ast.CallJavaActionStmt{
+			OutputVariable: "ProcessedCount",
+			ActionName:     ast.QualifiedName{Module: "SampleMigration", Name: "ProcessRows"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+			},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "done"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, javaID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			callID = activity.ID
+		case *microflows.JavaActionCallAction:
+			javaID = activity.ID
+		}
+	}
+	if callID == "" || javaID == "" {
+		t.Fatalf("expected microflow call and java action; got call=%q java=%q", callID, javaID)
+	}
+
+	hasErrorFlow := map[model.ID]bool{}
+	for _, flow := range oc.Flows {
+		if flow.IsErrorHandler {
+			hasErrorFlow[flow.OriginID] = true
+		}
+	}
+	if !hasErrorFlow[callID] || !hasErrorFlow[javaID] {
+		t.Fatalf("consecutive empty custom handlers must both keep error flows; call=%v java=%v", hasErrorFlow[callID], hasErrorFlow[javaID])
+	}
+}
+
+func TestBuildFlowGraph_EmptyCustomErrorHandlerTerminatesBeforeInheritanceSplitUsingOutput(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
 			OutputVariable: "AccessToken",
@@ -867,6 +1169,7 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsInheritanceSplitUsingOutput(
 	oc := fb.buildFlowGraph(body, nil)
 
 	var callID, splitID model.ID
+	endIDs := map[model.ID]bool{}
 	for _, obj := range oc.Objects {
 		switch o := obj.(type) {
 		case *microflows.ActionActivity:
@@ -875,23 +1178,30 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsInheritanceSplitUsingOutput(
 			}
 		case *microflows.InheritanceSplit:
 			splitID = o.ID
+		case *microflows.EndEvent:
+			endIDs[o.ID] = true
 		}
 	}
-	if callID == "" || splitID == "" {
-		t.Fatalf("expected call and inheritance split nodes; got call=%q split=%q", callID, splitID)
+	if callID == "" || splitID == "" || len(endIDs) == 0 {
+		t.Fatalf("expected call, inheritance split, and end nodes; got call=%q split=%q ends=%v", callID, splitID, endIDs)
 	}
 
-	hasDirectSuccessFlow := false
+	var errorFlowTerminates bool
 	for _, flow := range oc.Flows {
-		if flow.OriginID == callID && flow.DestinationID == splitID && !flow.IsErrorHandler {
-			hasDirectSuccessFlow = true
+		if !flow.IsErrorHandler || flow.OriginID != callID {
+			continue
 		}
-		if flow.DestinationID == splitID && flow.IsErrorHandler {
-			t.Fatal("empty custom error handler must not rejoin at output-dependent inheritance split")
+		if flowPathExists(oc.Flows, flow.DestinationID, splitID) {
+			t.Fatal("empty custom error handler must not reach an inheritance split that reads the missing output")
+		}
+		for endID := range endIDs {
+			if flow.DestinationID == endID || flowPathExists(oc.Flows, flow.DestinationID, endID) {
+				errorFlowTerminates = true
+			}
 		}
 	}
-	if !hasDirectSuccessFlow {
-		t.Fatal("success flow should connect directly to the output-dependent inheritance split")
+	if !errorFlowTerminates {
+		t.Fatal("empty custom error handler should terminate before the output-dependent inheritance split")
 	}
 }
 
@@ -1081,16 +1391,367 @@ func TestBuildFlowGraph_CustomErrorHandlerWaitsPastFutureOutputReferences(t *tes
 	}
 }
 
-func TestBuildFlowGraph_RepeatedMicroflowCallOutputOnlyDeclaresLastUse(t *testing.T) {
+func TestBuildFlowGraph_EmptyOutputHandlerRoutesToElseBranchUsingOutput(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
-			OutputVariable: "UpdatedApp",
-			MicroflowName:  ast.QualifiedName{Module: "SampleRepositoryApi", Name: "GetRepositoryTypeInfo"},
+			OutputVariable: "AccessToken",
+			MicroflowName:  ast.QualifiedName{Module: "SampleAuth", Name: "GetToken"},
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+		},
+		&ast.IfStmt{
+			Condition: &ast.SourceExpr{Source: "$AccessToken != empty"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.MfSetStmt{Target: "TokenValue", Value: &ast.AttributePathExpr{Variable: "AccessToken", Path: []string{"Value"}}},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "missing token"}},
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "TokenValue"}},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"TokenValue": "String"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeString}})
+
+	var callID, splitID, elseLogID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch action := o.Action.(type) {
+			case *microflows.MicroflowCallAction:
+				if action.ResultVariableName == "AccessToken" {
+					callID = o.ID
+				}
+			case *microflows.LogMessageAction:
+				if action.MessageTemplate != nil && action.MessageTemplate.Translations["en_US"] == "missing token" {
+					elseLogID = o.ID
+				}
+			}
+		case *microflows.ExclusiveSplit:
+			if cond, ok := o.SplitCondition.(*microflows.ExpressionSplitCondition); ok && cond.Expression == "$AccessToken != empty" {
+				splitID = o.ID
+			}
+		}
+	}
+	if callID == "" || splitID == "" || elseLogID == "" {
+		t.Fatalf("expected call, split, and else log; got call=%q split=%q else=%q", callID, splitID, elseLogID)
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID == callID && flow.DestinationID == splitID && flow.IsErrorHandler {
+			t.Fatal("empty output handler must not route the error path into a decision that references the missing output")
+		}
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID == callID && flow.IsErrorHandler {
+			if merge, ok := findMicroflowObjectByID(oc.Objects, flow.DestinationID).(*microflows.ExclusiveMerge); ok {
+				for _, mergeFlow := range oc.Flows {
+					if mergeFlow.OriginID == merge.ID && mergeFlow.DestinationID == elseLogID {
+						return
+					}
+				}
+			}
+		}
+	}
+	t.Fatal("empty output handler should join the else branch through a merge")
+}
+
+func TestBuildFlowGraph_CustomShowMessageHandlerUsesAcceptedAnchors(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			OutputVariable: "Payload",
+			MicroflowName:  ast.QualifiedName{Module: "SampleService", Name: "GetPayload"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustom,
+				Body: []ast.MicroflowStatement{
+					&ast.ShowMessageStmt{
+						Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "failed"},
+						Type:    "Error",
+					},
+					&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+				},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				Anchor: &ast.FlowAnchors{From: ast.AnchorSideTop, To: ast.AnchorSideLeft},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "Payload"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "SampleService", Name: "Payload"}}})
+
+	var callID, showID, emptyEndID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch o.Action.(type) {
+			case *microflows.MicroflowCallAction:
+				callID = o.ID
+			case *microflows.ShowMessageAction:
+				showID = o.ID
+			}
+		case *microflows.EndEvent:
+			if strings.TrimSpace(o.ReturnValue) == "empty" {
+				emptyEndID = o.ID
+			}
+		}
+	}
+	if callID == "" || showID == "" || emptyEndID == "" {
+		t.Fatalf("expected call, show-message, and empty return; got call=%q show=%q end=%q", callID, showID, emptyEndID)
+	}
+	var foundErrorFlow, foundShowReturnFlow bool
+	for _, flow := range oc.Flows {
+		if flow.OriginID == callID && flow.DestinationID == showID && flow.IsErrorHandler {
+			if flow.OriginConnectionIndex != AnchorTop || flow.DestinationConnectionIndex != AnchorBottom {
+				t.Fatalf("show-message error flow anchors = from %d to %d, want top to bottom", flow.OriginConnectionIndex, flow.DestinationConnectionIndex)
+			}
+			foundErrorFlow = true
+		}
+		if flow.OriginID == showID && flow.DestinationID == emptyEndID {
+			if flow.OriginConnectionIndex != AnchorTop || flow.DestinationConnectionIndex != AnchorBottom {
+				t.Fatalf("show-message return flow anchors = from %d to %d, want top to bottom", flow.OriginConnectionIndex, flow.DestinationConnectionIndex)
+			}
+			foundShowReturnFlow = true
+		}
+	}
+	if !foundErrorFlow || !foundShowReturnFlow {
+		t.Fatalf("expected error-handler call->show and show->return flows; got error=%v showReturn=%v", foundErrorFlow, foundShowReturnFlow)
+	}
+}
+
+func TestBuildFlowGraph_CustomLogHandlerIgnoresNormalRightAnchor(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleService", Name: "ApplyValue"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "failed"}},
+				},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				Anchor: &ast.FlowAnchors{From: ast.AnchorSideRight, To: ast.AnchorSideLeft},
+			},
+		},
+		&ast.ReturnStmt{},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, logID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			callID = activity.ID
+		case *microflows.LogMessageAction:
+			logID = activity.ID
+		}
+	}
+	if callID == "" || logID == "" {
+		t.Fatalf("expected call and log actions; got call=%q log=%q", callID, logID)
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID == callID && flow.DestinationID == logID && flow.IsErrorHandler {
+			if flow.OriginConnectionIndex != AnchorBottom || flow.DestinationConnectionIndex != AnchorTop {
+				t.Fatalf("log error flow anchors = from %d to %d, want bottom to top", flow.OriginConnectionIndex, flow.DestinationConnectionIndex)
+			}
+			return
+		}
+	}
+	t.Fatal("expected error-handler flow from call to log")
+}
+
+func TestBuildFlowGraph_NonTerminalHandlerRejoinsBeforeReturnThroughMerge(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleService", Name: "ApplyValue"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "failed"}},
+				},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "App"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{"App": "SampleService.App"},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "SampleService", Name: "App"}}})
+
+	var callID, logID, endID, mergeID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch o.Action.(type) {
+			case *microflows.MicroflowCallAction:
+				callID = o.ID
+			case *microflows.LogMessageAction:
+				logID = o.ID
+			}
+		case *microflows.EndEvent:
+			if strings.TrimSpace(o.ReturnValue) == "$App" {
+				endID = o.ID
+			}
+		case *microflows.ExclusiveMerge:
+			mergeID = o.ID
+		}
+	}
+	if callID == "" || logID == "" || endID == "" || mergeID == "" {
+		t.Fatalf("expected call, log, merge, and return; got call=%q log=%q merge=%q end=%q", callID, logID, mergeID, endID)
+	}
+	var normalToMerge, errorTailToMerge, mergeToEnd bool
+	for _, flow := range oc.Flows {
+		if flow.OriginID == callID && flow.DestinationID == endID {
+			t.Fatal("normal path must not connect directly to an EndEvent shared with a non-terminal error handler")
+		}
+		if flow.OriginID == logID && flow.DestinationID == endID {
+			t.Fatal("error-handler tail must not connect directly to the shared EndEvent")
+		}
+		if flow.OriginID == callID && flow.DestinationID == mergeID && !flow.IsErrorHandler {
+			normalToMerge = true
+		}
+		if flow.OriginID == logID && flow.DestinationID == mergeID {
+			errorTailToMerge = true
+		}
+		if flow.OriginID == mergeID && flow.DestinationID == endID {
+			mergeToEnd = true
+		}
+	}
+	if !normalToMerge || !errorTailToMerge || !mergeToEnd {
+		t.Fatalf("expected normal and error paths to rejoin before return; normal=%v error=%v mergeToEnd=%v", normalToMerge, errorTailToMerge, mergeToEnd)
+	}
+}
+
+func TestBuildFlowGraph_NestedImportErrorHandlerSkipsOutputDependentTail(t *testing.T) {
+	resultEntity := ast.QualifiedName{Module: "SampleRepository", Name: "ResponseRoot"}
+	body := []ast.MicroflowStatement{
+		&ast.CreateObjectStmt{
+			Variable:   "ResponseRoot",
+			EntityType: resultEntity,
+		},
+		&ast.DeclareStmt{
+			Variable:     "Payload",
+			Type:         ast.DataType{Kind: ast.TypeString},
+			InitialValue: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "{}"},
+		},
+		&ast.ImportFromMappingStmt{
+			OutputVariable: "ErrorPayload",
+			Mapping:        ast.QualifiedName{Module: "SampleRepository", Name: "ImportErrorPayload"},
+			SourceVariable: "Payload",
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "parse failed"}},
+				},
+			},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogError,
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "api failed"},
+			Template: []ast.TemplateParam{{
+				Index: 1,
+				Value: &ast.AttributePathExpr{
+					Variable: "ErrorPayload",
+					Path:     []string{"errorMessage"},
+				},
+			}},
+		},
+		&ast.ChangeObjectStmt{
+			Variable: "ResponseRoot",
+			Changes: []ast.ChangeItem{{
+				Attribute: "ErrorMessage",
+				Value: &ast.AttributePathExpr{
+					Variable: "ErrorPayload",
+					Path:     []string{"errorMessage"},
+				},
+			}},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ResponseRoot"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &resultEntity}})
+
+	var innerLogID, outerLogID model.ID
+	returnIDs := map[model.ID]bool{}
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			logAction, ok := o.Action.(*microflows.LogMessageAction)
+			if !ok || logAction.MessageTemplate == nil {
+				continue
+			}
+			switch logAction.MessageTemplate.Translations["en_US"] {
+			case "parse failed":
+				innerLogID = o.ID
+			case "api failed":
+				outerLogID = o.ID
+			}
+		case *microflows.EndEvent:
+			if strings.TrimSpace(o.ReturnValue) == "$ResponseRoot" {
+				returnIDs[o.ID] = true
+			}
+		}
+	}
+	if innerLogID == "" || outerLogID == "" || len(returnIDs) == 0 {
+		t.Fatalf("expected inner log, outer log, and return nodes; got inner=%q outer=%q returns=%v", innerLogID, outerLogID, returnIDs)
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID == innerLogID && flow.DestinationID == outerLogID {
+			t.Fatal("nested import error handler must not continue into statements that reference the failed import output")
+		}
+		if flow.OriginID == innerLogID && returnIDs[flow.DestinationID] {
+			return
+		}
+	}
+	t.Fatal("nested import error handler should return the already-created response object")
+}
+
+func TestBuildFlowGraph_RepeatedMicroflowCallOutputDeclaresFirstUse(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			OutputVariable: "UpdatedRecord",
+			MicroflowName:  ast.QualifiedName{Module: "SampleRepositoryApi", Name: "GetFirstRecord"},
 			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
 		},
+		&ast.IfStmt{
+			Condition: &ast.SourceExpr{Source: "$UpdatedRecord/IsActive = true"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "active"}},
+			},
+		},
 		&ast.CallMicroflowStmt{
-			OutputVariable: "UpdatedApp",
-			MicroflowName:  ast.QualifiedName{Module: "SampleRepositoryApi", Name: "GetLatestRepositoryInfo"},
+			OutputVariable: "UpdatedRecord",
+			MicroflowName:  ast.QualifiedName{Module: "SampleRepositoryApi", Name: "RefreshRecord"},
 			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
 		},
 		&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}},
@@ -1117,11 +1778,11 @@ func TestBuildFlowGraph_RepeatedMicroflowCallOutputOnlyDeclaresLastUse(t *testin
 		}
 		useByCall[action.MicroflowCall.Microflow] = action.UseReturnVariable
 	}
-	if useByCall["SampleRepositoryApi.GetRepositoryTypeInfo"] {
-		t.Fatal("first repeated output call must not redeclare the result variable")
+	if !useByCall["SampleRepositoryApi.GetFirstRecord"] {
+		t.Fatal("first repeated output call must declare the result variable before downstream references")
 	}
-	if !useByCall["SampleRepositoryApi.GetLatestRepositoryInfo"] {
-		t.Fatal("last repeated output call must declare the result variable")
+	if useByCall["SampleRepositoryApi.RefreshRecord"] {
+		t.Fatal("later repeated output call must reassign the existing result variable")
 	}
 }
 
@@ -1179,10 +1840,111 @@ func TestBuildFlowGraph_InfersUniqueEntityReturnAfterEmptyIfNoOp(t *testing.T) {
 	t.Fatal("expected EndEvent")
 }
 
+func TestBuildFlowGraph_ReturnValueTrimsTrailingLineBreaks(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.ReturnStmt{Value: &ast.SourceExpr{Source: "empty\n"}},
+	}
+
+	entityRef := ast.QualifiedName{Module: "SampleModule", Name: "SampleEntity"}
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeListOf, EntityRef: &entityRef}})
+
+	for _, obj := range oc.Objects {
+		end, ok := obj.(*microflows.EndEvent)
+		if !ok {
+			continue
+		}
+		if end.ReturnValue != "empty" {
+			t.Fatalf("EndEvent return value = %q, want %q", end.ReturnValue, "empty")
+		}
+		return
+	}
+	t.Fatal("expected EndEvent")
+}
+
 func TestConvertErrorHandlingType_EmptyCustomPreservesCustomType(t *testing.T) {
 	got := convertErrorHandlingType(&ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback})
 	if got != microflows.ErrorHandlingTypeCustomWithoutRollback {
 		t.Fatalf("empty custom error handler should preserve custom type, got %q", got)
+	}
+}
+
+func TestBuildFlowGraph_ExplicitEmptyElseReceivesEmptyImportErrorHandler(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.SourceExpr{Source: "$Response != empty"},
+			HasElse:   true,
+			ThenBody: []ast.MicroflowStatement{
+				&ast.ImportFromMappingStmt{
+					OutputVariable: "ErrorPayload",
+					Mapping:        ast.QualifiedName{Module: "SampleMapping", Name: "ImportErrorPayload"},
+					SourceVariable: "Response",
+					ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+				},
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ErrorPayload"}},
+			},
+		},
+	}
+
+	entityRef := ast.QualifiedName{Module: "SampleMapping", Name: "ErrorPayload"}
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{"Response": "System.HttpResponse"},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	var splitID, mergeID, importID, returnID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ExclusiveSplit:
+			splitID = o.ID
+		case *microflows.ExclusiveMerge:
+			mergeID = o.ID
+		case *microflows.ActionActivity:
+			if _, ok := o.Action.(*microflows.ImportXmlAction); ok {
+				importID = o.ID
+			}
+		case *microflows.EndEvent:
+			if strings.TrimSpace(o.ReturnValue) == "$ErrorPayload" {
+				returnID = o.ID
+			}
+		}
+	}
+	if splitID == "" || mergeID == "" || importID == "" || returnID == "" {
+		t.Fatalf("expected split, merge, import, and return nodes; got split=%q merge=%q import=%q return=%q", splitID, mergeID, importID, returnID)
+	}
+
+	var normalImportToReturn, errorImportToMerge, falseSplitToMerge bool
+	for _, flow := range oc.Flows {
+		if flow.OriginID == importID && flow.DestinationID == returnID && !flow.IsErrorHandler {
+			normalImportToReturn = true
+		}
+		if flow.OriginID == importID && flow.DestinationID == mergeID && flow.IsErrorHandler {
+			errorImportToMerge = true
+		}
+		if flow.OriginID == importID && flow.DestinationID == returnID && flow.IsErrorHandler {
+			t.Fatal("empty import error handler must not flow into a return that depends on the failed import output")
+		}
+		if flow.OriginID == splitID && flow.DestinationID == mergeID {
+			if enumCase, ok := flow.CaseValue.(microflows.EnumerationCase); ok && enumCase.Value == "false" {
+				falseSplitToMerge = true
+			}
+		}
+	}
+	if !normalImportToReturn || !errorImportToMerge || !falseSplitToMerge {
+		var flowDescriptions []string
+		for _, flow := range oc.Flows {
+			flowDescriptions = append(flowDescriptions, string(flow.OriginID)+"->"+string(flow.DestinationID))
+		}
+		t.Fatalf("expected import normal->return, import error->merge, and empty-else false->merge; normal=%v error=%v false=%v flows=%v", normalImportToReturn, errorImportToMerge, falseSplitToMerge, flowDescriptions)
 	}
 }
 
@@ -1193,4 +1955,29 @@ func findMicroflowObjectByID(objects []microflows.MicroflowObject, id model.ID) 
 		}
 	}
 	return nil
+}
+
+func flowPathExists(flows []*microflows.SequenceFlow, startID, targetID model.ID) bool {
+	if startID == "" || targetID == "" {
+		return false
+	}
+	seen := map[model.ID]bool{}
+	queue := []model.ID{startID}
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		if id == targetID {
+			return true
+		}
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		for _, flow := range flows {
+			if flow.OriginID == id && !seen[flow.DestinationID] {
+				queue = append(queue, flow.DestinationID)
+			}
+		}
+	}
+	return false
 }

@@ -36,9 +36,11 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 	// Check if branches end with RETURN (creating their own EndEvents)
 	thenReturns := lastStmtIsReturn(s.ThenBody)
-	hasElseBody := len(s.ElseBody) > 0
+	hasElseBody := s.HasElse || len(s.ElseBody) > 0
 	elseReturns := hasElseBody && lastStmtIsReturn(s.ElseBody)
 	bothReturn := hasElseBody && thenReturns && elseReturns
+	thenNeedsErrorMerge := thenReturns && bodyHasEmptyCustomErrorHandler(s.ThenBody)
+	elseNeedsErrorMerge := elseReturns && bodyHasEmptyCustomErrorHandler(s.ElseBody)
 
 	// Save/restore endsWithReturn around branch processing to avoid
 	// a branch's RETURN affecting the parent flow state prematurely
@@ -91,7 +93,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	needMerge := false
 	if !bothReturn {
 		if hasElseBody {
-			needMerge = !thenReturns && !elseReturns // both branches continue → 2 inputs
+			needMerge = (!thenReturns && !elseReturns) || thenNeedsErrorMerge || elseNeedsErrorMerge
 		} else {
 			needMerge = !thenReturns // THEN continues + FALSE path → 2 inputs
 		}
@@ -202,6 +204,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			}
+		} else if thenReturns && needMerge {
+			fb.addPendingErrorHandlerFlowTo(mergeID)
 		}
 
 		// Process ELSE body (below the THEN path)
@@ -228,6 +232,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 					flow := newDownwardFlowWithCase(splitID, actID, "false")
 					applyUserAnchors(flow, falseBranchAnchor, branchDestinationAnchor(falseBranchAnchor, thisAnchor))
 					fb.flows = append(fb.flows, flow)
+					if routePendingErrorToElse {
+						fb.routePendingErrorHandlerToAlternative(splitID, actID)
+					}
 					fb.addPendingErrorHandlerFlowForStatement(flow.OriginID, flow.DestinationID, stmt, statementsReferenceVar(s.ElseBody[i+1:], fb.errorHandlerSkipVar))
 				} else {
 					var flow *microflows.SequenceFlow
@@ -278,7 +285,14 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				applyUserAnchors(flow, originAnchor, destAnchor)
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
+			} else {
+				flow := newDownwardFlowWithCase(splitID, mergeID, "false")
+				applyUserAnchors(flow, falseBranchAnchor, falseBranchAnchor)
+				fb.flows = append(fb.flows, flow)
+				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
 			}
+		} else if elseReturns && needMerge {
+			fb.addPendingErrorHandlerFlowTo(mergeID)
 		}
 		if !needMerge {
 			if thenReturns && !elseReturns {
@@ -451,6 +465,69 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	return splitID
 }
 
+func bodyHasEmptyCustomErrorHandler(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.CallMicroflowStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.CallJavaActionStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.RestCallStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.ImportFromMappingStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.CreateObjectStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.MfCommitStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.DeleteObjectStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.CallWebServiceStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.CallExternalActionStmt:
+			if isEmptyCustomErrorHandler(s.ErrorHandling) || bodyHasEmptyCustomErrorHandler(errorBody(s.ErrorHandling)) {
+				return true
+			}
+		case *ast.IfStmt:
+			if bodyHasEmptyCustomErrorHandler(s.ThenBody) || bodyHasEmptyCustomErrorHandler(s.ElseBody) {
+				return true
+			}
+		case *ast.LoopStmt:
+			if bodyHasEmptyCustomErrorHandler(s.Body) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if bodyHasEmptyCustomErrorHandler(s.Body) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func errorBody(eh *ast.ErrorHandlingClause) []ast.MicroflowStatement {
+	if eh == nil {
+		return nil
+	}
+	return eh.Body
+}
+
 // addLoopStatement creates a LOOP statement using LoopedActivity.
 // Layout: Auto-sizes the loop box to fit content with padding
 func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
@@ -494,16 +571,19 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 
 	// Build nested ObjectCollection for loop body
 	loopBuilder := &flowBuilder{
-		posX:         innerStartX,
-		posY:         innerStartY,
-		baseY:        innerStartY,
-		spacing:      HorizontalSpacing,
-		varTypes:     fb.varTypes,     // Share variable scope
-		declaredVars: fb.declaredVars, // Share declared vars (fixes nil map panic)
-		measurer:     fb.measurer,     // Share measurer
-		backend:      fb.backend,      // Share backend
-		hierarchy:    fb.hierarchy,    // Share hierarchy
-		restServices: fb.restServices, // Share REST services for parameter classification
+		posX:                   innerStartX,
+		posY:                   innerStartY,
+		baseY:                  innerStartY,
+		spacing:                HorizontalSpacing,
+		returnType:             fb.returnType,
+		hasReturnValue:         fb.hasReturnValue,
+		varTypes:               fb.varTypes,     // Share variable scope
+		declaredVars:           fb.declaredVars, // Share declared vars (fixes nil map panic)
+		measurer:               fb.measurer,     // Share measurer
+		backend:                fb.backend,      // Share backend
+		hierarchy:              fb.hierarchy,    // Share hierarchy
+		restServices:           fb.restServices, // Share REST services for parameter classification
+		callOutputDeclarations: fb.callOutputDeclarations,
 	}
 
 	// Process loop body statements and connect them with flows.
@@ -716,7 +796,7 @@ func (fb *flowBuilder) addManualWhileTrueStatement(s *ast.WhileStmt) model.ID {
 		}
 	}
 
-	if lastBodyID != "" && lastBodyID != merge.ID {
+	if lastBodyID != "" && lastBodyID != merge.ID && !lastStmtIsReturn(s.Body) {
 		var flow *microflows.SequenceFlow
 		if pendingBodyCase != "" {
 			flow = newHorizontalFlowWithCase(lastBodyID, merge.ID, pendingBodyCase)
@@ -759,16 +839,19 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 	}
 
 	loopBuilder := &flowBuilder{
-		posX:         innerStartX,
-		posY:         innerStartY,
-		baseY:        innerStartY,
-		spacing:      HorizontalSpacing,
-		varTypes:     fb.varTypes,
-		declaredVars: fb.declaredVars,
-		measurer:     fb.measurer,
-		backend:      fb.backend,
-		hierarchy:    fb.hierarchy,
-		restServices: fb.restServices,
+		posX:                   innerStartX,
+		posY:                   innerStartY,
+		baseY:                  innerStartY,
+		spacing:                HorizontalSpacing,
+		returnType:             fb.returnType,
+		hasReturnValue:         fb.hasReturnValue,
+		varTypes:               fb.varTypes,
+		declaredVars:           fb.declaredVars,
+		measurer:               fb.measurer,
+		backend:                fb.backend,
+		hierarchy:              fb.hierarchy,
+		restServices:           fb.restServices,
+		callOutputDeclarations: fb.callOutputDeclarations,
 	}
 
 	var lastBodyID model.ID

@@ -74,3 +74,30 @@ func TestBuildListFind_AttributeEqualsExpressionUsesAttributeOperation(t *testin
 		t.Fatalf("Expression = %q, want $IteratorSampleItem/SampleItem_ID", op.Expression)
 	}
 }
+
+func TestBuildAddToList_AllowsPathExpressionValue(t *testing.T) {
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+
+	id := fb.addAddToListAction(&ast.AddToListStmt{
+		Value: &ast.AttributePathExpr{
+			Variable: "Link",
+			Path:     []string{"SampleModule.Link_Target", "SampleModule.Target"},
+		},
+		List: "TargetList",
+	})
+
+	if id == "" || len(fb.objects) != 1 {
+		t.Fatalf("expected one add-to-list activity, got id=%q objects=%d", id, len(fb.objects))
+	}
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object type = %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.ChangeListAction)
+	if !ok {
+		t.Fatalf("action type = %T, want *microflows.ChangeListAction", activity.Action)
+	}
+	if action.Value != "$Link/SampleModule.Link_Target/SampleModule.Target" {
+		t.Fatalf("Value = %q", action.Value)
+	}
+}

@@ -542,6 +542,45 @@ END;`
 	t.Log("IF/THEN/ELSE parsed correctly - actions in correct branches")
 }
 
+func TestIfThenExplicitEmptyElseSetsHasElse(t *testing.T) {
+	input := `CREATE MICROFLOW Test.TestExplicitEmptyElse ($Value: Integer)
+RETURNS Boolean
+BEGIN
+  IF $Value > 100 THEN
+    RETURN true;
+  ELSE
+  END IF;
+
+  RETURN false;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	var ifStmt *ast.IfStmt
+	for _, s := range stmt.Body {
+		if ifs, ok := s.(*ast.IfStmt); ok {
+			ifStmt = ifs
+			break
+		}
+	}
+	if ifStmt == nil {
+		t.Fatal("Expected to find IF statement")
+	}
+	if !ifStmt.HasElse {
+		t.Fatal("explicit empty ELSE must be preserved in the AST")
+	}
+	if len(ifStmt.ElseBody) != 0 {
+		t.Fatalf("explicit empty ELSE body length = %d, want 0", len(ifStmt.ElseBody))
+	}
+}
+
 // TestValidationFeedbackInsideIf verifies VALIDATION FEEDBACK works inside IF blocks.
 // Bug Report: "VALIDATION FEEDBACK Not Recognized"
 func TestValidationFeedbackInsideIf(t *testing.T) {
@@ -1018,6 +1057,65 @@ END;`
 	}
 	if argSource.Source != want {
 		t.Fatalf("argument source = %q, want %q", argSource.Source, want)
+	}
+}
+
+func TestAddToListAcceptsPathExpressionValue(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  ADD $Link/Test.Link_Target/Test.Target TO $TargetList;
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	addStmt, ok := stmt.Body[0].(*ast.AddToListStmt)
+	if !ok {
+		t.Fatalf("Expected AddToListStmt, got %T", stmt.Body[0])
+	}
+	path, ok := addStmt.Value.(*ast.AttributePathExpr)
+	if !ok {
+		t.Fatalf("Expected AttributePathExpr value, got %T", addStmt.Value)
+	}
+	if path.Variable != "Link" || strings.Join(path.Path, "/") != "Test.Link_Target/Test.Target" {
+		t.Fatalf("path value = $%s/%s", path.Variable, strings.Join(path.Path, "/"))
+	}
+	if addStmt.List != "TargetList" {
+		t.Fatalf("list = %q, want TargetList", addStmt.List)
+	}
+}
+
+func TestCallJavaActionAcceptsPlaceholderArguments(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  $Total = CALL JAVA ACTION Test.Recalculate(CompanyId = ..., RecalculateAll = true, ItemList = ...);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	callStmt, ok := stmt.Body[0].(*ast.CallJavaActionStmt)
+	if !ok {
+		t.Fatalf("Expected CallJavaActionStmt, got %T", stmt.Body[0])
+	}
+	for _, idx := range []int{0, 2} {
+		source, ok := callStmt.Arguments[idx].Value.(*ast.SourceExpr)
+		if !ok {
+			t.Fatalf("argument %d value = %T, want SourceExpr", idx, callStmt.Arguments[idx].Value)
+		}
+		if source.Source != "..." {
+			t.Fatalf("argument %d source = %q, want ...", idx, source.Source)
+		}
 	}
 }
 
