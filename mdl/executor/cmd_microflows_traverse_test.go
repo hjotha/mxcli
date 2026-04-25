@@ -428,6 +428,178 @@ func TestTraverseFlow_NestedTerminalBranchUsesParentMerge(t *testing.T) {
 	}
 }
 
+func TestTraverseFlow_NestedSplitSharedTailStaysOutsideParentIf(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("outer_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("outer_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Existing != empty"},
+		},
+		mkID("inner_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("inner_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Existing/IsReusable"},
+		},
+		mkID("reuse_end"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("reuse_end"),
+			ReturnValue:         "$Existing",
+		},
+		mkID("discard"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("discard")},
+			Action:       &microflows.DeleteObjectAction{DeleteVariable: "Existing"},
+		},
+		mkID("shared_fetch"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared_fetch")},
+			Action: &microflows.MicroflowCallAction{
+				ResultVariableName: "Fetched",
+				MicroflowCall:      &microflows.MicroflowCall{Microflow: "Synthetic.Fetch"},
+			},
+		},
+		mkID("shared_success"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("shared_success"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Fetched != empty"},
+		},
+		mkID("success_end"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("success_end"),
+			ReturnValue:         "$Fetched",
+		},
+		mkID("empty_end"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("empty_end"),
+			ReturnValue:         "empty",
+		},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "outer_split")},
+		mkID("outer_split"): {
+			mkBranchFlow("outer_split", "inner_split", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("outer_split", "shared_fetch", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("inner_split"): {
+			mkBranchFlow("inner_split", "reuse_end", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("inner_split", "discard", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("discard"):      {mkFlow("discard", "shared_fetch")},
+		mkID("shared_fetch"): {mkFlow("shared_fetch", "shared_success")},
+		mkID("shared_success"): {
+			mkBranchFlow("shared_success", "success_end", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("shared_success", "empty_end", &microflows.ExpressionCase{Expression: "false"}),
+		},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("outer_split")]; got != mkID("shared_fetch") {
+		t.Fatalf("outer split paired with %q, want shared continuation %q", got, mkID("shared_fetch"))
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	if got := strings.Count(out, "Synthetic.Fetch"); got != 1 {
+		t.Fatalf("shared tail must be emitted once, got %d:\n%s", got, out)
+	}
+	outerEndIf := strings.Index(out, "end if;")
+	sharedFetch := strings.Index(out, "Synthetic.Fetch")
+	if outerEndIf == -1 || sharedFetch == -1 || outerEndIf > sharedFetch {
+		t.Fatalf("shared tail was emitted inside parent IF:\n%s", out)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "Synthetic.Fetch") && strings.HasPrefix(line, "  ") {
+			t.Fatalf("shared tail must be top-level, got %q in:\n%s", line, out)
+		}
+	}
+}
+
+func TestTraverseFlow_NestedGuardLocalMergeDoesNotConsumeParentTail(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("outer_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("outer_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Existing != empty"},
+		},
+		mkID("inner_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("inner_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Existing/ExpiresAt != empty"},
+		},
+		mkID("guard_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("guard_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Existing/ExpiresAt > [%CurrentDateTime%]"},
+		},
+		mkID("reuse_end"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("reuse_end"),
+			ReturnValue:         "$Existing",
+		},
+		mkID("local_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("local_merge")},
+		mkID("discard"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("discard")},
+			Action:       &microflows.DeleteObjectAction{DeleteVariable: "Existing"},
+		},
+		mkID("parent_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("parent_merge")},
+		mkID("shared_fetch"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared_fetch")},
+			Action: &microflows.MicroflowCallAction{
+				ResultVariableName: "Fetched",
+				MicroflowCall:      &microflows.MicroflowCall{Microflow: "Synthetic.Fetch"},
+			},
+		},
+		mkID("success_end"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("success_end"),
+			ReturnValue:         "$Fetched",
+		},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "outer_split")},
+		mkID("outer_split"): {
+			mkBranchFlow("outer_split", "inner_split", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("outer_split", "parent_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("inner_split"): {
+			mkBranchFlow("inner_split", "guard_split", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("inner_split", "local_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("guard_split"): {
+			mkBranchFlow("guard_split", "reuse_end", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("guard_split", "local_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("local_merge"):  {mkFlow("local_merge", "discard")},
+		mkID("discard"):      {mkFlow("discard", "parent_merge")},
+		mkID("parent_merge"): {mkFlow("parent_merge", "shared_fetch")},
+		mkID("shared_fetch"): {mkFlow("shared_fetch", "success_end")},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("outer_split")]; got != mkID("parent_merge") {
+		t.Fatalf("outer split paired with %q, want parent merge %q", got, mkID("parent_merge"))
+	}
+	if got := splitMergeMap[mkID("inner_split")]; got != mkID("local_merge") {
+		t.Fatalf("inner split paired with %q, want local merge %q", got, mkID("local_merge"))
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	if got := strings.Count(out, "Synthetic.Fetch"); got != 1 {
+		t.Fatalf("shared tail must be emitted once, got %d:\n%s", got, out)
+	}
+	outerEndIf := strings.LastIndex(out[:strings.Index(out, "Synthetic.Fetch")], "end if;")
+	if outerEndIf == -1 {
+		t.Fatalf("expected outer IF to close before shared tail:\n%s", out)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "Synthetic.Fetch") && strings.HasPrefix(line, "  ") {
+			t.Fatalf("shared tail must be outside parent IF, got %q in:\n%s", line, out)
+		}
+	}
+}
+
 func TestTraverseFlow_IfInsideLoop(t *testing.T) {
 	e := newTestExecutor()
 

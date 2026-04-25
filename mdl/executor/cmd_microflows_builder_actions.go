@@ -176,17 +176,17 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 				fb.flows = append(fb.flows, flow)
 			} else {
 				var flow *microflows.SequenceFlow
+				originAnchor := prevAnchor
+				destAnchor := thisAnchor
 				if pendingCase != "" {
 					flow = newHorizontalFlowWithCase(lastID, actID, pendingCase)
+					originAnchor, destAnchor = pendingFlowAnchors(prevAnchor, pendingAnchor, thisAnchor)
 					pendingCase = ""
-					if pendingAnchor != nil {
-						prevAnchor = pendingAnchor
-						pendingAnchor = nil
-					}
+					pendingAnchor = nil
 				} else {
 					flow = newHorizontalFlow(lastID, actID)
 				}
-				applyUserAnchors(flow, prevAnchor, thisAnchor)
+				applyUserAnchors(flow, originAnchor, destAnchor)
 				fb.flows = append(fb.flows, flow)
 			}
 			prevAnchor = thisAnchor

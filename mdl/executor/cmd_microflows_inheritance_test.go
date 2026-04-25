@@ -210,6 +210,84 @@ func TestTraverseFlow_InheritanceSplitWithoutExplicitMergeEmitsSharedContinuatio
 	}
 }
 
+func TestTraverseFlow_InheritanceSplitInsideParentIfDoesNotDuplicateSharedTail(t *testing.T) {
+	e := newTestExecutor()
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("feature_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("feature_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UseTypedContext"},
+		},
+		mkID("fetch_context"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("fetch_context")},
+			Action: &microflows.MicroflowCallAction{
+				ResultVariableName: "Context",
+				MicroflowCall:      &microflows.MicroflowCall{Microflow: "Synthetic.GetContext"},
+			},
+		},
+		mkID("type_split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("type_split"),
+			VariableName:        "Context",
+		},
+		mkID("use_context"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("use_context")},
+			Action:       &microflows.ChangeVariableAction{VariableName: "ContextValue", Value: "$Context/Value"},
+		},
+		mkID("reject_context"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("reject_context")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Error", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "unsupported context"}}},
+		},
+		mkID("reject_end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("reject_end"), ReturnValue: "empty"},
+		mkID("parent_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("parent_merge")},
+		mkID("shared_tail"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared_tail")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared tail"}}},
+		},
+		mkID("tail_end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("tail_end"), ReturnValue: "$ContextValue"},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "feature_split")},
+		mkID("feature_split"): {
+			mkBranchFlow("feature_split", "fetch_context", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("feature_split", "parent_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("fetch_context"): {mkFlow("fetch_context", "type_split")},
+		mkID("type_split"): {
+			mkBranchFlow("type_split", "use_context", microflows.InheritanceCase{EntityQualifiedName: "Synthetic.TypedContext"}),
+			mkBranchFlow("type_split", "reject_context", microflows.InheritanceCase{EntityQualifiedName: ""}),
+		},
+		mkID("use_context"):    {mkFlow("use_context", "parent_merge")},
+		mkID("reject_context"): {mkFlow("reject_context", "reject_end")},
+		mkID("parent_merge"):   {mkFlow("parent_merge", "shared_tail")},
+		mkID("shared_tail"):    {mkFlow("shared_tail", "tail_end")},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("feature_split")]; got != mkID("parent_merge") {
+		t.Fatalf("parent split paired with %q, want %q", got, mkID("parent_merge"))
+	}
+	if got := splitMergeMap[mkID("type_split")]; got != "" {
+		t.Fatalf("type split should not have a local merge, got %q", got)
+	}
+
+	var lines []string
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, map[model.ID]bool{}, nil, nil, &lines, 0, nil, 0, nil)
+	got := strings.Join(lines, "\n")
+	if count := strings.Count(got, "shared tail"); count != 1 {
+		t.Fatalf("shared tail should be emitted once, got %d:\n%s", count, got)
+	}
+	sharedTail := strings.Index(got, "shared tail")
+	parentEnd := strings.LastIndex(got[:sharedTail], "end if;")
+	if parentEnd == -1 {
+		t.Fatalf("shared tail should be after the parent IF closes:\n%s", got)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "shared tail") && strings.HasPrefix(line, "  ") {
+			t.Fatalf("shared tail must be top-level, got %q in:\n%s", line, got)
+		}
+	}
+}
+
 func TestBuilder_InheritanceSplit_EmptyCaseCreatesConfiguredFlow(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.InheritanceSplitStmt{

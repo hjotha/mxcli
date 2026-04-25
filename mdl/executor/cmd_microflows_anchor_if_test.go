@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // buildWithAnchors is a test helper that builds the flow graph for a simple
@@ -255,4 +256,46 @@ func TestBuilder_NoMergeContinuingBranchPreservesTailAnchor(t *testing.T) {
 	if !hasFlow(oc.Flows, AnchorTop, AnchorBottom) {
 		t.Errorf("expected continuing branch tail to keep Top→Bottom, got %+v", oc.Flows)
 	}
+}
+
+func TestBuilder_NoMergeBranchAnchorWinsOverContinuationTargetAnchor(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "found"}},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				FalseBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+			},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogInfo,
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "continue"},
+			Annotations: &ast.ActivityAnnotations{
+				Anchor: &ast.FlowAnchors{From: ast.AnchorSideLeft, To: ast.AnchorSideRight},
+			},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, flow := range oc.Flows {
+		cv, ok := flow.CaseValue.(microflows.EnumerationCase)
+		if !ok {
+			if ptr, ptrOK := flow.CaseValue.(*microflows.EnumerationCase); ptrOK {
+				cv = *ptr
+				ok = true
+			}
+		}
+		if !ok || cv.Value != "false" {
+			continue
+		}
+		if flow.OriginConnectionIndex != AnchorBottom || flow.DestinationConnectionIndex != AnchorTop {
+			t.Fatalf("false continuation anchor = %d→%d, want Bottom→Top", flow.OriginConnectionIndex, flow.DestinationConnectionIndex)
+		}
+		return
+	}
+	t.Fatal("expected false continuation flow")
 }

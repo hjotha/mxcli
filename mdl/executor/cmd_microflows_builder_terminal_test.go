@@ -827,6 +827,74 @@ func TestBuildFlowGraph_EmptyCustomErrorHandlerRejoinsThroughMerge(t *testing.T)
 	}
 }
 
+func TestBuildFlowGraph_EmptyCustomErrorHandlerSkipsInheritanceSplitUsingOutput(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			OutputVariable: "AccessToken",
+			MicroflowName:  ast.QualifiedName{Module: "Synthetic", Name: "FetchToken"},
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+		},
+		&ast.InheritanceSplitStmt{
+			Variable: "AccessToken",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "Synthetic", Name: "DecryptedToken"},
+					Body: []ast.MicroflowStatement{
+						&ast.MfSetStmt{
+							Target: "TokenValue",
+							Value:  &ast.SourceExpr{Source: "$AccessToken/Value"},
+						},
+					},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+			},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogInfo,
+			Node:    &ast.LiteralExpr{Kind: ast.LiteralString, Value: "App"},
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "shared tail"},
+		},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, splitID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			if _, ok := o.Action.(*microflows.MicroflowCallAction); ok {
+				callID = o.ID
+			}
+		case *microflows.InheritanceSplit:
+			splitID = o.ID
+		}
+	}
+	if callID == "" || splitID == "" {
+		t.Fatalf("expected call and inheritance split nodes; got call=%q split=%q", callID, splitID)
+	}
+
+	hasDirectSuccessFlow := false
+	for _, flow := range oc.Flows {
+		if flow.OriginID == callID && flow.DestinationID == splitID && !flow.IsErrorHandler {
+			hasDirectSuccessFlow = true
+		}
+		if flow.DestinationID == splitID && flow.IsErrorHandler {
+			t.Fatal("empty custom error handler must not rejoin at output-dependent inheritance split")
+		}
+	}
+	if !hasDirectSuccessFlow {
+		t.Fatal("success flow should connect directly to the output-dependent inheritance split")
+	}
+}
+
 func TestBuildFlowGraph_EmptyCustomErrorHandlerPreservesDecisionCases(t *testing.T) {
 	entityRef := ast.QualifiedName{Module: "SampleAudit", Name: "ApiToken"}
 	body := []ast.MicroflowStatement{

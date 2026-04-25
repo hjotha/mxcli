@@ -99,7 +99,9 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 			destAnchor := stmtAnchor
 			if pendingFlowAnchor != nil {
 				originAnchor = pendingFlowAnchor
-				if destAnchor == nil || destAnchor.To == ast.AnchorSideUnset {
+				if pendingFlowAnchor.To != ast.AnchorSideUnset {
+					destAnchor = pendingFlowAnchor
+				} else if destAnchor == nil || destAnchor.To == ast.AnchorSideUnset {
 					destAnchor = pendingFlowAnchor
 				}
 				pendingFlowAnchor = nil

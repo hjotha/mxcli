@@ -12,7 +12,7 @@ import (
 
 // TestIfWithRuleCall_EmitsRuleSplitCondition is the regression test for the
 // Rule vs Expression subtype preservation bug. Prior to the fix, an IF whose
-// condition was a call into a rule (e.g. ControlCenterCommons.IsNotEmptyString)
+// condition was a call into a rule (e.g. Module.IsEligible)
 // was serialized as ExpressionSplitCondition, causing Mendix Studio Pro to
 // raise CE0117 "Error(s) in expression" and demoting the decision's subtype
 // from Rule to Expression on every describe → exec roundtrip.

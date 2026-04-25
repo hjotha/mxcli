@@ -269,6 +269,14 @@ func statementVarRefs(stmt ast.MicroflowStatement) []string {
 		refs = append(refs, exprVarRefs(s.Condition)...)
 		refs = append(refs, statementsVarRefs(s.ThenBody)...)
 		refs = append(refs, statementsVarRefs(s.ElseBody)...)
+	case *ast.InheritanceSplitStmt:
+		refs = append(refs, s.Variable)
+		for _, c := range s.Cases {
+			refs = append(refs, statementsVarRefs(c.Body)...)
+		}
+		refs = append(refs, statementsVarRefs(s.ElseBody)...)
+	case *ast.CastObjectStmt:
+		refs = append(refs, s.ObjectVariable)
 	case *ast.WhileStmt:
 		refs = append(refs, exprVarRefs(s.Condition)...)
 		refs = append(refs, statementsVarRefs(s.Body)...)
@@ -540,6 +548,20 @@ func applyUserAnchors(flow *microflows.SequenceFlow, origin *ast.FlowAnchors, de
 	}
 }
 
+func branchDestinationAnchor(branchAnchor, stmtAnchor *ast.FlowAnchors) *ast.FlowAnchors {
+	if branchAnchor != nil && branchAnchor.To != ast.AnchorSideUnset {
+		return branchAnchor
+	}
+	return stmtAnchor
+}
+
+func pendingFlowAnchors(previousAnchor, pendingAnchor, stmtAnchor *ast.FlowAnchors) (*ast.FlowAnchors, *ast.FlowAnchors) {
+	if pendingAnchor == nil {
+		return previousAnchor, stmtAnchor
+	}
+	return pendingAnchor, branchDestinationAnchor(pendingAnchor, stmtAnchor)
+}
+
 // lastStmtIsReturn reports whether execution of a body is guaranteed to terminate
 // (via RETURN, RAISE ERROR, BREAK, or CONTINUE) on every path — i.e. control can
 // never fall off the end of the body into the parent flow.
@@ -588,4 +610,66 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 	default:
 		return false
 	}
+}
+
+func containsTerminalStmt(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.ReturnStmt, *ast.RaiseErrorStmt:
+			return true
+		case *ast.IfStmt:
+			if containsTerminalStmt(s.ThenBody) || containsTerminalStmt(s.ElseBody) {
+				return true
+			}
+		case *ast.InheritanceSplitStmt:
+			if containsTerminalStmt(s.ElseBody) {
+				return true
+			}
+			for _, c := range s.Cases {
+				if containsTerminalStmt(c.Body) {
+					return true
+				}
+			}
+		case *ast.LoopStmt:
+			if containsTerminalStmt(s.Body) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if containsTerminalStmt(s.Body) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func containsBreakStmt(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.BreakStmt:
+			return true
+		case *ast.IfStmt:
+			if containsBreakStmt(s.ThenBody) || containsBreakStmt(s.ElseBody) {
+				return true
+			}
+		case *ast.InheritanceSplitStmt:
+			if containsBreakStmt(s.ElseBody) {
+				return true
+			}
+			for _, c := range s.Cases {
+				if containsBreakStmt(c.Body) {
+					return true
+				}
+			}
+		case *ast.LoopStmt:
+			if containsBreakStmt(s.Body) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if containsBreakStmt(s.Body) {
+				return true
+			}
+		}
+	}
+	return false
 }

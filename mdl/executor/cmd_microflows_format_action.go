@@ -8,10 +8,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // formatActivity formats a single microflow activity as an MDL statement.
@@ -731,7 +733,7 @@ func formatAction(
 			if a.OutputVariable != "" {
 				prefix = fmt.Sprintf("$%s = ", a.OutputVariable)
 			}
-			return prefix + "call web service raw " + mdlQuote(base64.StdEncoding.EncodeToString(a.RawBSON)) + ";"
+			return prefix + "call web service raw " + mdlQuote(base64.StdEncoding.EncodeToString(canonicalRawBSON(a.RawBSON))) + ";"
 		}
 		var parts []string
 		prefix := ""
@@ -1530,4 +1532,61 @@ func formatSplitCondition(cond microflows.SplitCondition) string {
 	default:
 		return "true"
 	}
+}
+
+func canonicalRawBSON(raw []byte) []byte {
+	var doc bson.D
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		return raw
+	}
+	canonical, err := bson.Marshal(canonicalBSONValue(doc))
+	if err != nil {
+		return raw
+	}
+	return canonical
+}
+
+func canonicalBSONValue(value any) any {
+	switch v := value.(type) {
+	case bson.D:
+		return canonicalBSONDocument(v)
+	case bson.A:
+		out := make(bson.A, len(v))
+		for i, item := range v {
+			out[i] = canonicalBSONValue(item)
+		}
+		return out
+	case []any:
+		out := make([]any, len(v))
+		for i, item := range v {
+			out[i] = canonicalBSONValue(item)
+		}
+		return out
+	case bson.M:
+		return canonicalBSONMap(map[string]any(v))
+	case map[string]any:
+		return canonicalBSONMap(v)
+	default:
+		return value
+	}
+}
+
+func canonicalBSONDocument(doc bson.D) bson.D {
+	out := make(bson.D, len(doc))
+	copy(out, doc)
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].Key < out[j].Key
+	})
+	for i := range out {
+		out[i].Value = canonicalBSONValue(out[i].Value)
+	}
+	return out
+}
+
+func canonicalBSONMap(m map[string]any) bson.D {
+	doc := make(bson.D, 0, len(m))
+	for k, v := range m {
+		doc = append(doc, bson.E{Key: k, Value: canonicalBSONValue(v)})
+	}
+	return canonicalBSONDocument(doc)
 }

@@ -636,7 +636,7 @@ func traverseFlowLoopAware(
 
 	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
 		startLine := len(*lines) + headerLineCount
-		emitInheritanceSplitStatement(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		emitInheritanceSplitStatement(ctx, currentID, "", activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 		return
 	}
@@ -774,21 +774,31 @@ func traverseFlowUntilMergeLoopAware(
 		}
 
 		if isGuard {
-			traverseFlowUntilMergeLoopAware(ctx, trueFlow.DestinationID, nestedMergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			guardMergeID := nestedMergeID
+			if guardMergeID == "" {
+				guardMergeID = mergeID
+			}
+
+			traverseFlowUntilMergeLoopAware(ctx, trueFlow.DestinationID, guardMergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
 			// Continue from the false branch (skip through merge if present)
 			if falseFlow != nil {
 				contID := falseFlow.DestinationID
-				if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
-					visited[contID] = true
-					for _, flow := range flowsByOrigin[contID] {
-						contID = flow.DestinationID
-						break
+				if contID != guardMergeID {
+					if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
+						visited[contID] = true
+						for _, flow := range flowsByOrigin[contID] {
+							contID = flow.DestinationID
+							break
+						}
 					}
+					traverseFlowUntilMergeLoopAware(ctx, contID, guardMergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 				}
-				traverseFlowUntilMergeLoopAware(ctx, contID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
+			if guardMergeID != "" && guardMergeID != mergeID {
+				continueAfterNestedSplitJoinLoopAware(ctx, guardMergeID, mergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			}
 		} else {
 			if trueFlow != nil {
@@ -815,7 +825,7 @@ func traverseFlowUntilMergeLoopAware(
 
 	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
 		startLine := len(*lines) + headerLineCount
-		emitInheritanceSplitStatement(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		emitInheritanceSplitStatement(ctx, currentID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 		return
 	}
@@ -918,6 +928,7 @@ func continueAfterNestedSplitJoinLoopAware(
 func emitInheritanceSplitStatement(
 	ctx *ExecContext,
 	currentID model.ID,
+	stopID model.ID,
 	activityMap map[model.ID]microflows.MicroflowObject,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
 	flowsByDest map[model.ID][]*microflows.SequenceFlow,
@@ -940,6 +951,10 @@ func emitInheritanceSplitStatement(
 	}
 
 	mergeID := splitMergeMap[currentID]
+	branchStopID := mergeID
+	if branchStopID == "" {
+		branchStopID = stopID
+	}
 	var elseFlow *microflows.SequenceFlow
 	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
 		caseValue := inheritanceCaseValue(flow.CaseValue)
@@ -948,22 +963,30 @@ func emitInheritanceSplitStatement(
 			continue
 		}
 		*lines = append(*lines, indentStr+"case "+caseValue)
-		traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+		traverseFlowUntilMerge(ctx, flow.DestinationID, branchStopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 	}
 	if elseFlow != nil {
 		*lines = append(*lines, indentStr+"else")
-		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, branchStopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 	}
 	*lines = append(*lines, indentStr+"end split;")
 
-	if mergeID != "" {
+	if mergeID != "" && mergeID != stopID {
 		if _, isMerge := activityMap[mergeID].(*microflows.ExclusiveMerge); isMerge {
 			visited[mergeID] = true
 			for _, flow := range findNormalFlows(flowsByOrigin[mergeID]) {
-				traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				if stopID != "" {
+					traverseFlowUntilMerge(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				} else {
+					traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				}
 			}
 		} else {
-			traverseFlow(ctx, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			if stopID != "" {
+				traverseFlowUntilMerge(ctx, mergeID, stopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			} else {
+				traverseFlow(ctx, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
 		}
 	}
 }
@@ -1359,20 +1382,32 @@ func collectStructuredStatements(
 		}
 
 		if isGuard {
+			guardMergeID := nestedMergeID
+			if guardMergeID == "" {
+				guardMergeID = stopID
+			}
 			traverseToID := trueFlow.DestinationID
-			collectStructuredStatements(ctx, traverseToID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1)
+			collectStructuredStatements(ctx, traverseToID, guardMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1)
 			*lines = append(*lines, indentStr+"end if;")
 
 			if falseFlow != nil {
 				contID := falseFlow.DestinationID
-				if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
-					visited[contID] = true
-					for _, flow := range findNormalFlows(flowsByOrigin[contID]) {
-						contID = flow.DestinationID
-						break
+				if contID != guardMergeID {
+					if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
+						visited[contID] = true
+						for _, flow := range findNormalFlows(flowsByOrigin[contID]) {
+							contID = flow.DestinationID
+							break
+						}
 					}
+					collectStructuredStatements(ctx, contID, guardMergeID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
 				}
-				collectStructuredStatements(ctx, contID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+			}
+			if guardMergeID != "" && guardMergeID != stopID {
+				visited[guardMergeID] = true
+				for _, flow := range findNormalFlows(flowsByOrigin[guardMergeID]) {
+					collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+				}
 			}
 		} else {
 			if trueFlow != nil {

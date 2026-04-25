@@ -3,12 +3,15 @@
 package executor
 
 import (
+	"encoding/base64"
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // =============================================================================
@@ -751,6 +754,55 @@ func TestFormatAction_WebServiceCallRaw(t *testing.T) {
 	want := "$Root = call web service raw 'AQID';"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_WebServiceCallRawCanonicalizesEquivalentBSON(t *testing.T) {
+	e := newTestExecutor()
+	rawA, err := bson.Marshal(bson.D{
+		{Key: "Z", Value: int32(1)},
+		{Key: "Nested", Value: bson.D{
+			{Key: "B", Value: "two"},
+			{Key: "A", Value: "one"},
+		}},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rawB, err := bson.Marshal(bson.D{
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "Nested", Value: bson.D{
+			{Key: "A", Value: "one"},
+			{Key: "B", Value: "two"},
+		}},
+		{Key: "Z", Value: int32(1)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gotA := e.formatAction(&microflows.WebServiceCallAction{OutputVariable: "Root", RawBSON: rawA}, nil, nil)
+	gotB := e.formatAction(&microflows.WebServiceCallAction{OutputVariable: "Root", RawBSON: rawB}, nil, nil)
+	if gotA != gotB {
+		t.Fatalf("canonical raw statements differ:\nA=%s\nB=%s", gotA, gotB)
+	}
+
+	rawText := strings.TrimSuffix(strings.TrimPrefix(gotA, "$Root = call web service raw '"), "';")
+	decoded, err := base64.StdEncoding.DecodeString(rawText)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var canonical bson.D
+	if err := bson.Unmarshal(decoded, &canonical); err != nil {
+		t.Fatal(err)
+	}
+	if canonical[0].Key != "$Type" || canonical[1].Key != "Nested" || canonical[2].Key != "Z" {
+		t.Fatalf("unexpected canonical key order: %#v", canonical)
+	}
+	nested := canonical[1].Value.(bson.D)
+	if nested[0].Key != "A" || nested[1].Key != "B" {
+		t.Fatalf("unexpected nested key order: %#v", nested)
 	}
 }
 
