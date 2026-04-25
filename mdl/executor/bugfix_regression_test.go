@@ -793,6 +793,71 @@ func TestCallMicroflowUnknownResultTypeStillDeclaresVariable(t *testing.T) {
 	}
 }
 
+func TestValidateMicroflowReferencesSkipsExcludedMicroflow(t *testing.T) {
+	moduleID := model.ID("module-1")
+	backend := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{{
+				BaseElement: model.BaseElement{ID: moduleID},
+				Name:        "AppsCombinedView",
+			}}, nil
+		},
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(backend))
+
+	stmt := &ast.CreateMicroflowStmt{
+		Excluded: true,
+		Name:     ast.QualifiedName{Module: "AppsCombinedView", Name: "ProcessEnvironmentEvent_Create"},
+		Body: []ast.MicroflowStatement{
+			&ast.CallMicroflowStmt{
+				MicroflowName: ast.QualifiedName{Module: "AppsCombinedView", Name: "CreateEnvironment"},
+			},
+		},
+	}
+
+	if err := validate(ctx, stmt); err != nil {
+		t.Fatalf("excluded microflow reference validation returned error: %v", err)
+	}
+}
+
+func TestValidateMicroflowReferencesReportsIncludedMissingMicroflow(t *testing.T) {
+	moduleID := model.ID("module-1")
+	backend := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{{
+				BaseElement: model.BaseElement{ID: moduleID},
+				Name:        "AppsCombinedView",
+			}}, nil
+		},
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(backend))
+
+	stmt := &ast.CreateMicroflowStmt{
+		Name: ast.QualifiedName{Module: "AppsCombinedView", Name: "ProcessEnvironmentEvent_Create"},
+		Body: []ast.MicroflowStatement{
+			&ast.CallMicroflowStmt{
+				MicroflowName: ast.QualifiedName{Module: "AppsCombinedView", Name: "CreateEnvironment"},
+			},
+		},
+	}
+
+	err := validate(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected missing microflow reference error")
+	}
+	if !strings.Contains(err.Error(), "microflow not found: AppsCombinedView.CreateEnvironment") {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+}
+
 func TestCallJavaAction_MicroflowParameterTypePreserved(t *testing.T) {
 	backend := &mock.MockBackend{
 		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {

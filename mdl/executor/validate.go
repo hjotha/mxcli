@@ -396,6 +396,12 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 	if !ctx.Connected() || len(s.Body) == 0 {
 		return nil
 	}
+	if s.Excluded {
+		// Studio Pro allows excluded documents to keep stale references. Reference
+		// checks should not fail a roundtrip audit for microflows that are not part
+		// of the runnable app.
+		return nil
+	}
 
 	// Collect all references from the microflow body
 	refs := &microflowRefCollector{}
