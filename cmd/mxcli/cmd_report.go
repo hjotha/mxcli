@@ -78,13 +78,8 @@ Examples:
 		}
 
 		// Create lint context
-		ctx := linter.NewLintContext(cat)
+		ctx := linter.NewLintContext(cat, exec.Backend())
 		ctx.SetExcludedModules(excludeModules)
-
-		// Set reader so rules that inspect raw BSON work
-		if reader := exec.Reader(); reader != nil {
-			ctx.SetReader(reader)
-		}
 
 		// Create linter and register all rules
 		lint := linter.New(ctx)

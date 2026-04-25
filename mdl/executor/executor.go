@@ -18,7 +18,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
@@ -309,25 +308,17 @@ func (e *Executor) Catalog() *catalog.Catalog {
 	return c
 }
 
-// Reader returns the MPR reader, or nil if not connected.
-// Deprecated: External callers should migrate to using Backend methods directly.
-// TODO(shared-types): remove once all callers use Backend — target: v0.next milestone.
-func (e *Executor) Reader() *mpr.Reader {
-	if e.backend == nil {
-		return nil
-	}
-	type readerProvider interface {
-		MprReader() *mpr.Reader
-	}
-	if rp, ok := e.backend.(readerProvider); ok {
-		return rp.MprReader()
-	}
-	return nil
-}
-
 // IsConnected returns true if connected to a project.
 func (e *Executor) IsConnected() bool {
 	return e.backend != nil && e.backend.IsConnected()
+}
+
+// Backend returns the full backend, or nil if not connected.
+func (e *Executor) Backend() backend.FullBackend {
+	if e.backend == nil || !e.backend.IsConnected() {
+		return nil
+	}
+	return e.backend
 }
 
 // Close closes the connection to the project and all SQL connections.

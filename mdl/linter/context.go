@@ -7,33 +7,46 @@ import (
 	"iter"
 
 	"github.com/mendixlabs/mxcli/mdl/catalog"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
+	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/sdk/security"
 )
+
+// LintReader provides read access to MPR document data needed by lint rules.
+// Implemented by MprBackend (and any backend satisfying these signatures).
+type LintReader interface {
+	GetMicroflow(id model.ID) (*microflows.Microflow, error)
+	GetProjectSecurity() (*security.ProjectSecurity, error)
+	GetNavigation() (*types.NavigationDocument, error)
+	ListPages() ([]*pages.Page, error)
+	ListModules() ([]*model.Module, error)
+	ListFolders() ([]*types.FolderInfo, error)
+	GetRawUnit(id model.ID) (map[string]any, error)
+}
 
 // LintContext wraps a catalog and provides rule-friendly APIs.
 type LintContext struct {
 	catalog  *catalog.Catalog
 	db       catalog.CatalogDB
 	excluded map[string]bool
-	reader   *mpr.Reader
+	reader   LintReader
 }
 
-// SetReader sets the MPR reader for rules that need to inspect full document data.
-func (ctx *LintContext) SetReader(reader *mpr.Reader) {
-	ctx.reader = reader
-}
-
-// Reader returns the MPR reader, or nil if not set.
-func (ctx *LintContext) Reader() *mpr.Reader {
+// Reader returns the LintReader, or nil if not set.
+func (ctx *LintContext) Reader() LintReader {
 	return ctx.reader
 }
 
-// NewLintContext creates a new LintContext from a catalog.
-func NewLintContext(cat *catalog.Catalog) *LintContext {
+// NewLintContext creates a new LintContext from a catalog and an optional reader.
+// reader may be nil; rules that require backend access must check Reader() != nil.
+func NewLintContext(cat *catalog.Catalog, reader LintReader) *LintContext {
 	return &LintContext{
 		catalog:  cat,
 		db:       cat.CatalogDB(),
 		excluded: make(map[string]bool),
+		reader:   reader,
 	}
 }
 

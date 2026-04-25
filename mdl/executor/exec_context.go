@@ -12,7 +12,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/sdk/mpr"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
@@ -214,20 +213,4 @@ func (ctx *ExecContext) ensureSqlMgr() *sqllib.Manager {
 		ctx.SqlMgr = sqllib.NewManager()
 	}
 	return ctx.SqlMgr
-}
-
-// Reader returns the MPR reader, or nil if not connected.
-// Deprecated: External callers should migrate to using Backend methods directly.
-// TODO(shared-types): remove once all callers use Backend — target: v0.next milestone.
-func (ctx *ExecContext) Reader() *mpr.Reader {
-	if ctx.Backend == nil {
-		return nil
-	}
-	type readerProvider interface {
-		MprReader() *mpr.Reader
-	}
-	if rp, ok := ctx.Backend.(readerProvider); ok {
-		return rp.MprReader()
-	}
-	return nil
 }
