@@ -65,19 +65,19 @@ func TestFormatAction_JavaActionCall_MixedParamTypes(t *testing.T) {
 func TestFormatAction_JavaActionCall_MicroflowParam(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.JavaActionCallAction{
-		JavaAction:         "MxDock.CreateLocalAdminOption",
-		ResultVariableName: "PlatformAdmin",
+		JavaAction:         "SampleAdmin.CreateAdminOption",
+		ResultVariableName: "AdminOption",
 		ParameterMappings: []*microflows.JavaActionParameterMapping{
 			{
-				Parameter: "MxDock.CreateLocalAdminOption.openPageMf",
+				Parameter: "SampleAdmin.CreateAdminOption.openPageMf",
 				Value: &microflows.MicroflowParameterValue{
-					Microflow: "MxDock.Example_OpenAdminPage",
+					Microflow: "SampleAdmin.OpenAdminPage",
 				},
 			},
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	want := "$PlatformAdmin = call java action MxDock.CreateLocalAdminOption(openPageMf = MxDock.Example_OpenAdminPage);"
+	want := "$AdminOption = call java action SampleAdmin.CreateAdminOption(openPageMf = SampleAdmin.OpenAdminPage);"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

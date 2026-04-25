@@ -795,7 +795,7 @@ func TestCallMicroflowUnknownResultTypeStillDeclaresVariable(t *testing.T) {
 func TestCallJavaAction_MicroflowParameterTypePreserved(t *testing.T) {
 	backend := &mock.MockBackend{
 		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
-			if qualifiedName != "MxDock.CreateLocalAdminOption" {
+			if qualifiedName != "SampleAdmin.CreateAdminOption" {
 				return nil, nil
 			}
 			return &javaactions.JavaAction{
@@ -816,12 +816,12 @@ func TestCallJavaAction_MicroflowParameterTypePreserved(t *testing.T) {
 	}
 
 	fb.addCallJavaActionAction(&ast.CallJavaActionStmt{
-		OutputVariable: "PlatformAdmin",
-		ActionName:     ast.QualifiedName{Module: "MxDock", Name: "CreateLocalAdminOption"},
+		OutputVariable: "AdminOption",
+		ActionName:     ast.QualifiedName{Module: "SampleAdmin", Name: "CreateAdminOption"},
 		Arguments: []ast.CallArgument{
 			{
 				Name:  "openPageMf",
-				Value: &ast.QualifiedNameExpr{QualifiedName: ast.QualifiedName{Module: "MxDock", Name: "Example_OpenAdminPage"}},
+				Value: &ast.QualifiedNameExpr{QualifiedName: ast.QualifiedName{Module: "SampleAdmin", Name: "OpenAdminPage"}},
 			},
 		},
 	})
@@ -841,7 +841,7 @@ func TestCallJavaAction_MicroflowParameterTypePreserved(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected MicroflowParameterValue, got %T", action.ParameterMappings[0].Value)
 	}
-	if value.Microflow != "MxDock.Example_OpenAdminPage" {
+	if value.Microflow != "SampleAdmin.OpenAdminPage" {
 		t.Fatalf("expected qualified microflow preserved, got %q", value.Microflow)
 	}
 }

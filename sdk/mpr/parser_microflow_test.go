@@ -86,14 +86,14 @@ func TestParseCodeActionParameterValue_MicroflowParameterValue(t *testing.T) {
 	value := parseCodeActionParameterValue(map[string]any{
 		"$ID":       "pmv-1",
 		"$Type":     "Microflows$MicroflowParameterValue",
-		"Microflow": "MxDock.Example_OpenAdminPage",
+		"Microflow": "SampleAdmin.OpenAdminPage",
 	})
 
 	got, ok := value.(*microflows.MicroflowParameterValue)
 	if !ok {
 		t.Fatalf("expected *MicroflowParameterValue, got %T", value)
 	}
-	if got.Microflow != "MxDock.Example_OpenAdminPage" {
+	if got.Microflow != "SampleAdmin.OpenAdminPage" {
 		t.Fatalf("expected microflow name preserved, got %q", got.Microflow)
 	}
 }

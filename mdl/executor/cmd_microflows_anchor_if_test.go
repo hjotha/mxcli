@@ -111,7 +111,9 @@ func TestBuilder_AnchorInsideElseBranch(t *testing.T) {
 
 // TestBuilder_AnchorFalseBranchTo_IfWithoutElse pins the audit cluster B4
 // regression: when the describer emits
-//   @anchor(to: left, true: (from: right, to: left), false: (from: bottom, to: top))
+//
+//	@anchor(to: left, true: (from: right, to: left), false: (from: bottom, to: top))
+//
 // on an IF-without-ELSE split, the writer used to apply only the FROM side of
 // the false-branch anchor to the split→merge flow, letting the default (Left)
 // overwrite the intended `to: top`. Re-describing produced `false: (from: bottom, to: left)`.

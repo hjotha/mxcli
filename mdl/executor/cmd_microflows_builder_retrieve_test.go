@@ -13,17 +13,17 @@ func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 	fb := &flowBuilder{varTypes: map[string]string{}}
 
 	fb.addRetrieveAction(&ast.RetrieveStmt{
-		Variable: "PrivateCloudEnvironmentList",
+		Variable: "DeploymentTargetList",
 		Source: ast.QualifiedName{
-			Module: "AppsCombinedView",
-			Name:   "PrivateCloudEnvironment",
+			Module: "SampleApps",
+			Name:   "DeploymentTarget",
 		},
 		Where: &ast.SourceExpr{
-			Source: "AppsCombinedView.PrivateCloudEnvironment_AppView/AppsCombinedView.AppView/AppsCombinedView.AppView_Company = $Company",
+			Source: "SampleApps.DeploymentTarget_ApplicationView/SampleApps.ApplicationView/SampleApps.ApplicationView_Company = $Company",
 		},
 		SortColumns: []ast.SortColumnDef{
-			{Attribute: "AppsCombinedView.AppView.AppCreatedDate", Order: "DESC"},
-			{Attribute: "AppsCombinedView.AppView.AppName", Order: "ASC"},
+			{Attribute: "SampleApps.ApplicationView.CreatedAt", Order: "DESC"},
+			{Attribute: "SampleApps.ApplicationView.Name", Order: "ASC"},
 		},
 	})
 
@@ -49,13 +49,13 @@ func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 	if len(source.Sorting) != 2 {
 		t.Fatalf("got %d sort items, want 2", len(source.Sorting))
 	}
-	if got := source.Sorting[0].AttributeQualifiedName; got != "AppsCombinedView.AppView.AppCreatedDate" {
+	if got := source.Sorting[0].AttributeQualifiedName; got != "SampleApps.ApplicationView.CreatedAt" {
 		t.Fatalf("first sort attribute = %q", got)
 	}
 	if got := source.Sorting[0].Direction; got != microflows.SortDirectionDescending {
 		t.Fatalf("first sort direction = %q, want %q", got, microflows.SortDirectionDescending)
 	}
-	if got := source.Sorting[1].AttributeQualifiedName; got != "AppsCombinedView.AppView.AppName" {
+	if got := source.Sorting[1].AttributeQualifiedName; got != "SampleApps.ApplicationView.Name" {
 		t.Fatalf("second sort attribute = %q", got)
 	}
 }

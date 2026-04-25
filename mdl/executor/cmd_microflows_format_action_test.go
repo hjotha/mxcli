@@ -786,14 +786,14 @@ func TestFormatAction_Retrieve_ReverseAssociationDatabaseSourceUsesCompactForm(t
 	action := &microflows.RetrieveAction{
 		OutputVariable: "Domains",
 		Source: &microflows.DatabaseRetrieveSource{
-			EntityQualifiedName: "CloudData.Domain",
-			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			EntityQualifiedName: "SampleRuntime.Domain",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
 			Range:               &microflows.Range{RangeType: microflows.RangeTypeAll},
 		},
 	}
 
 	got := e.formatAction(action, nil, nil)
-	want := "retrieve $Domains from $Environment/CloudData.Domain_Environment;"
+	want := "retrieve $Domains from $Runtime/SampleRuntime.Domain_Runtime;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -805,14 +805,14 @@ func TestFormatAction_Retrieve_ReverseAssociationRequiresSimpleAllRange(t *testi
 	action := &microflows.RetrieveAction{
 		OutputVariable: "Domains",
 		Source: &microflows.DatabaseRetrieveSource{
-			EntityQualifiedName: "CloudData.Domain",
-			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			EntityQualifiedName: "SampleRuntime.Domain",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
 			Range:               &microflows.Range{RangeType: microflows.RangeTypeFirst},
 		},
 	}
 
 	got := e.formatAction(action, nil, nil)
-	want := "retrieve $Domains from CloudData.Domain\n    where CloudData.Domain_Environment = $Environment\n    limit 1;"
+	want := "retrieve $Domains from SampleRuntime.Domain\n    where SampleRuntime.Domain_Runtime = $Runtime\n    limit 1;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -824,13 +824,13 @@ func TestFormatAction_Retrieve_ReverseAssociationRequiresMatchingEntity(t *testi
 	action := &microflows.RetrieveAction{
 		OutputVariable: "Domains",
 		Source: &microflows.DatabaseRetrieveSource{
-			EntityQualifiedName: "CloudData.Environment",
-			XPathConstraint:     "[CloudData.Domain_Environment = $Environment]",
+			EntityQualifiedName: "SampleRuntime.Runtime",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
 		},
 	}
 
 	got := e.formatAction(action, nil, nil)
-	want := "retrieve $Domains from CloudData.Environment\n    where CloudData.Domain_Environment = $Environment;"
+	want := "retrieve $Domains from SampleRuntime.Runtime\n    where SampleRuntime.Domain_Runtime = $Runtime;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -838,11 +838,11 @@ func TestFormatAction_Retrieve_ReverseAssociationRequiresMatchingEntity(t *testi
 
 func TestParseReverseAssociationXPathRejectsComplexPredicates(t *testing.T) {
 	tests := []string{
-		"[CloudData.Domain_Environment = $Environment][Active = true]",
-		"[CloudData.Domain_Environment != $Environment]",
-		"[CloudData.Domain_Environment = $Environment/Other.Assoc]",
-		"[CloudData.Domain_Environment = 'literal']",
-		"CloudData.Domain_Environment = $Environment",
+		"[SampleRuntime.Domain_Runtime = $Runtime][Active = true]",
+		"[SampleRuntime.Domain_Runtime != $Runtime]",
+		"[SampleRuntime.Domain_Runtime = $Runtime/Other.Assoc]",
+		"[SampleRuntime.Domain_Runtime = 'literal']",
+		"SampleRuntime.Domain_Runtime = $Runtime",
 	}
 
 	for _, tt := range tests {
@@ -857,12 +857,12 @@ func reverseAssociationBackend(t *testing.T) *mock.MockBackend {
 	moduleID := model.ID("clouddata-module")
 	return &mock.MockBackend{
 		GetModuleByNameFunc: func(name string) (*model.Module, error) {
-			if name != "CloudData" {
+			if name != "SampleRuntime" {
 				return nil, nil
 			}
 			return &model.Module{
 				BaseElement: model.BaseElement{ID: moduleID},
-				Name:        "CloudData",
+				Name:        "SampleRuntime",
 			}, nil
 		},
 		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
@@ -878,12 +878,12 @@ func reverseAssociationBackend(t *testing.T) *mock.MockBackend {
 					},
 					{
 						BaseElement: model.BaseElement{ID: "environment-entity"},
-						Name:        "Environment",
+						Name:        "Runtime",
 					},
 				},
 				Associations: []*domainmodel.Association{
 					{
-						Name:     "Domain_Environment",
+						Name:     "Domain_Runtime",
 						ParentID: "domain-entity",
 						ChildID:  "environment-entity",
 						Type:     domainmodel.AssociationTypeReference,

@@ -107,13 +107,13 @@ func TestFormatRestCallAction_EscapesRawControlCharsInsideBodyParamExpressions(t
 		},
 		RequestHandling: &microflows.CustomRequestHandling{
 			Template:       "{1}",
-			TemplateParams: []string{"'{\n  \"databaseName\": \"' + @DataLake.DatabaseName + '\"\n}'"},
+			TemplateParams: []string{"'{\n  \"databaseName\": \"' + @SampleEvents.DatabaseName + '\"\n}'"},
 		},
 		TimeoutExpression: "'15\tseconds'",
 		ResultHandling:    &microflows.ResultHandlingNone{},
 	}
 	got := e.formatRestCallAction(action)
 	assertContains(t, got, "header 'X-Trace' = 'Trace:\\n' + $TraceID")
-	assertContains(t, got, "body '{1}' with ({1} = '{\\n  \"databaseName\": \"' + @DataLake.DatabaseName + '\"\\n}')")
+	assertContains(t, got, "body '{1}' with ({1} = '{\\n  \"databaseName\": \"' + @SampleEvents.DatabaseName + '\"\\n}')")
 	assertContains(t, got, "timeout '15\\tseconds'")
 }
