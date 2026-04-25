@@ -621,6 +621,8 @@ func serializeRestCallAction(a *microflows.RestCallAction) bson.D {
 
 func serializeWebServiceCallAction(a *microflows.WebServiceCallAction) bson.D {
 	if len(a.RawBSON) > 0 {
+		// Raw SOAP actions are an explicit passthrough form. The raw payload is
+		// authoritative; parsed fields are convenience metadata for display only.
 		var raw bson.D
 		if err := bson.Unmarshal(a.RawBSON, &raw); err == nil {
 			return raw

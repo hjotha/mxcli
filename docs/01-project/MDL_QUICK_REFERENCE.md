@@ -223,8 +223,11 @@ authentication basic, session
 | Retrieve (Assoc) | `retrieve $list from $Parent/Module.AssocName;` | Retrieve by association |
 | Call microflow | `$Result = call microflow Module.Name (Param = $value);` | |
 | Call nanoflow | `$Result = call nanoflow Module.Name (Param = $value);` | |
+| Call web service | `$Result = call web service 'service-id' operation 'OperationName';` | Legacy SOAP; IDs are currently passthrough references |
+| Call web service raw | `$Result = call web service raw 'base64-bson';` | Escape hatch for byte-for-byte legacy SOAP round-trip |
 | Show page | `show page Module.PageName ($Param = $value);` | Also accepts `(Param: $value)` |
 | Close page | `close page;` | |
+| Download file | `download file $FileDocument [show in browser];` | Streams a `System.FileDocument` |
 | Validation | `validation feedback $entity/attribute message 'message';` | Requires attribute path + MESSAGE |
 | Log | `log info\|warning\|error [node 'name'] 'message';` | |
 | Position | `@position(x, y)` | Canvas position (before activity) |

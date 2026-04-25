@@ -616,14 +616,18 @@ type ExternalActionParameterMapping struct {
 type WebServiceCallAction struct {
 	model.BaseElement
 	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
-	RawBSON           []byte            `json:"-"`
-	ServiceID         model.ID          `json:"serviceId,omitempty"`
-	OperationName     string            `json:"operationName,omitempty"`
-	SendMappingID     model.ID          `json:"sendMappingId,omitempty"`
-	ReceiveMappingID  model.ID          `json:"receiveMappingId,omitempty"`
-	OutputVariable    string            `json:"outputVariable,omitempty"`
-	UseReturnVariable bool              `json:"useReturnVariable"`
-	TimeoutExpression string            `json:"timeoutExpression,omitempty"`
+	// RawBSON is an authoritative passthrough payload for legacy SOAP actions
+	// emitted as `call web service raw '...'`. When set, the writer preserves it
+	// byte-for-byte and ignores the convenience fields below. Builders for the
+	// structured `call web service 'service-id' ...` form must leave RawBSON nil.
+	RawBSON           []byte   `json:"-"`
+	ServiceID         model.ID `json:"serviceId,omitempty"`
+	OperationName     string   `json:"operationName,omitempty"`
+	SendMappingID     model.ID `json:"sendMappingId,omitempty"`
+	ReceiveMappingID  model.ID `json:"receiveMappingId,omitempty"`
+	OutputVariable    string   `json:"outputVariable,omitempty"`
+	UseReturnVariable bool     `json:"useReturnVariable"`
+	TimeoutExpression string   `json:"timeoutExpression,omitempty"`
 }
 
 func (WebServiceCallAction) isMicroflowAction() {}

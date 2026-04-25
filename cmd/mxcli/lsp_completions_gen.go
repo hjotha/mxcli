@@ -574,7 +574,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "MOD", Kind: protocol.CompletionItemKindKeyword, Detail: "Operator"},
 	{Label: "DIV", Kind: protocol.CompletionItemKindKeyword, Detail: "Operator"},
 
-	//
-	{Label: "DOWNLOAD", Kind: protocol.CompletionItemKindKeyword, Detail: ""},
-	{Label: "BROWSER", Kind: protocol.CompletionItemKindKeyword, Detail: ""},
+	// Microflow keyword
+	{Label: "DOWNLOAD", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "BROWSER", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 }

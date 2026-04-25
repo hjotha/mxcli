@@ -748,6 +748,8 @@ func parseCommitAction(raw map[string]any) *microflows.CommitObjectsAction {
 	action.CommitVariable = extractString(raw["CommitVariableName"])
 	action.WithEvents = extractBool(raw["WithEvents"], false)
 	action.RefreshInClient = extractBool(raw["RefreshInClient"], false)
+	// Studio Pro treats a missing or empty ErrorHandlingType as Rollback.
+	// Preserve that implicit default so describe -> exec -> describe stays symmetric.
 	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
 	if action.ErrorHandlingType == "" {
 		action.ErrorHandlingType = microflows.ErrorHandlingTypeRollback

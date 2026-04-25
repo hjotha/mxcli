@@ -824,6 +824,41 @@ rest call delete 'https://api.example.com/items/{1}' with (
 
 **REST CALL supports full error handling** (`on error continue`, `on error rollback`, custom error handlers).
 
+## Legacy SOAP Web Service Calls
+
+`call web service` preserves legacy Mendix SOAP activities. Prefer REST clients
+for new integrations; this syntax exists mainly so existing projects can round-trip
+without dropping SOAP actions.
+
+```mdl
+-- Structured passthrough form using Mendix document IDs.
+$Root = call web service 'sample-service-id'
+operation 'FetchSampleItems'
+send mapping 'sample-send-mapping-id'
+receive mapping 'sample-receive-mapping-id'
+timeout 30
+on error rollback;
+
+-- Raw escape hatch emitted by describe when the SOAP action has fields that
+-- are not expressible yet. The base64 payload is the authoritative BSON action.
+$Root = call web service raw 'AQID';
+```
+
+**Design note:** service and mapping references are currently opaque Mendix IDs,
+not qualified names. Treat this as round-trip support, not a recommended authoring
+syntax for new SOAP actions.
+
+## File Downloads
+
+Use `download file` to stream a `System.FileDocument` from a microflow. Add
+`show in browser` when Studio Pro's action should open the file inline instead
+of forcing a download.
+
+```mdl
+download file $GeneratedReport show in browser;
+download file $GeneratedExport;
+```
+
 ## Error Handling
 
 MDL supports error handling for activities that may fail (microflow calls, commits, external service calls, etc.).
