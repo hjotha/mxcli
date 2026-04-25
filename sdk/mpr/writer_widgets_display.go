@@ -11,12 +11,27 @@ import (
 
 // serializeSnippetCall serializes a SnippetCallWidget.
 func serializeSnippetCall(s *pages.SnippetCallWidget) bson.D {
+	// Build parameter mappings array.
+	// Format: [count, mapping1, mapping2, ...] where count is the Mendix array version marker.
+	paramMappings := bson.A{int32(len(s.ParameterMappings))}
+	for _, pm := range s.ParameterMappings {
+		// Parameter is BY_NAME_REFERENCE: SnippetQualifiedName.ParameterName
+		paramRef := s.SnippetName + "." + pm.ParamName
+		paramMappings = append(paramMappings, bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Forms$PageParameterMapping"},
+			{Key: "Argument", Value: pm.Argument},
+			{Key: "Parameter", Value: paramRef},
+			{Key: "Variable", Value: nil},
+		})
+	}
+
 	// Build the inner SnippetCall object
 	snippetCallID := generateUUID()
 	snippetCall := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(snippetCallID)},
 		{Key: "$Type", Value: "Forms$SnippetCall"},
-		{Key: "ParameterMappings", Value: bson.A{int32(3)}},
+		{Key: "ParameterMappings", Value: paramMappings},
 	}
 
 	// Add snippet reference - prefer qualified name (BY_NAME_REFERENCE) over binary ID

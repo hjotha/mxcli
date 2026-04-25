@@ -254,6 +254,20 @@ func (w *WidgetV3) GetSnippet() string {
 	return w.GetStringProp("Snippet")
 }
 
+// SnippetCallParam represents one parameter mapping in a SNIPPETCALL Params: block.
+type SnippetCallParam struct {
+	ParamName string // Parameter name as written (may include leading $)
+	Variable  string // Variable being passed, always includes leading $
+}
+
+// GetSnippetParams returns the Params mappings for a SNIPPETCALL widget, or nil.
+func (w *WidgetV3) GetSnippetParams() []SnippetCallParam {
+	if v, ok := w.Properties["Params"].([]SnippetCallParam); ok {
+		return v
+	}
+	return nil
+}
+
 // GetSelection returns the Selection mode or empty string.
 func (w *WidgetV3) GetSelection() string {
 	return w.GetStringProp("Selection")

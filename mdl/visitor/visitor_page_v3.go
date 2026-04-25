@@ -517,6 +517,14 @@ func parseWidgetPropertyV3(ctx parser.IWidgetPropertyV3Context, widget *ast.Widg
 		return
 	}
 
+	// Params: {$Asset: $var} — snippet call parameter mappings
+	if propCtx.PARAMS() != nil {
+		if plCtx := propCtx.SnippetCallParamListV3(); plCtx != nil {
+			widget.Properties["Params"] = buildSnippetCallParamListV3(plCtx)
+		}
+		return
+	}
+
 	// Attributes: [...] (for filter widgets)
 	if propCtx.ATTRIBUTES() != nil {
 		if attrListCtx := propCtx.AttributeListV3(); attrListCtx != nil {
@@ -1208,4 +1216,31 @@ func xpathPathToString(path *ast.XPathPathExpr) string {
 		parts = append(parts, s)
 	}
 	return strings.Join(parts, "/")
+}
+
+// buildSnippetCallParamListV3 converts a parsed snippetCallParamListV3 context
+// into a slice of SnippetCallParam AST nodes.
+func buildSnippetCallParamListV3(ctx parser.ISnippetCallParamListV3Context) []ast.SnippetCallParam {
+	var params []ast.SnippetCallParam
+	for _, mappingCtx := range ctx.AllSnippetCallParamMappingV3() {
+		param := ast.SnippetCallParam{}
+		if iok := mappingCtx.IdentifierOrKeyword(); iok != nil {
+			// Param name written without $: Agent: $someVar or Asset: $someVar
+			param.ParamName = iok.GetText()
+			if vars := mappingCtx.AllVARIABLE(); len(vars) > 0 {
+				param.Variable = vars[0].GetText()
+			}
+		} else {
+			// Param name written with $: $Asset: $someVar
+			vars := mappingCtx.AllVARIABLE()
+			if len(vars) >= 2 {
+				param.ParamName = vars[0].GetText()
+				param.Variable = vars[1].GetText()
+			}
+		}
+		if param.ParamName != "" && param.Variable != "" {
+			params = append(params, param)
+		}
+	}
+	return params
 }

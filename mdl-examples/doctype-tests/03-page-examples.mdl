@@ -1187,6 +1187,66 @@ create page PgTest.P016_Page_With_Snippet
   }
 }
 
+/**
+ * Page that calls a parameterized snippet with Params: mapping.
+ * Demonstrates fix for issue #291: SNIPPETCALL with Params syntax.
+ *
+ * Two forms are accepted:
+ *   Params: {Customer: $Customer}   -- bare parameter name (keywords OK)
+ *   Params: {$Customer: $Customer}  -- dollar-prefixed parameter name
+ */
+create or replace page PgTest.P017_SnippetCall_With_Params
+(
+  title: 'Customer Detail with Snippet',
+  layout: Atlas_Core.Atlas_Default,
+  params: {
+    $Customer: PgTest.Customer
+  },
+  url: 'p017_snippet_with_params',
+  folder: 'Snippets'
+)
+{
+  layoutgrid mainGrid {
+    row row1 {
+      column col1 (desktopwidth: 8) {
+        -- Call CustomerInfo snippet — bare parameter name form
+        snippetcall customerInfoSnippet (
+          snippet: PgTest.CustomerInfo,
+          params: {Customer: $Customer}
+        )
+      }
+      column col2 (desktopwidth: 4) {
+        -- Call CustomerSidebar snippet — dollar-prefixed parameter name form
+        snippetcall sidebarSnippet (
+          snippet: PgTest.CustomerSidebar,
+          params: {$Customer: $Customer}
+        )
+      }
+    }
+  }
+}
+
+-- MARK: Snippet call keyword param name
+-- Issue #291: param names that are grammar keywords (e.g. Agent, Customer) must
+-- also be accepted in bare form. Verified against test3.mpr.
+-- create or replace page AgentCommons.Test_SnippetCallParams (
+--   title: 'Snippet Params Test',
+--   layout: Atlas_Core.Atlas_Default,
+--   params: { $Agent: AgentCommons.Agent },
+--   folder: 'Private/Pages/Agent'
+-- ) {
+--   layoutgrid mainGrid {
+--     row row1 {
+--       column col1 (desktopwidth: 6) {
+--         snippetcall s1 (snippet: AgentCommons.Snippet_AgentTypeBadge, params: {$Agent: $Agent})
+--       }
+--       column col2 (desktopwidth: 6) {
+--         snippetcall s2 (snippet: AgentCommons.Snippet_AgentTypeBadge, params: {Agent: $Agent})
+--       }
+--     }
+--   }
+-- }
+
 
 
 -- MARK: Master-Detail

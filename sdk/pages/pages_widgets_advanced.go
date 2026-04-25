@@ -115,11 +115,18 @@ const (
 	HTMLSnippetTypeExternal HTMLSnippetType = "External"
 )
 
+// SnippetParamMapping represents one parameter mapping in a snippet call.
+type SnippetParamMapping struct {
+	ParamName string // Snippet parameter name without leading $ (e.g. "Asset")
+	Argument  string // Variable being passed, includes leading $ (e.g. "$asset")
+}
+
 // SnippetCallWidget represents a snippet call widget.
 type SnippetCallWidget struct {
 	BaseWidget
-	SnippetID   model.ID `json:"snippetId"`
-	SnippetName string   `json:"snippetName,omitempty"` // Qualified name for BY_NAME_REFERENCE
+	SnippetID         model.ID              `json:"snippetId"`
+	SnippetName       string                `json:"snippetName,omitempty"` // Qualified name for BY_NAME_REFERENCE
+	ParameterMappings []SnippetParamMapping `json:"parameterMappings,omitempty"`
 }
 
 // Gallery represents a gallery widget for displaying items in a grid layout (Forms$Gallery).

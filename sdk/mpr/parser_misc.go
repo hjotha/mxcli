@@ -76,6 +76,55 @@ func (r *Reader) parseSnippet(unitID, containerID string, contents []byte) (*pag
 		snippet.EntityID = model.ID(entityID)
 	}
 
+	// Parse snippet parameters so callers can validate SNIPPETCALL param mappings.
+	if params, ok := raw["Parameters"].(bson.A); ok {
+		for i := 1; i < len(params); i++ {
+			var paramMap map[string]any
+			switch v := params[i].(type) {
+			case bson.D:
+				paramMap = make(map[string]any, len(v))
+				for _, elem := range v {
+					paramMap[elem.Key] = elem.Value
+				}
+			case map[string]any:
+				paramMap = v
+			}
+			if paramMap == nil {
+				continue
+			}
+			sp := &pages.SnippetParameter{}
+			if id := extractID(paramMap["$ID"]); id != "" {
+				sp.ID = model.ID(id)
+			}
+			if n, ok := paramMap["Name"].(string); ok {
+				sp.Name = n
+			}
+			if sp.Name == "" {
+				continue
+			}
+			// ParameterType: either bson.D or map[string]any
+			extractParamType := func(m map[string]any) {
+				if t, ok := m["$Type"].(string); ok {
+					sp.Type = t
+				}
+				if e, ok := m["Entity"].(string); ok {
+					sp.EntityName = e
+				}
+			}
+			switch pt := paramMap["ParameterType"].(type) {
+			case bson.D:
+				m := make(map[string]any, len(pt))
+				for _, e := range pt {
+					m[e.Key] = e.Value
+				}
+				extractParamType(m)
+			case map[string]any:
+				extractParamType(pt)
+			}
+			snippet.Parameters = append(snippet.Parameters, sp)
+		}
+	}
+
 	return snippet, nil
 }
 

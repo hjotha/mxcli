@@ -2243,6 +2243,7 @@ widgetPropertyV3
     // Where: and OrderBy: removed — use inline WHERE/SORT BY in DataSource: expression
     | SELECTION COLON selectionModeV3                 // Selection: Single | Multiple
     | SNIPPET COLON qualifiedName                     // Snippet: Module.SnippetName
+    | PARAMS COLON snippetCallParamListV3             // Params: {$Asset: $var} — snippet call parameter mappings
     | ATTRIBUTES COLON attributeListV3                // Attributes: [Entity.Attr1, Entity.Attr2]
     | FILTERTYPE COLON filterTypeValue                // FilterType: startsWith | contains | equal
     | DESIGNPROPERTIES COLON designPropertyListV3       // DesignProperties: [...]
@@ -2262,6 +2263,15 @@ filterTypeValue
     : CONTAINS      // contains
     | EMPTY         // empty
     | IDENTIFIER    // startsWith, endsWith, greater, greaterEqual, equal, notEqual, smaller, smallerEqual, notEmpty
+    ;
+
+// Snippet call parameter mappings: {$Asset: $var, $Other: $other}
+snippetCallParamListV3
+    : LBRACE snippetCallParamMappingV3 (COMMA snippetCallParamMappingV3)* RBRACE
+    ;
+
+snippetCallParamMappingV3
+    : (identifierOrKeyword | VARIABLE) COLON VARIABLE
     ;
 
 // V3 Attribute list for filter widgets
