@@ -754,6 +754,12 @@ type MDLParserListener interface {
 	// EnterFilterTypeValue is called when entering the filterTypeValue production.
 	EnterFilterTypeValue(c *FilterTypeValueContext)
 
+	// EnterSnippetCallParamListV3 is called when entering the snippetCallParamListV3 production.
+	EnterSnippetCallParamListV3(c *SnippetCallParamListV3Context)
+
+	// EnterSnippetCallParamMappingV3 is called when entering the snippetCallParamMappingV3 production.
+	EnterSnippetCallParamMappingV3(c *SnippetCallParamMappingV3Context)
+
 	// EnterAttributeListV3 is called when entering the attributeListV3 production.
 	EnterAttributeListV3(c *AttributeListV3Context)
 
@@ -2061,6 +2067,12 @@ type MDLParserListener interface {
 
 	// ExitFilterTypeValue is called when exiting the filterTypeValue production.
 	ExitFilterTypeValue(c *FilterTypeValueContext)
+
+	// ExitSnippetCallParamListV3 is called when exiting the snippetCallParamListV3 production.
+	ExitSnippetCallParamListV3(c *SnippetCallParamListV3Context)
+
+	// ExitSnippetCallParamMappingV3 is called when exiting the snippetCallParamMappingV3 production.
+	ExitSnippetCallParamMappingV3(c *SnippetCallParamMappingV3Context)
 
 	// ExitAttributeListV3 is called when exiting the attributeListV3 production.
 	ExitAttributeListV3(c *AttributeListV3Context)

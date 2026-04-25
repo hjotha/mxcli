@@ -1584,6 +1584,20 @@ func (s *BaseMDLParserListener) EnterFilterTypeValue(ctx *FilterTypeValueContext
 // ExitFilterTypeValue is called when production filterTypeValue is exited.
 func (s *BaseMDLParserListener) ExitFilterTypeValue(ctx *FilterTypeValueContext) {}
 
+// EnterSnippetCallParamListV3 is called when production snippetCallParamListV3 is entered.
+func (s *BaseMDLParserListener) EnterSnippetCallParamListV3(ctx *SnippetCallParamListV3Context) {}
+
+// ExitSnippetCallParamListV3 is called when production snippetCallParamListV3 is exited.
+func (s *BaseMDLParserListener) ExitSnippetCallParamListV3(ctx *SnippetCallParamListV3Context) {}
+
+// EnterSnippetCallParamMappingV3 is called when production snippetCallParamMappingV3 is entered.
+func (s *BaseMDLParserListener) EnterSnippetCallParamMappingV3(ctx *SnippetCallParamMappingV3Context) {
+}
+
+// ExitSnippetCallParamMappingV3 is called when production snippetCallParamMappingV3 is exited.
+func (s *BaseMDLParserListener) ExitSnippetCallParamMappingV3(ctx *SnippetCallParamMappingV3Context) {
+}
+
 // EnterAttributeListV3 is called when production attributeListV3 is entered.
 func (s *BaseMDLParserListener) EnterAttributeListV3(ctx *AttributeListV3Context) {}
 

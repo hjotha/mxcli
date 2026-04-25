@@ -766,13 +766,19 @@ func (pb *pageBuilder) buildSnippetCallV3(w *ast.WidgetV3) (*pages.SnippetCallWi
 	}
 
 	// Handle Snippet property - resolve snippet and store both ID and name
-	if snippetName := w.GetSnippet(); snippetName != "" {
+	snippetName := w.GetSnippet()
+	if snippetName != "" {
 		snippetID, err := pb.resolveSnippetRef(snippetName)
 		if err != nil {
 			return nil, mdlerrors.NewBackend(fmt.Sprintf("resolve snippet %s", snippetName), err)
 		}
 		sc.SnippetID = snippetID
 		sc.SnippetName = snippetName // Store qualified name for BY_NAME_REFERENCE serialization
+
+		// Validate and wire up parameter mappings.
+		if err := pb.buildSnippetCallParams(sc, snippetName, w.GetSnippetParams()); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := pb.registerWidgetName(w.Name, sc.ID); err != nil {
@@ -780,6 +786,52 @@ func (pb *pageBuilder) buildSnippetCallV3(w *ast.WidgetV3) (*pages.SnippetCallWi
 	}
 
 	return sc, nil
+}
+
+// buildSnippetCallParams validates the supplied param mappings against the
+// snippet's declared parameters and populates sc.ParameterMappings.
+func (pb *pageBuilder) buildSnippetCallParams(sc *pages.SnippetCallWidget, snippetQName string, supplied []ast.SnippetCallParam) error {
+	snippets, err := pb.backend.ListSnippets()
+	if err != nil {
+		return err
+	}
+
+	// Find the target snippet to read its declared parameters.
+	var targetSnippet *pages.Snippet
+	for _, s := range snippets {
+		if s.Name != "" && (s.Name == snippetQName || strings.HasSuffix(snippetQName, "."+s.Name)) {
+			targetSnippet = s
+			break
+		}
+	}
+	if targetSnippet == nil || len(targetSnippet.Parameters) == 0 {
+		// Snippet has no declared parameters — nothing to validate or map.
+		return nil
+	}
+
+	// Build a lookup of supplied mappings by parameter name (strip leading $).
+	suppliedByName := make(map[string]string, len(supplied))
+	for _, p := range supplied {
+		name := strings.TrimPrefix(p.ParamName, "$")
+		suppliedByName[name] = p.Variable
+	}
+
+	// Validate that every declared parameter has a mapping, then build the list.
+	for _, declared := range targetSnippet.Parameters {
+		argument, ok := suppliedByName[declared.Name]
+		if !ok {
+			return mdlerrors.NewValidationf(
+				"snippet %s requires parameter $%s — add Params: {%s: $<variable>} to the SNIPPETCALL",
+				snippetQName, declared.Name, declared.Name,
+			)
+		}
+		sc.ParameterMappings = append(sc.ParameterMappings, pages.SnippetParamMapping{
+			ParamName: declared.Name,
+			Argument:  argument,
+		})
+	}
+
+	return nil
 }
 
 // buildTemplateV3 creates a Container to hold template content.
