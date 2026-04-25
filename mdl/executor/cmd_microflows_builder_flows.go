@@ -297,6 +297,8 @@ func statementVarRefs(stmt ast.MicroflowStatement) []string {
 		}
 	case *ast.CallWebServiceStmt:
 		refs = append(refs, exprVarRefs(s.Timeout)...)
+	case *ast.DownloadFileStmt:
+		refs = append(refs, s.FileDocument)
 	case *ast.RestCallStmt:
 		refs = append(refs, exprVarRefs(s.URL)...)
 		for _, param := range s.URLParams {

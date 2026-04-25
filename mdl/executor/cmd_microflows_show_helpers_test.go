@@ -310,6 +310,17 @@ func TestGetActionErrorHandlingType_CommitObjects(t *testing.T) {
 	}
 }
 
+func TestGetActionErrorHandlingType_DownloadFile(t *testing.T) {
+	activity := &microflows.ActionActivity{}
+	activity.Action = &microflows.DownloadFileAction{
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+	}
+	got := getActionErrorHandlingType(activity)
+	if got != microflows.ErrorHandlingTypeRollback {
+		t.Errorf("expected Rollback, got %q", got)
+	}
+}
+
 func TestGetActionErrorHandlingType_CallExternal(t *testing.T) {
 	activity := &microflows.ActionActivity{}
 	activity.Action = &microflows.CallExternalAction{

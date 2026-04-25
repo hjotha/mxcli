@@ -763,6 +763,9 @@ NUMBER_LITERAL
 // IDENTIFIERS (must come last)
 // =============================================================================
 
+DOWNLOAD: D O W N L O A D;
+BROWSER: B R O W S E R;
+
 // Variable identifier: $name (allows multi-character names)
 VARIABLE: '$' ID_BODY+;
 

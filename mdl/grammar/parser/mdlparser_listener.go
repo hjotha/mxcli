@@ -562,6 +562,9 @@ type MDLParserListener interface {
 	// EnterShowMessageStatement is called when entering the showMessageStatement production.
 	EnterShowMessageStatement(c *ShowMessageStatementContext)
 
+	// EnterDownloadFileStatement is called when entering the downloadFileStatement production.
+	EnterDownloadFileStatement(c *DownloadFileStatementContext)
+
 	// EnterThrowStatement is called when entering the throwStatement production.
 	EnterThrowStatement(c *ThrowStatementContext)
 
@@ -1881,6 +1884,9 @@ type MDLParserListener interface {
 
 	// ExitShowMessageStatement is called when exiting the showMessageStatement production.
 	ExitShowMessageStatement(c *ShowMessageStatementContext)
+
+	// ExitDownloadFileStatement is called when exiting the downloadFileStatement production.
+	ExitDownloadFileStatement(c *DownloadFileStatementContext)
 
 	// ExitThrowStatement is called when exiting the throwStatement production.
 	ExitThrowStatement(c *ThrowStatementContext)

@@ -1081,6 +1081,47 @@ func TestBuildFlowGraph_WebServiceCallPreservesRawBSON(t *testing.T) {
 	t.Fatal("expected WebServiceCallAction")
 }
 
+func TestBuildFlowGraph_DownloadFileCreatesRealAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.DownloadFileStmt{
+			FileDocument:  "GeneratedExcelDoc",
+			ShowInBrowser: true,
+			ErrorHandling: &ast.ErrorHandlingClause{Type: ast.ErrorHandlingContinue},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.DownloadFileAction)
+		if !ok {
+			continue
+		}
+		if action.FileDocument != "GeneratedExcelDoc" {
+			t.Fatalf("file document = %q, want GeneratedExcelDoc", action.FileDocument)
+		}
+		if !action.ShowInBrowser {
+			t.Fatal("ShowInBrowser = false, want true")
+		}
+		if action.ErrorHandlingType != microflows.ErrorHandlingTypeContinue {
+			t.Fatalf("error handling = %q, want Continue", action.ErrorHandlingType)
+		}
+		return
+	}
+	t.Fatal("expected DownloadFileAction")
+}
+
 func TestAddImportFromMappingAction_RegistersListResultType(t *testing.T) {
 	backend := &mock.MockBackend{
 		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {

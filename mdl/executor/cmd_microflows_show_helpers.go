@@ -1211,6 +1211,8 @@ func getActionErrorHandlingType(activity *microflows.ActionActivity) microflows.
 		return action.ErrorHandlingType
 	case *microflows.CommitObjectsAction:
 		return action.ErrorHandlingType
+	case *microflows.DownloadFileAction:
+		return action.ErrorHandlingType
 	default:
 		// Fall back to activity level for action types without ErrorHandlingType field
 		return activity.ErrorHandlingType

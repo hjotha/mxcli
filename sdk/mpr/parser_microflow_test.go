@@ -85,6 +85,62 @@ func TestParseCommitAction_ErrorHandlingTypeDefaultsToRollback(t *testing.T) {
 	}
 }
 
+func TestDownloadFileAction_Roundtrip(t *testing.T) {
+	action := &microflows.DownloadFileAction{
+		BaseElement:       model.BaseElement{ID: "download-action-id"},
+		ErrorHandlingType: microflows.ErrorHandlingTypeContinue,
+		FileDocument:      "GeneratedExcelDoc",
+		ShowInBrowser:     true,
+	}
+
+	doc := serializeMicroflowAction(action)
+	if got := bsonValue(doc, "$Type"); got != "Microflows$DownloadFileAction" {
+		t.Fatalf("$Type = %q, want Microflows$DownloadFileAction", got)
+	}
+	if got := bsonValue(doc, "ErrorHandlingType"); got != "Continue" {
+		t.Fatalf("ErrorHandlingType = %q, want Continue", got)
+	}
+	if got := bsonValue(doc, "FileDocumentVariableName"); got != "GeneratedExcelDoc" {
+		t.Fatalf("FileDocumentVariableName = %q, want GeneratedExcelDoc", got)
+	}
+	if got := bsonValue(doc, "ShowInBrowser"); got != true {
+		t.Fatalf("ShowInBrowser = %v, want true", got)
+	}
+
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		t.Fatalf("failed to marshal BSON: %v", err)
+	}
+
+	var raw map[string]any
+	if err := bson.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal BSON: %v", err)
+	}
+
+	parsed := parseDownloadFileAction(raw)
+	if parsed.ErrorHandlingType != microflows.ErrorHandlingTypeContinue {
+		t.Fatalf("parsed error handling = %q, want Continue", parsed.ErrorHandlingType)
+	}
+	if parsed.FileDocument != "GeneratedExcelDoc" {
+		t.Fatalf("parsed file document = %q, want GeneratedExcelDoc", parsed.FileDocument)
+	}
+	if !parsed.ShowInBrowser {
+		t.Fatal("parsed ShowInBrowser = false, want true")
+	}
+}
+
+func TestParseDownloadFileAction_ErrorHandlingTypeDefaultsToRollback(t *testing.T) {
+	action := parseDownloadFileAction(map[string]any{
+		"$ID":                      "download-action-id",
+		"FileDocumentVariableName": "GeneratedExcelDoc",
+		"ShowInBrowser":            false,
+	})
+
+	if action.ErrorHandlingType != microflows.ErrorHandlingTypeRollback {
+		t.Errorf("expected default Rollback, got %q", action.ErrorHandlingType)
+	}
+}
+
 func TestParseCodeActionParameterValue_MicroflowParameterValue(t *testing.T) {
 	value := parseCodeActionParameterValue(map[string]any{
 		"$ID":       "pmv-1",

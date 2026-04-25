@@ -1194,6 +1194,12 @@ func (s *BaseMDLParserListener) EnterShowMessageStatement(ctx *ShowMessageStatem
 // ExitShowMessageStatement is called when production showMessageStatement is exited.
 func (s *BaseMDLParserListener) ExitShowMessageStatement(ctx *ShowMessageStatementContext) {}
 
+// EnterDownloadFileStatement is called when production downloadFileStatement is entered.
+func (s *BaseMDLParserListener) EnterDownloadFileStatement(ctx *DownloadFileStatementContext) {}
+
+// ExitDownloadFileStatement is called when production downloadFileStatement is exited.
+func (s *BaseMDLParserListener) ExitDownloadFileStatement(ctx *DownloadFileStatementContext) {}
+
 // EnterThrowStatement is called when production throwStatement is entered.
 func (s *BaseMDLParserListener) EnterThrowStatement(ctx *ThrowStatementContext) {}
 

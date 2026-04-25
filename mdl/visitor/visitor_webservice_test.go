@@ -68,3 +68,32 @@ end;`
 		t.Fatalf("error handling = %#v, want rollback", call.ErrorHandling)
 	}
 }
+
+func TestDownloadFileStatement(t *testing.T) {
+	input := `create microflow Module.Test ()
+begin
+  download file $GeneratedExcelDoc show in browser on error rollback;
+end;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("parse error: %v", err)
+		}
+		return
+	}
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	download, ok := mf.Body[0].(*ast.DownloadFileStmt)
+	if !ok {
+		t.Fatalf("body[0] = %T, want *ast.DownloadFileStmt", mf.Body[0])
+	}
+	if download.FileDocument != "GeneratedExcelDoc" {
+		t.Fatalf("file document = %q, want GeneratedExcelDoc", download.FileDocument)
+	}
+	if !download.ShowInBrowser {
+		t.Fatal("ShowInBrowser = false, want true")
+	}
+	if download.ErrorHandling == nil || download.ErrorHandling.Type != ast.ErrorHandlingRollback {
+		t.Fatalf("error handling = %#v, want rollback", download.ErrorHandling)
+	}
+}

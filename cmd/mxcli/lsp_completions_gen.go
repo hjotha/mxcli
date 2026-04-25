@@ -128,6 +128,8 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "THROW", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "LOG", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "CALL", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "WEB", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "RAW", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "JAVA", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "JAVASCRIPT", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "ACTION", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
@@ -373,6 +375,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "RESPONSE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "REQUEST", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "SEND", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
+	{Label: "RECEIVE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "DEPRECATED", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "RESOURCE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "JSON", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
@@ -570,4 +573,8 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	// Operator
 	{Label: "MOD", Kind: protocol.CompletionItemKindKeyword, Detail: "Operator"},
 	{Label: "DIV", Kind: protocol.CompletionItemKindKeyword, Detail: "Operator"},
+
+	//
+	{Label: "DOWNLOAD", Kind: protocol.CompletionItemKindKeyword, Detail: ""},
+	{Label: "BROWSER", Kind: protocol.CompletionItemKindKeyword, Detail: ""},
 }
