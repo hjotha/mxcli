@@ -184,6 +184,8 @@ LOG: L O G;
 CALL: C A L L;
 WEB: W E B;
 RAW: R A W;
+DOWNLOAD: D O W N L O A D;
+BROWSER: B R O W S E R;
 JAVA: J A V A;
 JAVASCRIPT: J A V A S C R I P T;
 ACTION: A C T I O N;
@@ -762,9 +764,6 @@ NUMBER_LITERAL
 // =============================================================================
 // IDENTIFIERS (must come last)
 // =============================================================================
-
-DOWNLOAD: D O W N L O A D;
-BROWSER: B R O W S E R;
 
 // Variable identifier: $name (allows multi-character names)
 VARIABLE: '$' ID_BODY+;

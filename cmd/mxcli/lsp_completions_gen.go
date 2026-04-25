@@ -130,6 +130,8 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "CALL", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "WEB", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "RAW", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "DOWNLOAD", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "BROWSER", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "JAVA", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "JAVASCRIPT", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "ACTION", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
@@ -573,8 +575,4 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	// Operator
 	{Label: "MOD", Kind: protocol.CompletionItemKindKeyword, Detail: "Operator"},
 	{Label: "DIV", Kind: protocol.CompletionItemKindKeyword, Detail: "Operator"},
-
-	// Microflow keyword
-	{Label: "DOWNLOAD", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
-	{Label: "BROWSER", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 }

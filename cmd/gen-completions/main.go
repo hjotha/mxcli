@@ -136,7 +136,7 @@ func parseLexerGrammar(path string) ([]tokenEntry, error) {
 			entries = append(entries, tokenEntry{
 				Name:     tokenName,
 				Text:     text,
-				Category: categoryForToken(tokenName, currentCategory),
+				Category: currentCategory,
 			})
 			continue
 		}
@@ -167,7 +167,7 @@ func parseLexerGrammar(path string) ([]tokenEntry, error) {
 					entries = append(entries, tokenEntry{
 						Name:     tokenName,
 						Text:     text,
-						Category: categoryForToken(tokenName, currentCategory),
+						Category: currentCategory,
 					})
 				}
 				continue
@@ -190,22 +190,13 @@ func parseLexerGrammar(path string) ([]tokenEntry, error) {
 				entries = append(entries, tokenEntry{
 					Name:     tokenName,
 					Text:     text,
-					Category: categoryForToken(tokenName, currentCategory),
+					Category: currentCategory,
 				})
 			}
 		}
 	}
 
 	return entries, scanner.Err()
-}
-
-func categoryForToken(tokenName, currentCategory string) string {
-	switch tokenName {
-	case "DOWNLOAD", "BROWSER":
-		return "Microflow keyword"
-	default:
-		return currentCategory
-	}
 }
 
 // reconstructKeyword converts a token body (the RHS of the lexer rule) to user-facing text.
