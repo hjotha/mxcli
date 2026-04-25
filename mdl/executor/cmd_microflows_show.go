@@ -765,7 +765,7 @@ func formatMicroflowActivitiesWithSourceMap(
 	return lines
 }
 
-// findSplitMergePoints finds the corresponding merge point for each exclusive split.
+// findSplitMergePoints finds the corresponding join point for each exclusive split.
 func findSplitMergePoints(
 	ctx *ExecContext,
 	oc *microflows.MicroflowObjectCollection,
@@ -780,7 +780,7 @@ func findSplitMergePoints(
 	return findSplitMergePointsForGraph(ctx, activityMap, flowsByOrigin)
 }
 
-// findSplitMergePointsForGraph finds the corresponding merge point for each
+// findSplitMergePointsForGraph finds the corresponding join point for each
 // ExclusiveSplit in an already materialized flow graph. This variant is reused
 // by nested traversals (loop bodies, error handlers) that don't have a full
 // top-level MicroflowObjectCollection handy.
@@ -795,7 +795,7 @@ func findSplitMergePointsForGraph(
 	for _, obj := range activityMap {
 		if _, ok := obj.(*microflows.ExclusiveSplit); ok {
 			splitID := obj.GetID()
-			// Find merge by following both branches until they converge.
+			// Find the join by following branches until they converge.
 			mergeID := findMergeForSplit(ctx, splitID, flowsByOrigin, activityMap)
 			if mergeID != "" {
 				result[splitID] = mergeID
@@ -803,7 +803,7 @@ func findSplitMergePointsForGraph(
 		}
 		if _, ok := obj.(*microflows.InheritanceSplit); ok {
 			splitID := obj.GetID()
-			// Find merge by following both branches until they converge.
+			// Find the join by following branches until they converge.
 			mergeID := findMergeForSplit(ctx, splitID, flowsByOrigin, activityMap)
 			if mergeID != "" {
 				result[splitID] = mergeID
@@ -814,7 +814,10 @@ func findSplitMergePointsForGraph(
 	return result
 }
 
-// findMergeForSplit finds the ExclusiveMerge where branches from a split converge.
+// findMergeForSplit finds the nearest non-terminal node where split branches converge.
+// Mendix graphs commonly use an ExclusiveMerge, but some graphs converge directly
+// at another activity or split. Callers must therefore handle both merge and
+// non-merge join nodes.
 func findMergeForSplit(
 	ctx *ExecContext,
 	splitID model.ID,
@@ -831,7 +834,7 @@ func findMergeForSplit(
 		branchDistances = append(branchDistances, collectReachableDistances(ctx, flow.DestinationID, flowsByOrigin, activityMap))
 	}
 
-	return selectNearestCommonMerge(activityMap, branchDistances)
+	return selectNearestCommonJoin(activityMap, branchDistances)
 }
 
 // collectReachableNodes collects all nodes reachable from a starting node.
@@ -900,7 +903,7 @@ func collectReachableDistances(
 	return distances
 }
 
-func selectNearestCommonMerge(
+func selectNearestCommonJoin(
 	activityMap map[model.ID]microflows.MicroflowObject,
 	branchDistances []map[model.ID]int,
 ) model.ID {
@@ -916,7 +919,7 @@ func selectNearestCommonMerge(
 	candidates := []candidate{}
 
 	for nodeID, firstDistance := range branchDistances[0] {
-		if _, ok := activityMap[nodeID].(*microflows.ExclusiveMerge); !ok {
+		if !isSplitJoinCandidate(activityMap[nodeID]) {
 			continue
 		}
 
@@ -958,6 +961,18 @@ func selectNearestCommonMerge(
 	})
 
 	return candidates[0].id
+}
+
+func isSplitJoinCandidate(obj microflows.MicroflowObject) bool {
+	if obj == nil {
+		return false
+	}
+	switch obj.(type) {
+	case *microflows.StartEvent, *microflows.EndEvent:
+		return false
+	default:
+		return true
+	}
 }
 
 // --- Executor method wrappers for callers in unmigrated code ---

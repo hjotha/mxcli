@@ -513,8 +513,8 @@ func parseActionActivity(raw map[string]any) *microflows.ActionActivity {
 	}
 
 	// Parse the action.
-	if action := extractBsonMap(raw["Action"]); action != nil {
-		activity.Action = parseMicroflowAction(action)
+	if action := parseMicroflowActionValue(raw["Action"]); action != nil {
+		activity.Action = action
 	}
 
 	return activity
@@ -610,6 +610,27 @@ func parseMicroflowAction(raw map[string]any) microflows.MicroflowAction {
 		return fn(raw)
 	}
 	return &microflows.UnknownAction{TypeName: typeName}
+}
+
+func parseMicroflowActionValue(raw any) microflows.MicroflowAction {
+	switch action := raw.(type) {
+	case primitive.D:
+		actionMap := action.Map()
+		typeName, _ := actionMap["$Type"].(string)
+		if typeName == "Microflows$CallWebServiceAction" {
+			return parseWebServiceCallActionFromD(action)
+		}
+		return parseMicroflowAction(actionMap)
+	case map[string]any:
+		return parseMicroflowAction(action)
+	case primitive.M:
+		return parseMicroflowAction(map[string]any(action))
+	default:
+		if actionMap := extractBsonMap(raw); actionMap != nil {
+			return parseMicroflowAction(actionMap)
+		}
+		return nil
+	}
 }
 
 func parseCreateVariableAction(raw map[string]any) *microflows.CreateVariableAction {

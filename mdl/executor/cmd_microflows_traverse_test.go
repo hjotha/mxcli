@@ -296,6 +296,68 @@ func TestTraverseFlow_SequentialIfWithoutElseKeepsContinuationOutsideFirstIf(t *
 	}
 }
 
+func TestTraverseFlow_IfWithoutExplicitMergeKeepsSharedContinuationOutside(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("first_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("first_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$FirstFlag"},
+		},
+		mkID("first_then"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("first_then")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "first branch"}}},
+		},
+		mkID("shared_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("shared_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$SecondFlag"},
+		},
+		mkID("shared_then"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared_then")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared branch"}}},
+		},
+		mkID("shared_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("shared_merge")},
+		mkID("end"):          &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "first_split")},
+		mkID("first_split"): {
+			mkBranchFlow("first_split", "first_then", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("first_split", "shared_split", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("first_then"): {mkFlow("first_then", "shared_split")},
+		mkID("shared_split"): {
+			mkBranchFlow("shared_split", "shared_then", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("shared_split", "shared_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("shared_then"):  {mkFlow("shared_then", "shared_merge")},
+		mkID("shared_merge"): {mkFlow("shared_merge", "end")},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("first_split")]; got != mkID("shared_split") {
+		t.Fatalf("first split paired with %q, want shared continuation %q", got, mkID("shared_split"))
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	firstEndIf := strings.Index(out, "end if;")
+	secondIf := strings.Index(out, "if $SecondFlag then")
+	if firstEndIf == -1 || secondIf == -1 || firstEndIf > secondIf {
+		t.Fatalf("shared continuation was emitted inside first IF:\n%s", out)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "if $SecondFlag then") && strings.HasPrefix(line, "  ") {
+			t.Fatalf("shared continuation must be top-level, got %q in:\n%s", line, out)
+		}
+	}
+}
+
 func TestTraverseFlow_NestedTerminalBranchUsesParentMerge(t *testing.T) {
 	e := newTestExecutor()
 

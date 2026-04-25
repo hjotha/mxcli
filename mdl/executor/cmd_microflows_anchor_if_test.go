@@ -111,7 +111,9 @@ func TestBuilder_AnchorInsideElseBranch(t *testing.T) {
 
 // TestBuilder_AnchorFalseBranchTo_IfWithoutElse pins the audit cluster B4
 // regression: when the describer emits
-//   @anchor(to: left, true: (from: right, to: left), false: (from: bottom, to: top))
+//
+//	@anchor(to: left, true: (from: right, to: left), false: (from: bottom, to: top))
+//
 // on an IF-without-ELSE split, the writer used to apply only the FROM side of
 // the false-branch anchor to the split→merge flow, letting the default (Left)
 // overwrite the intended `to: top`. Re-describing produced `false: (from: bottom, to: left)`.
@@ -218,5 +220,39 @@ func TestBuilder_AnchorToTopOnReturnPreservedInsideElse(t *testing.T) {
 	// @anchor(to: top) on the return, DestinationConnectionIndex must be Top.
 	if !hasFlow(oc.Flows, AnchorBottom, AnchorTop) {
 		t.Errorf("expected split→return flow with Bottom→Top, got %+v", oc.Flows)
+	}
+}
+
+func TestBuilder_NoMergeContinuingBranchPreservesTailAnchor(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.MfSetStmt{
+					Target: "$IsValid",
+					Value:  &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: false},
+					Annotations: &ast.ActivityAnnotations{
+						Anchor: &ast.FlowAnchors{From: ast.AnchorSideRight, To: ast.AnchorSideLeft},
+					},
+				},
+				&ast.ValidationFeedbackStmt{
+					AttributePath: &ast.AttributePathExpr{Variable: "SampleRecord", Path: []string{"SampleValue"}},
+					Message:       &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Sample value is required."},
+					Annotations: &ast.ActivityAnnotations{
+						Anchor: &ast.FlowAnchors{From: ast.AnchorSideTop, To: ast.AnchorSideBottom},
+					},
+				},
+			},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "after validation"}},
+	}
+
+	oc := buildWithAnchors(body)
+
+	if !hasFlow(oc.Flows, AnchorTop, AnchorBottom) {
+		t.Errorf("expected continuing branch tail to keep Top→Bottom, got %+v", oc.Flows)
 	}
 }

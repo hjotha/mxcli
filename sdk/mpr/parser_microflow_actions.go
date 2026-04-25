@@ -403,6 +403,14 @@ func parseWebServiceCallAction(raw map[string]any) *microflows.WebServiceCallAct
 	return action
 }
 
+func parseWebServiceCallActionFromD(raw primitive.D) *microflows.WebServiceCallAction {
+	action := parseWebServiceCallAction(raw.Map())
+	if rawBSON, err := bson.Marshal(raw); err == nil {
+		action.RawBSON = rawBSON
+	}
+	return action
+}
+
 // parseRestOperationCallAction parses a Microflows$RestOperationCallAction from BSON.
 func parseRestOperationCallAction(raw map[string]any) *microflows.RestOperationCallAction {
 	action := &microflows.RestOperationCallAction{}

@@ -167,6 +167,49 @@ func TestTraverseFlow_InheritanceSplitPreservesEmptyCases(t *testing.T) {
 	assertContains(t, got, "cast $RuntimeListContext;")
 }
 
+func TestTraverseFlow_InheritanceSplitWithoutExplicitMergeEmitsSharedContinuation(t *testing.T) {
+	e := newTestExecutor()
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("split"),
+			VariableName:        "SampleContext",
+		},
+		mkID("cast"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("cast")},
+			Action:       &microflows.CastAction{OutputVariable: "SpecificContext"},
+		},
+		mkID("shared"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared continuation"}}},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "split")},
+		mkID("split"): {
+			mkBranchFlow("split", "cast", microflows.InheritanceCase{EntityQualifiedName: "SampleModule.SpecificContext"}),
+			mkBranchFlow("split", "shared", microflows.InheritanceCase{EntityQualifiedName: ""}),
+		},
+		mkID("cast"):   {mkFlow("cast", "shared")},
+		mkID("shared"): {mkFlow("shared", "end")},
+	}
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("split")]; got != mkID("shared") {
+		t.Fatalf("split paired with %q, want shared continuation %q", got, mkID("shared"))
+	}
+
+	var lines []string
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, map[model.ID]bool{}, nil, nil, &lines, 0, nil, 0, nil)
+	got := strings.Join(lines, "\n")
+	if strings.Count(got, "shared continuation") != 1 {
+		t.Fatalf("shared continuation should be emitted once, got:\n%s", got)
+	}
+	if strings.Index(got, "end split;") > strings.Index(got, "shared continuation") {
+		t.Fatalf("shared continuation was emitted inside split:\n%s", got)
+	}
+}
+
 func TestBuilder_InheritanceSplit_EmptyCaseCreatesConfiguredFlow(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.InheritanceSplitStmt{

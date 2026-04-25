@@ -290,6 +290,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			if thenReturns && !elseReturns {
 				if lastElseID != "" {
 					noMergeExitID = lastElseID
+					noMergeExitCase = pendingElseCase
+					if pendingElseAnchor != nil {
+						noMergeExitAnchor = pendingElseAnchor
+					} else {
+						noMergeExitAnchor = prevElseAnchor
+					}
 				} else {
 					noMergeExitID = splitID
 					noMergeExitCase = "false"
@@ -298,6 +304,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			} else if elseReturns && !thenReturns {
 				if lastThenID != "" {
 					noMergeExitID = lastThenID
+					noMergeExitCase = pendingThenCase
+					if pendingThenAnchor != nil {
+						noMergeExitAnchor = pendingThenAnchor
+					} else {
+						noMergeExitAnchor = prevThenAnchor
+					}
 				} else {
 					noMergeExitID = splitID
 					noMergeExitCase = "true"

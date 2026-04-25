@@ -3,6 +3,7 @@
 package mpr
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -297,6 +298,45 @@ func TestSerializeWebServiceCallActionPreservesRawBSON(t *testing.T) {
 	}
 	if got := fields["OperationName"]; got != "FetchItemsByTenant" {
 		t.Fatalf("OperationName = %v", got)
+	}
+}
+
+func TestParseActionActivityPreservesWebServiceActionRawBSONOrder(t *testing.T) {
+	rawAction := primitive.D{
+		{Key: "$ID", Value: "web-service-action-ordered"},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "ImportedService", Value: "SampleAccess.GroupService"},
+		{Key: "OperationName", Value: "FetchItemsByTenant"},
+		{Key: "TimeOutExpression", Value: "@SampleAuth.StandardTimeout"},
+		{Key: "NewResultHandling", Value: primitive.D{
+			{Key: "$Type", Value: "Microflows$WebServiceOperationResultHandling"},
+			{Key: "ResultVariableName", Value: "SampleResponse"},
+		}},
+	}
+	expectedRaw, err := bson.Marshal(rawAction)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	activity := parseActionActivity(map[string]any{
+		"$ID":    "activity-with-web-service-action",
+		"$Type":  "Microflows$ActionActivity",
+		"Action": rawAction,
+	})
+	action, ok := activity.Action.(*microflows.WebServiceCallAction)
+	if !ok {
+		t.Fatalf("Action = %T, want *WebServiceCallAction", activity.Action)
+	}
+	if !bytes.Equal(action.RawBSON, expectedRaw) {
+		t.Fatalf("RawBSON was not preserved byte-for-byte")
+	}
+
+	serializedRaw, err := bson.Marshal(serializeWebServiceCallAction(action))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(serializedRaw, expectedRaw) {
+		t.Fatalf("serialized raw BSON was not preserved byte-for-byte")
 	}
 }
 
