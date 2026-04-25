@@ -764,6 +764,7 @@ func traverseFlowUntilMergeLoopAware(
 		nestedMergeID := splitMergeMap[currentID]
 
 		trueFlow, falseFlow := findBranchFlows(flows)
+		nestedMergeID = resolveNestedMergeID(nestedMergeID, mergeID, trueFlow, falseFlow, flowsByOrigin)
 
 		// Guard pattern: true branch is a single EndEvent (RETURN),
 		// but only when the false branch does NOT also end directly.
@@ -801,7 +802,8 @@ func traverseFlowUntilMergeLoopAware(
 				traverseFlowUntilMergeLoopAware(ctx, trueFlow.DestinationID, nestedMergeID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
-			if falseFlow != nil {
+			falseHasBody := falseFlow != nil && falseFlow.DestinationID != nestedMergeID
+			if falseHasBody {
 				*lines = append(*lines, indentStr+"else")
 				visitedFalseBranch := make(map[model.ID]bool)
 				for id := range visited {
@@ -1097,6 +1099,27 @@ func canReachNode(
 	return false
 }
 
+func resolveNestedMergeID(
+	nestedMergeID model.ID,
+	parentMergeID model.ID,
+	trueFlow *microflows.SequenceFlow,
+	falseFlow *microflows.SequenceFlow,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+) model.ID {
+	if nestedMergeID != "" || parentMergeID == "" {
+		return nestedMergeID
+	}
+	for _, flow := range []*microflows.SequenceFlow{trueFlow, falseFlow} {
+		if flow == nil {
+			continue
+		}
+		if canReachNode(flow.DestinationID, parentMergeID, flowsByOrigin, make(map[model.ID]bool)) {
+			return parentMergeID
+		}
+	}
+	return ""
+}
+
 // findBranchFlows separates flows from a split into TRUE and FALSE branches based on CaseValue.
 // Returns (trueFlow, falseFlow). Either may be nil if the branch doesn't exist.
 func findBranchFlows(flows []*microflows.SequenceFlow) (trueFlow, falseFlow *microflows.SequenceFlow) {
@@ -1270,6 +1293,7 @@ func collectStructuredStatements(
 		flows := flowsByOrigin[currentID]
 		nestedMergeID := splitMergeMap[currentID]
 		trueFlow, falseFlow := findBranchFlows(flows)
+		nestedMergeID = resolveNestedMergeID(nestedMergeID, stopID, trueFlow, falseFlow, flowsByOrigin)
 
 		isGuard := false
 		if trueFlow != nil {

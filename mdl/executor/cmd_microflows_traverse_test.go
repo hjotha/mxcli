@@ -296,6 +296,76 @@ func TestTraverseFlow_SequentialIfWithoutElseKeepsContinuationOutsideFirstIf(t *
 	}
 }
 
+func TestTraverseFlow_NestedTerminalBranchUsesParentMerge(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("support_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("support_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "ControlCenterCommons.CurrentUserIsSupportEmployee()"},
+		},
+		mkID("admin_check"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("admin_check")},
+			Action: &microflows.MicroflowCallAction{
+				ResultVariableName: "UserIsCompanyAdmin",
+				MicroflowCall:      &microflows.MicroflowCall{Microflow: "ControlCenterCommons.UserIsCompanyAdmin"},
+			},
+		},
+		mkID("admin_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("admin_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UserIsCompanyAdmin"},
+		},
+		mkID("denied"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("denied")},
+			Action:       &microflows.ShowMessageAction{Template: &model.Text{Translations: map[string]string{"en_US": "denied"}}},
+		},
+		mkID("denied_end"):  &microflows.EndEvent{BaseMicroflowObject: mkObj("denied_end")},
+		mkID("outer_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("outer_merge")},
+		mkID("shared_tail"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared_tail")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared tail"}}},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "support_split")},
+		mkID("support_split"): {
+			mkBranchFlow("support_split", "outer_merge", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("support_split", "admin_check", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("admin_check"): {mkFlow("admin_check", "admin_split")},
+		mkID("admin_split"): {
+			mkBranchFlow("admin_split", "outer_merge", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("admin_split", "denied", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("denied"):      {mkFlow("denied", "denied_end")},
+		mkID("outer_merge"): {mkFlow("outer_merge", "shared_tail")},
+		mkID("shared_tail"): {mkFlow("shared_tail", "end")},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	if got := strings.Count(out, "shared tail"); got != 1 {
+		t.Fatalf("shared continuation must be emitted once, got %d:\n%s", got, out)
+	}
+	sharedTail := strings.Index(out, "shared tail")
+	denied := strings.Index(out, "denied")
+	if denied == -1 || sharedTail == -1 || denied > sharedTail {
+		t.Fatalf("terminal denial branch should stay before shared continuation:\n%s", out)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "shared tail") && strings.HasPrefix(line, "  ") {
+			t.Fatalf("shared continuation must be outside the guard branch, got %q in:\n%s", line, out)
+		}
+	}
+}
+
 func TestTraverseFlow_IfInsideLoop(t *testing.T) {
 	e := newTestExecutor()
 

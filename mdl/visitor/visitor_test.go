@@ -605,6 +605,39 @@ END;`
 	t.Log("VALIDATION FEEDBACK inside IF block parsed correctly")
 }
 
+func TestValidationFeedbackObjectOnlyTarget(t *testing.T) {
+	input := `CREATE MICROFLOW Test.VAL_Product ($Product: Test.Product)
+BEGIN
+  VALIDATION FEEDBACK $Product MESSAGE 'Select a product.';
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	if len(stmt.Body) != 1 {
+		t.Fatalf("expected one body statement, got %d", len(stmt.Body))
+	}
+	valFeedback, ok := stmt.Body[0].(*ast.ValidationFeedbackStmt)
+	if !ok {
+		t.Fatalf("expected ValidationFeedbackStmt, got %T", stmt.Body[0])
+	}
+	if valFeedback.AttributePath == nil {
+		t.Fatal("expected object-only target to be preserved")
+	}
+	if valFeedback.AttributePath.Variable != "Product" {
+		t.Fatalf("target variable = %q, want Product", valFeedback.AttributePath.Variable)
+	}
+	if len(valFeedback.AttributePath.Path) != 0 || len(valFeedback.AttributePath.Segments) != 0 {
+		t.Fatalf("object-only validation feedback must not synthesize an attribute path: %+v", valFeedback.AttributePath)
+	}
+}
+
 // TestRollbackStatement verifies the ROLLBACK statement parses correctly.
 func TestRollbackStatement(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestRollback ($Order: Test.Order)

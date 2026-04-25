@@ -184,7 +184,15 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		// nextConnectionPoint/nextFlowCase, so we must not emit a dangling flow here.
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
-				flow := newHorizontalFlow(lastThenID, mergeID)
+				var flow *microflows.SequenceFlow
+				if pendingThenCase != "" {
+					flow = newHorizontalFlowWithCase(lastThenID, mergeID, pendingThenCase)
+					if pendingThenAnchor != nil {
+						prevThenAnchor = pendingThenAnchor
+					}
+				} else {
+					flow = newHorizontalFlow(lastThenID, mergeID)
+				}
 				applyUserAnchors(flow, prevThenAnchor, prevThenAnchor)
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
@@ -264,6 +272,15 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		if !elseReturns && needMerge {
 			if lastElseID != "" {
 				flow := newUpwardFlow(lastElseID, mergeID)
+				if pendingElseCase != "" {
+					flow.CaseValue = microflows.EnumerationCase{
+						BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+						Value:       pendingElseCase,
+					}
+					if pendingElseAnchor != nil {
+						prevElseAnchor = pendingElseAnchor
+					}
+				}
 				applyUserAnchors(flow, prevElseAnchor, prevElseAnchor)
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)
@@ -365,6 +382,15 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		if !thenReturns && needMerge {
 			if lastThenID != "" {
 				flow := newUpwardFlow(lastThenID, mergeID)
+				if pendingThenCase != "" {
+					flow.CaseValue = microflows.EnumerationCase{
+						BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+						Value:       pendingThenCase,
+					}
+					if pendingThenAnchor != nil {
+						prevThenAnchor = pendingThenAnchor
+					}
+				}
 				applyUserAnchors(flow, prevThenAnchor, prevThenAnchor)
 				fb.flows = append(fb.flows, flow)
 				fb.addPendingEmptyErrorHandlerFlow(flow.OriginID, flow.DestinationID)

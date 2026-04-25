@@ -617,6 +617,38 @@ func TestFormatAction_ValidationFeedback(t *testing.T) {
 	}
 }
 
+func TestFormatAction_ValidationFeedback_ObjectOnlyTarget(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ValidationFeedbackAction{
+		ObjectVariable: "CompanyAdminSuggestion",
+		Template: &model.Text{
+			Translations: map[string]string{"en_US": "Please select your desired company admin."},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "validation feedback $CompanyAdminSuggestion message 'Please select your desired company admin.';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_ValidationFeedback_AssociationTarget(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ValidationFeedbackAction{
+		ObjectVariable:  "CompanyAdminSuggestion",
+		AssociationName: "CompanyLandingPage.CompanyAdminSuggestion_Member",
+		AttributeName:   "",
+		Template: &model.Text{
+			Translations: map[string]string{"en_US": "Please select your desired company admin."},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "validation feedback $CompanyAdminSuggestion/CompanyLandingPage.CompanyAdminSuggestion_Member message 'Please select your desired company admin.';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_LogMessage(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.LogMessageAction{

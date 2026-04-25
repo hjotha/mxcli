@@ -217,6 +217,58 @@ func TestBuildFlowGraph_NestedGuardIfPreservesFallthroughCase(t *testing.T) {
 	}
 }
 
+func TestBuildFlowGraph_EmptyThenElseReturnNestedGuardKeepsTrueCase(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "Support"},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.IfStmt{
+					Condition: &ast.VariableExpr{Name: "UserIsCompanyAdmin"},
+					ElseBody:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+				},
+			},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "shared tail"}},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"Support": "Boolean", "UserIsCompanyAdmin": "Boolean"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var nestedSplitID model.ID
+	for _, obj := range oc.Objects {
+		split, ok := obj.(*microflows.ExclusiveSplit)
+		if !ok {
+			continue
+		}
+		cond, ok := split.SplitCondition.(*microflows.ExpressionSplitCondition)
+		if ok && cond.Expression == "$UserIsCompanyAdmin" {
+			nestedSplitID = split.ID
+			break
+		}
+	}
+	if nestedSplitID == "" {
+		t.Fatal("expected nested authorization split")
+	}
+
+	for _, flow := range oc.Flows {
+		if flow.OriginID != nestedSplitID {
+			continue
+		}
+		if enumCase, ok := flow.CaseValue.(microflows.EnumerationCase); ok && enumCase.Value == "true" {
+			if _, ok := findMicroflowObjectByID(oc.Objects, flow.DestinationID).(*microflows.ExclusiveMerge); ok {
+				return
+			}
+		}
+	}
+	t.Fatal("nested empty-then guard must connect its true branch to the parent merge with CaseValue=true")
+}
+
 func TestBuildFlowGraph_ManualWhileTrueContinueUsesBackEdgeMerge(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.WhileStmt{
