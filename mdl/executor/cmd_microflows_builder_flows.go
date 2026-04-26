@@ -76,6 +76,18 @@ func (s pendingErrorHandlerState) activeIsEmpty() bool {
 	return s.emptyFrom == "" && s.tailFrom == "" && s.source == "" && s.skipVar == ""
 }
 
+func (s pendingErrorHandlerState) hasSkipVar() bool {
+	if s.skipVar != "" {
+		return true
+	}
+	for _, queued := range s.queue {
+		if queued.skipVar != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func (fb *flowBuilder) capturePendingErrorHandler() pendingErrorHandlerState {
 	return pendingErrorHandlerState{
 		emptyFrom:    fb.emptyErrorHandlerFrom,
@@ -231,7 +243,6 @@ func (fb *flowBuilder) addPendingEmptyErrorHandlerFlowForState(state pendingErro
 }
 
 func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHandlerState, originID, destinationID model.ID, stmt ast.MicroflowStatement, futureReferencesSkipVar bool, hasPendingOutput bool, referencesPendingOutput bool) pendingErrorHandlerState {
-	_ = futureReferencesSkipVar
 	if destinationID == "" {
 		return state
 	}
@@ -249,40 +260,46 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHand
 		return state
 	}
 	if state.skipVar != "" {
-		if !statementReferencesVar(stmt, state.skipVar) {
-			return state
-		}
-		if state.returnValue != "" {
-			endID := fb.addTerminalEndEventForPendingHandler(fb.returnType, state.returnValue)
-			if state.tailIsSource {
-				fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
-			} else {
-				fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+		referencesSkipVar := statementReferencesVar(stmt, state.skipVar)
+		if referencesSkipVar {
+			if state.returnValue != "" {
+				endID := fb.addTerminalEndEventForPendingHandler(fb.returnType, state.returnValue)
+				if state.tailIsSource {
+					fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+				}
+				state.source = ""
+				state.tailFrom = ""
+				state.skipVar = ""
+				state.tailIsSource = false
+				state.returnValue = ""
+				return state
 			}
-			state.source = ""
-			state.tailFrom = ""
-			state.skipVar = ""
-			state.tailIsSource = false
-			state.returnValue = ""
-			return state
-		}
-		if _, ok := stmt.(*ast.ReturnStmt); ok {
-			return state
-		}
-		if !fb.hasReturnValue {
-			endID := fb.addTerminalEndEventForPendingHandler(fb.returnType, "")
-			if state.tailIsSource {
-				fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
-			} else {
-				fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+			if _, ok := stmt.(*ast.ReturnStmt); ok {
+				return state
 			}
-			state.source = ""
-			state.tailFrom = ""
-			state.skipVar = ""
-			state.tailIsSource = false
-			state.returnValue = ""
+			if !fb.hasReturnValue {
+				endID := fb.addTerminalEndEventForPendingHandler(fb.returnType, "")
+				if state.tailIsSource {
+					fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+				}
+				state.source = ""
+				state.tailFrom = ""
+				state.skipVar = ""
+				state.tailIsSource = false
+				state.returnValue = ""
+				return state
+			}
 			return state
 		}
+
+		if futureReferencesSkipVar {
+			return state
+		}
+
 		fb.addErrorHandlerRejoinFlowForState(state, originID, destinationID)
 		state.source = ""
 		state.tailFrom = ""
@@ -883,6 +900,8 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 			}
 		}
 		return lastStmtIsReturn(s.ElseBody)
+	case *ast.WhileStmt:
+		return isManualWhileTrueCandidate(s)
 	default:
 		return false
 	}

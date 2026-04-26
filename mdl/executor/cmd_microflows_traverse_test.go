@@ -817,7 +817,7 @@ func TestCollectErrorHandlerStatements_Simple(t *testing.T) {
 	assertContains(t, stmts[1], "return;")
 }
 
-func TestCollectErrorHandlerStatements_StopsAtMerge(t *testing.T) {
+func TestCollectErrorHandlerStatements_TraverseLocalMerge(t *testing.T) {
 	e := newTestExecutor()
 
 	activityMap := map[model.ID]microflows.MicroflowObject{
@@ -838,10 +838,10 @@ func TestCollectErrorHandlerStatements_StopsAtMerge(t *testing.T) {
 	}
 
 	stmts := e.collectErrorHandlerStatements(mkID("err_log"), activityMap, flowsByOrigin, nil, nil)
-	// Should stop at merge, not include "after"
-	if len(stmts) != 1 {
-		t.Fatalf("expected 1 statement (stop at merge), got %d: %v", len(stmts), stmts)
+	if len(stmts) != 2 {
+		t.Fatalf("expected local merge tail to be included, got %d statements: %v", len(stmts), stmts)
 	}
+	assertContains(t, stmts[1], "after")
 }
 
 func TestCollectErrorHandlerStatements_StopsAtSharedContinuation(t *testing.T) {

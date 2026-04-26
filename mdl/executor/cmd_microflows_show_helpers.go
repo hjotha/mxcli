@@ -542,7 +542,7 @@ func traverseFlowLoopAware(
 			visited[currentID] = true
 			*lines = append(*lines, indentStr+"while true")
 			*lines = append(*lines, indentStr+"begin")
-			for _, flow := range flowsByOrigin[currentID] {
+			for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
 				traverseFlowLoopAware(ctx, flow.DestinationID, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 			*lines = append(*lines, indentStr+"end while;")
@@ -550,7 +550,7 @@ func traverseFlowLoopAware(
 			return
 		}
 		visited[currentID] = true
-		for _, flow := range flowsByOrigin[currentID] {
+		for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
 			traverseFlowLoopAware(ctx, flow.DestinationID, loopHeaderID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		}
 		return
@@ -1138,10 +1138,11 @@ func isManualLoopHeaderMerge(
 	if _, ok := activityMap[mergeID].(*microflows.ExclusiveMerge); !ok {
 		return false
 	}
-	if isMergePairedWithSplit(mergeID, splitMergeMap) || len(flowsByOrigin[mergeID]) == 0 {
+	normalOutgoing := findNormalFlows(flowsByOrigin[mergeID])
+	if isMergePairedWithSplit(mergeID, splitMergeMap) || len(normalOutgoing) == 0 {
 		return false
 	}
-	for _, flow := range flowsByOrigin[mergeID] {
+	for _, flow := range normalOutgoing {
 		if canReachNode(flow.DestinationID, mergeID, flowsByOrigin, make(map[model.ID]bool)) {
 			return true
 		}
@@ -1165,7 +1166,7 @@ func canReachNode(
 		return false
 	}
 	visited[currentID] = true
-	for _, flow := range flowsByOrigin[currentID] {
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
 		if canReachNode(flow.DestinationID, targetID, flowsByOrigin, visited) {
 			return true
 		}
@@ -1336,6 +1337,24 @@ func cloneVisited(visited map[model.ID]bool) map[model.ID]bool {
 	return cloned
 }
 
+func hasNormalIncomingFromOtherOrigin(
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	destinationID model.ID,
+	originID model.ID,
+) bool {
+	for candidateOriginID, flows := range flowsByOrigin {
+		if candidateOriginID == originID {
+			continue
+		}
+		for _, flow := range findNormalFlows(flows) {
+			if flow.DestinationID == destinationID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func collectStructuredStatements(
 	ctx *ExecContext,
 	currentID model.ID,
@@ -1359,10 +1378,13 @@ func collectStructuredStatements(
 	}
 
 	if _, isMerge := obj.(*microflows.ExclusiveMerge); isMerge {
-		// Error-handler collection handles structured IFs by traversing to the
-		// known merge explicitly after each split. Any merge reached directly here
-		// is therefore the rejoin point back to the outer graph and must not leak
-		// statements from the main flow into the `on error { ... }` block.
+		// Rejoin points back to the outer graph are already handled by stopID.
+		// Other merges can be local junctions inside the error handler itself,
+		// for example an empty nested handler that rejoins before a decision.
+		visited[currentID] = true
+		for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+			collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
+		}
 		return
 	}
 
@@ -1458,11 +1480,43 @@ func collectStructuredStatements(
 		return
 	}
 
-	appendFormattedStatement(ctx, obj, stmt, activityMap, flowsByOrigin, entityNames, microflowNames, lines, indentStr)
+	appendStructuredCollectedStatement(ctx, obj, stmt, activityMap, flowsByOrigin, visited, entityNames, microflowNames, lines, indentStr)
 
 	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
 		collectStructuredStatements(ctx, flow.DestinationID, stopID, activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, microflowNames, lines, indent)
 	}
+}
+
+func appendStructuredCollectedStatement(
+	ctx *ExecContext,
+	obj microflows.MicroflowObject,
+	stmt string,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indentStr string,
+) {
+	activity, isAction := obj.(*microflows.ActionActivity)
+	if isAction {
+		errType := getActionErrorHandlingType(activity)
+		errorHandlerFlow := findErrorHandlerFlow(flowsByOrigin[obj.GetID()])
+		if errorHandlerFlow != nil &&
+			hasCustomErrorHandler(errType) &&
+			(visited[errorHandlerFlow.DestinationID] ||
+				hasNormalIncomingFromOtherOrigin(flowsByOrigin, errorHandlerFlow.DestinationID, obj.GetID())) {
+			stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
+			errorSuffix := formatErrorHandlingSuffix(errType)
+			if errorSuffix == "" {
+				errorSuffix = " on error without rollback"
+			}
+			*lines = append(*lines, indentStr+stmtWithoutSemi+errorSuffix+" { };")
+			return
+		}
+	}
+	appendFormattedStatement(ctx, obj, stmt, activityMap, flowsByOrigin, entityNames, microflowNames, lines, indentStr)
 }
 
 func collectStructuredBranchStatements(
@@ -1609,7 +1663,16 @@ func findErrorHandlerRejoinID(
 		visited[currentID] = true
 
 		if currentID != startID {
-			if _, isMerge := activityMap[currentID].(*microflows.ExclusiveMerge); !isMerge {
+			if _, isEnd := activityMap[currentID].(*microflows.EndEvent); isEnd {
+				continue
+			}
+			if _, isMerge := activityMap[currentID].(*microflows.ExclusiveMerge); isMerge {
+				for _, incoming := range findNormalFlows(flowsByDest[currentID]) {
+					if !reachable[incoming.OriginID] {
+						return currentID
+					}
+				}
+			} else {
 				for _, incoming := range findNormalFlows(flowsByDest[currentID]) {
 					if !reachable[incoming.OriginID] {
 						return currentID

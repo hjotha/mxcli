@@ -135,6 +135,8 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		fromSplit bool
 	}
 	var branchTails []branchTail
+	routePendingErrorToElse := len(s.ElseBody) > 0 && fb.errorHandlerSkipVar != "" && s.Variable == fb.errorHandlerSkipVar
+	pendingErrorForElse := pendingErrorHandlerState{}
 
 	addBranch := func(caseValue string, body []ast.MicroflowStatement) {
 		branchY := centerY + branchIndex*VerticalSpacing
@@ -174,6 +176,9 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 					flow.DestinationConnectionIndex = int(thisAnchor.To)
 				}
 				fb.flows = append(fb.flows, flow)
+				if routePendingErrorToElse && caseValue == "" {
+					fb.routePendingErrorHandlerToAlternative(splitID, actID)
+				}
 			} else {
 				var flow *microflows.SequenceFlow
 				originAnchor := prevAnchor
@@ -209,8 +214,15 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		}
 	}
 
+	if routePendingErrorToElse {
+		pendingErrorForElse = fb.capturePendingErrorHandler()
+		fb.clearPendingErrorHandler()
+	}
 	for _, c := range s.Cases {
 		addBranch(qualifiedNameString(c.Entity), c.Body)
+	}
+	if routePendingErrorToElse && fb.capturePendingErrorHandler().isEmpty() {
+		fb.restorePendingErrorHandler(pendingErrorForElse)
 	}
 	addBranch("", s.ElseBody)
 

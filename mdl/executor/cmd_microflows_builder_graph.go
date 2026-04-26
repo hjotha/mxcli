@@ -31,6 +31,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	if fb.listInputVariables == nil {
 		fb.listInputVariables = collectListInputVariables(stmts)
 	}
+	markListReturnVariables(fb.listInputVariables, stmts, returns)
 	if fb.objectInputVariables == nil {
 		fb.objectInputVariables = collectObjectInputVariables(stmts)
 	}
@@ -272,6 +273,11 @@ func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 			case *ast.IfStmt:
 				walk(s.ThenBody)
 				walk(s.ElseBody)
+			case *ast.InheritanceSplitStmt:
+				for _, c := range s.Cases {
+					walk(c.Body)
+				}
+				walk(s.ElseBody)
 			case *ast.LoopStmt:
 				if s.ListVariable != "" {
 					inputs[s.ListVariable] = true
@@ -322,6 +328,98 @@ func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 	return inputs
 }
 
+func markListReturnVariables(inputs map[string]bool, stmts []ast.MicroflowStatement, returns *ast.MicroflowReturnType) {
+	if inputs == nil || returns == nil || returns.Type.Kind != ast.TypeListOf {
+		return
+	}
+	var walk func([]ast.MicroflowStatement)
+	walk = func(body []ast.MicroflowStatement) {
+		for _, stmt := range body {
+			switch s := stmt.(type) {
+			case *ast.ReturnStmt:
+				if name := simpleReturnedVariableName(s.Value); name != "" {
+					inputs[name] = true
+				}
+			case *ast.IfStmt:
+				walk(s.ThenBody)
+				walk(s.ElseBody)
+			case *ast.InheritanceSplitStmt:
+				for _, c := range s.Cases {
+					walk(c.Body)
+				}
+				walk(s.ElseBody)
+			case *ast.LoopStmt:
+				walk(s.Body)
+			case *ast.WhileStmt:
+				walk(s.Body)
+			case *ast.CallMicroflowStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CreateObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.MfCommitStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.DeleteObjectStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.RestCallStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallJavaActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallWebServiceStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.CallExternalActionStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			case *ast.ImportFromMappingStmt:
+				if s.ErrorHandling != nil {
+					walk(s.ErrorHandling.Body)
+				}
+			}
+		}
+	}
+	walk(stmts)
+}
+
+func simpleReturnedVariableName(expr ast.Expression) string {
+	switch e := expr.(type) {
+	case *ast.VariableExpr:
+		return e.Name
+	case *ast.SourceExpr:
+		source := strings.TrimSpace(e.Source)
+		if strings.HasPrefix(source, "$") && isIdentifierString(source[1:]) {
+			return source[1:]
+		}
+	}
+	return ""
+}
+
+func isIdentifierString(value string) bool {
+	if value == "" {
+		return false
+	}
+	for i, r := range value {
+		if r == '_' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || i > 0 && r >= '0' && r <= '9' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 func collectObjectInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 	inputs := make(map[string]bool)
 	var walkExpr func(ast.Expression)
@@ -360,6 +458,14 @@ func collectObjectInputVariables(stmts []ast.MicroflowStatement) map[string]bool
 			case *ast.IfStmt:
 				walkExpr(s.Condition)
 				walk(s.ThenBody)
+				walk(s.ElseBody)
+			case *ast.InheritanceSplitStmt:
+				if s.Variable != "" {
+					inputs[s.Variable] = true
+				}
+				for _, c := range s.Cases {
+					walk(c.Body)
+				}
 				walk(s.ElseBody)
 			case *ast.WhileStmt:
 				walkExpr(s.Condition)
@@ -475,6 +581,11 @@ func countMicroflowCallOutputs(stmts []ast.MicroflowStatement) map[string]int {
 			case *ast.IfStmt:
 				walk(s.ThenBody)
 				walk(s.ElseBody)
+			case *ast.InheritanceSplitStmt:
+				for _, c := range s.Cases {
+					walk(c.Body)
+				}
+				walk(s.ElseBody)
 			case *ast.LoopStmt:
 				walk(s.Body)
 			case *ast.WhileStmt:
@@ -535,6 +646,11 @@ func planMicroflowCallOutputDeclarations(stmts []ast.MicroflowStatement) map[*as
 				}
 			case *ast.IfStmt:
 				walk(s.ThenBody)
+				walk(s.ElseBody)
+			case *ast.InheritanceSplitStmt:
+				for _, c := range s.Cases {
+					walk(c.Body)
+				}
 				walk(s.ElseBody)
 			case *ast.LoopStmt:
 				walk(s.Body)
@@ -598,6 +714,14 @@ func (fb *flowBuilder) inferReturnValueFromScopeExcluding(returns *ast.Microflow
 	if returns == nil || returns.Variable != "" {
 		return ""
 	}
+	excluded := map[string]bool{}
+	for _, name := range excludedVars {
+		name = strings.TrimPrefix(name, "$")
+		if name != "" {
+			excluded[name] = true
+		}
+	}
+
 	target := ""
 	switch returns.Type.Kind {
 	case ast.TypeEntity:
@@ -611,15 +735,15 @@ func (fb *flowBuilder) inferReturnValueFromScopeExcluding(returns *ast.Microflow
 	default:
 		return ""
 	}
-	if target == "" || fb.varTypes == nil {
+	if target == "" {
 		return ""
 	}
-	excluded := map[string]bool{}
-	for _, name := range excludedVars {
-		name = strings.TrimPrefix(name, "$")
-		if name != "" {
-			excluded[name] = true
-		}
+
+	if target == "System.HttpResponse" && !excluded["latestHttpResponse"] {
+		return "$latestHttpResponse"
+	}
+	if fb.varTypes == nil {
+		return ""
 	}
 
 	findCandidate := func(localOnly bool) string {

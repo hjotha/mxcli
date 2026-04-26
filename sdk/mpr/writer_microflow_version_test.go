@@ -79,6 +79,38 @@ func TestSerializeSequenceFlow_Mx10_UsesModernShape(t *testing.T) {
 	}
 }
 
+func TestSerializeEndEvent_EmptyReturnValueHasNoTrailingLineBreak(t *testing.T) {
+	end := &microflows.EndEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: "end-empty"},
+			Position:    model.Point{X: 10, Y: 20},
+			Size:        model.Size{Width: 20, Height: 20},
+		},
+		ReturnValue: "empty",
+	}
+
+	doc := serializeMicroflowObject(end)
+	if got := bsonGetKey(doc, "ReturnValue"); got != "empty" {
+		t.Fatalf("ReturnValue = %q, want %q", got, "empty")
+	}
+}
+
+func TestSerializeEndEvent_NonEmptyReturnValueHasNoSyntheticLineBreak(t *testing.T) {
+	end := &microflows.EndEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: "end-result"},
+			Position:    model.Point{X: 10, Y: 20},
+			Size:        model.Size{Width: 20, Height: 20},
+		},
+		ReturnValue: "$Result",
+	}
+
+	doc := serializeMicroflowObject(end)
+	if got := bsonGetKey(doc, "ReturnValue"); got != "$Result" {
+		t.Fatalf("ReturnValue = %q, want %q", got, "$Result")
+	}
+}
+
 func TestSerializeAnnotationFlow_VersionShapes(t *testing.T) {
 	af := &microflows.AnnotationFlow{
 		BaseElement:   model.BaseElement{ID: "af-1"},

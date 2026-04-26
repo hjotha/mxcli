@@ -144,7 +144,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 					// Destination: prefer the first statement's own @anchor(to: ...) if it
 					// has one; otherwise fall back to trueBranchAnchor.To.
 					flow := newHorizontalFlowWithCase(splitID, actID, "true")
-					applyUserAnchors(flow, trueBranchAnchor, branchDestinationAnchor(trueBranchAnchor, thisAnchor))
+					originAnchor, destAnchor := fb.branchAnchorsForFirstFlow(actID, trueBranchAnchor, thisAnchor)
+					applyUserAnchors(flow, originAnchor, destAnchor)
 					fb.flows = append(fb.flows, flow)
 					fb.addPendingErrorHandlerFlowForStatement(flow.OriginID, flow.DestinationID, stmt, statementsReferenceVar(s.ThenBody[i+1:], fb.errorHandlerSkipVar))
 				} else {
@@ -208,6 +209,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			fb.addPendingErrorHandlerFlowTo(mergeID)
 		}
 
+		routeThenErrorToElse := thenReturns && fb.capturePendingErrorHandler().hasSkipVar()
+
 		// Process ELSE body (below the THEN path)
 		if routePendingErrorToElse && fb.capturePendingErrorHandler().isEmpty() {
 			fb.restorePendingErrorHandler(pendingErrorForElse)
@@ -230,9 +233,10 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 					// First statement in ELSE - connect from split going down (false path).
 					// Same compositional rule as the THEN branch.
 					flow := newDownwardFlowWithCase(splitID, actID, "false")
-					applyUserAnchors(flow, falseBranchAnchor, branchDestinationAnchor(falseBranchAnchor, thisAnchor))
+					originAnchor, destAnchor := fb.branchAnchorsForFirstFlow(actID, falseBranchAnchor, thisAnchor)
+					applyUserAnchors(flow, originAnchor, destAnchor)
 					fb.flows = append(fb.flows, flow)
-					if routePendingErrorToElse {
+					if routePendingErrorToElse || routeThenErrorToElse {
 						fb.routePendingErrorHandlerToAlternative(splitID, actID)
 					}
 					fb.addPendingErrorHandlerFlowForStatement(flow.OriginID, flow.DestinationID, stmt, statementsReferenceVar(s.ElseBody[i+1:], fb.errorHandlerSkipVar))
@@ -359,7 +363,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				if lastThenID == "" {
 					// First statement in THEN - connect from split going down with "true" case
 					flow := newDownwardFlowWithCase(splitID, actID, "true")
-					applyUserAnchors(flow, trueBranchAnchor, branchDestinationAnchor(trueBranchAnchor, thisAnchor))
+					originAnchor, destAnchor := fb.branchAnchorsForFirstFlow(actID, trueBranchAnchor, thisAnchor)
+					applyUserAnchors(flow, originAnchor, destAnchor)
 					fb.flows = append(fb.flows, flow)
 					fb.addPendingErrorHandlerFlowForStatement(flow.OriginID, flow.DestinationID, stmt, statementsReferenceVar(s.ThenBody[i+1:], fb.errorHandlerSkipVar))
 				} else {
@@ -463,6 +468,13 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	}
 
 	return splitID
+}
+
+func (fb *flowBuilder) branchAnchorsForFirstFlow(actID model.ID, branchAnchor, stmtAnchor *ast.FlowAnchors) (*ast.FlowAnchors, *ast.FlowAnchors) {
+	if fb.manualLoopBackTarget != "" && actID == fb.manualLoopBackTarget {
+		return nil, nil
+	}
+	return branchAnchor, branchDestinationAnchor(branchAnchor, stmtAnchor)
 }
 
 func bodyHasEmptyCustomErrorHandler(stmts []ast.MicroflowStatement) bool {
@@ -686,7 +698,7 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 }
 
 func isManualWhileTrueCandidate(s *ast.WhileStmt) bool {
-	if s == nil || containsBreakStmt(s.Body) || (!containsContinueStmt(s.Body) && !containsTerminalStmt(s.Body)) {
+	if s == nil || containsBreakForCurrentLoop(s.Body) || (!containsContinueStmt(s.Body) && !containsTerminalStmt(s.Body)) {
 		return false
 	}
 	lit, ok := s.Condition.(*ast.LiteralExpr)
@@ -695,6 +707,33 @@ func isManualWhileTrueCandidate(s *ast.WhileStmt) bool {
 	}
 	value, ok := lit.Value.(bool)
 	return ok && value
+}
+
+func containsBreakForCurrentLoop(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.BreakStmt:
+			return true
+		case *ast.IfStmt:
+			if containsBreakForCurrentLoop(s.ThenBody) || containsBreakForCurrentLoop(s.ElseBody) {
+				return true
+			}
+		case *ast.InheritanceSplitStmt:
+			if containsBreakForCurrentLoop(s.ElseBody) {
+				return true
+			}
+			for _, c := range s.Cases {
+				if containsBreakForCurrentLoop(c.Body) {
+					return true
+				}
+			}
+		case *ast.LoopStmt, *ast.WhileStmt:
+			// A break inside a nested loop exits that nested loop, not this
+			// manual while-true back-edge.
+			continue
+		}
+	}
+	return false
 }
 
 func containsContinueStmt(stmts []ast.MicroflowStatement) bool {

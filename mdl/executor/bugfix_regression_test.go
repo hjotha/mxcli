@@ -1065,6 +1065,55 @@ func TestBuildFlowGraph_RestMappingUsedAsListForcesListResult(t *testing.T) {
 	t.Fatal("expected REST call action")
 }
 
+func TestBuildFlowGraph_RestMappingReturnedFromListMicroflowForcesListResult(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "SampleIdentity", Name: "Role"}
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "Roles",
+			Method:         "get",
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleIdentity", Name: "RolesResponse"},
+				ResultEntity: entityRef,
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "Roles"}},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeListOf, EntityRef: &entityRef}})
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.RestCallAction)
+		if !ok {
+			continue
+		}
+		mapping, ok := action.ResultHandling.(*microflows.ResultHandlingMapping)
+		if !ok {
+			t.Fatalf("result handling = %T, want *ResultHandlingMapping", action.ResultHandling)
+		}
+		if mapping.SingleObject {
+			t.Fatal("REST mapping output returned by list microflow must be emitted as list result")
+		}
+		if got := fb.varTypes["Roles"]; got != "List of SampleIdentity.Role" {
+			t.Fatalf("registered REST mapping result type = %q, want list of SampleIdentity.Role", got)
+		}
+		return
+	}
+	t.Fatal("expected REST call action")
+}
+
 func TestBuildFlowGraph_WebServiceCallCreatesRealAction(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallWebServiceStmt{

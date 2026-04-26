@@ -456,3 +456,49 @@ func TestBuilder_InheritanceSplitCastRegistersCaseType(t *testing.T) {
 	}
 	t.Fatal("expected change action")
 }
+
+func TestBuilder_InheritanceSplitPrescansMicroflowCallOutputDeclarations(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "Context",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "SampleTypes", Name: "TypedContext"},
+					Body: []ast.MicroflowStatement{
+						&ast.CallMicroflowStmt{
+							OutputVariable: "Items",
+							MicroflowName:  ast.QualifiedName{Module: "SampleItems", Name: "LoadItems"},
+						},
+					},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.MicroflowCallAction)
+		if !ok || action.ResultVariableName != "Items" {
+			continue
+		}
+		if !action.UseReturnVariable {
+			t.Fatal("microflow call output inside inheritance split must declare its return variable")
+		}
+		return
+	}
+	t.Fatal("expected microflow call inside inheritance split")
+}
