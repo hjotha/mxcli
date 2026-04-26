@@ -466,13 +466,10 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 		}
 
 	case *microflows.EndEvent:
-		// Pristine EndEvents always carry `ReturnValue` (empty string for void
-		// microflows; expression + "\n" when a value is returned). Omitting it
-		// diverges from the pristine key set on Mx 9 roundtrips.
-		returnValue := ""
-		if o.ReturnValue != "" {
-			returnValue = o.ReturnValue + "\n"
-		}
+		// Pristine Mx 9 EndEvents carry `ReturnValue` but not a synthetic trailing
+		// line break. Adding one can make Studio Pro reject list-return EndEvents
+		// with CE0117 even though mxcli's parser accepts the expression.
+		returnValue := o.ReturnValue
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
 			{Key: "$Type", Value: "Microflows$EndEvent"},
