@@ -141,11 +141,14 @@ func emitAnchorAnnotation(
 		return
 	}
 	var parts []string
-	if from != "" {
+	if from != "" && from != "right" {
 		parts = append(parts, "from: "+from)
 	}
-	if to != "" {
+	if to != "" && to != "left" {
 		parts = append(parts, "to: "+to)
+	}
+	if len(parts) == 0 {
+		return
 	}
 	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
 }
@@ -189,13 +192,13 @@ func emitSplitAnchorAnnotation(
 	}
 
 	var parts []string
-	if inTo != "" {
+	if inTo != "" && inTo != "left" {
 		parts = append(parts, "to: "+inTo)
 	}
-	if p := branchAnchorFragment("true", trueFrom, trueTo); p != "" {
+	if p := branchAnchorFragmentWithDefaults("true", trueFrom, trueTo, "right", "left"); p != "" {
 		parts = append(parts, p)
 	}
-	if p := branchAnchorFragment("false", falseFrom, falseTo); p != "" {
+	if p := branchAnchorFragmentWithDefaults("false", falseFrom, falseTo, "bottom", "top"); p != "" {
 		parts = append(parts, p)
 	}
 	if len(parts) == 0 {
@@ -218,6 +221,16 @@ func branchAnchorFragment(label, from, to string) string {
 		inner = append(inner, "to: "+to)
 	}
 	return fmt.Sprintf("%s: (%s)", label, strings.Join(inner, ", "))
+}
+
+func branchAnchorFragmentWithDefaults(label, from, to, defaultFrom, defaultTo string) string {
+	if from == defaultFrom {
+		from = ""
+	}
+	if to == defaultTo {
+		to = ""
+	}
+	return branchAnchorFragment(label, from, to)
 }
 
 // emitLoopAnchorAnnotation emits the loop form of @anchor for a LoopedActivity.
