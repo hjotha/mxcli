@@ -979,6 +979,46 @@ func TestTraverseFlow_CustomErrorHandlerWithIfElse(t *testing.T) {
 	assertContains(t, joined, "};")
 }
 
+func TestTraverseFlow_CustomErrorHandlerSharedContinuationEmitsEmptyBlock(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("commit"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("commit")},
+			Action: &microflows.CommitObjectsAction{
+				CommitVariable:    "Order",
+				ErrorHandlingType: microflows.ErrorHandlingTypeCustomWithoutRollback,
+			},
+		},
+		mkID("shared_tail"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared_tail")},
+			Action: &microflows.LogMessageAction{
+				LogLevel:        "Info",
+				LogNodeName:     "'App'",
+				MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared tail"}},
+			},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"):       {mkFlow("start", "commit")},
+		mkID("commit"):      {mkFlow("commit", "shared_tail"), mkErrorFlow("commit", "shared_tail")},
+		mkID("shared_tail"): {mkFlow("shared_tail", "end")},
+	}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	joined := strings.Join(lines, "\n")
+	assertContains(t, joined, "commit $Order on error without rollback { };")
+	if got := strings.Count(joined, "shared tail"); got != 1 {
+		t.Fatalf("shared continuation must be described once, got %d occurrences:\n%s", got, joined)
+	}
+}
+
 func TestCollectErrorHandlerStatements_EmptyID(t *testing.T) {
 	e := newTestExecutor()
 	stmts := e.collectErrorHandlerStatements("", nil, nil, nil, nil)

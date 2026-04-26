@@ -5,6 +5,7 @@ package executor
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -64,6 +65,8 @@ type flowBuilder struct {
 	callOutputDeclarations   map[*ast.CallMicroflowStmt]bool
 	listInputVariables       map[string]bool
 	objectInputVariables     map[string]bool
+	variableAliases          map[string]string
+	outputVarPositions       map[string]model.Point
 }
 
 // addError records a validation error during flow building.
@@ -149,6 +152,69 @@ func (fb *flowBuilder) registerResultVariableType(varName string, dt microflows.
 	if fb.declaredVars != nil {
 		fb.declaredVars[varName] = dt.GetTypeName()
 	}
+}
+
+func (fb *flowBuilder) resolveVariableName(varName string) string {
+	if varName == "" || fb.variableAliases == nil {
+		return varName
+	}
+	if alias := fb.variableAliases[varName]; alias != "" {
+		return alias
+	}
+	return varName
+}
+
+func (fb *flowBuilder) resolveVariablePath(path string) string {
+	if before, after, ok := strings.Cut(path, "/"); ok {
+		return fb.resolveVariableName(before) + "/" + after
+	}
+	return fb.resolveVariableName(path)
+}
+
+func (fb *flowBuilder) resolveSourceVariables(source string) string {
+	if source == "" || fb.variableAliases == nil {
+		return source
+	}
+	resolved := source
+	for original, alias := range fb.variableAliases {
+		if alias == "" {
+			continue
+		}
+		rx := regexp.MustCompile(`\$` + regexp.QuoteMeta(original) + `\b`)
+		resolved = rx.ReplaceAllStringFunc(resolved, func(string) string {
+			return "$" + alias
+		})
+	}
+	return resolved
+}
+
+func (fb *flowBuilder) uniqueImplicitOutputVariable(varName string) string {
+	if varName == "" {
+		return ""
+	}
+	if fb.outputVarPositions == nil {
+		fb.outputVarPositions = make(map[string]model.Point)
+	}
+	position := model.Point{X: fb.posX, Y: fb.posY}
+	if previous, ok := fb.outputVarPositions[varName]; ok &&
+		previous.X == position.X && previous.Y == position.Y &&
+		fb.isVariableDeclared(varName) {
+		if fb.variableAliases == nil {
+			fb.variableAliases = make(map[string]string)
+		}
+		for i := 2; ; i++ {
+			candidate := fmt.Sprintf("%s_%d", varName, i)
+			if !fb.isVariableDeclared(candidate) {
+				fb.variableAliases[varName] = candidate
+				return candidate
+			}
+		}
+	}
+	if fb.variableAliases != nil {
+		delete(fb.variableAliases, varName)
+	}
+	fb.outputVarPositions[varName] = position
+	return varName
 }
 
 // lookupMicroflowReturnType resolves the return type of a called microflow by
@@ -253,10 +319,12 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 	}
 
 	switch e := expr.(type) {
+	case *ast.VariableExpr:
+		return &ast.VariableExpr{Name: fb.resolveVariableName(e.Name)}
 	case *ast.AttributePathExpr:
 		resolved := fb.resolvePathSegments(e.Path)
 		return &ast.AttributePathExpr{
-			Variable: e.Variable,
+			Variable: fb.resolveVariableName(e.Variable),
 			Path:     resolved,
 			Segments: e.Segments,
 		}
@@ -290,7 +358,7 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 		}
 	case *ast.SourceExpr:
 		if e.Source != "" {
-			return e
+			return &ast.SourceExpr{Source: fb.resolveSourceVariables(e.Source)}
 		}
 		return &ast.SourceExpr{
 			Expression: fb.resolveAssociationPaths(e.Expression),

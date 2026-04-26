@@ -596,6 +596,8 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		hierarchy:              fb.hierarchy,    // Share hierarchy
 		restServices:           fb.restServices, // Share REST services for parameter classification
 		callOutputDeclarations: fb.callOutputDeclarations,
+		variableAliases:        fb.variableAliases,
+		outputVarPositions:     fb.outputVarPositions,
 	}
 
 	// Process loop body statements and connect them with flows.
@@ -891,6 +893,8 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 		hierarchy:              fb.hierarchy,
 		restServices:           fb.restServices,
 		callOutputDeclarations: fb.callOutputDeclarations,
+		variableAliases:        fb.variableAliases,
+		outputVarPositions:     fb.outputVarPositions,
 	}
 
 	var lastBodyID model.ID

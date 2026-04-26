@@ -276,6 +276,15 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHand
 				state.returnValue = ""
 				return state
 			}
+			if _, isRetrieve := stmt.(*ast.RetrieveStmt); isRetrieve && state.source != "" && state.tailFrom != "" && !state.tailIsSource {
+				fb.addPendingErrorHandlerLoopBackFlowForState(state)
+				state.source = ""
+				state.tailFrom = ""
+				state.skipVar = ""
+				state.tailIsSource = false
+				state.returnValue = ""
+				return state
+			}
 			if _, ok := stmt.(*ast.ReturnStmt); ok {
 				return state
 			}
@@ -416,6 +425,28 @@ func (fb *flowBuilder) addErrorHandlerRejoinFlowForState(state pendingErrorHandl
 	fb.flows = append(fb.flows, mergeFlow)
 }
 
+func (fb *flowBuilder) addPendingErrorHandlerLoopBackFlowForState(state pendingErrorHandlerState) {
+	if state.source == "" || state.tailFrom == "" {
+		return
+	}
+	incomingOriginID := model.ID("")
+	for _, flow := range fb.flows {
+		if !flow.IsErrorHandler && flow.DestinationID == state.source {
+			incomingOriginID = flow.OriginID
+			break
+		}
+	}
+	if incomingOriginID != "" {
+		fb.addErrorHandlerRejoinFlowForState(state, incomingOriginID, state.source)
+		return
+	}
+	if state.tailIsSource {
+		fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, state.source))
+	} else {
+		fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, state.source))
+	}
+}
+
 func (fb *flowBuilder) findExistingRejoinMerge(originID, destinationID model.ID) model.ID {
 	for _, flow := range fb.flows {
 		if flow.OriginID != originID || flow.IsErrorHandler {
@@ -539,6 +570,11 @@ func statementVarRefs(stmt ast.MicroflowStatement) []string {
 		for _, change := range s.Changes {
 			refs = append(refs, exprVarRefs(change.Value)...)
 		}
+	case *ast.RetrieveStmt:
+		if s.StartVariable != "" {
+			refs = append(refs, s.StartVariable)
+		}
+		refs = append(refs, exprVarRefs(s.Where)...)
 	case *ast.CallMicroflowStmt:
 		for _, arg := range s.Arguments {
 			refs = append(refs, exprVarRefs(arg.Value)...)
@@ -645,9 +681,14 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 		restServices:           fb.restServices,
 		returnScopeBaseline:    copyVarTypes(fb.varTypes),
 		callOutputDeclarations: fb.callOutputDeclarations,
+		variableAliases:        fb.variableAliases,
+		outputVarPositions:     fb.outputVarPositions,
 	}
 
 	var lastErrID model.ID
+	var prevErrAnchor *ast.FlowAnchors
+	var pendingErrCase string
+	var pendingErrAnchor *ast.FlowAnchors
 	for i, stmt := range errorBody {
 		thisAnchor := stmtOwnAnchor(stmt)
 		actID := errBuilder.addStatement(stmt)
@@ -661,7 +702,18 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 				}
 				fb.flows = append(fb.flows, flow)
 			} else {
-				flow := newHorizontalFlow(lastErrID, actID)
+				var flow *microflows.SequenceFlow
+				originAnchor := prevErrAnchor
+				destAnchor := thisAnchor
+				if pendingErrCase != "" {
+					flow = newHorizontalFlowWithCase(lastErrID, actID, pendingErrCase)
+					originAnchor, destAnchor = pendingFlowAnchors(prevErrAnchor, pendingErrAnchor, thisAnchor)
+					pendingErrCase = ""
+					pendingErrAnchor = nil
+				} else {
+					flow = newHorizontalFlow(lastErrID, actID)
+				}
+				applyUserAnchors(flow, originAnchor, destAnchor)
 				if errBuilder.isShowMessageActivity(lastErrID) && errBuilder.isEndEvent(actID) {
 					flow.OriginConnectionIndex = AnchorTop
 					flow.DestinationConnectionIndex = AnchorBottom
@@ -669,9 +721,14 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 				errBuilder.flows = append(errBuilder.flows, flow)
 				errBuilder.addPendingErrorHandlerFlowForStatement(lastErrID, actID, stmt, statementsReferenceVar(errorBody[i+1:], errBuilder.errorHandlerSkipVar))
 			}
+			prevErrAnchor = thisAnchor
 			if errBuilder.nextConnectionPoint != "" {
 				lastErrID = errBuilder.nextConnectionPoint
 				errBuilder.nextConnectionPoint = ""
+				pendingErrCase = errBuilder.nextFlowCase
+				errBuilder.nextFlowCase = ""
+				pendingErrAnchor = errBuilder.nextFlowAnchor
+				errBuilder.nextFlowAnchor = nil
 			} else {
 				lastErrID = actID
 			}

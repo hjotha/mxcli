@@ -431,18 +431,23 @@ func appendFormattedStatement(
 			stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
 			*lines = append(*lines, indentStr+stmtWithoutSemi+suffix+" { };")
 		} else if errorHandlerFlow != nil && hasCustomErrorHandler(errType) {
-			errStmts := collectErrorHandlerStatements(
-				ctx,
-				errorHandlerFlow.DestinationID,
-				activityMap, flowsByOrigin, entityNames, microflowNames,
-			)
-
 			stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
 
 			errorSuffix := suffix
 			if errorSuffix == "" {
 				errorSuffix = " on error without rollback"
 			}
+
+			if hasNormalIncomingToDestination(flowsByOrigin, errorHandlerFlow.DestinationID) {
+				*lines = append(*lines, indentStr+stmtWithoutSemi+errorSuffix+" { };")
+				return
+			}
+
+			errStmts := collectErrorHandlerStatements(
+				ctx,
+				errorHandlerFlow.DestinationID,
+				activityMap, flowsByOrigin, entityNames, microflowNames,
+			)
 
 			if len(errStmts) == 0 {
 				*lines = append(*lines, indentStr+stmtWithoutSemi+errorSuffix+" { };")
@@ -1355,6 +1360,20 @@ func hasNormalIncomingFromOtherOrigin(
 	return false
 }
 
+func hasNormalIncomingToDestination(
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	destinationID model.ID,
+) bool {
+	for _, flows := range flowsByOrigin {
+		for _, flow := range findNormalFlows(flows) {
+			if flow.DestinationID == destinationID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func collectStructuredStatements(
 	ctx *ExecContext,
 	currentID model.ID,
@@ -1506,6 +1525,7 @@ func appendStructuredCollectedStatement(
 		if errorHandlerFlow != nil &&
 			hasCustomErrorHandler(errType) &&
 			(visited[errorHandlerFlow.DestinationID] ||
+				hasNormalIncomingToDestination(flowsByOrigin, errorHandlerFlow.DestinationID) ||
 				hasNormalIncomingFromOtherOrigin(flowsByOrigin, errorHandlerFlow.DestinationID, obj.GetID())) {
 			stmtWithoutSemi := strings.TrimSuffix(strings.TrimSpace(stmt), ";")
 			errorSuffix := formatErrorHandlingSuffix(errType)

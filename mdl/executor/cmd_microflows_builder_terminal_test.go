@@ -1191,6 +1191,350 @@ func TestBuildFlowGraph_CustomErrorHandlerTerminatesWhenFinalReturnUsesFailedOut
 	}
 }
 
+func TestBuildFlowGraph_CustomErrorHandlerRetriesSourceWhenOnlyFailedOutputTailRemains(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "SampleApi", Name: "ResponseRoot"}
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "ResponseRoot",
+			Method:         ast.HttpMethodGet,
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.test"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleApi", Name: "ImportResponse"},
+				ResultEntity: entityRef,
+			},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "retry"}},
+					&ast.MfSetStmt{
+						Target: "RetryCount",
+						Value: &ast.BinaryExpr{
+							Left:     &ast.VariableExpr{Name: "RetryCount"},
+							Operator: "+",
+							Right:    &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: 1},
+						},
+					},
+				},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ResponseRoot"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	var restID model.ID
+	var retryTailID model.ID
+	var failedOutputEndID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch action := o.Action.(type) {
+			case *microflows.RestCallAction:
+				if action.OutputVariable == "ResponseRoot" {
+					restID = o.ID
+				}
+			case *microflows.ChangeVariableAction:
+				if action.VariableName == "RetryCount" {
+					retryTailID = o.ID
+				}
+			}
+		case *microflows.EndEvent:
+			if strings.TrimSpace(o.ReturnValue) == "$ResponseRoot" {
+				failedOutputEndID = o.ID
+			}
+		}
+	}
+	if restID == "" || retryTailID == "" || failedOutputEndID == "" {
+		t.Fatalf("expected REST source, retry tail, and success return; got rest=%q retryTail=%q end=%q", restID, retryTailID, failedOutputEndID)
+	}
+
+	var retryLoopMergeID model.ID
+	for _, flow := range oc.Flows {
+		if flow.OriginID == retryTailID && flow.DestinationID == failedOutputEndID {
+			t.Fatal("retry handler must not return the failed REST output directly")
+		}
+		if flow.OriginID == retryTailID && !flow.IsErrorHandler {
+			if _, ok := findMicroflowObjectByID(oc.Objects, flow.DestinationID).(*microflows.ExclusiveMerge); ok {
+				retryLoopMergeID = flow.DestinationID
+			}
+		}
+	}
+	if retryLoopMergeID == "" {
+		t.Fatal("retry handler should loop back through a merge when no safe alternate return value exists")
+	}
+	if !flowPathExists(oc.Flows, retryLoopMergeID, restID) {
+		t.Fatal("retry merge must flow back to the source activity")
+	}
+}
+
+func TestBuildFlowGraph_CustomErrorHandlerPreservesDeferredFalseCaseBetweenHandlerStatements(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "SampleApi", Name: "ResponseRoot"}
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "ResponseRoot",
+			Method:         ast.HttpMethodGet,
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.test"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleApi", Name: "ImportResponse"},
+				ResultEntity: entityRef,
+			},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.IfStmt{
+						Condition: &ast.VariableExpr{Name: "WasNotFound"},
+						ThenBody:  []ast.MicroflowStatement{&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty}}},
+					},
+					&ast.IfStmt{
+						Condition: &ast.VariableExpr{Name: "ShouldRetry"},
+						ThenBody: []ast.MicroflowStatement{
+							&ast.MfSetStmt{
+								Target: "RetryCount",
+								Value: &ast.BinaryExpr{
+									Left:     &ast.VariableExpr{Name: "RetryCount"},
+									Operator: "+",
+									Right:    &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: 1},
+								},
+							},
+						},
+						ElseBody: []ast.MicroflowStatement{&ast.RaiseErrorStmt{}},
+						HasElse:  true,
+					},
+				},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ResponseRoot"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	var notFoundSplitID model.ID
+	var retrySplitID model.ID
+	for _, obj := range oc.Objects {
+		split, ok := obj.(*microflows.ExclusiveSplit)
+		if !ok {
+			continue
+		}
+		cond, ok := split.SplitCondition.(*microflows.ExpressionSplitCondition)
+		if !ok {
+			continue
+		}
+		switch cond.Expression {
+		case "$WasNotFound":
+			notFoundSplitID = split.ID
+		case "$ShouldRetry":
+			retrySplitID = split.ID
+		}
+	}
+	if notFoundSplitID == "" || retrySplitID == "" {
+		t.Fatalf("expected both handler splits, got notFound=%q retry=%q", notFoundSplitID, retrySplitID)
+	}
+
+	for _, flow := range oc.Flows {
+		if flow.OriginID != notFoundSplitID || flow.DestinationID != retrySplitID {
+			continue
+		}
+		if enumCase, ok := flow.CaseValue.(microflows.EnumerationCase); ok && enumCase.Value == "false" {
+			return
+		}
+		t.Fatalf("deferred handler flow must carry CaseValue=false, got %#v", flow.CaseValue)
+	}
+	t.Fatal("expected false branch from first handler IF to the retry IF")
+}
+
+func TestBuildFlowGraph_CustomErrorHandlerDoesNotRejoinBeforeAssociationRetrieveUsingFailedOutput(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "SampleApi", Name: "ResponseRoot"}
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "ResponseRoot",
+			Method:         ast.HttpMethodGet,
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.test"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleApi", Name: "ImportResponse"},
+				ResultEntity: entityRef,
+			},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "failed"}},
+					&ast.IfStmt{
+						Condition: &ast.VariableExpr{Name: "ShouldRetry"},
+						ThenBody: []ast.MicroflowStatement{
+							&ast.MfSetStmt{
+								Target: "RetryCount",
+								Value: &ast.BinaryExpr{
+									Left:     &ast.VariableExpr{Name: "RetryCount"},
+									Operator: "+",
+									Right:    &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: 1},
+								},
+							},
+						},
+						ElseBody: []ast.MicroflowStatement{&ast.RaiseErrorStmt{}},
+						HasElse:  true,
+					},
+				},
+			},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "success"}},
+		&ast.RetrieveStmt{
+			Variable:      "ResponseItems",
+			StartVariable: "ResponseRoot",
+			Source:        ast.QualifiedName{Module: "SampleApi", Name: "ResponseRoot_Items"},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ResponseItems"}},
+	}
+
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeListOf, EntityRef: &entityRef}})
+
+	var restID model.ID
+	var retryTailID model.ID
+	var retrieveID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.RestCallAction:
+			if action.OutputVariable == "ResponseRoot" {
+				restID = activity.ID
+			}
+		case *microflows.ChangeVariableAction:
+			if action.VariableName == "RetryCount" {
+				retryTailID = activity.ID
+			}
+		case *microflows.RetrieveAction:
+			if source, ok := action.Source.(*microflows.AssociationRetrieveSource); ok && source.StartVariable == "ResponseRoot" {
+				retrieveID = activity.ID
+			}
+		}
+	}
+	if restID == "" || retryTailID == "" || retrieveID == "" {
+		t.Fatalf("expected REST source, retry tail, and output-dependent retrieve; got rest=%q retryTail=%q retrieve=%q", restID, retryTailID, retrieveID)
+	}
+
+	var retryLoopMergeID model.ID
+	for _, flow := range oc.Flows {
+		if flow.OriginID != retryTailID || flow.IsErrorHandler {
+			continue
+		}
+		if flow.DestinationID == retrieveID {
+			t.Fatal("retry handler must not rejoin directly before a retrieve that uses the failed output")
+		}
+		if _, ok := findMicroflowObjectByID(oc.Objects, flow.DestinationID).(*microflows.ExclusiveMerge); ok {
+			for _, mergeFlow := range oc.Flows {
+				if mergeFlow.OriginID == flow.DestinationID && mergeFlow.DestinationID == retrieveID {
+					t.Fatal("retry handler must not rejoin through a merge immediately before a retrieve that uses the failed output")
+				}
+				if mergeFlow.OriginID == flow.DestinationID && mergeFlow.DestinationID == restID {
+					retryLoopMergeID = flow.DestinationID
+				}
+			}
+		}
+	}
+	if retryLoopMergeID == "" {
+		t.Fatal("retry handler should loop back through a merge before the source activity")
+	}
+}
+
+func TestBuildFlowGraph_DuplicateImplicitOutputAtSamePositionGetsLocalAlias(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "Sample", Name: "Item"}
+	sharedPosition := &ast.ActivityAnnotations{Position: &ast.Position{X: 400, Y: 100}}
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "UseFirstPath"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.RetrieveStmt{
+					Variable:    "SelectedItem",
+					Source:      entityRef,
+					Limit:       "1",
+					Annotations: sharedPosition,
+				},
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "SelectedItem"}},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.RetrieveStmt{
+					Variable:    "SelectedItem",
+					Source:      entityRef,
+					Limit:       "1",
+					Annotations: sharedPosition,
+				},
+				&ast.ChangeObjectStmt{
+					Variable: "SelectedItem",
+					Changes: []ast.ChangeItem{{
+						Attribute: "Name",
+						Value:     &ast.SourceExpr{Source: "$SelectedItem/Name"},
+					}},
+				},
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "SelectedItem"}},
+			},
+			HasElse: true,
+		},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{"UseFirstPath": "Boolean"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	retrieveOutputs := map[string]bool{}
+	returnValues := map[string]bool{}
+	var aliasedChangeValue string
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch action := o.Action.(type) {
+			case *microflows.RetrieveAction:
+				retrieveOutputs[action.OutputVariable] = true
+			case *microflows.ChangeObjectAction:
+				if action.ChangeVariable == "SelectedItem_2" && len(action.Changes) == 1 {
+					aliasedChangeValue = action.Changes[0].Value
+				}
+			}
+		case *microflows.EndEvent:
+			returnValues[strings.TrimSpace(o.ReturnValue)] = true
+		}
+	}
+	if !retrieveOutputs["SelectedItem"] || !retrieveOutputs["SelectedItem_2"] {
+		t.Fatalf("duplicate implicit output should be aliased, got retrieve outputs %#v", retrieveOutputs)
+	}
+	if !returnValues["$SelectedItem"] || !returnValues["$SelectedItem_2"] {
+		t.Fatalf("aliased branch references should follow the duplicate output, got returns %#v", returnValues)
+	}
+	if aliasedChangeValue != "$SelectedItem_2/Name" {
+		t.Fatalf("raw source expressions should follow the duplicate output alias, got %q", aliasedChangeValue)
+	}
+}
+
 func TestBuildFlowGraph_NestedCustomErrorHandlerInsideErrorBodyKeepsTailFlow(t *testing.T) {
 	entityRef := ast.QualifiedName{Module: "SampleApi", Name: "ResponseRoot"}
 	body := []ast.MicroflowStatement{

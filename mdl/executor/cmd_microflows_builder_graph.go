@@ -211,6 +211,15 @@ func (fb *flowBuilder) terminatePendingErrorHandlersAtEnd(returns *ast.Microflow
 			state.returnValue = ""
 		}
 		if state.tailFrom != "" {
+			if state.returnValue == "" && state.skipVar != "" && state.source != "" && !state.tailIsSource {
+				fb.addPendingErrorHandlerLoopBackFlowForState(state)
+				state.source = ""
+				state.tailFrom = ""
+				state.skipVar = ""
+				state.tailIsSource = false
+				state.returnValue = ""
+				return state
+			}
 			if state.returnValue == "" && returns != nil && returns.Type.Kind != ast.TypeVoid && fb.lastReturnEndID != "" {
 				if state.tailIsSource {
 					fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, fb.lastReturnEndID))
