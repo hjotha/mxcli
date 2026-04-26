@@ -654,6 +654,60 @@ func TestTraverseFlow_NestedTerminalGuardBranchSuppressesEmptyOuterElse(t *testi
 	}
 }
 
+func TestTraverseFlow_LoopBodyUsesNestedAnnotationFlows(t *testing.T) {
+	e := newTestExecutor()
+
+	split := &microflows.ExclusiveSplit{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: mkID("split")},
+			Position:    model.Point{X: 100, Y: 100},
+		},
+		SplitCondition: &microflows.ExpressionSplitCondition{Expression: "$Item/IsActive"},
+	}
+	note := &microflows.Annotation{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: mkID("note")},
+			Position:    model.Point{X: 1000, Y: 100},
+		},
+		Caption: "nested split note",
+	}
+	loopObjects := &microflows.MicroflowObjectCollection{
+		Objects: []microflows.MicroflowObject{split, note},
+		AnnotationFlows: []*microflows.AnnotationFlow{
+			{
+				BaseElement:   model.BaseElement{ID: mkID("note-flow")},
+				OriginID:      mkID("note"),
+				DestinationID: mkID("split"),
+			},
+		},
+	}
+	annotationsByTarget := mergeAnnotationsByTarget(
+		buildAnnotationsByTarget(&microflows.MicroflowObjectCollection{}),
+		buildAnnotationsByTarget(loopObjects),
+	)
+
+	var lines []string
+	e.traverseFlow(
+		mkID("split"),
+		map[model.ID]microflows.MicroflowObject{mkID("split"): split},
+		nil,
+		nil,
+		make(map[model.ID]bool),
+		nil,
+		nil,
+		&lines,
+		0,
+		nil,
+		0,
+		annotationsByTarget,
+	)
+
+	out := strings.Join(lines, "\n")
+	if !strings.Contains(out, "@annotation 'nested split note'") {
+		t.Fatalf("expected nested loop annotation in output:\n%s", out)
+	}
+}
+
 // =============================================================================
 // collectErrorHandlerStatements
 // =============================================================================

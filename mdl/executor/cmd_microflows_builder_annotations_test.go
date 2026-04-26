@@ -221,6 +221,53 @@ func TestIfAnnotationStaysWithCorrectSplit(t *testing.T) {
 	}
 }
 
+func TestLoopBodyIfAnnotationPromotedToParentFlows(t *testing.T) {
+	nestedIf := &ast.IfStmt{
+		Condition: &ast.VariableExpr{Name: "IsActive"},
+		ThenBody: []ast.MicroflowStatement{
+			&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "active"}},
+		},
+		Annotations: &ast.ActivityAnnotations{
+			AnnotationText: "Nested decision note",
+		},
+	}
+	loop := &ast.LoopStmt{
+		LoopVariable: "Item",
+		ListVariable: "Items",
+		Body:         []ast.MicroflowStatement{nestedIf},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"Items": "List of Synthetic.Item", "IsActive": "Boolean"},
+		declaredVars: map[string]string{"Items": "List of Synthetic.Item", "IsActive": "Boolean"},
+	}
+	oc := fb.buildFlowGraph([]ast.MicroflowStatement{loop}, nil)
+
+	var splitID model.ID
+	for _, obj := range oc.Objects {
+		loopObj, ok := obj.(*microflows.LoopedActivity)
+		if !ok || loopObj.ObjectCollection == nil {
+			continue
+		}
+		for _, nested := range loopObj.ObjectCollection.Objects {
+			if split, ok := nested.(*microflows.ExclusiveSplit); ok {
+				splitID = split.ID
+			}
+		}
+	}
+	if splitID == "" {
+		t.Fatal("expected nested ExclusiveSplit inside loop body")
+	}
+
+	annotations := buildAnnotationsByTarget(oc)
+	if got := annotations[splitID]; len(got) != 1 || got[0] != "Nested decision note" {
+		t.Fatalf("annotations for nested split = %#v, want Nested decision note", got)
+	}
+}
+
 // TestLoopCaptionPreserved covers the loop caption case — previously untested
 // per PR review. The fix for the outer-IF caption contamination bug also applied
 // the same snapshot/restore pattern to addLoopStatement and addWhileStatement.
