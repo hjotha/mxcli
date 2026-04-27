@@ -440,6 +440,10 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addCreateVariableAction(s)
 	case *ast.EnumSplitStmt:
 		return fb.addEnumSplit(s)
+	case *ast.InheritanceSplitStmt:
+		return fb.addInheritanceSplit(s)
+	case *ast.CastObjectStmt:
+		return fb.addCastAction(s)
 	case *ast.MfSetStmt:
 		return fb.addChangeVariableAction(s)
 	case *ast.ReturnStmt:
