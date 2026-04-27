@@ -202,8 +202,6 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$MicroflowCallAction"},
 			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
-			{Key: "ResultVariableName", Value: a.ResultVariableName},
-			{Key: "UseReturnVariable", Value: a.UseReturnVariable},
 		}
 		// Serialize nested MicroflowCall structure
 		if a.MicroflowCall != nil {
@@ -211,7 +209,6 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 				{Key: "$ID", Value: idToBsonBinary(string(a.MicroflowCall.ID))},
 				{Key: "$Type", Value: "Microflows$MicroflowCall"},
 				{Key: "Microflow", Value: a.MicroflowCall.Microflow},
-				{Key: "QueueSettings", Value: nil},
 			}
 			// Serialize parameter mappings within MicroflowCall
 			if len(a.MicroflowCall.ParameterMappings) > 0 {
@@ -221,8 +218,8 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 					mapping := bson.D{
 						{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
 						{Key: "$Type", Value: "Microflows$MicroflowCallParameterMapping"},
-						{Key: "Parameter", Value: pm.Parameter},
 						{Key: "Argument", Value: pm.Argument},
+						{Key: "Parameter", Value: pm.Parameter},
 					}
 					mappings = append(mappings, mapping)
 				}
@@ -230,8 +227,13 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			} else {
 				mfCall = append(mfCall, bson.E{Key: "ParameterMappings", Value: bson.A{int32(2)}}) // Empty array with marker
 			}
+			mfCall = append(mfCall, bson.E{Key: "QueueSettings", Value: nil})
 			doc = append(doc, bson.E{Key: "MicroflowCall", Value: mfCall})
 		}
+		doc = append(doc,
+			bson.E{Key: "ResultVariableName", Value: a.ResultVariableName},
+			bson.E{Key: "UseReturnVariable", Value: a.UseReturnVariable},
+		)
 		return doc
 
 	case *microflows.JavaActionCallAction:
