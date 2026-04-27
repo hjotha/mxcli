@@ -1012,7 +1012,8 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 		SingleObject:   true,
 	}
 
-	// Determine single vs list and result entity from the import mapping
+	// Determine single vs list and result entity from the import mapping.
+	resultEntityQN := ""
 	if fb.backend != nil {
 		if im, err := fb.backend.GetImportMappingByQualifiedName(s.Mapping.Module, s.Mapping.Name); err == nil {
 			if im.JsonStructure != "" {
@@ -1026,7 +1027,8 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 				}
 			}
 			if len(im.Elements) > 0 && im.Elements[0].Entity != "" {
-				resultHandling.ResultEntityID = model.ID(im.Elements[0].Entity)
+				resultEntityQN = im.Elements[0].Entity
+				resultHandling.ResultEntityID = model.ID(resultEntityQN)
 			}
 		}
 	}
@@ -1047,6 +1049,13 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
+	if s.OutputVariable != "" && resultEntityQN != "" && fb.varTypes != nil {
+		if resultHandling.SingleObject {
+			fb.varTypes[s.OutputVariable] = resultEntityQN
+		} else {
+			fb.varTypes[s.OutputVariable] = "List of " + resultEntityQN
+		}
+	}
 
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
