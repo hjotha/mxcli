@@ -65,9 +65,9 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		}
 		// ErrorHandlingType is required (default to Rollback)
 		doc = append(doc, bson.E{Key: "ErrorHandlingType", Value: "Rollback"})
-		// Serialize Items (ChangeActionItem) for InitialMembers
-		// IMPORTANT: Mendix BSON arrays include the count as the first element
-		items := bson.A{int32(len(a.InitialMembers))} // Start with count
+		// Serialize Items (ChangeActionItem) for InitialMembers. Mendix stores
+		// this list with storage-list marker 2, not with the item count.
+		items := bson.A{int32(2)}
 		for _, change := range a.InitialMembers {
 			item := bson.D{
 				{Key: "$ID", Value: idToBsonBinary(string(change.ID))},
@@ -99,10 +99,11 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$Type", Value: "Microflows$ChangeAction"}, // storageName differs from qualifiedName
 			{Key: "ChangeVariableName", Value: a.ChangeVariable},
 			{Key: "Commit", Value: string(a.Commit)},
+			{Key: "ErrorHandlingType", Value: "Rollback"},
 		}
-		// Serialize Items (ChangeActionItem)
-		// IMPORTANT: Mendix BSON arrays include the count as the first element
-		items := bson.A{int32(len(a.Changes))} // Start with count
+		// Serialize Items (ChangeActionItem). Mendix stores this list with
+		// storage-list marker 2, not with the item count.
+		items := bson.A{int32(2)}
 		for _, change := range a.Changes {
 			item := bson.D{
 				{Key: "$ID", Value: idToBsonBinary(string(change.ID))},
