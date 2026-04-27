@@ -42,6 +42,10 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 	// Check each statement type
 	if decl := mfCtx.DeclareStatement(); decl != nil {
 		stmt = buildDeclareStatement(decl)
+	} else if split := mfCtx.InheritanceSplitStatement(); split != nil {
+		stmt = buildInheritanceSplitStatement(split)
+	} else if cast := mfCtx.CastObjectStatement(); cast != nil {
+		stmt = buildCastObjectStatement(cast)
 	} else if set := mfCtx.SetStatement(); set != nil {
 		stmt = buildSetStatement(set)
 	} else if createList := mfCtx.CreateListStatement(); createList != nil {
@@ -415,6 +419,10 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		s.Annotations = ann
+	case *ast.InheritanceSplitStmt:
+		s.Annotations = ann
+	case *ast.CastObjectStmt:
+		s.Annotations = ann
 	case *ast.MfSetStmt:
 		s.Annotations = ann
 	case *ast.ReturnStmt:
@@ -533,6 +541,48 @@ func buildDeclareStatement(ctx parser.IDeclareStatementContext) *ast.DeclareStmt
 		stmt.InitialValue = buildExpression(expr)
 	}
 
+	return stmt
+}
+
+func buildInheritanceSplitStatement(ctx parser.IInheritanceSplitStatementContext) *ast.InheritanceSplitStmt {
+	if ctx == nil {
+		return nil
+	}
+	splitCtx := ctx.(*parser.InheritanceSplitStatementContext)
+	stmt := &ast.InheritanceSplitStmt{}
+	if v := splitCtx.VARIABLE(); v != nil {
+		stmt.Variable = strings.TrimPrefix(v.GetText(), "$")
+	}
+	for _, caseCtx := range splitCtx.AllInheritanceSplitCase() {
+		c := caseCtx.(*parser.InheritanceSplitCaseContext)
+		stmt.Cases = append(stmt.Cases, ast.InheritanceSplitCase{
+			Entity: buildQualifiedName(c.QualifiedName()),
+			Body:   buildMicroflowBody(c.MicroflowBody()),
+		})
+	}
+	if splitCtx.ELSE() != nil {
+		stmt.ElseBody = buildMicroflowBody(splitCtx.MicroflowBody())
+	}
+	return stmt
+}
+
+func buildCastObjectStatement(ctx parser.ICastObjectStatementContext) *ast.CastObjectStmt {
+	if ctx == nil {
+		return nil
+	}
+	castCtx := ctx.(*parser.CastObjectStatementContext)
+	stmt := &ast.CastObjectStmt{}
+	vars := castCtx.AllVARIABLE()
+	if len(vars) == 1 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+		return stmt
+	}
+	if len(vars) > 0 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+	}
+	if len(vars) > 1 {
+		stmt.ObjectVariable = strings.TrimPrefix(vars[1].GetText(), "$")
+	}
 	return stmt
 }
 

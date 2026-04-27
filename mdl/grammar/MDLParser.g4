@@ -1291,6 +1291,8 @@ microflowBody
  */
 microflowStatement
     : annotation* declareStatement SEMICOLON?
+    | annotation* inheritanceSplitStatement SEMICOLON?
+    | annotation* castObjectStatement SEMICOLON?
     | annotation* setStatement SEMICOLON?
     | annotation* createListStatement SEMICOLON?       // Must be before createObjectStatement to match "CREATE LIST OF"
     | annotation* createObjectStatement SEMICOLON?
@@ -1344,6 +1346,20 @@ microflowStatement
 
 declareStatement
     : DECLARE VARIABLE dataType (EQUALS expression)?
+    ;
+
+inheritanceSplitStatement
+    : SPLIT TYPE VARIABLE
+      (inheritanceSplitCase+ (ELSE microflowBody)? END SPLIT)?
+    ;
+
+inheritanceSplitCase
+    : CASE qualifiedName microflowBody
+    ;
+
+castObjectStatement
+    : CAST VARIABLE
+    | VARIABLE EQUALS CAST VARIABLE
     ;
 
 setStatement

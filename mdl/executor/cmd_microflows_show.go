@@ -852,9 +852,10 @@ func findSplitMergePoints(
 		flowsByOrigin[flow.OriginID] = append(flowsByOrigin[flow.OriginID], flow)
 	}
 
-	// For each ExclusiveSplit, find its merge point
+	// For each branching split, find its merge point
 	for _, obj := range oc.Objects {
-		if _, ok := obj.(*microflows.ExclusiveSplit); ok {
+		switch obj.(type) {
+		case *microflows.ExclusiveSplit, *microflows.InheritanceSplit:
 			splitID := obj.GetID()
 			// Find merge by following both branches until they converge
 			mergeID := findMergeForSplit(ctx, splitID, flowsByOrigin, activityMap)
@@ -874,22 +875,23 @@ func findMergeForSplit(
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
 	activityMap map[model.ID]microflows.MicroflowObject,
 ) model.ID {
-	flows := flowsByOrigin[splitID]
+	flows := findNormalFlows(flowsByOrigin[splitID])
 	if len(flows) < 2 {
 		return ""
 	}
 
-	// Follow each branch and collect all reachable nodes
-	branch0Nodes := collectReachableNodes(ctx, flows[0].DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
-	branch1Nodes := collectReachableNodes(ctx, flows[1].DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
-
-	// Find the first common node that is an ExclusiveMerge
-	// This is a simplification - we look for the first merge point reachable from both branches
-	for nodeID := range branch0Nodes {
-		if branch1Nodes[nodeID] {
-			if _, ok := activityMap[nodeID].(*microflows.ExclusiveMerge); ok {
-				return nodeID
+	common := collectReachableNodes(ctx, flows[0].DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
+	for _, flow := range flows[1:] {
+		next := collectReachableNodes(ctx, flow.DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
+		for nodeID := range common {
+			if !next[nodeID] {
+				delete(common, nodeID)
 			}
+		}
+	}
+	for nodeID := range common {
+		if _, ok := activityMap[nodeID].(*microflows.ExclusiveMerge); ok {
+			return nodeID
 		}
 	}
 

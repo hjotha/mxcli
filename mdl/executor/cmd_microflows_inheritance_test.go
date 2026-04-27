@@ -1,0 +1,141 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package executor
+
+import (
+	"testing"
+
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+)
+
+func TestFormatActivity_InheritanceSplit(t *testing.T) {
+	stmt := formatActivity(nil, &microflows.InheritanceSplit{VariableName: "Input"}, nil, nil)
+	if stmt != "split type $Input;" {
+		t.Fatalf("formatActivity = %q, want split type $Input;", stmt)
+	}
+}
+
+func TestFormatAction_CastAction(t *testing.T) {
+	stmt := formatAction(nil, &microflows.CastAction{OutputVariable: "SpecificInput"}, nil, nil)
+	if stmt != "cast $SpecificInput;" {
+		t.Fatalf("formatAction = %q, want cast $SpecificInput;", stmt)
+	}
+}
+
+func TestBuilder_InheritanceSplitAndCastAction(t *testing.T) {
+	fb := &flowBuilder{spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph([]ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "Input",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "Sample", Name: "SpecializedInput"},
+					Body: []ast.MicroflowStatement{
+						&ast.CastObjectStmt{OutputVariable: "SpecificInput"},
+					},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{&ast.ReturnStmt{}},
+		},
+	}, nil)
+
+	var split *microflows.InheritanceSplit
+	var cast *microflows.CastAction
+	var caseFlow *microflows.SequenceFlow
+	for _, obj := range oc.Objects {
+		if candidate, ok := obj.(*microflows.InheritanceSplit); ok {
+			split = candidate
+		}
+		if activity, ok := obj.(*microflows.ActionActivity); ok {
+			if candidate, ok := activity.Action.(*microflows.CastAction); ok {
+				cast = candidate
+			}
+		}
+	}
+	for _, flow := range oc.Flows {
+		if split != nil && flow.OriginID == split.ID {
+			if _, ok := flow.CaseValue.(*microflows.InheritanceCase); ok {
+				caseFlow = flow
+			}
+		}
+	}
+	if split == nil {
+		t.Fatal("expected InheritanceSplit object")
+	}
+	if split.VariableName != "Input" {
+		t.Fatalf("split variable = %q, want Input", split.VariableName)
+	}
+	if cast == nil || cast.OutputVariable != "SpecificInput" {
+		t.Fatalf("cast action = %#v, want output SpecificInput", cast)
+	}
+	if caseFlow == nil {
+		t.Fatal("expected inheritance case flow")
+	}
+	caseValue := caseFlow.CaseValue.(*microflows.InheritanceCase)
+	if caseValue.EntityQualifiedName != "Sample.SpecializedInput" {
+		t.Fatalf("case entity = %q, want Sample.SpecializedInput", caseValue.EntityQualifiedName)
+	}
+}
+
+func TestTraverseFlow_InheritanceSplit(t *testing.T) {
+	e := newTestExecutor()
+	entityID := mkID("entity-specialized")
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("split"),
+			VariableName:        "Input",
+		},
+		mkID("cast"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("cast")},
+			Action:       &microflows.CastAction{OutputVariable: "SpecificInput"},
+		},
+		mkID("fallback"): &microflows.EndEvent{BaseMicroflowObject: mkObj("fallback")},
+		mkID("merge"):    &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("split"): {
+			mkBranchFlow("split", "cast", &microflows.InheritanceCase{EntityID: entityID}),
+			mkFlow("split", "fallback"),
+		},
+		mkID("cast"):     {mkFlow("cast", "merge")},
+		mkID("fallback"): {mkFlow("fallback", "merge")},
+	}
+	splitMergeMap := map[model.ID]model.ID{mkID("split"): mkID("merge")}
+	entityNames := map[model.ID]string{entityID: "Sample.SpecializedInput"}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("split"), activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, nil, &lines, 1, nil, 0, nil)
+
+	assertLineContains(t, lines, "split type $Input")
+	assertLineContains(t, lines, "case Sample.SpecializedInput")
+	assertLineContains(t, lines, "cast $SpecificInput;")
+	assertLineContains(t, lines, "else")
+	assertLineContains(t, lines, "end split;")
+}
+
+func TestLastStmtIsReturn_InheritanceSplitAllBranchesReturn(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Cases: []ast.InheritanceSplitCase{
+				{Entity: ast.QualifiedName{Module: "Sample", Name: "SpecializedInput"}, Body: []ast.MicroflowStatement{&ast.ReturnStmt{}}},
+			},
+			ElseBody: []ast.MicroflowStatement{&ast.ReturnStmt{}},
+		},
+	}
+	if !lastStmtIsReturn(body) {
+		t.Fatal("inheritance split where all cases and ELSE return must be terminal")
+	}
+}
+
+func assertLineContains(t *testing.T, lines []string, want string) {
+	t.Helper()
+	for _, line := range lines {
+		if contains(line, want) {
+			return
+		}
+	}
+	t.Fatalf("expected output to contain %q, got %v", want, lines)
+}

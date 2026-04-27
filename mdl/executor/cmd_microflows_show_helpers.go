@@ -503,6 +503,21 @@ func traverseFlow(
 	stmt := formatActivity(ctx, obj, entityNames, microflowNames)
 	indentStr := strings.Repeat("  ", indent)
 
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
+		startLine := len(*lines) + headerLineCount
+		mergeID := splitMergeMap[currentID]
+		emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+		emitInheritanceSplitStatement(ctx, currentID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+		if mergeID != "" {
+			visited[mergeID] = true
+			for _, flow := range flowsByOrigin[mergeID] {
+				traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
+		}
+		return
+	}
+
 	// Handle ExclusiveSplit specially - need to process both branches
 	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
 		startLine := len(*lines) + headerLineCount
@@ -670,6 +685,21 @@ func traverseFlowUntilMerge(
 
 	stmt := formatActivity(ctx, obj, entityNames, microflowNames)
 	indentStr := strings.Repeat("  ", indent)
+
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
+		startLine := len(*lines) + headerLineCount
+		nestedMergeID := splitMergeMap[currentID]
+		emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+		emitInheritanceSplitStatement(ctx, currentID, nestedMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+		if nestedMergeID != "" && nestedMergeID != mergeID {
+			visited[nestedMergeID] = true
+			for _, flow := range flowsByOrigin[nestedMergeID] {
+				traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
+		}
+		return
+	}
 
 	// Handle nested ExclusiveSplit
 	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
@@ -1099,6 +1129,82 @@ func reachesObject(currentID, targetID model.ID, flowsByOrigin map[model.ID][]*m
 		}
 	}
 	return false
+}
+
+func emitInheritanceSplitStatement(
+	ctx *ExecContext,
+	currentID model.ID,
+	mergeID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	split, _ := activityMap[currentID].(*microflows.InheritanceSplit)
+	if split == nil {
+		return
+	}
+	varName := split.VariableName
+	if !strings.HasPrefix(varName, "$") {
+		varName = "$" + varName
+	}
+	indentStr := strings.Repeat("  ", indent)
+	*lines = append(*lines, indentStr+"split type "+varName)
+
+	var elseFlow *microflows.SequenceFlow
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+		caseName, ok := inheritanceCaseName(flow, entityNames)
+		if !ok {
+			elseFlow = flow
+			continue
+		}
+		*lines = append(*lines, indentStr+"case "+caseName)
+		traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+	if elseFlow != nil {
+		*lines = append(*lines, indentStr+"else")
+		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+	*lines = append(*lines, indentStr+"end split;")
+}
+
+func inheritanceCaseName(flow *microflows.SequenceFlow, entityNames map[model.ID]string) (string, bool) {
+	if flow == nil || flow.CaseValue == nil {
+		return "", false
+	}
+	switch cv := flow.CaseValue.(type) {
+	case *microflows.InheritanceCase:
+		if cv.EntityQualifiedName != "" {
+			return cv.EntityQualifiedName, true
+		}
+		if name := entityNames[cv.EntityID]; name != "" {
+			return name, true
+		}
+	case microflows.InheritanceCase:
+		if cv.EntityQualifiedName != "" {
+			return cv.EntityQualifiedName, true
+		}
+		if name := entityNames[cv.EntityID]; name != "" {
+			return name, true
+		}
+	}
+	return "", false
+}
+
+func cloneVisited(visited map[model.ID]bool) map[model.ID]bool {
+	cloned := make(map[model.ID]bool, len(visited))
+	for id, seen := range visited {
+		cloned[id] = seen
+	}
+	return cloned
 }
 
 // findBranchFlows separates flows from a split into TRUE and FALSE branches based on CaseValue.
