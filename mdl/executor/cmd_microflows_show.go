@@ -881,7 +881,7 @@ func findMergeForSplit(
 
 	branchDistances := make([]map[model.ID]int, 0, len(flows))
 	for _, flow := range flows {
-		branchDistances = append(branchDistances, collectReachableDistances(ctx, flow.DestinationID, flowsByOrigin, activityMap))
+		branchDistances = append(branchDistances, collectReachableDistances(flow.DestinationID, flowsByOrigin))
 	}
 
 	return selectNearestCommonMerge(activityMap, branchDistances)
@@ -918,14 +918,9 @@ func collectReachableNodes(
 // branch start to every reachable node. Error handler flows are excluded because
 // they do not participate in split/merge structural pairing.
 func collectReachableDistances(
-	ctx *ExecContext,
 	startID model.ID,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
-	activityMap map[model.ID]microflows.MicroflowObject,
 ) map[model.ID]int {
-	_ = ctx
-	_ = activityMap
-
 	distances := map[model.ID]int{}
 	type queueItem struct {
 		id       model.ID
