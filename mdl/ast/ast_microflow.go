@@ -192,9 +192,10 @@ func (s *CreateObjectStmt) isMicroflowStatement() {}
 
 // ChangeObjectStmt represents: CHANGE $Var (assignments)
 type ChangeObjectStmt struct {
-	Variable    string               // Variable name
-	Changes     []ChangeItem         // SET assignments
-	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+	Variable        string               // Variable name
+	Changes         []ChangeItem         // SET assignments
+	RefreshInClient bool                 // Whether to refresh in client
+	Annotations     *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
 func (s *ChangeObjectStmt) isMicroflowStatement() {}
