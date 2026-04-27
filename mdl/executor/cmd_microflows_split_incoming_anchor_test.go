@@ -122,6 +122,61 @@ func TestEmitSplitAnchor_OmitsDefaultBranchAnchors(t *testing.T) {
 	}
 }
 
+func TestEmitSplitAnchor_OmitsBuilderNoElseBranchAnchors(t *testing.T) {
+	splitID := model.ID("split-builder-defaults")
+	split := &microflows.ExclusiveSplit{}
+	split.ID = splitID
+
+	trueFlow := &microflows.SequenceFlow{
+		OriginID:                   splitID,
+		OriginConnectionIndex:      AnchorBottom,
+		DestinationConnectionIndex: AnchorLeft,
+		CaseValue:                  &microflows.ExpressionCase{Expression: "true"},
+	}
+	falseFlow := &microflows.SequenceFlow{
+		OriginID:                   splitID,
+		OriginConnectionIndex:      AnchorRight,
+		DestinationConnectionIndex: AnchorLeft,
+		CaseValue:                  &microflows.ExpressionCase{Expression: "false"},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		splitID: {trueFlow, falseFlow},
+	}
+
+	var lines []string
+	emitAnchorAnnotation(split, flowsByOrigin, nil, &lines, "")
+
+	if len(lines) != 0 {
+		t.Fatalf("expected builder-generated branch anchors to be omitted, got %v", lines)
+	}
+}
+
+func TestEmitSplitAnchor_EmitsNonDefaultDestinationAgainstBuilderDefaults(t *testing.T) {
+	splitID := model.ID("split-non-default-destination")
+	split := &microflows.ExclusiveSplit{}
+	split.ID = splitID
+
+	trueFlow := &microflows.SequenceFlow{
+		OriginID:                   splitID,
+		OriginConnectionIndex:      AnchorBottom,
+		DestinationConnectionIndex: AnchorTop,
+		CaseValue:                  &microflows.ExpressionCase{Expression: "true"},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		splitID: {trueFlow},
+	}
+
+	var lines []string
+	emitAnchorAnnotation(split, flowsByOrigin, nil, &lines, "")
+
+	if len(lines) != 1 {
+		t.Fatalf("expected non-default destination anchor to be emitted, got %v", lines)
+	}
+	if !strings.Contains(lines[0], "true: (to: top)") {
+		t.Fatalf("expected true branch destination anchor, got %q", lines[0])
+	}
+}
+
 func TestEmitSplitAnchor_SupportsExpressionCase(t *testing.T) {
 	// Mendix splits often use ExpressionCase (Expression == "true" / "false")
 	// instead of EnumerationCase. The anchor emission must identify the
