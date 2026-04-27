@@ -430,6 +430,15 @@ type MDLParserListener interface {
 	// EnterEnumSplitCaseValue is called when entering the enumSplitCaseValue production.
 	EnterEnumSplitCaseValue(c *EnumSplitCaseValueContext)
 
+	// EnterInheritanceSplitStatement is called when entering the inheritanceSplitStatement production.
+	EnterInheritanceSplitStatement(c *InheritanceSplitStatementContext)
+
+	// EnterInheritanceSplitCase is called when entering the inheritanceSplitCase production.
+	EnterInheritanceSplitCase(c *InheritanceSplitCaseContext)
+
+	// EnterCastObjectStatement is called when entering the castObjectStatement production.
+	EnterCastObjectStatement(c *CastObjectStatementContext)
+
 	// EnterSetStatement is called when entering the setStatement production.
 	EnterSetStatement(c *SetStatementContext)
 
@@ -1779,6 +1788,15 @@ type MDLParserListener interface {
 
 	// ExitEnumSplitCaseValue is called when exiting the enumSplitCaseValue production.
 	ExitEnumSplitCaseValue(c *EnumSplitCaseValueContext)
+
+	// ExitInheritanceSplitStatement is called when exiting the inheritanceSplitStatement production.
+	ExitInheritanceSplitStatement(c *InheritanceSplitStatementContext)
+
+	// ExitInheritanceSplitCase is called when exiting the inheritanceSplitCase production.
+	ExitInheritanceSplitCase(c *InheritanceSplitCaseContext)
+
+	// ExitCastObjectStatement is called when exiting the castObjectStatement production.
+	ExitCastObjectStatement(c *CastObjectStatementContext)
 
 	// ExitSetStatement is called when exiting the setStatement production.
 	ExitSetStatement(c *SetStatementContext)

@@ -242,6 +242,8 @@ authentication basic, session
 | Free annotation | `@annotation 'text'` before `@position(...)` | Free-floating visual note preserved by order |
 | IF | `if condition then ... [else ...] end if;` | |
 | Enum split | `split enum $Var case Value ... end split;` | Enumeration decision branches |
+| Type split | `split type $Var case Module.Entity ... end split;` | Runtime specialization branches |
+| Cast | `cast $SpecificVar;` | Downcast inside a type split branch |
 | LOOP | `loop $item in $list begin ... end loop;` | FOR EACH over list |
 | WHILE | `while condition begin ... end while;` | Condition-based loop |
 | Return | `return $value;` | Required at end of every flow path |

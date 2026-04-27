@@ -339,6 +339,22 @@ end split;
 ```
 
 `(empty)` represents an unset enumeration value. Multiple values can share one branch by separating them with commas.
+### Type Split And Cast Statements
+
+Use `split type` when a microflow branches on an object's runtime specialization.
+Use `cast` inside a type branch to create the specialized variable used by the branch body.
+
+```mdl
+split type $Input
+case Sample.SpecializedInput
+  cast $SpecificInput;
+  return true;
+else
+  return false;
+end split;
+```
+
+`case` values are qualified entity names. The optional `else` branch handles objects that do not match any listed specialization.
 
 ### LOOP Statements
 
