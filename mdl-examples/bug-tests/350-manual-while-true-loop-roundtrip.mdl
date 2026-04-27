@@ -1,0 +1,62 @@
+-- ============================================================================
+-- Bug #350: Manual `while true` retry-loop roundtrip
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Studio Pro projects with manual retry loops authored as
+--     while true
+--     begin
+--       <work>
+--       if <done> then return ...; end if;
+--       continue;
+--     end while;
+--   could be described correctly, but `mxcli exec` rebuilt the same MDL
+--   into either a `LoopedActivity` (collection-style loop) or a flow
+--   with a synthetic fallthrough `EndEvent`. The resulting MPR diverged
+--   from the original — a back-edge merge expected by Studio Pro was
+--   missing — and `mx check` could fail or the model's runtime semantics
+--   could change silently.
+--
+-- Root cause:
+--   The builder accepted `while`, `break`, `continue` syntax but never
+--   materialized BreakEvent/ContinueEvent objects. `continue` in a
+--   manual `while true` body was treated as plain fallthrough.
+--
+-- After fix:
+--   - `BreakEvent` and `ContinueEvent` objects are produced for break/continue.
+--   - Both are treated as terminal branch statements for control-flow analysis.
+--   - Manual `while true` bodies that need a graph-level back-edge are
+--     built as an `ExclusiveMerge` loop header.
+--   - `continue` inside that manual loop routes back to the merge instead
+--     of producing a standalone `ContinueEvent`.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/350-manual-while-true-loop-roundtrip.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest350.MF_ManualRetryLoop"
+--   `mx check` against the resulting MPR must report 0 errors.
+-- ============================================================================
+
+create module BugTest350;
+
+create entity BugTest350.Item (
+  IsDone : boolean
+);
+/
+
+-- Manual while-true retry loop. The graph rebuild must use an
+-- ExclusiveMerge back-edge — not a LoopedActivity and not a fallthrough
+-- EndEvent — and the `continue` must route to that merge.
+create microflow BugTest350.MF_ManualRetryLoop (
+  $Item: BugTest350.Item
+)
+returns boolean as $Done
+begin
+  while true
+  begin
+    if $Item/IsDone then
+      return true;
+    end if;
+    continue;
+  end while;
+end;
+/
