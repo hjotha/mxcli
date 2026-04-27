@@ -532,6 +532,7 @@ func buildDeclareStatement(ctx parser.IDeclareStatementContext) *ast.DeclareStmt
 	// Get optional initial value
 	if expr := declCtx.Expression(); expr != nil {
 		stmt.InitialValue = buildSourceExpression(expr)
+		stmt.InitialValue = appendStatementExpressionTrailingWhitespace(expr, stmt.InitialValue)
 	}
 
 	return stmt
@@ -696,6 +697,7 @@ func buildSetStatement(ctx parser.ISetStatementContext) ast.MicroflowStatement {
 
 	if valueExprCtx != nil {
 		valueExpr = buildSourceExpression(valueExprCtx)
+		valueExpr = appendStatementExpressionTrailingWhitespace(valueExprCtx, valueExpr)
 	}
 
 	// Default: regular SET statement

@@ -52,6 +52,7 @@ func buildLogStatement(ctx parser.ILogStatementContext) *ast.LogStmt {
 	// expression is the node and the second is the message.
 	if logCtx.NODE() != nil && len(exprs) > 1 {
 		stmt.Node = buildSourceExpression(exprs[0])
+		stmt.Node = appendLogNodeTrailingWhitespace(exprs[0], exprs[1], stmt.Node)
 		stmt.Message = buildSourceExpression(exprs[1])
 	} else if len(exprs) > 0 {
 		stmt.Message = buildSourceExpression(exprs[0])
@@ -127,17 +128,11 @@ func appendTemplateParamTrailingWhitespace(
 	expr ast.Expression,
 ) ast.Expression {
 	trailing := templateParamTrailingWhitespace(paramsCtx, allParams, index, exprCtx)
-	if trailing == "" || !strings.ContainsAny(trailing, "\r\n") {
+	if trailing == "" {
 		return expr
 	}
 
-	source := strings.TrimSpace(extractOriginalText(exprCtx.(antlr.ParserRuleContext)))
-	innerExpr := expr
-	if sourceExpr, ok := expr.(*ast.SourceExpr); ok {
-		source = sourceExpr.Source
-		innerExpr = sourceExpr.Expression
-	}
-	return &ast.SourceExpr{Expression: innerExpr, Source: source + trailing}
+	return appendSourceExpressionSuffix(exprCtx, expr, trailing)
 }
 
 func templateParamTrailingWhitespace(
@@ -198,17 +193,11 @@ func appendExpressionListTrailingWhitespace(
 	expr ast.Expression,
 ) ast.Expression {
 	trailing := expressionListTrailingWhitespace(parent, next, exprCtx)
-	if trailing == "" || !strings.ContainsAny(trailing, "\r\n") {
+	if trailing == "" {
 		return expr
 	}
 
-	source := strings.TrimSpace(extractOriginalText(exprCtx.(antlr.ParserRuleContext)))
-	innerExpr := expr
-	if sourceExpr, ok := expr.(*ast.SourceExpr); ok {
-		source = sourceExpr.Source
-		innerExpr = sourceExpr.Expression
-	}
-	return &ast.SourceExpr{Expression: innerExpr, Source: source + trailing}
+	return appendSourceExpressionSuffix(exprCtx, expr, trailing)
 }
 
 func expressionListTrailingWhitespace(
@@ -233,6 +222,9 @@ func expressionListTrailingWhitespace(
 		end = parent.GetStop().GetStart() - 1
 	}
 	if start < 0 || end < start {
+		if next == nil {
+			return whitespaceUntilDelimiter(input, start, ")]")
+		}
 		return ""
 	}
 
@@ -248,6 +240,116 @@ func expressionListTrailingWhitespace(
 		return ""
 	}
 	return gap
+}
+
+func appendStatementExpressionTrailingWhitespace(
+	exprCtx parser.IExpressionContext,
+	expr ast.Expression,
+) ast.Expression {
+	trailing := statementExpressionTrailingWhitespace(exprCtx)
+	if trailing == "" {
+		return expr
+	}
+	return appendSourceExpressionSuffix(exprCtx, expr, trailing)
+}
+
+func statementExpressionTrailingWhitespace(exprCtx parser.IExpressionContext) string {
+	exprRule, ok := exprCtx.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+
+	start := exprRule.GetStop().GetStop() + 1
+	if start < 0 || start >= input.Size() {
+		return ""
+	}
+
+	return whitespaceUntilDelimiter(input, start, ";")
+}
+
+func appendLogNodeTrailingWhitespace(
+	nodeCtx parser.IExpressionContext,
+	messageCtx parser.IExpressionContext,
+	expr ast.Expression,
+) ast.Expression {
+	trailing := expressionGapWhitespace(nodeCtx, messageCtx)
+	if trailing == "" || !strings.ContainsAny(trailing, "\r\n") {
+		return expr
+	}
+	// formatAction always writes one space between the node and message slots.
+	// Preserve the source line break but avoid duplicating indentation spaces.
+	trailing = strings.TrimRight(trailing, " \t")
+	if trailing == "" {
+		return expr
+	}
+	return appendSourceExpressionSuffix(nodeCtx, expr, trailing)
+}
+
+func expressionGapWhitespace(
+	leftCtx parser.IExpressionContext,
+	rightCtx parser.IExpressionContext,
+) string {
+	leftRule, ok := leftCtx.(antlr.ParserRuleContext)
+	if !ok || leftRule.GetStop() == nil {
+		return ""
+	}
+	rightRule, ok := rightCtx.(antlr.ParserRuleContext)
+	if !ok || rightRule.GetStart() == nil {
+		return ""
+	}
+	input := leftRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+	start := leftRule.GetStop().GetStop() + 1
+	end := rightRule.GetStart().GetStart() - 1
+	if start < 0 || end < start {
+		return ""
+	}
+	gap := input.GetText(start, end)
+	if strings.TrimSpace(gap) != "" {
+		return ""
+	}
+	return gap
+}
+
+func whitespaceUntilDelimiter(input antlr.CharStream, start int, delimiters string) string {
+	if start < 0 || start >= input.Size() {
+		return ""
+	}
+	end := start
+	for end < input.Size() {
+		ch := input.GetText(end, end)
+		if strings.Contains(delimiters, ch) {
+			break
+		}
+		if strings.TrimSpace(ch) != "" {
+			return ""
+		}
+		end++
+	}
+	if end >= input.Size() || end == start {
+		return ""
+	}
+	return input.GetText(start, end-1)
+}
+
+func appendSourceExpressionSuffix(
+	exprCtx parser.IExpressionContext,
+	expr ast.Expression,
+	suffix string,
+) ast.Expression {
+	source := strings.TrimSpace(extractOriginalText(exprCtx.(antlr.ParserRuleContext)))
+	innerExpr := expr
+	if sourceExpr, ok := expr.(*ast.SourceExpr); ok {
+		source = sourceExpr.Source
+		innerExpr = sourceExpr.Expression
+	}
+	return &ast.SourceExpr{Expression: innerExpr, Source: source + suffix}
 }
 
 // buildCallMicroflowStatement converts CALL MICROFLOW statement context to CallMicroflowStmt.

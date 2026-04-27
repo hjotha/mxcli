@@ -1810,6 +1810,62 @@ END;`
 	}
 }
 
+func TestTrailingExpressionWhitespacePreservedForRoundtripSlots(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.PreserveTrailingExpressionWhitespace (
+  $Object: Synthetic.Entity
+)
+RETURNS Boolean AS $Result
+BEGIN
+  DECLARE $Prefix String = 'Hello'
+;
+  SET $Prefix = substring($Prefix, 0, 1)
+;
+  CHANGE $Object (Name = $Prefix );
+  LOG INFO NODE @Synthetic.LogNode
+ 'Processed {1}' WITH ({1} = $Prefix );
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	decl := mf.Body[0].(*ast.DeclareStmt)
+	if source, ok := decl.InitialValue.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected declare initial value SourceExpr, got %T", decl.InitialValue)
+	} else if source.Source != "'Hello'\n" {
+		t.Fatalf("declare source = %q", source.Source)
+	}
+
+	setStmt := mf.Body[1].(*ast.MfSetStmt)
+	if source, ok := setStmt.Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected set value SourceExpr, got %T", setStmt.Value)
+	} else if source.Source != "substring($Prefix, 0, 1)\n" {
+		t.Fatalf("set source = %q", source.Source)
+	}
+
+	changeStmt := mf.Body[2].(*ast.ChangeObjectStmt)
+	if source, ok := changeStmt.Changes[0].Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected change value SourceExpr, got %T", changeStmt.Changes[0].Value)
+	} else if source.Source != "$Prefix " {
+		t.Fatalf("change source = %q", source.Source)
+	}
+
+	logStmt := mf.Body[3].(*ast.LogStmt)
+	if source, ok := logStmt.Node.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected log node SourceExpr, got %T", logStmt.Node)
+	} else if source.Source != "@Synthetic.LogNode\n" {
+		t.Fatalf("log node source = %q", source.Source)
+	}
+	if source, ok := logStmt.Template[0].Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected log template SourceExpr, got %T", logStmt.Template[0].Value)
+	} else if source.Source != "$Prefix " {
+		t.Fatalf("template source = %q", source.Source)
+	}
+}
+
 func TestShouldPreserveExpressionSourceIgnoresStringLiteralPunctuation(t *testing.T) {
 	if shouldPreserveExpressionSource("'Processed {1} items!'") {
 		t.Fatal("plain string literal punctuation should not force SourceExpr preservation")
