@@ -218,6 +218,7 @@ authentication basic, session
 | List declaration | `declare $list list of Module.Entity = empty;` | |
 | Assignment | `set $Var = expression;` | Variable must be declared first |
 | Create object | `$Var = create Module.Entity (attr = value);` | |
+| Duplicate implicit output | `$Var`, `$Var_2`, `$Var_3` | Describe may alias same-position duplicate outputs for round-trip preservation |
 | Change object | `change $entity (attr = value);` | |
 | Commit | `commit $entity [with events] [refresh];` | |
 | Delete | `delete $entity;` | |

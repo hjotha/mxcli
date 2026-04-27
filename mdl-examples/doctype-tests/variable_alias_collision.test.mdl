@@ -1,0 +1,17 @@
+create microflow SampleAliases.ACT_DuplicateOutputPosition ()
+returns SampleAliases.Item as $Item
+begin
+  @position(100, 200)
+  $Item = create SampleAliases.Item (
+    Name = 'first');
+
+  @position(100, 200)
+  $Item = create SampleAliases.Item (
+    Name = 'second');
+
+  change $Item (
+    Name = $Item/Name + ' updated');
+
+  return $Item;
+end;
+/
