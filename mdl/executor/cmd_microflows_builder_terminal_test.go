@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -289,4 +290,248 @@ func TestLastStmtIsReturn_EnumSplitWithoutElseNonTerminalCase_NotTerminal(t *tes
 	if lastStmtIsReturn(body) {
 		t.Error("ENUM split without ELSE must not be terminal when any emitted case can continue")
 	}
+}
+
+func TestBuildFlowGraph_NonTerminalCustomHandlerRejoinsContinuation(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleSync", Name: "RefreshExternalData"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "refresh failed"}},
+				},
+			},
+		},
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleSync", Name: "ContinueWithNextBatch"},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var sourceID, handlerLogID, nextID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			if action.MicroflowCall != nil && action.MicroflowCall.Microflow == "SampleSync.RefreshExternalData" {
+				sourceID = activity.ID
+			}
+			if action.MicroflowCall != nil && action.MicroflowCall.Microflow == "SampleSync.ContinueWithNextBatch" {
+				nextID = activity.ID
+			}
+		case *microflows.LogMessageAction:
+			if action.LogLevel == "Error" {
+				handlerLogID = activity.ID
+			}
+		}
+	}
+	if sourceID == "" || handlerLogID == "" || nextID == "" {
+		t.Fatalf("expected source call, handler log, and continuation; got source=%q log=%q next=%q", sourceID, handlerLogID, nextID)
+	}
+	if !flowPathExists(oc.Flows, handlerLogID, nextID) {
+		t.Fatal("non-terminal custom error handler should rejoin the next safe continuation")
+	}
+	for _, flow := range oc.Flows {
+		if flow.IsErrorHandler && flow.OriginID == sourceID && flow.DestinationID == nextID {
+			t.Fatal("custom handler must execute its body before rejoining")
+		}
+	}
+}
+
+func TestBuildFlowGraph_ConsecutiveCustomHandlersEachRejoinsContinuation(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleSync", Name: "RetryFirstBatch"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "first failed"}},
+				},
+			},
+		},
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleSync", Name: "RetrySecondBatch"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "second failed"}},
+				},
+			},
+		},
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleSync", Name: "RetryFinalBatch"},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	callIDs := map[string]model.ID{}
+	logIDs := map[string]model.ID{}
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			if action.MicroflowCall != nil {
+				callIDs[action.MicroflowCall.Microflow] = activity.ID
+			}
+		case *microflows.LogMessageAction:
+			if action.MessageTemplate != nil {
+				logIDs[action.MessageTemplate.Translations["en_US"]] = activity.ID
+			}
+		}
+	}
+
+	firstLog := logIDs["first failed"]
+	secondLog := logIDs["second failed"]
+	secondCall := callIDs["SampleSync.RetrySecondBatch"]
+	finalCall := callIDs["SampleSync.RetryFinalBatch"]
+	if firstLog == "" || secondLog == "" || secondCall == "" || finalCall == "" {
+		t.Fatalf("expected all handler logs and continuation calls; logs=%#v calls=%#v", logIDs, callIDs)
+	}
+	if !flowPathExists(oc.Flows, firstLog, secondCall) {
+		t.Fatal("first pending handler must rejoin before the second call instead of being overwritten")
+	}
+	if !flowPathExists(oc.Flows, secondLog, finalCall) {
+		t.Fatal("second pending handler must rejoin before the final continuation")
+	}
+}
+
+func TestBuildFlowGraph_EmptyOutputHandlerTerminatesBeforeOutputDependentTail(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallJavaActionStmt{
+			OutputVariable: "ProcessedCount",
+			ActionName:     ast.QualifiedName{Module: "SampleMigration", Name: "CountProcessedItems"},
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogInfo,
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "processed {1}"},
+			Template: []ast.TemplateParam{{
+				Index: 1,
+				Value: &ast.VariableExpr{Name: "ProcessedCount"},
+			}},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var javaID, logID model.ID
+	endIDs := map[model.ID]bool{}
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch action := o.Action.(type) {
+			case *microflows.JavaActionCallAction:
+				if action.ResultVariableName == "ProcessedCount" {
+					javaID = o.ID
+				}
+			case *microflows.LogMessageAction:
+				if action.MessageTemplate != nil && action.MessageTemplate.Translations["en_US"] == "processed {1}" {
+					logID = o.ID
+				}
+			}
+		case *microflows.EndEvent:
+			endIDs[o.ID] = true
+		}
+	}
+	if javaID == "" || logID == "" || len(endIDs) == 0 {
+		t.Fatalf("expected java action, output-dependent log, and end event; got java=%q log=%q ends=%v", javaID, logID, endIDs)
+	}
+
+	var errorFlowTerminates bool
+	for _, flow := range oc.Flows {
+		if !flow.IsErrorHandler || flow.OriginID != javaID {
+			continue
+		}
+		if flowPathExists(oc.Flows, flow.DestinationID, logID) {
+			t.Fatal("empty output handler must not rejoin before a statement that reads the missing output")
+		}
+		for endID := range endIDs {
+			if flow.DestinationID == endID || flowPathExists(oc.Flows, flow.DestinationID, endID) {
+				errorFlowTerminates = true
+			}
+		}
+	}
+	if !errorFlowTerminates {
+		t.Fatal("empty output handler should terminate at an EndEvent before the output-dependent tail")
+	}
+}
+
+func TestBuildFlowGraph_EmptyNoOutputHandlerRejoinsAtNextAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "SampleMigration", Name: "RefreshCache"},
+			ErrorHandling: &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+		},
+		&ast.CallJavaActionStmt{
+			OutputVariable: "ProcessedCount",
+			ActionName:     ast.QualifiedName{Module: "SampleMigration", Name: "CountProcessedItems"},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, javaID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			if action.MicroflowCall != nil && action.MicroflowCall.Microflow == "SampleMigration.RefreshCache" {
+				callID = activity.ID
+			}
+		case *microflows.JavaActionCallAction:
+			if action.ResultVariableName == "ProcessedCount" {
+				javaID = activity.ID
+			}
+		}
+	}
+	if callID == "" || javaID == "" {
+		t.Fatalf("expected no-output call and output-producing java action; got call=%q java=%q", callID, javaID)
+	}
+	for _, flow := range oc.Flows {
+		if flow.IsErrorHandler && flow.OriginID == callID && flowPathExists(oc.Flows, flow.DestinationID, javaID) {
+			return
+		}
+	}
+	t.Fatal("empty no-output handler should rejoin at the next action")
+}
+
+func flowPathExists(flows []*microflows.SequenceFlow, startID, targetID model.ID) bool {
+	if startID == "" || targetID == "" {
+		return false
+	}
+	seen := map[model.ID]bool{}
+	queue := []model.ID{startID}
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		if id == targetID {
+			return true
+		}
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		for _, flow := range flows {
+			if flow.OriginID == id && !seen[flow.DestinationID] {
+				queue = append(queue, flow.DestinationID)
+			}
+		}
+	}
+	return false
 }
