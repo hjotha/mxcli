@@ -27,9 +27,11 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		fb.objectInputVariables = collectObjectInputVariables(stmts)
 	}
 	// Set return value expression for error handler EndEvents
+	fb.returnType = returns
 	if returns != nil && returns.Variable != "" {
 		fb.returnValue = "$" + returns.Variable
 	}
+	fb.hasReturnValue = returns != nil && returns.Type.Kind != ast.TypeVoid
 	// Set baseY for branch restoration (this is the center line)
 	fb.baseY = fb.posY
 
@@ -64,7 +66,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	// deferred split→nextActivity flow honours @anchor(true: ..., false: ...).
 	pendingCase := ""
 	var pendingFlowAnchor *ast.FlowAnchors
-	for _, stmt := range stmts {
+	for i, stmt := range stmts {
 		// Snapshot the current statement's anchor annotation before addStatement
 		// can reset pendingAnnotations via recursive processing. The incoming
 		// side (To) is applied when this statement is the destination of the
@@ -94,6 +96,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 			pendingFlowAnchor = nil
 			applyUserAnchors(flow, originAnchor, destAnchor)
 			fb.flows = append(fb.flows, flow)
+			fb.addPendingErrorHandlerFlowForStatement(lastID, activityID, stmt, statementsReferenceVar(stmts[i+1:], fb.errorHandlerSkipVar))
 			fb.previousStmtAnchor = stmtAnchor
 
 			// For compound statements (IF, LOOP), the exit point differs from entry point
@@ -155,7 +158,15 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		}
 		applyUserAnchors(endFlow, originAnchor, nil)
 		fb.flows = append(fb.flows, endFlow)
+		var endStmt ast.MicroflowStatement
+		if len(fb.returnValue) > 1 && fb.returnValue[0] == '$' {
+			endStmt = &ast.ReturnStmt{Value: &ast.VariableExpr{Name: fb.returnValue[1:]}}
+		}
+		fb.addPendingErrorHandlerFlowForStatement(lastID, endEvent.ID, endStmt)
+		fb.terminatePendingErrorHandlersAtEnd(returns)
 		fb.previousStmtAnchor = nil
+	} else {
+		fb.terminatePendingErrorHandlersAtEnd(returns)
 	}
 
 	return &microflows.MicroflowObjectCollection{
@@ -415,6 +426,59 @@ func sourceAttributeVarRefs(source string) []string {
 		i = j
 	}
 	return refs
+}
+
+func (fb *flowBuilder) terminatePendingErrorHandlersAtEnd(returns *ast.MicroflowReturnType) {
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		if state.emptyFrom != "" {
+			if returns != nil && returns.Type.Kind != ast.TypeVoid && fb.lastReturnEndID != "" {
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.emptyFrom, fb.lastReturnEndID))
+			} else {
+				endID := fb.addTerminalEndEventForPendingHandler(returns, state.returnValue)
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.emptyFrom, endID))
+			}
+			state.emptyFrom = ""
+			state.returnValue = ""
+		}
+		if state.tailFrom != "" {
+			if returns != nil && returns.Type.Kind != ast.TypeVoid && state.returnValue == "" && fb.lastReturnEndID != "" {
+				if state.tailIsSource {
+					fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, fb.lastReturnEndID))
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, fb.lastReturnEndID))
+				}
+			} else {
+				endID := fb.addTerminalEndEventForPendingHandler(returns, state.returnValue)
+				if state.tailIsSource {
+					fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+				}
+			}
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailIsSource = false
+			state.returnValue = ""
+		}
+		return state
+	})
+}
+
+func (fb *flowBuilder) addTerminalEndEventForPendingHandler(returns *ast.MicroflowReturnType, returnValue string) model.ID {
+	if returnValue == "" && returns != nil && returns.Type.Kind != ast.TypeVoid {
+		returnValue = fb.returnValue
+	}
+	end := &microflows.EndEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX + HorizontalSpacing/2, Y: fb.baseY + VerticalSpacing},
+			Size:        model.Size{Width: EventSize, Height: EventSize},
+		},
+		ReturnValue: returnValue,
+	}
+	fb.objects = append(fb.objects, end)
+	return end.ID
 }
 
 // addStatement converts an AST statement to a microflow activity and returns its ID.
