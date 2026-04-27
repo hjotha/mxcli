@@ -1,0 +1,56 @@
+-- ============================================================================
+-- Bug #352 (part): Java action result variable type inference
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   The microflow builder looked up Java action definitions to format
+--   entity-typed parameters, but it did NOT register the Java action's
+--   return type on the output variable. Subsequent statements that
+--   touched the result (`change`, `commit`, `$Result/Attribute`,
+--   association paths) had no type info, so:
+--     - the writer fell back to untyped expressions
+--     - `mx check` could surface CE0117 on dependent activities
+--     - describe re-emitted the call without the right variable
+--       declaration shape
+--
+-- After fix:
+--   `addCallJavaActionAction` consults the Java action's `ReturnType`
+--   and registers the output variable as the appropriate object/list
+--   type (`Module.Entity`, `List of Module.Entity`, `System.FileDocument`,
+--   etc.) so downstream activities resolve correctly.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/352-java-action-return-type-inference.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest352b.MF_UseJavaResult"
+--   `mx check` against the resulting MPR must report 0 errors.
+-- ============================================================================
+
+create module BugTest352b;
+
+create persistent entity BugTest352b.LogEntry (
+  Message : string(500)
+);
+/
+
+-- Java action returning an entity object — the result variable type must
+-- be inferred so downstream `change` / `commit` resolve.
+create java action BugTest352b.CreateLogEntry (
+  Msg: string not null
+) returns BugTest352b.LogEntry
+as $$
+return new com.mendix.systemwideinterfaces.core.IMendixObject();
+$$;
+/
+
+-- Caller microflow that depends on the inferred return type. The change
+-- statement on `$Entry/Message` would fail validation if the Java action
+-- result variable type is not registered.
+create microflow BugTest352b.MF_UseJavaResult (
+  $Msg: string
+)
+returns BugTest352b.LogEntry as $Entry
+begin
+  $Entry = call java action BugTest352b.CreateLogEntry (Msg = $Msg);
+  change $Entry (Message = $Msg + ' (processed)');
+end;
+/
