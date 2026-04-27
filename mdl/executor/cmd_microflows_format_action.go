@@ -33,7 +33,10 @@ func formatActivity(
 			}
 			return fmt.Sprintf("return %s;", returnVal)
 		}
-		return "" // Skip end events without return value
+		if ctx != nil && ctx.DescribingMicroflowHasReturnValue {
+			return ""
+		}
+		return "return;"
 
 	case *microflows.ActionActivity:
 		return formatAction(ctx, activity.Action, entityNames, microflowNames)

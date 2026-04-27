@@ -322,8 +322,16 @@ func TestFormatActivity_EndEvent_NoReturn(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.EndEvent{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
+	if got != "return;" {
+		t.Errorf("expected bare return for EndEvent without return, got %q", got)
+	}
+}
+
+func TestFormatActivity_EndEvent_NoReturnValueInReturningMicroflow(t *testing.T) {
+	obj := &microflows.EndEvent{BaseMicroflowObject: mkObj("1")}
+	got := formatActivity(&ExecContext{DescribingMicroflowHasReturnValue: true}, obj, nil, nil)
 	if got != "" {
-		t.Errorf("expected empty for EndEvent without return, got %q", got)
+		t.Errorf("expected empty EndEvent to be skipped in value-returning microflow, got %q", got)
 	}
 }
 
