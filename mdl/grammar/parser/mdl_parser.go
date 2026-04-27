@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import (
@@ -2899,7 +2899,7 @@ func mdlparserParserInit() {
 		1, 0, 0, 0, 4417, 431, 1, 0, 0, 0, 4418, 4419, 5, 578, 0, 0, 4419, 4420,
 		5, 548, 0, 0, 4420, 4421, 5, 17, 0, 0, 4421, 4422, 5, 13, 0, 0, 4422, 4423,
 		3, 860, 430, 0, 4423, 433, 1, 0, 0, 0, 4424, 4425, 5, 47, 0, 0, 4425, 4426,
-		5, 578, 0, 0, 4426, 4427, 5, 459, 0, 0, 4427, 4428, 5, 578, 0, 0, 4428,
+		3, 816, 408, 0, 4426, 4427, 5, 459, 0, 0, 4427, 4428, 5, 578, 0, 0, 4428,
 		435, 1, 0, 0, 0, 4429, 4430, 5, 141, 0, 0, 4430, 4431, 5, 578, 0, 0, 4431,
 		4432, 5, 72, 0, 0, 4432, 4433, 5, 578, 0, 0, 4433, 437, 1, 0, 0, 0, 4434,
 		4439, 3, 440, 220, 0, 4435, 4436, 5, 559, 0, 0, 4436, 4438, 3, 440, 220,
@@ -60675,9 +60675,9 @@ type IAddToListStatementContext interface {
 
 	// Getter signatures
 	ADD() antlr.TerminalNode
-	AllVARIABLE() []antlr.TerminalNode
-	VARIABLE(i int) antlr.TerminalNode
+	Expression() IExpressionContext
 	TO() antlr.TerminalNode
+	VARIABLE() antlr.TerminalNode
 
 	// IsAddToListStatementContext differentiates from other interfaces.
 	IsAddToListStatementContext()
@@ -60719,16 +60719,28 @@ func (s *AddToListStatementContext) ADD() antlr.TerminalNode {
 	return s.GetToken(MDLParserADD, 0)
 }
 
-func (s *AddToListStatementContext) AllVARIABLE() []antlr.TerminalNode {
-	return s.GetTokens(MDLParserVARIABLE)
-}
+func (s *AddToListStatementContext) Expression() IExpressionContext {
+	var t antlr.RuleContext
+	for _, ctx := range s.GetChildren() {
+		if _, ok := ctx.(IExpressionContext); ok {
+			t = ctx.(antlr.RuleContext)
+			break
+		}
+	}
 
-func (s *AddToListStatementContext) VARIABLE(i int) antlr.TerminalNode {
-	return s.GetToken(MDLParserVARIABLE, i)
+	if t == nil {
+		return nil
+	}
+
+	return t.(IExpressionContext)
 }
 
 func (s *AddToListStatementContext) TO() antlr.TerminalNode {
 	return s.GetToken(MDLParserTO, 0)
+}
+
+func (s *AddToListStatementContext) VARIABLE() antlr.TerminalNode {
+	return s.GetToken(MDLParserVARIABLE, 0)
 }
 
 func (s *AddToListStatementContext) GetRuleContext() antlr.RuleContext {
@@ -60765,11 +60777,7 @@ func (p *MDLParser) AddToListStatement() (localctx IAddToListStatementContext) {
 	}
 	{
 		p.SetState(4425)
-		p.Match(MDLParserVARIABLE)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
-		}
+		p.Expression()
 	}
 	{
 		p.SetState(4426)
