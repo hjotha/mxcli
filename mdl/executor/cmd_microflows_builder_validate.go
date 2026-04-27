@@ -94,6 +94,14 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 			fb.validateStatements(s.ElseBody)
 		}
 
+	case *ast.EnumSplitStmt:
+		for _, c := range s.Cases {
+			fb.validateStatements(c.Body)
+		}
+		if len(s.ElseBody) > 0 {
+			fb.validateStatements(s.ElseBody)
+		}
+
 	case *ast.LoopStmt:
 		// Register loop variable (derived from list type)
 		if s.ListVariable != "" {
@@ -144,6 +152,19 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 			fb.declaredVars[s.OutputVariable] = "Unknown"
 		}
 		// Validate error handler body if present
+		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+			fb.validateStatements(s.ErrorHandling.Body)
+		}
+
+	case *ast.CallWebServiceStmt:
+		if s.OutputVariable != "" {
+			fb.declaredVars[s.OutputVariable] = "Object"
+		}
+		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+			fb.validateStatements(s.ErrorHandling.Body)
+		}
+
+	case *ast.DownloadFileStmt:
 		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 			fb.validateStatements(s.ErrorHandling.Body)
 		}

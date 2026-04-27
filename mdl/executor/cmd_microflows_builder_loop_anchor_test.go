@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -149,6 +150,96 @@ func TestBuilder_LoopWithoutLoopAnchorEmitsNoIteratorOrTail(t *testing.T) {
 		}
 		if f.OriginID == firstID && f.DestinationID == loop.ID {
 			t.Errorf("unexpected tail flow emitted without @anchor(tail: ...)")
+		}
+	}
+}
+
+func TestBuilder_WhileTrueWithNestedReturnUsesManualLoopBack(t *testing.T) {
+	stmts := []ast.MicroflowStatement{
+		&ast.WhileStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			Body: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "batch"}},
+				&ast.IfStmt{
+					Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+					ThenBody: []ast.MicroflowStatement{
+						&ast.ReturnStmt{},
+					},
+					Annotations: &ast.ActivityAnnotations{
+						FalseBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideTop, To: ast.AnchorSideTop},
+					},
+				},
+			},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+	oc := fb.buildFlowGraph(stmts, nil)
+
+	var mergeID model.ID
+	endEvents := 0
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.LoopedActivity:
+			t.Fatalf("while true with nested return must use a manual loop, got LoopedActivity %s", o.ID)
+		case *microflows.ExclusiveMerge:
+			if mergeID == "" {
+				mergeID = o.ID
+			}
+		case *microflows.EndEvent:
+			endEvents++
+		}
+	}
+	if mergeID == "" {
+		t.Fatal("expected manual loop header merge")
+	}
+	if endEvents != 1 {
+		t.Fatalf("expected only the explicit return end event, got %d", endEvents)
+	}
+	for _, flow := range oc.Flows {
+		cv, ok := flow.CaseValue.(microflows.EnumerationCase)
+		if !ok {
+			if ptr, ptrOK := flow.CaseValue.(*microflows.EnumerationCase); ptrOK {
+				cv = *ptr
+				ok = true
+			}
+		}
+		if ok && cv.Value == "false" && flow.DestinationID == mergeID {
+			if flow.OriginConnectionIndex != AnchorTop || flow.DestinationConnectionIndex != AnchorTop {
+				t.Fatalf("loop-back anchor = %d→%d, want Top→Top", flow.OriginConnectionIndex, flow.DestinationConnectionIndex)
+			}
+			return
+		}
+	}
+	t.Fatal("expected false branch loop-back flow")
+}
+
+func TestBuilder_WhileTrueEndingInReturnDoesNotLoopBackFromEndEvent(t *testing.T) {
+	stmts := []ast.MicroflowStatement{
+		&ast.WhileStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			Body: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "batch"}},
+				&ast.ReturnStmt{},
+			},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+	oc := fb.buildFlowGraph(stmts, nil)
+
+	endEvents := map[model.ID]bool{}
+	for _, obj := range oc.Objects {
+		if _, ok := obj.(*microflows.EndEvent); ok {
+			endEvents[obj.GetID()] = true
+		}
+	}
+	if len(endEvents) == 0 {
+		t.Fatal("expected explicit return end event")
+	}
+	for _, flow := range oc.Flows {
+		if endEvents[flow.OriginID] {
+			t.Fatalf("EndEvent %s must not have outgoing loop-back flow to %s", flow.OriginID, flow.DestinationID)
 		}
 	}
 }

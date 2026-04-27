@@ -131,6 +131,21 @@ func TestFindNormalFlows_AllErrors(t *testing.T) {
 	}
 }
 
+func TestIsManualLoopHeaderMergeIgnoresErrorHandlerBackEdges(t *testing.T) {
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("merge"):  &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+		mkID("action"): &microflows.ActionActivity{BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("action")}},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("merge"):  {mkFlow("merge", "action")},
+		mkID("action"): {mkErrorFlow("action", "merge")},
+	}
+
+	if isManualLoopHeaderMerge(mkID("merge"), activityMap, flowsByOrigin, nil) {
+		t.Fatal("error-handler-only back edge must not make an exclusive merge a manual loop header")
+	}
+}
+
 func TestEmitObjectAnnotations_EscapesMultilineText(t *testing.T) {
 	obj := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
@@ -213,6 +228,183 @@ func TestHasCustomErrorHandler(t *testing.T) {
 	}
 }
 
+func TestAppendFormattedStatement_EmptyCustomErrorHandlerKeepsBlock(t *testing.T) {
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: mkObj("act"),
+		},
+		Action: &microflows.MicroflowCallAction{
+			ErrorHandlingType: microflows.ErrorHandlingTypeCustomWithoutRollback,
+		},
+	}
+
+	var lines []string
+	appendFormattedStatement(
+		nil,
+		activity,
+		"$Result = call microflow Module.GetToken();",
+		map[model.ID]microflows.MicroflowObject{mkID("act"): activity},
+		map[model.ID][]*microflows.SequenceFlow{},
+		nil,
+		nil,
+		&lines,
+		"",
+	)
+
+	got := strings.Join(lines, "\n")
+	want := "$Result = call microflow Module.GetToken() on error without rollback { };"
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestCollectErrorHandlerStatementsIncludesSharedTerminalReturn(t *testing.T) {
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("error_log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("error_log")},
+			Action: &microflows.LogMessageAction{
+				LogLevel:        "Error",
+				LogNodeName:     "'Sample'",
+				MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "failed"}},
+			},
+		},
+		mkID("success_log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("success_log")},
+			Action: &microflows.LogMessageAction{
+				LogLevel:        "Info",
+				LogNodeName:     "'Sample'",
+				MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "success"}},
+			},
+		},
+		mkID("end"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("end"),
+			ReturnValue:         "$Response",
+		},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("error_log"):   {mkFlow("error_log", "end")},
+		mkID("success_log"): {mkFlow("success_log", "end")},
+	}
+
+	got := strings.Join(collectErrorHandlerStatements(nil, mkID("error_log"), activityMap, flowsByOrigin, nil, nil), "\n")
+	assertContains(t, got, "log error node 'Sample' 'failed';")
+	assertContains(t, got, "return $Response;")
+}
+
+func TestCollectErrorHandlerStatementsTraversesLocalMergeBeforeDecision(t *testing.T) {
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("error_log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("error_log")},
+			Action: &microflows.LogMessageAction{
+				LogLevel:        "Error",
+				LogNodeName:     "'Sample'",
+				MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "failed"}},
+			},
+		},
+		mkID("local_merge"): &microflows.ExclusiveMerge{
+			BaseMicroflowObject: mkObj("local_merge"),
+		},
+		mkID("decision"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("decision"),
+			Caption:             "$latestHttpResponse != empty",
+			SplitCondition: &microflows.ExpressionSplitCondition{
+				Expression: "$latestHttpResponse != empty",
+			},
+		},
+		mkID("import_error"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("import_error")},
+			Action: &microflows.ImportXmlAction{
+				ErrorHandlingType:   microflows.ErrorHandlingTypeCustomWithoutRollback,
+				XmlDocumentVariable: "latestHttpResponse",
+				ResultHandling: &microflows.ResultHandlingMapping{
+					MappingID:      "SampleApi.IMM_Error",
+					ResultEntityID: "SampleApi.Error",
+					ResultVariable: "ErrorResponse",
+					SingleObject:   true,
+				},
+			},
+		},
+		mkID("return_error"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("return_error"),
+			ReturnValue:         "$ErrorResponse",
+		},
+		mkID("create_generic"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("create_generic")},
+			Action: &microflows.CreateObjectAction{
+				EntityQualifiedName: "SampleApi.Error",
+				OutputVariable:      "GenericError",
+			},
+		},
+		mkID("return_generic"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("return_generic"),
+			ReturnValue:         "$GenericError",
+		},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("error_log"):      {mkFlow("error_log", "local_merge")},
+		mkID("local_merge"):    {mkFlow("local_merge", "decision")},
+		mkID("decision"):       {mkBranchFlow("decision", "import_error", microflows.EnumerationCase{Value: "true"}), mkBranchFlow("decision", "create_generic", microflows.EnumerationCase{Value: "false"})},
+		mkID("import_error"):   {mkFlow("import_error", "return_error"), mkErrorFlow("import_error", "local_merge")},
+		mkID("create_generic"): {mkFlow("create_generic", "return_generic")},
+	}
+
+	got := strings.Join(collectErrorHandlerStatements(nil, mkID("error_log"), activityMap, flowsByOrigin, nil, nil), "\n")
+	assertContains(t, got, "log error node 'Sample' 'failed';")
+	assertContains(t, got, "if $latestHttpResponse != empty then")
+	assertContains(t, got, "$ErrorResponse = import from mapping SampleApi.IMM_Error($latestHttpResponse) on error without rollback { };")
+	assertContains(t, got, "return $ErrorResponse;")
+	assertContains(t, got, "else")
+	assertContains(t, got, "return $GenericError;")
+	if count := strings.Count(got, "$GenericError = create"); count != 1 {
+		t.Fatalf("expected shared error branch to be emitted once, got %d occurrences:\n%s", count, got)
+	}
+}
+
+func TestCollectErrorHandlerStatementsStopsBeforeSharedSiblingMerge(t *testing.T) {
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("split"),
+			Caption:             "$UsePrimary",
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UsePrimary"},
+		},
+		mkID("error_log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("error_log")},
+			Action: &microflows.LogMessageAction{
+				LogLevel:        "Error",
+				LogNodeName:     "'Sample'",
+				MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "primary failed"}},
+			},
+		},
+		mkID("shared_merge"): &microflows.ExclusiveMerge{
+			BaseMicroflowObject: mkObj("shared_merge"),
+		},
+		mkID("fallback_call"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("fallback_call")},
+			Action: &microflows.JavaActionCallAction{
+				JavaAction:         "SampleAudit.RetrieveFallback",
+				ResultVariableName: "FallbackList",
+				UseReturnVariable:  true,
+			},
+		},
+		mkID("return_fallback"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("return_fallback"),
+			ReturnValue:         "$FallbackList",
+		},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("split"):         {mkBranchFlow("split", "shared_merge", microflows.EnumerationCase{Value: "false"})},
+		mkID("error_log"):     {mkFlow("error_log", "shared_merge")},
+		mkID("shared_merge"):  {mkFlow("shared_merge", "fallback_call")},
+		mkID("fallback_call"): {mkFlow("fallback_call", "return_fallback")},
+	}
+
+	got := strings.Join(collectErrorHandlerStatements(nil, mkID("error_log"), activityMap, flowsByOrigin, nil, nil), "\n")
+	assertContains(t, got, "log error node 'Sample' 'primary failed';")
+	if strings.Contains(got, "FallbackList") {
+		t.Fatalf("shared sibling fallback must stay outside the custom error block:\n%s", got)
+	}
+}
+
 // =============================================================================
 // getActionErrorHandlingType
 // =============================================================================
@@ -280,6 +472,17 @@ func TestGetActionErrorHandlingType_CommitObjects(t *testing.T) {
 	}
 }
 
+func TestGetActionErrorHandlingType_DownloadFile(t *testing.T) {
+	activity := &microflows.ActionActivity{}
+	activity.Action = &microflows.DownloadFileAction{
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+	}
+	got := getActionErrorHandlingType(activity)
+	if got != microflows.ErrorHandlingTypeRollback {
+		t.Errorf("expected Rollback, got %q", got)
+	}
+}
+
 func TestGetActionErrorHandlingType_CallExternal(t *testing.T) {
 	activity := &microflows.ActionActivity{}
 	activity.Action = &microflows.CallExternalAction{
@@ -322,8 +525,16 @@ func TestFormatActivity_EndEvent_NoReturn(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.EndEvent{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
+	if got != "return;" {
+		t.Errorf("expected bare return for EndEvent without return, got %q", got)
+	}
+}
+
+func TestFormatActivity_EndEvent_NoReturnValueInReturningMicroflow(t *testing.T) {
+	obj := &microflows.EndEvent{BaseMicroflowObject: mkObj("1")}
+	got := formatActivity(&ExecContext{DescribingMicroflowHasReturnValue: true}, obj, nil, nil)
 	if got != "" {
-		t.Errorf("expected empty for EndEvent without return, got %q", got)
+		t.Errorf("expected empty EndEvent to be skipped in value-returning microflow, got %q", got)
 	}
 }
 

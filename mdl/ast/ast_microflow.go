@@ -79,6 +79,48 @@ type DeclareStmt struct {
 
 func (s *DeclareStmt) isMicroflowStatement() {}
 
+// InheritanceSplitCase represents one typed branch in an InheritanceSplit.
+type InheritanceSplitCase struct {
+	Entity QualifiedName
+	Body   []MicroflowStatement
+}
+
+// InheritanceSplitStmt represents: SPLIT TYPE $Var ... END SPLIT
+type InheritanceSplitStmt struct {
+	Variable    string // Variable name (without $ prefix)
+	Cases       []InheritanceSplitCase
+	ElseBody    []MicroflowStatement
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *InheritanceSplitStmt) isMicroflowStatement() {}
+
+// EnumSplitCase represents one enumeration branch in an EnumSplit.
+type EnumSplitCase struct {
+	Value  string   // First enumeration value, or "(empty)" for Mendix's empty enum case.
+	Values []string // All enumeration values that share this branch.
+	Body   []MicroflowStatement
+}
+
+// EnumSplitStmt represents: SPLIT ENUM $Var ... END SPLIT
+type EnumSplitStmt struct {
+	Variable    string // Variable or attribute path without $ prefix (e.g. EventType or Event/EventType)
+	Cases       []EnumSplitCase
+	ElseBody    []MicroflowStatement
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *EnumSplitStmt) isMicroflowStatement() {}
+
+// CastObjectStmt represents: $Output = CAST $Object
+type CastObjectStmt struct {
+	OutputVariable string               // Output variable name (without $ prefix)
+	ObjectVariable string               // Source object variable name (without $ prefix)
+	Annotations    *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *CastObjectStmt) isMicroflowStatement() {}
+
 // MfSetStmt represents: SET $Var = expr or SET $Var/Attr = expr
 // (Named MfSetStmt to avoid conflict with existing SetStmt for SET key = value)
 type MfSetStmt struct {
@@ -132,6 +174,7 @@ type ActivityAnnotations struct {
 	Caption        string       // @caption 'text'
 	Color          string       // @color Green
 	AnnotationText string       // @annotation 'text'
+	FreeAnnotation string       // @annotation 'text' before @position/@anchor, kept free-floating
 	Excluded       bool         // @excluded
 	Anchor         *FlowAnchors // @anchor(from: X, to: Y) — anchors of the flow leaving this statement
 
@@ -225,6 +268,7 @@ type IfStmt struct {
 	Condition   Expression           // IF condition
 	ThenBody    []MicroflowStatement // THEN branch
 	ElseBody    []MicroflowStatement // ELSE branch (optional)
+	HasElse     bool                 // True when source had an explicit ELSE, even if empty
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
@@ -333,6 +377,23 @@ type CallJavaActionStmt struct {
 }
 
 func (s *CallJavaActionStmt) isMicroflowStatement() {}
+
+// CallWebServiceStmt represents a legacy SOAP web service call.
+// The service and mapping references are raw Mendix IDs because older MPRs store
+// these calls by ID rather than by stable qualified names.
+type CallWebServiceStmt struct {
+	OutputVariable   string               // Optional output variable
+	RawBSONBase64    string               // Raw Microflows$CallWebServiceAction BSON for lossless roundtrip
+	ServiceID        string               // Consumed web service ID
+	OperationName    string               // Operation name
+	SendMappingID    string               // Optional export mapping ID
+	ReceiveMappingID string               // Optional import mapping ID
+	Timeout          Expression           // Optional timeout expression
+	ErrorHandling    *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations      *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *CallWebServiceStmt) isMicroflowStatement() {}
 
 // ExecuteDatabaseQueryStmt represents: EXECUTE DATABASE QUERY Module.Connection.QueryName ...
 type ExecuteDatabaseQueryStmt struct {
@@ -504,9 +565,10 @@ type CreateListStmt struct {
 
 func (s *CreateListStmt) isMicroflowStatement() {}
 
-// AddToListStmt represents: ADD $Item TO $List
+// AddToListStmt represents: ADD expr TO $List
 type AddToListStmt struct {
-	Item        string               // Item variable to add
+	Item        string               // Item variable to add, kept for simple $Var compatibility
+	Value       Expression           // Item expression to add
 	List        string               // Target list variable
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
@@ -569,6 +631,16 @@ type ShowMessageStmt struct {
 }
 
 func (s *ShowMessageStmt) isMicroflowStatement() {}
+
+// DownloadFileStmt represents: DOWNLOAD FILE $FileDocument [SHOW IN BROWSER]
+type DownloadFileStmt struct {
+	FileDocument  string               // File document variable without $ prefix
+	ShowInBrowser bool                 // Whether the file opens in the browser
+	ErrorHandling *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations   *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *DownloadFileStmt) isMicroflowStatement() {}
 
 // ValidationFeedbackStmt represents: VALIDATION FEEDBACK $Var/Attr MESSAGE 'message' OBJECTS [$Var1, $Var2];
 type ValidationFeedbackStmt struct {

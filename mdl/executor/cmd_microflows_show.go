@@ -273,6 +273,12 @@ func describeMicroflow(ctx *ExecContext, name ast.QualifiedName) error {
 	// BEGIN block
 	lines = append(lines, "begin")
 
+	prevDescribingReturnValue := ctx.DescribingMicroflowHasReturnValue
+	ctx.DescribingMicroflowHasReturnValue = microflowHasReturnValue(targetMf)
+	defer func() {
+		ctx.DescribingMicroflowHasReturnValue = prevDescribingReturnValue
+	}()
+
 	// Generate activities
 	if targetMf.ObjectCollection != nil && len(targetMf.ObjectCollection.Objects) > 0 {
 		activityLines := formatMicroflowActivities(ctx, targetMf, entityNames, microflowNames)
@@ -487,6 +493,12 @@ func renderMicroflowMDL(
 	microflowNames map[model.ID]string,
 	sourceMap map[string]elkSourceRange,
 ) string {
+	prevDescribingReturnValue := ctx.DescribingMicroflowHasReturnValue
+	ctx.DescribingMicroflowHasReturnValue = microflowHasReturnValue(mf)
+	defer func() {
+		ctx.DescribingMicroflowHasReturnValue = prevDescribingReturnValue
+	}()
+
 	var lines []string
 
 	if mf.Documentation != "" {
@@ -571,6 +583,14 @@ func renderMicroflowMDL(
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
+}
+
+func microflowHasReturnValue(mf *microflows.Microflow) bool {
+	if mf == nil || mf.ReturnType == nil {
+		return false
+	}
+	_, isVoid := mf.ReturnType.(*microflows.VoidType)
+	return !isVoid
 }
 
 // formatMicroflowDataType formats a microflow data type for MDL output.
@@ -745,25 +765,45 @@ func formatMicroflowActivitiesWithSourceMap(
 	return lines
 }
 
-// findSplitMergePoints finds the corresponding merge point for each exclusive split.
+// findSplitMergePoints finds the corresponding join point for each exclusive split.
 func findSplitMergePoints(
 	ctx *ExecContext,
 	oc *microflows.MicroflowObjectCollection,
 	activityMap map[model.ID]microflows.MicroflowObject,
 ) map[model.ID]model.ID {
-	result := make(map[model.ID]model.ID)
-
 	// Build flow graph for forward traversal
 	flowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
 	for _, flow := range oc.Flows {
 		flowsByOrigin[flow.OriginID] = append(flowsByOrigin[flow.OriginID], flow)
 	}
 
-	// For each ExclusiveSplit, find its merge point
-	for _, obj := range oc.Objects {
+	return findSplitMergePointsForGraph(ctx, activityMap, flowsByOrigin)
+}
+
+// findSplitMergePointsForGraph finds the corresponding join point for each
+// ExclusiveSplit in an already materialized flow graph. This variant is reused
+// by nested traversals (loop bodies, error handlers) that don't have a full
+// top-level MicroflowObjectCollection handy.
+func findSplitMergePointsForGraph(
+	ctx *ExecContext,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+) map[model.ID]model.ID {
+	result := make(map[model.ID]model.ID)
+
+	// For each ExclusiveSplit, find its merge point.
+	for _, obj := range activityMap {
 		if _, ok := obj.(*microflows.ExclusiveSplit); ok {
 			splitID := obj.GetID()
-			// Find merge by following both branches until they converge
+			// Find the join by following branches until they converge.
+			mergeID := findMergeForSplit(ctx, splitID, flowsByOrigin, activityMap)
+			if mergeID != "" {
+				result[splitID] = mergeID
+			}
+		}
+		if _, ok := obj.(*microflows.InheritanceSplit); ok {
+			splitID := obj.GetID()
+			// Find the join by following branches until they converge.
 			mergeID := findMergeForSplit(ctx, splitID, flowsByOrigin, activityMap)
 			if mergeID != "" {
 				result[splitID] = mergeID
@@ -774,33 +814,32 @@ func findSplitMergePoints(
 	return result
 }
 
-// findMergeForSplit finds the ExclusiveMerge where branches from a split converge.
+// findMergeForSplit finds the nearest non-terminal node where split branches converge.
+// Mendix graphs commonly use an ExclusiveMerge, but some graphs converge directly
+// at another activity or split. Callers must therefore handle both merge and
+// non-merge join nodes.
 func findMergeForSplit(
 	ctx *ExecContext,
 	splitID model.ID,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
 	activityMap map[model.ID]microflows.MicroflowObject,
 ) model.ID {
-	flows := flowsByOrigin[splitID]
+	flows := findNormalFlows(flowsByOrigin[splitID])
 	if len(flows) < 2 {
 		return ""
 	}
 
-	// Follow each branch and collect all reachable nodes
-	branch0Nodes := collectReachableNodes(ctx, flows[0].DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
-	branch1Nodes := collectReachableNodes(ctx, flows[1].DestinationID, flowsByOrigin, activityMap, make(map[model.ID]bool))
-
-	// Find the first common node that is an ExclusiveMerge
-	// This is a simplification - we look for the first merge point reachable from both branches
-	for nodeID := range branch0Nodes {
-		if branch1Nodes[nodeID] {
-			if _, ok := activityMap[nodeID].(*microflows.ExclusiveMerge); ok {
-				return nodeID
-			}
-		}
+	branchDistances := make([]map[model.ID]int, 0, len(flows))
+	branchStarts := make([]model.ID, 0, len(flows))
+	for _, flow := range flows {
+		branchStarts = append(branchStarts, flow.DestinationID)
+		branchDistances = append(branchDistances, collectReachableDistances(ctx, flow.DestinationID, flowsByOrigin, activityMap))
 	}
 
-	return ""
+	if joinID := selectNearestCommonJoin(activityMap, branchDistances); joinID != "" {
+		return joinID
+	}
+	return selectNearestPartialJoin(activityMap, branchDistances, branchStarts, flowsByOrigin)
 }
 
 // collectReachableNodes collects all nodes reachable from a starting node.
@@ -828,6 +867,224 @@ func collectReachableNodes(
 
 	traverse(startID)
 	return result
+}
+
+// collectReachableDistances collects the shortest normal-flow distance from a
+// branch start to every reachable node. Error handler flows are excluded because
+// they do not participate in split/merge structural pairing.
+func collectReachableDistances(
+	ctx *ExecContext,
+	startID model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	activityMap map[model.ID]microflows.MicroflowObject,
+) map[model.ID]int {
+	_ = ctx
+	_ = activityMap
+
+	distances := map[model.ID]int{}
+	type queueItem struct {
+		id       model.ID
+		distance int
+	}
+	queue := []queueItem{{id: startID}}
+
+	for len(queue) > 0 {
+		item := queue[0]
+		queue = queue[1:]
+
+		if previous, ok := distances[item.id]; ok && previous <= item.distance {
+			continue
+		}
+		distances[item.id] = item.distance
+
+		for _, flow := range findNormalFlows(flowsByOrigin[item.id]) {
+			queue = append(queue, queueItem{
+				id:       flow.DestinationID,
+				distance: item.distance + 1,
+			})
+		}
+	}
+
+	return distances
+}
+
+func selectNearestCommonJoin(
+	activityMap map[model.ID]microflows.MicroflowObject,
+	branchDistances []map[model.ID]int,
+) model.ID {
+	if len(branchDistances) < 2 {
+		return ""
+	}
+
+	type candidate struct {
+		id          model.ID
+		maxDistance int
+		sumDistance int
+	}
+	candidates := []candidate{}
+
+	for nodeID, firstDistance := range branchDistances[0] {
+		if !isSplitJoinCandidate(activityMap[nodeID]) {
+			continue
+		}
+
+		maxDistance := firstDistance
+		sumDistance := firstDistance
+		common := true
+		for _, distances := range branchDistances[1:] {
+			distance, ok := distances[nodeID]
+			if !ok {
+				common = false
+				break
+			}
+			if distance > maxDistance {
+				maxDistance = distance
+			}
+			sumDistance += distance
+		}
+		if common {
+			candidates = append(candidates, candidate{
+				id:          nodeID,
+				maxDistance: maxDistance,
+				sumDistance: sumDistance,
+			})
+		}
+	}
+
+	if len(candidates) == 0 {
+		return ""
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].maxDistance != candidates[j].maxDistance {
+			return candidates[i].maxDistance < candidates[j].maxDistance
+		}
+		if candidates[i].sumDistance != candidates[j].sumDistance {
+			return candidates[i].sumDistance < candidates[j].sumDistance
+		}
+		return string(candidates[i].id) < string(candidates[j].id)
+	})
+
+	return candidates[0].id
+}
+
+func selectNearestPartialJoin(
+	activityMap map[model.ID]microflows.MicroflowObject,
+	branchDistances []map[model.ID]int,
+	branchStarts []model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+) model.ID {
+	if len(branchDistances) < 2 || len(branchStarts) != len(branchDistances) {
+		return ""
+	}
+
+	type candidate struct {
+		id             model.ID
+		reachableCount int
+		maxDistance    int
+		sumDistance    int
+	}
+
+	seenCandidates := make(map[model.ID]bool)
+	candidates := []candidate{}
+	for _, distances := range branchDistances {
+		for nodeID := range distances {
+			if seenCandidates[nodeID] || !isSplitJoinCandidate(activityMap[nodeID]) {
+				continue
+			}
+			seenCandidates[nodeID] = true
+
+			reachableCount := 0
+			maxDistance := 0
+			sumDistance := 0
+			valid := true
+			for branchIndex, branchDistance := range branchDistances {
+				if distance, ok := branchDistance[nodeID]; ok {
+					reachableCount++
+					if distance > maxDistance {
+						maxDistance = distance
+					}
+					sumDistance += distance
+					continue
+				}
+				if !allNormalPathsTerminateBefore(branchStarts[branchIndex], nodeID, flowsByOrigin, activityMap, make(map[model.ID]bool)) {
+					valid = false
+					break
+				}
+			}
+			if !valid || reachableCount < 2 {
+				continue
+			}
+			candidates = append(candidates, candidate{
+				id:             nodeID,
+				reachableCount: reachableCount,
+				maxDistance:    maxDistance,
+				sumDistance:    sumDistance,
+			})
+		}
+	}
+	if len(candidates) == 0 {
+		return ""
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].reachableCount != candidates[j].reachableCount {
+			return candidates[i].reachableCount > candidates[j].reachableCount
+		}
+		if candidates[i].maxDistance != candidates[j].maxDistance {
+			return candidates[i].maxDistance < candidates[j].maxDistance
+		}
+		if candidates[i].sumDistance != candidates[j].sumDistance {
+			return candidates[i].sumDistance < candidates[j].sumDistance
+		}
+		return string(candidates[i].id) < string(candidates[j].id)
+	})
+
+	return candidates[0].id
+}
+
+func allNormalPathsTerminateBefore(
+	currentID model.ID,
+	stopID model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	visiting map[model.ID]bool,
+) bool {
+	if currentID == "" || currentID == stopID {
+		return false
+	}
+	if visiting[currentID] {
+		return false
+	}
+	if _, isEnd := activityMap[currentID].(*microflows.EndEvent); isEnd {
+		return true
+	}
+
+	normalFlows := findNormalFlows(flowsByOrigin[currentID])
+	if len(normalFlows) == 0 {
+		return false
+	}
+
+	visiting[currentID] = true
+	defer delete(visiting, currentID)
+	for _, flow := range normalFlows {
+		if !allNormalPathsTerminateBefore(flow.DestinationID, stopID, flowsByOrigin, activityMap, visiting) {
+			return false
+		}
+	}
+	return true
+}
+
+func isSplitJoinCandidate(obj microflows.MicroflowObject) bool {
+	if obj == nil {
+		return false
+	}
+	switch obj.(type) {
+	case *microflows.StartEvent, *microflows.EndEvent:
+		return false
+	default:
+		return true
+	}
 }
 
 // --- Executor method wrappers for callers in unmigrated code ---

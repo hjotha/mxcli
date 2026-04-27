@@ -31,6 +31,14 @@ import (
 // When adding new action types, check existing MPR files or reflection data for the storage name.
 func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 	switch a := action.(type) {
+	case *microflows.CastAction:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+			{Key: "$Type", Value: "Microflows$CastAction"},
+			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "VariableName", Value: a.OutputVariable},
+		}
+
 	case *microflows.CreateVariableAction:
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
@@ -65,9 +73,9 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		}
 		// ErrorHandlingType is required (default to Rollback)
 		doc = append(doc, bson.E{Key: "ErrorHandlingType", Value: "Rollback"})
-		// Serialize Items (ChangeActionItem) for InitialMembers
-		// IMPORTANT: Mendix BSON arrays include the count as the first element
-		items := bson.A{int32(len(a.InitialMembers))} // Start with count
+		// Serialize Items (ChangeActionItem) for InitialMembers. Mendix uses a
+		// storage-list marker as the first array element; it is not an item count.
+		items := bson.A{int32(2)}
 		for _, change := range a.InitialMembers {
 			item := bson.D{
 				{Key: "$ID", Value: idToBsonBinary(string(change.ID))},
@@ -99,10 +107,11 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$Type", Value: "Microflows$ChangeAction"}, // storageName differs from qualifiedName
 			{Key: "ChangeVariableName", Value: a.ChangeVariable},
 			{Key: "Commit", Value: string(a.Commit)},
+			{Key: "ErrorHandlingType", Value: "Rollback"},
 		}
-		// Serialize Items (ChangeActionItem)
-		// IMPORTANT: Mendix BSON arrays include the count as the first element
-		items := bson.A{int32(len(a.Changes))} // Start with count
+		// Serialize Items (ChangeActionItem). Mendix uses a storage-list marker
+		// as the first array element; it is not an item count.
+		items := bson.A{int32(2)}
 		for _, change := range a.Changes {
 			item := bson.D{
 				{Key: "$ID", Value: idToBsonBinary(string(change.ID))},
@@ -126,17 +135,14 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		return doc
 
 	case *microflows.CommitObjectsAction:
-		doc := bson.D{
+		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$CommitAction"},
 			{Key: "CommitVariableName", Value: a.CommitVariable},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+			{Key: "RefreshInClient", Value: a.RefreshInClient},
+			{Key: "WithEvents", Value: a.WithEvents},
 		}
-		if a.ErrorHandlingType != "" && a.ErrorHandlingType != microflows.ErrorHandlingTypeRollback {
-			doc = append(doc, bson.E{Key: "ErrorHandlingType", Value: string(a.ErrorHandlingType)})
-		}
-		doc = append(doc, bson.E{Key: "RefreshInClient", Value: a.RefreshInClient})
-		doc = append(doc, bson.E{Key: "WithEvents", Value: a.WithEvents})
-		return doc
 
 	case *microflows.DeleteObjectAction:
 		return bson.D{
@@ -202,8 +208,6 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$MicroflowCallAction"},
 			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
-			{Key: "ResultVariableName", Value: a.ResultVariableName},
-			{Key: "UseReturnVariable", Value: a.UseReturnVariable},
 		}
 		// Serialize nested MicroflowCall structure
 		if a.MicroflowCall != nil {
@@ -211,7 +215,6 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 				{Key: "$ID", Value: idToBsonBinary(string(a.MicroflowCall.ID))},
 				{Key: "$Type", Value: "Microflows$MicroflowCall"},
 				{Key: "Microflow", Value: a.MicroflowCall.Microflow},
-				{Key: "QueueSettings", Value: nil},
 			}
 			// Serialize parameter mappings within MicroflowCall
 			if len(a.MicroflowCall.ParameterMappings) > 0 {
@@ -221,8 +224,8 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 					mapping := bson.D{
 						{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
 						{Key: "$Type", Value: "Microflows$MicroflowCallParameterMapping"},
-						{Key: "Parameter", Value: pm.Parameter},
 						{Key: "Argument", Value: pm.Argument},
+						{Key: "Parameter", Value: pm.Parameter},
 					}
 					mappings = append(mappings, mapping)
 				}
@@ -230,8 +233,13 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			} else {
 				mfCall = append(mfCall, bson.E{Key: "ParameterMappings", Value: bson.A{int32(2)}}) // Empty array with marker
 			}
+			mfCall = append(mfCall, bson.E{Key: "QueueSettings", Value: nil})
 			doc = append(doc, bson.E{Key: "MicroflowCall", Value: mfCall})
 		}
+		doc = append(doc,
+			bson.E{Key: "ResultVariableName", Value: a.ResultVariableName},
+			bson.E{Key: "UseReturnVariable", Value: a.UseReturnVariable},
+		)
 		return doc
 
 	case *microflows.JavaActionCallAction:
@@ -345,15 +353,16 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			formSettingsID = model.ID(generateUUID())
 		}
 
-		// Build ParameterMappings inside FormSettings
-		paramMappings := bson.A{int32(len(a.PageParameterMappings))}
+		// Build ParameterMappings inside FormSettings. The first element is the
+		// Mendix storage-list marker, not the number of mappings.
+		paramMappings := bson.A{int32(2)}
 		for _, pm := range a.PageParameterMappings {
 			mapping := bson.D{
 				{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
 				{Key: "$Type", Value: "Forms$PageParameterMapping"}, // Forms$, not Microflows$
 				{Key: "Argument", Value: pm.Argument},
 				{Key: "Parameter", Value: pm.Parameter}, // BY_NAME_REFERENCE
-				{Key: "Variable", Value: nil},
+				{Key: "Variable", Value: emptyPageVariable()},
 			}
 			paramMappings = append(paramMappings, mapping)
 		}
@@ -399,6 +408,15 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		}
 		return doc
 
+	case *microflows.DownloadFileAction:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+			{Key: "$Type", Value: "Microflows$DownloadFileAction"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+			{Key: "FileDocumentVariableName", Value: a.FileDocument},
+			{Key: "ShowInBrowser", Value: a.ShowInBrowser},
+		}
+
 	case *microflows.ValidationFeedbackAction:
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
@@ -424,6 +442,9 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 
 	case *microflows.RestCallAction:
 		return serializeRestCallAction(a)
+
+	case *microflows.WebServiceCallAction:
+		return serializeWebServiceCallAction(a)
 
 	case *microflows.RestOperationCallAction:
 		return serializeRestOperationCallAction(a)
@@ -466,6 +487,17 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 
 	default:
 		return nil
+	}
+}
+
+func emptyPageVariable() bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Forms$PageVariable"},
+		{Key: "PageParameter", Value: ""},
+		{Key: "SnippetParameter", Value: ""},
+		{Key: "UseAllPages", Value: false},
+		{Key: "Widget", Value: ""},
 	}
 }
 
@@ -585,6 +617,25 @@ func serializeRestCallAction(a *microflows.RestCallAction) bson.D {
 	}
 
 	return doc
+}
+
+func serializeWebServiceCallAction(a *microflows.WebServiceCallAction) bson.D {
+	if len(a.RawBSON) > 0 {
+		// Raw SOAP actions are an explicit passthrough form. The raw payload is
+		// authoritative; parsed fields are convenience metadata for display only.
+		var raw bson.D
+		if err := bson.Unmarshal(a.RawBSON, &raw); err == nil {
+			return raw
+		}
+	}
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "ImportedService", Value: string(a.ServiceID)},
+		{Key: "OperationName", Value: a.OperationName},
+		{Key: "TimeOutExpression", Value: a.TimeoutExpression},
+		{Key: "UseRequestTimeOut", Value: a.TimeoutExpression != ""},
+	}
 }
 
 // serializeRestOperationCallAction serializes a Microflows$RestOperationCallAction to BSON.
@@ -745,6 +796,20 @@ func serializeRestResultHandling(rh microflows.ResultHandling, outputVar string)
 		}
 		return doc
 
+	case *microflows.ResultHandlingHttpResponse:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(h.ID))},
+			{Key: "$Type", Value: "Microflows$ResultHandling"},
+			{Key: "Bind", Value: outputVar != ""},
+			{Key: "ImportMappingCall", Value: nil},
+			{Key: "ResultVariableName", Value: outputVar},
+			{Key: "VariableType", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+				{Key: "$Type", Value: "DataTypes$ObjectType"},
+				{Key: "Entity", Value: "System.HttpResponse"},
+			}},
+		}
+
 	case *microflows.ResultHandlingMapping:
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(h.ID))},
@@ -753,13 +818,16 @@ func serializeRestResultHandling(rh microflows.ResultHandling, outputVar string)
 		}
 		// ImportMappingCall - uses ReturnValueMapping (Studio Pro field name)
 		// with all required fields to make the mapping link visible in Studio Pro.
-		// SingleObject drives ForceSingleOccurrence and Range.SingleObject.
+		forceSingleOccurrence := h.SingleObject
+		if h.ForceSingleOccurrence != nil {
+			forceSingleOccurrence = *h.ForceSingleOccurrence
+		}
 		importCall := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 			{Key: "$Type", Value: "Microflows$ImportMappingCall"},
 			{Key: "Commit", Value: "YesWithoutEvents"},
 			{Key: "ContentType", Value: "Json"},
-			{Key: "ForceSingleOccurrence", Value: h.SingleObject},
+			{Key: "ForceSingleOccurrence", Value: forceSingleOccurrence},
 			{Key: "ObjectHandlingBackup", Value: "Create"},
 			{Key: "ParameterVariableName", Value: ""},
 			{Key: "Range", Value: bson.D{
@@ -868,6 +936,24 @@ func serializeListOperation(op microflows.ListOperation) bson.D {
 			{Key: "Expression", Value: o.Expression},
 			{Key: "ListName", Value: o.ListVariable}, // storageName: ListName
 		}
+	case *microflows.FindByAttributeOperation:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
+			{Key: "$Type", Value: "Microflows$Find"},
+			{Key: "Association", Value: o.Association},
+			{Key: "Attribute", Value: o.Attribute},
+			{Key: "Expression", Value: o.Expression},
+			{Key: "ListName", Value: o.ListVariable},
+		}
+	case *microflows.FilterByAttributeOperation:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
+			{Key: "$Type", Value: "Microflows$Filter"},
+			{Key: "Association", Value: o.Association},
+			{Key: "Attribute", Value: o.Attribute},
+			{Key: "Expression", Value: o.Expression},
+			{Key: "ListName", Value: o.ListVariable},
+		}
 	case *microflows.SortOperation:
 		// Build sorting items
 		sortings := bson.A{int32(3)} // Array with items marker
@@ -883,6 +969,9 @@ func serializeListOperation(op microflows.ListOperation) bson.D {
 					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 					{Key: "$Type", Value: "DomainModels$AttributeRef"},
 					{Key: "Attribute", Value: item.AttributeQualifiedName}, // BY_NAME_REFERENCE stored as string
+				}
+				if len(item.EntityRefSteps) > 0 {
+					attrRef = append(attrRef, bson.E{Key: "EntityRef", Value: serializeIndirectEntityRef(item.EntityRefSteps)})
 				}
 				sortItem = append(sortItem, bson.E{Key: "AttributeRef", Value: attrRef})
 			}
@@ -1040,6 +1129,9 @@ func serializeSortItem(s *microflows.SortItem) bson.D {
 			{Key: "$Type", Value: "DomainModels$AttributeRef"},
 			{Key: "Attribute", Value: s.AttributeQualifiedName}, // BY_NAME_REFERENCE stored as string
 		}
+		if len(s.EntityRefSteps) > 0 {
+			attrRef = append(attrRef, bson.E{Key: "EntityRef", Value: serializeIndirectEntityRef(s.EntityRefSteps)})
+		}
 		doc = append(doc, bson.E{Key: "AttributeRef", Value: attrRef})
 	} else if s.AttributeID != "" {
 		// Legacy fallback: binary ID reference
@@ -1048,6 +1140,23 @@ func serializeSortItem(s *microflows.SortItem) bson.D {
 
 	doc = append(doc, bson.E{Key: "SortOrder", Value: string(s.Direction)})
 	return doc
+}
+
+func serializeIndirectEntityRef(steps []microflows.EntityRefStep) bson.D {
+	items := bson.A{int32(2)}
+	for _, step := range steps {
+		items = append(items, bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "DomainModels$EntityRefStep"},
+			{Key: "Association", Value: step.Association},
+			{Key: "DestinationEntity", Value: step.DestinationEntity},
+		})
+	}
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},
+		{Key: "Steps", Value: items},
+	}
 }
 
 // serializeCodeActionParameterValue serializes a CodeActionParameterValue to BSON.
@@ -1085,6 +1194,12 @@ func serializeCodeActionParameterValue(v microflows.CodeActionParameterValue) bs
 			{Key: "$ID", Value: idToBsonBinary(string(value.ID))},
 			{Key: "$Type", Value: "Microflows$EntityTypeCodeActionParameterValue"},
 			{Key: "Entity", Value: value.Entity},
+		}
+	case *microflows.MicroflowParameterValue:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(value.ID))},
+			{Key: "$Type", Value: "Microflows$MicroflowParameterValue"},
+			{Key: "Microflow", Value: value.Microflow},
 		}
 	}
 	return nil
@@ -1139,19 +1254,23 @@ func serializeExecuteDatabaseQueryAction(a *microflows.ExecuteDatabaseQueryActio
 }
 
 func serializeImportXmlAction(a *microflows.ImportXmlAction) bson.D {
+	forceSingleOccurrence := false
+	if a.ResultHandling.ForceSingleOccurrence != nil {
+		forceSingleOccurrence = *a.ResultHandling.ForceSingleOccurrence
+	}
 	// Build ImportMappingCall
 	importCall := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 		{Key: "$Type", Value: "Microflows$ImportMappingCall"},
 		{Key: "Commit", Value: "YesWithoutEvents"},
 		{Key: "ContentType", Value: "Json"},
-		{Key: "ForceSingleOccurrence", Value: false},
+		{Key: "ForceSingleOccurrence", Value: forceSingleOccurrence},
 		{Key: "ObjectHandlingBackup", Value: "Create"},
 		{Key: "ParameterVariableName", Value: ""},
 		{Key: "Range", Value: bson.D{
 			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 			{Key: "$Type", Value: "Microflows$ConstantRange"},
-			{Key: "SingleObject", Value: false},
+			{Key: "SingleObject", Value: a.ResultHandling.SingleObject},
 		}},
 		{Key: "ReturnValueMapping", Value: string(a.ResultHandling.MappingID)},
 	}

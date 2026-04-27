@@ -148,19 +148,16 @@ FULL: F U L L;
 CROSS: C R O S S;
 ON: O N;
 
-// Sort direction
-ASC: A S C;
-DESC: D E S C;
-
-// =============================================================================
-// ANCHOR ANNOTATION KEYWORDS
-// =============================================================================
-
+// Anchor annotation keywords.
 // Sides of an activity box a SequenceFlow can attach to, used by the
 // @anchor(from: X, to: Y) annotation and its per-branch variants.
 TOP: T O P;
 BOTTOM: B O T T O M;
 ANCHOR: A N C H O R;
+
+// Sort direction
+ASC: A S C;
+DESC: D E S C;
 
 // =============================================================================
 // MICROFLOW KEYWORDS
@@ -185,6 +182,10 @@ RETURN: R E T U R N;
 THROW: T H R O W;
 LOG: L O G;
 CALL: C A L L;
+WEB: W E B;
+RAW: R A W;
+DOWNLOAD: D O W N L O A D;
+BROWSER: B R O W S E R;
 JAVA: J A V A;
 JAVASCRIPT: J A V A S C R I P T;
 ACTION: A C T I O N;
@@ -473,6 +474,7 @@ BODY: B O D Y;
 RESPONSE: R E S P O N S E;
 REQUEST: R E Q U E S T;
 SEND: S E N D;
+RECEIVE: R E C E I V E;
 DEPRECATED: D E P R E C A T E D;
 RESOURCE: R E S O U R C E;
 JSON: J S O N;
@@ -721,6 +723,7 @@ DIV: D I V;
 
 SEMICOLON: ';';
 COMMA: ',';
+ELLIPSIS: '...';
 DOT: '.';
 LPAREN: '(';
 RPAREN: ')';

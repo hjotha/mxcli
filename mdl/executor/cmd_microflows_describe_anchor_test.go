@@ -50,6 +50,38 @@ func TestEmitAnchorAnnotation_FromAndTo(t *testing.T) {
 	}
 }
 
+func TestEmitAnchorAnnotation_OmitsDefaultRightToLeft(t *testing.T) {
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: "act-default"},
+			},
+		},
+	}
+	incoming := &microflows.SequenceFlow{
+		DestinationID:              "act-default",
+		DestinationConnectionIndex: AnchorLeft,
+	}
+	outgoing := &microflows.SequenceFlow{
+		OriginID:              "act-default",
+		OriginConnectionIndex: AnchorRight,
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		"act-default": {outgoing},
+	}
+	flowsByDest := map[model.ID][]*microflows.SequenceFlow{
+		"act-default": {incoming},
+	}
+
+	var lines []string
+	emitAnchorAnnotation(activity, flowsByOrigin, flowsByDest, &lines, "")
+
+	if len(lines) != 0 {
+		t.Fatalf("expected default anchor line to be omitted, got %v", lines)
+	}
+}
+
 func TestEmitAnchorAnnotation_NoFlowsSkipsEmission(t *testing.T) {
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{

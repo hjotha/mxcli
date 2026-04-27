@@ -82,6 +82,11 @@ type ExecContext struct {
 	// Executor. Used by REFRESH CATALOG BACKGROUND so the goroutine can
 	// deliver the result after syncBack has already run.
 	SyncCatalog func(*catalog.Catalog)
+
+	// DescribingMicroflowHasReturnValue is set while rendering a microflow body.
+	// It lets activity formatting distinguish a terminal void EndEvent from an
+	// empty EndEvent in a value-returning microflow, where bare `return;` is invalid.
+	DescribingMicroflowHasReturnValue bool
 }
 
 // Connected returns true if a project is connected via the Backend.

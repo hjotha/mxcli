@@ -5,6 +5,7 @@ package executor
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -23,10 +24,14 @@ type flowBuilder struct {
 	posY                int
 	baseY               int // Base Y position (for returning after ELSE branches)
 	spacing             int
-	returnValue         string            // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnValue         string // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnType          *ast.MicroflowReturnType
+	hasReturnValue      bool              // True when the microflow declares a non-void return type
 	endsWithReturn      bool              // True if the flow already ends with EndEvent(s) from RETURN statements
+	lastReturnEndID     model.ID          // Last explicit RETURN EndEvent, used as a fallback error-handler target
 	varTypes            map[string]string // Variable name -> entity qualified name (for CHANGE statements)
 	declaredVars        map[string]string // Declared primitive variables: name -> type (e.g., "$IsValid" -> "Boolean")
+	returnScopeBaseline map[string]string // Variable types visible before a nested handler starts
 	errors              []string          // Validation errors collected during build
 	measurer            *layoutMeasurer   // For measuring statement dimensions
 	nextConnectionPoint model.ID          // For compound statements: the exit point differs from entry point
@@ -45,7 +50,23 @@ type flowBuilder struct {
 	// previousStmtAnchor holds the Anchor annotation of the statement that
 	// just emitted an activity, so the next flow's OriginConnectionIndex can
 	// be overridden by the user. Cleared after each flow is created.
-	previousStmtAnchor *ast.FlowAnchors
+	previousStmtAnchor       *ast.FlowAnchors
+	assocLookupCache         map[string]*assocLookupResult
+	memberResolutionCache    map[string]resolvedMember
+	manualLoopBackTarget     model.ID
+	emptyErrorHandlerFrom    model.ID
+	errorHandlerTailFrom     model.ID
+	errorHandlerSource       model.ID
+	errorHandlerSkipVar      string
+	errorHandlerTailIsSource bool
+	errorHandlerReturnValue  string
+	pendingErrorHandlers     []pendingErrorHandlerState
+	callOutputRemaining      map[string]int
+	callOutputDeclarations   map[*ast.CallMicroflowStmt]bool
+	listInputVariables       map[string]bool
+	objectInputVariables     map[string]bool
+	variableAliases          map[string]string
+	outputVarPositions       map[string]model.Point
 }
 
 // addError records a validation error during flow building.
@@ -131,6 +152,69 @@ func (fb *flowBuilder) registerResultVariableType(varName string, dt microflows.
 	if fb.declaredVars != nil {
 		fb.declaredVars[varName] = dt.GetTypeName()
 	}
+}
+
+func (fb *flowBuilder) resolveVariableName(varName string) string {
+	if varName == "" || fb.variableAliases == nil {
+		return varName
+	}
+	if alias := fb.variableAliases[varName]; alias != "" {
+		return alias
+	}
+	return varName
+}
+
+func (fb *flowBuilder) resolveVariablePath(path string) string {
+	if before, after, ok := strings.Cut(path, "/"); ok {
+		return fb.resolveVariableName(before) + "/" + after
+	}
+	return fb.resolveVariableName(path)
+}
+
+func (fb *flowBuilder) resolveSourceVariables(source string) string {
+	if source == "" || fb.variableAliases == nil {
+		return source
+	}
+	resolved := source
+	for original, alias := range fb.variableAliases {
+		if alias == "" {
+			continue
+		}
+		rx := regexp.MustCompile(`\$` + regexp.QuoteMeta(original) + `\b`)
+		resolved = rx.ReplaceAllStringFunc(resolved, func(string) string {
+			return "$" + alias
+		})
+	}
+	return resolved
+}
+
+func (fb *flowBuilder) uniqueImplicitOutputVariable(varName string) string {
+	if varName == "" {
+		return ""
+	}
+	if fb.outputVarPositions == nil {
+		fb.outputVarPositions = make(map[string]model.Point)
+	}
+	position := model.Point{X: fb.posX, Y: fb.posY}
+	if previous, ok := fb.outputVarPositions[varName]; ok &&
+		previous.X == position.X && previous.Y == position.Y &&
+		fb.isVariableDeclared(varName) {
+		if fb.variableAliases == nil {
+			fb.variableAliases = make(map[string]string)
+		}
+		for i := 2; ; i++ {
+			candidate := fmt.Sprintf("%s_%d", varName, i)
+			if !fb.isVariableDeclared(candidate) {
+				fb.variableAliases[varName] = candidate
+				return candidate
+			}
+		}
+	}
+	if fb.variableAliases != nil {
+		delete(fb.variableAliases, varName)
+	}
+	fb.outputVarPositions[varName] = position
+	return varName
 }
 
 // lookupMicroflowReturnType resolves the return type of a called microflow by
@@ -222,6 +306,10 @@ func (fb *flowBuilder) exprToString(expr ast.Expression) string {
 	return expressionToString(resolved)
 }
 
+func cleanReturnValue(value string) string {
+	return strings.TrimRight(value, " \t\r\n")
+}
+
 // resolveAssociationPaths walks an expression tree and, for any AttributePathExpr
 // whose path contains an association (qualified name like Module.AssocName), inserts
 // the association's target entity after the association segment.
@@ -231,10 +319,12 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 	}
 
 	switch e := expr.(type) {
+	case *ast.VariableExpr:
+		return &ast.VariableExpr{Name: fb.resolveVariableName(e.Name)}
 	case *ast.AttributePathExpr:
 		resolved := fb.resolvePathSegments(e.Path)
 		return &ast.AttributePathExpr{
-			Variable: e.Variable,
+			Variable: fb.resolveVariableName(e.Variable),
 			Path:     resolved,
 			Segments: e.Segments,
 		}
@@ -265,6 +355,14 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 			Condition: fb.resolveAssociationPaths(e.Condition),
 			ThenExpr:  fb.resolveAssociationPaths(e.ThenExpr),
 			ElseExpr:  fb.resolveAssociationPaths(e.ElseExpr),
+		}
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return &ast.SourceExpr{Source: fb.resolveSourceVariables(e.Source)}
+		}
+		return &ast.SourceExpr{
+			Expression: fb.resolveAssociationPaths(e.Expression),
+			Source:     e.Source,
 		}
 	default:
 		return expr
@@ -380,6 +478,8 @@ func unwrapParenCall(expr ast.Expression) *ast.FunctionCallExpr {
 			return e
 		case *ast.ParenExpr:
 			expr = e.Inner
+		case *ast.SourceExpr:
+			expr = e.Expression
 		default:
 			return nil
 		}

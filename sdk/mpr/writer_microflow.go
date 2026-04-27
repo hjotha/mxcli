@@ -228,6 +228,8 @@ func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
 		cv = &c
 	case microflows.NoCase:
 		cv = &c
+	case microflows.InheritanceCase:
+		cv = &c
 	}
 
 	switch c := cv.(type) {
@@ -249,6 +251,17 @@ func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(id)},
 			{Key: "$Type", Value: "Microflows$NoCase"},
+		}
+	case *microflows.InheritanceCase:
+		id := string(c.ID)
+		if id == "" {
+			id = generateUUID()
+		}
+		value := c.EntityQualifiedName
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(id)},
+			{Key: "$Type", Value: "Microflows$InheritanceCase"},
+			{Key: "Value", Value: value},
 		}
 	}
 	// Default: synthesise a NoCase document with a fresh ID.
@@ -466,13 +479,10 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 		}
 
 	case *microflows.EndEvent:
-		// Pristine EndEvents always carry `ReturnValue` (empty string for void
-		// microflows; expression + "\n" when a value is returned). Omitting it
-		// diverges from the pristine key set on Mx 9 roundtrips.
-		returnValue := ""
-		if o.ReturnValue != "" {
-			returnValue = o.ReturnValue + "\n"
-		}
+		// Pristine Mx 9 EndEvents carry `ReturnValue` but not a synthetic trailing
+		// line break. Adding one can make Studio Pro reject list-return EndEvents
+		// with CE0117 even though mxcli's parser accepts the expression.
+		returnValue := o.ReturnValue
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
 			{Key: "$Type", Value: "Microflows$EndEvent"},
@@ -565,6 +575,18 @@ func serializeMicroflowObject(obj microflows.MicroflowObject) bson.D {
 			}
 		}
 		return doc
+
+	case *microflows.InheritanceSplit:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
+			{Key: "$Type", Value: "Microflows$InheritanceSplit"},
+			{Key: "Caption", Value: o.Caption},
+			{Key: "Documentation", Value: o.Documentation},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(o.ErrorHandlingType), "Rollback")},
+			{Key: "RelativeMiddlePoint", Value: pointToString(o.Position)},
+			{Key: "Size", Value: sizeToString(o.Size)},
+			{Key: "SplitVariableName", Value: o.VariableName},
+		}
 
 	case *microflows.ExclusiveMerge:
 		return bson.D{

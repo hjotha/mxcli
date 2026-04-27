@@ -210,6 +210,22 @@ func getSpacedText(tree antlr.Tree) string {
 	return strings.Join(tokens, " ")
 }
 
+func getExpressionSourceText(tree antlr.Tree) string {
+	text := getSpacedText(tree)
+	replacer := strings.NewReplacer(
+		" @ ", " @",
+		"@ ", "@",
+		" . ", ".",
+		" / ", "/",
+		" ( ", "(",
+		" (", "(",
+		"( ", "(",
+		" )", ")",
+		" ,", ",",
+	)
+	return replacer.Replace(text)
+}
+
 // collectLeafTokens recursively collects terminal node texts from a parse tree.
 func collectLeafTokens(tree antlr.Tree, tokens *[]string) {
 	if leaf, ok := tree.(antlr.TerminalNode); ok {

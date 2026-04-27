@@ -5,6 +5,7 @@ package visitor
 import (
 	"strings"
 
+	"github.com/antlr4-go/antlr/v4"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
 )
@@ -42,6 +43,12 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 	// Check each statement type
 	if decl := mfCtx.DeclareStatement(); decl != nil {
 		stmt = buildDeclareStatement(decl)
+	} else if split := mfCtx.EnumSplitStatement(); split != nil {
+		stmt = buildEnumSplitStatement(split)
+	} else if split := mfCtx.InheritanceSplitStatement(); split != nil {
+		stmt = buildInheritanceSplitStatement(split)
+	} else if cast := mfCtx.CastObjectStatement(); cast != nil {
+		stmt = buildCastObjectStatement(cast)
 	} else if set := mfCtx.SetStatement(); set != nil {
 		stmt = buildSetStatement(set)
 	} else if createList := mfCtx.CreateListStatement(); createList != nil {
@@ -75,6 +82,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildCallMicroflowStatement(call)
 	} else if call := mfCtx.CallJavaActionStatement(); call != nil {
 		stmt = buildCallJavaActionStatement(call)
+	} else if call := mfCtx.CallWebServiceStatement(); call != nil {
+		stmt = buildCallWebServiceStatement(call)
 	} else if call := mfCtx.ExecuteDatabaseQueryStatement(); call != nil {
 		stmt = buildExecuteDatabaseQueryStatement(call)
 	} else if call := mfCtx.CallExternalActionStatement(); call != nil {
@@ -99,6 +108,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = &ast.ShowHomePageStmt{}
 	} else if showMsg := mfCtx.ShowMessageStatement(); showMsg != nil {
 		stmt = buildShowMessageStatement(showMsg)
+	} else if download := mfCtx.DownloadFileStatement(); download != nil {
+		stmt = buildDownloadFileStatement(download)
 	} else if valFeedback := mfCtx.ValidationFeedbackStatement(); valFeedback != nil {
 		stmt = buildValidationFeedbackStatement(valFeedback)
 	} else if restCall := mfCtx.RestCallStatement(); restCall != nil {
@@ -153,7 +164,8 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 	result := &ast.ActivityAnnotations{}
 	hasAny := false
 
-	for _, annCtx := range annotations {
+	seenActivityMetadata := false
+	for i, annCtx := range annotations {
 		ann := annCtx.(*parser.AnnotationContext)
 		annName := strings.ToLower(ann.AnnotationName().GetText())
 
@@ -170,6 +182,7 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 					hasAny = true
 				}
 			}
+			seenActivityMetadata = true
 
 		case "caption":
 			// @caption 'text' — bare annotationValue
@@ -180,6 +193,7 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 					hasAny = true
 				}
 			}
+			seenActivityMetadata = true
 
 		case "color":
 			// @color Green — bare annotationValue (identifier)
@@ -190,13 +204,18 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 					hasAny = true
 				}
 			}
+			seenActivityMetadata = true
 
 		case "annotation":
 			// @annotation 'text' — bare annotationValue
 			if valCtx := ann.AnnotationValue(); valCtx != nil {
 				text := extractAnnotationValueString(valCtx)
 				if text != "" {
-					result.AnnotationText = text
+					if !seenActivityMetadata && hasLaterActivityAnnotation(annotations, i+1) {
+						result.FreeAnnotation = text
+					} else {
+						result.AnnotationText = text
+					}
 					hasAny = true
 				}
 			}
@@ -205,6 +224,7 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 			// @excluded — no value needed
 			result.Excluded = true
 			hasAny = true
+			seenActivityMetadata = true
 
 		case "anchor":
 			// @anchor(from: right, to: left) — simple form for the outgoing flow.
@@ -216,6 +236,7 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 				parseAnchorAnnotation(params.(*parser.AnnotationParamsContext), result)
 				hasAny = true
 			}
+			seenActivityMetadata = true
 		}
 	}
 
@@ -223,6 +244,17 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 		return nil
 	}
 	return result
+}
+
+func hasLaterActivityAnnotation(annotations []parser.IAnnotationContext, start int) bool {
+	for _, annCtx := range annotations[start:] {
+		ann := annCtx.(*parser.AnnotationContext)
+		switch strings.ToLower(ann.AnnotationName().GetText()) {
+		case "position", "caption", "color", "excluded", "anchor":
+			return true
+		}
+	}
+	return false
 }
 
 // parseAnchorAnnotation populates Anchor / TrueBranchAnchor / FalseBranchAnchor /
@@ -385,6 +417,12 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		s.Annotations = ann
+	case *ast.InheritanceSplitStmt:
+		s.Annotations = ann
+	case *ast.EnumSplitStmt:
+		s.Annotations = ann
+	case *ast.CastObjectStmt:
+		s.Annotations = ann
 	case *ast.MfSetStmt:
 		s.Annotations = ann
 	case *ast.ReturnStmt:
@@ -415,6 +453,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 		s.Annotations = ann
 	case *ast.CallJavaActionStmt:
 		s.Annotations = ann
+	case *ast.CallWebServiceStmt:
+		s.Annotations = ann
 	case *ast.ExecuteDatabaseQueryStmt:
 		s.Annotations = ann
 	case *ast.CallExternalActionStmt:
@@ -441,11 +481,19 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 		s.Annotations = ann
 	case *ast.ShowMessageStmt:
 		s.Annotations = ann
+	case *ast.DownloadFileStmt:
+		s.Annotations = ann
 	case *ast.ValidationFeedbackStmt:
 		s.Annotations = ann
 	case *ast.RestCallStmt:
 		s.Annotations = ann
 	case *ast.SendRestRequestStmt:
+		s.Annotations = ann
+	case *ast.ImportFromMappingStmt:
+		s.Annotations = ann
+	case *ast.ExportToMappingStmt:
+		s.Annotations = ann
+	case *ast.TransformJsonStmt:
 		s.Annotations = ann
 	}
 }
@@ -494,9 +542,134 @@ func buildDeclareStatement(ctx parser.IDeclareStatementContext) *ast.DeclareStmt
 
 	// Get optional initial value
 	if expr := declCtx.Expression(); expr != nil {
-		stmt.InitialValue = buildExpression(expr)
+		stmt.InitialValue = buildSourceExpression(expr)
 	}
 
+	return stmt
+}
+
+func buildInheritanceSplitStatement(ctx parser.IInheritanceSplitStatementContext) *ast.InheritanceSplitStmt {
+	if ctx == nil {
+		return nil
+	}
+	splitCtx := ctx.(*parser.InheritanceSplitStatementContext)
+	stmt := &ast.InheritanceSplitStmt{}
+	if v := splitCtx.VARIABLE(); v != nil {
+		stmt.Variable = strings.TrimPrefix(v.GetText(), "$")
+	}
+	for _, caseCtx := range splitCtx.AllInheritanceSplitCase() {
+		c := caseCtx.(*parser.InheritanceSplitCaseContext)
+		stmt.Cases = append(stmt.Cases, ast.InheritanceSplitCase{
+			Entity: buildQualifiedName(c.QualifiedName()),
+			Body:   buildMicroflowBody(c.MicroflowBody()),
+		})
+	}
+	if splitCtx.ELSE() != nil {
+		stmt.ElseBody = buildMicroflowBody(splitCtx.MicroflowBody())
+	}
+	return stmt
+}
+
+func buildEnumSplitStatement(ctx parser.IEnumSplitStatementContext) *ast.EnumSplitStmt {
+	if ctx == nil {
+		return nil
+	}
+	splitCtx := ctx.(*parser.EnumSplitStatementContext)
+	stmt := &ast.EnumSplitStmt{}
+	if src := splitCtx.EnumSplitSource(); src != nil {
+		stmt.Variable = enumSplitSourceText(src)
+	}
+	for _, caseCtx := range splitCtx.AllEnumSplitCase() {
+		c := caseCtx.(*parser.EnumSplitCaseContext)
+		values := make([]string, 0, len(c.AllEnumSplitCaseValue()))
+		for _, valueCtx := range c.AllEnumSplitCaseValue() {
+			values = append(values, enumSplitCaseValueText(valueCtx))
+		}
+		firstValue := ""
+		if len(values) > 0 {
+			firstValue = values[0]
+		}
+		stmt.Cases = append(stmt.Cases, ast.EnumSplitCase{
+			Value:  firstValue,
+			Values: values,
+			Body:   buildMicroflowBody(c.MicroflowBody()),
+		})
+	}
+	if splitCtx.ELSE() != nil {
+		stmt.ElseBody = buildMicroflowBody(splitCtx.MicroflowBody())
+	}
+	return stmt
+}
+
+func enumSplitSourceText(ctx parser.IEnumSplitSourceContext) string {
+	if ctx == nil {
+		return ""
+	}
+	srcCtx := ctx.(*parser.EnumSplitSourceContext)
+	if pathCtx := srcCtx.AttributePath(); pathCtx != nil {
+		return attributePathExprSource(buildAttributePathFromContext(pathCtx))
+	}
+	if v := srcCtx.VARIABLE(); v != nil {
+		return strings.TrimPrefix(v.GetText(), "$")
+	}
+	return strings.TrimPrefix(srcCtx.GetText(), "$")
+}
+
+func attributePathExprSource(path *ast.AttributePathExpr) string {
+	if path == nil {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(path.Variable)
+	if len(path.Segments) > 0 {
+		for _, segment := range path.Segments {
+			sep := segment.Separator
+			if sep == "" {
+				sep = "/"
+			}
+			b.WriteString(sep)
+			b.WriteString(segment.Name)
+		}
+		return b.String()
+	}
+	for _, segment := range path.Path {
+		b.WriteString("/")
+		b.WriteString(segment)
+	}
+	return b.String()
+}
+
+func enumSplitCaseValueText(ctx parser.IEnumSplitCaseValueContext) string {
+	if ctx == nil {
+		return ""
+	}
+	valueCtx := ctx.(*parser.EnumSplitCaseValueContext)
+	if valueCtx.EMPTY() != nil {
+		return "(empty)"
+	}
+	if iok := valueCtx.IdentifierOrKeyword(); iok != nil {
+		return identifierOrKeywordText(iok)
+	}
+	return valueCtx.GetText()
+}
+
+func buildCastObjectStatement(ctx parser.ICastObjectStatementContext) *ast.CastObjectStmt {
+	if ctx == nil {
+		return nil
+	}
+	castCtx := ctx.(*parser.CastObjectStatementContext)
+	stmt := &ast.CastObjectStmt{}
+	vars := castCtx.AllVARIABLE()
+	if castCtx.CAST() != nil && len(vars) == 1 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+		return stmt
+	}
+	if len(vars) > 0 {
+		stmt.OutputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
+	}
+	if len(vars) > 1 {
+		stmt.ObjectVariable = strings.TrimPrefix(vars[1].GetText(), "$")
+	}
 	return stmt
 }
 
@@ -520,11 +693,15 @@ func buildSetStatement(ctx parser.ISetStatementContext) ast.MicroflowStatement {
 	// Get value expression
 	var valueExpr ast.Expression
 	if expr := setCtx.Expression(); expr != nil {
-		valueExpr = buildExpression(expr)
+		valueExpr = buildSourceExpression(expr)
 	}
 
 	// Check if the expression is a list operation or aggregate function
-	if funcCall, ok := valueExpr.(*ast.FunctionCallExpr); ok {
+	inspectionExpr := valueExpr
+	if sourceExpr, ok := inspectionExpr.(*ast.SourceExpr); ok {
+		inspectionExpr = sourceExpr.Expression
+	}
+	if funcCall, ok := inspectionExpr.(*ast.FunctionCallExpr); ok {
 		funcName := strings.ToUpper(funcCall.Name)
 
 		// Check for list operations: HEAD, TAIL, FIND, FILTER, SORT, UNION, INTERSECT, SUBTRACT, CONTAINS, EQUALS
@@ -946,7 +1123,7 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 				stmt.Where = result
 			}
 		} else if expr := retrCtx.Expression(0); expr != nil {
-			stmt.Where = buildExpression(expr)
+			stmt.Where = buildSourceExpression(expr)
 		}
 	}
 
@@ -962,10 +1139,10 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 
 	// Get LIMIT and OFFSET expressions
 	if limitExpr := retrCtx.GetLimitExpr(); limitExpr != nil {
-		stmt.Limit = limitExpr.GetText()
+		stmt.Limit = strings.TrimSpace(extractOriginalText(limitExpr))
 	}
 	if offsetExpr := retrCtx.GetOffsetExpr(); offsetExpr != nil {
-		stmt.Offset = offsetExpr.GetText()
+		stmt.Offset = strings.TrimSpace(extractOriginalText(offsetExpr))
 	}
 
 	// Check for ON ERROR clause
@@ -1015,7 +1192,7 @@ func buildIfStatement(ctx parser.IIfStatementContext) *ast.IfStmt {
 	// Get all expressions (condition for IF and ELSIFs)
 	exprs := ifCtx.AllExpression()
 	if len(exprs) > 0 {
-		stmt.Condition = buildExpression(exprs[0])
+		stmt.Condition = buildSourceExpression(exprs[0])
 	}
 
 	// Get all microflow bodies (THEN, ELSIF THENs, ELSE)
@@ -1024,6 +1201,7 @@ func buildIfStatement(ctx parser.IIfStatementContext) *ast.IfStmt {
 		stmt.ThenBody = buildMicroflowBody(bodies[0])
 	}
 	// Last body is ELSE if there's no ELSIF or if there are more bodies than expressions
+	stmt.HasElse = ifCtx.ELSE() != nil
 	if len(bodies) > len(exprs) {
 		stmt.ElseBody = buildMicroflowBody(bodies[len(bodies)-1])
 	}
@@ -1068,7 +1246,7 @@ func buildWhileStatement(ctx parser.IWhileStatementContext) *ast.WhileStmt {
 
 	// Get condition expression
 	if expr := wsCtx.Expression(); expr != nil {
-		stmt.Condition = buildExpression(expr)
+		stmt.Condition = buildSourceExpression(expr)
 	}
 
 	// Get body
@@ -1077,6 +1255,51 @@ func buildWhileStatement(ctx parser.IWhileStatementContext) *ast.WhileStmt {
 	}
 
 	return stmt
+}
+
+func buildSourceExpression(ctx parser.IExpressionContext) ast.Expression {
+	if ctx == nil {
+		return nil
+	}
+	expr := buildExpression(ctx)
+	if prc, ok := ctx.(antlr.ParserRuleContext); ok {
+		if source := strings.TrimSpace(extractOriginalText(prc)); source != "" {
+			if shouldPreserveExpressionSource(source) {
+				return &ast.SourceExpr{Expression: expr, Source: source}
+			}
+		}
+	}
+	return expr
+}
+
+func shouldPreserveExpressionSource(source string) bool {
+	if strings.ContainsAny(source, "\r\n") {
+		return true
+	}
+	inString := false
+	for i := 0; i < len(source); i++ {
+		if source[i] == '\'' {
+			if inString && i+1 < len(source) && source[i+1] == '\'' {
+				i++
+				continue
+			}
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		switch source[i] {
+		case '=', '!', '<', '>', '+', '-', '*', ':':
+			if i > 0 && source[i-1] != ' ' && source[i-1] != '\t' {
+				return true
+			}
+			if i+1 < len(source) && source[i+1] != ' ' && source[i+1] != '\t' && source[i+1] != '=' {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // buildReturnStatement converts RETURN statement context to ReturnStmt.

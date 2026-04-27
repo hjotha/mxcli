@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // buildWithAnchors is a test helper that builds the flow graph for a simple
@@ -109,6 +110,90 @@ func TestBuilder_AnchorInsideElseBranch(t *testing.T) {
 	}
 }
 
+// TestBuilder_AnchorFalseBranchTo_IfWithoutElse pins the audit cluster B4
+// regression: when the describer emits
+//
+//	@anchor(to: left, true: (from: right, to: left), false: (from: bottom, to: top))
+//
+// on an IF-without-ELSE split, the writer used to apply only the FROM side of
+// the false-branch anchor to the split→merge flow, letting the default (Left)
+// overwrite the intended `to: top`. Re-describing produced `false: (from: bottom, to: left)`.
+func TestBuilder_AnchorFalseBranchTo_IfWithoutElse(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "inside"}},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				FalseBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+			},
+		},
+	}
+
+	oc := buildWithAnchors(body)
+
+	// The split → merge false flow must land on merge's Top side, not the default Left.
+	if !hasFlow(oc.Flows, AnchorBottom, AnchorTop) {
+		t.Errorf("expected false branch split→merge flow Bottom→Top, got %+v", oc.Flows)
+	}
+}
+
+// TestBuilder_AnchorTrueBranchTo_EmptyThenIfWithElse is the ELSE-branch mirror
+// of the cluster B4 regression: an empty THEN body connecting straight to the
+// merge must honor the trueBranchAnchor.To.
+func TestBuilder_AnchorTrueBranchTo_EmptyThenIfWithElse(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody:  nil, // empty THEN body
+			ElseBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "else"}},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				TrueBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideRight, To: ast.AnchorSideTop},
+			},
+		},
+	}
+
+	oc := buildWithAnchors(body)
+
+	// Empty THEN → merge: must honor the user's Right→Top anchor, not the default Right→Left.
+	if !hasFlow(oc.Flows, AnchorRight, AnchorTop) {
+		t.Errorf("expected true branch split→merge flow Right→Top, got %+v", oc.Flows)
+	}
+}
+
+func TestBuilder_IfBranchTailToMergeHonorsAnchorDestination(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "then"}},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.LogStmt{
+					Level:   ast.LogInfo,
+					Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "else"},
+					Annotations: &ast.ActivityAnnotations{
+						Anchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+					},
+				},
+			},
+		},
+	}
+
+	oc := buildWithAnchors(body)
+
+	// The else branch has one statement, so its own anchor applies both to the
+	// split->statement flow and to the statement->merge tail flow. Dropping the
+	// destination side on the tail produced ActionActivity(bottom)->Merge(bottom),
+	// which Studio Pro rejects as CE0709.
+	if got := countFlows(oc.Flows, AnchorBottom, AnchorTop); got != 2 {
+		t.Errorf("expected split→else and else→merge Bottom→Top flows, got %d: %+v", got, oc.Flows)
+	}
+}
+
 func TestBuilder_AnchorToTopOnReturnPreservedInsideElse(t *testing.T) {
 	// Minimal case: single-statement ELSE whose only statement is a RETURN
 	// carrying @anchor(to: top). The flow from the split to that return's
@@ -137,4 +222,80 @@ func TestBuilder_AnchorToTopOnReturnPreservedInsideElse(t *testing.T) {
 	if !hasFlow(oc.Flows, AnchorBottom, AnchorTop) {
 		t.Errorf("expected split→return flow with Bottom→Top, got %+v", oc.Flows)
 	}
+}
+
+func TestBuilder_NoMergeContinuingBranchPreservesTailAnchor(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.MfSetStmt{
+					Target: "$IsValid",
+					Value:  &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: false},
+					Annotations: &ast.ActivityAnnotations{
+						Anchor: &ast.FlowAnchors{From: ast.AnchorSideRight, To: ast.AnchorSideLeft},
+					},
+				},
+				&ast.ValidationFeedbackStmt{
+					AttributePath: &ast.AttributePathExpr{Variable: "SampleRecord", Path: []string{"SampleValue"}},
+					Message:       &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Sample value is required."},
+					Annotations: &ast.ActivityAnnotations{
+						Anchor: &ast.FlowAnchors{From: ast.AnchorSideTop, To: ast.AnchorSideBottom},
+					},
+				},
+			},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "after validation"}},
+	}
+
+	oc := buildWithAnchors(body)
+
+	if !hasFlow(oc.Flows, AnchorTop, AnchorBottom) {
+		t.Errorf("expected continuing branch tail to keep Top→Bottom, got %+v", oc.Flows)
+	}
+}
+
+func TestBuilder_NoMergeBranchAnchorWinsOverContinuationTargetAnchor(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "found"}},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				FalseBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+			},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogInfo,
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "continue"},
+			Annotations: &ast.ActivityAnnotations{
+				Anchor: &ast.FlowAnchors{From: ast.AnchorSideLeft, To: ast.AnchorSideRight},
+			},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, flow := range oc.Flows {
+		cv, ok := flow.CaseValue.(microflows.EnumerationCase)
+		if !ok {
+			if ptr, ptrOK := flow.CaseValue.(*microflows.EnumerationCase); ptrOK {
+				cv = *ptr
+				ok = true
+			}
+		}
+		if !ok || cv.Value != "false" {
+			continue
+		}
+		if flow.OriginConnectionIndex != AnchorBottom || flow.DestinationConnectionIndex != AnchorTop {
+			t.Fatalf("false continuation anchor = %d→%d, want Bottom→Top", flow.OriginConnectionIndex, flow.DestinationConnectionIndex)
+		}
+		return
+	}
+	t.Fatal("expected false continuation flow")
 }

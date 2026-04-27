@@ -1,0 +1,504 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package executor
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+)
+
+func TestFormatActivity_InheritanceSplit(t *testing.T) {
+	e := newTestExecutor()
+	obj := &microflows.InheritanceSplit{VariableName: "Input"}
+
+	got := e.formatActivity(obj, nil, nil)
+	want := "split type $Input;"
+	if got != want {
+		t.Fatalf("formatActivity: got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_CastAction(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.CastAction{
+		OutputVariable: "Specific",
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "cast $Specific;"
+	if got != want {
+		t.Fatalf("formatAction: got %q, want %q", got, want)
+	}
+}
+
+func TestBuilder_InheritanceSplitAndCastAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{Variable: "Input"},
+		&ast.CastObjectStmt{OutputVariable: "Specific"},
+	}
+	fb := &flowBuilder{
+		posX:    100,
+		posY:    100,
+		spacing: HorizontalSpacing,
+	}
+
+	oc := fb.buildFlowGraph(body, nil)
+	if len(oc.Objects) < 4 {
+		t.Fatalf("objects: got %d, want at least 4", len(oc.Objects))
+	}
+
+	split, ok := oc.Objects[1].(*microflows.InheritanceSplit)
+	if !ok {
+		t.Fatalf("second object: got %T, want *microflows.InheritanceSplit", oc.Objects[1])
+	}
+	if split.VariableName != "Input" {
+		t.Fatalf("split variable: got %q, want Input", split.VariableName)
+	}
+
+	activity, ok := oc.Objects[2].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("third object: got %T, want *microflows.ActionActivity", oc.Objects[2])
+	}
+	cast, ok := activity.Action.(*microflows.CastAction)
+	if !ok {
+		t.Fatalf("action: got %T, want *microflows.CastAction", activity.Action)
+	}
+	if cast.OutputVariable != "Specific" || cast.ObjectVariable != "" {
+		t.Fatalf("cast vars: got output=%q object=%q", cast.OutputVariable, cast.ObjectVariable)
+	}
+}
+
+func TestBuilder_InheritanceSplit_NonReturningBranchesMerge(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "currentUser",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "Administration", Name: "Account"},
+					Body: []ast.MicroflowStatement{
+						&ast.ShowMessageStmt{
+							Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "account"},
+							Type:    "Information",
+						},
+					},
+				},
+				{
+					Entity: ast.QualifiedName{Module: "System", Name: "User"},
+					Body: []ast.MicroflowStatement{
+						&ast.ShowMessageStmt{
+							Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "user"},
+							Type:    "Information",
+						},
+					},
+				},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:    100,
+		posY:    100,
+		spacing: HorizontalSpacing,
+	}
+
+	oc := fb.buildFlowGraph(body, nil)
+	var mergeID string
+	for _, obj := range oc.Objects {
+		if merge, ok := obj.(*microflows.ExclusiveMerge); ok {
+			mergeID = string(merge.ID)
+			break
+		}
+	}
+	if mergeID == "" {
+		t.Fatal("expected non-returning inheritance split branches to converge through an ExclusiveMerge")
+	}
+
+	inbound := 0
+	outbound := 0
+	for _, flow := range oc.Flows {
+		if string(flow.DestinationID) == mergeID {
+			inbound++
+		}
+		if string(flow.OriginID) == mergeID {
+			outbound++
+		}
+	}
+	if inbound != 3 {
+		t.Fatalf("merge inbound flows: got %d, want 3", inbound)
+	}
+	if outbound != 1 {
+		t.Fatalf("merge outbound flows: got %d, want 1", outbound)
+	}
+}
+
+func TestTraverseFlow_InheritanceSplitPreservesEmptyCases(t *testing.T) {
+	e := newTestExecutor()
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("split"),
+			VariableName:        "ListContext",
+		},
+		mkID("cast"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("cast")},
+			Action:       &microflows.CastAction{OutputVariable: "RuntimeListContext"},
+		},
+		mkID("merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+		mkID("end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "split")},
+		mkID("split"): {
+			mkBranchFlow("split", "cast", microflows.InheritanceCase{EntityQualifiedName: "SampleRuntime.RuntimeListContext"}),
+			mkBranchFlow("split", "merge", microflows.InheritanceCase{EntityQualifiedName: "SampleSelection.ListContext"}),
+		},
+		mkID("cast"):  {mkFlow("cast", "merge")},
+		mkID("merge"): {mkFlow("merge", "end")},
+	}
+	splitMergeMap := map[model.ID]model.ID{mkID("split"): mkID("merge")}
+	var lines []string
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, map[model.ID]bool{}, nil, nil, &lines, 0, nil, 0, nil)
+	got := strings.Join(lines, "\n")
+	assertContains(t, got, "case SampleRuntime.RuntimeListContext")
+	assertContains(t, got, "case SampleSelection.ListContext")
+	assertContains(t, got, "cast $RuntimeListContext;")
+}
+
+func TestTraverseFlow_InheritanceSplitWithoutExplicitMergeEmitsSharedContinuation(t *testing.T) {
+	e := newTestExecutor()
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("split"),
+			VariableName:        "SampleContext",
+		},
+		mkID("cast"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("cast")},
+			Action:       &microflows.CastAction{OutputVariable: "SpecificContext"},
+		},
+		mkID("shared"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared continuation"}}},
+		},
+		mkID("end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "split")},
+		mkID("split"): {
+			mkBranchFlow("split", "cast", microflows.InheritanceCase{EntityQualifiedName: "SampleModule.SpecificContext"}),
+			mkBranchFlow("split", "shared", microflows.InheritanceCase{EntityQualifiedName: ""}),
+		},
+		mkID("cast"):   {mkFlow("cast", "shared")},
+		mkID("shared"): {mkFlow("shared", "end")},
+	}
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("split")]; got != mkID("shared") {
+		t.Fatalf("split paired with %q, want shared continuation %q", got, mkID("shared"))
+	}
+
+	var lines []string
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, map[model.ID]bool{}, nil, nil, &lines, 0, nil, 0, nil)
+	got := strings.Join(lines, "\n")
+	if strings.Count(got, "shared continuation") != 1 {
+		t.Fatalf("shared continuation should be emitted once, got:\n%s", got)
+	}
+	if strings.Index(got, "end split;") > strings.Index(got, "shared continuation") {
+		t.Fatalf("shared continuation was emitted inside split:\n%s", got)
+	}
+}
+
+func TestTraverseFlow_InheritanceSplitInsideParentIfDoesNotDuplicateSharedTail(t *testing.T) {
+	e := newTestExecutor()
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("feature_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("feature_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UseTypedContext"},
+		},
+		mkID("fetch_context"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("fetch_context")},
+			Action: &microflows.MicroflowCallAction{
+				ResultVariableName: "Context",
+				MicroflowCall:      &microflows.MicroflowCall{Microflow: "Synthetic.GetContext"},
+			},
+		},
+		mkID("type_split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("type_split"),
+			VariableName:        "Context",
+		},
+		mkID("use_context"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("use_context")},
+			Action:       &microflows.ChangeVariableAction{VariableName: "ContextValue", Value: "$Context/Value"},
+		},
+		mkID("reject_context"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("reject_context")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Error", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "unsupported context"}}},
+		},
+		mkID("reject_end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("reject_end"), ReturnValue: "empty"},
+		mkID("parent_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("parent_merge")},
+		mkID("shared_tail"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("shared_tail")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "shared tail"}}},
+		},
+		mkID("tail_end"): &microflows.EndEvent{BaseMicroflowObject: mkObj("tail_end"), ReturnValue: "$ContextValue"},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "feature_split")},
+		mkID("feature_split"): {
+			mkBranchFlow("feature_split", "fetch_context", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("feature_split", "parent_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("fetch_context"): {mkFlow("fetch_context", "type_split")},
+		mkID("type_split"): {
+			mkBranchFlow("type_split", "use_context", microflows.InheritanceCase{EntityQualifiedName: "Synthetic.TypedContext"}),
+			mkBranchFlow("type_split", "reject_context", microflows.InheritanceCase{EntityQualifiedName: ""}),
+		},
+		mkID("use_context"):    {mkFlow("use_context", "parent_merge")},
+		mkID("reject_context"): {mkFlow("reject_context", "reject_end")},
+		mkID("parent_merge"):   {mkFlow("parent_merge", "shared_tail")},
+		mkID("shared_tail"):    {mkFlow("shared_tail", "tail_end")},
+	}
+
+	splitMergeMap := findSplitMergePointsForGraph(nil, activityMap, flowsByOrigin)
+	if got := splitMergeMap[mkID("feature_split")]; got != mkID("parent_merge") {
+		t.Fatalf("parent split paired with %q, want %q", got, mkID("parent_merge"))
+	}
+	if got := splitMergeMap[mkID("type_split")]; got != "" {
+		t.Fatalf("type split should not have a local merge, got %q", got)
+	}
+
+	var lines []string
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, map[model.ID]bool{}, nil, nil, &lines, 0, nil, 0, nil)
+	got := strings.Join(lines, "\n")
+	if count := strings.Count(got, "shared tail"); count != 1 {
+		t.Fatalf("shared tail should be emitted once, got %d:\n%s", count, got)
+	}
+	sharedTail := strings.Index(got, "shared tail")
+	parentEnd := strings.LastIndex(got[:sharedTail], "end if;")
+	if parentEnd == -1 {
+		t.Fatalf("shared tail should be after the parent IF closes:\n%s", got)
+	}
+	for _, line := range lines {
+		if strings.Contains(line, "shared tail") && strings.HasPrefix(line, "  ") {
+			t.Fatalf("shared tail must be top-level, got %q in:\n%s", line, got)
+		}
+	}
+}
+
+func TestBuilder_InheritanceSplit_EmptyCaseCreatesConfiguredFlow(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "ListContext",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "Cloud", Name: "RuntimeListContext"},
+					Body: []ast.MicroflowStatement{
+						&ast.CastObjectStmt{OutputVariable: "RuntimeListContext"},
+					},
+				},
+				{Entity: ast.QualifiedName{Module: "SampleSelection", Name: "ListContext"}},
+			},
+			ElseBody: []ast.MicroflowStatement{},
+		},
+		&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+	}
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var splitID, mergeID model.ID
+	for _, obj := range oc.Objects {
+		switch obj.(type) {
+		case *microflows.InheritanceSplit:
+			splitID = obj.GetID()
+		case *microflows.ExclusiveMerge:
+			mergeID = obj.GetID()
+		}
+	}
+	if splitID == "" || mergeID == "" {
+		t.Fatalf("expected split and merge, got split=%q merge=%q", splitID, mergeID)
+	}
+	foundEmptyElse := false
+	for _, flow := range oc.Flows {
+		if flow.OriginID != splitID || flow.DestinationID != mergeID {
+			continue
+		}
+		if inheritanceCaseValue(flow.CaseValue) == "SampleSelection.ListContext" {
+			foundEmptyElse = true
+		}
+	}
+	if !foundEmptyElse {
+		t.Fatal("expected empty inheritance case to produce a configured split-to-merge flow")
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID == splitID && flow.DestinationID == mergeID {
+			if _, ok := flow.CaseValue.(microflows.InheritanceCase); ok && inheritanceCaseValue(flow.CaseValue) == "" {
+				return
+			}
+			if _, ok := flow.CaseValue.(*microflows.InheritanceCase); ok && inheritanceCaseValue(flow.CaseValue) == "" {
+				return
+			}
+		}
+	}
+	t.Fatal("expected empty else branch to use an InheritanceCase with empty value, not NoCase")
+}
+
+func TestBuilder_InheritanceSplitPreservesGuardFalseContinuation(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "currentUser",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "SampleAuth", Name: "SampleIdentityUser"},
+					Body: []ast.MicroflowStatement{
+						&ast.IfStmt{
+							Condition: &ast.BinaryExpr{
+								Left:     &ast.VariableExpr{Name: "Member"},
+								Operator: "!=",
+								Right:    &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"},
+							},
+							ThenBody: []ast.MicroflowStatement{
+								&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "Member"}},
+							},
+						},
+						&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "missing member"}},
+						&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+					},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{"Member": "SampleDirectory.Member"},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "SampleDirectory", Name: "Member"}}})
+
+	var guardSplitID, logID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ExclusiveSplit:
+			if o.Caption == "$Member != empty" {
+				guardSplitID = o.ID
+			}
+		case *microflows.ActionActivity:
+			if action, ok := o.Action.(*microflows.LogMessageAction); ok && action.LogLevel == "Error" {
+				logID = o.ID
+			}
+		}
+	}
+	if guardSplitID == "" || logID == "" {
+		t.Fatalf("expected guard split and log; got split=%q log=%q", guardSplitID, logID)
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID != guardSplitID || flow.DestinationID != logID {
+			continue
+		}
+		if enumCase, ok := flow.CaseValue.(microflows.EnumerationCase); ok && enumCase.Value == "false" {
+			return
+		}
+		t.Fatalf("guard continuation flow has case %#v, want false", flow.CaseValue)
+	}
+	t.Fatal("expected false continuation from guard split to following log")
+}
+
+func TestBuilder_InheritanceSplitCastRegistersCaseType(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "ListContext",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "SampleAccess", Name: "GroupMemberListContext"},
+					Body: []ast.MicroflowStatement{
+						&ast.CastObjectStmt{OutputVariable: "GroupMemberListContext"},
+						&ast.ChangeObjectStmt{
+							Variable: "GroupMemberListContext",
+							Changes:  []ast.ChangeItem{{Attribute: "TotalListSize", Value: &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: "0"}}},
+						},
+					},
+				},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	fb.buildFlowGraph(body, nil)
+
+	if got := fb.varTypes["GroupMemberListContext"]; got != "SampleAccess.GroupMemberListContext" {
+		t.Fatalf("cast variable type = %q, want inheritance case type", got)
+	}
+	for _, obj := range fb.objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.ChangeObjectAction)
+		if !ok || len(action.Changes) == 0 {
+			continue
+		}
+		if got := action.Changes[0].AttributeQualifiedName; got != "SampleAccess.GroupMemberListContext.TotalListSize" {
+			t.Fatalf("change attribute = %q, want qualified cast case attribute", got)
+		}
+		return
+	}
+	t.Fatal("expected change action")
+}
+
+func TestBuilder_InheritanceSplitPrescansMicroflowCallOutputDeclarations(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "Context",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "SampleTypes", Name: "TypedContext"},
+					Body: []ast.MicroflowStatement{
+						&ast.CallMicroflowStmt{
+							OutputVariable: "Items",
+							MicroflowName:  ast.QualifiedName{Module: "SampleItems", Name: "LoadItems"},
+						},
+					},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty, Value: "empty"}},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:     100,
+		posY:     100,
+		spacing:  HorizontalSpacing,
+		varTypes: map[string]string{},
+		measurer: &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.MicroflowCallAction)
+		if !ok || action.ResultVariableName != "Items" {
+			continue
+		}
+		if !action.UseReturnVariable {
+			t.Fatal("microflow call output inside inheritance split must declare its return variable")
+		}
+		return
+	}
+	t.Fatal("expected microflow call inside inheritance split")
+}

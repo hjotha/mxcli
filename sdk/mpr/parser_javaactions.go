@@ -402,7 +402,7 @@ func parseCodeActionParameterType(raw map[string]any) javaactions.CodeActionPara
 		}
 		et.Enumeration = extractString(raw["Enumeration"])
 		return et
-	case "CodeActions$MicroflowType":
+	case "CodeActions$MicroflowType", "JavaActions$MicroflowJavaActionParameterType":
 		return &javaactions.MicroflowType{
 			BaseElement: model.BaseElement{ID: model.ID(extractBsonID(raw["$ID"]))},
 		}

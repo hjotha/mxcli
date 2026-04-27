@@ -559,6 +559,7 @@ commit $Product;
 
 **Rules:**
 - `@annotation` before an activity attaches the note to that activity
+- `@annotation` before activity-binding metadata such as `@position`, `@caption`, `@color`, `@excluded`, or `@anchor` stays free-floating when later metadata binds the following activity
 - `@annotation` at the end (no following activity) creates a free-floating note
 - Escape single quotes by doubling: `@annotation 'Don''t forget'`
 - `@position` always appears in DESCRIBE output; `@caption` only when custom; `@color` only when not Default
@@ -823,6 +824,60 @@ rest call delete 'https://api.example.com/items/{1}' with (
 - `returns mapping Module.ImportMapping as Module.Entity` — import mapping
 
 **REST CALL supports full error handling** (`on error continue`, `on error rollback`, custom error handlers).
+
+## Legacy SOAP Web Service Calls
+
+`call web service` preserves legacy Mendix SOAP activities. Prefer REST clients
+for new integrations; this syntax exists mainly so existing projects can round-trip
+without dropping SOAP actions.
+
+```mdl
+-- Structured passthrough form using Mendix document IDs.
+$Root = call web service 'sample-service-id'
+operation 'FetchSampleItems'
+send mapping 'sample-send-mapping-id'
+receive mapping 'sample-receive-mapping-id'
+timeout 30
+on error rollback;
+
+-- Raw escape hatch emitted by describe when the SOAP action has fields that
+-- are not expressible yet. The base64 payload is the authoritative BSON action.
+$Root = call web service raw 'AQID';
+```
+
+**Design note:** service and mapping references are currently opaque Mendix IDs,
+not qualified names. Treat this as round-trip support, not a recommended authoring
+syntax for new SOAP actions.
+
+## File Downloads
+
+Use `download file` to stream a `System.FileDocument` from a microflow. Add
+`show in browser` when Studio Pro's action should open the file inline instead
+of forcing a download.
+
+```mdl
+download file $GeneratedReport show in browser;
+download file $GeneratedExport;
+```
+
+## Empty Java-Action Argument (`...`)
+
+When `describe` round-trips a Java-action call that has an unbound parameter
+in Studio Pro, it emits `...` as the argument value. This preserves the
+underlying empty `BasicCodeActionParameterValue.Argument` so that the next
+`describe → exec → describe` cycle stays symmetric.
+
+```mdl
+$Total = call java action SampleModule.Recalculate(
+  CompanyId       = ...,
+  RecalculateAll  = true,
+  ItemList        = ...
+);
+```
+
+`...` is a *round-trip-only* placeholder. New scripts should bind every
+parameter to a real expression; reach for `...` only when you're regenerating
+MDL from an existing project that already had unbound parameters.
 
 ## Error Handling
 

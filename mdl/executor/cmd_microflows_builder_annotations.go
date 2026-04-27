@@ -15,6 +15,12 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		return s.Annotations
+	case *ast.InheritanceSplitStmt:
+		return s.Annotations
+	case *ast.EnumSplitStmt:
+		return s.Annotations
+	case *ast.CastObjectStmt:
+		return s.Annotations
 	case *ast.MfSetStmt:
 		return s.Annotations
 	case *ast.ReturnStmt:
@@ -45,6 +51,8 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 		return s.Annotations
 	case *ast.CallJavaActionStmt:
 		return s.Annotations
+	case *ast.CallWebServiceStmt:
+		return s.Annotations
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.Annotations
 	case *ast.CallExternalActionStmt:
@@ -71,9 +79,19 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 		return s.Annotations
 	case *ast.ShowMessageStmt:
 		return s.Annotations
+	case *ast.DownloadFileStmt:
+		return s.Annotations
 	case *ast.ValidationFeedbackStmt:
 		return s.Annotations
 	case *ast.RestCallStmt:
+		return s.Annotations
+	case *ast.SendRestRequestStmt:
+		return s.Annotations
+	case *ast.ImportFromMappingStmt:
+		return s.Annotations
+	case *ast.ExportToMappingStmt:
+		return s.Annotations
+	case *ast.TransformJsonStmt:
 		return s.Annotations
 	default:
 		return nil
@@ -112,6 +130,9 @@ func (fb *flowBuilder) mergeStatementAnnotations(stmt ast.MicroflowStatement) {
 	}
 	if ann.AnnotationText != "" {
 		fb.pendingAnnotations.AnnotationText = ann.AnnotationText
+	}
+	if ann.FreeAnnotation != "" {
+		fb.pendingAnnotations.FreeAnnotation = ann.FreeAnnotation
 	}
 	if ann.Anchor != nil {
 		fb.pendingAnnotations.Anchor = ann.Anchor
@@ -185,13 +206,21 @@ func (fb *flowBuilder) applyAnnotations(activityID model.ID, ann *ast.ActivityAn
 	}
 }
 
+func (fb *flowBuilder) applyPendingAnnotations(activityID model.ID) {
+	if fb.pendingAnnotations == nil {
+		return
+	}
+	fb.applyAnnotations(activityID, fb.pendingAnnotations)
+	fb.pendingAnnotations = nil
+}
+
 // addEndEventWithReturn creates an EndEvent with the specified return value.
 // This produces an actual EndEvent activity in the flow graph, allowing RETURN
 // to work correctly inside IF/ELSE branches and error handler bodies.
 func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 	retVal := ""
 	if s.Value != nil {
-		retVal = fb.exprToString(s.Value)
+		retVal = cleanReturnValue(fb.exprToString(s.Value))
 	}
 
 	endEvent := &microflows.EndEvent{
@@ -205,6 +234,7 @@ func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 
 	fb.objects = append(fb.objects, endEvent)
 	fb.endsWithReturn = true
+	fb.lastReturnEndID = endEvent.ID
 	fb.posX += fb.spacing / 2
 	return endEvent.ID
 }

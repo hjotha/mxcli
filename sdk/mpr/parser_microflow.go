@@ -223,6 +223,16 @@ func parseCaseValue(raw any) microflows.CaseValue {
 				Value:       val,
 			}
 		}
+	case "Microflows$InheritanceCase":
+		entityQName := extractString(caseMap["Value"])
+		if entityQName == "" {
+			entityQName = extractString(caseMap["Entity"])
+		}
+		return &microflows.InheritanceCase{
+			BaseElement:         model.BaseElement{ID: id},
+			EntityID:            model.ID(extractBsonID(caseMap["Entity"])),
+			EntityQualifiedName: entityQName,
+		}
 	}
 	return nil
 }
@@ -502,9 +512,9 @@ func parseActionActivity(raw map[string]any) *microflows.ActionActivity {
 		activity.ErrorHandlingType = microflows.ErrorHandlingType(errorHandling)
 	}
 
-	// Parse the action
-	if action, ok := raw["Action"].(map[string]any); ok {
-		activity.Action = parseMicroflowAction(action)
+	// Parse the action.
+	if action := parseMicroflowActionValue(raw["Action"]); action != nil {
+		activity.Action = action
 	}
 
 	return activity
@@ -560,6 +570,9 @@ var microflowActionParsers = map[string]func(map[string]any) microflows.Microflo
 
 	// REST call action (inline HTTP)
 	"Microflows$RestCallAction": func(r map[string]any) microflows.MicroflowAction { return parseRestCallAction(r) },
+	"Microflows$CallWebServiceAction": func(r map[string]any) microflows.MicroflowAction {
+		return parseWebServiceCallAction(r)
+	},
 
 	// REST operation call action (consumed REST service)
 	"Microflows$RestOperationCallAction": func(r map[string]any) microflows.MicroflowAction {
@@ -597,6 +610,27 @@ func parseMicroflowAction(raw map[string]any) microflows.MicroflowAction {
 		return fn(raw)
 	}
 	return &microflows.UnknownAction{TypeName: typeName}
+}
+
+func parseMicroflowActionValue(raw any) microflows.MicroflowAction {
+	switch action := raw.(type) {
+	case primitive.D:
+		actionMap := action.Map()
+		typeName, _ := actionMap["$Type"].(string)
+		if typeName == "Microflows$CallWebServiceAction" {
+			return parseWebServiceCallActionFromD(action)
+		}
+		return parseMicroflowAction(actionMap)
+	case map[string]any:
+		return parseMicroflowAction(action)
+	case primitive.M:
+		return parseMicroflowAction(map[string]any(action))
+	default:
+		if actionMap := extractBsonMap(raw); actionMap != nil {
+			return parseMicroflowAction(actionMap)
+		}
+		return nil
+	}
 }
 
 func parseCreateVariableAction(raw map[string]any) *microflows.CreateVariableAction {
@@ -714,8 +748,11 @@ func parseCommitAction(raw map[string]any) *microflows.CommitObjectsAction {
 	action.CommitVariable = extractString(raw["CommitVariableName"])
 	action.WithEvents = extractBool(raw["WithEvents"], false)
 	action.RefreshInClient = extractBool(raw["RefreshInClient"], false)
-	if errType, ok := raw["ErrorHandlingType"].(string); ok {
-		action.ErrorHandlingType = microflows.ErrorHandlingType(errType)
+	// Studio Pro treats a missing or empty ErrorHandlingType as Rollback.
+	// Preserve that implicit default so describe -> exec -> describe stays symmetric.
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	if action.ErrorHandlingType == "" {
+		action.ErrorHandlingType = microflows.ErrorHandlingTypeRollback
 	}
 	return action
 }
@@ -782,6 +819,7 @@ func parseSortItems(raw map[string]any) []*microflows.SortItem {
 			} else {
 				sortItem.AttributeID = model.ID(extractBsonID(attrRefMap["Attribute"]))
 			}
+			sortItem.EntityRefSteps = parseEntityRefSteps(attrRefMap["EntityRef"])
 		}
 
 		// Fall back to AttributePath (legacy)
@@ -799,6 +837,32 @@ func parseSortItems(raw map[string]any) []*microflows.SortItem {
 		result = append(result, sortItem)
 	}
 	return result
+}
+
+func parseEntityRefSteps(raw any) []microflows.EntityRefStep {
+	entityRefMap := extractBsonMap(raw)
+	if entityRefMap == nil {
+		return nil
+	}
+	items := extractBsonSlice(entityRefMap["Steps"])
+	if len(items) == 0 {
+		return nil
+	}
+	var steps []microflows.EntityRefStep
+	for _, item := range items {
+		itemMap := extractBsonMap(item)
+		if itemMap == nil {
+			continue
+		}
+		step := microflows.EntityRefStep{
+			Association:       extractString(itemMap["Association"]),
+			DestinationEntity: extractString(itemMap["DestinationEntity"]),
+		}
+		if step.Association != "" || step.DestinationEntity != "" {
+			steps = append(steps, step)
+		}
+	}
+	return steps
 }
 
 func parseRetrieveSource(raw map[string]any) microflows.RetrieveSource {

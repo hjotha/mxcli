@@ -10,9 +10,11 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	mdltypes "github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
+	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -591,6 +593,100 @@ func TestResolveMemberChange_FallbackWithoutReader_QualifiedAttributeStaysAttrib
 	}
 }
 
+func TestResolveMemberChange_BareAssociationUsesDomainMetadata(t *testing.T) {
+	moduleID := model.ID("module-1")
+	childID := model.ID("child-1")
+	parentID := model.ID("parent-1")
+	fb := &flowBuilder{
+		backend: &mock.MockBackend{
+			GetModuleByNameFunc: func(name string) (*model.Module, error) {
+				if name != "Demo" {
+					return nil, nil
+				}
+				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: "Demo"}, nil
+			},
+			GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+				if id != moduleID {
+					return nil, nil
+				}
+				return &domainmodel.DomainModel{
+					ContainerID: moduleID,
+					Entities: []*domainmodel.Entity{
+						{BaseElement: model.BaseElement{ID: childID}, Name: "Child"},
+						{BaseElement: model.BaseElement{ID: parentID}, Name: "Parent"},
+					},
+					Associations: []*domainmodel.Association{
+						{
+							Name:     "Child_Parent",
+							ParentID: childID,
+							ChildID:  parentID,
+							Type:     domainmodel.AssociationTypeReference,
+						},
+					},
+				}, nil
+			},
+		},
+	}
+
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "Child_Parent", "Demo.Child")
+
+	if mc.AssociationQualifiedName != "Demo.Child_Parent" {
+		t.Fatalf("expected association Demo.Child_Parent, got attr=%q assoc=%q",
+			mc.AttributeQualifiedName, mc.AssociationQualifiedName)
+	}
+	if mc.AttributeQualifiedName != "" {
+		t.Fatalf("expected no attribute, got %q", mc.AttributeQualifiedName)
+	}
+}
+
+func TestResolveMemberChange_BareInheritedAttributeUsesDeclaringEntity(t *testing.T) {
+	moduleID := model.ID("system-module")
+	messageID := model.ID("http-message")
+	responseID := model.ID("http-response")
+	fb := &flowBuilder{
+		backend: &mock.MockBackend{
+			GetModuleByNameFunc: func(name string) (*model.Module, error) {
+				if name != "System" {
+					return nil, nil
+				}
+				return &model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: "System"}, nil
+			},
+			GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+				if id != moduleID {
+					return nil, nil
+				}
+				return &domainmodel.DomainModel{
+					ContainerID: moduleID,
+					Entities: []*domainmodel.Entity{
+						{
+							BaseElement: model.BaseElement{ID: messageID},
+							Name:        "HttpMessage",
+							Attributes:  []*domainmodel.Attribute{{Name: "Content"}},
+						},
+						{
+							BaseElement:       model.BaseElement{ID: responseID},
+							Name:              "HttpResponse",
+							GeneralizationRef: "System.HttpMessage",
+						},
+					},
+				}, nil
+			},
+		},
+	}
+
+	mc := &microflows.MemberChange{}
+	fb.resolveMemberChange(mc, "Content", "System.HttpResponse")
+
+	if mc.AttributeQualifiedName != "System.HttpMessage.Content" {
+		t.Fatalf("expected inherited attribute System.HttpMessage.Content, got attr=%q assoc=%q",
+			mc.AttributeQualifiedName, mc.AssociationQualifiedName)
+	}
+	if mc.AssociationQualifiedName != "" {
+		t.Fatalf("expected no association, got %q", mc.AssociationQualifiedName)
+	}
+}
+
 func TestCallMicroflowResultType_ResolvesSubsequentChangeMember(t *testing.T) {
 	moduleID := model.ID("module-1")
 	backend := &mock.MockBackend{
@@ -694,5 +790,750 @@ func TestCallMicroflowUnknownResultTypeStillDeclaresVariable(t *testing.T) {
 	}
 	if !fb.isVariableDeclared("Result") {
 		t.Fatal("expected Result to remain declared after unresolved call return type")
+	}
+}
+
+func TestValidateMicroflowReferencesSkipsExcludedMicroflow(t *testing.T) {
+	moduleID := model.ID("module-1")
+	backend := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{{
+				BaseElement: model.BaseElement{ID: moduleID},
+				Name:        "SampleApps",
+			}}, nil
+		},
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(backend))
+
+	stmt := &ast.CreateMicroflowStmt{
+		Excluded: true,
+		Name:     ast.QualifiedName{Module: "SampleApps", Name: "ProcessRuntimeEvent"},
+		Body: []ast.MicroflowStatement{
+			&ast.CallMicroflowStmt{
+				MicroflowName: ast.QualifiedName{Module: "SampleApps", Name: "CreateRuntime"},
+			},
+		},
+	}
+
+	if err := validate(ctx, stmt); err != nil {
+		t.Fatalf("excluded microflow reference validation returned error: %v", err)
+	}
+}
+
+func TestValidateMicroflowReferencesReportsIncludedMissingMicroflow(t *testing.T) {
+	moduleID := model.ID("module-1")
+	backend := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{{
+				BaseElement: model.BaseElement{ID: moduleID},
+				Name:        "SampleApps",
+			}}, nil
+		},
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(backend))
+
+	stmt := &ast.CreateMicroflowStmt{
+		Name: ast.QualifiedName{Module: "SampleApps", Name: "ProcessRuntimeEvent"},
+		Body: []ast.MicroflowStatement{
+			&ast.CallMicroflowStmt{
+				MicroflowName: ast.QualifiedName{Module: "SampleApps", Name: "CreateRuntime"},
+			},
+		},
+	}
+
+	err := validate(ctx, stmt)
+	if err == nil {
+		t.Fatal("expected missing microflow reference error")
+	}
+	if !strings.Contains(err.Error(), "microflow not found: SampleApps.CreateRuntime") {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+}
+
+func TestCallJavaAction_MicroflowParameterTypePreserved(t *testing.T) {
+	backend := &mock.MockBackend{
+		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
+			if qualifiedName != "SampleAdmin.CreateAdminOption" {
+				return nil, nil
+			}
+			return &javaactions.JavaAction{
+				Parameters: []*javaactions.JavaActionParameter{
+					{
+						Name:          "openPageMf",
+						ParameterType: &javaactions.MicroflowType{},
+					},
+				},
+			}, nil
+		},
+	}
+
+	fb := &flowBuilder{
+		backend:      backend,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+	}
+
+	fb.addCallJavaActionAction(&ast.CallJavaActionStmt{
+		OutputVariable: "AdminOption",
+		ActionName:     ast.QualifiedName{Module: "SampleAdmin", Name: "CreateAdminOption"},
+		Arguments: []ast.CallArgument{
+			{
+				Name:  "openPageMf",
+				Value: &ast.QualifiedNameExpr{QualifiedName: ast.QualifiedName{Module: "SampleAdmin", Name: "OpenAdminPage"}},
+			},
+		},
+	})
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected last object to be ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+	action, ok := activity.Action.(*microflows.JavaActionCallAction)
+	if !ok {
+		t.Fatalf("expected JavaActionCallAction, got %T", activity.Action)
+	}
+	if len(action.ParameterMappings) != 1 {
+		t.Fatalf("expected one parameter mapping, got %d", len(action.ParameterMappings))
+	}
+	value, ok := action.ParameterMappings[0].Value.(*microflows.MicroflowParameterValue)
+	if !ok {
+		t.Fatalf("expected MicroflowParameterValue, got %T", action.ParameterMappings[0].Value)
+	}
+	if value.Microflow != "SampleAdmin.OpenAdminPage" {
+		t.Fatalf("expected qualified microflow preserved, got %q", value.Microflow)
+	}
+}
+
+func TestCallJavaAction_FileDocumentReturnRegistersSystemFileDocument(t *testing.T) {
+	backend := &mock.MockBackend{
+		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
+			if qualifiedName != "SampleSelection.ExportList" {
+				return nil, nil
+			}
+			return &javaactions.JavaAction{
+				ReturnType: &javaactions.FileDocumentType{},
+			}, nil
+		},
+	}
+
+	fb := &flowBuilder{
+		backend:      backend,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+	}
+
+	fb.addCallJavaActionAction(&ast.CallJavaActionStmt{
+		OutputVariable: "GeneratedExcelDoc",
+		ActionName:     ast.QualifiedName{Module: "SampleSelection", Name: "ExportList"},
+	})
+
+	if got := fb.varTypes["GeneratedExcelDoc"]; got != "System.FileDocument" {
+		t.Fatalf("GeneratedExcelDoc type = %q, want System.FileDocument", got)
+	}
+}
+
+func TestAddRestCallAction_ResponseResultUsesHttpResponseHandling(t *testing.T) {
+	fb := &flowBuilder{
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+
+	fb.addRestCallAction(&ast.RestCallStmt{
+		OutputVariable: "Response",
+		Method:         "post",
+		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+		Result:         ast.RestResult{Type: ast.RestResultResponse},
+	})
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+	action, ok := activity.Action.(*microflows.RestCallAction)
+	if !ok {
+		t.Fatalf("expected RestCallAction, got %T", activity.Action)
+	}
+	if _, ok := action.ResultHandling.(*microflows.ResultHandlingHttpResponse); !ok {
+		t.Fatalf("result handling = %T, want *ResultHandlingHttpResponse", action.ResultHandling)
+	}
+}
+
+func TestAddRestCallAction_MappingResultPreservesExplicitOutputVariable(t *testing.T) {
+	fb := &flowBuilder{
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+
+	fb.addRestCallAction(&ast.RestCallStmt{
+		OutputVariable: "NewApiToken_FromAPI",
+		Method:         "post",
+		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+		Result: ast.RestResult{
+			Type:         ast.RestResultMapping,
+			MappingName:  ast.QualifiedName{Module: "SampleAudit", Name: "IMP_ApiToken"},
+			ResultEntity: ast.QualifiedName{Module: "SampleAudit", Name: "ApiToken"},
+		},
+	})
+
+	activity, ok := fb.objects[len(fb.objects)-1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("expected ActionActivity, got %T", fb.objects[len(fb.objects)-1])
+	}
+	action, ok := activity.Action.(*microflows.RestCallAction)
+	if !ok {
+		t.Fatalf("expected RestCallAction, got %T", activity.Action)
+	}
+	mapping, ok := action.ResultHandling.(*microflows.ResultHandlingMapping)
+	if !ok {
+		t.Fatalf("result handling = %T, want *ResultHandlingMapping", action.ResultHandling)
+	}
+	if mapping.ResultVariable != "NewApiToken_FromAPI" {
+		t.Fatalf("mapping result variable = %q, want explicit output variable", mapping.ResultVariable)
+	}
+	if action.OutputVariable != "NewApiToken_FromAPI" {
+		t.Fatalf("action output variable = %q, want explicit output variable", action.OutputVariable)
+	}
+	if got := fb.varTypes["NewApiToken_FromAPI"]; got != "SampleAudit.ApiToken" {
+		t.Fatalf("registered result type = %q, want SampleAudit.ApiToken", got)
+	}
+}
+
+func TestBuildFlowGraph_RestMappingUsedAsListForcesListResult(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "Roles",
+			Method:         "get",
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleIdentity", Name: "RolesResponse"},
+				ResultEntity: ast.QualifiedName{Module: "SampleIdentity", Name: "Role"},
+			},
+		},
+		&ast.ListOperationStmt{
+			Operation:      ast.ListOpFind,
+			OutputVariable: "SelectedRole",
+			InputVariable:  "Roles",
+			Condition: &ast.BinaryExpr{
+				Left:     &ast.IdentifierExpr{Name: "Name"},
+				Operator: "=",
+				Right:    &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Admin"},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.RestCallAction)
+		if !ok {
+			continue
+		}
+		mapping, ok := action.ResultHandling.(*microflows.ResultHandlingMapping)
+		if !ok {
+			t.Fatalf("result handling = %T, want *ResultHandlingMapping", action.ResultHandling)
+		}
+		if mapping.SingleObject {
+			t.Fatal("REST mapping output used by list operation must be emitted as list result")
+		}
+		if got := fb.varTypes["Roles"]; got != "List of SampleIdentity.Role" {
+			t.Fatalf("registered REST mapping result type = %q, want list of SampleIdentity.Role", got)
+		}
+		return
+	}
+	t.Fatal("expected REST call action")
+}
+
+func TestBuildFlowGraph_RestMappingReturnedFromListMicroflowForcesListResult(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "SampleIdentity", Name: "Role"}
+	body := []ast.MicroflowStatement{
+		&ast.RestCallStmt{
+			OutputVariable: "Roles",
+			Method:         "get",
+			URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+			Result: ast.RestResult{
+				Type:         ast.RestResultMapping,
+				MappingName:  ast.QualifiedName{Module: "SampleIdentity", Name: "RolesResponse"},
+				ResultEntity: entityRef,
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "Roles"}},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeListOf, EntityRef: &entityRef}})
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.RestCallAction)
+		if !ok {
+			continue
+		}
+		mapping, ok := action.ResultHandling.(*microflows.ResultHandlingMapping)
+		if !ok {
+			t.Fatalf("result handling = %T, want *ResultHandlingMapping", action.ResultHandling)
+		}
+		if mapping.SingleObject {
+			t.Fatal("REST mapping output returned by list microflow must be emitted as list result")
+		}
+		if got := fb.varTypes["Roles"]; got != "List of SampleIdentity.Role" {
+			t.Fatalf("registered REST mapping result type = %q, want list of SampleIdentity.Role", got)
+		}
+		return
+	}
+	t.Fatal("expected REST call action")
+}
+
+func TestBuildFlowGraph_WebServiceCallCreatesRealAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallWebServiceStmt{
+			OutputVariable:   "Root",
+			ServiceID:        "service-1",
+			OperationName:    "FetchSampleItems",
+			SendMappingID:    "send-1",
+			ReceiveMappingID: "receive-1",
+			Timeout:          &ast.LiteralExpr{Kind: ast.LiteralInteger, Value: int64(30)},
+			ErrorHandling:    &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.WebServiceCallAction)
+		if !ok {
+			continue
+		}
+		if action.ServiceID != "service-1" || action.OperationName != "FetchSampleItems" ||
+			action.SendMappingID != "send-1" || action.ReceiveMappingID != "receive-1" {
+			t.Fatalf("unexpected web service action: %#v", action)
+		}
+		if action.OutputVariable != "Root" || !action.UseReturnVariable {
+			t.Fatalf("output variable not preserved: %#v", action)
+		}
+		if got := fb.declaredVars["Root"]; got != "Object" {
+			t.Fatalf("declared Root type = %q, want Object", got)
+		}
+		return
+	}
+	t.Fatal("expected WebServiceCallAction")
+}
+
+func TestBuildFlowGraph_WebServiceCallPreservesRawBSON(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallWebServiceStmt{
+			OutputVariable: "Root",
+			RawBSONBase64:  "AQID",
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.WebServiceCallAction)
+		if !ok {
+			continue
+		}
+		if string(action.RawBSON) != string([]byte{1, 2, 3}) {
+			t.Fatalf("raw BSON = %v, want [1 2 3]", action.RawBSON)
+		}
+		return
+	}
+	t.Fatal("expected WebServiceCallAction")
+}
+
+func TestBuildFlowGraph_DownloadFileCreatesRealAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.DownloadFileStmt{
+			FileDocument:  "GeneratedExcelDoc",
+			ShowInBrowser: true,
+			ErrorHandling: &ast.ErrorHandlingClause{Type: ast.ErrorHandlingContinue},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.DownloadFileAction)
+		if !ok {
+			continue
+		}
+		if action.FileDocument != "GeneratedExcelDoc" {
+			t.Fatalf("file document = %q, want GeneratedExcelDoc", action.FileDocument)
+		}
+		if !action.ShowInBrowser {
+			t.Fatal("ShowInBrowser = false, want true")
+		}
+		if action.ErrorHandlingType != microflows.ErrorHandlingTypeContinue {
+			t.Fatalf("error handling = %q, want Continue", action.ErrorHandlingType)
+		}
+		return
+	}
+	t.Fatal("expected DownloadFileAction")
+}
+
+func TestAddImportFromMappingAction_RegistersListResultType(t *testing.T) {
+	backend := &mock.MockBackend{
+		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+			return &model.ImportMapping{
+				JsonStructure: "SampleAudit.SubmitSampleAuditResponseJson",
+				Elements: []*model.ImportMappingElement{
+					{Entity: "SampleAudit.SubmitSampleAuditResponse"},
+				},
+			}, nil
+		},
+		GetJsonStructureByQualifiedNameFunc: func(moduleName, name string) (*mdltypes.JsonStructure, error) {
+			return &mdltypes.JsonStructure{
+				Elements: []*mdltypes.JsonElement{{ElementType: "Array"}},
+			}, nil
+		},
+	}
+	fb := &flowBuilder{
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		backend:      backend,
+		measurer:     &layoutMeasurer{},
+	}
+
+	fb.addImportFromMappingAction(&ast.ImportFromMappingStmt{
+		OutputVariable: "SubmitSampleAuditResponse",
+		Mapping:        ast.QualifiedName{Module: "SampleAudit", Name: "IMP_SubmitSampleAuditResponse"},
+		SourceVariable: "Response",
+		ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+	})
+
+	if got := fb.varTypes["SubmitSampleAuditResponse"]; got != "List of SampleAudit.SubmitSampleAuditResponse" {
+		t.Fatalf("import mapping result type = %q, want list of mapping entity", got)
+	}
+}
+
+func TestBuildFlowGraph_ImportMappingUsedAsListForcesListResult(t *testing.T) {
+	backend := &mock.MockBackend{
+		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+			return &model.ImportMapping{
+				JsonStructure: "SampleAudit.SubmitSampleAuditResponseJson",
+				Elements: []*model.ImportMappingElement{
+					{Entity: "SampleAudit.SubmitSampleAuditResponse"},
+				},
+			}, nil
+		},
+		GetJsonStructureByQualifiedNameFunc: func(moduleName, name string) (*mdltypes.JsonStructure, error) {
+			return &mdltypes.JsonStructure{
+				Elements: []*mdltypes.JsonElement{{ElementType: "Object"}},
+			}, nil
+		},
+	}
+	body := []ast.MicroflowStatement{
+		&ast.ImportFromMappingStmt{
+			OutputVariable: "SubmitSampleAuditResponse",
+			Mapping:        ast.QualifiedName{Module: "SampleAudit", Name: "IMP_SubmitSampleAuditResponse"},
+			SourceVariable: "Response",
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+		},
+		&ast.ListOperationStmt{
+			Operation:      ast.ListOpFind,
+			OutputVariable: "TargetAuditLog",
+			InputVariable:  "SubmitSampleAuditResponse",
+			Condition: &ast.BinaryExpr{
+				Left:     &ast.IdentifierExpr{Name: "LogId"},
+				Operator: "=",
+				Right:    &ast.SourceExpr{Source: "$IteratorAuditLog/LogID"},
+			},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		backend:      backend,
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.ImportXmlAction)
+		if !ok {
+			continue
+		}
+		if action.ResultHandling == nil || action.ResultHandling.SingleObject {
+			t.Fatal("import mapping used by list operation must be emitted as list result")
+		}
+		return
+	}
+	t.Fatal("expected import mapping action")
+}
+
+func TestBuildFlowGraph_ImportMappingUsedAsObjectForcesSingleResult(t *testing.T) {
+	backend := &mock.MockBackend{
+		GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+			return &model.ImportMapping{
+				JsonStructure: "SampleRest.ErrorResponseJson",
+				Elements: []*model.ImportMappingElement{
+					{Entity: "SampleRest.Error"},
+				},
+			}, nil
+		},
+		GetJsonStructureByQualifiedNameFunc: func(moduleName, name string) (*mdltypes.JsonStructure, error) {
+			return &mdltypes.JsonStructure{
+				Elements: []*mdltypes.JsonElement{{ElementType: "Array"}},
+			}, nil
+		},
+	}
+	body := []ast.MicroflowStatement{
+		&ast.ImportFromMappingStmt{
+			OutputVariable: "ErrorResponse",
+			Mapping:        ast.QualifiedName{Module: "SampleRest", Name: "IMM_ErrorResponse"},
+			SourceVariable: "HttpErrorResponse",
+			ErrorHandling:  &ast.ErrorHandlingClause{Type: ast.ErrorHandlingRollback},
+		},
+		&ast.ChangeObjectStmt{
+			Variable: "UserStatusContext",
+			Changes: []ast.ChangeItem{{
+				Attribute: "Reason",
+				Value:     &ast.AttributePathExpr{Variable: "ErrorResponse", Path: []string{"Detail"}},
+			}},
+		},
+	}
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{"UserStatusContext": "SampleUsers.UserStatusContext"},
+		declaredVars: map[string]string{},
+		backend:      backend,
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.ImportXmlAction)
+		if !ok {
+			continue
+		}
+		if action.ResultHandling == nil || !action.ResultHandling.SingleObject {
+			t.Fatal("import mapping used through an attribute path must be emitted as a single-object result")
+		}
+		if got := fb.varTypes["ErrorResponse"]; got != "SampleRest.Error" {
+			t.Fatalf("import mapping object result type = %q, want SampleRest.Error", got)
+		}
+		return
+	}
+	t.Fatal("expected import mapping action")
+}
+
+func TestAddJavaAction_GenericListReturnInheritsInputListType(t *testing.T) {
+	backend := &mock.MockBackend{
+		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
+			return &javaactions.JavaAction{
+				ReturnType: &javaactions.ListType{},
+			}, nil
+		},
+	}
+	fb := &flowBuilder{
+		varTypes: map[string]string{
+			"ApplicationViewList": "List of SampleApps.ApplicationView",
+		},
+		declaredVars: map[string]string{},
+		backend:      backend,
+		measurer:     &layoutMeasurer{},
+	}
+
+	fb.addCallJavaActionAction(&ast.CallJavaActionStmt{
+		OutputVariable: "ApplicationViewFoundList",
+		ActionName:     ast.QualifiedName{Module: "DataStructures", Name: "J_FilterFromHashMap"},
+		Arguments: []ast.CallArgument{
+			{Name: "KeyValue", Value: &ast.SourceExpr{Source: "$IteratorDeploymentTarget/ApplicationId"}},
+			{Name: "InputList", Value: &ast.VariableExpr{Name: "ApplicationViewList"}},
+		},
+	})
+
+	if got := fb.varTypes["ApplicationViewFoundList"]; got != "List of SampleApps.ApplicationView" {
+		t.Fatalf("generic java list result type = %q, want input list type", got)
+	}
+}
+
+func TestResolveMemberChange_CrossAssociationRemoteChild(t *testing.T) {
+	backend := &mock.MockBackend{
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) {
+			return []*domainmodel.DomainModel{
+				{
+					ContainerID: "brand-module",
+					Entities: []*domainmodel.Entity{
+						{BaseElement: model.BaseElement{ID: "brand-id"}, Name: "Brand"},
+					},
+				},
+				{
+					ContainerID: "sprintr-module",
+					CrossAssociations: []*domainmodel.CrossModuleAssociation{
+						{
+							Name:     "Tenant_Brand",
+							ParentID: "company-id",
+							ChildRef: "SampleBranding.Brand",
+						},
+					},
+				},
+			}, nil
+		},
+		GetModuleFunc: func(id model.ID) (*model.Module, error) {
+			switch id {
+			case "brand-module":
+				return &model.Module{Name: "SampleBranding"}, nil
+			case "sprintr-module":
+				return &model.Module{Name: "SampleDirectory"}, nil
+			default:
+				return nil, nil
+			}
+		},
+		GetModuleByNameFunc: func(name string) (*model.Module, error) {
+			if name == "SampleBranding" {
+				return &model.Module{BaseElement: model.BaseElement{ID: "brand-module"}, Name: name}, nil
+			}
+			return nil, nil
+		},
+		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
+			if moduleID == "brand-module" {
+				return &domainmodel.DomainModel{
+					ContainerID: "brand-module",
+					Entities: []*domainmodel.Entity{
+						{BaseElement: model.BaseElement{ID: "brand-id"}, Name: "Brand"},
+					},
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+	fb := &flowBuilder{backend: backend, varTypes: map[string]string{}, declaredVars: map[string]string{}}
+	change := &microflows.MemberChange{}
+
+	fb.resolveMemberChange(change, "Tenant_Brand", "SampleBranding.Brand")
+
+	if change.AssociationQualifiedName != "SampleDirectory.Tenant_Brand" {
+		t.Fatalf("association = %q, want remote-child cross association", change.AssociationQualifiedName)
+	}
+}
+
+func TestListAttributeOperation_QualifiesAttributeForObjectTypedInput(t *testing.T) {
+	backend := &mock.MockBackend{
+		GetModuleByNameFunc: func(name string) (*model.Module, error) {
+			if name == "SampleAudit" {
+				return &model.Module{BaseElement: model.BaseElement{ID: "audit-module"}, Name: name}, nil
+			}
+			return nil, nil
+		},
+		GetDomainModelFunc: func(moduleID model.ID) (*domainmodel.DomainModel, error) {
+			if moduleID == "audit-module" {
+				return &domainmodel.DomainModel{
+					ContainerID: moduleID,
+					Entities: []*domainmodel.Entity{
+						{
+							Name: "SubmitSampleAuditResponse",
+							Attributes: []*domainmodel.Attribute{
+								{Name: "LogId"},
+							},
+						},
+					},
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+	fb := &flowBuilder{
+		varTypes: map[string]string{
+			"SubmitSampleAuditResponse": "SampleAudit.SubmitSampleAuditResponse",
+		},
+		backend: backend,
+	}
+
+	op := fb.listAttributeOperation(&ast.ListOperationStmt{
+		Operation:      ast.ListOpFind,
+		OutputVariable: "TargetAuditLog",
+		InputVariable:  "SubmitSampleAuditResponse",
+		Condition: &ast.BinaryExpr{
+			Left:     &ast.IdentifierExpr{Name: "LogId"},
+			Operator: "=",
+			Right:    &ast.SourceExpr{Source: "$IteratorAuditLog/LogID"},
+		},
+	}, false)
+
+	find, ok := op.(*microflows.FindByAttributeOperation)
+	if !ok {
+		t.Fatalf("operation = %T, want FindByAttributeOperation", op)
+	}
+	if find.Attribute != "SampleAudit.SubmitSampleAuditResponse.LogId" {
+		t.Fatalf("attribute = %q, want qualified attribute", find.Attribute)
 	}
 }

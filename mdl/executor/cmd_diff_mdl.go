@@ -337,6 +337,22 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 		}
 		lines = append(lines, indentStr+"end if;")
 
+	case *ast.EnumSplitStmt:
+		lines = append(lines, fmt.Sprintf("%ssplit enum $%s", indentStr, s.Variable))
+		for _, branch := range s.Cases {
+			lines = append(lines, fmt.Sprintf("%scase %s", indentStr, formatEnumSplitCaseValues(enumSplitCaseValues(branch))))
+			for _, branchStmt := range branch.Body {
+				lines = append(lines, microflowStatementToMDL(ctx, branchStmt, indent+1)...)
+			}
+		}
+		if len(s.ElseBody) > 0 {
+			lines = append(lines, indentStr+"else")
+			for _, elseStmt := range s.ElseBody {
+				lines = append(lines, microflowStatementToMDL(ctx, elseStmt, indent+1)...)
+			}
+		}
+		lines = append(lines, indentStr+"end split;")
+
 	case *ast.LoopStmt:
 		lines = append(lines, fmt.Sprintf("%sloop $%s in $%s", indentStr, s.LoopVariable, s.ListVariable))
 		for _, bodyStmt := range s.Body {

@@ -154,9 +154,15 @@ const (
 // SortItem represents a sort specification.
 type SortItem struct {
 	model.BaseElement
-	AttributeID            model.ID      `json:"attributeId"`
-	AttributeQualifiedName string        `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
-	Direction              SortDirection `json:"direction"`
+	AttributeID            model.ID        `json:"attributeId"`
+	AttributeQualifiedName string          `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
+	EntityRefSteps         []EntityRefStep `json:"entityRefSteps,omitempty"`
+	Direction              SortDirection   `json:"direction"`
+}
+
+type EntityRefStep struct {
+	Association       string `json:"association,omitempty"`
+	DestinationEntity string `json:"destinationEntity,omitempty"`
 }
 
 // SortDirection represents sort order.
@@ -480,8 +486,9 @@ func (ValidationFeedbackAction) isMicroflowAction() {}
 // DownloadFileAction downloads a file.
 type DownloadFileAction struct {
 	model.BaseElement
-	FileDocument  string `json:"fileDocument"`
-	ShowInBrowser bool   `json:"showInBrowser"`
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	FileDocument      string            `json:"fileDocument"`
+	ShowInBrowser     bool              `json:"showInBrowser"`
 }
 
 func (DownloadFileAction) isMicroflowAction() {}
@@ -576,6 +583,14 @@ type EntityTypeCodeActionParameterValue struct {
 
 func (EntityTypeCodeActionParameterValue) isCodeActionParameterValue() {}
 
+// MicroflowParameterValue is a microflow reference passed to a Java action.
+type MicroflowParameterValue struct {
+	model.BaseElement
+	Microflow string `json:"microflow,omitempty"` // BY_NAME_REFERENCE: qualified microflow name
+}
+
+func (MicroflowParameterValue) isCodeActionParameterValue() {}
+
 // CallExternalAction calls an external action on a consumed OData service.
 type CallExternalAction struct {
 	model.BaseElement
@@ -600,6 +615,12 @@ type ExternalActionParameterMapping struct {
 // WebServiceCallAction calls a web service.
 type WebServiceCallAction struct {
 	model.BaseElement
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	// RawBSON is an authoritative passthrough payload for legacy SOAP actions
+	// emitted as `call web service raw '...'`. When set, the writer preserves it
+	// byte-for-byte and ignores the convenience fields below. Builders for the
+	// structured `call web service 'service-id' ...` form must leave RawBSON nil.
+	RawBSON           []byte   `json:"-"`
 	ServiceID         model.ID `json:"serviceId,omitempty"`
 	OperationName     string   `json:"operationName,omitempty"`
 	SendMappingID     model.ID `json:"sendMappingId,omitempty"`
@@ -774,10 +795,11 @@ func (ResultHandlingHttpResponse) isResultHandling() {}
 // ResultHandlingMapping uses an import mapping.
 type ResultHandlingMapping struct {
 	model.BaseElement
-	MappingID      model.ID `json:"mappingId"`
-	ResultEntityID model.ID `json:"resultEntityId,omitempty"`
-	ResultVariable string   `json:"resultVariable,omitempty"`
-	SingleObject   bool     `json:"singleObject,omitempty"` // true when mapping returns a single object (not a list)
+	MappingID             model.ID `json:"mappingId"`
+	ResultEntityID        model.ID `json:"resultEntityId,omitempty"`
+	ResultVariable        string   `json:"resultVariable,omitempty"`
+	SingleObject          bool     `json:"singleObject,omitempty"` // true when mapping returns a single object (not a list)
+	ForceSingleOccurrence *bool    `json:"forceSingleOccurrence,omitempty"`
 }
 
 func (ResultHandlingMapping) isResultHandling() {}

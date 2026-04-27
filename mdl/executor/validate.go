@@ -396,6 +396,12 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 	if !ctx.Connected() || len(s.Body) == 0 {
 		return nil
 	}
+	if s.Excluded {
+		// Studio Pro allows excluded documents to keep stale references. Reference
+		// checks should not fail a roundtrip audit for microflows that are not part
+		// of the runnable app.
+		return nil
+	}
 
 	// Collect all references from the microflow body
 	refs := &microflowRefCollector{}
@@ -428,6 +434,9 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 	if len(refs.javaActions) > 0 {
 		known := buildJavaActionQualifiedNames(ctx)
 		for _, ref := range refs.javaActions {
+			if isBuiltinJavaActionReference(ref) {
+				continue
+			}
 			if !known[ref] {
 				errors = append(errors, fmt.Sprintf("java action not found: %s (referenced by call java action)", ref))
 			}
@@ -444,6 +453,11 @@ func validateMicroflowReferences(ctx *ExecContext, s *ast.CreateMicroflowStmt, s
 	}
 
 	return errors
+}
+
+func isBuiltinJavaActionReference(ref string) bool {
+	module, _, ok := strings.Cut(ref, ".")
+	return ok && module == "System"
 }
 
 // microflowRefCollector collects qualified name references from microflow statements.
@@ -497,6 +511,11 @@ func (c *microflowRefCollector) collectFromStatements(stmts []ast.MicroflowState
 		case *ast.IfStmt:
 			c.collectFromStatements(s.ThenBody)
 			c.collectFromStatements(s.ElseBody)
+		case *ast.EnumSplitStmt:
+			for _, branch := range s.Cases {
+				c.collectFromStatements(branch.Body)
+			}
+			c.collectFromStatements(s.ElseBody)
 		case *ast.LoopStmt:
 			c.collectFromStatements(s.Body)
 		}
@@ -523,6 +542,14 @@ func getErrorHandlerBody(stmt ast.MicroflowStatement) []ast.MicroflowStatement {
 			return s.ErrorHandling.Body
 		}
 	case *ast.CallJavaActionStmt:
+		if s.ErrorHandling != nil && s.ErrorHandling.Body != nil {
+			return s.ErrorHandling.Body
+		}
+	case *ast.CallWebServiceStmt:
+		if s.ErrorHandling != nil && s.ErrorHandling.Body != nil {
+			return s.ErrorHandling.Body
+		}
+	case *ast.DownloadFileStmt:
 		if s.ErrorHandling != nil && s.ErrorHandling.Body != nil {
 			return s.ErrorHandling.Body
 		}

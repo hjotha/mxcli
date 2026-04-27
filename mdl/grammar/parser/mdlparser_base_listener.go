@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -878,6 +878,50 @@ func (s *BaseMDLParserListener) EnterDeclareStatement(ctx *DeclareStatementConte
 // ExitDeclareStatement is called when production declareStatement is exited.
 func (s *BaseMDLParserListener) ExitDeclareStatement(ctx *DeclareStatementContext) {}
 
+// EnterInheritanceSplitStatement is called when production inheritanceSplitStatement is entered.
+func (s *BaseMDLParserListener) EnterInheritanceSplitStatement(ctx *InheritanceSplitStatementContext) {
+}
+
+// ExitInheritanceSplitStatement is called when production inheritanceSplitStatement is exited.
+func (s *BaseMDLParserListener) ExitInheritanceSplitStatement(ctx *InheritanceSplitStatementContext) {
+}
+
+// EnterInheritanceSplitCase is called when production inheritanceSplitCase is entered.
+func (s *BaseMDLParserListener) EnterInheritanceSplitCase(ctx *InheritanceSplitCaseContext) {}
+
+// ExitInheritanceSplitCase is called when production inheritanceSplitCase is exited.
+func (s *BaseMDLParserListener) ExitInheritanceSplitCase(ctx *InheritanceSplitCaseContext) {}
+
+// EnterEnumSplitStatement is called when production enumSplitStatement is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitStatement(ctx *EnumSplitStatementContext) {}
+
+// ExitEnumSplitStatement is called when production enumSplitStatement is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitStatement(ctx *EnumSplitStatementContext) {}
+
+// EnterEnumSplitSource is called when production enumSplitSource is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitSource(ctx *EnumSplitSourceContext) {}
+
+// ExitEnumSplitSource is called when production enumSplitSource is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitSource(ctx *EnumSplitSourceContext) {}
+
+// EnterEnumSplitCase is called when production enumSplitCase is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitCase(ctx *EnumSplitCaseContext) {}
+
+// ExitEnumSplitCase is called when production enumSplitCase is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitCase(ctx *EnumSplitCaseContext) {}
+
+// EnterEnumSplitCaseValue is called when production enumSplitCaseValue is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitCaseValue(ctx *EnumSplitCaseValueContext) {}
+
+// ExitEnumSplitCaseValue is called when production enumSplitCaseValue is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitCaseValue(ctx *EnumSplitCaseValueContext) {}
+
+// EnterCastObjectStatement is called when production castObjectStatement is entered.
+func (s *BaseMDLParserListener) EnterCastObjectStatement(ctx *CastObjectStatementContext) {}
+
+// ExitCastObjectStatement is called when production castObjectStatement is exited.
+func (s *BaseMDLParserListener) ExitCastObjectStatement(ctx *CastObjectStatementContext) {}
+
 // EnterSetStatement is called when production setStatement is entered.
 func (s *BaseMDLParserListener) EnterSetStatement(ctx *SetStatementContext) {}
 
@@ -1028,6 +1072,12 @@ func (s *BaseMDLParserListener) EnterCallJavaActionStatement(ctx *CallJavaAction
 // ExitCallJavaActionStatement is called when production callJavaActionStatement is exited.
 func (s *BaseMDLParserListener) ExitCallJavaActionStatement(ctx *CallJavaActionStatementContext) {}
 
+// EnterCallWebServiceStatement is called when production callWebServiceStatement is entered.
+func (s *BaseMDLParserListener) EnterCallWebServiceStatement(ctx *CallWebServiceStatementContext) {}
+
+// ExitCallWebServiceStatement is called when production callWebServiceStatement is exited.
+func (s *BaseMDLParserListener) ExitCallWebServiceStatement(ctx *CallWebServiceStatementContext) {}
+
 // EnterExecuteDatabaseQueryStatement is called when production executeDatabaseQueryStatement is entered.
 func (s *BaseMDLParserListener) EnterExecuteDatabaseQueryStatement(ctx *ExecuteDatabaseQueryStatementContext) {
 }
@@ -1167,6 +1217,12 @@ func (s *BaseMDLParserListener) EnterShowMessageStatement(ctx *ShowMessageStatem
 
 // ExitShowMessageStatement is called when production showMessageStatement is exited.
 func (s *BaseMDLParserListener) ExitShowMessageStatement(ctx *ShowMessageStatementContext) {}
+
+// EnterDownloadFileStatement is called when production downloadFileStatement is entered.
+func (s *BaseMDLParserListener) EnterDownloadFileStatement(ctx *DownloadFileStatementContext) {}
+
+// ExitDownloadFileStatement is called when production downloadFileStatement is exited.
+func (s *BaseMDLParserListener) ExitDownloadFileStatement(ctx *DownloadFileStatementContext) {}
 
 // EnterThrowStatement is called when production throwStatement is entered.
 func (s *BaseMDLParserListener) EnterThrowStatement(ctx *ThrowStatementContext) {}

@@ -62,6 +62,27 @@ func TestFormatAction_JavaActionCall_MixedParamTypes(t *testing.T) {
 	}
 }
 
+func TestFormatAction_JavaActionCall_MicroflowParam(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.JavaActionCallAction{
+		JavaAction:         "MxDock.CreateLocalAdminOption",
+		ResultVariableName: "PlatformAdmin",
+		ParameterMappings: []*microflows.JavaActionParameterMapping{
+			{
+				Parameter: "MxDock.CreateLocalAdminOption.openPageMf",
+				Value: &microflows.MicroflowParameterValue{
+					Microflow: "MxDock.Example_OpenAdminPage",
+				},
+			},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "$PlatformAdmin = call java action MxDock.CreateLocalAdminOption(openPageMf = MxDock.Example_OpenAdminPage);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_JavaActionCall_EntityTypeParam_EmptyEntity(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.JavaActionCallAction{

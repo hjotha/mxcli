@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strings"
@@ -129,13 +130,19 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		Microflow:         mfQN,
 		ParameterMappings: mappings,
 	}
+	useReturnVariable := true
+	if s.OutputVariable != "" && fb.callOutputDeclarations != nil {
+		useReturnVariable = fb.callOutputDeclarations[s]
+	} else if s.OutputVariable != "" && fb.isVariableDeclared(s.OutputVariable) {
+		useReturnVariable = false
+	}
 
 	action := &microflows.MicroflowCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		MicroflowCall:      mfCall,
 		ResultVariableName: s.OutputVariable,
-		UseReturnVariable:  s.OutputVariable != "",
+		UseReturnVariable:  useReturnVariable,
 	}
 
 	activityX := fb.posX
@@ -162,7 +169,9 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -184,10 +193,14 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 
 	// Build a map of parameter name -> param type for the Java action
 	entityTypeParams := make(map[string]bool)
+	microflowParams := make(map[string]bool)
 	if jaDef != nil {
 		for _, p := range jaDef.Parameters {
-			if _, ok := p.ParameterType.(*javaactions.EntityTypeParameterType); ok {
+			switch p.ParameterType.(type) {
+			case *javaactions.EntityTypeParameterType:
 				entityTypeParams[p.Name] = true
+			case *javaactions.MicroflowType:
+				microflowParams[p.Name] = true
 			}
 		}
 	}
@@ -216,6 +229,16 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Entity:      entityName,
 			}
+		} else if microflowParams[arg.Name] {
+			value = &microflows.MicroflowParameterValue{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Microflow:   strings.Trim(fb.exprToString(arg.Value), "'"),
+			}
+		} else if isPlaceholderExpression(arg.Value) {
+			value = &microflows.BasicCodeActionParameterValue{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Argument:    "",
+			}
 		} else {
 			// Regular parameter: expression-based value
 			valueExpr := fb.exprToString(arg.Value)
@@ -241,6 +264,13 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 		ResultVariableName: s.OutputVariable,
 		UseReturnVariable:  s.OutputVariable != "",
 	}
+	if s.OutputVariable != "" && jaDef != nil && fb.varTypes != nil {
+		if varType := javaActionReturnVarType(jaDef.ReturnType); varType != "" {
+			fb.varTypes[s.OutputVariable] = varType
+		} else if inferred := fb.inferGenericJavaActionReturnType(jaDef, s); inferred != "" {
+			fb.varTypes[s.OutputVariable] = inferred
+		}
+	}
 
 	activityX := fb.posX
 	activity := &microflows.ActionActivity{
@@ -262,7 +292,106 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
+	}
+
+	return activity.ID
+}
+
+func javaActionReturnVarType(returnType javaactions.CodeActionReturnType) string {
+	switch t := returnType.(type) {
+	case *javaactions.EntityType:
+		return t.Entity
+	case *javaactions.ListType:
+		if t.Entity != "" {
+			return "List of " + t.Entity
+		}
+	case *javaactions.FileDocumentType:
+		return "System.FileDocument"
+	}
+	return ""
+}
+
+func (fb *flowBuilder) inferGenericJavaActionReturnType(jaDef *javaactions.JavaAction, s *ast.CallJavaActionStmt) string {
+	if jaDef == nil || fb.varTypes == nil || s == nil {
+		return ""
+	}
+	switch t := jaDef.ReturnType.(type) {
+	case *javaactions.ListType:
+		if t.Entity != "" {
+			return ""
+		}
+	case javaactions.ListType:
+		if t.Entity != "" {
+			return ""
+		}
+	default:
+		return ""
+	}
+	for _, arg := range s.Arguments {
+		valueExpr := strings.TrimPrefix(strings.Trim(fb.exprToString(arg.Value), "'"), "$")
+		if valueExpr == "" {
+			continue
+		}
+		if typ := fb.varTypes[valueExpr]; strings.HasPrefix(typ, "List of ") {
+			return typ
+		}
+	}
+	return ""
+}
+
+// addCallWebServiceAction creates a legacy SOAP WebServiceCallAction.
+func (fb *flowBuilder) addCallWebServiceAction(s *ast.CallWebServiceStmt) model.ID {
+	activityX := fb.posX
+	action := &microflows.WebServiceCallAction{
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
+		ServiceID:         model.ID(s.ServiceID),
+		OperationName:     s.OperationName,
+		SendMappingID:     model.ID(s.SendMappingID),
+		ReceiveMappingID:  model.ID(s.ReceiveMappingID),
+		OutputVariable:    s.OutputVariable,
+		UseReturnVariable: s.OutputVariable != "",
+	}
+	if s.RawBSONBase64 != "" {
+		if raw, err := base64.StdEncoding.DecodeString(s.RawBSONBase64); err == nil {
+			action.RawBSON = raw
+		} else {
+			fb.addError("invalid raw web service action payload: %v", err)
+		}
+	}
+	if s.Timeout != nil {
+		action.TimeoutExpression = fb.exprToString(s.Timeout)
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+			ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	if s.OutputVariable != "" && fb.declaredVars != nil {
+		fb.declaredVars[s.OutputVariable] = "Object"
+	}
+
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -313,7 +442,9 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -457,6 +588,35 @@ func (fb *flowBuilder) addShowMessageAction(s *ast.ShowMessageStmt) model.ID {
 		Template:           template,
 		Type:               msgType,
 		TemplateParameters: templateParams,
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+	return activity.ID
+}
+
+// addDownloadFileAction creates a DOWNLOAD FILE statement.
+func (fb *flowBuilder) addDownloadFileAction(s *ast.DownloadFileStmt) model.ID {
+	action := &microflows.DownloadFileAction{
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		FileDocument:      s.FileDocument,
+		ShowInBrowser:     s.ShowInBrowser,
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+	}
+	if s.ErrorHandling != nil {
+		action.ErrorHandlingType = convertErrorHandlingType(s.ErrorHandling)
 	}
 
 	activity := &microflows.ActionActivity{
@@ -694,42 +854,52 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 
 	// Build result handling
 	var resultHandling microflows.ResultHandling
+	restMappingSingleObject := true
 	switch s.Result.Type {
 	case ast.RestResultString:
 		resultHandling = &microflows.ResultHandlingString{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
 	case ast.RestResultResponse:
-		resultHandling = &microflows.ResultHandlingString{
+		resultHandling = &microflows.ResultHandlingHttpResponse{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
-		// Note: For HttpResponse, we would need a different result type, but using String for now
 	case ast.RestResultMapping:
 		mappingQN := s.Result.MappingName.Module + "." + s.Result.MappingName.Name
 		entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name
-		// Derive the output variable name from the root entity's short name so
-		// callers don't need to hard-code it in the MDL assignment.
-		s.OutputVariable = s.Result.ResultEntity.Name
-		// Determine whether the import mapping returns a single object or a list by
-		// looking at the JSON structure it references. If the root JSON element is
-		// an Object, the mapping produces one object; if it is an Array, a list.
-		singleObject := false
+		// Derive the output variable name from the root entity's short name only
+		// when the MDL did not provide an explicit assignment target.
+		if s.OutputVariable == "" {
+			s.OutputVariable = s.Result.ResultEntity.Name
+		}
+		// MDL's "returns mapping ... as Entity" describes an object-valued result.
+		// The import mapping's JSON root can still be an array; in that case Studio
+		// Pro stores Range.SingleObject=true and ForceSingleOccurrence=false.
+		singleObject := true
+		forceSingleOccurrence := false
 		if fb.backend != nil {
 			if im, err := fb.backend.GetImportMappingByQualifiedName(s.Result.MappingName.Module, s.Result.MappingName.Name); err == nil && im.JsonStructure != "" {
 				// im.JsonStructure is "Module.Name" — split and look up the JSON structure.
 				if parts := strings.SplitN(im.JsonStructure, ".", 2); len(parts) == 2 {
 					if js, err := fb.backend.GetJsonStructureByQualifiedName(parts[0], parts[1]); err == nil && len(js.Elements) > 0 {
-						singleObject = js.Elements[0].ElementType == "Object"
+						forceSingleOccurrence = js.Elements[0].ElementType == "Object"
 					}
 				}
 			}
 		}
+		if s.OutputVariable != "" && fb.listInputVariables != nil && fb.listInputVariables[s.OutputVariable] {
+			singleObject = false
+		} else if s.OutputVariable != "" && fb.objectInputVariables != nil && fb.objectInputVariables[s.OutputVariable] {
+			singleObject = true
+		}
+		restMappingSingleObject = singleObject
 		resultHandling = &microflows.ResultHandlingMapping{
-			BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-			MappingID:      model.ID(mappingQN),
-			ResultEntityID: model.ID(entityQN),
-			ResultVariable: s.OutputVariable,
-			SingleObject:   singleObject,
+			BaseElement:           model.BaseElement{ID: model.ID(types.GenerateID())},
+			MappingID:             model.ID(mappingQN),
+			ResultEntityID:        model.ID(entityQN),
+			ResultVariable:        s.OutputVariable,
+			SingleObject:          singleObject,
+			ForceSingleOccurrence: &forceSingleOccurrence,
 		}
 	case ast.RestResultNone:
 		resultHandling = &microflows.ResultHandlingNone{
@@ -759,6 +929,23 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 		UseReturnVariable: s.OutputVariable != "",
 		TimeoutExpression: timeoutExpr,
 	}
+	if s.OutputVariable != "" {
+		switch s.Result.Type {
+		case ast.RestResultResponse:
+			fb.registerResultVariableType(s.OutputVariable, &microflows.ObjectType{EntityQualifiedName: "System.HttpResponse"})
+		case ast.RestResultMapping:
+			entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name
+			if restMappingSingleObject {
+				fb.registerResultVariableType(s.OutputVariable, &microflows.ObjectType{EntityQualifiedName: entityQN})
+			} else {
+				fb.registerResultVariableType(s.OutputVariable, &microflows.ListType{EntityQualifiedName: entityQN})
+			}
+		default:
+			if fb.declaredVars != nil {
+				fb.declaredVars[s.OutputVariable] = "String"
+			}
+		}
+	}
 
 	activityX := fb.posX
 	activity := &microflows.ActionActivity{
@@ -780,7 +967,9 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -989,7 +1178,9 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -1013,6 +1204,7 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	}
 
 	// Determine single vs list and result entity from the import mapping
+	resultEntityQN := ""
 	if fb.backend != nil {
 		if im, err := fb.backend.GetImportMappingByQualifiedName(s.Mapping.Module, s.Mapping.Name); err == nil {
 			if im.JsonStructure != "" {
@@ -1026,9 +1218,20 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 				}
 			}
 			if len(im.Elements) > 0 && im.Elements[0].Entity != "" {
-				resultHandling.ResultEntityID = model.ID(im.Elements[0].Entity)
+				resultEntityQN = im.Elements[0].Entity
+				if !strings.Contains(resultEntityQN, ".") {
+					if resolved := fb.resolveEntityQualifiedName(model.ID(resultEntityQN)); resolved != "" {
+						resultEntityQN = resolved
+					}
+				}
+				resultHandling.ResultEntityID = model.ID(resultEntityQN)
 			}
 		}
+	}
+	if s.OutputVariable != "" && fb.listInputVariables != nil && fb.listInputVariables[s.OutputVariable] {
+		resultHandling.SingleObject = false
+	} else if s.OutputVariable != "" && fb.objectInputVariables != nil && fb.objectInputVariables[s.OutputVariable] {
+		resultHandling.SingleObject = true
 	}
 
 	action.ResultHandling = resultHandling
@@ -1047,11 +1250,24 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
+	if s.OutputVariable != "" {
+		if resultEntityQN != "" && fb.varTypes != nil {
+			if resultHandling.SingleObject {
+				fb.varTypes[s.OutputVariable] = resultEntityQN
+			} else {
+				fb.varTypes[s.OutputVariable] = "List of " + resultEntityQN
+			}
+		} else if fb.declaredVars != nil {
+			fb.declaredVars[s.OutputVariable] = "Unknown"
+		}
+	}
 
 	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activity.ID, errorY, s.OutputVariable)
+	} else {
+		fb.registerEmptyCustomErrorHandlerWithSkip(activity.ID, s.ErrorHandling, s.OutputVariable)
 	}
 
 	return activity.ID
@@ -1129,4 +1345,9 @@ func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) mode
 	}
 
 	return activity.ID
+}
+
+func isPlaceholderExpression(expr ast.Expression) bool {
+	source, ok := expr.(*ast.SourceExpr)
+	return ok && strings.TrimSpace(source.Source) == "..."
 }

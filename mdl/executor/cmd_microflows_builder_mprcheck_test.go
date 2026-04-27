@@ -1,0 +1,103 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package executor
+
+import (
+	"testing"
+
+	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
+)
+
+func TestBuildChangeObject_EmptyChangeRefreshesInClient(t *testing.T) {
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+
+	id := fb.addChangeObjectAction(&ast.ChangeObjectStmt{Variable: "Company"})
+	if id == "" || len(fb.objects) != 1 {
+		t.Fatalf("expected one change object activity, got id=%q objects=%d", id, len(fb.objects))
+	}
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object type = %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.ChangeObjectAction)
+	if !ok {
+		t.Fatalf("action type = %T, want *microflows.ChangeObjectAction", activity.Action)
+	}
+	if !action.RefreshInClient {
+		t.Fatal("empty change object must refresh in client; otherwise Mendix rejects it as CE0032")
+	}
+}
+
+func TestBuildListFind_AttributeEqualsExpressionUsesAttributeOperation(t *testing.T) {
+	fb := &flowBuilder{
+		posX:    100,
+		posY:    100,
+		spacing: HorizontalSpacing,
+		varTypes: map[string]string{
+			"SampleItemList": "List of SampleLearning.SampleItem",
+		},
+	}
+
+	id := fb.addListOperationAction(&ast.ListOperationStmt{
+		OutputVariable: "ExistingSampleItem",
+		Operation:      ast.ListOpFind,
+		InputVariable:  "SampleItemList",
+		Condition: &ast.BinaryExpr{
+			Left:     &ast.IdentifierExpr{Name: "UUID"},
+			Operator: "=",
+			Right: &ast.AttributePathExpr{
+				Variable: "IteratorSampleItem",
+				Path:     []string{"SampleItem_ID"},
+			},
+		},
+	})
+	if id == "" || len(fb.objects) != 1 {
+		t.Fatalf("expected one list operation activity, got id=%q objects=%d", id, len(fb.objects))
+	}
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object type = %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.ListOperationAction)
+	if !ok {
+		t.Fatalf("action type = %T, want *microflows.ListOperationAction", activity.Action)
+	}
+	op, ok := action.Operation.(*microflows.FindByAttributeOperation)
+	if !ok {
+		t.Fatalf("operation type = %T, want *microflows.FindByAttributeOperation", action.Operation)
+	}
+	if op.Attribute != "SampleLearning.SampleItem.UUID" {
+		t.Fatalf("Attribute = %q, want SampleLearning.SampleItem.UUID", op.Attribute)
+	}
+	if op.Expression != "$IteratorSampleItem/SampleItem_ID" {
+		t.Fatalf("Expression = %q, want $IteratorSampleItem/SampleItem_ID", op.Expression)
+	}
+}
+
+func TestBuildAddToList_AllowsPathExpressionValue(t *testing.T) {
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+
+	id := fb.addAddToListAction(&ast.AddToListStmt{
+		Value: &ast.AttributePathExpr{
+			Variable: "Link",
+			Path:     []string{"SampleModule.Link_Target", "SampleModule.Target"},
+		},
+		List: "TargetList",
+	})
+
+	if id == "" || len(fb.objects) != 1 {
+		t.Fatalf("expected one add-to-list activity, got id=%q objects=%d", id, len(fb.objects))
+	}
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object type = %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.ChangeListAction)
+	if !ok {
+		t.Fatalf("action type = %T, want *microflows.ChangeListAction", activity.Action)
+	}
+	if action.Value != "$Link/SampleModule.Link_Target/SampleModule.Target" {
+		t.Fatalf("Value = %q", action.Value)
+	}
+}

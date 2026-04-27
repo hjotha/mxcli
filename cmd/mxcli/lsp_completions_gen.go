@@ -103,13 +103,11 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "FULL", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "CROSS", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "ON", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
+	{Label: "TOP", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
+	{Label: "BOTTOM", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
+	{Label: "ANCHOR", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "ASC", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
 	{Label: "DESC", Kind: protocol.CompletionItemKindKeyword, Detail: "Query keyword"},
-
-	// Flow annotation keyword
-	{Label: "TOP", Kind: protocol.CompletionItemKindKeyword, Detail: "Flow annotation keyword"},
-	{Label: "BOTTOM", Kind: protocol.CompletionItemKindKeyword, Detail: "Flow annotation keyword"},
-	{Label: "ANCHOR", Kind: protocol.CompletionItemKindKeyword, Detail: "Flow annotation keyword"},
 
 	// Microflow keyword
 	{Label: "BEGIN", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
@@ -130,6 +128,10 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "THROW", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "LOG", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "CALL", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "WEB", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "RAW", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "DOWNLOAD", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
+	{Label: "BROWSER", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "JAVA", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "JAVASCRIPT", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
 	{Label: "ACTION", Kind: protocol.CompletionItemKindKeyword, Detail: "Microflow keyword"},
@@ -375,6 +377,7 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "RESPONSE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "REQUEST", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "SEND", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
+	{Label: "RECEIVE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "DEPRECATED", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "RESOURCE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "JSON", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},

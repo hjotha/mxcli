@@ -6,6 +6,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -122,6 +123,11 @@ func parseCodeActionParameterValue(raw map[string]any) microflows.CodeActionPara
 		value := &microflows.EntityTypeCodeActionParameterValue{}
 		value.ID = model.ID(extractBsonID(raw["$ID"]))
 		value.Entity = extractString(raw["Entity"])
+		return value
+	case "Microflows$MicroflowParameterValue":
+		value := &microflows.MicroflowParameterValue{}
+		value.ID = model.ID(extractBsonID(raw["$ID"]))
+		value.Microflow = extractString(raw["Microflow"])
 		return value
 	}
 	return nil
@@ -291,6 +297,10 @@ func parseValidationFeedbackAction(raw map[string]any) *microflows.ValidationFee
 func parseDownloadFileAction(raw map[string]any) *microflows.DownloadFileAction {
 	action := &microflows.DownloadFileAction{}
 	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	if action.ErrorHandlingType == "" {
+		action.ErrorHandlingType = microflows.ErrorHandlingTypeRollback
+	}
 	action.FileDocument = extractString(raw["FileDocumentVariableName"])
 	action.ShowInBrowser = extractBool(raw["ShowInBrowser"], false)
 	return action
@@ -330,6 +340,9 @@ func parseCastAction(raw map[string]any) *microflows.CastAction {
 	action.ID = model.ID(extractBsonID(raw["$ID"]))
 	action.ObjectVariable = extractString(raw["ObjectVariableName"])
 	action.OutputVariable = extractString(raw["OutputVariableName"])
+	if action.OutputVariable == "" {
+		action.OutputVariable = extractString(raw["VariableName"])
+	}
 	return action
 }
 
@@ -363,6 +376,38 @@ func parseRestCallAction(raw map[string]any) *microflows.RestCallAction {
 		action.RequestHandling = parseRequestHandling(requestHandlingD.Map(), requestHandlingType)
 	}
 
+	return action
+}
+
+func parseWebServiceCallAction(raw map[string]any) *microflows.WebServiceCallAction {
+	action := &microflows.WebServiceCallAction{}
+	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	action.OperationName = extractString(raw["OperationName"])
+	action.TimeoutExpression = extractString(raw["TimeOutExpression"])
+
+	if rh := extractBsonMap(raw["NewResultHandling"]); rh != nil {
+		action.OutputVariable = extractString(rh["ResultVariableName"])
+		action.UseReturnVariable = action.OutputVariable != ""
+		if call := extractBsonMap(rh["ImportMappingCall"]); call != nil {
+			action.ReceiveMappingID = model.ID(extractString(call["ReturnValueMapping"]))
+		}
+	}
+	if importedService := extractString(raw["ImportedService"]); importedService != "" {
+		action.ServiceID = model.ID(importedService)
+	}
+	if rawBSON, err := bson.Marshal(raw); err == nil {
+		action.RawBSON = rawBSON
+	}
+
+	return action
+}
+
+func parseWebServiceCallActionFromD(raw primitive.D) *microflows.WebServiceCallAction {
+	action := parseWebServiceCallAction(raw.Map())
+	if rawBSON, err := bson.Marshal(raw); err == nil {
+		action.RawBSON = rawBSON
+	}
 	return action
 }
 
@@ -501,9 +546,17 @@ func parseResultHandling(raw map[string]any, handlingType string) microflows.Res
 				mappingRef = extractString(call["ReturnValueMapping"])
 			}
 			result.MappingID = model.ID(mappingRef)
+			forceSingleOccurrence := extractBool(call["ForceSingleOccurrence"], false)
+			result.ForceSingleOccurrence = &forceSingleOccurrence
+			if rangeMap := toMap(call["Range"]); rangeMap != nil {
+				result.SingleObject = extractBool(rangeMap["SingleObject"], false)
+			}
 		}
 		if varType := toMap(raw["VariableType"]); varType != nil {
 			result.ResultEntityID = model.ID(extractString(varType["Entity"]))
+			if extractString(varType["$Type"]) == "DataTypes$ObjectType" {
+				result.SingleObject = true
+			}
 		}
 		return result
 	case "None":
@@ -605,7 +658,14 @@ func parseImportXmlAction(raw map[string]any) *microflows.ImportXmlAction {
 			if varType := toMap(call["VariableType"]); varType != nil {
 				handling.ResultEntityID = model.ID(extractString(varType["Entity"]))
 			}
-			handling.SingleObject = extractBool(call["ForceSingleOccurrence"], false)
+			forceSingleOccurrence := extractBool(call["ForceSingleOccurrence"], false)
+			handling.ForceSingleOccurrence = &forceSingleOccurrence
+			if rangeMap := toMap(call["Range"]); rangeMap != nil {
+				handling.SingleObject = extractBool(rangeMap["SingleObject"], false)
+			}
+			if !handling.SingleObject {
+				handling.SingleObject = forceSingleOccurrence
+			}
 		}
 		action.ResultHandling = handling
 	}

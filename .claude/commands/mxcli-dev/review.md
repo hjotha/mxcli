@@ -32,6 +32,9 @@ proactively. Add a row after every review that surfaces something new.
 | 7 | Skill/doc table references a function that doesn't exist (e.g. `formatActionStatement()` vs `formatAction()`) | Docs quality | Grep function names before writing: `grep -r "func formatA" mdl/executor/` |
 | 8 | "Always X" rule is too absolute for trivial edge cases (e.g. "always write failing test first" for one-char typos) | Docs quality | Soften to "prefer X" or add an exception clause; include the reasoning so readers can judge edge cases |
 | 9 | Doc comment promises a fallback/feature that doesn't exist in the code (e.g., "raw-map fallback in the client" when no such fallback was implemented) | Docs quality | Grep for function/type names referenced in doc comments to confirm they exist before committing |
+| 10 | New MDL keyword or statement added without a parser example in `mdl-examples/` | Syntax feature | Add a minimal `mdl-examples/doctype-tests/*.mdl` fixture and include the statement in the quick reference before review |
+| 11 | Commit titled `fix:` actually introduces new MDL syntax | Scope & atomicity | Split the syntax addition into a `feat:` or proposal-backed PR; keep bug fixes separate from language design |
+| 12 | Round-trip bug patched on only one half of parse/write | DESCRIBE/EXEC symmetry | Fix both parser/defaulting and writer serialization, then add tests for missing/default fields and explicit fields |
 
 ---
 

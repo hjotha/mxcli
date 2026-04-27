@@ -56,16 +56,16 @@ func TestEmitSplitAnchor_EmitsBranchAnchors(t *testing.T) {
 
 	trueFlow := &microflows.SequenceFlow{
 		OriginID:                   splitID,
-		OriginConnectionIndex:      AnchorRight,
-		DestinationConnectionIndex: AnchorLeft,
+		OriginConnectionIndex:      AnchorTop,
+		DestinationConnectionIndex: AnchorTop,
 		CaseValue: microflows.EnumerationCase{
 			Value: "true",
 		},
 	}
 	falseFlow := &microflows.SequenceFlow{
 		OriginID:                   splitID,
-		OriginConnectionIndex:      AnchorBottom,
-		DestinationConnectionIndex: AnchorTop,
+		OriginConnectionIndex:      AnchorLeft,
+		DestinationConnectionIndex: AnchorRight,
 		CaseValue: microflows.EnumerationCase{
 			Value: "false",
 		},
@@ -84,12 +84,41 @@ func TestEmitSplitAnchor_EmitsBranchAnchors(t *testing.T) {
 	out := lines[0]
 
 	for _, want := range []string{
-		"true: (from: right, to: left)",
-		"false: (from: bottom, to: top)",
+		"true: (from: top, to: top)",
+		"false: (from: left, to: right)",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q\nfull: %s", want, out)
 		}
+	}
+}
+
+func TestEmitSplitAnchor_OmitsDefaultBranchAnchors(t *testing.T) {
+	splitID := model.ID("split-defaults")
+	split := &microflows.ExclusiveSplit{}
+	split.ID = splitID
+
+	trueFlow := &microflows.SequenceFlow{
+		OriginID:                   splitID,
+		OriginConnectionIndex:      AnchorRight,
+		DestinationConnectionIndex: AnchorLeft,
+		CaseValue:                  &microflows.ExpressionCase{Expression: "true"},
+	}
+	falseFlow := &microflows.SequenceFlow{
+		OriginID:                   splitID,
+		OriginConnectionIndex:      AnchorBottom,
+		DestinationConnectionIndex: AnchorTop,
+		CaseValue:                  &microflows.ExpressionCase{Expression: "false"},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		splitID: {trueFlow, falseFlow},
+	}
+
+	var lines []string
+	emitAnchorAnnotation(split, flowsByOrigin, nil, &lines, "")
+
+	if len(lines) != 0 {
+		t.Fatalf("expected default branch anchor line to be omitted, got %v", lines)
 	}
 }
 
@@ -105,16 +134,16 @@ func TestEmitSplitAnchor_SupportsExpressionCase(t *testing.T) {
 
 	trueFlow := &microflows.SequenceFlow{
 		OriginID:                   splitID,
-		OriginConnectionIndex:      AnchorRight,
-		DestinationConnectionIndex: AnchorLeft,
+		OriginConnectionIndex:      AnchorTop,
+		DestinationConnectionIndex: AnchorTop,
 		CaseValue: &microflows.ExpressionCase{
 			Expression: "true",
 		},
 	}
 	falseFlow := &microflows.SequenceFlow{
 		OriginID:                   splitID,
-		OriginConnectionIndex:      AnchorBottom,
-		DestinationConnectionIndex: AnchorTop,
+		OriginConnectionIndex:      AnchorLeft,
+		DestinationConnectionIndex: AnchorRight,
 		CaseValue: &microflows.ExpressionCase{
 			Expression: "false",
 		},
@@ -131,8 +160,8 @@ func TestEmitSplitAnchor_SupportsExpressionCase(t *testing.T) {
 	}
 	out := lines[0]
 	for _, want := range []string{
-		"true: (from: right, to: left)",
-		"false: (from: bottom, to: top)",
+		"true: (from: top, to: top)",
+		"false: (from: left, to: right)",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q\nfull: %s", want, out)
@@ -155,8 +184,8 @@ func TestEmitSplitAnchor_SupportsBooleanCase(t *testing.T) {
 	}
 	falseFlow := &microflows.SequenceFlow{
 		OriginID:                   splitID,
-		OriginConnectionIndex:      AnchorBottom,
-		DestinationConnectionIndex: AnchorTop,
+		OriginConnectionIndex:      AnchorLeft,
+		DestinationConnectionIndex: AnchorRight,
 		CaseValue:                  &microflows.BooleanCase{Value: false},
 	}
 	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
@@ -171,8 +200,8 @@ func TestEmitSplitAnchor_SupportsBooleanCase(t *testing.T) {
 	}
 	out := lines[0]
 	for _, want := range []string{
-		"true: (from: top, to: left)",
-		"false: (from: bottom, to: top)",
+		"true: (from: top)",
+		"false: (from: left, to: right)",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q\nfull: %s", want, out)

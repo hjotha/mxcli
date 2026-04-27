@@ -51,10 +51,10 @@ func buildLogStatement(ctx parser.ILogStatementContext) *ast.LogStmt {
 	// LOG always has a message expression; when NODE is present the first
 	// expression is the node and the second is the message.
 	if logCtx.NODE() != nil && len(exprs) > 1 {
-		stmt.Node = buildExpression(exprs[0])
-		stmt.Message = buildExpression(exprs[1])
+		stmt.Node = buildSourceExpression(exprs[0])
+		stmt.Message = buildSourceExpression(exprs[1])
 	} else if len(exprs) > 0 {
-		stmt.Message = buildExpression(exprs[0])
+		stmt.Message = buildSourceExpression(exprs[0])
 	}
 
 	// Parse template parameters: WITH ({1} = expr, {2} = expr, ...)
@@ -79,7 +79,8 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 	var result []ast.TemplateParam
 
 	// Handle WITH ({1} = expr, {2} = expr, ...) syntax
-	for _, param := range paramsCtx.AllTemplateParam() {
+	allParams := paramsCtx.AllTemplateParam()
+	for i, param := range allParams {
 		paramCtx := param.(*parser.TemplateParamContext)
 		indexStr := paramCtx.NUMBER_LITERAL().GetText()
 		index, _ := strconv.Atoi(indexStr)
@@ -89,11 +90,16 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 
 		// Parse the expression and check for data source attribute reference
 		if exprCtx := paramCtx.Expression(); exprCtx != nil {
-			expr := buildExpression(exprCtx)
+			expr := buildSourceExpression(exprCtx)
+			expr = appendTemplateParamTrailingWhitespace(paramsCtx, allParams, i, exprCtx, expr)
 			tp.Value = expr
 
 			// Check if this is a $Widget.Attr pattern (AttributePathExpr with Path)
-			if pathExpr, ok := expr.(*ast.AttributePathExpr); ok && len(pathExpr.Path) > 0 {
+			inspectionExpr := expr
+			if sourceExpr, ok := inspectionExpr.(*ast.SourceExpr); ok {
+				inspectionExpr = sourceExpr.Expression
+			}
+			if pathExpr, ok := inspectionExpr.(*ast.AttributePathExpr); ok && len(pathExpr.Path) > 0 {
 				// This is a data source attribute reference
 				tp.DataSourceName = pathExpr.Variable
 				tp.AttributeName = pathExpr.Path[len(pathExpr.Path)-1]
@@ -115,6 +121,70 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 	}
 
 	return result
+}
+
+func appendTemplateParamTrailingWhitespace(
+	paramsCtx *parser.TemplateParamsContext,
+	allParams []parser.ITemplateParamContext,
+	index int,
+	exprCtx parser.IExpressionContext,
+	expr ast.Expression,
+) ast.Expression {
+	trailing := templateParamTrailingWhitespace(paramsCtx, allParams, index, exprCtx)
+	if trailing == "" || !strings.ContainsAny(trailing, "\r\n") {
+		return expr
+	}
+
+	source := strings.TrimSpace(extractOriginalText(exprCtx.(antlr.ParserRuleContext)))
+	innerExpr := expr
+	if sourceExpr, ok := expr.(*ast.SourceExpr); ok {
+		source = sourceExpr.Source
+		innerExpr = sourceExpr.Expression
+	}
+	return &ast.SourceExpr{Expression: innerExpr, Source: source + trailing}
+}
+
+func templateParamTrailingWhitespace(
+	paramsCtx *parser.TemplateParamsContext,
+	allParams []parser.ITemplateParamContext,
+	index int,
+	exprCtx parser.IExpressionContext,
+) string {
+	exprRule, ok := exprCtx.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+
+	start := exprRule.GetStop().GetStop() + 1
+	end := -1
+	delimiter := byte(')')
+	if index+1 < len(allParams) {
+		nextParam := allParams[index+1].(antlr.ParserRuleContext)
+		end = nextParam.GetStart().GetStart() - 1
+		delimiter = ','
+	} else if paramsCtx.GetStop() != nil {
+		end = paramsCtx.GetStop().GetStart() - 1
+	}
+	if start < 0 || end < start {
+		return ""
+	}
+
+	gap := input.GetText(start, end)
+	if delimiter == ',' {
+		comma := strings.IndexByte(gap, ',')
+		if comma == -1 {
+			return ""
+		}
+		gap = gap[:comma]
+	}
+	if strings.TrimSpace(gap) != "" {
+		return ""
+	}
+	return gap
 }
 
 // buildCallMicroflowStatement converts CALL MICROFLOW statement context to CallMicroflowStmt.
@@ -176,6 +246,54 @@ func buildCallJavaActionStatement(ctx parser.ICallJavaActionStatementContext) *a
 	}
 
 	// Check for ON ERROR clause
+	if errClause := callCtx.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+
+	return stmt
+}
+
+// buildCallWebServiceStatement converts CALL WEB SERVICE statement context to CallWebServiceStmt.
+func buildCallWebServiceStatement(ctx parser.ICallWebServiceStatementContext) *ast.CallWebServiceStmt {
+	if ctx == nil {
+		return nil
+	}
+	callCtx := ctx.(*parser.CallWebServiceStatementContext)
+
+	stmt := &ast.CallWebServiceStmt{}
+	if v := callCtx.VARIABLE(); v != nil {
+		stmt.OutputVariable = strings.TrimPrefix(v.GetText(), "$")
+	}
+
+	literals := callCtx.AllSTRING_LITERAL()
+	idx := 0
+	if callCtx.RAW() != nil {
+		if len(literals) > 0 {
+			stmt.RawBSONBase64 = unquoteString(literals[0].GetText())
+		}
+		if errClause := callCtx.OnErrorClause(); errClause != nil {
+			stmt.ErrorHandling = buildOnErrorClause(errClause)
+		}
+		return stmt
+	}
+	if len(literals) > idx {
+		stmt.ServiceID = unquoteString(literals[idx].GetText())
+		idx++
+	}
+	if callCtx.OPERATION() != nil && len(literals) > idx {
+		stmt.OperationName = unquoteString(literals[idx].GetText())
+		idx++
+	}
+	if callCtx.SEND() != nil && len(literals) > idx {
+		stmt.SendMappingID = unquoteString(literals[idx].GetText())
+		idx++
+	}
+	if callCtx.RECEIVE() != nil && len(literals) > idx {
+		stmt.ReceiveMappingID = unquoteString(literals[idx].GetText())
+	}
+	if expr := callCtx.Expression(); expr != nil {
+		stmt.Timeout = buildExpression(expr)
+	}
 	if errClause := callCtx.OnErrorClause(); errClause != nil {
 		stmt.ErrorHandling = buildOnErrorClause(errClause)
 	}
@@ -302,7 +420,7 @@ func buildCallArgumentList(ctx parser.ICallArgumentListContext) []ast.CallArgume
 			ca.Name = parameterNameText(pn)
 		}
 		if expr := arg.Expression(); expr != nil {
-			ca.Value = buildExpression(expr)
+			ca.Value = buildSourceExpression(expr)
 		}
 
 		args = append(args, ca)
@@ -328,7 +446,7 @@ func buildMemberAssignmentList(ctx parser.IMemberAssignmentListContext) []ast.Ch
 			ci.Attribute = memberAttributeNameText(name)
 		}
 		if expr := assign.Expression(); expr != nil {
-			ci.Value = buildExpression(expr)
+			ci.Value = buildSourceExpression(expr)
 		}
 
 		items = append(items, ci)
@@ -353,7 +471,7 @@ func buildChangeList(ctx parser.IChangeListContext) []ast.ChangeItem {
 			ci.Attribute = id.GetText()
 		}
 		if expr := item.Expression(); expr != nil {
-			ci.Value = buildExpression(expr)
+			ci.Value = buildSourceExpression(expr)
 		}
 
 		items = append(items, ci)
@@ -633,7 +751,7 @@ func buildCreateListStatement(ctx parser.ICreateListStatementContext) *ast.Creat
 }
 
 // buildAddToListStatement converts add to list statement context to AddToListStmt.
-// Grammar: ADD VARIABLE TO VARIABLE
+// Grammar: ADD expression TO VARIABLE
 func buildAddToListStatement(ctx parser.IAddToListStatementContext) *ast.AddToListStmt {
 	if ctx == nil {
 		return nil
@@ -642,13 +760,18 @@ func buildAddToListStatement(ctx parser.IAddToListStatementContext) *ast.AddToLi
 
 	stmt := &ast.AddToListStmt{}
 
-	// Get both variables
-	vars := addCtx.AllVARIABLE()
-	if len(vars) >= 1 {
-		stmt.Item = strings.TrimPrefix(vars[0].GetText(), "$")
+	if expr := addCtx.Expression(); expr != nil {
+		stmt.Value = buildSourceExpression(expr)
+		inspectionExpr := stmt.Value
+		if sourceExpr, ok := inspectionExpr.(*ast.SourceExpr); ok {
+			inspectionExpr = sourceExpr.Expression
+		}
+		if varExpr, ok := inspectionExpr.(*ast.VariableExpr); ok {
+			stmt.Item = varExpr.Name
+		}
 	}
-	if len(vars) >= 2 {
-		stmt.List = strings.TrimPrefix(vars[1].GetText(), "$")
+	if v := addCtx.VARIABLE(); v != nil {
+		stmt.List = strings.TrimPrefix(v.GetText(), "$")
 	}
 
 	return stmt
@@ -813,6 +936,23 @@ func buildShowMessageStatement(ctx parser.IShowMessageStatementContext) *ast.Sho
 	return stmt
 }
 
+// buildDownloadFileStatement converts downloadFileStatement context to DownloadFileStmt.
+func buildDownloadFileStatement(ctx parser.IDownloadFileStatementContext) *ast.DownloadFileStmt {
+	if ctx == nil {
+		return nil
+	}
+	dlCtx := ctx.(*parser.DownloadFileStatementContext)
+	stmt := &ast.DownloadFileStmt{}
+	if variable := dlCtx.VARIABLE(); variable != nil {
+		stmt.FileDocument = strings.TrimPrefix(variable.GetText(), "$")
+	}
+	stmt.ShowInBrowser = dlCtx.BROWSER() != nil
+	if errClause := dlCtx.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+	return stmt
+}
+
 // buildValidationFeedbackStatement converts validationFeedbackStatement context to ValidationFeedbackStmt.
 // Grammar: VALIDATION FEEDBACK attributePath MESSAGE expression (OBJECTS LBRACKET expressionList RBRACKET)?
 func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementContext) *ast.ValidationFeedbackStmt {
@@ -826,6 +966,10 @@ func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementCon
 	// Build attribute path
 	if attrPath := vfCtx.AttributePath(); attrPath != nil {
 		stmt.AttributePath = buildAttributePathFromContext(attrPath)
+	} else if variable := vfCtx.VARIABLE(); variable != nil {
+		stmt.AttributePath = &ast.AttributePathExpr{
+			Variable: strings.TrimPrefix(variable.GetText(), "$"),
+		}
 	}
 
 	// Build message expression

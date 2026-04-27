@@ -542,6 +542,45 @@ END;`
 	t.Log("IF/THEN/ELSE parsed correctly - actions in correct branches")
 }
 
+func TestIfThenExplicitEmptyElseSetsHasElse(t *testing.T) {
+	input := `CREATE MICROFLOW Test.TestExplicitEmptyElse ($Value: Integer)
+RETURNS Boolean
+BEGIN
+  IF $Value > 100 THEN
+    RETURN true;
+  ELSE
+  END IF;
+
+  RETURN false;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	var ifStmt *ast.IfStmt
+	for _, s := range stmt.Body {
+		if ifs, ok := s.(*ast.IfStmt); ok {
+			ifStmt = ifs
+			break
+		}
+	}
+	if ifStmt == nil {
+		t.Fatal("Expected to find IF statement")
+	}
+	if !ifStmt.HasElse {
+		t.Fatal("explicit empty ELSE must be preserved in the AST")
+	}
+	if len(ifStmt.ElseBody) != 0 {
+		t.Fatalf("explicit empty ELSE body length = %d, want 0", len(ifStmt.ElseBody))
+	}
+}
+
 // TestValidationFeedbackInsideIf verifies VALIDATION FEEDBACK works inside IF blocks.
 // Bug Report: "VALIDATION FEEDBACK Not Recognized"
 func TestValidationFeedbackInsideIf(t *testing.T) {
@@ -603,6 +642,39 @@ END;`
 	}
 
 	t.Log("VALIDATION FEEDBACK inside IF block parsed correctly")
+}
+
+func TestValidationFeedbackObjectOnlyTarget(t *testing.T) {
+	input := `CREATE MICROFLOW Test.VAL_Product ($Product: Test.Product)
+BEGIN
+  VALIDATION FEEDBACK $Product MESSAGE 'Select a product.';
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	if len(stmt.Body) != 1 {
+		t.Fatalf("expected one body statement, got %d", len(stmt.Body))
+	}
+	valFeedback, ok := stmt.Body[0].(*ast.ValidationFeedbackStmt)
+	if !ok {
+		t.Fatalf("expected ValidationFeedbackStmt, got %T", stmt.Body[0])
+	}
+	if valFeedback.AttributePath == nil {
+		t.Fatal("expected object-only target to be preserved")
+	}
+	if valFeedback.AttributePath.Variable != "Product" {
+		t.Fatalf("target variable = %q, want Product", valFeedback.AttributePath.Variable)
+	}
+	if len(valFeedback.AttributePath.Path) != 0 || len(valFeedback.AttributePath.Segments) != 0 {
+		t.Fatalf("object-only validation feedback must not synthesize an attribute path: %+v", valFeedback.AttributePath)
+	}
 }
 
 // TestRollbackStatement verifies the ROLLBACK statement parses correctly.
@@ -879,6 +951,213 @@ END;`
 	}
 
 	t.Log("RETRIEVE with LIMIT parsed correctly")
+}
+
+func TestRetrieveWithInlineIfLimitPreservesSpaces(t *testing.T) {
+	input := `CREATE MICROFLOW Test.TestRetrieve ()
+RETURNS Boolean AS $Success
+BEGIN
+  RETRIEVE $Products FROM Test.Product LIMIT if $pageSize != 0 and $pageSize != empty then $pageSize else @Test.DefaultPageSize OFFSET 0;
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	retrieveStmt, ok := stmt.Body[0].(*ast.RetrieveStmt)
+	if !ok {
+		t.Fatalf("Expected RetrieveStmt, got %T", stmt.Body[0])
+	}
+
+	wantLimit := "if $pageSize != 0 and $pageSize != empty then $pageSize else @Test.DefaultPageSize"
+	if retrieveStmt.Limit != wantLimit {
+		t.Errorf("Limit: got %q, want %q", retrieveStmt.Limit, wantLimit)
+	}
+	if retrieveStmt.Offset != "0" {
+		t.Errorf("Offset: got %q, want %q", retrieveStmt.Offset, "0")
+	}
+}
+
+func TestIfConditionPreservesOriginalSourceWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  IF $A = $B and
+$C = $D THEN
+    RETURN true;
+  END IF;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	ifStmt, ok := stmt.Body[0].(*ast.IfStmt)
+	if !ok {
+		t.Fatalf("Expected IfStmt, got %T", stmt.Body[0])
+	}
+	source, ok := ifStmt.Condition.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr condition, got %T", ifStmt.Condition)
+	}
+
+	want := "$A = $B and\n$C = $D"
+	if source.Source != want {
+		t.Fatalf("condition source = %q, want %q", source.Source, want)
+	}
+}
+
+func TestMemberAndCallArgumentsPreserveOriginalSourceWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  $Obj = CREATE Test.Entity (Value = if $Count = 0
+then $Fallback
+else $Actual);
+  CALL MICROFLOW Test.Handle(Value = if $Count = 0
+then $Fallback
+else $Actual);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	createStmt, ok := stmt.Body[0].(*ast.CreateObjectStmt)
+	if !ok {
+		t.Fatalf("Expected CreateObjectStmt, got %T", stmt.Body[0])
+	}
+	callStmt, ok := stmt.Body[1].(*ast.CallMicroflowStmt)
+	if !ok {
+		t.Fatalf("Expected CallMicroflowStmt, got %T", stmt.Body[1])
+	}
+
+	want := "if $Count = 0\nthen $Fallback\nelse $Actual"
+	memberSource, ok := createStmt.Changes[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr member value, got %T", createStmt.Changes[0].Value)
+	}
+	if memberSource.Source != want {
+		t.Fatalf("member source = %q, want %q", memberSource.Source, want)
+	}
+	argSource, ok := callStmt.Arguments[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr call argument, got %T", callStmt.Arguments[0].Value)
+	}
+	if argSource.Source != want {
+		t.Fatalf("argument source = %q, want %q", argSource.Source, want)
+	}
+}
+
+func TestAddToListAcceptsPathExpressionValue(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  ADD $Link/Test.Link_Target/Test.Target TO $TargetList;
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	addStmt, ok := stmt.Body[0].(*ast.AddToListStmt)
+	if !ok {
+		t.Fatalf("Expected AddToListStmt, got %T", stmt.Body[0])
+	}
+	path, ok := addStmt.Value.(*ast.AttributePathExpr)
+	if !ok {
+		t.Fatalf("Expected AttributePathExpr value, got %T", addStmt.Value)
+	}
+	if path.Variable != "Link" || strings.Join(path.Path, "/") != "Test.Link_Target/Test.Target" {
+		t.Fatalf("path value = $%s/%s", path.Variable, strings.Join(path.Path, "/"))
+	}
+	if addStmt.List != "TargetList" {
+		t.Fatalf("list = %q, want TargetList", addStmt.List)
+	}
+}
+
+func TestCallJavaActionAcceptsPlaceholderArguments(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  $Total = CALL JAVA ACTION Test.Recalculate(CompanyId = ..., RecalculateAll = true, ItemList = ...);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	callStmt, ok := stmt.Body[0].(*ast.CallJavaActionStmt)
+	if !ok {
+		t.Fatalf("Expected CallJavaActionStmt, got %T", stmt.Body[0])
+	}
+	for _, idx := range []int{0, 2} {
+		source, ok := callStmt.Arguments[idx].Value.(*ast.SourceExpr)
+		if !ok {
+			t.Fatalf("argument %d value = %T, want SourceExpr", idx, callStmt.Arguments[idx].Value)
+		}
+		if source.Source != "..." {
+			t.Fatalf("argument %d source = %q, want ...", idx, source.Source)
+		}
+	}
+}
+
+func TestSetAndLogTemplatePreserveCompactOperatorSource(t *testing.T) {
+	input := `CREATE MICROFLOW Test.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  SET $Batch = $Batch+1;
+  LOG INFO NODE 'Node' 'Offset {1}' WITH ({1} = $Offset+$TotalCommittedApp);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	setStmt, ok := stmt.Body[0].(*ast.MfSetStmt)
+	if !ok {
+		t.Fatalf("Expected MfSetStmt, got %T", stmt.Body[0])
+	}
+	logStmt, ok := stmt.Body[1].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[1])
+	}
+
+	setSource, ok := setStmt.Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr set value, got %T", setStmt.Value)
+	}
+	if setSource.Source != "$Batch+1" {
+		t.Fatalf("set source = %q, want %q", setSource.Source, "$Batch+1")
+	}
+
+	tplSource, ok := logStmt.Template[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr template value, got %T", logStmt.Template[0].Value)
+	}
+	if tplSource.Source != "$Offset+$TotalCommittedApp" {
+		t.Fatalf("template source = %q, want %q", tplSource.Source, "$Offset+$TotalCommittedApp")
+	}
 }
 
 // TestDeclareEntityWithoutAS verifies entity declaration without AS keyword.
@@ -1587,5 +1866,127 @@ func TestCalculatedAttributeOnNonPersistentEntity(t *testing.T) {
 	}
 	if !stmt.Attributes[0].Calculated {
 		t.Error("Value attribute should be calculated")
+	}
+}
+
+func TestAnnotationBeforePositionIsFreeFloating(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  @annotation 'free note'
+  @position(100, 200)
+  LOG INFO NODE 'SyntheticLog' 'message';
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	logStmt, ok := stmt.Body[0].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[0])
+	}
+	if logStmt.Annotations == nil {
+		t.Fatal("expected annotations")
+	}
+	if logStmt.Annotations.FreeAnnotation != "free note" {
+		t.Fatalf("free annotation = %q, want free note", logStmt.Annotations.FreeAnnotation)
+	}
+	if logStmt.Annotations.AnnotationText != "" {
+		t.Fatalf("attached annotation = %q, want empty", logStmt.Annotations.AnnotationText)
+	}
+}
+
+func TestAnnotationAfterPositionStaysAttached(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  @position(100, 200)
+  @annotation 'attached note'
+  LOG INFO NODE 'SyntheticLog' 'message';
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	logStmt, ok := stmt.Body[0].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[0])
+	}
+	if logStmt.Annotations == nil {
+		t.Fatal("expected annotations")
+	}
+	if logStmt.Annotations.AnnotationText != "attached note" {
+		t.Fatalf("attached annotation = %q, want attached note", logStmt.Annotations.AnnotationText)
+	}
+	if logStmt.Annotations.FreeAnnotation != "" {
+		t.Fatalf("free annotation = %q, want empty", logStmt.Annotations.FreeAnnotation)
+	}
+}
+
+func TestDeclareAndLogTemplatePreserveMultilineSourceWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Endpoint String = @Synthetic.Endpoint
++ '/items?page=' + toString($Page)
++ '&token=' + (if $Token!=empty then $Token/Value
+else
+'');
+  LOG INFO NODE 'SyntheticLog' 'Processed {1} items for {2}' WITH ({1} = toString($Count)
+
+, {2} = $Endpoint);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	decl, ok := stmt.Body[0].(*ast.DeclareStmt)
+	if !ok {
+		t.Fatalf("Expected DeclareStmt, got %T", stmt.Body[0])
+	}
+	logStmt, ok := stmt.Body[1].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[1])
+	}
+
+	declSource, ok := decl.InitialValue.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr declare value, got %T", decl.InitialValue)
+	}
+	wantDecl := "@Synthetic.Endpoint\n+ '/items?page=' + toString($Page)\n+ '&token=' + (if $Token!=empty then $Token/Value\nelse\n'')"
+	if declSource.Source != wantDecl {
+		t.Fatalf("declare source = %q, want %q", declSource.Source, wantDecl)
+	}
+
+	firstParam, ok := logStmt.Template[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr first log template param, got %T", logStmt.Template[0].Value)
+	}
+	if firstParam.Source != "toString($Count)\n\n" {
+		t.Fatalf("template param source = %q, want trailing blank line", firstParam.Source)
+	}
+}
+
+func TestShouldPreserveExpressionSourceIgnoresStringLiteralPunctuation(t *testing.T) {
+	if shouldPreserveExpressionSource("'Processed {1} items!'") {
+		t.Fatal("plain string literal punctuation should not force SourceExpr preservation")
+	}
+	if shouldPreserveExpressionSource("'Owner''s item: {1}'") {
+		t.Fatal("escaped quotes and colon inside a string literal should not force SourceExpr preservation")
+	}
+	if !shouldPreserveExpressionSource("$Token!=empty") {
+		t.Fatal("compact operators outside string literals should preserve source")
 	}
 }

@@ -215,6 +215,7 @@ authentication basic, session
 | List declaration | `declare $list list of Module.Entity = empty;` | |
 | Assignment | `set $Var = expression;` | Variable must be declared first |
 | Create object | `$Var = create Module.Entity (attr = value);` | |
+| Duplicate implicit output | `$Var`, `$Var_2`, `$Var_3` | Describe may alias same-position duplicate outputs for round-trip preservation |
 | Change object | `change $entity (attr = value);` | |
 | Commit | `commit $entity [with events] [refresh];` | |
 | Delete | `delete $entity;` | |
@@ -223,14 +224,18 @@ authentication basic, session
 | Retrieve (Assoc) | `retrieve $list from $Parent/Module.AssocName;` | Retrieve by association |
 | Call microflow | `$Result = call microflow Module.Name (Param = $value);` | |
 | Call nanoflow | `$Result = call nanoflow Module.Name (Param = $value);` | |
+| Call web service | `$Result = call web service 'Module.Service' operation 'OperationName';` | Legacy SOAP; unresolved dangling refs fall back to raw IDs |
+| Call web service raw | `$Result = call web service raw 'base64-bson';` | Escape hatch for byte-for-byte legacy SOAP round-trip |
 | Show page | `show page Module.PageName ($Param = $value);` | Also accepts `(Param: $value)` |
 | Close page | `close page;` | |
+| Download file | `download file $FileDocument [show in browser];` | Streams a `System.FileDocument` |
 | Validation | `validation feedback $entity/attribute message 'message';` | Requires attribute path + MESSAGE |
 | Log | `log info\|warning\|error [node 'name'] 'message';` | |
 | Position | `@position(x, y)` | Canvas position (before activity) |
 | Caption | `@caption 'text'` | Custom caption (before activity) |
 | Color | `@color Green` | Background color (before activity) |
 | Annotation | `@annotation 'text'` | Visual note attached to next activity |
+| Free annotation | `@annotation 'text'` before `@position(...)` | Free-floating visual note preserved by order |
 | IF | `if condition then ... [else ...] end if;` | |
 | LOOP | `loop $item in $list begin ... end loop;` | FOR EACH over list |
 | WHILE | `while condition begin ... end while;` | Condition-based loop |
@@ -775,6 +780,7 @@ Module.OrderResponse_CustomerInfo/Module.CustomerInfo as customer {
 | Create exposed action | `... exposed as 'caption' in 'Category' as $$ ... $$;` | Toolbox-visible in Studio Pro |
 | Drop Java action | `drop java action Module.Name;` | Delete a Java action |
 | Call from microflow | `$Result = call java action Module.Name(Param = value);` | Inside BEGIN...END |
+| Empty argument | `call java action Module.Name(Param = ...);` | `...` placeholder for an unbound code-action parameter (round-trip only) |
 
 **Parameter Types:** `string`, `integer`, `long`, `decimal`, `boolean`, `datetime`, `Module.Entity`, `list of Module.Entity`, `enum Module.EnumName`, `enumeration(Module.EnumName)`, `stringtemplate(sql)`, `stringtemplate(Oql)`, `entity <pEntity>` (type parameter declaration), bare `pEntity` (type parameter reference).
 

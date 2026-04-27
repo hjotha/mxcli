@@ -1251,6 +1251,9 @@ microflowBody
 
 microflowStatement
     : annotation* declareStatement SEMICOLON?
+    | annotation* enumSplitStatement SEMICOLON?
+    | annotation* inheritanceSplitStatement SEMICOLON?
+    | annotation* castObjectStatement SEMICOLON?
     | annotation* setStatement SEMICOLON?
     | annotation* createListStatement SEMICOLON?       // Must be before createObjectStatement to match "CREATE LIST OF"
     | annotation* createObjectStatement SEMICOLON?
@@ -1269,12 +1272,14 @@ microflowStatement
     | annotation* logStatement SEMICOLON?
     | annotation* callMicroflowStatement SEMICOLON?
     | annotation* callJavaActionStatement SEMICOLON?
+    | annotation* callWebServiceStatement SEMICOLON?
     | annotation* executeDatabaseQueryStatement SEMICOLON?
     | annotation* callExternalActionStatement SEMICOLON?
     | annotation* showPageStatement SEMICOLON?
     | annotation* closePageStatement SEMICOLON?
     | annotation* showHomePageStatement SEMICOLON?
     | annotation* showMessageStatement SEMICOLON?
+    | annotation* downloadFileStatement SEMICOLON?
     | annotation* throwStatement SEMICOLON?
     | annotation* listOperationStatement SEMICOLON?
     | annotation* aggregateListStatement SEMICOLON?
@@ -1301,6 +1306,39 @@ microflowStatement
 
 declareStatement
     : DECLARE VARIABLE dataType (EQUALS expression)?
+    ;
+
+inheritanceSplitStatement
+    : SPLIT TYPE VARIABLE
+      (inheritanceSplitCase+ (ELSE microflowBody)? END SPLIT)?
+    ;
+
+inheritanceSplitCase
+    : CASE qualifiedName microflowBody
+    ;
+
+enumSplitStatement
+    : SPLIT ENUM_TYPE enumSplitSource
+      (enumSplitCase+ (ELSE microflowBody)? END SPLIT)?
+    ;
+
+enumSplitSource
+    : attributePath
+    | VARIABLE
+    ;
+
+enumSplitCase
+    : CASE enumSplitCaseValue (COMMA enumSplitCaseValue)* microflowBody
+    ;
+
+enumSplitCaseValue
+    : identifierOrKeyword
+    | LPAREN EMPTY RPAREN
+    ;
+
+castObjectStatement
+    : CAST VARIABLE
+    | VARIABLE EQUALS CAST VARIABLE
     ;
 
 setStatement
@@ -1437,6 +1475,19 @@ callJavaActionStatement
     : (VARIABLE EQUALS)? CALL JAVA ACTION qualifiedName LPAREN callArgumentList? RPAREN onErrorClause?
     ;
 
+// Legacy SOAP call. References are emitted as raw Mendix IDs because older MPRs
+// store consumed web service and mapping references by ID.
+callWebServiceStatement
+    : (VARIABLE EQUALS)? CALL WEB SERVICE
+      (RAW STRING_LITERAL
+      | STRING_LITERAL
+        (OPERATION STRING_LITERAL)?
+        (SEND MAPPING STRING_LITERAL)?
+        (RECEIVE MAPPING STRING_LITERAL)?
+        (TIMEOUT expression)?)
+      onErrorClause?
+    ;
+
 // $Result = EXECUTE DATABASE QUERY Module.Connection.QueryName (param = 'value');
 // $Result = EXECUTE DATABASE QUERY Module.Connection.QueryName DYNAMIC 'SELECT ...';
 // $Result = EXECUTE DATABASE QUERY Module.Connection.QueryName CONNECTION (DBSource = $Url, DBUsername = $User, DBPassword = $Pass);
@@ -1558,6 +1609,10 @@ showMessageStatement
     : SHOW MESSAGE expression (TYPE identifierOrKeyword)? (OBJECTS LBRACKET expressionList RBRACKET)?
     ;
 
+downloadFileStatement
+    : DOWNLOAD FILE_KW VARIABLE (SHOW IN BROWSER)? onErrorClause?
+    ;
+
 throwStatement
     : THROW expression
     ;
@@ -1565,7 +1620,7 @@ throwStatement
 // VALIDATION FEEDBACK $Product/Code MESSAGE 'Product code cannot be empty';
 // VALIDATION FEEDBACK $Product/Code MESSAGE '{1}' OBJECTS [$Var1, $Var2];
 validationFeedbackStatement
-    : VALIDATION FEEDBACK attributePath MESSAGE expression (OBJECTS LBRACKET expressionList RBRACKET)?
+    : VALIDATION FEEDBACK (attributePath | VARIABLE) MESSAGE expression (OBJECTS LBRACKET expressionList RBRACKET)?
     ;
 
 // =============================================================================
@@ -1867,7 +1922,7 @@ createListStatement
  * ```
  */
 addToListStatement
-    : ADD VARIABLE TO VARIABLE
+    : ADD expression TO VARIABLE
     ;
 
 /**
@@ -3656,6 +3711,7 @@ argumentList
 
 atomicExpression
     : literal
+    | ELLIPSIS
     | VARIABLE (DOT attributeName)*    // $Var or $Widget.Attribute (data source ref)
     | AT qualifiedName                 // @Module.ConstantName (constant reference)
     | qualifiedName
@@ -3792,8 +3848,8 @@ annotationParenValue
  */
 keyword
     // DDL / DML
-    : ADD | ALTER | BATCH | CHANGE | CLOSE | COMMIT | CREATE | DECLARE | DELETE | DESCRIBE
-    | DROP | EXECUTE | EXPORT | GENERATE | IMPORT | INSERT | INTO | MODIFY | MOVE | REFRESH
+    : ADD | ALTER | BATCH | BROWSER | CHANGE | CLOSE | COMMIT | CREATE | DECLARE | DELETE | DESCRIBE
+    | DOWNLOAD | DROP | EXECUTE | EXPORT | GENERATE | IMPORT | INSERT | INTO | MODIFY | MOVE | REFRESH
     | REMOVE | RENAME | REPLACE | RETRIEVE | RETURN | ROLLBACK | SET | UPDATE
 
     // Entity / Domain model
@@ -3906,8 +3962,8 @@ keyword
     | MAP | MAPPING | MAPPINGS | MESSAGES | METHOD | NAMESPACE_KW
     | NOT_SUPPORTED | ODATA | OAUTH | OPERATION | PAGING
     | PARAMETER | PARAMETERS | PATH | PUBLISH | PUBLISHED
-    | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
-    | SOURCE_KW | TIMEOUT | VERSION | XML
+    | RAW | RECEIVE | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
+    | SOURCE_KW | TIMEOUT | VERSION | WEB | XML
     | FILE_KW | LINK | DYNAMIC
 
     // HTTP methods

@@ -177,11 +177,8 @@ func mendixFunctionName(name string) string {
 //     are doubled so the visitor's unquoteString preserves them — without this,
 //     the source literal `\\n` would come back as a real newline on reparse.
 //   - For any other backslash-prefixed byte (e.g. `\d`, `\w`, `\p{...}` inside
-//     regexes) the backslash is emitted as-is and the follower is written by the
-//     next loop iteration via the default arm, so the two bytes end up in the
-//     output unchanged. This keeps Mendix regular-expression escape sequences
-//     bit-exact across describe→exec roundtrips; the output is byte-identical
-//     to passthrough even though the implementation walks the bytes separately.
+//     regexes) the bytes are preserved unchanged so describe→exec roundtrips of
+//     Mendix regular-expression arguments stay bit-exact.
 //
 // This is narrower than mdlQuote (used for @annotation / @caption text where
 // the AST value is a plain string): mdlQuote unconditionally doubles every
@@ -321,6 +318,11 @@ func expressionToString(expr ast.Expression) string {
 		thenStr := expressionToString(e.ThenExpr)
 		elseStr := expressionToString(e.ElseExpr)
 		return "if " + cond + " then " + thenStr + " else " + elseStr
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return e.Source
+		}
+		return expressionToString(e.Expression)
 	default:
 		return ""
 	}
@@ -373,6 +375,11 @@ func expressionToXPath(expr ast.Expression) string {
 		return expressionToString(expr)
 	case *ast.QualifiedNameExpr:
 		return qualifiedNameToXPath(e)
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return e.Source
+		}
+		return expressionToXPath(e.Expression)
 	default:
 		// For all other expression types, the standard serialization is correct
 		return expressionToString(expr)

@@ -89,6 +89,16 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 		case *ast.IfStmt:
 			v.walkBody(stmt.ThenBody)
 			v.walkBody(stmt.ElseBody)
+		case *ast.InheritanceSplitStmt:
+			for _, c := range stmt.Cases {
+				v.walkBody(c.Body)
+			}
+			v.walkBody(stmt.ElseBody)
+		case *ast.EnumSplitStmt:
+			for _, c := range stmt.Cases {
+				v.walkBody(c.Body)
+			}
+			v.walkBody(stmt.ElseBody)
 		case *ast.DeclareStmt:
 			// Track list variables declared as empty (candidates for the empty-list-in-loop anti-pattern)
 			if stmt.Type.Kind == ast.TypeListOf {
@@ -163,6 +173,8 @@ func stmtActivityName(stmt ast.MicroflowStatement) string {
 		return "call microflow"
 	case *ast.CallJavaActionStmt:
 		return "call java action"
+	case *ast.CallWebServiceStmt:
+		return "call web service"
 	case *ast.ExecuteDatabaseQueryStmt:
 		return "execute database query"
 	default:
@@ -279,6 +291,82 @@ func bodyReturns(stmts []ast.MicroflowStatement) bool {
 	case *ast.IfStmt:
 		// Both branches must return, and ELSE must be present
 		return len(s.ElseBody) > 0 && bodyReturns(s.ThenBody) && bodyReturns(s.ElseBody)
+	case *ast.InheritanceSplitStmt:
+		if len(s.ElseBody) == 0 {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyReturns(c.Body) {
+				return false
+			}
+		}
+		return bodyReturns(s.ElseBody)
+	case *ast.EnumSplitStmt:
+		if len(s.Cases) == 0 {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyReturns(c.Body) {
+				return false
+			}
+		}
+		if len(s.ElseBody) == 0 {
+			return true
+		}
+		return bodyReturns(s.ElseBody)
+	case *ast.WhileStmt:
+		return isLiteralTrue(s.Condition) && bodyDoesNotFallThrough(s.Body)
+	}
+	return false
+}
+
+func bodyDoesNotFallThrough(stmts []ast.MicroflowStatement) bool {
+	if len(stmts) == 0 {
+		return false
+	}
+	last := stmts[len(stmts)-1]
+	switch s := last.(type) {
+	case *ast.ReturnStmt, *ast.ContinueStmt, *ast.RaiseErrorStmt:
+		return true
+	case *ast.IfStmt:
+		return len(s.ElseBody) > 0 && bodyDoesNotFallThrough(s.ThenBody) && bodyDoesNotFallThrough(s.ElseBody)
+	case *ast.InheritanceSplitStmt:
+		if len(s.ElseBody) == 0 {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyDoesNotFallThrough(c.Body) {
+				return false
+			}
+		}
+		return bodyDoesNotFallThrough(s.ElseBody)
+	case *ast.EnumSplitStmt:
+		if len(s.Cases) == 0 {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyDoesNotFallThrough(c.Body) {
+				return false
+			}
+		}
+		if len(s.ElseBody) == 0 {
+			return true
+		}
+		return bodyDoesNotFallThrough(s.ElseBody)
+	case *ast.WhileStmt:
+		return isLiteralTrue(s.Condition) && bodyDoesNotFallThrough(s.Body)
+	}
+	return false
+}
+
+func isLiteralTrue(expr ast.Expression) bool {
+	if source, ok := expr.(*ast.SourceExpr); ok {
+		expr = source.Expression
+	}
+	if lit, ok := expr.(*ast.LiteralExpr); ok && lit.Kind == ast.LiteralBoolean {
+		if value, ok := lit.Value.(bool); ok {
+			return value
+		}
 	}
 	return false
 }
@@ -302,6 +390,28 @@ func (v *microflowValidator) checkBranchScoping(body []ast.MicroflowStatement) {
 			}
 			// Recurse into branches for nested scoping checks
 			v.checkBranchScoping(stmt.ThenBody)
+			v.checkBranchScoping(stmt.ElseBody)
+		case *ast.InheritanceSplitStmt:
+			for _, c := range stmt.Cases {
+				for varName := range collectDeclaredVars(c.Body) {
+					branchVars[varName] = "split type branch"
+				}
+				v.checkBranchScoping(c.Body)
+			}
+			for varName := range collectDeclaredVars(stmt.ElseBody) {
+				branchVars[varName] = "split type else branch"
+			}
+			v.checkBranchScoping(stmt.ElseBody)
+		case *ast.EnumSplitStmt:
+			for _, c := range stmt.Cases {
+				for varName := range collectDeclaredVars(c.Body) {
+					branchVars[varName] = "split enum branch"
+				}
+				v.checkBranchScoping(c.Body)
+			}
+			for varName := range collectDeclaredVars(stmt.ElseBody) {
+				branchVars[varName] = "split enum else branch"
+			}
 			v.checkBranchScoping(stmt.ElseBody)
 		case *ast.LoopStmt:
 			v.checkBranchScoping(stmt.Body)
@@ -356,6 +466,10 @@ func collectDeclaredVars(body []ast.MicroflowStatement) map[string]bool {
 			if stmt.OutputVariable != "" {
 				vars[stmt.OutputVariable] = true
 			}
+		case *ast.CallWebServiceStmt:
+			if stmt.OutputVariable != "" {
+				vars[stmt.OutputVariable] = true
+			}
 		case *ast.ExecuteDatabaseQueryStmt:
 			if stmt.OutputVariable != "" {
 				vars[stmt.OutputVariable] = true
@@ -396,12 +510,26 @@ func referencedVars(stmt ast.MicroflowStatement) []string {
 	case *ast.DeleteObjectStmt:
 		refs = append(refs, s.Variable)
 	case *ast.AddToListStmt:
-		refs = append(refs, s.Item, s.List)
+		refs = append(refs, exprVarRefs(s.Value)...)
+		if s.Item != "" {
+			refs = append(refs, s.Item)
+		}
+		refs = append(refs, s.List)
 	case *ast.RemoveFromListStmt:
 		refs = append(refs, s.Item, s.List)
 	case *ast.LogStmt:
 		refs = append(refs, exprVarRefs(s.Node)...)
 		refs = append(refs, exprVarRefs(s.Message)...)
+	case *ast.EnumSplitStmt:
+		refs = append(refs, extractVarName(s.Variable))
+		for _, branch := range s.Cases {
+			for _, branchStmt := range branch.Body {
+				refs = append(refs, referencedVars(branchStmt)...)
+			}
+		}
+		for _, branchStmt := range s.ElseBody {
+			refs = append(refs, referencedVars(branchStmt)...)
+		}
 	}
 	return refs
 }
@@ -437,6 +565,37 @@ func exprVarRefs(expr ast.Expression) []string {
 		}
 	case *ast.ParenExpr:
 		refs = append(refs, exprVarRefs(e.Inner)...)
+	case *ast.IfThenElseExpr:
+		refs = append(refs, exprVarRefs(e.Condition)...)
+		refs = append(refs, exprVarRefs(e.ThenExpr)...)
+		refs = append(refs, exprVarRefs(e.ElseExpr)...)
+	case *ast.SourceExpr:
+		refs = append(refs, exprVarRefs(e.Expression)...)
+		refs = append(refs, sourceVarRefs(e.Source)...)
+	}
+	return refs
+}
+
+func sourceVarRefs(source string) []string {
+	var refs []string
+	for i := 0; i < len(source); i++ {
+		if source[i] != '$' {
+			continue
+		}
+		start := i + 1
+		end := start
+		for end < len(source) {
+			c := source[end]
+			if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
+				end++
+				continue
+			}
+			break
+		}
+		if end > start {
+			refs = append(refs, source[start:end])
+			i = end - 1
+		}
 	}
 	return refs
 }
@@ -455,6 +614,10 @@ func stmtErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
 	case *ast.CallMicroflowStmt:
 		return s.ErrorHandling
 	case *ast.CallJavaActionStmt:
+		return s.ErrorHandling
+	case *ast.CallWebServiceStmt:
+		return s.ErrorHandling
+	case *ast.DownloadFileStmt:
 		return s.ErrorHandling
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.ErrorHandling

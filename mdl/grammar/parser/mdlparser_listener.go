@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -409,6 +409,27 @@ type MDLParserListener interface {
 	// EnterDeclareStatement is called when entering the declareStatement production.
 	EnterDeclareStatement(c *DeclareStatementContext)
 
+	// EnterInheritanceSplitStatement is called when entering the inheritanceSplitStatement production.
+	EnterInheritanceSplitStatement(c *InheritanceSplitStatementContext)
+
+	// EnterInheritanceSplitCase is called when entering the inheritanceSplitCase production.
+	EnterInheritanceSplitCase(c *InheritanceSplitCaseContext)
+
+	// EnterEnumSplitStatement is called when entering the enumSplitStatement production.
+	EnterEnumSplitStatement(c *EnumSplitStatementContext)
+
+	// EnterEnumSplitSource is called when entering the enumSplitSource production.
+	EnterEnumSplitSource(c *EnumSplitSourceContext)
+
+	// EnterEnumSplitCase is called when entering the enumSplitCase production.
+	EnterEnumSplitCase(c *EnumSplitCaseContext)
+
+	// EnterEnumSplitCaseValue is called when entering the enumSplitCaseValue production.
+	EnterEnumSplitCaseValue(c *EnumSplitCaseValueContext)
+
+	// EnterCastObjectStatement is called when entering the castObjectStatement production.
+	EnterCastObjectStatement(c *CastObjectStatementContext)
+
 	// EnterSetStatement is called when entering the setStatement production.
 	EnterSetStatement(c *SetStatementContext)
 
@@ -484,6 +505,9 @@ type MDLParserListener interface {
 	// EnterCallJavaActionStatement is called when entering the callJavaActionStatement production.
 	EnterCallJavaActionStatement(c *CallJavaActionStatementContext)
 
+	// EnterCallWebServiceStatement is called when entering the callWebServiceStatement production.
+	EnterCallWebServiceStatement(c *CallWebServiceStatementContext)
+
 	// EnterExecuteDatabaseQueryStatement is called when entering the executeDatabaseQueryStatement production.
 	EnterExecuteDatabaseQueryStatement(c *ExecuteDatabaseQueryStatementContext)
 
@@ -549,6 +573,9 @@ type MDLParserListener interface {
 
 	// EnterShowMessageStatement is called when entering the showMessageStatement production.
 	EnterShowMessageStatement(c *ShowMessageStatementContext)
+
+	// EnterDownloadFileStatement is called when entering the downloadFileStatement production.
+	EnterDownloadFileStatement(c *DownloadFileStatementContext)
 
 	// EnterThrowStatement is called when entering the throwStatement production.
 	EnterThrowStatement(c *ThrowStatementContext)
@@ -1723,6 +1750,27 @@ type MDLParserListener interface {
 	// ExitDeclareStatement is called when exiting the declareStatement production.
 	ExitDeclareStatement(c *DeclareStatementContext)
 
+	// ExitInheritanceSplitStatement is called when exiting the inheritanceSplitStatement production.
+	ExitInheritanceSplitStatement(c *InheritanceSplitStatementContext)
+
+	// ExitInheritanceSplitCase is called when exiting the inheritanceSplitCase production.
+	ExitInheritanceSplitCase(c *InheritanceSplitCaseContext)
+
+	// ExitEnumSplitStatement is called when exiting the enumSplitStatement production.
+	ExitEnumSplitStatement(c *EnumSplitStatementContext)
+
+	// ExitEnumSplitSource is called when exiting the enumSplitSource production.
+	ExitEnumSplitSource(c *EnumSplitSourceContext)
+
+	// ExitEnumSplitCase is called when exiting the enumSplitCase production.
+	ExitEnumSplitCase(c *EnumSplitCaseContext)
+
+	// ExitEnumSplitCaseValue is called when exiting the enumSplitCaseValue production.
+	ExitEnumSplitCaseValue(c *EnumSplitCaseValueContext)
+
+	// ExitCastObjectStatement is called when exiting the castObjectStatement production.
+	ExitCastObjectStatement(c *CastObjectStatementContext)
+
 	// ExitSetStatement is called when exiting the setStatement production.
 	ExitSetStatement(c *SetStatementContext)
 
@@ -1798,6 +1846,9 @@ type MDLParserListener interface {
 	// ExitCallJavaActionStatement is called when exiting the callJavaActionStatement production.
 	ExitCallJavaActionStatement(c *CallJavaActionStatementContext)
 
+	// ExitCallWebServiceStatement is called when exiting the callWebServiceStatement production.
+	ExitCallWebServiceStatement(c *CallWebServiceStatementContext)
+
 	// ExitExecuteDatabaseQueryStatement is called when exiting the executeDatabaseQueryStatement production.
 	ExitExecuteDatabaseQueryStatement(c *ExecuteDatabaseQueryStatementContext)
 
@@ -1863,6 +1914,9 @@ type MDLParserListener interface {
 
 	// ExitShowMessageStatement is called when exiting the showMessageStatement production.
 	ExitShowMessageStatement(c *ShowMessageStatementContext)
+
+	// ExitDownloadFileStatement is called when exiting the downloadFileStatement production.
+	ExitDownloadFileStatement(c *DownloadFileStatementContext)
 
 	// ExitThrowStatement is called when exiting the throwStatement production.
 	ExitThrowStatement(c *ThrowStatementContext)

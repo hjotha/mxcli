@@ -207,7 +207,7 @@ func TestTraverseFlow_ManualRetryLoopPatternEmitsEverything(t *testing.T) {
 	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, visited, nil, nil, &lines, 0, nil, 0, nil)
 
 	out := strings.Join(lines, "\n")
-	for _, want := range []string{"setup", "call-rest", "if $retry then", "change-retry-count", "delay"} {
+	for _, want := range []string{"setup", "while true", "call-rest", "if $retry then", "change-retry-count", "delay", "continue;", "end while;"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("issue #281: missing %q from describe output:\n%s", want, out)
 		}

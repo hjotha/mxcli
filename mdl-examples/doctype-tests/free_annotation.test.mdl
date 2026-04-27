@@ -1,0 +1,14 @@
+create microflow SampleAnnotations.ACT_FreeAnnotation ()
+returns Void
+begin
+  @annotation 'section header'
+  @position(100, 200)
+  log info node 'Sample' 'start';
+
+  @position(300, 200)
+  @annotation 'activity note'
+  log info node 'Sample' 'attached';
+
+  return;
+end;
+/
