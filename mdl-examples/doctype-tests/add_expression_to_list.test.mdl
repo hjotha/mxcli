@@ -1,0 +1,17 @@
+create module AddListExample;
+
+create persistent entity AddListExample.Item (
+  Name: string
+);
+/
+
+create microflow AddListExample.AddFirstItem (
+  $SourceItems: list of AddListExample.Item
+)
+returns list of AddListExample.Item as $Items
+begin
+  $Items = create list of AddListExample.Item;
+  add head($SourceItems) to $Items;
+  return $Items;
+end;
+/
