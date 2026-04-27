@@ -1,0 +1,55 @@
+-- ============================================================================
+-- Bug #367: Retrieve sort items lost indirect entity references
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   A retrieve source can sort by an attribute whose owning entity differs
+--   from the retrieved entity, as long as Studio Pro has an association
+--   path for that attribute. Example: retrieve DeploymentTarget sorted by
+--   ApplicationView.CreatedAt through DeploymentTarget_ApplicationView.
+--   The SDK shape only stored the final attribute reference, so parser/
+--   writer roundtrip dropped the `DomainModels$IndirectEntityRef` steps,
+--   and the MDL builder rejected qualified sort attributes when the
+--   attribute entity differed from the retrieve entity.
+--
+-- After fix:
+--   - Parser/writer now preserve `DomainModels$IndirectEntityRef` steps.
+--   - The MDL builder infers a one-hop association sort reference and
+--     emits the IndirectEntityRef path. Unrelated qualified attributes
+--     are still rejected.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/367-retrieve-sort-indirect-entity-ref.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest367.MF_FetchSorted"
+--   `mx check` against the resulting MPR must report 0 errors and the
+--   describe output must keep the qualified `Module.Entity.Attribute`
+--   sort form.
+-- ============================================================================
+
+create module BugTest367;
+
+create entity BugTest367.ApplicationView (
+  CreatedAt : datetime
+);
+/
+
+create entity BugTest367.DeploymentTarget (
+  Name : string(100)
+);
+/
+
+create association BugTest367.DeploymentTarget_ApplicationView
+  from BugTest367.DeploymentTarget
+  to BugTest367.ApplicationView;
+/
+
+-- Sort uses an attribute on a related entity. The builder must emit the
+-- IndirectEntityRef step through DeploymentTarget_ApplicationView so the
+-- BSON parses cleanly in Studio Pro.
+create microflow BugTest367.MF_FetchSorted ()
+returns list of BugTest367.DeploymentTarget as $Targets
+begin
+  retrieve $Targets from BugTest367.DeploymentTarget
+    sort by BugTest367.ApplicationView.CreatedAt desc, Name asc;
+end;
+/
