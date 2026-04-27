@@ -617,6 +617,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			for _, col := range s.SortColumns {
 				// Resolve attribute path - if just a simple name, prefix with entity
 				attrPath := col.Attribute
+				var entityRefSteps []microflows.EntityRefStep
 				if !strings.Contains(attrPath, ".") {
 					attrPath = entityQN + "." + attrPath
 				} else {
@@ -627,20 +628,24 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						// Extract entity from attribute path (first two parts)
 						attrEntityQN := parts[0] + "." + parts[1]
 						if attrEntityQN != entityQN {
-							fb.addError("sort by attribute '%s' does not belong to entity '%s'", col.Attribute, entityQN)
-							continue // Skip this sort column but continue processing others
+							entityRefSteps = fb.inferSortEntityRefSteps(entityQN, attrPath)
+							if len(entityRefSteps) == 0 {
+								fb.addError("sort by attribute '%s' does not belong to entity '%s'", col.Attribute, entityQN)
+								continue // Skip this sort column but continue processing others
+							}
 						}
 					}
 				}
 
 				direction := microflows.SortDirectionAscending
-				if col.Order == "desc" {
+				if strings.EqualFold(col.Order, "desc") {
 					direction = microflows.SortDirectionDescending
 				}
 
 				dbSource.Sorting = append(dbSource.Sorting, &microflows.SortItem{
 					BaseElement:            model.BaseElement{ID: model.ID(types.GenerateID())},
 					AttributeQualifiedName: attrPath,
+					EntityRefSteps:         entityRefSteps,
 					Direction:              direction,
 				})
 			}
@@ -692,6 +697,54 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	}
 
 	return activity.ID
+}
+
+func (fb *flowBuilder) inferSortEntityRefSteps(sourceEntityQN, attrPath string) []microflows.EntityRefStep {
+	attrEntityQN := entityQualifiedNameFromAttribute(attrPath)
+	if attrEntityQN == "" || attrEntityQN == sourceEntityQN {
+		return nil
+	}
+	parts := strings.SplitN(sourceEntityQN, ".", 2)
+	if len(parts) != 2 || parts[0] == "" {
+		return nil
+	}
+	if fb.backend == nil {
+		return nil
+	}
+	mod, err := fb.backend.GetModuleByName(parts[0])
+	if err != nil || mod == nil {
+		return nil
+	}
+	dm, err := fb.backend.GetDomainModel(mod.ID)
+	if err != nil || dm == nil {
+		return nil
+	}
+	entityNames := make(map[model.ID]string, len(dm.Entities))
+	for _, e := range dm.Entities {
+		entityNames[e.ID] = parts[0] + "." + e.Name
+	}
+	for _, assoc := range dm.Associations {
+		parentQN := entityNames[assoc.ParentID]
+		childQN := entityNames[assoc.ChildID]
+		if parentQN == sourceEntityQN && childQN == attrEntityQN {
+			return []microflows.EntityRefStep{{Association: parts[0] + "." + assoc.Name, DestinationEntity: childQN}}
+		}
+	}
+	for _, assoc := range dm.CrossAssociations {
+		parentQN := entityNames[assoc.ParentID]
+		if parentQN == sourceEntityQN && assoc.ChildRef == attrEntityQN {
+			return []microflows.EntityRefStep{{Association: parts[0] + "." + assoc.Name, DestinationEntity: assoc.ChildRef}}
+		}
+	}
+	return nil
+}
+
+func entityQualifiedNameFromAttribute(attrPath string) string {
+	parts := strings.Split(attrPath, ".")
+	if len(parts) < 3 {
+		return ""
+	}
+	return parts[0] + "." + parts[1]
 }
 
 // addListOperationAction creates list operations like HEAD, TAIL, FIND, etc.

@@ -156,9 +156,15 @@ const (
 // SortItem represents a sort specification.
 type SortItem struct {
 	model.BaseElement
-	AttributeID            model.ID      `json:"attributeId"`
-	AttributeQualifiedName string        `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
-	Direction              SortDirection `json:"direction"`
+	AttributeID            model.ID        `json:"attributeId"`
+	AttributeQualifiedName string          `json:"attributeQualifiedName,omitempty"` // BY_NAME_REFERENCE: Module.Entity.Attribute
+	EntityRefSteps         []EntityRefStep `json:"entityRefSteps,omitempty"`
+	Direction              SortDirection   `json:"direction"`
+}
+
+type EntityRefStep struct {
+	Association       string `json:"association,omitempty"`
+	DestinationEntity string `json:"destinationEntity,omitempty"`
 }
 
 // SortDirection represents sort order.

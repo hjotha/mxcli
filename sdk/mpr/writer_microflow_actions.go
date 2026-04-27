@@ -1061,6 +1061,9 @@ func serializeListOperation(op microflows.ListOperation) bson.D {
 					{Key: "$Type", Value: "DomainModels$AttributeRef"},
 					{Key: "Attribute", Value: item.AttributeQualifiedName}, // BY_NAME_REFERENCE stored as string
 				}
+				if len(item.EntityRefSteps) > 0 {
+					attrRef = append(attrRef, bson.E{Key: "EntityRef", Value: serializeIndirectEntityRef(item.EntityRefSteps)})
+				}
 				sortItem = append(sortItem, bson.E{Key: "AttributeRef", Value: attrRef})
 			}
 			sortings = append(sortings, sortItem)
@@ -1217,6 +1220,9 @@ func serializeSortItem(s *microflows.SortItem) bson.D {
 			{Key: "$Type", Value: "DomainModels$AttributeRef"},
 			{Key: "Attribute", Value: s.AttributeQualifiedName}, // BY_NAME_REFERENCE stored as string
 		}
+		if len(s.EntityRefSteps) > 0 {
+			attrRef = append(attrRef, bson.E{Key: "EntityRef", Value: serializeIndirectEntityRef(s.EntityRefSteps)})
+		}
 		doc = append(doc, bson.E{Key: "AttributeRef", Value: attrRef})
 	} else if s.AttributeID != "" {
 		// Legacy fallback: binary ID reference
@@ -1225,6 +1231,23 @@ func serializeSortItem(s *microflows.SortItem) bson.D {
 
 	doc = append(doc, bson.E{Key: "SortOrder", Value: string(s.Direction)})
 	return doc
+}
+
+func serializeIndirectEntityRef(steps []microflows.EntityRefStep) bson.D {
+	items := bson.A{int32(2)}
+	for _, step := range steps {
+		items = append(items, bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "DomainModels$EntityRefStep"},
+			{Key: "Association", Value: step.Association},
+			{Key: "DestinationEntity", Value: step.DestinationEntity},
+		})
+	}
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},
+		{Key: "Steps", Value: items},
+	}
 }
 
 // serializeCodeActionParameterValue serializes a CodeActionParameterValue to BSON.

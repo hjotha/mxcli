@@ -807,6 +807,7 @@ func parseSortItems(raw map[string]any) []*microflows.SortItem {
 			} else {
 				sortItem.AttributeID = model.ID(extractBsonID(attrRefMap["Attribute"]))
 			}
+			sortItem.EntityRefSteps = parseEntityRefSteps(attrRefMap["EntityRef"])
 		}
 
 		// Fall back to AttributePath (legacy)
@@ -824,6 +825,32 @@ func parseSortItems(raw map[string]any) []*microflows.SortItem {
 		result = append(result, sortItem)
 	}
 	return result
+}
+
+func parseEntityRefSteps(raw any) []microflows.EntityRefStep {
+	entityRefMap := extractBsonMap(raw)
+	if entityRefMap == nil {
+		return nil
+	}
+	items := extractBsonSlice(entityRefMap["Steps"])
+	if len(items) == 0 {
+		return nil
+	}
+	var steps []microflows.EntityRefStep
+	for _, item := range items {
+		itemMap := extractBsonMap(item)
+		if itemMap == nil {
+			continue
+		}
+		step := microflows.EntityRefStep{
+			Association:       extractString(itemMap["Association"]),
+			DestinationEntity: extractString(itemMap["DestinationEntity"]),
+		}
+		if step.Association != "" || step.DestinationEntity != "" {
+			steps = append(steps, step)
+		}
+	}
+	return steps
 }
 
 func parseRetrieveSource(raw map[string]any) microflows.RetrieveSource {
