@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // TestShowPageAction_Roundtrip verifies that a ShowPageAction with parameters
@@ -59,6 +60,59 @@ func TestShowPageAction_Roundtrip(t *testing.T) {
 	}
 	if pm.Argument != "$Product" {
 		t.Errorf("Argument = %q, want %q", pm.Argument, "$Product")
+	}
+}
+
+func TestShowPageAction_WritesValidPageParameterMapping(t *testing.T) {
+	action := &microflows.ShowPageAction{
+		BaseElement: model.BaseElement{ID: "test-action-id"},
+		PageName:    "Sales.Product_NewEdit",
+		PageParameterMappings: []*microflows.PageParameterMapping{
+			{
+				BaseElement: model.BaseElement{ID: "test-mapping-id"},
+				Parameter:   "Sales.Product_NewEdit.Product",
+				Argument:    "$Product",
+			},
+		},
+	}
+
+	doc := serializeMicroflowAction(action)
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		t.Fatalf("failed to marshal BSON: %v", err)
+	}
+
+	var raw map[string]any
+	if err := bson.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal BSON: %v", err)
+	}
+
+	formSettings := toMap(raw["FormSettings"])
+	if formSettings == nil {
+		t.Fatal("FormSettings missing")
+	}
+
+	mappings, ok := formSettings["ParameterMappings"].(primitive.A)
+	if !ok {
+		t.Fatalf("ParameterMappings type = %T, want primitive.A", formSettings["ParameterMappings"])
+	}
+	if len(mappings) != 2 {
+		t.Fatalf("ParameterMappings length = %d, want marker plus one mapping", len(mappings))
+	}
+	if marker, ok := mappings[0].(int32); !ok || marker != 2 {
+		t.Fatalf("ParameterMappings marker = %#v, want int32(2)", mappings[0])
+	}
+
+	mapping := toMap(mappings[1])
+	if mapping == nil {
+		t.Fatal("PageParameterMapping missing")
+	}
+	variable := toMap(mapping["Variable"])
+	if variable == nil {
+		t.Fatal("Variable is nil; Studio Pro rejects null page parameter mapping variables")
+	}
+	if got := extractString(variable["$Type"]); got != "Forms$PageVariable" {
+		t.Fatalf("Variable $Type = %q, want Forms$PageVariable", got)
 	}
 }
 
