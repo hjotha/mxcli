@@ -712,6 +712,8 @@ func formatAction(
 			if len(parts) >= 3 {
 				attrPath = varName + "/" + parts[len(parts)-1]
 			}
+		} else if a.AssociationName != "" {
+			attrPath = varName + "/" + a.AssociationName
 		}
 		return fmt.Sprintf("validation feedback %s message %s;", attrPath, msgText)
 
