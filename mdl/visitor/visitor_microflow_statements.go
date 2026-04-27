@@ -1008,10 +1008,10 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 
 	// Get LIMIT and OFFSET expressions
 	if limitExpr := retrCtx.GetLimitExpr(); limitExpr != nil {
-		stmt.Limit = limitExpr.GetText()
+		stmt.Limit = retrieveRangeExpressionSource(limitExpr) + retrieveLimitTrailingWhitespace(retrCtx, limitExpr)
 	}
 	if offsetExpr := retrCtx.GetOffsetExpr(); offsetExpr != nil {
-		stmt.Offset = offsetExpr.GetText()
+		stmt.Offset = retrieveRangeExpressionSource(offsetExpr) + retrieveRangeExpressionTrailingWhitespace(offsetExpr)
 	}
 
 	// Check for ON ERROR clause
@@ -1020,6 +1020,74 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 	}
 
 	return stmt
+}
+
+func retrieveRangeExpressionSource(exprCtx parser.IExpressionContext) string {
+	if exprCtx == nil {
+		return ""
+	}
+	if prc, ok := exprCtx.(antlr.ParserRuleContext); ok {
+		if source := strings.TrimSpace(extractOriginalText(prc)); source != "" {
+			return source
+		}
+	}
+	return exprCtx.GetText()
+}
+
+func retrieveLimitTrailingWhitespace(retrCtx *parser.RetrieveStatementContext, limitExpr parser.IExpressionContext) string {
+	if retrCtx == nil || limitExpr == nil {
+		return ""
+	}
+	exprRule, ok := limitExpr.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+
+	start := exprRule.GetStop().GetStop() + 1
+	if offset := retrCtx.OFFSET(); offset != nil && offset.GetSymbol() != nil {
+		gap := whitespaceBetween(input, start, offset.GetSymbol().GetStart()-1)
+		return retrieveInterClauseWhitespaceSuffix(gap)
+	}
+	return whitespaceUntilDelimiter(input, start, ";")
+}
+
+func retrieveRangeExpressionTrailingWhitespace(exprCtx parser.IExpressionContext) string {
+	exprRule, ok := exprCtx.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+	return whitespaceUntilDelimiter(input, exprRule.GetStop().GetStop()+1, ";")
+}
+
+func whitespaceBetween(input antlr.CharStream, start, end int) string {
+	if start < 0 || end < start || start >= input.Size() {
+		return ""
+	}
+	gap := input.GetText(start, end)
+	if strings.TrimSpace(gap) != "" {
+		return ""
+	}
+	return gap
+}
+
+func retrieveInterClauseWhitespaceSuffix(gap string) string {
+	if gap == "" {
+		return ""
+	}
+	for _, suffix := range []string{"\r\n    ", "\n    "} {
+		if strings.HasSuffix(gap, suffix) {
+			return strings.TrimSuffix(gap, suffix)
+		}
+	}
+	return ""
 }
 
 // buildSortColumnMicroflow builds a sort column definition from a SortColumnContext.

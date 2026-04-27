@@ -1866,6 +1866,43 @@ END;`
 	}
 }
 
+func TestRetrieveRangeExpressionsPreserveTrailingWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.PreserveRetrieveRangeWhitespace (
+  $UseFirstPage: Boolean,
+  $PageSize: Integer,
+  $PageNumber: Integer
+)
+RETURNS List OF Synthetic.Entity
+BEGIN
+  RETRIEVE $Items FROM Synthetic.Entity
+    LIMIT $PageSize
+
+    OFFSET IF $UseFirstPage THEN 0
+ELSE
+$PageSize * ($PageNumber - 1)
+;
+  RETURN $Items;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	retrieveStmt, ok := mf.Body[0].(*ast.RetrieveStmt)
+	if !ok {
+		t.Fatalf("expected RetrieveStmt, got %T", mf.Body[0])
+	}
+	if retrieveStmt.Limit != "$PageSize\n" {
+		t.Fatalf("limit source = %q", retrieveStmt.Limit)
+	}
+	wantOffset := "IF $UseFirstPage THEN 0\nELSE\n$PageSize * ($PageNumber - 1)\n"
+	if retrieveStmt.Offset != wantOffset {
+		t.Fatalf("offset source = %q, want %q", retrieveStmt.Offset, wantOffset)
+	}
+}
+
 func TestShouldPreserveExpressionSourceIgnoresStringLiteralPunctuation(t *testing.T) {
 	if shouldPreserveExpressionSource("'Processed {1} items!'") {
 		t.Fatal("plain string literal punctuation should not force SourceExpr preservation")
