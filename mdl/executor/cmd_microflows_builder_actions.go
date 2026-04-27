@@ -283,6 +283,141 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 	return activity.ID
 }
 
+func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
+	if fb.measurer == nil {
+		fb.measurer = &layoutMeasurer{varTypes: fb.varTypes}
+	}
+
+	splitX := fb.posX
+	centerY := fb.posY
+	split := &microflows.ExclusiveSplit{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: splitX, Y: centerY},
+			Size:        model.Size{Width: SplitWidth, Height: SplitHeight},
+		},
+		Caption: "$" + s.Variable,
+		SplitCondition: &microflows.ExpressionSplitCondition{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Expression:  "$" + s.Variable,
+		},
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+	}
+	fb.objects = append(fb.objects, split)
+	splitID := split.ID
+	if fb.pendingAnnotations != nil {
+		fb.applyAnnotations(splitID, fb.pendingAnnotations)
+		fb.pendingAnnotations = nil
+	}
+
+	type branch struct {
+		values []string
+		body   []ast.MicroflowStatement
+	}
+	branches := make([]branch, 0, len(s.Cases)+1)
+	for _, c := range s.Cases {
+		branches = append(branches, branch{values: enumSplitCaseValues(c), body: c.Body})
+	}
+	if len(s.ElseBody) > 0 {
+		branches = append(branches, branch{body: s.ElseBody})
+	}
+
+	branchWidth := fb.measurer.measureStatements(appendEnumBodies(s)).Width
+	if branchWidth == 0 {
+		branchWidth = HorizontalSpacing / 2
+	}
+	mergeX := splitX + SplitWidth + HorizontalSpacing/2 + branchWidth + HorizontalSpacing/2
+	merge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: mergeX, Y: centerY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, merge)
+
+	savedEndsWithReturn := fb.endsWithReturn
+	allBranchesReturn := len(branches) > 0
+	for i, br := range branches {
+		branchY := centerY + i*VerticalSpacing
+		fb.posX = splitX + SplitWidth + HorizontalSpacing/2
+		fb.posY = branchY
+		fb.endsWithReturn = false
+
+		lastID := model.ID("")
+		for _, stmt := range br.body {
+			actID := fb.addStatement(stmt)
+			if actID == "" {
+				continue
+			}
+			if fb.pendingAnnotations != nil {
+				fb.applyAnnotations(actID, fb.pendingAnnotations)
+				fb.pendingAnnotations = nil
+			}
+			if lastID == "" {
+				fb.addEnumSplitFlows(splitID, actID, br.values)
+			} else {
+				fb.flows = append(fb.flows, newHorizontalFlow(lastID, actID))
+			}
+			if fb.nextConnectionPoint != "" {
+				lastID = fb.nextConnectionPoint
+				fb.nextConnectionPoint = ""
+			} else {
+				lastID = actID
+			}
+		}
+
+		if lastStmtIsReturn(br.body) {
+			continue
+		}
+		allBranchesReturn = false
+		if lastID == "" {
+			fb.addEnumSplitFlows(splitID, merge.ID, br.values)
+		} else {
+			fb.flows = append(fb.flows, newHorizontalFlow(lastID, merge.ID))
+		}
+	}
+
+	fb.posX = mergeX + HorizontalSpacing/2
+	fb.posY = centerY
+	fb.endsWithReturn = savedEndsWithReturn
+	if allBranchesReturn {
+		fb.endsWithReturn = true
+	} else {
+		fb.nextConnectionPoint = merge.ID
+	}
+	return splitID
+}
+
+func (fb *flowBuilder) addEnumSplitFlows(originID, destinationID model.ID, values []string) {
+	if len(values) == 0 {
+		fb.flows = append(fb.flows, newHorizontalFlow(originID, destinationID))
+		return
+	}
+	for _, value := range values {
+		fb.flows = append(fb.flows, newHorizontalFlowWithEnumCase(originID, destinationID, value))
+	}
+}
+
+func enumSplitCaseValues(c ast.EnumSplitCase) []string {
+	if len(c.Values) > 0 {
+		return append([]string(nil), c.Values...)
+	}
+	if c.Value != "" {
+		return []string{c.Value}
+	}
+	return nil
+}
+
+func appendEnumBodies(s *ast.EnumSplitStmt) []ast.MicroflowStatement {
+	var stmts []ast.MicroflowStatement
+	for _, c := range s.Cases {
+		stmts = append(stmts, c.Body...)
+	}
+	stmts = append(stmts, s.ElseBody...)
+	return stmts
+}
+
 // addRetrieveAction creates a RETRIEVE statement.
 func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	var source microflows.RetrieveSource

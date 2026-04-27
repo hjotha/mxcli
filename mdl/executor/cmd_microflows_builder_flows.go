@@ -145,6 +145,15 @@ func newHorizontalFlowWithCase(originID, destinationID model.ID, caseValue strin
 	return flow
 }
 
+func newHorizontalFlowWithEnumCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
+	flow := newHorizontalFlow(originID, destinationID)
+	flow.CaseValue = microflows.EnumerationCase{
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+		Value:       caseValue,
+	}
+	return flow
+}
+
 // newDownwardFlowWithCase creates a SequenceFlow going down from origin (Bottom) to destination (Left)
 // Used when TRUE path goes below the main line
 func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
@@ -211,9 +220,9 @@ func pendingFlowAnchors(previousAnchor, pendingAnchor, stmtAnchor *ast.FlowAncho
 // never fall off the end of the body into the parent flow.
 //
 // Terminal statements: ReturnStmt, RaiseErrorStmt, BreakStmt, ContinueStmt. An
-// IfStmt is terminal iff it has an ELSE and both branches are terminal
-// (recursively). A LoopStmt is never terminal — BREAK can exit the loop even if
-// the body returns.
+// Branching statements are terminal iff every branch is present and recursively
+// terminal. A LoopStmt is never terminal — BREAK can exit the loop even if the
+// body returns.
 //
 // Naming kept for history; the predicate is really "last stmt is a guaranteed
 // terminator". Missing this case causes the outer IF to emit a dangling
@@ -243,6 +252,16 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 		return lastStmtIsReturn(s.ThenBody) && lastStmtIsReturn(s.ElseBody)
 	case *ast.WhileStmt:
 		return isManualWhileTrueCandidate(s)
+	case *ast.EnumSplitStmt:
+		if len(s.Cases) == 0 || len(s.ElseBody) == 0 || !lastStmtIsReturn(s.ElseBody) {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !lastStmtIsReturn(c.Body) {
+				return false
+			}
+		}
+		return true
 	default:
 		return false
 	}

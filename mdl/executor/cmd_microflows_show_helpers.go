@@ -504,11 +504,26 @@ func traverseFlow(
 	indentStr := strings.Repeat("  ", indent)
 
 	// Handle ExclusiveSplit specially - need to process both branches
-	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
+	if split, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
 		startLine := len(*lines) + headerLineCount
-
 		flows := flowsByOrigin[currentID]
 		mergeID := splitMergeMap[currentID]
+		if variable, ok := enumSplitVariable(split); ok && hasEnumCaseFlows(flows) {
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitEnumSplitStatement(ctx, currentID, mergeID, variable, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+			if mergeID != "" {
+				visited[mergeID] = true
+				for _, flow := range flowsByOrigin[mergeID] {
+					traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				}
+			}
+			return
+		}
+		if stmt != "" {
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			*lines = append(*lines, indentStr+stmt)
+		}
 
 		trueFlow, falseFlow := findBranchFlows(flows)
 
@@ -672,11 +687,26 @@ func traverseFlowUntilMerge(
 	indentStr := strings.Repeat("  ", indent)
 
 	// Handle nested ExclusiveSplit
-	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
+	if split, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
 		startLine := len(*lines) + headerLineCount
-
 		flows := flowsByOrigin[currentID]
 		nestedMergeID := splitMergeMap[currentID]
+		if variable, ok := enumSplitVariable(split); ok && hasEnumCaseFlows(flows) {
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitEnumSplitStatement(ctx, currentID, nestedMergeID, variable, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+			if nestedMergeID != "" && nestedMergeID != mergeID {
+				visited[nestedMergeID] = true
+				for _, flow := range flowsByOrigin[nestedMergeID] {
+					traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+				}
+			}
+			return
+		}
+		if stmt != "" {
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			*lines = append(*lines, indentStr+stmt)
+		}
 
 		trueFlow, falseFlow := findBranchFlows(flows)
 
@@ -1099,6 +1129,121 @@ func reachesObject(currentID, targetID model.ID, flowsByOrigin map[model.ID][]*m
 		}
 	}
 	return false
+}
+
+func emitEnumSplitStatement(
+	ctx *ExecContext,
+	currentID model.ID,
+	mergeID model.ID,
+	variable string,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	indentStr := strings.Repeat("  ", indent)
+	*lines = append(*lines, indentStr+"split enum $"+variable)
+
+	type enumBranch struct {
+		values []string
+		flow   *microflows.SequenceFlow
+	}
+	branches := []enumBranch{}
+	branchByDestination := map[model.ID]int{}
+	var elseFlow *microflows.SequenceFlow
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+		caseValue, ok := enumCaseValue(flow)
+		if !ok {
+			elseFlow = flow
+			continue
+		}
+		if idx, ok := branchByDestination[flow.DestinationID]; ok {
+			branches[idx].values = append(branches[idx].values, caseValue)
+			continue
+		}
+		branchByDestination[flow.DestinationID] = len(branches)
+		branches = append(branches, enumBranch{values: []string{caseValue}, flow: flow})
+	}
+
+	for _, branch := range branches {
+		*lines = append(*lines, indentStr+"case "+formatEnumSplitCaseValues(branch.values))
+		traverseFlowUntilMerge(ctx, branch.flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+	if elseFlow != nil {
+		*lines = append(*lines, indentStr+"else")
+		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+
+	*lines = append(*lines, indentStr+"end split;")
+}
+
+func enumSplitVariable(split *microflows.ExclusiveSplit) (string, bool) {
+	if split == nil {
+		return "", false
+	}
+	cond, ok := split.SplitCondition.(*microflows.ExpressionSplitCondition)
+	if !ok {
+		return "", false
+	}
+	expr := strings.TrimSpace(cond.Expression)
+	if !strings.HasPrefix(expr, "$") || expr == "$" {
+		return "", false
+	}
+	return strings.TrimPrefix(expr, "$"), true
+}
+
+func hasEnumCaseFlows(flows []*microflows.SequenceFlow) bool {
+	for _, flow := range flows {
+		if value, ok := enumCaseValue(flow); ok && value != "true" && value != "false" {
+			return true
+		}
+	}
+	return false
+}
+
+func enumCaseValue(flow *microflows.SequenceFlow) (string, bool) {
+	if flow == nil || flow.CaseValue == nil {
+		return "", false
+	}
+	switch cv := flow.CaseValue.(type) {
+	case *microflows.EnumerationCase:
+		return cv.Value, true
+	case microflows.EnumerationCase:
+		return cv.Value, true
+	default:
+		return "", false
+	}
+}
+
+func formatEnumSplitCaseValue(value string) string {
+	if value == "" || value == "(empty)" {
+		return "(empty)"
+	}
+	return value
+}
+
+func formatEnumSplitCaseValues(values []string) string {
+	formatted := make([]string, 0, len(values))
+	for _, value := range values {
+		formatted = append(formatted, formatEnumSplitCaseValue(value))
+	}
+	return strings.Join(formatted, ", ")
+}
+
+func cloneVisited(visited map[model.ID]bool) map[model.ID]bool {
+	cloned := make(map[model.ID]bool, len(visited))
+	for id, seen := range visited {
+		cloned[id] = seen
+	}
+	return cloned
 }
 
 // findBranchFlows separates flows from a split into TRUE and FALSE branches based on CaseValue.

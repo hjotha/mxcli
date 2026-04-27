@@ -1291,6 +1291,7 @@ microflowBody
  */
 microflowStatement
     : annotation* declareStatement SEMICOLON?
+    | annotation* enumSplitStatement SEMICOLON?
     | annotation* setStatement SEMICOLON?
     | annotation* createListStatement SEMICOLON?       // Must be before createObjectStatement to match "CREATE LIST OF"
     | annotation* createObjectStatement SEMICOLON?
@@ -1344,6 +1345,25 @@ microflowStatement
 
 declareStatement
     : DECLARE VARIABLE dataType (EQUALS expression)?
+    ;
+
+enumSplitStatement
+    : SPLIT ENUM_TYPE enumSplitSource
+      (enumSplitCase+ (ELSE microflowBody)? END SPLIT)?
+    ;
+
+enumSplitSource
+    : attributePath
+    | VARIABLE
+    ;
+
+enumSplitCase
+    : CASE enumSplitCaseValue (COMMA enumSplitCaseValue)* microflowBody
+    ;
+
+enumSplitCaseValue
+    : identifierOrKeyword
+    | LPAREN EMPTY RPAREN
     ;
 
 setStatement
