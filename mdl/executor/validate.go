@@ -598,6 +598,7 @@ func (c *flowRefCollector) collectFromStatements(stmts []ast.MicroflowStatement)
 			c.collectFromStatements(s.ThenBody)
 			c.collectFromStatements(s.ElseBody)
 		case *ast.EnumSplitStmt:
+		case *ast.InheritanceSplitStmt:
 			for _, cse := range s.Cases {
 				c.collectFromStatements(cse.Body)
 			}

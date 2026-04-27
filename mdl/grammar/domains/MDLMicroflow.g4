@@ -100,6 +100,8 @@ microflowBody
 microflowStatement
     : annotation* declareStatement SEMICOLON?
     | annotation* caseStatement SEMICOLON?
+    | annotation* inheritanceSplitStatement SEMICOLON?
+    | annotation* castObjectStatement SEMICOLON?
     | annotation* setStatement SEMICOLON?
     | annotation* createListStatement SEMICOLON?       // Must be before createObjectStatement to match "CREATE LIST OF"
     | annotation* createObjectStatement SEMICOLON?
@@ -171,6 +173,20 @@ enumSplitSource
 enumSplitCaseValue
     : identifierOrKeyword
     | LPAREN EMPTY RPAREN
+    ;
+
+inheritanceSplitStatement
+    : SPLIT TYPE VARIABLE
+      (inheritanceSplitCase+ (ELSE microflowBody)? END SPLIT)?
+    ;
+
+inheritanceSplitCase
+    : CASE qualifiedName microflowBody
+    ;
+
+castObjectStatement
+    : CAST VARIABLE
+    | VARIABLE EQUALS CAST VARIABLE
     ;
 
 setStatement

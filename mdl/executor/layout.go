@@ -81,6 +81,8 @@ func (m *layoutMeasurer) measureStatement(stmt ast.MicroflowStatement) Bounds {
 		return m.measureIfStatement(s)
 	case *ast.EnumSplitStmt:
 		return m.measureEnumSplitStatement(s)
+	case *ast.InheritanceSplitStmt:
+		return m.measureInheritanceSplitStatement(s)
 	case *ast.LoopStmt:
 		return m.measureLoopStatement(s)
 	case *ast.WhileStmt:
@@ -122,6 +124,30 @@ func (m *layoutMeasurer) measureEnumSplitStatement(s *ast.EnumSplitStmt) Bounds 
 
 	width := SplitWidth + HorizontalSpacing/2 + maxBranchWidth + HorizontalSpacing/2 + MergeSize
 	return Bounds{Width: width, Height: totalHeight}
+}
+
+func (m *layoutMeasurer) measureInheritanceSplitStatement(s *ast.InheritanceSplitStmt) Bounds {
+	maxBranchWidth := 0
+	branchCount := len(s.Cases)
+	for _, c := range s.Cases {
+		bounds := m.measureStatements(c.Body)
+		maxBranchWidth = max(maxBranchWidth, bounds.Width)
+	}
+	if len(s.ElseBody) > 0 {
+		bounds := m.measureStatements(s.ElseBody)
+		maxBranchWidth = max(maxBranchWidth, bounds.Width)
+		branchCount++
+	}
+	if maxBranchWidth == 0 {
+		maxBranchWidth = HorizontalSpacing / 2
+	}
+	if branchCount == 0 {
+		branchCount = 1
+	}
+
+	width := ActivityWidth + HorizontalSpacing/2 + maxBranchWidth + HorizontalSpacing/2 + MergeSize
+	height := ActivityHeight + (branchCount-1)*VerticalSpacing
+	return Bounds{Width: width, Height: height}
 }
 
 // measureIfStatement calculates bounds for IF/ELSE

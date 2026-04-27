@@ -116,7 +116,31 @@ type EnumSplitStmt struct {
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
+// InheritanceSplitCase represents one typed branch in an inheritance split.
+type InheritanceSplitCase struct {
+	Entity QualifiedName
+	Body   []MicroflowStatement
+}
+
+// InheritanceSplitStmt represents: SPLIT TYPE $Var ... END SPLIT
+type InheritanceSplitStmt struct {
+	Variable    string // Variable name without $ prefix
+	Cases       []InheritanceSplitCase
+	ElseBody    []MicroflowStatement
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
 func (s *EnumSplitStmt) isMicroflowStatement() {}
+func (s *InheritanceSplitStmt) isMicroflowStatement() {}
+
+// CastObjectStmt represents: $Output = CAST $Object
+type CastObjectStmt struct {
+	OutputVariable string               // Output variable name without $ prefix
+	ObjectVariable string               // Source object variable name without $ prefix
+	Annotations    *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *CastObjectStmt) isMicroflowStatement() {}
 
 // MfSetStmt represents: SET $Var = expr or SET $Var/Attr = expr
 // (Named MfSetStmt to avoid conflict with existing SetStmt for SET key = value)
