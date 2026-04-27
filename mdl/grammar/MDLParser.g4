@@ -1364,7 +1364,7 @@ changeObjectStatement
     ;
 
 attributePath
-    : VARIABLE ((SLASH | DOT) (IDENTIFIER | qualifiedName))+
+    : VARIABLE ((SLASH | DOT) qualifiedName)+
     ;
 
 // COMMIT $Product; or COMMIT $Product WITH EVENTS; or COMMIT $Product REFRESH;
@@ -1621,7 +1621,7 @@ throwStatement
 // VALIDATION FEEDBACK $Product/Code MESSAGE 'Product code cannot be empty';
 // VALIDATION FEEDBACK $Product/Code MESSAGE '{1}' OBJECTS [$Var1, $Var2];
 validationFeedbackStatement
-    : VALIDATION FEEDBACK attributePath MESSAGE expression (OBJECTS LBRACKET expressionList RBRACKET)?
+    : VALIDATION FEEDBACK (attributePath | VARIABLE) MESSAGE expression (OBJECTS LBRACKET expressionList RBRACKET)?
     ;
 
 // =============================================================================
