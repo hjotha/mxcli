@@ -675,6 +675,27 @@ func TestCallMicroflowResultType_ResolvesSubsequentChangeMember(t *testing.T) {
 	}
 }
 
+func TestEmptyChangeObjectRefreshesInClient(t *testing.T) {
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+
+	id := fb.addChangeObjectAction(&ast.ChangeObjectStmt{Variable: "Object"})
+	if id == "" || len(fb.objects) != 1 {
+		t.Fatalf("expected one change object activity, got id=%q objects=%d", id, len(fb.objects))
+	}
+
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object type = %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.ChangeObjectAction)
+	if !ok {
+		t.Fatalf("action type = %T, want *microflows.ChangeObjectAction", activity.Action)
+	}
+	if !action.RefreshInClient {
+		t.Fatal("empty change object must refresh in client to remain valid without member changes or commit")
+	}
+}
+
 func TestCallMicroflowUnknownResultTypeStillDeclaresVariable(t *testing.T) {
 	fb := &flowBuilder{
 		varTypes:     map[string]string{"Result": "Old.ModuleEntity"},

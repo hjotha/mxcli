@@ -243,7 +243,7 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 		BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
 		ChangeVariable:  s.Variable,
 		Commit:          microflows.CommitTypeNo,
-		RefreshInClient: false,
+		RefreshInClient: len(s.Changes) == 0,
 	}
 
 	// Look up entity type from variable scope
