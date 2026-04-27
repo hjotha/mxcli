@@ -1,0 +1,67 @@
+-- ============================================================================
+-- Bug #358: Validation feedback object and association targets
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Microflow `validation feedback` statements can target an object
+--   itself or an association member, not only a scalar attribute. The
+--   MDL grammar accepted only attribute paths, and the formatter
+--   emitted only attribute targets. Round-tripping object-only and
+--   association targets either failed to re-parse the described MDL or
+--   dropped the association name when describing existing Studio Pro
+--   models.
+--
+-- After fix (grammar + formatter only):
+--   - Grammar now accepts `validation feedback $Object message '…';`
+--     (object-only target).
+--   - Grammar treats each path segment of `$Object/Module.Member` as a
+--     qualified name so `Module.Association` stays one association
+--     segment.
+--   - Formatter emits `AssociationName` when `AttributeName` is absent,
+--     preserving association targets when describing existing models.
+--
+-- Scope note:
+--   This PR fixes the parser and the formatter (describe path) so
+--   existing models with object-only or association targets re-parse
+--   and re-describe cleanly. It does NOT extend the builder to make
+--   newly authored object-only targets a valid Studio Pro model — the
+--   builder still emits `Attribute = ""` which Studio Pro rejects with
+--   `[CE0091] No member selected`. Authored validation feedback should
+--   continue to use the attribute form until a follow-up extends the
+--   builder.
+--
+-- Usage (verifies the in-scope fix):
+--   ./bin/mxcli check mdl-examples/bug-tests/358-validation-feedback-targets.mdl
+--   ./bin/mxcli exec mdl-examples/bug-tests/358-validation-feedback-targets.mdl -p app.mpr
+--   ./bin/mxcli -p app.mpr -c "describe microflow BugTest358.MF_ValidateAttr"
+--   The describe output must keep `validation feedback $Customer/Email
+--   message '…';` and `mx check` must report 0 errors.
+--
+--   The OBJECT-ONLY shape `validation feedback $Customer message '…';`
+--   parses and re-describes cleanly (covered by parser/formatter Go tests),
+--   but mx check will still surface `[CE0091]` because the builder is
+--   out of scope here. Authored MDL should keep using the attribute form.
+-- ============================================================================
+
+create module BugTest358;
+
+create entity BugTest358.Customer (
+  Email : string(200)
+);
+/
+
+-- Attribute-target validation feedback — must round-trip cleanly under
+-- describe → exec → describe and pass `mx check`.
+create microflow BugTest358.MF_ValidateAttr (
+  $Customer: BugTest358.Customer
+)
+returns boolean as $Valid
+begin
+  declare $Valid boolean = true;
+  if $Customer/Email = empty then
+    set $Valid = false;
+    validation feedback $Customer/Email message 'Email is required';
+  end if;
+  return $Valid;
+end;
+/
