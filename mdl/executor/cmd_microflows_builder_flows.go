@@ -329,6 +329,8 @@ func statementsReferenceVar(stmts []ast.MicroflowStatement, varName string) bool
 func statementVarRefs(stmt ast.MicroflowStatement) []string {
 	var refs []string
 	switch s := stmt.(type) {
+	case *ast.DeclareStmt:
+		refs = append(refs, exprVarRefs(s.InitialValue)...)
 	case *ast.ReturnStmt:
 		refs = append(refs, exprVarRefs(s.Value)...)
 	case *ast.LogStmt:

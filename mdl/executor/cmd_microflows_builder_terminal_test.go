@@ -468,6 +468,78 @@ func TestBuildFlowGraph_EmptyOutputHandlerTerminatesBeforeOutputDependentTail(t 
 	}
 }
 
+func TestBuildFlowGraph_OutputHandlerTerminatesBeforeDeclareReferencingOutput(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			OutputVariable: "CreatedRecord",
+			MicroflowName: ast.QualifiedName{Module: "SampleSync", Name: "CreateRecord"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustomWithoutRollback,
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "create failed"}},
+				},
+			},
+		},
+		&ast.DeclareStmt{
+			Variable: "SuccessMessage",
+			Type:     ast.DataType{Kind: ast.TypeString},
+			InitialValue: &ast.BinaryExpr{
+				Left:     &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Created "},
+				Operator: "+",
+				Right:    &ast.AttributePathExpr{Variable: "CreatedRecord", Path: []string{"Name"}},
+			},
+		},
+	}
+
+	if !statementReferencesVar(body[1], "CreatedRecord") {
+		t.Fatal("DECLARE initial values must be visible to custom handler skip-var routing")
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, declareID model.ID
+	endIDs := map[model.ID]bool{}
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ActionActivity:
+			switch action := o.Action.(type) {
+			case *microflows.MicroflowCallAction:
+				if action.ResultVariableName == "CreatedRecord" {
+					callID = o.ID
+				}
+			case *microflows.CreateVariableAction:
+				if action.VariableName == "SuccessMessage" {
+					declareID = o.ID
+				}
+			}
+		case *microflows.EndEvent:
+			endIDs[o.ID] = true
+		}
+	}
+	if callID == "" || declareID == "" || len(endIDs) == 0 {
+		t.Fatalf("expected call, output-dependent declare, and end event; got call=%q declare=%q ends=%v", callID, declareID, endIDs)
+	}
+
+	var errorFlowTerminates bool
+	for _, flow := range oc.Flows {
+		if !flow.IsErrorHandler || flow.OriginID != callID {
+			continue
+		}
+		if flowPathExists(oc.Flows, flow.DestinationID, declareID) {
+			t.Fatal("custom handler must not rejoin before a DECLARE that reads the missing output")
+		}
+		for endID := range endIDs {
+			if flow.DestinationID == endID || flowPathExists(oc.Flows, flow.DestinationID, endID) {
+				errorFlowTerminates = true
+			}
+		}
+	}
+	if !errorFlowTerminates {
+		t.Fatal("custom handler should terminate at an EndEvent before the output-dependent declare")
+	}
+}
+
 func TestBuildFlowGraph_EmptyNoOutputHandlerRejoinsAtNextAction(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
