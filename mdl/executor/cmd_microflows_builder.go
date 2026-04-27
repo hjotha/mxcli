@@ -23,8 +23,11 @@ type flowBuilder struct {
 	posY                int
 	baseY               int // Base Y position (for returning after ELSE branches)
 	spacing             int
-	returnValue         string            // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnValue         string // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnType          *ast.MicroflowReturnType
+	hasReturnValue      bool              // True when the microflow declares a non-void return type
 	endsWithReturn      bool              // True if the flow already ends with EndEvent(s) from RETURN statements
+	lastReturnEndID     model.ID          // Last explicit RETURN EndEvent, used as a fallback error-handler target
 	varTypes            map[string]string // Variable name -> entity qualified name (for CHANGE statements)
 	declaredVars        map[string]string // Declared primitive variables: name -> type (e.g., "$IsValid" -> "Boolean")
 	errors              []string          // Validation errors collected during build
@@ -49,12 +52,19 @@ type flowBuilder struct {
 	// be overridden by the user. Cleared after each flow is created.
 	previousStmtAnchor *ast.FlowAnchors
 	// Cached flow lists to avoid repeated backend calls during lookups.
-	microflowsCache       []*microflows.Microflow
-	microflowsCacheLoaded bool
-	nanoflowsCache        []*microflows.Nanoflow
-	nanoflowsCacheLoaded  bool
-	manualLoopBackTarget  model.ID
-	isNanoflow            bool // true when building a nanoflow — default error handling is "" not "Rollback"
+	microflowsCache          []*microflows.Microflow
+	microflowsCacheLoaded    bool
+	nanoflowsCache           []*microflows.Nanoflow
+	nanoflowsCacheLoaded     bool
+	manualLoopBackTarget     model.ID
+	isNanoflow               bool // true when building a nanoflow — default error handling is "" not "Rollback"
+	emptyErrorHandlerFrom    model.ID
+	errorHandlerTailFrom     model.ID
+	errorHandlerSource       model.ID
+	errorHandlerSkipVar      string
+	errorHandlerTailIsSource bool
+	errorHandlerReturnValue  string
+	pendingErrorHandlers     []pendingErrorHandlerState
 }
 
 // addError records a validation error during flow building.
