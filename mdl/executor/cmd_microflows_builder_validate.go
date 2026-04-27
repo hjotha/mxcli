@@ -101,6 +101,7 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 		}
 
 	case *ast.EnumSplitStmt:
+	case *ast.InheritanceSplitStmt:
 		for _, c := range s.Cases {
 			fb.validateStatements(c.Body)
 		}
