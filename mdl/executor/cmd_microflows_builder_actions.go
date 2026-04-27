@@ -357,6 +357,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		fb.endsWithReturn = false
 
 		var lastID model.ID
+		pendingCase := ""
 		for _, stmt := range body {
 			actID := fb.addStatement(stmt)
 			if actID == "" {
@@ -381,11 +382,18 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 				}
 				fb.flows = append(fb.flows, flow)
 			} else {
-				fb.flows = append(fb.flows, newHorizontalFlow(lastID, actID))
+				if pendingCase != "" {
+					fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, actID, pendingCase))
+					pendingCase = ""
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlow(lastID, actID))
+				}
 			}
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
 				fb.nextConnectionPoint = ""
+				pendingCase = fb.nextFlowCase
+				fb.nextFlowCase = ""
 			} else {
 				lastID = actID
 			}
@@ -394,7 +402,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		if !lastStmtIsReturn(body) {
 			allBranchesReturn = false
 			if lastID != "" {
-				branchTails = append(branchTails, branchTail{id: lastID})
+				branchTails = append(branchTails, branchTail{id: lastID, caseValue: pendingCase})
 			}
 		}
 	}
@@ -411,6 +419,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		fb.endsWithReturn = true
 	} else if len(branchTails) == 1 && !branchTails[0].fromSplit {
 		fb.nextConnectionPoint = branchTails[0].id
+		fb.nextFlowCase = branchTails[0].caseValue
 	} else if len(branchTails) > 0 {
 		merge := &microflows.ExclusiveMerge{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
@@ -428,7 +437,11 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 					fb.flows = append(fb.flows, newDownwardFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue))
 				}
 			} else {
-				fb.flows = append(fb.flows, newHorizontalFlow(tail.id, merge.ID))
+				if tail.caseValue != "" {
+					fb.flows = append(fb.flows, newHorizontalFlowWithCase(tail.id, merge.ID, tail.caseValue))
+				} else {
+					fb.flows = append(fb.flows, newHorizontalFlow(tail.id, merge.ID))
+				}
 			}
 		}
 		fb.nextConnectionPoint = merge.ID
