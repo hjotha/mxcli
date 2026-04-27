@@ -1,0 +1,64 @@
+-- ============================================================================
+-- Bug #349: Custom error-handler routing during microflow roundtrip
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Custom error-handler bodies that did NOT explicitly return were
+--   rebuilt as DETACHED terminal paths — they got their own EndEvent and
+--   never rejoined the next activity. Empty custom handlers could either
+--   lose their error flow entirely or rejoin into statements that read
+--   an output variable absent on the error path.
+--
+-- Root cause:
+--   The microflow builder handled custom error handlers immediately at
+--   the source activity. It did not retain pending handler state until
+--   the next safe continuation was known, so a later handler could
+--   overwrite an earlier pending handler.
+--
+-- After fix:
+--   - Pending custom-handler state is queued.
+--   - Non-terminal handler bodies rejoin through a merge before the
+--     next safe continuation, instead of fabricating detached EndEvents.
+--   - Empty custom-handler error flows are preserved.
+--   - Output-producing handlers terminate before output-dependent
+--     continuation in void microflows.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/349-custom-error-handler-routing.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest349.MF_Caller"
+--   `mx check` against the resulting MPR must report 0 errors and the
+--   non-terminal handler must rejoin the continuation activity.
+-- ============================================================================
+
+create module BugTest349;
+
+create microflow BugTest349.MF_RefreshData (
+  $Token: string
+)
+begin
+  log info node 'BugTest349' 'refreshed: ' + $Token;
+end;
+/
+
+create microflow BugTest349.MF_NextBatch ()
+begin
+  log info node 'BugTest349' 'next batch';
+end;
+/
+
+-- Caller with non-terminal custom error handler. The handler body logs
+-- but does not return, so its tail must rejoin the continuation
+-- (`call microflow ... MF_NextBatch ()`) instead of becoming a detached
+-- terminal path.
+create microflow BugTest349.MF_Caller (
+  $Token: string
+)
+begin
+  call microflow BugTest349.MF_RefreshData (Token = $Token)
+  on error without rollback {
+    log error node 'BugTest349' 'refresh failed';
+  };
+
+  call microflow BugTest349.MF_NextBatch ();
+end;
+/
