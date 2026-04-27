@@ -560,6 +560,17 @@ func formatAction(
 		}
 		return result + ";"
 
+	case *microflows.DownloadFileAction:
+		fileDocument := a.FileDocument
+		if fileDocument != "" && !strings.HasPrefix(fileDocument, "$") {
+			fileDocument = "$" + fileDocument
+		}
+		result := fmt.Sprintf("download file %s", fileDocument)
+		if a.ShowInBrowser {
+			result += " show in browser"
+		}
+		return result + ";"
+
 	case *microflows.ValidationFeedbackAction:
 		// Get the message text from template translations (prefer en_US, fallback to any)
 		msgText := "'...'"

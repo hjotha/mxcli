@@ -291,6 +291,10 @@ func parseValidationFeedbackAction(raw map[string]any) *microflows.ValidationFee
 func parseDownloadFileAction(raw map[string]any) *microflows.DownloadFileAction {
 	action := &microflows.DownloadFileAction{}
 	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	if action.ErrorHandlingType == "" {
+		action.ErrorHandlingType = microflows.ErrorHandlingTypeRollback
+	}
 	action.FileDocument = extractString(raw["FileDocumentVariableName"])
 	action.ShowInBrowser = extractBool(raw["ShowInBrowser"], false)
 	return action

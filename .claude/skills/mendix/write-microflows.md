@@ -824,6 +824,17 @@ rest call delete 'https://api.example.com/items/{1}' with (
 
 **REST CALL supports full error handling** (`on error continue`, `on error rollback`, custom error handlers).
 
+## File Downloads
+
+Use `download file` to stream a `System.FileDocument` from a microflow. Add
+`show in browser` when the action should open the file inline instead of forcing
+a download.
+
+```mdl
+download file $GeneratedReport show in browser;
+download file $GeneratedExport;
+```
+
 ## Error Handling
 
 MDL supports error handling for activities that may fail (microflow calls, commits, external service calls, etc.).

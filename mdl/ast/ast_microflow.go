@@ -570,6 +570,16 @@ type ShowMessageStmt struct {
 
 func (s *ShowMessageStmt) isMicroflowStatement() {}
 
+// DownloadFileStmt represents: DOWNLOAD FILE $FileDocument [SHOW IN BROWSER]
+type DownloadFileStmt struct {
+	FileDocument  string               // File document variable without $ prefix
+	ShowInBrowser bool                 // Whether the file opens in the browser
+	ErrorHandling *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations   *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *DownloadFileStmt) isMicroflowStatement() {}
+
 // ValidationFeedbackStmt represents: VALIDATION FEEDBACK $Var/Attr MESSAGE 'message' OBJECTS [$Var1, $Var2];
 type ValidationFeedbackStmt struct {
 	AttributePath *AttributePathExpr   // The attribute to associate with the feedback

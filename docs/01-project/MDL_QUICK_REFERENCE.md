@@ -225,6 +225,7 @@ authentication basic, session
 | Call nanoflow | `$Result = call nanoflow Module.Name (Param = $value);` | |
 | Show page | `show page Module.PageName ($Param = $value);` | Also accepts `(Param: $value)` |
 | Close page | `close page;` | |
+| Download file | `download file $FileDocument [show in browser];` | Streams a `System.FileDocument` |
 | Validation | `validation feedback $entity/attribute message 'message';` | Requires attribute path + MESSAGE |
 | Log | `log info\|warning\|error [node 'name'] 'message';` | |
 | Position | `@position(x, y)` | Canvas position (before activity) |

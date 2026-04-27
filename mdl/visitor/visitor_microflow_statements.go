@@ -99,6 +99,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = &ast.ShowHomePageStmt{}
 	} else if showMsg := mfCtx.ShowMessageStatement(); showMsg != nil {
 		stmt = buildShowMessageStatement(showMsg)
+	} else if download := mfCtx.DownloadFileStatement(); download != nil {
+		stmt = buildDownloadFileStatement(download)
 	} else if valFeedback := mfCtx.ValidationFeedbackStatement(); valFeedback != nil {
 		stmt = buildValidationFeedbackStatement(valFeedback)
 	} else if restCall := mfCtx.RestCallStatement(); restCall != nil {
@@ -440,6 +442,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	case *ast.ShowHomePageStmt:
 		s.Annotations = ann
 	case *ast.ShowMessageStmt:
+		s.Annotations = ann
+	case *ast.DownloadFileStmt:
 		s.Annotations = ann
 	case *ast.ValidationFeedbackStmt:
 		s.Annotations = ann

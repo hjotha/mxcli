@@ -1275,6 +1275,7 @@ microflowStatement
     | annotation* closePageStatement SEMICOLON?
     | annotation* showHomePageStatement SEMICOLON?
     | annotation* showMessageStatement SEMICOLON?
+    | annotation* downloadFileStatement SEMICOLON?
     | annotation* throwStatement SEMICOLON?
     | annotation* listOperationStatement SEMICOLON?
     | annotation* aggregateListStatement SEMICOLON?
@@ -1556,6 +1557,10 @@ showHomePageStatement
 // SHOW MESSAGE 'Hello {1}' TYPE Information OBJECTS [$Name];
 showMessageStatement
     : SHOW MESSAGE expression (TYPE identifierOrKeyword)? (OBJECTS LBRACKET expressionList RBRACKET)?
+    ;
+
+downloadFileStatement
+    : DOWNLOAD FILE_KW VARIABLE (SHOW IN BROWSER)? onErrorClause?
     ;
 
 throwStatement
@@ -3792,8 +3797,8 @@ annotationParenValue
  */
 keyword
     // DDL / DML
-    : ADD | ALTER | BATCH | CHANGE | CLOSE | COMMIT | CREATE | DECLARE | DELETE | DESCRIBE
-    | DROP | EXECUTE | EXPORT | GENERATE | IMPORT | INSERT | INTO | MODIFY | MOVE | REFRESH
+    : ADD | ALTER | BATCH | BROWSER | CHANGE | CLOSE | COMMIT | CREATE | DECLARE | DELETE | DESCRIBE
+    | DOWNLOAD | DROP | EXECUTE | EXPORT | GENERATE | IMPORT | INSERT | INTO | MODIFY | MOVE | REFRESH
     | REMOVE | RENAME | REPLACE | RETRIEVE | RETURN | ROLLBACK | SET | UPDATE
 
     // Entity / Domain model

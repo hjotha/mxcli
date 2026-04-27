@@ -813,6 +813,23 @@ func buildShowMessageStatement(ctx parser.IShowMessageStatementContext) *ast.Sho
 	return stmt
 }
 
+// buildDownloadFileStatement converts downloadFileStatement context to DownloadFileStmt.
+func buildDownloadFileStatement(ctx parser.IDownloadFileStatementContext) *ast.DownloadFileStmt {
+	if ctx == nil {
+		return nil
+	}
+	dlCtx := ctx.(*parser.DownloadFileStatementContext)
+	stmt := &ast.DownloadFileStmt{}
+	if variable := dlCtx.VARIABLE(); variable != nil {
+		stmt.FileDocument = strings.TrimPrefix(variable.GetText(), "$")
+	}
+	stmt.ShowInBrowser = dlCtx.BROWSER() != nil
+	if errClause := dlCtx.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+	return stmt
+}
+
 // buildValidationFeedbackStatement converts validationFeedbackStatement context to ValidationFeedbackStmt.
 // Grammar: VALIDATION FEEDBACK attributePath MESSAGE expression (OBJECTS LBRACKET expressionList RBRACKET)?
 func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementContext) *ast.ValidationFeedbackStmt {

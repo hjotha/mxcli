@@ -234,6 +234,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addShowHomePageAction(s)
 	case *ast.ShowMessageStmt:
 		return fb.addShowMessageAction(s)
+	case *ast.DownloadFileStmt:
+		return fb.addDownloadFileAction(s)
 	case *ast.ValidationFeedbackStmt:
 		return fb.addValidationFeedbackAction(s)
 	case *ast.RestCallStmt:

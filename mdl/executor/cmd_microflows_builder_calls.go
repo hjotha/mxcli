@@ -476,6 +476,35 @@ func (fb *flowBuilder) addShowMessageAction(s *ast.ShowMessageStmt) model.ID {
 	return activity.ID
 }
 
+// addDownloadFileAction creates a DOWNLOAD FILE statement.
+func (fb *flowBuilder) addDownloadFileAction(s *ast.DownloadFileStmt) model.ID {
+	action := &microflows.DownloadFileAction{
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		FileDocument:      s.FileDocument,
+		ShowInBrowser:     s.ShowInBrowser,
+		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+	}
+	if s.ErrorHandling != nil {
+		action.ErrorHandlingType = convertErrorHandlingType(s.ErrorHandling)
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+	return activity.ID
+}
+
 // addClosePageAction creates a CLOSE PAGE statement.
 func (fb *flowBuilder) addClosePageAction(s *ast.ClosePageStmt) model.ID {
 	numPages := s.NumberOfPages

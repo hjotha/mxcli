@@ -491,6 +491,20 @@ func TestFormatAction_ShowMessage_EscapesMultiline(t *testing.T) {
 	}
 }
 
+func TestFormatAction_DownloadFile(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.DownloadFileAction{
+		FileDocument:  "GeneratedReport",
+		ShowInBrowser: true,
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "download file $GeneratedReport show in browser;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_ValidationFeedback(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ValidationFeedbackAction{

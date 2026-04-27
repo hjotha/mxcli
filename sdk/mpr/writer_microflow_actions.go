@@ -399,6 +399,15 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		}
 		return doc
 
+	case *microflows.DownloadFileAction:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+			{Key: "$Type", Value: "Microflows$DownloadFileAction"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+			{Key: "FileDocumentVariableName", Value: a.FileDocument},
+			{Key: "ShowInBrowser", Value: a.ShowInBrowser},
+		}
+
 	case *microflows.ValidationFeedbackAction:
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},

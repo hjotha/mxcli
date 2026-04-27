@@ -480,8 +480,9 @@ func (ValidationFeedbackAction) isMicroflowAction() {}
 // DownloadFileAction downloads a file.
 type DownloadFileAction struct {
 	model.BaseElement
-	FileDocument  string `json:"fileDocument"`
-	ShowInBrowser bool   `json:"showInBrowser"`
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	FileDocument      string            `json:"fileDocument"`
+	ShowInBrowser     bool              `json:"showInBrowser"`
 }
 
 func (DownloadFileAction) isMicroflowAction() {}

@@ -456,6 +456,8 @@ func stmtErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
 		return s.ErrorHandling
 	case *ast.CallJavaActionStmt:
 		return s.ErrorHandling
+	case *ast.DownloadFileStmt:
+		return s.ErrorHandling
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.ErrorHandling
 	}

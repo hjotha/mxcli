@@ -43,6 +43,7 @@ BSON schema Registry ◄──── multi-version Support
 |----------|--------|---------|------------|
 | [MDL Syntax Improvements v1](PROPOSAL_mdl_syntax_improvements.md) | Draft | Go-style assignment, C-style braces, fluent list APIs | — |
 | [MDL Syntax Improvements v2](PROPOSAL_mdl_syntax_improvements_v2.md) | Proposed | Consolidated v2: unified variable declaration, C-style braces, fluent list ops | Syntax Improvements v1 |
+| [Microflow Download File Statement](PROPOSAL_microflow_download_file_statement.md) | Draft | `download file $FileDocument [show in browser]` for `DownloadFileAction` round-trip and authoring | — |
 | [Page Syntax V2](PROPOSAL_page_syntax_v2.md) | Superseded | Page/widget syntax with `{}` blocks and `->` binding. Superseded by V3 (archived) | — |
 | [Page Styling Support](page-styling-support.md) | Partial | CSS classes, inline styles, dynamic classes, design properties. Phase 1 (Class/Style) done | — |
 | [Page Composition](proposal_page_composition.md) | Proposed | Fragment definitions and ALTER PAGE for partial page editing | Page Syntax V2, Page Styling |
