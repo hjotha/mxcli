@@ -400,6 +400,18 @@ commit $Product with events refresh;
 
 **Best Practice**: Use `with events` when you want before/after commit event handlers to execute. Use `refresh` when the committed object is displayed in the client and you want the UI to update immediately.
 
+## List Operations
+
+```mdl
+-- Existing variable form
+add $Item to $Items;
+
+-- Expression-valued add, useful when round-tripping Studio Pro list-add values
+add head($SourceItems) to $Items;
+```
+
+Use expression-valued `add` only when the expression returns an object compatible with the target list element type.
+
 ## Database Operations
 
 ### RETRIEVE Statement

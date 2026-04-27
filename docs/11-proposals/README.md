@@ -49,6 +49,7 @@ BSON schema Registry ◄──── multi-version Support
 | [Page Styling Support](page-styling-support.md) | Partial | CSS classes, inline styles, dynamic classes, design properties. Phase 1 (Class/Style) done | — |
 | [Page Composition](proposal_page_composition.md) | Proposed | Fragment definitions and ALTER PAGE for partial page editing | Page Syntax V2, Page Styling |
 | [XPath Gaps](xpath-gaps-proposal.md) | Partial | XPath constraint support gap analysis. ~85% complete, association paths and nested predicates remain | — |
+| [Microflow ADD Expression To List](PROPOSAL_microflow_add_expression_to_list.md) | Draft | Preserve expression-valued list-add actions in microflow round-trips | — |
 | [LLM MDL Assistance](PROPOSAL_llm_mdl_assistance.md) | Proposed | Enhanced error messages with examples, reorganized skills by use case | — |
 
 ### Testing & Evaluation
