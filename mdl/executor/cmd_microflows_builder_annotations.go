@@ -49,6 +49,8 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 		return s.Annotations
 	case *ast.CallJavaScriptActionStmt:
 		return s.Annotations
+	case *ast.CallWebServiceStmt:
+		return s.Annotations
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.Annotations
 	case *ast.CallExternalActionStmt:

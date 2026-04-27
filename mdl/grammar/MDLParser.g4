@@ -1311,6 +1311,7 @@ microflowStatement
     | annotation* callNanoflowStatement SEMICOLON?
     | annotation* callJavaActionStatement SEMICOLON?
     | annotation* callJavaScriptActionStatement SEMICOLON?
+    | annotation* callWebServiceStatement SEMICOLON?
     | annotation* executeDatabaseQueryStatement SEMICOLON?
     | annotation* callExternalActionStatement SEMICOLON?
     | annotation* showPageStatement SEMICOLON?
@@ -1487,6 +1488,19 @@ callJavaActionStatement
 // $Result = CALL JAVASCRIPT ACTION Module.JSAction(Param = 'value');
 callJavaScriptActionStatement
     : (VARIABLE EQUALS)? CALL JAVASCRIPT ACTION qualifiedName LPAREN callArgumentList? RPAREN onErrorClause?
+    ;
+
+// Legacy SOAP call. The preferred structured form uses Module.Document names;
+// raw IDs remain accepted for dangling references and old round-trip output.
+callWebServiceStatement
+    : (VARIABLE EQUALS)? CALL WEB SERVICE
+      (RAW STRING_LITERAL
+      | STRING_LITERAL
+        (OPERATION STRING_LITERAL)?
+        (SEND MAPPING STRING_LITERAL)?
+        (RECEIVE MAPPING STRING_LITERAL)?
+        (TIMEOUT expression)?)
+      onErrorClause?
     ;
 
 // $Result = EXECUTE DATABASE QUERY Module.Connection.QueryName (param = 'value');
@@ -3963,8 +3977,8 @@ keyword
     | MAP | MAPPING | MAPPINGS | MESSAGES | METHOD | NAMESPACE_KW
     | NOT_SUPPORTED | ODATA | OAUTH | OPERATION | PAGING
     | PARAMETER | PARAMETERS | PATH | PUBLISH | PUBLISHED
-    | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
-    | SOURCE_KW | TIMEOUT | VERSION | XML
+    | RAW | RECEIVE | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
+    | SOURCE_KW | TIMEOUT | VERSION | WEB | XML
     | FILE_KW | LINK | DYNAMIC
 
     // HTTP methods

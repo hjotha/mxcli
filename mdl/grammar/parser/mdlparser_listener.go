@@ -499,6 +499,9 @@ type MDLParserListener interface {
 	// EnterCallJavaScriptActionStatement is called when entering the callJavaScriptActionStatement production.
 	EnterCallJavaScriptActionStatement(c *CallJavaScriptActionStatementContext)
 
+	// EnterCallWebServiceStatement is called when entering the callWebServiceStatement production.
+	EnterCallWebServiceStatement(c *CallWebServiceStatementContext)
+
 	// EnterExecuteDatabaseQueryStatement is called when entering the executeDatabaseQueryStatement production.
 	EnterExecuteDatabaseQueryStatement(c *ExecuteDatabaseQueryStatementContext)
 
@@ -1830,6 +1833,9 @@ type MDLParserListener interface {
 
 	// ExitCallJavaScriptActionStatement is called when exiting the callJavaScriptActionStatement production.
 	ExitCallJavaScriptActionStatement(c *CallJavaScriptActionStatementContext)
+
+	// ExitCallWebServiceStatement is called when exiting the callWebServiceStatement production.
+	ExitCallWebServiceStatement(c *CallWebServiceStatementContext)
 
 	// ExitExecuteDatabaseQueryStatement is called when exiting the executeDatabaseQueryStatement production.
 	ExitExecuteDatabaseQueryStatement(c *ExecuteDatabaseQueryStatementContext)
