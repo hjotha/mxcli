@@ -130,6 +130,72 @@ func TestLastStmtIsReturn_InheritanceSplitAllBranchesReturn(t *testing.T) {
 	}
 }
 
+func TestBuilder_InheritanceSplitNestedEmptyThenBranchKeepsContinuationCase(t *testing.T) {
+	fb := &flowBuilder{
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"HasMember": "Boolean", "HasApp": "Boolean"},
+		varTypes:     map[string]string{"Selection": "Sample.Selection"},
+		measurer:     &layoutMeasurer{},
+	}
+
+	oc := fb.buildFlowGraph([]ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "Selection",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "Sample", Name: "MemberSelection"},
+					Body: []ast.MicroflowStatement{
+						&ast.IfStmt{
+							Condition: &ast.VariableExpr{Name: "HasMember"},
+							ElseBody:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+						},
+					},
+				},
+				{
+					Entity: ast.QualifiedName{Module: "Sample", Name: "AppSelection"},
+					Body: []ast.MicroflowStatement{
+						&ast.IfStmt{
+							Condition: &ast.VariableExpr{Name: "HasApp"},
+							ElseBody:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+						},
+					},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{&ast.ReturnStmt{}},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "shared tail"}},
+	}, nil)
+
+	objects := map[model.ID]microflows.MicroflowObject{}
+	var nestedSplitID model.ID
+	for _, obj := range oc.Objects {
+		objects[obj.GetID()] = obj
+		split, ok := obj.(*microflows.ExclusiveSplit)
+		if !ok {
+			continue
+		}
+		if condition, ok := split.SplitCondition.(*microflows.ExpressionSplitCondition); ok && condition.Expression == "$HasMember" {
+			nestedSplitID = split.ID
+		}
+	}
+	if nestedSplitID == "" {
+		t.Fatal("expected nested decision split")
+	}
+	for _, flow := range oc.Flows {
+		if flow.OriginID != nestedSplitID {
+			continue
+		}
+		caseValue, ok := flow.CaseValue.(microflows.EnumerationCase)
+		if !ok || caseValue.Value != "true" {
+			continue
+		}
+		if _, ok := objects[flow.DestinationID].(*microflows.ExclusiveMerge); ok {
+			return
+		}
+	}
+	t.Fatal("nested empty-then inheritance branch must carry CaseValue=true to the inheritance merge")
+}
+
 func assertLineContains(t *testing.T, lines []string, want string) {
 	t.Helper()
 	for _, line := range lines {
