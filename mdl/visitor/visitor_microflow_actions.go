@@ -1216,6 +1216,10 @@ func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementCon
 	// Build attribute path
 	if attrPath := vfCtx.AttributePath(); attrPath != nil {
 		stmt.AttributePath = buildAttributePathFromContext(attrPath)
+	} else if variable := vfCtx.VARIABLE(); variable != nil {
+		stmt.AttributePath = &ast.AttributePathExpr{
+			Variable: strings.TrimPrefix(variable.GetText(), "$"),
+		}
 	}
 
 	// Build message expression
