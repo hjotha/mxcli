@@ -1,5 +1,12 @@
+create module SampleSOAP;
+
+create entity SampleSOAP.OrderResponse (
+  Status : string(50)
+);
+/
+
 create microflow SampleSOAP.ACT_FetchItems ()
-returns Object as $Root
+returns SampleSOAP.OrderResponse as $Root
 begin
   $Root = call web service 'SampleSOAP.OrderService'
   operation 'FetchSampleItems'
@@ -13,7 +20,7 @@ end;
 /
 
 create microflow SampleSOAP.ACT_FetchItemsDanglingRefs ()
-returns Object as $Root
+returns SampleSOAP.OrderResponse as $Root
 begin
   -- Raw IDs are preserved when describe cannot resolve dangling legacy refs.
   $Root = call web service 'sample-service-id'
@@ -26,9 +33,10 @@ end;
 /
 
 create microflow SampleSOAP.ACT_FetchItemsRaw ()
-returns Object as $Root
 begin
-  $Root = call web service raw 'uAAAAAIkSUQAGgAAAHNhbXBsZS13ZWItc2VydmljZS1hY3Rpb24AAiRUeXBlACAAAABNaWNyb2Zsb3dzJENhbGxXZWJTZXJ2aWNlQWN0aW9uAAJJbXBvcnRlZFNlcnZpY2UAEgAAAHNhbXBsZS1zZXJ2aWNlLWlkAAJPcGVyYXRpb25OYW1lABEAAABGZXRjaFNhbXBsZUl0ZW1zAAJUaW1lT3V0RXhwcmVzc2lvbgADAAAAMzAAAA==';
-  return $Root;
+  -- Raw base64 escape hatch: opaque Microflows$CallWebServiceAction BSON is
+  -- preserved verbatim. The encoded payload here has no OutputVariable, so
+  -- no `$Var = ` assignment is emitted; richer payloads can carry one.
+  call web service raw 'uAAAAAIkSUQAGgAAAHNhbXBsZS13ZWItc2VydmljZS1hY3Rpb24AAiRUeXBlACAAAABNaWNyb2Zsb3dzJENhbGxXZWJTZXJ2aWNlQWN0aW9uAAJJbXBvcnRlZFNlcnZpY2UAEgAAAHNhbXBsZS1zZXJ2aWNlLWlkAAJPcGVyYXRpb25OYW1lABEAAABGZXRjaFNhbXBsZUl0ZW1zAAJUaW1lT3V0RXhwcmVzc2lvbgADAAAAMzAAAA==';
 end;
 /
