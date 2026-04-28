@@ -6,6 +6,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -1159,7 +1160,7 @@ func emitEnumSplitStatement(
 	branches := []enumBranch{}
 	branchByDestination := map[model.ID]int{}
 	var elseFlow *microflows.SequenceFlow
-	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+	for _, flow := range orderedEnumSplitFlows(findNormalFlows(flowsByOrigin[currentID])) {
 		caseValue, ok := enumCaseValue(flow)
 		if !ok {
 			elseFlow = flow
@@ -1221,6 +1222,26 @@ func enumCaseValue(flow *microflows.SequenceFlow) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+func orderedEnumSplitFlows(flows []*microflows.SequenceFlow) []*microflows.SequenceFlow {
+	ordered := append([]*microflows.SequenceFlow(nil), flows...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return splitCaseOrder(ordered[i]) < splitCaseOrder(ordered[j])
+	})
+	return ordered
+}
+
+func splitCaseOrder(flow *microflows.SequenceFlow) int {
+	if flow == nil {
+		return 1 << 20
+	}
+	for i, pair := range splitCaseOrderAnchors {
+		if flow.OriginConnectionIndex == pair.origin && flow.DestinationConnectionIndex == pair.destination {
+			return i
+		}
+	}
+	return (1 << 10) + flow.OriginConnectionIndex*4 + flow.DestinationConnectionIndex
 }
 
 func formatEnumSplitCaseValue(value string) string {

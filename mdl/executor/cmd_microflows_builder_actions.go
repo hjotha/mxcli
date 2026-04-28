@@ -356,7 +356,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 				fb.pendingAnnotations = nil
 			}
 			if lastID == "" {
-				fb.addEnumSplitFlows(splitID, actID, br.values)
+				fb.addEnumSplitFlows(splitID, actID, br.values, i)
 			} else {
 				if pendingCase != "" {
 					fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, actID, pendingCase))
@@ -380,7 +380,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		}
 		allBranchesReturn = false
 		if lastID == "" {
-			fb.addEnumSplitFlows(splitID, merge.ID, br.values)
+			fb.addEnumSplitFlows(splitID, merge.ID, br.values, i)
 		} else {
 			if pendingCase != "" {
 				fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, merge.ID, pendingCase))
@@ -401,14 +401,51 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 	return splitID
 }
 
-func (fb *flowBuilder) addEnumSplitFlows(originID, destinationID model.ID, values []string) {
+func (fb *flowBuilder) addEnumSplitFlows(originID, destinationID model.ID, values []string, order int) {
 	if len(values) == 0 {
-		fb.flows = append(fb.flows, newHorizontalFlow(originID, destinationID))
+		flow := newHorizontalFlow(originID, destinationID)
+		applySplitCaseOrder(flow, order)
+		fb.flows = append(fb.flows, flow)
 		return
 	}
 	for _, value := range values {
-		fb.flows = append(fb.flows, newHorizontalFlowWithEnumCase(originID, destinationID, value))
+		flow := newHorizontalFlowWithEnumCase(originID, destinationID, value)
+		applySplitCaseOrder(flow, order)
+		fb.flows = append(fb.flows, flow)
 	}
+}
+
+type splitCaseOrderAnchor struct {
+	origin      int
+	destination int
+}
+
+var splitCaseOrderAnchors = []splitCaseOrderAnchor{
+	{AnchorTop, AnchorLeft},
+	{AnchorRight, AnchorLeft},
+	{AnchorBottom, AnchorLeft},
+	{AnchorLeft, AnchorLeft},
+	{AnchorTop, AnchorTop},
+	{AnchorRight, AnchorTop},
+	{AnchorBottom, AnchorTop},
+	{AnchorLeft, AnchorTop},
+	{AnchorTop, AnchorRight},
+	{AnchorRight, AnchorRight},
+	{AnchorBottom, AnchorRight},
+	{AnchorLeft, AnchorRight},
+	{AnchorTop, AnchorBottom},
+	{AnchorRight, AnchorBottom},
+	{AnchorBottom, AnchorBottom},
+	{AnchorLeft, AnchorBottom},
+}
+
+func applySplitCaseOrder(flow *microflows.SequenceFlow, order int) {
+	if flow == nil || order < 0 || order >= len(splitCaseOrderAnchors) {
+		return
+	}
+	pair := splitCaseOrderAnchors[order]
+	flow.OriginConnectionIndex = pair.origin
+	flow.DestinationConnectionIndex = pair.destination
 }
 
 func enumSplitCaseValues(c ast.EnumSplitCase) []string {
