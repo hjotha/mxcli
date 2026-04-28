@@ -1,6 +1,6 @@
 # Nanoflow Test Cases — Manual Testing
 
-**Updated:** 2026-04-24
+**Updated:** 2026-04-28
 **PR:** [retran/mxcli#10](https://github.com/retran/mxcli/pull/10)
 
 ## Test Projects
@@ -942,6 +942,65 @@ CREATE single nanoflow with one instance of each allowed action type (where gram
 
 ---
 
+## 19. ELK DIAGRAM OUTPUT (CLI `--format elk`)
+
+ELK (Eclipse Layout Kernel) JSON output is used by the VS Code extension to render interactive SVG diagrams for nanoflows.
+
+### 19.1 Simple nanoflow — ELK JSON structure
+```bash
+mxcli describe nanoflow -p <mpr> --format elk <Module.SimpleNanoflow>
+```
+**Expected:** Valid JSON with keys: `format` (`"elk"`), `type` (`"nanoflow"`), `name`, `parameters`, `returnType`, `nodes`, `edges`, `mdlSource`, `sourceMap`. At least one start node and one end node.
+
+### 19.2 Complex nanoflow — nodes and edges
+```bash
+mxcli describe nanoflow -p <mpr> --format elk <Module.ComplexNanoflow>
+```
+Use a nanoflow with 5+ activities (if/else, retrieve, call, log, etc.).
+**Expected:** One node per activity. Edges connect activities in correct order. Decision nodes have multiple outgoing edges. `mdlSource` contains full MDL text. `sourceMap` maps node IDs to `{startLine, endLine}`.
+
+### 19.3 Empty nanoflow — minimal ELK
+```bash
+echo 'create nanoflow M.Empty () begin end;' > /tmp/elk-test.mdl
+mxcli exec /tmp/elk-test.mdl -p <mpr>
+mxcli describe nanoflow -p <mpr> --format elk M.Empty
+```
+**Expected:** Valid JSON with start node and end node only. Zero intermediate nodes. `mdlSource` shows `CREATE NANOFLOW M.Empty()`.
+
+### 19.4 Nanoflow with parameters and return type
+```bash
+mxcli describe nanoflow -p <mpr> --format elk <Module.NanoflowWithParams>
+```
+**Expected:** `parameters` array in JSON lists all parameters with names and types. `returnType` populated. These fields match DESCRIBE output.
+
+### 19.5 Cross-project ELK — verify on all test projects
+Run `--format elk` on one complex nanoflow from each test project:
+- EnquiriesManagement
+- Evora-FactoryManagement
+- LatoProductInventory
+
+**Expected:** All produce valid JSON. Entity names in `mdlSource` resolve correctly (qualified `Module.Entity` format).
+
+### 19.6 Non-existent nanoflow — error
+```bash
+mxcli describe nanoflow -p <mpr> --format elk M.DoesNotExist
+```
+**Expected:** Error message: `nanoflow not found: M.DoesNotExist`
+
+### 19.7 Microflow ELK still works (no regression)
+```bash
+mxcli describe microflow -p <mpr> --format elk <Module.SomeMicroflow>
+```
+**Expected:** Valid ELK JSON, same structure as before. Confirms `buildEntityNames` refactoring did not break microflow path.
+
+### 19.8 ELK source map correctness
+For a nanoflow with 3+ activities, verify `sourceMap` entries:
+- Each node ID in `nodes` has a corresponding `sourceMap` entry
+- `startLine` < `endLine` for multi-line activities
+- Line numbers correspond to actual lines in `mdlSource`
+
+---
+
 ## Test Project Coverage Matrix
 
 | Category | Enquiries (79) | Evora Factory (93) | Lato Inventory (51) |
@@ -957,6 +1016,7 @@ CREATE single nanoflow with one instance of each allowed action type (where gram
 | BSON data integrity (§16.5) | 10+ complex nanoflows | Same | Same |
 | Security cascades (§17) | Project roles | Same | Same |
 | 100+ listing (§18.8) | N/A (79) | CREATE extras to reach 100+ | N/A (51) |
+| ELK diagram (§19) | Sample complex | Sample complex | Sample complex |
 
 ---
 
@@ -979,6 +1039,7 @@ CREATE single nanoflow with one instance of each allowed action type (where gram
 | BSON parser | 5 roundtrip | Covered |
 | BSON writer | 5 roundtrip | Covered |
 | Diff output | None | **Gap** |
+| ELK diagram | None | **Manual only** |
 | Roundtrip (integration) | 3 integration | Covered |
 | Multi-step workflows (§15) | None | **Manual only** |
 | Failure modes (§16) | Partial | **Mostly manual** |
