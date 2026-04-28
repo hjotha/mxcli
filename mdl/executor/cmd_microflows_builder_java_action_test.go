@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/javaactions"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -55,5 +58,59 @@ func TestBuildJavaAction_PlaceholderArgumentPreservesEmptyBasicValue(t *testing.
 	}
 	if value.Argument != "true" {
 		t.Fatalf("boolean argument = %q, want true", value.Argument)
+	}
+}
+
+func TestBuildJavaAction_PlaceholderMicroflowArgumentUsesMicroflowParameterValue(t *testing.T) {
+	fb := &flowBuilder{
+		posX:    100,
+		posY:    100,
+		spacing: HorizontalSpacing,
+		backend: &mock.MockBackend{
+			ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
+				if qualifiedName != "SampleModule.StartAsync" {
+					t.Fatalf("java action lookup = %q", qualifiedName)
+				}
+				return &javaactions.JavaAction{
+					Parameters: []*javaactions.JavaActionParameter{
+						{
+							Name: "Callback",
+							ParameterType: &javaactions.MicroflowType{
+								BaseElement: model.BaseElement{ID: "param-type"},
+							},
+						},
+					},
+				}, nil
+			},
+		},
+	}
+	stmt := &ast.CallJavaActionStmt{
+		ActionName: ast.QualifiedName{Module: "SampleModule", Name: "StartAsync"},
+		Arguments: []ast.CallArgument{
+			{Name: "Callback", Value: &ast.SourceExpr{Source: "..."}},
+		},
+	}
+
+	id := fb.addCallJavaActionAction(stmt)
+	var activity *microflows.ActionActivity
+	for _, obj := range fb.objects {
+		if obj.GetID() == id {
+			activity, _ = obj.(*microflows.ActionActivity)
+			break
+		}
+	}
+	if activity == nil {
+		t.Fatal("expected Java action activity")
+	}
+	action, ok := activity.Action.(*microflows.JavaActionCallAction)
+	if !ok {
+		t.Fatalf("action = %T, want *JavaActionCallAction", activity.Action)
+	}
+	value, ok := action.ParameterMappings[0].Value.(*microflows.MicroflowParameterValue)
+	if !ok {
+		t.Fatalf("mapping value = %T, want *MicroflowParameterValue", action.ParameterMappings[0].Value)
+	}
+	if value.Microflow != "" {
+		t.Fatalf("placeholder microflow = %q, want empty string", value.Microflow)
 	}
 }

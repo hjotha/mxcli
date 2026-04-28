@@ -402,7 +402,7 @@ func parseCodeActionParameterType(raw map[string]any) javaactions.CodeActionPara
 		}
 		et.Enumeration = extractString(raw["Enumeration"])
 		return et
-	case "CodeActions$MicroflowType":
+	case "CodeActions$MicroflowType", "JavaActions$MicroflowJavaActionParameterType":
 		return &javaactions.MicroflowType{
 			BaseElement: model.BaseElement{ID: model.ID(extractBsonID(raw["$ID"]))},
 		}
@@ -459,6 +459,10 @@ func parseInnerParameterType(raw map[string]any) javaactions.CodeActionParameter
 		}
 	case "CodeActions$DateTimeType":
 		return &javaactions.DateTimeType{
+			BaseElement: model.BaseElement{ID: model.ID(extractBsonID(raw["$ID"]))},
+		}
+	case "CodeActions$MicroflowType", "JavaActions$MicroflowJavaActionParameterType":
+		return &javaactions.MicroflowType{
 			BaseElement: model.BaseElement{ID: model.ID(extractBsonID(raw["$ID"]))},
 		}
 	case "CodeActions$ConcreteEntityType", "CodeActions$EntityType":

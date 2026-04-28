@@ -81,3 +81,19 @@ func TestParseCommitAction_ErrorHandlingTypeDefaultsToRollback(t *testing.T) {
 		t.Errorf("expected default Rollback, got %q", action.ErrorHandlingType)
 	}
 }
+
+func TestParseCodeActionParameterValue_MicroflowParameterValue(t *testing.T) {
+	value := parseCodeActionParameterValue(map[string]any{
+		"$ID":       "value-1",
+		"$Type":     "Microflows$MicroflowParameterValue",
+		"Microflow": "SyntheticModule.Callback",
+	})
+
+	got, ok := value.(*microflows.MicroflowParameterValue)
+	if !ok {
+		t.Fatalf("value = %T, want *MicroflowParameterValue", value)
+	}
+	if got.Microflow != "SyntheticModule.Callback" {
+		t.Fatalf("microflow = %q", got.Microflow)
+	}
+}

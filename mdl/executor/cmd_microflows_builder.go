@@ -53,7 +53,7 @@ type flowBuilder struct {
 	microflowsCacheLoaded bool
 	nanoflowsCache        []*microflows.Nanoflow
 	nanoflowsCacheLoaded  bool
-	manualLoopBackTarget model.ID
+	manualLoopBackTarget  model.ID
 }
 
 // addError records a validation error during flow building.
