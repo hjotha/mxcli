@@ -327,14 +327,20 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		branchWidth = HorizontalSpacing / 2
 	}
 	mergeX := splitX + SplitWidth + HorizontalSpacing/2 + branchWidth + HorizontalSpacing/2
-	merge := &microflows.ExclusiveMerge{
-		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-			Position:    model.Point{X: mergeX, Y: centerY},
-			Size:        model.Size{Width: MergeSize, Height: MergeSize},
-		},
+	var merge *microflows.ExclusiveMerge
+	ensureMerge := func() *microflows.ExclusiveMerge {
+		if merge == nil {
+			merge = &microflows.ExclusiveMerge{
+				BaseMicroflowObject: microflows.BaseMicroflowObject{
+					BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+					Position:    model.Point{X: mergeX, Y: centerY},
+					Size:        model.Size{Width: MergeSize, Height: MergeSize},
+				},
+			}
+			fb.objects = append(fb.objects, merge)
+		}
+		return merge
 	}
-	fb.objects = append(fb.objects, merge)
 
 	savedEndsWithReturn := fb.endsWithReturn
 	allBranchesReturn := len(branches) > 0
@@ -356,7 +362,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 				fb.pendingAnnotations = nil
 			}
 			if lastID == "" {
-				fb.addEnumSplitFlows(splitID, actID, br.values, i)
+				fb.addGroupedEnumSplitFlows(splitID, actID, br.values, i, splitX+SplitWidth+HorizontalSpacing/4, branchY)
 			} else {
 				if pendingCase != "" {
 					fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, actID, pendingCase))
@@ -380,12 +386,12 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		}
 		allBranchesReturn = false
 		if lastID == "" {
-			fb.addEnumSplitFlows(splitID, merge.ID, br.values, i)
+			fb.addGroupedEnumSplitFlows(splitID, ensureMerge().ID, br.values, i, splitX+SplitWidth+HorizontalSpacing/4, branchY)
 		} else {
 			if pendingCase != "" {
-				fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, merge.ID, pendingCase))
+				fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, ensureMerge().ID, pendingCase))
 			} else {
-				fb.flows = append(fb.flows, newHorizontalFlow(lastID, merge.ID))
+				fb.flows = append(fb.flows, newHorizontalFlow(lastID, ensureMerge().ID))
 			}
 		}
 	}
@@ -396,9 +402,26 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 	if allBranchesReturn {
 		fb.endsWithReturn = true
 	} else {
-		fb.nextConnectionPoint = merge.ID
+		fb.nextConnectionPoint = ensureMerge().ID
 	}
 	return splitID
+}
+
+func (fb *flowBuilder) addGroupedEnumSplitFlows(originID, destinationID model.ID, values []string, order int, mergeX, mergeY int) {
+	if len(values) <= 1 {
+		fb.addEnumSplitFlows(originID, destinationID, values, order)
+		return
+	}
+	branchMerge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: mergeX, Y: mergeY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, branchMerge)
+	fb.addEnumSplitFlows(originID, branchMerge.ID, values, order)
+	fb.flows = append(fb.flows, newHorizontalFlow(branchMerge.ID, destinationID))
 }
 
 func (fb *flowBuilder) addEnumSplitFlows(originID, destinationID model.ID, values []string, order int) {

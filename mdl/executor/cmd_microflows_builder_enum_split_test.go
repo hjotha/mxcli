@@ -119,3 +119,33 @@ func TestEnumSplitNestedEmptyThenBranchKeepsContinuationCase(t *testing.T) {
 	}
 	t.Fatal("nested empty-then enum branch must carry CaseValue=true to the enum merge")
 }
+
+func TestEnumSplitAllBranchesReturnDoesNotCreateDanglingMerge(t *testing.T) {
+	fb := &flowBuilder{
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+
+	oc := fb.buildFlowGraph([]ast.MicroflowStatement{
+		&ast.EnumSplitStmt{
+			Variable: "Status",
+			Cases: []ast.EnumSplitCase{
+				{
+					Value: "Open",
+					Body:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+				},
+				{
+					Value: "Closed",
+					Body:  []ast.MicroflowStatement{&ast.ReturnStmt{}},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{&ast.ReturnStmt{}},
+		},
+	}, nil)
+
+	for _, obj := range oc.Objects {
+		if _, ok := obj.(*microflows.ExclusiveMerge); ok {
+			t.Fatalf("all-terminal enum split created dangling merge %#v", obj.GetID())
+		}
+	}
+}
