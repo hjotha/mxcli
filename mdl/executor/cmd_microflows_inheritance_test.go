@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -114,6 +115,39 @@ func TestTraverseFlow_InheritanceSplit(t *testing.T) {
 	assertLineContains(t, lines, "cast $SpecificInput;")
 	assertLineContains(t, lines, "else")
 	assertLineContains(t, lines, "end split;")
+}
+
+func TestTraverseFlow_InheritanceSplitPreservesExplicitCaseOrder(t *testing.T) {
+	e := newTestExecutor()
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("split"),
+			VariableName:        "Input",
+		},
+		mkID("merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+	}
+	accountFlow := mkBranchFlow("split", "merge", &microflows.InheritanceCase{EntityQualifiedName: "Sample.Account"})
+	userFlow := mkBranchFlow("split", "merge", &microflows.InheritanceCase{EntityQualifiedName: "Sample.User"})
+	applyInheritanceSplitCaseOrder(accountFlow, 0)
+	applyInheritanceSplitCaseOrder(userFlow, 1)
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("split"): {userFlow, accountFlow},
+	}
+	splitMergeMap := map[model.ID]model.ID{mkID("split"): mkID("merge")}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("split"), activityMap, flowsByOrigin, splitMergeMap, visited, nil, nil, &lines, 1, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	accountIdx := strings.Index(out, "case Sample.Account")
+	userIdx := strings.Index(out, "case Sample.User")
+	if accountIdx == -1 || userIdx == -1 {
+		t.Fatalf("missing expected cases:\n%s", out)
+	}
+	if accountIdx > userIdx {
+		t.Fatalf("case order was not preserved:\n%s", out)
+	}
 }
 
 func TestLastStmtIsReturn_InheritanceSplitAllBranchesReturn(t *testing.T) {

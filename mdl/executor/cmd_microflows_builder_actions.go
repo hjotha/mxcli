@@ -505,6 +505,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		id        model.ID
 		caseValue string
 		fromSplit bool
+		order     int
 	}
 	var branchTails []branchTail
 
@@ -518,7 +519,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		branchIndex++
 		if len(body) == 0 {
 			allBranchesReturn = false
-			branchTails = append(branchTails, branchTail{id: splitID, caseValue: caseValue, fromSplit: true})
+			branchTails = append(branchTails, branchTail{id: splitID, caseValue: caseValue, fromSplit: true, order: branchNumber})
 			return
 		}
 
@@ -550,6 +551,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 				if caseValue == "" {
 					flow = newHorizontalFlow(splitID, actID)
 				}
+				applyInheritanceSplitCaseOrder(flow, branchNumber)
 				fb.flows = append(fb.flows, flow)
 			} else {
 				if pendingCase != "" {
@@ -601,11 +603,14 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		fb.objects = append(fb.objects, merge)
 		for _, tail := range branchTails {
 			if tail.fromSplit {
+				var flow *microflows.SequenceFlow
 				if tail.caseValue == "" {
-					fb.flows = append(fb.flows, newHorizontalFlow(splitID, merge.ID))
+					flow = newHorizontalFlow(splitID, merge.ID)
 				} else {
-					fb.flows = append(fb.flows, newDownwardFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue))
+					flow = newDownwardFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue)
 				}
+				applyInheritanceSplitCaseOrder(flow, tail.order)
+				fb.flows = append(fb.flows, flow)
 			} else {
 				if tail.caseValue != "" {
 					fb.flows = append(fb.flows, newHorizontalFlowWithCase(tail.id, merge.ID, tail.caseValue))
@@ -722,6 +727,39 @@ func appendInheritanceBodies(s *ast.InheritanceSplitStmt) []ast.MicroflowStateme
 	}
 	stmts = append(stmts, s.ElseBody...)
 	return stmts
+}
+
+type inheritanceSplitCaseOrderAnchor struct {
+	origin      int
+	destination int
+}
+
+var inheritanceSplitCaseOrderAnchors = []inheritanceSplitCaseOrderAnchor{
+	{AnchorTop, AnchorLeft},
+	{AnchorRight, AnchorLeft},
+	{AnchorBottom, AnchorLeft},
+	{AnchorLeft, AnchorLeft},
+	{AnchorTop, AnchorTop},
+	{AnchorRight, AnchorTop},
+	{AnchorBottom, AnchorTop},
+	{AnchorLeft, AnchorTop},
+	{AnchorTop, AnchorRight},
+	{AnchorRight, AnchorRight},
+	{AnchorBottom, AnchorRight},
+	{AnchorLeft, AnchorRight},
+	{AnchorTop, AnchorBottom},
+	{AnchorRight, AnchorBottom},
+	{AnchorBottom, AnchorBottom},
+	{AnchorLeft, AnchorBottom},
+}
+
+func applyInheritanceSplitCaseOrder(flow *microflows.SequenceFlow, order int) {
+	if flow == nil || order < 0 || order >= len(inheritanceSplitCaseOrderAnchors) {
+		return
+	}
+	pair := inheritanceSplitCaseOrderAnchors[order]
+	flow.OriginConnectionIndex = pair.origin
+	flow.DestinationConnectionIndex = pair.destination
 }
 
 func qualifiedNameString(qn ast.QualifiedName) string {
