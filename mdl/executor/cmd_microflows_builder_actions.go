@@ -469,6 +469,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		caseValue string
 		fromSplit bool
 		order     int
+		anchor    *ast.FlowAnchors
 	}
 	var branchTails []branchTail
 
@@ -491,8 +492,10 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		fb.endsWithReturn = false
 
 		var lastID model.ID
+		var prevAnchor *ast.FlowAnchors
 		pendingCase := ""
 		for _, stmt := range body {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID == "" {
 				continue
@@ -511,19 +514,21 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 				} else {
 					flow = newDownwardFlowWithInheritanceCase(splitID, actID, caseValue)
 				}
-				if caseValue == "" {
-					flow = newHorizontalFlow(splitID, actID)
-				}
-				applyInheritanceSplitCaseOrder(flow, branchNumber)
+				applyUserAnchors(flow, nil, thisAnchor)
 				fb.flows = append(fb.flows, flow)
 			} else {
 				if pendingCase != "" {
-					fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, actID, pendingCase))
+					flow := newHorizontalFlowWithCase(lastID, actID, pendingCase)
+					applyUserAnchors(flow, prevAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 					pendingCase = ""
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastID, actID))
+					flow := newHorizontalFlow(lastID, actID)
+					applyUserAnchors(flow, prevAnchor, thisAnchor)
+					fb.flows = append(fb.flows, flow)
 				}
 			}
+			prevAnchor = thisAnchor
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
 				fb.nextConnectionPoint = ""
@@ -537,7 +542,7 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		if !lastStmtIsReturn(body) {
 			allBranchesReturn = false
 			if lastID != "" {
-				branchTails = append(branchTails, branchTail{id: lastID, caseValue: pendingCase})
+				branchTails = append(branchTails, branchTail{id: lastID, caseValue: pendingCase, anchor: prevAnchor})
 			}
 		}
 	}
@@ -567,8 +572,8 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 		for _, tail := range branchTails {
 			if tail.fromSplit {
 				var flow *microflows.SequenceFlow
-				if tail.caseValue == "" {
-					flow = newHorizontalFlow(splitID, merge.ID)
+				if tail.order == 0 {
+					flow = newHorizontalFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue)
 				} else {
 					flow = newDownwardFlowWithInheritanceCase(splitID, merge.ID, tail.caseValue)
 				}
@@ -576,9 +581,13 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 				fb.flows = append(fb.flows, flow)
 			} else {
 				if tail.caseValue != "" {
-					fb.flows = append(fb.flows, newHorizontalFlowWithCase(tail.id, merge.ID, tail.caseValue))
+					flow := newHorizontalFlowWithCase(tail.id, merge.ID, tail.caseValue)
+					applyUserAnchors(flow, tail.anchor, nil)
+					fb.flows = append(fb.flows, flow)
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(tail.id, merge.ID))
+					flow := newHorizontalFlow(tail.id, merge.ID)
+					applyUserAnchors(flow, tail.anchor, nil)
+					fb.flows = append(fb.flows, flow)
 				}
 			}
 		}
