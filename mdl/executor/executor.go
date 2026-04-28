@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -160,9 +162,31 @@ const (
 	// maxOutputLines is the per-statement line limit. Statements that produce more
 	// lines than this are aborted to prevent runaway output from infinite loops.
 	maxOutputLines = 10_000
-	// executeTimeout is the maximum wall-clock time allowed for a single statement.
-	executeTimeout = 5 * time.Minute
+	// defaultExecuteTimeout is the maximum wall-clock time allowed for a single
+	// statement when MXCLI_EXEC_TIMEOUT is not set.
+	defaultExecuteTimeout = 5 * time.Minute
 )
+
+// configuredExecuteTimeout returns the per-statement wall-clock timeout. The
+// value is read from the MXCLI_EXEC_TIMEOUT environment variable on every call
+// so long-running audits can opt into a higher ceiling without recompiling.
+//
+// Accepts either a Go duration ("12m", "2h30m") or a bare number of seconds
+// ("900"). Falls back to defaultExecuteTimeout when the variable is unset,
+// empty, or fails to parse.
+func configuredExecuteTimeout() time.Duration {
+	raw := os.Getenv("MXCLI_EXEC_TIMEOUT")
+	if raw == "" {
+		return defaultExecuteTimeout
+	}
+	if d, err := time.ParseDuration(raw); err == nil && d > 0 {
+		return d
+	}
+	if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+	return defaultExecuteTimeout
+}
 
 // BackendFactory creates a new backend instance for connecting to a project.
 type BackendFactory func() backend.FullBackend
@@ -221,7 +245,7 @@ func (e *Executor) SetLogger(l *diaglog.Logger) {
 
 // Execute runs a single MDL statement with output-line and wall-clock guards.
 // Each statement gets a fresh line budget. If the statement exceeds maxOutputLines
-// lines of output or runs longer than executeTimeout, it is aborted with an error.
+// lines of output or runs longer than the configured timeout, it is aborted with an error.
 func (e *Executor) Execute(stmt ast.Statement) error {
 	start := time.Now()
 
@@ -233,6 +257,7 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 	// Enforce wall-clock timeout via context.WithTimeout.
 	// The goroutine pattern is retained because handlers are not yet
 	// context-aware; threading context through handlers is a follow-up.
+	executeTimeout := configuredExecuteTimeout()
 	ctx, cancel := context.WithTimeout(context.Background(), executeTimeout)
 	defer cancel()
 
