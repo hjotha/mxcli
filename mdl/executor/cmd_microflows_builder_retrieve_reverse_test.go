@@ -81,11 +81,38 @@ func TestAddRetrieveAction_ReverseReferenceNonPersistableParentUsesAssociationSo
 	}
 }
 
+func TestAddRetrieveAction_ReferenceSetRegistersOtherEntityListType(t *testing.T) {
+	fb := newRetrieveAssociationFlowBuilderWithType(domainmodel.AssociationTypeReferenceSet, domainmodel.AssociationOwnerBoth, true, true)
+	fb.varTypes["Parent"] = "Sample.Parent"
+
+	fb.addRetrieveAction(&ast.RetrieveStmt{
+		Variable:      "Children",
+		StartVariable: "Parent",
+		Source:        ast.QualifiedName{Module: "Sample", Name: "Parent_Child"},
+	})
+
+	action := onlyRetrieveAction(t, fb)
+	source, ok := action.Source.(*microflows.AssociationRetrieveSource)
+	if !ok {
+		t.Fatalf("reference-set retrieve source = %T, want AssociationRetrieveSource", action.Source)
+	}
+	if source.StartVariable != "Parent" || source.AssociationQualifiedName != "Sample.Parent_Child" {
+		t.Fatalf("association source = %#v", source)
+	}
+	if got := fb.varTypes["Children"]; got != "List of Sample.Child" {
+		t.Fatalf("result var type = %q, want List of Sample.Child", got)
+	}
+}
+
 func newRetrieveAssociationFlowBuilder(owner domainmodel.AssociationOwner) *flowBuilder {
 	return newRetrieveAssociationFlowBuilderWithPersistability(owner, true, true)
 }
 
 func newRetrieveAssociationFlowBuilderWithPersistability(owner domainmodel.AssociationOwner, parentPersistable, childPersistable bool) *flowBuilder {
+	return newRetrieveAssociationFlowBuilderWithType(domainmodel.AssociationTypeReference, owner, parentPersistable, childPersistable)
+}
+
+func newRetrieveAssociationFlowBuilderWithType(associationType domainmodel.AssociationType, owner domainmodel.AssociationOwner, parentPersistable, childPersistable bool) *flowBuilder {
 	moduleID := model.ID("sample-module")
 	parentID := model.ID("parent-entity")
 	childID := model.ID("child-entity")
@@ -113,7 +140,7 @@ func newRetrieveAssociationFlowBuilderWithPersistability(owner domainmodel.Assoc
 							Name:     "Parent_Child",
 							ParentID: parentID,
 							ChildID:  childID,
-							Type:     domainmodel.AssociationTypeReference,
+							Type:     associationType,
 							Owner:    owner,
 						},
 					},

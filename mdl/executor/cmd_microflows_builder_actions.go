@@ -329,6 +329,18 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						otherEntity = assocInfo.parentEntityQN
 					}
 					fb.varTypes[s.Variable] = otherEntity
+				} else if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReferenceSet {
+					// ReferenceSet traversal returns a list of the entity on the other side,
+					// not a list typed as the association itself.
+					otherEntity := assocInfo.childEntityQN
+					if startVarType == assocInfo.childEntityQN {
+						otherEntity = assocInfo.parentEntityQN
+					}
+					if otherEntity != "" {
+						fb.varTypes[s.Variable] = "List of " + otherEntity
+					} else {
+						fb.varTypes[s.Variable] = "List of " + assocQN
+					}
 				} else {
 					// ReferenceSet or unknown: returns a list
 					fb.varTypes[s.Variable] = "List of " + assocQN
