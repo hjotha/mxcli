@@ -1302,7 +1302,7 @@ func emitInheritanceSplitStatement(
 	*lines = append(*lines, indentStr+"split type "+varName)
 
 	var elseFlow *microflows.SequenceFlow
-	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+	for _, flow := range orderedInheritanceSplitFlows(findNormalFlows(flowsByOrigin[currentID])) {
 		caseName, ok := inheritanceCaseName(flow, entityNames)
 		if !ok {
 			elseFlow = flow
@@ -1387,11 +1387,31 @@ func orderedEnumSplitFlows(flows []*microflows.SequenceFlow) []*microflows.Seque
 	return ordered
 }
 
+func orderedInheritanceSplitFlows(flows []*microflows.SequenceFlow) []*microflows.SequenceFlow {
+	ordered := append([]*microflows.SequenceFlow(nil), flows...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return inheritanceSplitCaseOrder(ordered[i]) < inheritanceSplitCaseOrder(ordered[j])
+	})
+	return ordered
+}
+
 func splitCaseOrder(flow *microflows.SequenceFlow) int {
 	if flow == nil {
 		return 1 << 20
 	}
 	for i, pair := range splitCaseOrderAnchors {
+		if flow.OriginConnectionIndex == pair.origin && flow.DestinationConnectionIndex == pair.destination {
+			return i
+		}
+	}
+	return (1 << 10) + flow.OriginConnectionIndex*4 + flow.DestinationConnectionIndex
+}
+
+func inheritanceSplitCaseOrder(flow *microflows.SequenceFlow) int {
+	if flow == nil {
+		return 1 << 20
+	}
+	for i, pair := range inheritanceSplitCaseOrderAnchors {
 		if flow.OriginConnectionIndex == pair.origin && flow.DestinationConnectionIndex == pair.destination {
 			return i
 		}
