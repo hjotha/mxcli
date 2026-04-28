@@ -57,7 +57,7 @@ func TestBuilder_InheritanceSplitAndCastAction(t *testing.T) {
 	}
 	for _, flow := range oc.Flows {
 		if split != nil && flow.OriginID == split.ID {
-			if _, ok := flow.CaseValue.(*microflows.InheritanceCase); ok {
+			if caseValue, ok := flow.CaseValue.(*microflows.InheritanceCase); ok && caseValue.EntityQualifiedName == "Sample.SpecializedInput" {
 				caseFlow = flow
 			}
 		}
@@ -228,6 +228,89 @@ func TestBuilder_InheritanceSplitNestedEmptyThenBranchKeepsContinuationCase(t *t
 		}
 	}
 	t.Fatal("nested empty-then inheritance branch must carry CaseValue=true to the inheritance merge")
+}
+
+func TestBuilder_InheritanceSplitBranchAnchorsApplyToBodyFlows(t *testing.T) {
+	fb := &flowBuilder{spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	message := &ast.ShowMessageStmt{
+		Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "No matching account"},
+		Type:    "Information",
+		Annotations: &ast.ActivityAnnotations{
+			Anchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+		},
+	}
+	bodyReturn := &ast.ReturnStmt{
+		Annotations: &ast.ActivityAnnotations{
+			Anchor: &ast.FlowAnchors{From: ast.AnchorSideUnset, To: ast.AnchorSideTop},
+		},
+	}
+
+	oc := fb.buildFlowGraph([]ast.MicroflowStatement{
+		&ast.InheritanceSplitStmt{
+			Variable: "Input",
+			Cases: []ast.InheritanceSplitCase{
+				{
+					Entity: ast.QualifiedName{Module: "Sample", Name: "Primary"},
+					Body:   []ast.MicroflowStatement{&ast.ReturnStmt{}},
+				},
+				{
+					Entity: ast.QualifiedName{Module: "Sample", Name: "Secondary"},
+					Body:   []ast.MicroflowStatement{message, bodyReturn},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{&ast.ReturnStmt{}},
+		},
+	}, nil)
+
+	var splitID, messageID model.ID
+	for _, obj := range oc.Objects {
+		switch obj := obj.(type) {
+		case *microflows.InheritanceSplit:
+			splitID = obj.ID
+		case *microflows.ActionActivity:
+			if _, ok := obj.Action.(*microflows.ShowMessageAction); ok {
+				messageID = obj.ID
+			}
+		}
+	}
+	if splitID == "" || messageID == "" {
+		t.Fatalf("expected split and show-message activity, got split=%q message=%q", splitID, messageID)
+	}
+
+	var splitToMessage, messageToReturn *microflows.SequenceFlow
+	var elseCase *microflows.InheritanceCase
+	for _, flow := range oc.Flows {
+		if flow.OriginID == splitID && flow.DestinationID == messageID {
+			splitToMessage = flow
+		}
+		if flow.OriginID == messageID {
+			messageToReturn = flow
+		}
+		if flow.OriginID == splitID {
+			if c, ok := flow.CaseValue.(*microflows.InheritanceCase); ok && c.EntityQualifiedName == "" {
+				elseCase = c
+			}
+		}
+	}
+	if splitToMessage == nil {
+		t.Fatal("expected inheritance split flow to annotated branch body")
+	}
+	if splitToMessage.OriginConnectionIndex != AnchorBottom || splitToMessage.DestinationConnectionIndex != AnchorTop {
+		t.Fatalf("split branch anchors = (%d,%d), want (%d,%d)",
+			splitToMessage.OriginConnectionIndex, splitToMessage.DestinationConnectionIndex,
+			AnchorBottom, AnchorTop)
+	}
+	if messageToReturn == nil {
+		t.Fatal("expected message to return flow")
+	}
+	if messageToReturn.OriginConnectionIndex != AnchorBottom || messageToReturn.DestinationConnectionIndex != AnchorTop {
+		t.Fatalf("body flow anchors = (%d,%d), want (%d,%d)",
+			messageToReturn.OriginConnectionIndex, messageToReturn.DestinationConnectionIndex,
+			AnchorBottom, AnchorTop)
+	}
+	if elseCase == nil {
+		t.Fatal("expected ELSE branch to keep an explicit empty inheritance case")
+	}
 }
 
 func assertLineContains(t *testing.T, lines []string, want string) {
