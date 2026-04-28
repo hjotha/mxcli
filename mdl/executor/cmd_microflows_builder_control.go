@@ -106,6 +106,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	}
 
 	thenStartX := splitX + SplitWidth + HorizontalSpacing/2
+	branchEntryVarState := fb.snapshotVariableState()
+	var postIfVarState flowBuilderVariableState
+	postIfVarStateSet := false
 
 	if hasElseBody {
 		// IF WITH ELSE: TRUE path horizontal (happy path), FALSE path below
@@ -143,6 +146,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				}
 			}
 		}
+		thenExitVarState := fb.snapshotVariableState()
+		fb.restoreVariableState(branchEntryVarState)
 
 		// Connect THEN body to merge only if it doesn't end with RETURN and a merge exists.
 		// When needMerge=false, the continuing branch is wired up by the parent via
@@ -196,6 +201,16 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				}
 			}
 		}
+		elseExitVarState := fb.snapshotVariableState()
+		switch {
+		case thenReturns && !elseReturns:
+			postIfVarState = elseExitVarState
+		case elseReturns && !thenReturns:
+			postIfVarState = thenExitVarState
+		default:
+			postIfVarState = branchEntryVarState
+		}
+		postIfVarStateSet = true
 
 		// Connect ELSE body to merge only if it doesn't end with RETURN and a merge exists.
 		// When needMerge=false, the continuing branch is handled by the parent; emitting
@@ -255,6 +270,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				}
 			}
 		}
+		postIfVarState = branchEntryVarState
+		postIfVarStateSet = true
 
 		// Connect THEN body to merge only if it doesn't end with RETURN and a merge exists.
 		// With no ELSE + thenReturns, needMerge=false and the FALSE path is threaded through
@@ -273,6 +290,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				fb.flows = append(fb.flows, flow)
 			}
 		}
+	}
+	if postIfVarStateSet {
+		fb.restoreVariableState(postIfVarState)
 	}
 
 	// If both branches end with RETURN, the flow terminates here

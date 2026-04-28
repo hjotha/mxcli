@@ -74,3 +74,50 @@ func TestBuildFlowGraph_DuplicateImplicitOutputAtSamePositionGetsLocalAlias(t *t
 		t.Fatalf("return value = %q, want $SelectedItem_2", returnValue)
 	}
 }
+
+func TestBuildFlowGraph_TerminalBranchDuplicateOutputDoesNotForceAlias(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "Sample", Name: "Item"}
+	sharedPosition := &ast.ActivityAnnotations{Position: &ast.Position{X: 400, Y: 100}}
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.RetrieveStmt{
+					Variable:    "CurrentItem",
+					Source:      entityRef,
+					Limit:       "1",
+					Annotations: sharedPosition,
+				},
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "CurrentItem"}},
+			},
+		},
+		&ast.RetrieveStmt{
+			Variable:    "CurrentItem",
+			Source:      entityRef,
+			Limit:       "1",
+			Annotations: sharedPosition,
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "CurrentItem"}},
+	}
+
+	fb := &flowBuilder{
+		posX: 100, posY: 100, baseY: 100, spacing: HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	var outputs []string
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		if retrieve, ok := activity.Action.(*microflows.RetrieveAction); ok {
+			outputs = append(outputs, retrieve.OutputVariable)
+		}
+	}
+	if strings.Join(outputs, ",") != "CurrentItem,CurrentItem" {
+		t.Fatalf("retrieve outputs = %#v, want duplicate name preserved without alias", outputs)
+	}
+}
