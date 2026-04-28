@@ -150,6 +150,92 @@ func TestTraverseFlow_InheritanceSplitPreservesExplicitCaseOrder(t *testing.T) {
 	}
 }
 
+func TestTraverseFlow_NestedInheritanceSplitKeepsParentTailOutsideCase(t *testing.T) {
+	e := newTestExecutor()
+	entityID := mkID("entity-specialized")
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("init"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("init")},
+			Action: &microflows.CreateVariableAction{
+				VariableName: "TokenValue",
+				InitialValue: "''",
+			},
+		},
+		mkID("outer_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("outer_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UseToken"},
+		},
+		mkID("before_type_split"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("before_type_split")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "before type split"}}},
+		},
+		mkID("type_split"): &microflows.InheritanceSplit{
+			BaseMicroflowObject: mkObj("type_split"),
+			VariableName:        "Input",
+		},
+		mkID("set_token"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("set_token")},
+			Action:       &microflows.ChangeVariableAction{VariableName: "TokenValue", Value: "$Input/Value"},
+		},
+		mkID("failed_log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("failed_log")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "no token"}}},
+		},
+		mkID("failed_return"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("failed_return"),
+			ReturnValue:         "empty",
+		},
+		mkID("outer_merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("outer_merge")},
+		mkID("tail"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("tail")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'App'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "tail after split"}}},
+		},
+		mkID("end"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("end"),
+			ReturnValue:         "'ok'",
+		},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "init")},
+		mkID("init"):  {mkFlow("init", "outer_split")},
+		mkID("outer_split"): {
+			mkBranchFlow("outer_split", "before_type_split", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("outer_split", "outer_merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("before_type_split"): {mkFlow("before_type_split", "type_split")},
+		mkID("type_split"): {
+			mkBranchFlow("type_split", "set_token", &microflows.InheritanceCase{EntityID: entityID}),
+			mkBranchFlow("type_split", "failed_log", &microflows.InheritanceCase{}),
+		},
+		mkID("set_token"):   {mkFlow("set_token", "outer_merge")},
+		mkID("failed_log"):  {mkFlow("failed_log", "failed_return")},
+		mkID("outer_merge"): {mkFlow("outer_merge", "tail")},
+		mkID("tail"):        {mkFlow("tail", "end")},
+	}
+	splitMergeMap := map[model.ID]model.ID{mkID("outer_split"): mkID("outer_merge")}
+	entityNames := map[model.ID]string{entityID: "Sample.SpecializedInput"}
+
+	var lines []string
+	visited := make(map[model.ID]bool)
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, visited, entityNames, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	tail := strings.Index(out, "tail after split")
+	endSplit := strings.Index(out, "end split;")
+	endIf := strings.Index(out, "end if;")
+	if tail == -1 {
+		t.Fatalf("expected parent tail after nested inheritance split:\n%s", out)
+	}
+	if endSplit == -1 || tail < endSplit {
+		t.Fatalf("parent tail must not be emitted inside the inheritance case:\n%s", out)
+	}
+	if endIf == -1 || tail < endIf {
+		t.Fatalf("parent tail must remain after the outer IF closes:\n%s", out)
+	}
+}
+
 func TestLastStmtIsReturn_InheritanceSplitAllBranchesReturn(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.InheritanceSplitStmt{
@@ -219,8 +305,22 @@ func TestBuilder_InheritanceSplitNestedEmptyThenBranchKeepsContinuationCase(t *t
 		if flow.OriginID != nestedSplitID {
 			continue
 		}
-		caseValue, ok := flow.CaseValue.(microflows.EnumerationCase)
-		if !ok || caseValue.Value != "true" {
+		// After PR #337 the expression split uses ExpressionCase (pointer or
+		// value receiver) with Expression="true"/"false" rather than
+		// EnumerationCase. Accept either representation so the test
+		// documents the intent without pinning the case shape.
+		value := ""
+		switch c := flow.CaseValue.(type) {
+		case microflows.EnumerationCase:
+			value = c.Value
+		case *microflows.EnumerationCase:
+			value = c.Value
+		case microflows.ExpressionCase:
+			value = c.Expression
+		case *microflows.ExpressionCase:
+			value = c.Expression
+		}
+		if value != "true" {
 			continue
 		}
 		if _, ok := objects[flow.DestinationID].(*microflows.ExclusiveMerge); ok {
