@@ -109,6 +109,60 @@ func TestBuilder_AnchorInsideElseBranch(t *testing.T) {
 	}
 }
 
+// TestBuilder_AnchorFalseBranchTo_IfWithoutElse pins a regression: when the
+// describer emits
+//
+//	@anchor(to: left, true: (from: right, to: left), false: (from: bottom, to: top))
+//
+// on an IF-without-ELSE split, the writer used to apply only the FROM side of
+// the false-branch anchor to the split→merge flow, letting the default (Left)
+// overwrite the intended `to: top`. Re-describing produced `false: (from: bottom, to: left)`.
+func TestBuilder_AnchorFalseBranchTo_IfWithoutElse(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "inside"}},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				FalseBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+			},
+		},
+	}
+
+	oc := buildWithAnchors(body)
+
+	// The split → merge false flow must land on merge's Top side, not the default Left.
+	if !hasFlow(oc.Flows, AnchorBottom, AnchorTop) {
+		t.Errorf("expected false branch split→merge flow Bottom→Top, got %+v", oc.Flows)
+	}
+}
+
+// TestBuilder_AnchorTrueBranchTo_EmptyThenIfWithElse is the ELSE-branch mirror
+// of the cluster B4 regression: an empty THEN body connecting straight to the
+// merge must honor the trueBranchAnchor.To.
+func TestBuilder_AnchorTrueBranchTo_EmptyThenIfWithElse(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody:  nil, // empty THEN body
+			ElseBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "else"}},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				TrueBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideRight, To: ast.AnchorSideTop},
+			},
+		},
+	}
+
+	oc := buildWithAnchors(body)
+
+	// Empty THEN → merge: must honor the user's Right→Top anchor, not the default Right→Left.
+	if !hasFlow(oc.Flows, AnchorRight, AnchorTop) {
+		t.Errorf("expected true branch split→merge flow Right→Top, got %+v", oc.Flows)
+	}
+}
+
 func TestBuilder_AnchorToTopOnReturnPreservedInsideElse(t *testing.T) {
 	// Minimal case: single-statement ELSE whose only statement is a RETURN
 	// carrying @anchor(to: top). The flow from the split to that return's
