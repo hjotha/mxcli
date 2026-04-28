@@ -1,0 +1,61 @@
+-- ============================================================================
+-- Bug #341: Microflow call BSON field order produced CE0117 in Studio Pro
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `mxcli exec` could roundtrip the textual MDL of a microflow call
+--   (`$Result = call microflow Module.Target (Param = $Var);`) unchanged,
+--   but Studio Pro flagged the resulting activity with
+--     [CE0117] expression error on the call activity
+--   even though the MDL source had not been edited. The cause was BSON
+--   field order:
+--   - The writer emitted result-variable fields BEFORE the nested
+--     `MicroflowCall` document.
+--   - Inside `MicroflowCall`, `QueueSettings` was emitted BEFORE
+--     `ParameterMappings`.
+--   - Each `MicroflowCallParameterMapping` was emitted with `Parameter`
+--     BEFORE `Argument`.
+--   Studio Pro's expression validator depends on this order being stable
+--   to resolve parameter references.
+--
+-- After fix:
+--   `serializeMicroflowAction` now emits:
+--   - `MicroflowCallAction`: $ID, $Type, ErrorHandlingType, MicroflowCall,
+--     ResultVariableName, UseReturnVariable (call payload before result fields).
+--   - `MicroflowCall`: $ID, $Type, Microflow, ParameterMappings, QueueSettings.
+--   - `MicroflowCallParameterMapping`: $ID, $Type, Argument, Parameter.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/341-microflow-call-bson-field-order.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest341.MF_Caller"
+--   `mx check` against the resulting MPR must report 0 errors and the
+--   call activity must not surface CE0117 in Studio Pro.
+-- ============================================================================
+
+create module BugTest341;
+
+create entity BugTest341.Item (
+  Name : string(100)
+);
+/
+
+-- Callee with one parameter, exercising the parameter-mapping serialization.
+create microflow BugTest341.MF_RenameItem (
+  $Item: BugTest341.Item,
+  $NewName: string
+)
+begin
+  change $Item (Name = $NewName);
+end;
+/
+
+-- Caller — produces a MicroflowCallAction whose nested MicroflowCall
+-- contains ParameterMappings. Field order in the serialized BSON must
+-- match Studio Pro's expectation.
+create microflow BugTest341.MF_Caller (
+  $Item: BugTest341.Item
+)
+begin
+  call microflow BugTest341.MF_RenameItem (Item = $Item, NewName = 'updated');
+end;
+/
