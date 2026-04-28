@@ -833,7 +833,7 @@ func traverseFlowUntilMerge(
 		startLine := len(*lines) + headerLineCount
 		nestedMergeID := splitMergeMap[currentID]
 		emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-		emitInheritanceSplitStatement(ctx, currentID, nestedMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		emitInheritanceSplitStatement(ctx, currentID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 		if nestedMergeID != "" && nestedMergeID != mergeID {
 			visited[nestedMergeID] = true
@@ -1353,7 +1353,7 @@ func emitEnumSplitStatement(
 func emitInheritanceSplitStatement(
 	ctx *ExecContext,
 	currentID model.ID,
-	mergeID model.ID,
+	stopID model.ID,
 	activityMap map[model.ID]microflows.MicroflowObject,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
 	flowsByDest map[model.ID][]*microflows.SequenceFlow,
@@ -1378,6 +1378,11 @@ func emitInheritanceSplitStatement(
 	indentStr := strings.Repeat("  ", indent)
 	*lines = append(*lines, indentStr+"split type "+varName)
 
+	branchStopID := splitMergeMap[currentID]
+	if branchStopID == "" {
+		branchStopID = stopID
+	}
+
 	var elseFlow *microflows.SequenceFlow
 	for _, flow := range orderedInheritanceSplitFlows(findNormalFlows(flowsByOrigin[currentID])) {
 		caseName, ok := inheritanceCaseName(flow, entityNames)
@@ -1386,11 +1391,11 @@ func emitInheritanceSplitStatement(
 			continue
 		}
 		*lines = append(*lines, indentStr+"case "+caseName)
-		traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+		traverseFlowUntilMerge(ctx, flow.DestinationID, branchStopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 	}
 	if elseFlow != nil {
 		*lines = append(*lines, indentStr+"else")
-		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, branchStopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 	}
 	*lines = append(*lines, indentStr+"end split;")
 }
