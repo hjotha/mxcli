@@ -6,6 +6,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -1160,7 +1161,7 @@ func emitInheritanceSplitStatement(
 	*lines = append(*lines, indentStr+"split type "+varName)
 
 	var elseFlow *microflows.SequenceFlow
-	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+	for _, flow := range orderedInheritanceSplitFlows(findNormalFlows(flowsByOrigin[currentID])) {
 		caseName, ok := inheritanceCaseName(flow, entityNames)
 		if !ok {
 			elseFlow = flow
@@ -1197,6 +1198,26 @@ func inheritanceCaseName(flow *microflows.SequenceFlow, entityNames map[model.ID
 		}
 	}
 	return "", false
+}
+
+func orderedInheritanceSplitFlows(flows []*microflows.SequenceFlow) []*microflows.SequenceFlow {
+	ordered := append([]*microflows.SequenceFlow(nil), flows...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return inheritanceSplitCaseOrder(ordered[i]) < inheritanceSplitCaseOrder(ordered[j])
+	})
+	return ordered
+}
+
+func inheritanceSplitCaseOrder(flow *microflows.SequenceFlow) int {
+	if flow == nil {
+		return 1 << 20
+	}
+	for i, pair := range inheritanceSplitCaseOrderAnchors {
+		if flow.OriginConnectionIndex == pair.origin && flow.DestinationConnectionIndex == pair.destination {
+			return i
+		}
+	}
+	return (1 << 10) + flow.OriginConnectionIndex*4 + flow.DestinationConnectionIndex
 }
 
 func cloneVisited(visited map[model.ID]bool) map[model.ID]bool {
