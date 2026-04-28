@@ -49,13 +49,14 @@ type flowBuilder struct {
 	// be overridden by the user. Cleared after each flow is created.
 	previousStmtAnchor *ast.FlowAnchors
 	// Cached flow lists to avoid repeated backend calls during lookups.
-	microflowsCache       []*microflows.Microflow
-	microflowsCacheLoaded bool
-	nanoflowsCache        []*microflows.Nanoflow
-	nanoflowsCacheLoaded  bool
-	manualLoopBackTarget  model.ID
-	variableAliases       map[string]string
-	outputVarPositions    map[string]model.Point
+	microflowsCache        []*microflows.Microflow
+	microflowsCacheLoaded  bool
+	nanoflowsCache         []*microflows.Nanoflow
+	nanoflowsCacheLoaded   bool
+	manualLoopBackTarget   model.ID
+	callOutputDeclarations map[*ast.CallMicroflowStmt]bool
+	variableAliases        map[string]string
+	outputVarPositions     map[string]model.Point
 }
 
 // addError records a validation error during flow building.
