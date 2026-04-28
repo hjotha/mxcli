@@ -1,0 +1,69 @@
+-- ============================================================================
+-- Bug #375: REST HttpResponse result handling serialized as string
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   When a Studio Pro REST call action bound the complete HTTP response
+--   to an output variable, the parser/AST captured this as
+--   `ResultHandlingHttpResponse` and the action-level
+--   `ResultHandlingType` was `HttpResponse`. The writer, however, did
+--   NOT have an explicit branch for `ResultHandlingHttpResponse` inside
+--   `serializeRestResultHandling`, so it fell through to the string
+--   default. The serialized result variable was emitted as
+--   `DataTypes$StringType`, not the expected
+--   `DataTypes$ObjectType` bound to `System.HttpResponse`.
+--   Studio Pro then surfaced a type mismatch on the bound output
+--   variable, and dependent activities that reached into the response
+--   (`$Response/Content`, `$Response/StatusCode`) failed validation
+--   with CE0117.
+--
+-- After fix (writer only):
+--   `serializeRestResultHandling` now has an explicit
+--   `ResultHandlingHttpResponse` branch that emits a `DataTypes$ObjectType`
+--   variable type bound to `System.HttpResponse`.
+--
+-- Scope note — known related gap:
+--   The MDL builder for `rest call ... returns response` still creates
+--   a `ResultHandlingString` (not `ResultHandlingHttpResponse`). See
+--   `mdl/executor/cmd_microflows_builder_calls.go` — the
+--   `case ast.RestResultResponse` arm carries the comment
+--   "we would need a different result type, but using String for now".
+--   That means newly authored MDL with `returns response` does NOT yet
+--   trigger the new writer branch. PR #376 fixes the symptom for
+--   existing Studio Pro models that already contain
+--   `ResultHandlingHttpResponse` in their BSON; the BUILDER side is
+--   tracked separately and verified by the SDK-level Go test
+--   `TestSerializeRestResultHandlingHttpResponseUsesObjectType`, which
+--   constructs the AST directly.
+--
+-- Usage (positive control):
+--   mxcli exec mdl-examples/bug-tests/375-rest-httpresponse-result-type.mdl -p app.mpr
+--   `mx check` against the resulting MPR must report 0 errors. The
+--   negative case (a Studio Pro REST call with HttpResponse binding)
+--   needs the existing BSON shape and is covered by the Go test above.
+-- ============================================================================
+
+create module BugTest375;
+
+-- Inline REST call returning a string. Once the builder learns to emit
+-- ResultHandlingHttpResponse for `returns response`, this script can be
+-- updated to use `returns response` and exercise the writer branch end
+-- to end.
+create microflow BugTest375.MF_RestCall ()
+returns boolean as $Ok
+begin
+  declare $Ok boolean = false;
+
+  $Body = rest call get 'https://httpbin.org/get'
+    header Accept = 'application/json'
+    timeout 15
+    returns string
+    on error continue;
+
+  if $Body != '' then
+    set $Ok = true;
+  end if;
+
+  return $Ok;
+end;
+/

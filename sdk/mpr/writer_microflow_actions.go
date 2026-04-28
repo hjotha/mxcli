@@ -813,6 +813,20 @@ func serializeRestResultHandling(rh microflows.ResultHandling, outputVar string)
 		)
 		return doc
 
+	case *microflows.ResultHandlingHttpResponse:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(h.ID))},
+			{Key: "$Type", Value: "Microflows$ResultHandling"},
+			{Key: "Bind", Value: outputVar != ""},
+			{Key: "ImportMappingCall", Value: nil},
+			{Key: "ResultVariableName", Value: outputVar},
+			{Key: "VariableType", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+				{Key: "$Type", Value: "DataTypes$ObjectType"},
+				{Key: "Entity", Value: "System.HttpResponse"},
+			}},
+		}
+
 	case *microflows.ResultHandlingNone:
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(h.ID))},

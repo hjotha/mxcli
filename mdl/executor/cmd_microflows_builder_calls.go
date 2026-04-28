@@ -729,10 +729,14 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		}
 	case ast.RestResultResponse:
-		resultHandling = &microflows.ResultHandlingString{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+		// Bind the full HTTP response object to the output variable. The writer
+		// emits the matching `DataTypes$ObjectType` bound to System.HttpResponse;
+		// the action-level `ResultHandlingType` is derived as "HttpResponse" from
+		// this concrete type.
+		resultHandling = &microflows.ResultHandlingHttpResponse{
+			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+			VariableName: s.OutputVariable,
 		}
-		// Note: For HttpResponse, we would need a different result type, but using String for now
 	case ast.RestResultMapping:
 		mappingQN := s.Result.MappingName.Module + "." + s.Result.MappingName.Name
 		entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name

@@ -937,6 +937,8 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 		case *microflows.ResultHandlingString:
 			sb.WriteString("String")
 			_ = rh // used for type assertion only
+		case *microflows.ResultHandlingHttpResponse:
+			sb.WriteString("response")
 		case *microflows.ResultHandlingMapping:
 			sb.WriteString("mapping ")
 			sb.WriteString(string(rh.MappingID))
