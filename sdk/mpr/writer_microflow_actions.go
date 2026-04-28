@@ -342,15 +342,16 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			formSettingsID = model.ID(generateUUID())
 		}
 
-		// Build ParameterMappings inside FormSettings
-		paramMappings := bson.A{int32(len(a.PageParameterMappings))}
+		// Build ParameterMappings inside FormSettings. Mendix storage lists use
+		// a marker as the first element; it is not the number of mappings.
+		paramMappings := bson.A{int32(2)}
 		for _, pm := range a.PageParameterMappings {
 			mapping := bson.D{
 				{Key: "$ID", Value: idToBsonBinary(string(pm.ID))},
 				{Key: "$Type", Value: "Forms$PageParameterMapping"}, // Forms$, not Microflows$
 				{Key: "Argument", Value: pm.Argument},
 				{Key: "Parameter", Value: pm.Parameter}, // BY_NAME_REFERENCE
-				{Key: "Variable", Value: nil},
+				{Key: "Variable", Value: emptyPageVariable()},
 			}
 			paramMappings = append(paramMappings, mapping)
 		}
@@ -472,6 +473,17 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 
 	default:
 		return nil
+	}
+}
+
+func emptyPageVariable() bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Forms$PageVariable"},
+		{Key: "PageParameter", Value: ""},
+		{Key: "SnippetParameter", Value: ""},
+		{Key: "UseAllPages", Value: false},
+		{Key: "Widget", Value: ""},
 	}
 }
 
