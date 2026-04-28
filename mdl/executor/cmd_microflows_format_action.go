@@ -299,6 +299,10 @@ func formatAction(
 				entityName = "Entity"
 			}
 
+			if startVar, assocName, ok := parseReverseAssociationRetrieve(ctx, dbSource, entityName); ok {
+				return fmt.Sprintf("retrieve $%s from $%s/%s;", outputVar, startVar, assocName)
+			}
+
 			stmt := fmt.Sprintf("retrieve $%s from %s", outputVar, entityName)
 
 			if dbSource.XPathConstraint != "" {
@@ -1146,6 +1150,156 @@ func formatTransformJsonAction(a *microflows.TransformJsonAction) string {
 	sb.WriteString(a.Transformation)
 	sb.WriteString(";")
 	return sb.String()
+}
+
+func parseReverseAssociationRetrieve(
+	ctx *ExecContext,
+	source *microflows.DatabaseRetrieveSource,
+	entityName string,
+) (string, string, bool) {
+	if ctx == nil || ctx.Backend == nil || source == nil || entityName == "" {
+		return "", "", false
+	}
+	if len(source.Sorting) > 0 || !isRangeAllOrNil(source.Range) {
+		return "", "", false
+	}
+
+	assocName, startVar, ok := parseReverseAssociationXPath(source.XPathConstraint)
+	if !ok || !databaseRetrieveMatchesAssociationTarget(ctx, entityName, assocName) {
+		return "", "", false
+	}
+	return startVar, assocName, true
+}
+
+func isRangeAllOrNil(r *microflows.Range) bool {
+	return r == nil || r.RangeType == "" || r.RangeType == microflows.RangeTypeAll
+}
+
+func parseReverseAssociationXPath(raw string) (string, string, bool) {
+	parts, ok := splitTopLevelXPathPredicates(raw)
+	if !ok || len(parts) != 1 {
+		return "", "", false
+	}
+
+	condition := strings.TrimSpace(parts[0])
+	if strings.ContainsAny(condition, "<>!") || strings.Count(condition, "=") != 1 {
+		return "", "", false
+	}
+
+	sides := strings.SplitN(condition, "=", 2)
+	assocName := strings.TrimSpace(sides[0])
+	startVar := strings.TrimSpace(sides[1])
+	if !isQualifiedAssociationName(assocName) || !strings.HasPrefix(startVar, "$") {
+		return "", "", false
+	}
+
+	startVar = strings.TrimPrefix(startVar, "$")
+	if !isSimpleMendixName(startVar) {
+		return "", "", false
+	}
+	return assocName, startVar, true
+}
+
+func isQualifiedAssociationName(name string) bool {
+	parts := strings.Split(name, ".")
+	return len(parts) == 2 && isSimpleMendixName(parts[0]) && isSimpleMendixName(parts[1])
+}
+
+func isSimpleMendixName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i, r := range name {
+		if r == '_' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || i > 0 && r >= '0' && r <= '9' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func databaseRetrieveMatchesAssociationTarget(ctx *ExecContext, entityName, assocQualifiedName string) bool {
+	moduleName, assocName, ok := strings.Cut(assocQualifiedName, ".")
+	if !ok {
+		return false
+	}
+
+	mod, err := ctx.Backend.GetModuleByName(moduleName)
+	if err != nil || mod == nil {
+		return false
+	}
+	dm, err := ctx.Backend.GetDomainModel(mod.ID)
+	if err != nil || dm == nil {
+		return false
+	}
+
+	entityNames := make(map[model.ID]string, len(dm.Entities))
+	for _, entity := range dm.Entities {
+		entityNames[entity.ID] = moduleName + "." + entity.Name
+	}
+	for _, assoc := range dm.Associations {
+		if assoc.Name == assocName {
+			return entityNames[assoc.ParentID] == entityName
+		}
+	}
+	return false
+}
+
+func splitTopLevelXPathPredicates(raw string) ([]string, bool) {
+	var parts []string
+	input := strings.TrimSpace(raw)
+	if input == "" {
+		return nil, false
+	}
+
+	i := 0
+	for i < len(input) {
+		for i < len(input) && (input[i] == ' ' || input[i] == '\t' || input[i] == '\r' || input[i] == '\n') {
+			i++
+		}
+		if i >= len(input) {
+			break
+		}
+		if input[i] != '[' {
+			return nil, false
+		}
+
+		start := i + 1
+		depth := 1
+		var quote byte
+		for i = start; i < len(input); i++ {
+			ch := input[i]
+			if quote != 0 {
+				if ch == quote {
+					quote = 0
+				}
+				continue
+			}
+			switch ch {
+			case '\'', '"':
+				quote = ch
+			case '[':
+				depth++
+			case ']':
+				depth--
+				if depth == 0 {
+					part := strings.TrimSpace(input[start:i])
+					parts = append(parts, part)
+					i++
+					goto nextPredicate
+				}
+			}
+		}
+		return nil, false
+
+	nextPredicate:
+	}
+
+	if len(parts) == 0 {
+		return nil, false
+	}
+
+	return parts, true
 }
 
 // --- Executor method wrappers for callers in unmigrated code and tests ---

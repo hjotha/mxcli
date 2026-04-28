@@ -303,6 +303,8 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		}
 
 		if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReference &&
+			assocInfo.Owner != domainmodel.AssociationOwnerBoth &&
+			assocInfo.parentPersistable &&
 			assocInfo.childEntityQN != "" && startVarType == assocInfo.childEntityQN {
 			// Reverse traversal on Reference: child → parent (one-to-many)
 			// Use DatabaseRetrieveSource with XPath to get a list of parent entities
@@ -330,6 +332,18 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						otherEntity = assocInfo.parentEntityQN
 					}
 					fb.varTypes[s.Variable] = otherEntity
+				} else if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReferenceSet {
+					// ReferenceSet traversal returns a list of the entity on the other side,
+					// not a list typed as the association itself.
+					otherEntity := assocInfo.childEntityQN
+					if startVarType == assocInfo.childEntityQN {
+						otherEntity = assocInfo.parentEntityQN
+					}
+					if otherEntity != "" {
+						fb.varTypes[s.Variable] = "List of " + otherEntity
+					} else {
+						fb.varTypes[s.Variable] = "List of " + assocQN
+					}
 				} else {
 					// ReferenceSet or unknown: returns a list
 					fb.varTypes[s.Variable] = "List of " + assocQN
@@ -865,9 +879,12 @@ func resolveMemberChangeFallback(mc *microflows.MemberChange, memberName string,
 
 // assocLookupResult holds resolved association metadata.
 type assocLookupResult struct {
-	Type           domainmodel.AssociationType
-	parentEntityQN string // Qualified name of the parent (FROM/owner) entity
-	childEntityQN  string // Qualified name of the child (TO/referenced) entity
+	Type              domainmodel.AssociationType
+	Owner             domainmodel.AssociationOwner
+	parentEntityQN    string // Qualified name of the parent (FROM/owner) entity
+	childEntityQN     string // Qualified name of the child (TO/referenced) entity
+	parentPersistable bool
+	childPersistable  bool
 }
 
 // lookupAssociation finds an association by module and name, returning its type
@@ -888,16 +905,21 @@ func (fb *flowBuilder) lookupAssociation(moduleName, assocName string) *assocLoo
 
 	// Build entity ID → qualified name map
 	entityNames := make(map[model.ID]string, len(dm.Entities))
+	entityPersistable := make(map[model.ID]bool, len(dm.Entities))
 	for _, e := range dm.Entities {
 		entityNames[e.ID] = moduleName + "." + e.Name
+		entityPersistable[e.ID] = e.Persistable
 	}
 
 	for _, a := range dm.Associations {
 		if a.Name == assocName {
 			return &assocLookupResult{
-				Type:           a.Type,
-				parentEntityQN: entityNames[a.ParentID],
-				childEntityQN:  entityNames[a.ChildID],
+				Type:              a.Type,
+				Owner:             a.Owner,
+				parentEntityQN:    entityNames[a.ParentID],
+				childEntityQN:     entityNames[a.ChildID],
+				parentPersistable: entityPersistable[a.ParentID],
+				childPersistable:  entityPersistable[a.ChildID],
 			}
 		}
 	}

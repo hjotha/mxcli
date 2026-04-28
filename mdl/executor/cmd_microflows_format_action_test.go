@@ -5,7 +5,9 @@ package executor
 import (
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -685,5 +687,119 @@ func TestFormatAction_Retrieve_Association(t *testing.T) {
 	want := "retrieve $Address from $Customer/MyModule.Customer_Address;"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_Retrieve_ReverseAssociationDatabaseSourceUsesCompactForm(t *testing.T) {
+	e := newTestExecutor()
+	e.backend = reverseAssociationBackend(t)
+	action := &microflows.RetrieveAction{
+		OutputVariable: "Domains",
+		Source: &microflows.DatabaseRetrieveSource{
+			EntityQualifiedName: "SampleRuntime.Domain",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
+			Range:               &microflows.Range{RangeType: microflows.RangeTypeAll},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "retrieve $Domains from $Runtime/SampleRuntime.Domain_Runtime;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_Retrieve_ReverseAssociationRequiresSimpleAllRange(t *testing.T) {
+	e := newTestExecutor()
+	e.backend = reverseAssociationBackend(t)
+	action := &microflows.RetrieveAction{
+		OutputVariable: "Domains",
+		Source: &microflows.DatabaseRetrieveSource{
+			EntityQualifiedName: "SampleRuntime.Domain",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
+			Range:               &microflows.Range{RangeType: microflows.RangeTypeFirst},
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "retrieve $Domains from SampleRuntime.Domain\n    where SampleRuntime.Domain_Runtime = $Runtime\n    limit 1;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_Retrieve_ReverseAssociationRequiresMatchingEntity(t *testing.T) {
+	e := newTestExecutor()
+	e.backend = reverseAssociationBackend(t)
+	action := &microflows.RetrieveAction{
+		OutputVariable: "Domains",
+		Source: &microflows.DatabaseRetrieveSource{
+			EntityQualifiedName: "SampleRuntime.Runtime",
+			XPathConstraint:     "[SampleRuntime.Domain_Runtime = $Runtime]",
+		},
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "retrieve $Domains from SampleRuntime.Runtime\n    where SampleRuntime.Domain_Runtime = $Runtime;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParseReverseAssociationXPathRejectsComplexPredicates(t *testing.T) {
+	tests := []string{
+		"[SampleRuntime.Domain_Runtime = $Runtime][Active = true]",
+		"[SampleRuntime.Domain_Runtime != $Runtime]",
+		"[SampleRuntime.Domain_Runtime = $Runtime/Other.Assoc]",
+		"[SampleRuntime.Domain_Runtime = 'literal']",
+		"SampleRuntime.Domain_Runtime = $Runtime",
+	}
+
+	for _, tt := range tests {
+		if assoc, start, ok := parseReverseAssociationXPath(tt); ok {
+			t.Fatalf("parseReverseAssociationXPath(%q) = %q, %q, true; want false", tt, assoc, start)
+		}
+	}
+}
+
+func reverseAssociationBackend(t *testing.T) *mock.MockBackend {
+	t.Helper()
+	moduleID := model.ID("sample-runtime-module")
+	return &mock.MockBackend{
+		GetModuleByNameFunc: func(name string) (*model.Module, error) {
+			if name != "SampleRuntime" {
+				return nil, nil
+			}
+			return &model.Module{
+				BaseElement: model.BaseElement{ID: moduleID},
+				Name:        "SampleRuntime",
+			}, nil
+		},
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+			if id != moduleID {
+				return nil, nil
+			}
+			return &domainmodel.DomainModel{
+				ContainerID: moduleID,
+				Entities: []*domainmodel.Entity{
+					{
+						BaseElement: model.BaseElement{ID: "domain-entity"},
+						Name:        "Domain",
+					},
+					{
+						BaseElement: model.BaseElement{ID: "runtime-entity"},
+						Name:        "Runtime",
+					},
+				},
+				Associations: []*domainmodel.Association{
+					{
+						Name:     "Domain_Runtime",
+						ParentID: "domain-entity",
+						ChildID:  "runtime-entity",
+						Type:     domainmodel.AssociationTypeReference,
+					},
+				},
+			}, nil
+		},
 	}
 }
