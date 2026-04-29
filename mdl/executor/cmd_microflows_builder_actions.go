@@ -302,10 +302,19 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			startVarType = fb.varTypes[s.StartVariable]
 		}
 
-		if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReference &&
+		outputUsedAsList := fb.listInputVariables != nil && fb.listInputVariables[s.Variable]
+		outputUsedAsObject := fb.objectInputVariables != nil && fb.objectInputVariables[s.Variable]
+		// Owner-both Reference associations need later usage context: the same
+		// compact retrieve can be consumed as either a list or a single object.
+		expandReverseReference := assocInfo != nil &&
+			assocInfo.Type == domainmodel.AssociationTypeReference &&
 			assocInfo.Owner != "" &&
 			assocInfo.parentPersistable &&
-			assocInfo.childEntityQN != "" && startVarType == assocInfo.childEntityQN {
+			assocInfo.childEntityQN != "" &&
+			startVarType == assocInfo.childEntityQN &&
+			(assocInfo.Owner != domainmodel.AssociationOwnerBoth || outputUsedAsList && !outputUsedAsObject)
+
+		if expandReverseReference {
 			// Reverse traversal on Reference: child → parent (one-to-many)
 			// Use DatabaseRetrieveSource with XPath to get a list of parent entities
 			dbSource := &microflows.DatabaseRetrieveSource{
@@ -333,7 +342,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 					if startVarType == assocInfo.childEntityQN {
 						otherEntity = assocInfo.parentEntityQN
 					}
-					if startVarType == assocInfo.childEntityQN {
+					if startVarType == assocInfo.childEntityQN && !outputUsedAsObject {
 						fb.varTypes[s.Variable] = "List of " + otherEntity
 					} else {
 						fb.varTypes[s.Variable] = otherEntity
