@@ -474,6 +474,23 @@ func buildJavaActionQualifiedNames(ctx *ExecContext) map[string]bool {
 	return result
 }
 
+func buildJavaScriptActionQualifiedNames(ctx *ExecContext) map[string]bool {
+	result := make(map[string]bool)
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return result
+	}
+	jsas, err := ctx.Backend.ListJavaScriptActions()
+	if err != nil {
+		return result
+	}
+	for _, jsa := range jsas {
+		qn := h.GetQualifiedName(jsa.ContainerID, jsa.Name)
+		result[qn] = true
+	}
+	return result
+}
+
 // ----------------------------------------------------------------------------
 // Executor method wrappers (for callers in unmigrated files)
 // ----------------------------------------------------------------------------

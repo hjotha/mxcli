@@ -289,6 +289,8 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 
 	if s.StartVariable != "" {
 		// Association retrieve: RETRIEVE $List FROM $Parent/Module.AssocName
+		// Always use AssociationRetrieveSource to preserve the original syntax.
+		// The runtime resolves traversal direction from association metadata.
 		assocQN := s.Source.Module + "." + s.Source.Name
 
 		// Look up association to determine type and direction.

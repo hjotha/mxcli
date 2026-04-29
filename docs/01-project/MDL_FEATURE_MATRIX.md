@@ -13,7 +13,7 @@ When adding a new MDL feature, use this matrix as a checklist to ensure complete
 | **Associations** | Y | Y | Y | N | Y | Y | 01 | Y | N | Y | Y | Y | Y | Y | Y | Y | N |
 | **Enumerations** | Y | Y | Y | Y | Y | Y | 01 | Y | Y | N | Y | Y | Y | N | Y | Y | Y |
 | **Microflows** | Y | Y | Y | Y | Y | N | 02 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| **Nanoflows** | Y | N | N | N | N | N | N | N | Y | Y | Y | N | Y | N | P | N | N |
+| **Nanoflows** | Y | Y | Y | Y | Y | N | Y | Y | Y | Y | Y | Y | Y | Y | P | N | N |
 | **Pages** | Y | Y | Y | N | Y | Y | 03 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 | **Snippets** | Y | Y | Y | N | Y | Y | 03 | Y | Y | Y | Y | Y | Y | N | Y | Y | Y |
 | **Layouts** | Y | Y | N | N | N | N | N | N | Y | Y | Y | N | Y | N | Y | N | N |
@@ -37,6 +37,7 @@ When adding a new MDL feature, use this matrix as a checklist to ensure complete
 | **Project Security** | Y | - | - | - | - | Y | 08 | Y | Y | Y | Y | Y | Y | N | N | Y | Y |
 | **Entity Access** | P | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
 | **Microflow Access** | Y | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
+| **Nanoflow Access** | Y | N | Y | P | Y | P | N | Y | N | Y | Y | Y | Y | N | N | N | N |
 | **Page Access** | Y | N | Y | P | Y | P | 08 | Y | N | Y | Y | Y | Y | N | N | Y | Y |
 
 ## Project Organization
@@ -123,7 +124,6 @@ These types are not covered in `help.go` output:
 
 ### Missing Skills
 
-- **Nanoflows** — No dedicated skill (covered partially by microflow skill)
 - **Layouts** — Read-only, no skill needed
 - **Constants** — No dedicated skill
 
@@ -133,7 +133,6 @@ These types are not covered in `help.go` output:
 
 ### Missing Examples
 
-- **Nanoflows** — No dedicated example file
 - **Layouts** — Read-only, no example needed
 - **Folders / MOVE** — No dedicated example file
 
@@ -170,12 +169,12 @@ Mermaid diagram support (`mxcli describe --format mermaid` + VS Code "Show Diagr
 
 - **Domain Model** (Entities/Associations) — `erDiagram` with attributes, cardinality, generalizations
 - **Microflows** — `flowchart TD` with activities, splits, merge points, case labels
+- **Nanoflows** — `flowchart TD` with activities, splits, merge points (same logic as microflows)
 - **Pages** — `block-beta` with widget tree structure
 
 Not yet implemented:
 
 - **Enumerations** — Could render as a simple table or list diagram
-- **Nanoflows** — Same flowchart logic as microflows, not yet wired up
 - **Snippets** — Same widget tree logic as pages, not yet wired up
 - **Call graphs** — `show context of` / `show callers of` as directed graphs
 - **Module overview** — Combined ER + dependency diagram
@@ -186,9 +185,7 @@ Document types that exist in Mendix but have no MDL support:
 
 | Feature | SHOW | DESCRIBE | CREATE | OR MODIFY | DROP | ALTER | Examples | Tests | Catalog | REFS | LSP | Skills | Help | Viz | REPL | Syntax | Starlark | Notes |
 |---------|------|----------|--------|-----------|------|-------|----------|-------|---------|------|-----|--------|------|-----|------|--------|----------|-------|
-| **Nanoflow CREATE** | Y | N | **N** | N | N | N | N | N | Y | Y | Y | N | Y | N | P | N | N | SHOW works; DESCRIBE/CREATE/DROP not implemented |
 | **Microflow activities** | - | - | P | - | - | - | 02 | Y | P | P | P | Y | Y | - | - | - | P | 60+ activities supported; some edge cases missing |
-| **Mobile nanoflows** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Mobile-specific nanoflow features |
 | **Building blocks** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Reusable page building blocks |
 | **Styling** | P | P | P | N | N | N | N | N | N | N | N | P | N | P | N | N | N | Class/Style/DesignProperties on widgets; full theme system not yet |
 | **Extensions** | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | N | Mendix extensions / add-ons |

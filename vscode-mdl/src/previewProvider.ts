@@ -55,7 +55,7 @@ export class MdlPreviewProvider {
 
 		const effectiveType = originalType || elementType;
 
-		if (effectiveType === 'systemoverview' || effectiveType === 'domainmodel' || effectiveType === 'entity' || effectiveType === 'microflow' || effectiveType === 'page') {
+		if (effectiveType === 'systemoverview' || effectiveType === 'domainmodel' || effectiveType === 'entity' || effectiveType === 'microflow' || effectiveType === 'nanoflow' || effectiveType === 'page') {
 			// ELK path — entity type uses 'entity' elementType so the backend
 			// receives a qualified name (Module.Entity) and renders a focused view
 			const jsonData = await generateElk(this.mxcliPath, mprFile, elementType, qualifiedName);
@@ -70,6 +70,8 @@ export class MdlPreviewProvider {
 				title = `Domain Model: ${qualifiedName}`;
 			} else if (effectiveType === 'microflow') {
 				title = `Microflow: ${qualifiedName}`;
+			} else if (effectiveType === 'nanoflow') {
+				title = `Nanoflow: ${qualifiedName}`;
 			} else if (effectiveType === 'page') {
 				title = `Page: ${qualifiedName}`;
 			} else {
@@ -138,6 +140,8 @@ export class MdlPreviewProvider {
 				title = `Domain Model: ${qualifiedName}`;
 			} else if (effectiveType === 'microflow') {
 				title = `Microflow: ${qualifiedName}`;
+			} else if (effectiveType === 'nanoflow') {
+				title = `Nanoflow: ${qualifiedName}`;
 			} else if (effectiveType === 'page') {
 				title = `Page: ${qualifiedName}`;
 			} else {
@@ -161,6 +165,8 @@ export class MdlPreviewProvider {
 			title = `Domain Model: ${qualifiedName}`;
 		} else if (effectiveType === 'microflow') {
 			title = `Microflow: ${qualifiedName}`;
+		} else if (effectiveType === 'nanoflow') {
+			title = `Nanoflow: ${qualifiedName}`;
 		} else if (effectiveType === 'page') {
 			title = `Page: ${qualifiedName}`;
 		} else {

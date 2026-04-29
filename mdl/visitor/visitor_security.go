@@ -194,6 +194,46 @@ func (b *Builder) ExitRevokeMicroflowAccessStatement(ctx *parser.RevokeMicroflow
 	b.statements = append(b.statements, stmt)
 }
 
+// ExitGrantNanoflowAccessStatement handles GRANT EXECUTE ON NANOFLOW Module.NF TO role1, role2
+func (b *Builder) ExitGrantNanoflowAccessStatement(ctx *parser.GrantNanoflowAccessStatementContext) {
+	qn := ctx.QualifiedName()
+	if qn == nil {
+		return
+	}
+
+	stmt := &ast.GrantNanoflowAccessStmt{
+		Nanoflow: buildQualifiedName(qn),
+	}
+
+	if mrl := ctx.ModuleRoleList(); mrl != nil {
+		for _, rqn := range mrl.AllQualifiedName() {
+			stmt.Roles = append(stmt.Roles, buildQualifiedName(rqn))
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
+// ExitRevokeNanoflowAccessStatement handles REVOKE EXECUTE ON NANOFLOW Module.NF FROM role1, role2
+func (b *Builder) ExitRevokeNanoflowAccessStatement(ctx *parser.RevokeNanoflowAccessStatementContext) {
+	qn := ctx.QualifiedName()
+	if qn == nil {
+		return
+	}
+
+	stmt := &ast.RevokeNanoflowAccessStmt{
+		Nanoflow: buildQualifiedName(qn),
+	}
+
+	if mrl := ctx.ModuleRoleList(); mrl != nil {
+		for _, rqn := range mrl.AllQualifiedName() {
+			stmt.Roles = append(stmt.Roles, buildQualifiedName(rqn))
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
 // ExitGrantPageAccessStatement handles GRANT VIEW ON PAGE Module.Page TO role1, role2
 func (b *Builder) ExitGrantPageAccessStatement(ctx *parser.GrantPageAccessStatementContext) {
 	qn := ctx.QualifiedName()

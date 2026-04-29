@@ -205,6 +205,9 @@ authentication basic, session
 | Rename constant | `rename constant Module.Old to New;` | Updates all references |
 | Drop microflow | `drop microflow Module.Name;` | |
 | Drop nanoflow | `drop nanoflow Module.Name;` | |
+| Create nanoflow | `create [or modify] nanoflow Module.Name (params) returns type [folder 'path'] begin ... end;` | Same body syntax as microflows |
+| Move nanoflow | `move nanoflow Module.Name to folder 'path';` | |
+| Nanoflow restrictions | N/A | No Java actions, ErrorEvent, REST calls, database queries, external actions, download file, workflow actions, import/export mappings, JSON transformation, show home page |
 
 ## Microflows - Supported Statements
 
@@ -223,6 +226,8 @@ authentication basic, session
 | Retrieve (Assoc) | `retrieve $list from $Parent/Module.AssocName;` | Retrieve by association |
 | Call microflow | `$Result = call microflow Module.Name (Param = $value);` | |
 | Call nanoflow | `$Result = call nanoflow Module.Name (Param = $value);` | |
+| Call JS action | `$Result = call javascript action Module.Name (Param = $value);` | JavaScript action (nanoflow/microflow) |
+| Call Java action | `$Result = call java action Module.Name (Param = $value);` | Java action (microflow only) |
 | Show page | `show page Module.PageName ($Param = $value);` | Also accepts `(Param: $value)` |
 | Close page | `close page;` | |
 | Download file | `download file $FileDocument [show in browser];` | Streams a `System.FileDocument` |
@@ -276,7 +281,7 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 | Show module roles | `show module roles [in module];` | All roles or filtered by module |
 | Show user roles | `show user roles;` | Project-level user roles |
 | Show demo users | `show demo users;` | Configured demo users |
-| Show access on element | `show access on microflow\|page\|entity Mod.Name;` | Which roles can access |
+| Show access on element | `show access on microflow\|nanoflow\|page\|entity Mod.Name;` | Which roles can access |
 | Show security matrix | `show security matrix [in module];` | Full access overview |
 | Create module role | `create module role Mod.Role [description 'text'];` | |
 | Drop module role | `drop module role Mod.Role;` | |
@@ -285,6 +290,8 @@ Nested folders use `/` separator: `'Parent/Child/Grandchild'`. Missing folders a
 | Drop user role | `drop user role Name;` | |
 | Grant microflow access | `grant execute on microflow Mod.MF to Mod.Role, ...;` | |
 | Revoke microflow access | `revoke execute on microflow Mod.MF from Mod.Role, ...;` | |
+| Grant nanoflow access | `grant execute on nanoflow Mod.NF to Mod.Role, ...;` | |
+| Revoke nanoflow access | `revoke execute on nanoflow Mod.NF from Mod.Role, ...;` | |
 | Grant page access | `grant view on page Mod.Page to Mod.Role, ...;` | |
 | Revoke page access | `revoke view on page Mod.Page from Mod.Role, ...;` | |
 | Grant entity access | `grant Mod.Role on Mod.Entity (create, delete, read *, write *);` | Additive — merges with existing |

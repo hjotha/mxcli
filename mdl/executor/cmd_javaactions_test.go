@@ -75,8 +75,8 @@ func TestFormatAction_JavaActionCall_EntityTypeParam_EmptyEntity(t *testing.T) {
 		},
 	}
 	got := e.formatAction(action, nil, nil)
-	// Empty entity renders as ...
-	want := "$IsValid = call java action MyModule.Validate(InputObject = ...);"
+	// Empty entity param is omitted from argument list
+	want := "$IsValid = call java action MyModule.Validate();"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

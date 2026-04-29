@@ -539,9 +539,11 @@ var microflowActionParsers = map[string]func(map[string]any) microflows.Microflo
 	"Microflows$ListOperationsAction": func(r map[string]any) microflows.MicroflowAction { return parseListOperationAction(r) },
 
 	// Integration actions
-	"Microflows$MicroflowCallAction":  func(r map[string]any) microflows.MicroflowAction { return parseMicroflowCallAction(r) },
-	"Microflows$JavaActionCallAction": func(r map[string]any) microflows.MicroflowAction { return parseJavaActionCallAction(r) },
-	"Microflows$CallExternalAction":   func(r map[string]any) microflows.MicroflowAction { return parseCallExternalAction(r) },
+	"Microflows$MicroflowCallAction":        func(r map[string]any) microflows.MicroflowAction { return parseMicroflowCallAction(r) },
+	"Microflows$NanoflowCallAction":         func(r map[string]any) microflows.MicroflowAction { return parseNanoflowCallAction(r) },
+	"Microflows$JavaActionCallAction":       func(r map[string]any) microflows.MicroflowAction { return parseJavaActionCallAction(r) },
+	"Microflows$JavaScriptActionCallAction": func(r map[string]any) microflows.MicroflowAction { return parseJavaScriptActionCallAction(r) },
+	"Microflows$CallExternalAction":         func(r map[string]any) microflows.MicroflowAction { return parseCallExternalAction(r) },
 
 	// Client actions (ShowFormAction is storageName for ShowPageAction)
 	"Microflows$ShowFormAction":           func(r map[string]any) microflows.MicroflowAction { return parseShowPageAction(r) },

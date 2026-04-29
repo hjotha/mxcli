@@ -294,9 +294,15 @@ func expressionToString(expr ast.Expression) string {
 		op := strings.ToLower(e.Operator)
 		return left + " " + op + " " + right
 	case *ast.UnaryExpr:
-		operand := expressionToString(e.Operand)
 		// Mendix expressions use lowercase operators (not)
 		op := strings.ToLower(e.Operator)
+		// Special case: not(...) should not have space before parenthesized operand
+		if op == "not" {
+			if paren, ok := e.Operand.(*ast.ParenExpr); ok {
+				return "not(" + expressionToString(paren.Inner) + ")"
+			}
+		}
+		operand := expressionToString(e.Operand)
 		return op + " " + operand
 	case *ast.FunctionCallExpr:
 		var args []string

@@ -79,13 +79,9 @@ func microflowELK(ctx *ExecContext, name string) error {
 	}
 
 	// Build entity name lookup
-	entityNames := make(map[model.ID]string)
-	domainModels, _ := ctx.Backend.ListDomainModels()
-	for _, dm := range domainModels {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, entity := range dm.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
-		}
+	entityNames, err := buildEntityNames(ctx, h)
+	if err != nil {
+		return err
 	}
 
 	// Find the microflow
@@ -108,29 +104,51 @@ func microflowELK(ctx *ExecContext, name string) error {
 		return mdlerrors.NewNotFound("microflow", name)
 	}
 
-	// Generate MDL source with source map
+	// Generate MDL source with source map (best-effort — diagram works without it)
 	mdlSource, sourceMap, _ := describeMicroflowToString(ctx, qn)
 
-	return buildMicroflowELK(ctx, targetMf, name, entityNames, mdlSource, sourceMap)
+	return buildFlowELK(ctx, flowELKInput{
+		FlowType:         "microflow",
+		QualifiedName:    name,
+		ReturnType:       targetMf.ReturnType,
+		Parameters:       targetMf.Parameters,
+		ObjectCollection: targetMf.ObjectCollection,
+		EntityNames:      entityNames,
+		MdlSource:        mdlSource,
+		SourceMap:        sourceMap,
+	})
 }
 
-func buildMicroflowELK(ctx *ExecContext, mf *microflows.Microflow, qualifiedName string, entityNames map[model.ID]string, mdlSource string, sourceMap map[string]elkSourceRange) error {
-	returnType := ""
-	if mf.ReturnType != nil {
-		returnType = mf.ReturnType.GetTypeName()
+// flowELKInput collects the parameters for buildFlowELK.
+type flowELKInput struct {
+	FlowType         string
+	QualifiedName    string
+	ReturnType       microflows.DataType
+	Parameters       []*microflows.MicroflowParameter
+	ObjectCollection *microflows.MicroflowObjectCollection
+	EntityNames      map[model.ID]string
+	MdlSource        string
+	SourceMap        map[string]elkSourceRange
+}
+
+// buildFlowELK generates ELK JSON for any flow type (microflow or nanoflow).
+func buildFlowELK(ctx *ExecContext, in flowELKInput) error {
+	rt := ""
+	if in.ReturnType != nil {
+		rt = in.ReturnType.GetTypeName()
 	}
 
 	data := microflowELKData{
 		Format:     "elk",
-		Type:       "microflow",
-		Name:       qualifiedName,
-		ReturnType: returnType,
-		MdlSource:  mdlSource,
-		SourceMap:  sourceMap,
+		Type:       in.FlowType,
+		Name:       in.QualifiedName,
+		ReturnType: rt,
+		MdlSource:  in.MdlSource,
+		SourceMap:  in.SourceMap,
 	}
 
 	// Parameters
-	for _, p := range mf.Parameters {
+	for _, p := range in.Parameters {
 		paramType := ""
 		if p.Type != nil {
 			paramType = p.Type.GetTypeName()
@@ -141,8 +159,8 @@ func buildMicroflowELK(ctx *ExecContext, mf *microflows.Microflow, qualifiedName
 		})
 	}
 
-	// Handle empty microflow
-	if mf.ObjectCollection == nil || len(mf.ObjectCollection.Objects) == 0 {
+	// Handle empty flow
+	if in.ObjectCollection == nil || len(in.ObjectCollection.Objects) == 0 {
 		data.Nodes = []microflowELKNode{
 			{ID: "node-start", Type: "start", Category: "event", Label: "Start", Width: 80, Height: 36},
 			{ID: "node-end", Type: "end", Category: "event", Label: "End", Width: 70, Height: 36},
@@ -154,13 +172,13 @@ func buildMicroflowELK(ctx *ExecContext, mf *microflows.Microflow, qualifiedName
 	}
 
 	// Build nodes — loops become compound nodes with children
-	for _, obj := range mf.ObjectCollection.Objects {
-		node := buildMicroflowELKNodeHierarchical(obj, entityNames, 0)
+	for _, obj := range in.ObjectCollection.Objects {
+		node := buildMicroflowELKNodeHierarchical(obj, in.EntityNames, 0)
 		data.Nodes = append(data.Nodes, node)
 	}
 
 	// Build edges — only top-level flows
-	for i, flow := range mf.ObjectCollection.Flows {
+	for i, flow := range in.ObjectCollection.Flows {
 		edge := buildMicroflowELKEdge(flow, i, "edge")
 		data.Edges = append(data.Edges, edge)
 	}

@@ -757,8 +757,11 @@ DOLLAR_STRING
     ;
 
 // Number literal (integer or decimal)
+// Note: no leading '-' here — negation is handled by unaryExpression in the parser.
+// Including '-' in the lexer caused greedy tokenisation of e.g. `$x -2` as
+// VARIABLE NUMBER_LITERAL(-2) instead of VARIABLE MINUS NUMBER_LITERAL(2).
 NUMBER_LITERAL
-    : '-'? DIGIT+ ('.' DIGIT+)? ([eE] [+-]? DIGIT+)?
+    : DIGIT+ ('.' DIGIT+)? ([eE] [+-]? DIGIT+)?
     ;
 
 // =============================================================================

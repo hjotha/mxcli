@@ -425,6 +425,7 @@ Regenerate after modifying `MDLLexer.g4` or `MDLParser.g4`: `make grammar`. See 
 - `.claude/skills/version-awareness.md` - **CHECK project version first** - Run `show features` before using version-gated syntax
 - `.claude/skills/design-mdl-syntax.md` - **READ before designing new MDL syntax** - Design principles, decision framework, anti-patterns, checklist
 - `.claude/skills/write-microflows.md` - Microflow syntax, common mistakes, validation checklist
+- `.claude/skills/write-nanoflows.md` - Nanoflow syntax, restrictions, disallowed activities, validation checklist
 - `.claude/skills/create-page.md` - Page/widget syntax reference
 - `.claude/skills/alter-page.md` - ALTER PAGE/SNIPPET in-place modifications (SET, INSERT, DROP, REPLACE, SET Layout)
 - `.claude/skills/overview-pages.md` - CRUD page patterns
@@ -439,9 +440,9 @@ Regenerate after modifying `MDLLexer.g4` or `MDLParser.g4`: `make grammar`. See 
 - `.claude/skills/database-connections.md` - External database connections from microflows
 - `.claude/skills/test-microflows.md` - **READ for testing work** - Test annotations, file formats, Docker setup requirement
 
-### Mendix Microflow Idioms (MUST follow)
+### Mendix Microflow/Nanoflow Idioms (MUST follow)
 
-These rules apply whenever generating microflow MDL. Violations are caught by `mxcli check`.
+These rules apply whenever generating microflow or nanoflow MDL. Violations are caught by `mxcli check`.
 
 1. **NEVER create empty list variables as loop sources.** If processing imported data, accept the list as a microflow parameter — `declare $Items list of ... = empty` followed by `loop $item in $Items` is always wrong.
 2. **NEVER use nested LOOPs for list matching.** Loop over the primary list and use `retrieve $match from $TargetList where key = $item/key limit 1` for O(N) lookup. Nested loops are O(N^2).
@@ -464,7 +465,7 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - MPR v1/v2 reading and writing
 - Domain model (entities, attributes, associations)
 - ALTER ENTITY (add/rename/modify/drop attributes, indexes, documentation)
-- Microflows/Nanoflows with 60+ activity types
+- Microflows/Nanoflows with 60+ activity types, JavaScript action calls, nanoflow validation parity
 - Pages with 50+ widget types
 - ALTER PAGE/SNIPPET (SET, INSERT, DROP, REPLACE operations on widget trees)
 - Image widgets (IMAGE, STATICIMAGE, DYNAMICIMAGE) with Width/Height properties

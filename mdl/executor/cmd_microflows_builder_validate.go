@@ -12,14 +12,23 @@ import (
 // ValidateMicroflowBody validates the microflow body for semantic errors without building objects.
 // This is used by the check command to validate scripts without executing them.
 func ValidateMicroflowBody(s *ast.CreateMicroflowStmt) []string {
-	// Build variable maps from parameters
+	return validateFlowBody(s.Parameters, s.Body)
+}
+
+// ValidateNanoflowBody validates the nanoflow body for semantic errors without building objects.
+// This is used by the check command to validate scripts without executing them.
+func ValidateNanoflowBody(s *ast.CreateNanoflowStmt) []string {
+	return validateFlowBody(s.Parameters, s.Body)
+}
+
+// validateFlowBody validates parameters and body statements for semantic errors.
+func validateFlowBody(params []ast.MicroflowParam, body []ast.MicroflowStatement) []string {
 	varTypes := make(map[string]string)
 	declaredVars := make(map[string]string)
 
 	var paramErrors []string
-	for _, p := range s.Parameters {
+	for _, p := range params {
 		if p.Type.EntityRef != nil {
-			// Reject bare entity names (empty module) — e.g., "Object" instead of "System.Workflow"
 			if p.Type.EntityRef.Module == "" {
 				paramErrors = append(paramErrors, fmt.Sprintf(
 					"parameter '$%s': entity type '%s' is missing module prefix (use 'Module.%s')",
@@ -33,7 +42,6 @@ func ValidateMicroflowBody(s *ast.CreateMicroflowStmt) []string {
 				varTypes[p.Name] = entityQN
 			}
 		} else {
-			// Primitive type parameters
 			declaredVars[p.Name] = p.Type.Kind.String()
 		}
 	}
@@ -41,15 +49,13 @@ func ValidateMicroflowBody(s *ast.CreateMicroflowStmt) []string {
 		return paramErrors
 	}
 
-	// Create a validation-only flow builder
 	fb := &flowBuilder{
 		varTypes:     varTypes,
 		declaredVars: declaredVars,
 		errors:       []string{},
 	}
 
-	// Validate the body statements
-	fb.validateStatements(s.Body)
+	fb.validateStatements(body)
 
 	return fb.errors
 }
@@ -138,6 +144,21 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 			fb.validateStatements(s.ErrorHandling.Body)
 		}
 
+	case *ast.CallNanoflowStmt:
+		// Register result variable if assigned
+		if s.OutputVariable != "" {
+			nfQN := s.NanoflowName.Module + "." + s.NanoflowName.Name
+			if returnType := fb.lookupNanoflowReturnType(nfQN); returnType != nil {
+				fb.registerResultVariableType(s.OutputVariable, returnType)
+			} else {
+				fb.declaredVars[s.OutputVariable] = "Unknown"
+			}
+		}
+		// Validate error handler body if present
+		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+			fb.validateStatements(s.ErrorHandling.Body)
+		}
+
 	case *ast.CallJavaActionStmt:
 		// Register result variable if assigned
 		if s.OutputVariable != "" {
@@ -149,6 +170,16 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 		}
 
 	case *ast.DownloadFileStmt:
+		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+			fb.validateStatements(s.ErrorHandling.Body)
+		}
+
+	case *ast.CallJavaScriptActionStmt:
+		// Register result variable if assigned
+		if s.OutputVariable != "" {
+			fb.declaredVars[s.OutputVariable] = "Unknown"
+		}
+		// Validate error handler body if present
 		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
 			fb.validateStatements(s.ErrorHandling.Body)
 		}

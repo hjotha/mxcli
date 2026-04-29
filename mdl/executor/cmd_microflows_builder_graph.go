@@ -474,8 +474,12 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addRemoveFromListAction(s)
 	case *ast.CallMicroflowStmt:
 		return fb.addCallMicroflowAction(s)
+	case *ast.CallNanoflowStmt:
+		return fb.addCallNanoflowAction(s)
 	case *ast.CallJavaActionStmt:
 		return fb.addCallJavaActionAction(s)
+	case *ast.CallJavaScriptActionStmt:
+		return fb.addCallJavaScriptActionAction(s)
 	case *ast.ExecuteDatabaseQueryStmt:
 		return fb.addExecuteDatabaseQueryAction(s)
 	case *ast.CallExternalActionStmt:

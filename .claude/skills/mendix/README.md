@@ -19,6 +19,7 @@ Detailed syntax for each MDL document type:
 |-------|---------|----------|
 | [mdl-entities.md](mdl-entities.md) | Entity, attribute, association syntax | Creating domain models |
 | [write-microflows.md](write-microflows.md) | Microflow syntax reference | Writing microflow logic |
+| [write-nanoflows.md](write-nanoflows.md) | Nanoflow syntax reference | Writing client-side nanoflow logic |
 | [write-oql-queries.md](write-oql-queries.md) | OQL query syntax | Creating VIEW entities |
 | [create-page.md](create-page.md) | Page and widget syntax | Creating pages |
 | [fragments.md](fragments.md) | Fragment (reusable widget group) syntax | Reusing widget patterns across pages |

@@ -181,6 +181,7 @@ var mdlCreateSnippets = []protocol.CompletionItem{
 	snippet("CREATE MICROFLOW", "CREATE MICROFLOW ${1:Module}.${2:MicroflowName}\nBEGIN\n\t$0\nEND;", "Create a new microflow"),
 	snippet("CREATE MICROFLOW (with params)", "CREATE MICROFLOW ${1:Module}.${2:MicroflowName}\n(\n\t$$${3:Param}: ${4:Module.Entity}\n)\nRETURNS ${5:Boolean} AS $$${6:Result}\nBEGIN\n\t$0\nEND;", "Create microflow with parameters"),
 	snippet("CREATE NANOFLOW", "CREATE NANOFLOW ${1:Module}.${2:NanoflowName}\nBEGIN\n\t$0\nEND;", "Create a new nanoflow"),
+	snippet("CREATE NANOFLOW (with params)", "CREATE NANOFLOW ${1:Module}.${2:NanoflowName}\n(\n\t$$${3:Param}: ${4:Module.Entity}\n)\nRETURNS ${5:Boolean} AS $$${6:Result}\nBEGIN\n\t$0\nEND;", "Create nanoflow with parameters"),
 	snippet("CREATE ENUMERATION", "CREATE ENUMERATION ${1:Module}.${2:EnumName}\n(\n\t'${3:Value1}' '${4:Caption1}',\n\t'${5:Value2}' '${6:Caption2}'\n);", "Create a new enumeration"),
 	snippet("CREATE CONSTANT", "CREATE CONSTANT ${1:Module}.${2:ConstantName}\nTYPE ${3|String,Integer,Long,Decimal,Boolean,DateTime|}\nDEFAULT ${4:'value'};", "Create a new constant"),
 	snippet("CREATE PAGE", "CREATE PAGE ${1:Module}.${2:PageName}\n(\n\tTitle: '${3:Page Title}',\n\tLayout: ${4:Atlas_Core.Atlas_Default}\n)\n{\n\t$0\n}", "Create a new page"),
@@ -199,6 +200,10 @@ var mdlStatementSnippets = []protocol.CompletionItem{
 	snippet("RETRIEVE ... FROM $Var/Assoc", "RETRIEVE $$${1:List} FROM $$${2:Parent}/${3:Module.AssociationName};", "Retrieve by association"),
 	snippet("DATAVIEW", "DATAVIEW ${1:dvName} (DataSource: $$${2:Var}) {\n\t$0\n}", "Data view widget"),
 	snippet("INDEX", "INDEX (${1:AttributeName});", "Entity index"),
+	snippet("CALL MICROFLOW", "$$${1:Result} = CALL MICROFLOW ${2:Module.MicroflowName}(${3});", "Call a microflow"),
+	snippet("CALL NANOFLOW", "$$${1:Result} = CALL NANOFLOW ${2:Module.NanoflowName}(${3});", "Call a nanoflow"),
+	snippet("CALL JAVASCRIPT ACTION", "$$${1:Result} = CALL JAVASCRIPT ACTION ${2:Module.ActionName}(${3});", "Call a JavaScript action"),
+	snippet("CALL JAVA ACTION", "$$${1:Result} = CALL JAVA ACTION ${2:Module.ActionName}(${3});", "Call a Java action"),
 }
 
 // inferCompletionTypes examines the line prefix and returns the ObjectType

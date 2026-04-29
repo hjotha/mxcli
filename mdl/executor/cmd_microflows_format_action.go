@@ -13,6 +13,49 @@ import (
 )
 
 // formatActivity formats a single microflow activity as an MDL statement.
+
+// escapeExpressionValue escapes raw control characters inside string literals
+// of a Mendix expression value so it can be safely embedded in MDL output.
+// The lexer's STRING_LITERAL rule forbids raw \r and \n inside single-quoted
+// strings. Only characters inside '...' regions are escaped; characters
+// outside string literals (structural whitespace) are preserved as-is.
+func escapeExpressionValue(v string) string {
+	if !strings.ContainsAny(v, "\n\r\t") {
+		return v
+	}
+	var b strings.Builder
+	b.Grow(len(v) + 32)
+	inString := false
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		if c == '\'' {
+			// Check for escaped quote ('') inside string
+			if inString && i+1 < len(v) && v[i+1] == '\'' {
+				b.WriteString("''")
+				i++
+				continue
+			}
+			inString = !inString
+			b.WriteByte(c)
+			continue
+		}
+		if inString {
+			switch c {
+			case '\n':
+				b.WriteString(`\n`)
+			case '\r':
+				b.WriteString(`\r`)
+			case '\t':
+				b.WriteString(`\t`)
+			default:
+				b.WriteByte(c)
+			}
+		} else {
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
+}
 func formatActivity(
 	ctx *ExecContext,
 	obj microflows.MicroflowObject,
@@ -28,7 +71,7 @@ func formatActivity(
 			returnVal := strings.TrimSuffix(activity.ReturnValue, "\n")
 			// Only add $ prefix for bare identifiers (no operators, quotes, or parens)
 			if !strings.HasPrefix(returnVal, "$") && !isMendixKeyword(returnVal) && !isQualifiedEnumLiteral(returnVal) &&
-				!strings.ContainsAny(returnVal, "+'\"()") {
+				!strings.ContainsAny(returnVal, "+'\"()") && !isNumericLiteral(returnVal) {
 				returnVal = "$" + returnVal
 			}
 			return fmt.Sprintf("return %s;", returnVal)
@@ -166,7 +209,7 @@ func formatAction(
 						memberName = parts[len(parts)-1]
 					}
 				}
-				members = append(members, fmt.Sprintf("%s = %s", memberName, m.Value))
+				members = append(members, fmt.Sprintf("%s = %s", memberName, escapeExpressionValue(m.Value)))
 			}
 			return fmt.Sprintf("$%s = create %s (%s);", outputVar, entityName, strings.Join(members, ", "))
 		}
@@ -196,7 +239,7 @@ func formatAction(
 						memberName = parts[len(parts)-1]
 					}
 				}
-				members = append(members, fmt.Sprintf("%s = %s", memberName, m.Value))
+				members = append(members, fmt.Sprintf("%s = %s", memberName, escapeExpressionValue(m.Value)))
 			}
 			return fmt.Sprintf("change $%s (%s);", varName, strings.Join(members, ", "))
 		}
@@ -308,13 +351,30 @@ func formatAction(
 
 			stmt := fmt.Sprintf("retrieve $%s from %s", outputVar, entityName)
 
-			if dbSource.XPathConstraint != "" {
-				constraint := strings.TrimSpace(dbSource.XPathConstraint)
-				if strings.HasPrefix(constraint, "[") && strings.HasSuffix(constraint, "]") {
-					constraint = constraint[1 : len(constraint)-1]
+		if dbSource.XPathConstraint != "" {
+			constraint := strings.TrimSpace(dbSource.XPathConstraint)
+			// XPath may contain multiple predicates like [a][b] or [a]\n[b].
+			// Split them and join with MDL 'and' so the parser sees
+			// separate xpathConstraint nodes.
+			if strings.HasPrefix(constraint, "[") && strings.HasSuffix(constraint, "]") {
+				// Split on "][" boundary (possibly separated by \n literals),
+				// then re-wrap each predicate.
+				inner := constraint[1 : len(constraint)-1]
+				// Normalise real newlines between predicates: ]\n[ → ][
+				inner = strings.ReplaceAll(inner, "]\n[", "][")
+				parts := strings.Split(inner, "][")
+				if len(parts) > 1 {
+					var wrapped []string
+					for _, p := range parts {
+						wrapped = append(wrapped, "["+strings.TrimSpace(p)+"]")
+					}
+					constraint = strings.Join(wrapped, "\n    ")
+				} else {
+					constraint = parts[0]
 				}
-				stmt += fmt.Sprintf("\n    where %s", constraint)
 			}
+			stmt += fmt.Sprintf("\n    where %s", constraint)
+		}
 
 			// Output SORT BY clause if present
 			if len(dbSource.Sorting) > 0 {
@@ -428,6 +488,35 @@ func formatAction(
 		}
 		return fmt.Sprintf("call microflow %s(%s);", mfName, paramStr)
 
+	case *microflows.NanoflowCallAction:
+		nfName := ""
+		if a.NanoflowCall != nil && a.NanoflowCall.Nanoflow != "" {
+			nfName = a.NanoflowCall.Nanoflow
+		} else {
+			nfName = "Nanoflow"
+		}
+
+		var params []string
+		if a.NanoflowCall != nil {
+			for _, pm := range a.NanoflowCall.ParameterMappings {
+				paramName := pm.Parameter
+				if idx := strings.LastIndex(paramName, "."); idx != -1 {
+					paramName = paramName[idx+1:]
+				}
+				params = append(params, fmt.Sprintf("%s = %s", paramName, pm.Argument))
+			}
+		}
+
+		paramStr := ""
+		if len(params) > 0 {
+			paramStr = strings.Join(params, ", ")
+		}
+
+		if a.OutputVariableName != "" {
+			return fmt.Sprintf("$%s = call nanoflow %s(%s);", a.OutputVariableName, nfName, paramStr)
+		}
+		return fmt.Sprintf("call nanoflow %s(%s);", nfName, paramStr)
+
 	case *microflows.JavaActionCallAction:
 		javaActionName := a.JavaAction
 		if javaActionName == "" {
@@ -442,26 +531,24 @@ func formatAction(
 				paramName = paramName[idx+1:]
 			}
 			// Get the value based on parameter value type
-			valueStr := "..."
+			valueStr := ""
 			switch v := pm.Value.(type) {
 			case *microflows.StringTemplateParameterValue:
 				if v.TypedTemplate != nil {
-					valueStr = v.TypedTemplate.Text
+					valueStr = mdlQuote(v.TypedTemplate.Text)
 				}
 			case *microflows.ExpressionBasedCodeActionParameterValue:
-				if v.Expression != "" {
-					valueStr = v.Expression
-				}
+				valueStr = v.Expression
 			case *microflows.BasicCodeActionParameterValue:
-				if v.Argument != "" {
-					valueStr = v.Argument
-				}
+				valueStr = v.Argument
 			case *microflows.EntityTypeCodeActionParameterValue:
 				if v.Entity != "" {
 					valueStr = mdlQuote(v.Entity)
 				}
 			}
-			params = append(params, fmt.Sprintf("%s = %s", paramName, valueStr))
+			if valueStr != "" {
+				params = append(params, fmt.Sprintf("%s = %s", paramName, valueStr))
+			}
 		}
 
 		paramStr := ""
@@ -686,6 +773,55 @@ func formatAction(
 			return fmt.Sprintf("unlock workflow %s;", a.Workflow)
 		}
 		return fmt.Sprintf("unlock workflow $%s;", a.WorkflowVariable)
+
+	case *microflows.JavaScriptActionCallAction:
+		jsActionName := a.JavaScriptAction
+		if jsActionName == "" {
+			if n := len(a.ParameterMappings); n > 0 {
+				label := "params"
+				if n == 1 {
+					label = "param"
+				}
+				return fmt.Sprintf("-- JavaScriptAction: missing action reference (%d %s)", n, label)
+			}
+			return "-- JavaScriptAction: missing action reference"
+		}
+
+		var params []string
+		for _, pm := range a.ParameterMappings {
+			paramName := pm.Parameter
+			if idx := strings.LastIndex(paramName, "."); idx != -1 {
+				paramName = paramName[idx+1:]
+			}
+			valueStr := ""
+			if pm.Value != nil {
+				switch v := pm.Value.(type) {
+				case *microflows.StringTemplateParameterValue:
+					if v.TypedTemplate != nil {
+						valueStr = mdlQuote(v.TypedTemplate.Text)
+					}
+				case *microflows.ExpressionBasedCodeActionParameterValue:
+					valueStr = v.Expression
+				case *microflows.BasicCodeActionParameterValue:
+					valueStr = v.Argument
+				case *microflows.EntityTypeCodeActionParameterValue:
+					valueStr = v.Entity
+				}
+			}
+			if valueStr != "" {
+				params = append(params, fmt.Sprintf("%s = %s", paramName, valueStr))
+			}
+		}
+
+		paramStr := ""
+		if len(params) > 0 {
+			paramStr = strings.Join(params, ", ")
+		}
+
+		if a.OutputVariableName != "" {
+			return fmt.Sprintf("$%s = call javascript action %s(%s);", a.OutputVariableName, jsActionName, paramStr)
+		}
+		return fmt.Sprintf("call javascript action %s(%s);", jsActionName, paramStr)
 
 	case *microflows.UnknownAction:
 		return fmt.Sprintf("-- Unsupported action type: %s", a.TypeName)
@@ -1077,6 +1213,33 @@ func isMendixKeyword(s string) bool {
 // that must not be prefixed with "$" when serialized as a RETURN value.
 func isQualifiedEnumLiteral(s string) bool {
 	return strings.Count(s, ".") >= 2
+}
+
+// isNumericLiteral returns true for numeric literals (integers and decimals)
+// that must not be prefixed with "$" when serialized as a RETURN value.
+func isNumericLiteral(s string) bool {
+	if s == "" {
+		return false
+	}
+	start := 0
+	if s[0] == '-' {
+		start = 1
+		if len(s) == 1 {
+			return false
+		}
+	}
+	dotSeen := false
+	hasDigit := false
+	for i := start; i < len(s); i++ {
+		if s[i] == '.' && !dotSeen {
+			dotSeen = true
+		} else if s[i] >= '0' && s[i] <= '9' {
+			hasDigit = true
+		} else {
+			return false
+		}
+	}
+	return hasDigit && s[len(s)-1] != '.'
 }
 
 // formatImportXmlAction formats an import mapping action as MDL.

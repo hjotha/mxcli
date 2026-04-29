@@ -55,6 +55,7 @@ const (
 	ShowAccessOnMicroflow // SHOW ACCESS ON MICROFLOW Module.MF
 	ShowAccessOnPage      // SHOW ACCESS ON PAGE Module.Page
 	ShowAccessOnWorkflow  // SHOW ACCESS ON WORKFLOW Module.WF
+	ShowAccessOnNanoflow  // SHOW ACCESS ON NANOFLOW Module.NF
 	ShowSecurityMatrix    // SHOW SECURITY MATRIX [IN module]
 
 	// OData show types
@@ -160,6 +161,8 @@ func (t ShowObjectType) String() string {
 		return "ACCESS ON PAGE"
 	case ShowAccessOnWorkflow:
 		return "ACCESS ON WORKFLOW"
+	case ShowAccessOnNanoflow:
+		return "ACCESS ON NANOFLOW"
 	case ShowSecurityMatrix:
 		return "SECURITY MATRIX"
 	case ShowODataClients:

@@ -168,6 +168,66 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	return activity.ID
 }
 
+// addCallNanoflowAction creates a CALL NANOFLOW statement.
+func (fb *flowBuilder) addCallNanoflowAction(s *ast.CallNanoflowStmt) model.ID {
+	nfQN := s.NanoflowName.Module + "." + s.NanoflowName.Name
+
+	// Build parameter mappings for NanoflowCall
+	var mappings []*microflows.NanoflowCallParameterMapping
+	for _, arg := range s.Arguments {
+		paramQN := nfQN + "." + arg.Name
+		mapping := &microflows.NanoflowCallParameterMapping{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Parameter:   paramQN,
+			Argument:    fb.exprToString(arg.Value),
+		}
+		mappings = append(mappings, mapping)
+	}
+
+	nfCall := &microflows.NanoflowCall{
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		Nanoflow:          nfQN,
+		ParameterMappings: mappings,
+	}
+
+	action := &microflows.NanoflowCallAction{
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		NanoflowCall:       nfCall,
+		OutputVariableName: s.OutputVariable,
+		UseReturnVariable:  s.OutputVariable != "",
+	}
+
+	activityX := fb.posX
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	if s.OutputVariable != "" {
+		fb.registerResultVariableType(s.OutputVariable, fb.lookupNanoflowReturnType(nfQN))
+	}
+
+	// Build custom error handler flow if present
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+	}
+
+	return activity.ID
+}
+
 // addCallJavaActionAction creates a CALL JAVA ACTION statement.
 func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.ID {
 	actionQN := s.ActionName.Module + "." + s.ActionName.Name
@@ -315,6 +375,66 @@ func (fb *flowBuilder) inferGenericJavaActionReturnType(jaDef *javaactions.JavaA
 		}
 	}
 	return ""
+}
+
+// addCallJavaScriptActionAction creates a CALL JAVASCRIPT ACTION statement.
+func (fb *flowBuilder) addCallJavaScriptActionAction(s *ast.CallJavaScriptActionStmt) model.ID {
+	actionQN := s.ActionName.Module + "." + s.ActionName.Name
+
+	// Build parameter mappings with Value structure
+	var mappings []*microflows.JavaScriptActionParameterMapping
+	for _, arg := range s.Arguments {
+		// Parameter qualified name format: Module.JavaScriptAction.ParameterName
+		paramQN := actionQN + "." + arg.Name
+
+		// JavaScript actions use BasicCodeActionParameterValue for all parameters
+		valueExpr := fb.exprToString(arg.Value)
+		value := &microflows.BasicCodeActionParameterValue{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Argument:    valueExpr,
+		}
+
+		mapping := &microflows.JavaScriptActionParameterMapping{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Parameter:   paramQN,
+			Value:       value,
+		}
+		mappings = append(mappings, mapping)
+	}
+
+	action := &microflows.JavaScriptActionCallAction{
+		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		JavaScriptAction:   actionQN,
+		ParameterMappings:  mappings,
+		OutputVariableName: s.OutputVariable,
+		UseReturnVariable:  s.OutputVariable != "",
+	}
+
+	activityX := fb.posX
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	// Build custom error handler flow if present
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+	}
+
+	return activity.ID
 }
 
 // addCallExternalActionAction creates a CALL EXTERNAL ACTION statement.
@@ -1148,7 +1268,7 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	return activity.ID
 }
 
-// addExportToMappingAction adds an ExportXmlAction to the microflow.
+// addTransformJsonAction adds a TransformJsonAction to the microflow.
 func (fb *flowBuilder) addTransformJsonAction(s *ast.TransformJsonStmt) model.ID {
 	activityX := fb.posX
 

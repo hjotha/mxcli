@@ -37,6 +37,11 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
+	// Validate name is not empty
+	if strings.TrimSpace(s.Name.Name) == "" {
+		return mdlerrors.NewValidation("microflow name must not be empty")
+	}
+
 	// Find or auto-create module
 	module, err := findOrCreateModule(ctx, s.Name.Module)
 	if err != nil {

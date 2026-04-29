@@ -129,6 +129,7 @@ createStatement
     | | createAssociationStatement
     | | createModuleStatement
     | | createMicroflowStatement
+    | | createNanoflowStatement
     | | createPageStatement
     | | createSnippetStatement
     | | createEnumerationStatement

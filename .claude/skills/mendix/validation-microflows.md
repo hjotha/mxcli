@@ -10,6 +10,8 @@ Use this skill when:
 - Building conditional validation chains
 - Creating action microflows that call validation microflows
 
+> **Nanoflow validation:** The same patterns apply to nanoflows (`create nanoflow` instead of `create microflow`). Use nanoflows for client-side validation when server roundtrips are unnecessary — validation feedback renders instantly without a network call.
+
 ## The Validation Pattern
 
 Mendix validation follows a two-microflow pattern:

@@ -75,6 +75,8 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 		return listAccessOnPage(ctx, s.Name)
 	case ast.ShowAccessOnWorkflow:
 		return listAccessOnWorkflow(ctx, s.Name)
+	case ast.ShowAccessOnNanoflow:
+		return listAccessOnNanoflow(ctx, s.Name)
 	case ast.ShowSecurityMatrix:
 		return listSecurityMatrix(ctx, s.InModule)
 	case ast.ShowODataClients:

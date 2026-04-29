@@ -502,7 +502,7 @@ func microflowBsonToMDL(ctx *ExecContext, raw map[string]any, qualifiedName stri
 	}
 
 	entityNames, microflowNames := buildNameLookups(ctx)
-	return renderMicroflowMDL(ctx, mf, qn, entityNames, microflowNames, nil)
+	return renderMicroflowMDL(ctx, "microflow", mf, qn, entityNames, microflowNames, nil)
 }
 
 // splitQualifiedName parses "Module.Name" into an ast.QualifiedName.

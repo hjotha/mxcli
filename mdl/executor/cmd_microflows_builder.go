@@ -47,6 +47,12 @@ type flowBuilder struct {
 	// previousStmtAnchor holds the Anchor annotation of the statement that
 	// just emitted an activity, so the next flow's OriginConnectionIndex can
 	// be overridden by the user. Cleared after each flow is created.
+	previousStmtAnchor *ast.FlowAnchors
+	// Cached flow lists to avoid repeated backend calls during lookups.
+	microflowsCache       []*microflows.Microflow
+	microflowsCacheLoaded bool
+	nanoflowsCache        []*microflows.Nanoflow
+	nanoflowsCacheLoaded  bool
 	previousStmtAnchor   *ast.FlowAnchors
 	manualLoopBackTarget model.ID
 }
@@ -143,12 +149,15 @@ func (fb *flowBuilder) lookupMicroflowReturnType(qualifiedName string) microflow
 		return nil
 	}
 
+	// Fast path: direct lookup by qualified name avoids O(n) module walk.
+	// Falls through to module walk on any error (not found, corrupt BSON, etc.).
 	if rawUnit, err := fb.backend.GetRawUnitByName("microflow", qualifiedName); err == nil && rawUnit != nil && len(rawUnit.Contents) > 0 {
 		if mf, err := fb.backend.ParseMicroflowBSON(rawUnit.Contents, model.ID(rawUnit.ID), ""); err == nil && mf != nil {
 			return mf.ReturnType
 		}
 	}
 
+	// Slow path: enumerate all microflows in the module and match by name.
 	moduleName, microflowName, ok := strings.Cut(qualifiedName, ".")
 	if !ok || moduleName == "" || microflowName == "" {
 		return nil
@@ -158,12 +167,16 @@ func (fb *flowBuilder) lookupMicroflowReturnType(qualifiedName string) microflow
 	if err != nil || module == nil {
 		return nil
 	}
-	microflowList, err := fb.backend.ListMicroflows()
-	if err != nil {
-		return nil
+	if !fb.microflowsCacheLoaded {
+		microflowList, err := fb.backend.ListMicroflows()
+		if err != nil {
+			return nil
+		}
+		fb.microflowsCache = microflowList
+		fb.microflowsCacheLoaded = true
 	}
 
-	for _, mf := range microflowList {
+	for _, mf := range fb.microflowsCache {
 		if mf == nil {
 			continue
 		}
@@ -173,6 +186,54 @@ func (fb *flowBuilder) lookupMicroflowReturnType(qualifiedName string) microflow
 		}
 		if containerModuleID == module.ID && mf.Name == microflowName {
 			return mf.ReturnType
+		}
+	}
+
+	return nil
+}
+
+func (fb *flowBuilder) lookupNanoflowReturnType(qualifiedName string) microflows.DataType {
+	if fb.backend == nil || qualifiedName == "" {
+		return nil
+	}
+
+	// Fast path: direct lookup by qualified name avoids O(n) module walk.
+	// Falls through to module walk on any error (not found, corrupt BSON, etc.).
+	if rawUnit, err := fb.backend.GetRawUnitByName("nanoflow", qualifiedName); err == nil && rawUnit != nil && len(rawUnit.Contents) > 0 {
+		if nf, err := fb.backend.ParseMicroflowBSON(rawUnit.Contents, model.ID(rawUnit.ID), ""); err == nil && nf != nil {
+			return nf.ReturnType
+		}
+	}
+
+	// Slow path: enumerate all nanoflows in the module and match by name.
+	moduleName, nanoflowName, ok := strings.Cut(qualifiedName, ".")
+	if !ok || moduleName == "" || nanoflowName == "" {
+		return nil
+	}
+
+	module, err := fb.backend.GetModuleByName(moduleName)
+	if err != nil || module == nil {
+		return nil
+	}
+	if !fb.nanoflowsCacheLoaded {
+		nanoflowList, err := fb.backend.ListNanoflows()
+		if err != nil {
+			return nil
+		}
+		fb.nanoflowsCache = nanoflowList
+		fb.nanoflowsCacheLoaded = true
+	}
+
+	for _, nf := range fb.nanoflowsCache {
+		if nf == nil {
+			continue
+		}
+		containerModuleID := nf.ContainerID
+		if fb.hierarchy != nil {
+			containerModuleID = fb.hierarchy.FindModuleID(nf.ContainerID)
+		}
+		if containerModuleID == module.ID && nf.Name == nanoflowName {
+			return nf.ReturnType
 		}
 	}
 

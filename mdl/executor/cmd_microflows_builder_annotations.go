@@ -43,7 +43,11 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 		return s.Annotations
 	case *ast.CallMicroflowStmt:
 		return s.Annotations
+	case *ast.CallNanoflowStmt:
+		return s.Annotations
 	case *ast.CallJavaActionStmt:
+		return s.Annotations
+	case *ast.CallJavaScriptActionStmt:
 		return s.Annotations
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.Annotations

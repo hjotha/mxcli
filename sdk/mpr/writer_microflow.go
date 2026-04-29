@@ -765,25 +765,48 @@ func serializeTextTemplate(text *model.Text, params []string) bson.D {
 }
 
 func (w *Writer) serializeNanoflow(nf *microflows.Nanoflow) ([]byte, error) {
-	params := make([]bson.M, 0, len(nf.Parameters))
-	for _, p := range nf.Parameters {
-		params = append(params, bson.M{
-			"$ID":           string(p.ID),
-			"$Type":         p.TypeName,
-			"Name":          p.Name,
-			"Documentation": p.Documentation,
-		})
+	// Determine project major version for version-specific serialization.
+	majorVersion := version.DefaultVersion().MajorVersion
+	if pv := w.reader.ProjectVersion(); pv != nil {
+		majorVersion = pv.MajorVersion
 	}
 
-	doc := bson.M{
-		"$ID":           string(nf.ID),
-		"$Type":         nf.TypeName,
-		"Name":          nf.Name,
-		"Documentation": nf.Documentation,
-		"MarkAsUsed":    nf.MarkAsUsed,
-		"Excluded":      nf.Excluded,
-		"Parameters":    params,
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(nf.ID))},
+		{Key: "$Type", Value: "Microflows$Nanoflow"},
+		{Key: "AllowedModuleRoles", Value: allowedModuleRolesArray(nf.AllowedModuleRoles)},
+		{Key: "Documentation", Value: nf.Documentation},
+		{Key: "Excluded", Value: nf.Excluded},
 	}
+
+	// Add Flows array (SequenceFlows and AnnotationFlows at root level)
+	flows := bson.A{int32(3)} // Array type marker
+	if nf.ObjectCollection != nil {
+		for _, flow := range nf.ObjectCollection.Flows {
+			flows = append(flows, serializeSequenceFlow(flow, majorVersion))
+		}
+		for _, af := range nf.ObjectCollection.AnnotationFlows {
+			flows = append(flows, serializeAnnotationFlow(af, majorVersion))
+		}
+	}
+	doc = append(doc, bson.E{Key: "Flows", Value: flows})
+
+	doc = append(doc, bson.E{Key: "MarkAsUsed", Value: nf.MarkAsUsed})
+
+	// Add return type
+	if nf.ReturnType != nil {
+		doc = append(doc, bson.E{Key: "MicroflowReturnType", Value: serializeMicroflowDataType(nf.ReturnType)})
+	}
+
+	doc = append(doc, bson.E{Key: "Name", Value: nf.Name})
+
+	// Add object collection (without flows — they're in Flows array)
+	if nf.ObjectCollection != nil {
+		doc = append(doc, bson.E{Key: "ObjectCollection", Value: serializeMicroflowObjectCollectionWithoutFlows(nf.ObjectCollection, nf.Parameters, majorVersion)})
+	}
+
+	// Parameters stored inside ObjectCollection.Objects, not as a separate key.
+
 	return bson.Marshal(doc)
 }
 

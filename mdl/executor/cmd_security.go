@@ -401,6 +401,52 @@ func listAccessOnWorkflow(ctx *ExecContext, name *ast.QualifiedName) error {
 	return mdlerrors.NewUnsupported("show access on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }
 
+// listAccessOnNanoflow handles SHOW ACCESS ON NANOFLOW Module.NF.
+func listAccessOnNanoflow(ctx *ExecContext, name *ast.QualifiedName) error {
+	if name == nil {
+		return mdlerrors.NewValidation("nanoflow name required")
+	}
+
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	nfs, err := ctx.Backend.ListNanoflows()
+	if err != nil {
+		return mdlerrors.NewBackend("list nanoflows", err)
+	}
+
+	for _, nf := range nfs {
+		modName := h.GetModuleName(h.FindModuleID(nf.ContainerID))
+		if modName == name.Module && nf.Name == name.Name {
+			if ctx.Format == FormatJSON {
+				result := &TableResult{Columns: []string{"Module", "Role"}}
+				for _, role := range nf.AllowedModuleRoles {
+					parts := strings.SplitN(string(role), ".", 2)
+					mod, r := "", string(role)
+					if len(parts) == 2 {
+						mod, r = parts[0], parts[1]
+					}
+					result.Rows = append(result.Rows, []any{mod, r})
+				}
+				return writeResult(ctx, result)
+			}
+			if len(nf.AllowedModuleRoles) == 0 {
+				fmt.Fprintf(ctx.Output, "No module roles granted execute access on %s.%s\n", modName, nf.Name)
+				return nil
+			}
+			fmt.Fprintf(ctx.Output, "Allowed module roles for %s.%s:\n", modName, nf.Name)
+			for _, role := range nf.AllowedModuleRoles {
+				fmt.Fprintf(ctx.Output, "  %s\n", string(role))
+			}
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("nanoflow", name.String())
+}
+
 // listSecurityMatrix handles SHOW SECURITY MATRIX [IN module].
 func listSecurityMatrix(ctx *ExecContext, moduleName string) error {
 	if ctx.Format == FormatJSON {
