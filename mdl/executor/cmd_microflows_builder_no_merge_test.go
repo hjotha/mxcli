@@ -46,6 +46,58 @@ func TestBuildFlowGraph_NoMergeIfElseContinuesFromBranchTail(t *testing.T) {
 	}
 }
 
+func TestBuildFlowGraph_NestedNoMergeTailCarriesAnchorToParentMerge(t *testing.T) {
+	anchoredTail := &ast.LogStmt{
+		Level:   ast.LogInfo,
+		Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "nested else tail"},
+		Annotations: &ast.ActivityAnnotations{
+			Anchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+		},
+	}
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "Outer"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.IfStmt{
+					Condition: &ast.VariableExpr{Name: "Inner"},
+					ThenBody: []ast.MicroflowStatement{
+						&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}},
+					},
+					ElseBody: []ast.MicroflowStatement{anchoredTail},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "outer else"}},
+			},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "after outer"}},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"Outer": "Boolean", "Inner": "Boolean"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeBoolean}})
+
+	tailID := findLogActivityIDByMessage(t, oc, "nested else tail")
+	for _, flow := range oc.Flows {
+		if flow.OriginID != tailID {
+			continue
+		}
+		if _, ok := objectByID(oc, flow.DestinationID).(*microflows.ExclusiveMerge); !ok {
+			continue
+		}
+		if flow.OriginConnectionIndex != AnchorBottom || flow.DestinationConnectionIndex != AnchorTop {
+			t.Fatalf("nested no-merge tail anchor = from %d to %d, want bottom/top", flow.OriginConnectionIndex, flow.DestinationConnectionIndex)
+		}
+		return
+	}
+	t.Fatal("expected nested no-merge tail to connect to the parent merge")
+}
+
 func findLogActivityIDByMessage(t *testing.T, oc *microflows.MicroflowObjectCollection, message string) model.ID {
 	t.Helper()
 	for _, obj := range oc.Objects {
@@ -63,6 +115,15 @@ func findLogActivityIDByMessage(t *testing.T, oc *microflows.MicroflowObjectColl
 	}
 	t.Fatalf("missing log activity %q", message)
 	return ""
+}
+
+func objectByID(oc *microflows.MicroflowObjectCollection, id model.ID) microflows.MicroflowObject {
+	for _, obj := range oc.Objects {
+		if obj.GetID() == id {
+			return obj
+		}
+	}
+	return nil
 }
 
 func hasSequenceFlow(flows []*microflows.SequenceFlow, originID, destinationID model.ID) bool {
