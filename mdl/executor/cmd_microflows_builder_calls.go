@@ -1268,7 +1268,7 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	return activity.ID
 }
 
-// addExportToMappingAction adds an ExportXmlAction to the microflow.
+// addTransformJsonAction adds a TransformJsonAction to the microflow.
 func (fb *flowBuilder) addTransformJsonAction(s *ast.TransformJsonStmt) model.ID {
 	activityX := fb.posX
 

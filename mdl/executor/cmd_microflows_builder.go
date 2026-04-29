@@ -145,12 +145,15 @@ func (fb *flowBuilder) lookupMicroflowReturnType(qualifiedName string) microflow
 		return nil
 	}
 
+	// Fast path: direct lookup by qualified name avoids O(n) module walk.
+	// Falls through to module walk on any error (not found, corrupt BSON, etc.).
 	if rawUnit, err := fb.backend.GetRawUnitByName("microflow", qualifiedName); err == nil && rawUnit != nil && len(rawUnit.Contents) > 0 {
 		if mf, err := fb.backend.ParseMicroflowBSON(rawUnit.Contents, model.ID(rawUnit.ID), ""); err == nil && mf != nil {
 			return mf.ReturnType
 		}
 	}
 
+	// Slow path: enumerate all microflows in the module and match by name.
 	moduleName, microflowName, ok := strings.Cut(qualifiedName, ".")
 	if !ok || moduleName == "" || microflowName == "" {
 		return nil
@@ -190,6 +193,15 @@ func (fb *flowBuilder) lookupNanoflowReturnType(qualifiedName string) microflows
 		return nil
 	}
 
+	// Fast path: direct lookup by qualified name avoids O(n) module walk.
+	// Falls through to module walk on any error (not found, corrupt BSON, etc.).
+	if rawUnit, err := fb.backend.GetRawUnitByName("nanoflow", qualifiedName); err == nil && rawUnit != nil && len(rawUnit.Contents) > 0 {
+		if nf, err := fb.backend.ParseMicroflowBSON(rawUnit.Contents, model.ID(rawUnit.ID), ""); err == nil && nf != nil {
+			return nf.ReturnType
+		}
+	}
+
+	// Slow path: enumerate all nanoflows in the module and match by name.
 	moduleName, nanoflowName, ok := strings.Cut(qualifiedName, ".")
 	if !ok || moduleName == "" || nanoflowName == "" {
 		return nil

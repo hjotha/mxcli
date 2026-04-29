@@ -130,6 +130,9 @@ func (sc *scriptContext) allNames() []string {
 	for n := range sc.microflows {
 		names = append(names, n)
 	}
+	for n := range sc.nanoflows {
+		names = append(names, n)
+	}
 	for n := range sc.pages {
 		names = append(names, n)
 	}
@@ -287,6 +290,11 @@ func validateWithContext(ctx *ExecContext, stmt ast.Statement, sc *scriptContext
 			if _, err := findModule(ctx, s.Name.Module); err != nil {
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
+		}
+		// Validate nanoflow body for semantic errors (e.g., undeclared variables)
+		if validationErrors := ValidateNanoflowBody(s); len(validationErrors) > 0 {
+			return mdlerrors.NewValidationf("nanoflow '%s' has validation errors:\n  - %s",
+				s.Name.String(), strings.Join(validationErrors, "\n  - "))
 		}
 		// Validate references inside nanoflow body (skip excluded nanoflows)
 		if !s.Excluded {

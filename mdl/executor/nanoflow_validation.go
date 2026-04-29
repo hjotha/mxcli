@@ -70,27 +70,18 @@ func checkDisallowedNanoflowAction(stmt ast.MicroflowStatement) string {
 		return "export mapping is not allowed in nanoflows"
 	case *ast.TransformJsonStmt:
 		return "JSON transformation is not allowed in nanoflows"
-	case *ast.CallWorkflowStmt:
-		return "workflow calls are not allowed in nanoflows"
-	case *ast.GetWorkflowDataStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.GetWorkflowsStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.GetWorkflowActivityRecordsStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.WorkflowOperationStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.SetTaskOutcomeStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.OpenUserTaskStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.NotifyWorkflowStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.OpenWorkflowStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.LockWorkflowStmt:
-		return "workflow actions are not allowed in nanoflows"
-	case *ast.UnlockWorkflowStmt:
+	// Workflow actions — all server-side only
+	case *ast.CallWorkflowStmt,
+		*ast.GetWorkflowDataStmt,
+		*ast.GetWorkflowsStmt,
+		*ast.GetWorkflowActivityRecordsStmt,
+		*ast.WorkflowOperationStmt,
+		*ast.SetTaskOutcomeStmt,
+		*ast.OpenUserTaskStmt,
+		*ast.NotifyWorkflowStmt,
+		*ast.OpenWorkflowStmt,
+		*ast.LockWorkflowStmt,
+		*ast.UnlockWorkflowStmt:
 		return "workflow actions are not allowed in nanoflows"
 	case *ast.DownloadFileStmt:
 		return "file downloads are not allowed in nanoflows"
