@@ -511,6 +511,9 @@ func (fb *flowBuilder) resolveWebServiceRefForWrite(ref string) string {
 		if fb.hierarchy != nil && fb.hierarchy.GetQualifiedName(unit.ContainerID, name) == ref {
 			return string(unit.ID)
 		}
+		// Hierarchy can be unavailable in tests or partial backends. Bare-name
+		// fallback keeps those cases writable, but it is intentionally a
+		// best-effort match and can be ambiguous across modules.
 		if name == ref {
 			return string(unit.ID)
 		}

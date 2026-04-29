@@ -1671,6 +1671,10 @@ func formatSplitCondition(cond microflows.SplitCondition) string {
 }
 
 func canonicalRawBSON(raw []byte) []byte {
+	// RawBSON is preserved byte-for-byte when written back to disk. This
+	// canonical form only stabilizes the MDL text emitted by describe, so BSON
+	// documents with equivalent key/value content do not drift due to map or
+	// parser ordering.
 	var doc bson.D
 	if err := bson.Unmarshal(raw, &doc); err != nil {
 		return raw

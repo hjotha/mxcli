@@ -702,6 +702,10 @@ func serializeWebServiceCallAction(a *microflows.WebServiceCallAction) bson.D {
 				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 				{Key: "$Type", Value: "Microflows$ExportMappingCall"},
 				{Key: "Mapping", Value: string(a.SendMappingID)},
+				// Studio Pro uses an array whose first element is the declared
+				// count. The legacy SOAP fixture has no parameter mappings, so
+				// this marker matches the empty ExportMappingCall shape used by
+				// existing microflow/rule-call writers.
 				{Key: "ParameterMappings", Value: bson.A{int32(2)}},
 			}},
 		}})

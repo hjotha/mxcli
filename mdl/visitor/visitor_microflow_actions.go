@@ -261,6 +261,9 @@ func buildCallWebServiceStatement(ctx parser.ICallWebServiceStatementContext) *a
 		stmt.OutputVariable = strings.TrimPrefix(v.GetText(), "$")
 	}
 
+	// The grammar fixes the structured CALL WEB SERVICE clause order as:
+	// service, optional operation, optional send mapping, optional receive
+	// mapping. Keep the positional STRING_LITERAL walk in that same order.
 	literals := callCtx.AllSTRING_LITERAL()
 	idx := 0
 	if callCtx.RAW() != nil {
