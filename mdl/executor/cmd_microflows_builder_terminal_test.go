@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -429,7 +430,7 @@ func TestBuildFlowGraph_OutputHandlerTerminatesBeforeDeclareReferencingOutput(t 
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
 			OutputVariable: "CreatedRecord",
-			MicroflowName: ast.QualifiedName{Module: "SampleSync", Name: "CreateRecord"},
+			MicroflowName:  ast.QualifiedName{Module: "SampleSync", Name: "CreateRecord"},
 			ErrorHandling: &ast.ErrorHandlingClause{
 				Type: ast.ErrorHandlingCustomWithoutRollback,
 				Body: []ast.MicroflowStatement{
@@ -494,6 +495,128 @@ func TestBuildFlowGraph_OutputHandlerTerminatesBeforeDeclareReferencingOutput(t 
 	}
 	if !errorFlowTerminates {
 		t.Fatal("custom handler should terminate at an EndEvent before the output-dependent declare")
+	}
+}
+
+func TestBuildFlowGraph_OutputHandlerInReturningBranchSkipsDerivedSuccessTail(t *testing.T) {
+	successMessage := &ast.VariableExpr{Name: "SuccessMessage"}
+	body := []ast.MicroflowStatement{
+		&ast.DeclareStmt{
+			Variable:     "ErrorMessage",
+			Type:         ast.DataType{Kind: ast.TypeString},
+			InitialValue: &ast.LiteralExpr{Kind: ast.LiteralString, Value: ""},
+		},
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "CanCreate"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.CallMicroflowStmt{
+					OutputVariable: "CreatedRecord",
+					MicroflowName:  ast.QualifiedName{Module: "SampleService", Name: "CreateRecord"},
+					ErrorHandling: &ast.ErrorHandlingClause{
+						Type: ast.ErrorHandlingCustomWithoutRollback,
+						Body: []ast.MicroflowStatement{
+							&ast.MfSetStmt{
+								Target: "ErrorMessage",
+								Value:  &ast.LiteralExpr{Kind: ast.LiteralString, Value: "create failed"},
+							},
+						},
+					},
+				},
+				&ast.DeclareStmt{
+					Variable: "SuccessMessage",
+					Type:     ast.DataType{Kind: ast.TypeString},
+					InitialValue: &ast.BinaryExpr{
+						Left:     &ast.LiteralExpr{Kind: ast.LiteralString, Value: "Created "},
+						Operator: "+",
+						Right:    &ast.AttributePathExpr{Variable: "CreatedRecord", Path: []string{"Name"}},
+					},
+				},
+				&ast.LogStmt{
+					Level:   ast.LogInfo,
+					Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "{1}"},
+					Template: []ast.TemplateParam{
+						{Index: 1, Value: successMessage},
+					},
+				},
+				&ast.ShowMessageStmt{
+					Message:      &ast.LiteralExpr{Kind: ast.LiteralString, Value: "{1}"},
+					Type:         "Information",
+					TemplateArgs: []ast.Expression{successMessage},
+				},
+				&ast.ClosePageStmt{},
+				&ast.ReturnStmt{},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.MfSetStmt{
+					Target: "ErrorMessage",
+					Value:  &ast.LiteralExpr{Kind: ast.LiteralString, Value: "not found"},
+				},
+			},
+		},
+		&ast.LogStmt{
+			Level:   ast.LogError,
+			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "{1}"},
+			Template: []ast.TemplateParam{
+				{Index: 1, Value: &ast.VariableExpr{Name: "ErrorMessage"}},
+			},
+		},
+		&ast.ShowMessageStmt{
+			Message:      &ast.LiteralExpr{Kind: ast.LiteralString, Value: "{1}"},
+			Type:         "Error",
+			TemplateArgs: []ast.Expression{&ast.VariableExpr{Name: "ErrorMessage"}},
+		},
+		&ast.ReturnStmt{},
+	}
+
+	if !statementReferencesVar(body[1].(*ast.IfStmt).ThenBody[3], "SuccessMessage") {
+		t.Fatal("SHOW MESSAGE arguments must be visible to custom handler skip-var routing")
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"CanCreate": "Boolean"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, handlerSetID, successDeclareID, errorLogID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			if action.ResultVariableName == "CreatedRecord" {
+				callID = activity.ID
+			}
+		case *microflows.ChangeVariableAction:
+			if action.VariableName == "ErrorMessage" && strings.Contains(action.Value, "create failed") {
+				handlerSetID = activity.ID
+			}
+		case *microflows.CreateVariableAction:
+			if action.VariableName == "SuccessMessage" {
+				successDeclareID = activity.ID
+			}
+		case *microflows.LogMessageAction:
+			if action.LogLevel == "Error" {
+				errorLogID = activity.ID
+			}
+		}
+	}
+	if callID == "" || handlerSetID == "" || successDeclareID == "" || errorLogID == "" {
+		t.Fatalf("expected source call, handler set, success declare, and error log; got call=%q handler=%q declare=%q errorLog=%q", callID, handlerSetID, successDeclareID, errorLogID)
+	}
+	if !flowPathExists(oc.Flows, callID, handlerSetID) {
+		t.Fatal("source call must connect to the custom handler body")
+	}
+	if flowPathExists(oc.Flows, handlerSetID, successDeclareID) {
+		t.Fatal("custom handler must skip the output-derived success tail")
+	}
+	if !flowPathExists(oc.Flows, handlerSetID, errorLogID) {
+		t.Fatal("custom handler in a returning branch must rejoin at the shared safe continuation")
 	}
 }
 

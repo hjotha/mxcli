@@ -127,6 +127,27 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForStatement(originID, destinat
 	})
 }
 
+func (fb *flowBuilder) addPendingErrorHandlerFlowTo(destinationID model.ID) {
+	if destinationID == "" {
+		return
+	}
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		if state.emptyFrom != "" {
+			fb.addEmptyErrorHandlerRejoinFlowFrom(state.emptyFrom, state.emptyFrom, destinationID)
+			state.emptyFrom = ""
+		}
+		if state.source != "" && state.tailFrom != "" {
+			fb.addErrorHandlerRejoinFlowForState(state, state.source, destinationID)
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailIsSource = false
+			state.returnValue = ""
+		}
+		return state
+	})
+}
+
 func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHandlerState, originID, destinationID model.ID, stmt ast.MicroflowStatement, futureReferencesSkipVar bool) pendingErrorHandlerState {
 	if destinationID == "" {
 		return state
@@ -147,13 +168,10 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHand
 	if state.skipVar != "" {
 		if statementReferencesVar(stmt, state.skipVar) {
 			if !fb.hasReturnValue {
-				endID := fb.addTerminalEndEventForPendingHandler(fb.returnType, "")
-				if state.tailIsSource {
-					fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, endID))
-				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(state.tailFrom, endID))
+				if derivedVar := outputDerivedVariable(stmt, state.skipVar); derivedVar != "" {
+					state.skipVar = derivedVar
 				}
-				return pendingErrorHandlerState{}
+				return state
 			}
 			return state
 		}
@@ -332,6 +350,11 @@ func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
 		for _, param := range s.Template {
 			refs = append(refs, exprVarRefs(param.Value)...)
 		}
+	case *ast.ShowMessageStmt:
+		refs = append(refs, exprVarRefs(s.Message)...)
+		for _, arg := range s.TemplateArgs {
+			refs = append(refs, exprVarRefs(arg)...)
+		}
 	case *ast.IfStmt:
 		refs = append(refs, exprVarRefs(s.Condition)...)
 		refs = append(refs, errorHandlerStatementsVarRefs(s.ThenBody)...)
@@ -395,6 +418,19 @@ func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
 		refs = append(refs, s.Item, s.List)
 	}
 	return refs
+}
+
+func outputDerivedVariable(stmt ast.MicroflowStatement, sourceVar string) string {
+	declare, ok := stmt.(*ast.DeclareStmt)
+	if !ok || declare.Variable == "" {
+		return ""
+	}
+	for _, ref := range exprVarRefs(declare.InitialValue) {
+		if ref == sourceVar {
+			return declare.Variable
+		}
+	}
+	return ""
 }
 
 func errorHandlerStatementsVarRefs(stmts []ast.MicroflowStatement) []string {
