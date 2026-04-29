@@ -179,3 +179,7 @@ BEGIN
   SHOW PAGE Sales.Order_Detail ($Order = $Order);
 END;
 ```
+
+## Security
+
+Nanoflow access control uses GRANT/REVOKE to specify which module roles can execute a nanoflow. See [Grant & Revoke](./grant-revoke.md) and [Document Access](./document-access.md) for full syntax and examples.

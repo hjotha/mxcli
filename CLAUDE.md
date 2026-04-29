@@ -425,6 +425,7 @@ Regenerate after modifying `MDLLexer.g4` or `MDLParser.g4`: `make grammar`. See 
 - `.claude/skills/version-awareness.md` - **CHECK project version first** - Run `show features` before using version-gated syntax
 - `.claude/skills/design-mdl-syntax.md` - **READ before designing new MDL syntax** - Design principles, decision framework, anti-patterns, checklist
 - `.claude/skills/write-microflows.md` - Microflow syntax, common mistakes, validation checklist
+- `.claude/skills/write-nanoflows.md` - Nanoflow syntax, restrictions, disallowed activities, validation checklist
 - `.claude/skills/create-page.md` - Page/widget syntax reference
 - `.claude/skills/alter-page.md` - ALTER PAGE/SNIPPET in-place modifications (SET, INSERT, DROP, REPLACE, SET Layout)
 - `.claude/skills/overview-pages.md` - CRUD page patterns

@@ -92,17 +92,18 @@ func checkDisallowedNanoflowAction(stmt ast.MicroflowStatement) string {
 		return "workflow actions are not allowed in nanoflows"
 	case *ast.UnlockWorkflowStmt:
 		return "workflow actions are not allowed in nanoflows"
+	case *ast.DownloadFileStmt:
+		return "file downloads are not allowed in nanoflows"
 	}
 	return ""
 }
 
 // getErrorHandling extracts the ErrorHandlingClause from statements that have one.
 //
-// NOTE: This function does not cover all statement types that carry an ErrorHandling
-// field (e.g., CallWorkflowStmt, ShowHomePageStmt, workflow action stmts). That is
-// safe because validateNanoflowStatements checks the denylist FIRST and skips
-// recursion (via continue) for disallowed actions. If the denylist ordering changes,
-// add error handling extraction for those types here.
+// Only statements reachable in nanoflows (i.e., NOT in the denylist) need coverage
+// here. Disallowed actions are rejected by checkDisallowedNanoflowAction before
+// this function is called. Statements like ListOperationStmt that have no
+// ErrorHandling field are also omitted (they return nil implicitly via default).
 func getErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
 	switch s := stmt.(type) {
 	case *ast.CreateObjectStmt:
@@ -117,26 +118,8 @@ func getErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
 		return s.ErrorHandling
 	case *ast.CallNanoflowStmt:
 		return s.ErrorHandling
-	case *ast.CallJavaActionStmt:
-		return s.ErrorHandling
 	case *ast.CallJavaScriptActionStmt:
 		return s.ErrorHandling
-	case *ast.CallExternalActionStmt:
-		return s.ErrorHandling
-	case *ast.RestCallStmt:
-		return s.ErrorHandling
-	case *ast.SendRestRequestStmt:
-		return s.ErrorHandling
-	case *ast.ImportFromMappingStmt:
-		return s.ErrorHandling
-	case *ast.ExportToMappingStmt:
-		return s.ErrorHandling
-	case *ast.TransformJsonStmt:
-		return s.ErrorHandling
-	case *ast.ExecuteDatabaseQueryStmt:
-		return s.ErrorHandling
-	case *ast.ListOperationStmt:
-		return nil
 	}
 	return nil
 }

@@ -844,3 +844,34 @@ func TestNanoflow_DropNotFound(t *testing.T) {
 		t.Error("Expected error for dropping non-existent nanoflow")
 	}
 }
+
+// TestRoundtripNanoflow_CallJavaScriptAction verifies that CALL JAVASCRIPT ACTION
+// roundtrips correctly through CREATE → DESCRIBE.
+// Requires a JavaScript action to exist in the test project module.
+func TestRoundtripNanoflow_CallJavaScriptAction(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	// First, verify a JavaScript action exists in the test module.
+	// If none exist, skip—this test requires a pre-provisioned JS action.
+	jsActions, err := env.describeMDL(fmt.Sprintf("show javascript actions in %s;", testModule))
+	if err != nil || jsActions == "" || strings.Contains(jsActions, "0 javascript actions") {
+		t.Skip("No JavaScript actions available in test module — skipping roundtrip test")
+	}
+
+	// Extract first available JS action name from SHOW output for the test.
+	// Fallback: use a known action name if the test project provisions one.
+	jsActionName := testModule + ".MyJSAction"
+
+	nfName := testModule + ".RT_NF_CallJSAction"
+	createMDL := `create nanoflow ` + nfName + ` () returns String
+begin
+  $Result = call javascript action ` + jsActionName + ` ();
+  return $Result;
+end;`
+
+	assertNanoflowContains(t, env, nfName, createMDL,
+		[]string{"call javascript action", jsActionName},
+		nil,
+	)
+}

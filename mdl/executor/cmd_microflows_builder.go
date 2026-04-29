@@ -46,6 +46,11 @@ type flowBuilder struct {
 	// just emitted an activity, so the next flow's OriginConnectionIndex can
 	// be overridden by the user. Cleared after each flow is created.
 	previousStmtAnchor *ast.FlowAnchors
+	// Cached flow lists to avoid repeated backend calls during lookups.
+	microflowsCache       []*microflows.Microflow
+	microflowsCacheLoaded bool
+	nanoflowsCache        []*microflows.Nanoflow
+	nanoflowsCacheLoaded  bool
 }
 
 // addError records a validation error during flow building.
@@ -155,12 +160,16 @@ func (fb *flowBuilder) lookupMicroflowReturnType(qualifiedName string) microflow
 	if err != nil || module == nil {
 		return nil
 	}
-	microflowList, err := fb.backend.ListMicroflows()
-	if err != nil {
-		return nil
+	if !fb.microflowsCacheLoaded {
+		microflowList, err := fb.backend.ListMicroflows()
+		if err != nil {
+			return nil
+		}
+		fb.microflowsCache = microflowList
+		fb.microflowsCacheLoaded = true
 	}
 
-	for _, mf := range microflowList {
+	for _, mf := range fb.microflowsCache {
 		if mf == nil {
 			continue
 		}
@@ -190,12 +199,16 @@ func (fb *flowBuilder) lookupNanoflowReturnType(qualifiedName string) microflows
 	if err != nil || module == nil {
 		return nil
 	}
-	nanoflowList, err := fb.backend.ListNanoflows()
-	if err != nil {
-		return nil
+	if !fb.nanoflowsCacheLoaded {
+		nanoflowList, err := fb.backend.ListNanoflows()
+		if err != nil {
+			return nil
+		}
+		fb.nanoflowsCache = nanoflowList
+		fb.nanoflowsCacheLoaded = true
 	}
 
-	for _, nf := range nanoflowList {
+	for _, nf := range fb.nanoflowsCache {
 		if nf == nil {
 			continue
 		}

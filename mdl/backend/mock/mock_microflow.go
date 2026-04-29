@@ -69,42 +69,42 @@ func (m *MockBackend) ListNanoflows() ([]*microflows.Nanoflow, error) {
 	if m.ListNanoflowsFunc != nil {
 		return m.ListNanoflowsFunc()
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.ListNanoflows not configured")
 }
 
 func (m *MockBackend) GetNanoflow(id model.ID) (*microflows.Nanoflow, error) {
 	if m.GetNanoflowFunc != nil {
 		return m.GetNanoflowFunc(id)
 	}
-	return nil, nil
+	return nil, fmt.Errorf("MockBackend.GetNanoflow not configured")
 }
 
 func (m *MockBackend) CreateNanoflow(nf *microflows.Nanoflow) error {
 	if m.CreateNanoflowFunc != nil {
 		return m.CreateNanoflowFunc(nf)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.CreateNanoflow not configured")
 }
 
 func (m *MockBackend) UpdateNanoflow(nf *microflows.Nanoflow) error {
 	if m.UpdateNanoflowFunc != nil {
 		return m.UpdateNanoflowFunc(nf)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.UpdateNanoflow not configured")
 }
 
 func (m *MockBackend) DeleteNanoflow(id model.ID) error {
 	if m.DeleteNanoflowFunc != nil {
 		return m.DeleteNanoflowFunc(id)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.DeleteNanoflow not configured")
 }
 
 func (m *MockBackend) MoveNanoflow(nf *microflows.Nanoflow) error {
 	if m.MoveNanoflowFunc != nil {
 		return m.MoveNanoflowFunc(nf)
 	}
-	return nil
+	return fmt.Errorf("MockBackend.MoveNanoflow not configured")
 }
 
 func (m *MockBackend) IsRule(qualifiedName string) (bool, error) {
