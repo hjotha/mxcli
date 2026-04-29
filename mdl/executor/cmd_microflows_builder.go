@@ -37,11 +37,13 @@ type flowBuilder struct {
 	// continues) so the continuing branch's @anchor survives to the actual
 	// splitID→nextActivity flow — which is emitted one iteration later by the
 	// outer loop, not by addIfStatement.
-	nextFlowAnchor     *ast.FlowAnchors
-	backend            backend.FullBackend          // For looking up page/microflow references
-	hierarchy          *ContainerHierarchy          // For resolving container IDs to module names
-	pendingAnnotations *ast.ActivityAnnotations     // Pending annotations to attach to next activity
-	restServices       []*model.ConsumedRestService // Cached REST services for parameter classification
+	nextFlowAnchor       *ast.FlowAnchors
+	backend              backend.FullBackend          // For looking up page/microflow references
+	hierarchy            *ContainerHierarchy          // For resolving container IDs to module names
+	pendingAnnotations   *ast.ActivityAnnotations     // Pending annotations to attach to next activity
+	restServices         []*model.ConsumedRestService // Cached REST services for parameter classification
+	listInputVariables   map[string]bool              // Variables later consumed by list-only actions
+	objectInputVariables map[string]bool              // Variables later consumed through object/attribute access
 	// previousStmtAnchor holds the Anchor annotation of the statement that
 	// just emitted an activity, so the next flow's OriginConnectionIndex can
 	// be overridden by the user. Cleared after each flow is created.
@@ -51,6 +53,8 @@ type flowBuilder struct {
 	microflowsCacheLoaded bool
 	nanoflowsCache        []*microflows.Nanoflow
 	nanoflowsCacheLoaded  bool
+	previousStmtAnchor   *ast.FlowAnchors
+	manualLoopBackTarget model.ID
 }
 
 // addError records a validation error during flow building.
