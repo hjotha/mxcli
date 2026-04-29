@@ -468,6 +468,16 @@ func traverseFlow(
 		if isMergePairedWithSplit(currentID, splitMergeMap) {
 			return
 		}
+		if mergeHasLoopBackEdge(currentID, flowsByOrigin) {
+			visited[currentID] = true
+			*lines = append(*lines, strings.Repeat("  ", indent)+"while true")
+			*lines = append(*lines, strings.Repeat("  ", indent)+"begin")
+			for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+				traverseFlowUntilMerge(ctx, flow.DestinationID, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+			}
+			*lines = append(*lines, strings.Repeat("  ", indent)+"end while;")
+			return
+		}
 		visited[currentID] = true
 		for _, flow := range flowsByOrigin[currentID] {
 			traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
@@ -909,6 +919,31 @@ func emitLoopBody(
 func isMergePairedWithSplit(mergeID model.ID, splitMergeMap map[model.ID]model.ID) bool {
 	for _, v := range splitMergeMap {
 		if v == mergeID {
+			return true
+		}
+	}
+	return false
+}
+
+func mergeHasLoopBackEdge(mergeID model.ID, flowsByOrigin map[model.ID][]*microflows.SequenceFlow) bool {
+	for _, flow := range findNormalFlows(flowsByOrigin[mergeID]) {
+		if reachesObject(flow.DestinationID, mergeID, flowsByOrigin, map[model.ID]bool{}) {
+			return true
+		}
+	}
+	return false
+}
+
+func reachesObject(currentID, targetID model.ID, flowsByOrigin map[model.ID][]*microflows.SequenceFlow, visited map[model.ID]bool) bool {
+	if currentID == "" || visited[currentID] {
+		return false
+	}
+	if currentID == targetID {
+		return true
+	}
+	visited[currentID] = true
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+		if reachesObject(flow.DestinationID, targetID, flowsByOrigin, visited) {
 			return true
 		}
 	}

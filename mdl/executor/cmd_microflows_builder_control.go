@@ -436,9 +436,150 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 	return loop.ID
 }
 
+func isManualWhileTrueCandidate(s *ast.WhileStmt) bool {
+	if s == nil || containsBreakForCurrentLoop(s.Body) || (!containsContinueStmt(s.Body) && !containsTerminalStmt(s.Body)) {
+		return false
+	}
+	lit, ok := s.Condition.(*ast.LiteralExpr)
+	if !ok || lit.Kind != ast.LiteralBoolean {
+		return false
+	}
+	value, ok := lit.Value.(bool)
+	return ok && value
+}
+
+func containsBreakForCurrentLoop(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.BreakStmt:
+			return true
+		case *ast.IfStmt:
+			if containsBreakForCurrentLoop(s.ThenBody) || containsBreakForCurrentLoop(s.ElseBody) {
+				return true
+			}
+		case *ast.LoopStmt, *ast.WhileStmt:
+			// A break inside a nested loop exits that nested loop, not this
+			// manual while-true back-edge.
+			continue
+		}
+	}
+	return false
+}
+
+func containsContinueStmt(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.ContinueStmt:
+			return true
+		case *ast.IfStmt:
+			if containsContinueStmt(s.ThenBody) || containsContinueStmt(s.ElseBody) {
+				return true
+			}
+		case *ast.LoopStmt:
+			if containsContinueStmt(s.Body) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if containsContinueStmt(s.Body) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (fb *flowBuilder) addManualWhileTrueStatement(s *ast.WhileStmt) model.ID {
+	mergeX := fb.posX
+	mergeY := fb.posY
+	if s.Annotations != nil && s.Annotations.Position != nil {
+		mergeX = s.Annotations.Position.X
+		mergeY = s.Annotations.Position.Y
+	}
+
+	merge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: mergeX, Y: mergeY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, merge)
+	if fb.pendingAnnotations != nil {
+		fb.applyAnnotations(merge.ID, fb.pendingAnnotations)
+		fb.pendingAnnotations = nil
+	}
+
+	savedBackTarget := fb.manualLoopBackTarget
+	fb.manualLoopBackTarget = merge.ID
+	defer func() { fb.manualLoopBackTarget = savedBackTarget }()
+
+	fb.posX = mergeX + MergeSize + HorizontalSpacing/2
+	fb.posY = mergeY
+
+	lastBodyID := merge.ID
+	var pendingBodyCase string
+	var pendingBodyAnchor *ast.FlowAnchors
+	var prevBodyAnchor *ast.FlowAnchors
+	for _, stmt := range s.Body {
+		thisAnchor := stmtOwnAnchor(stmt)
+		actID := fb.addStatement(stmt)
+		if actID == "" {
+			continue
+		}
+		if fb.pendingAnnotations != nil {
+			fb.applyAnnotations(actID, fb.pendingAnnotations)
+			fb.pendingAnnotations = nil
+		}
+		if lastBodyID != "" && lastBodyID != actID {
+			var flow *microflows.SequenceFlow
+			if pendingBodyCase != "" {
+				flow = newHorizontalFlowWithCase(lastBodyID, actID, pendingBodyCase)
+				if pendingBodyAnchor != nil {
+					prevBodyAnchor = pendingBodyAnchor
+				}
+				pendingBodyCase = ""
+				pendingBodyAnchor = nil
+			} else {
+				flow = newHorizontalFlow(lastBodyID, actID)
+			}
+			applyUserAnchors(flow, prevBodyAnchor, thisAnchor)
+			fb.flows = append(fb.flows, flow)
+		}
+		prevBodyAnchor = thisAnchor
+		if fb.nextConnectionPoint != "" {
+			lastBodyID = fb.nextConnectionPoint
+			fb.nextConnectionPoint = ""
+			pendingBodyCase = fb.nextFlowCase
+			fb.nextFlowCase = ""
+			pendingBodyAnchor = fb.nextFlowAnchor
+			fb.nextFlowAnchor = nil
+		} else {
+			lastBodyID = actID
+		}
+	}
+
+	if lastBodyID != "" && lastBodyID != merge.ID && !lastStmtIsReturn(s.Body) {
+		var flow *microflows.SequenceFlow
+		if pendingBodyCase != "" {
+			flow = newHorizontalFlowWithCase(lastBodyID, merge.ID, pendingBodyCase)
+		} else {
+			flow = newHorizontalFlow(lastBodyID, merge.ID)
+		}
+		applyUserAnchors(flow, pendingBodyAnchor, pendingBodyAnchor)
+		fb.flows = append(fb.flows, flow)
+	}
+	fb.endsWithReturn = true
+
+	return merge.ID
+}
+
 // addWhileStatement creates a WHILE loop using LoopedActivity with WhileLoopCondition.
 // Layout matches addLoopStatement but without iterator icon space.
 func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
+	if isManualWhileTrueCandidate(s) {
+		return fb.addManualWhileTrueStatement(s)
+	}
+
 	// Snapshot & clear this WHILE's own annotations so the body's recursive
 	// addStatement calls can't consume them (see addLoopStatement).
 	savedWhileAnnotations := fb.pendingAnnotations
@@ -522,4 +663,34 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 	fb.posX = loopLeftX + loopWidth + HorizontalSpacing
 
 	return loop.ID
+}
+
+func (fb *flowBuilder) addBreakEvent() model.ID {
+	event := &microflows.BreakEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX, Y: fb.posY},
+			Size:        model.Size{Width: EventSize, Height: EventSize},
+		},
+	}
+	fb.objects = append(fb.objects, event)
+	fb.posX += fb.spacing
+	return event.ID
+}
+
+func (fb *flowBuilder) addContinueEvent() model.ID {
+	if fb.manualLoopBackTarget != "" {
+		return fb.manualLoopBackTarget
+	}
+
+	event := &microflows.ContinueEvent{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX, Y: fb.posY},
+			Size:        model.Size{Width: EventSize, Height: EventSize},
+		},
+	}
+	fb.objects = append(fb.objects, event)
+	fb.posX += fb.spacing
+	return event.ID
 }

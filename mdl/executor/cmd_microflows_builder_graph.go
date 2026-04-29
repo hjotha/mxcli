@@ -438,6 +438,10 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addEndEventWithReturn(s)
 	case *ast.RaiseErrorStmt:
 		return fb.addErrorEvent()
+	case *ast.BreakStmt:
+		return fb.addBreakEvent()
+	case *ast.ContinueStmt:
+		return fb.addContinueEvent()
 	case *ast.LogStmt:
 		return fb.addLogMessageAction(s)
 	case *ast.CreateObjectStmt:

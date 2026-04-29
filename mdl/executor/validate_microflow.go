@@ -279,8 +279,22 @@ func bodyReturns(stmts []ast.MicroflowStatement) bool {
 	case *ast.IfStmt:
 		// Both branches must return, and ELSE must be present
 		return len(s.ElseBody) > 0 && bodyReturns(s.ThenBody) && bodyReturns(s.ElseBody)
+	case *ast.WhileStmt:
+		return isUnconditionalTrueWhile(s) && !containsBreakForCurrentLoop(s.Body)
 	}
 	return false
+}
+
+func isUnconditionalTrueWhile(s *ast.WhileStmt) bool {
+	if s == nil {
+		return false
+	}
+	lit, ok := s.Condition.(*ast.LiteralExpr)
+	if !ok || lit.Kind != ast.LiteralBoolean {
+		return false
+	}
+	value, ok := lit.Value.(bool)
+	return ok && value
 }
 
 // checkBranchScoping detects variables declared inside IF/ELSE branches that are

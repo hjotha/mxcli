@@ -206,12 +206,13 @@ func pendingFlowAnchors(previousAnchor, pendingAnchor, stmtAnchor *ast.FlowAncho
 }
 
 // lastStmtIsReturn reports whether execution of a body is guaranteed to terminate
-// (via RETURN or RAISE ERROR) on every path — i.e. control can never fall off the
-// end of the body into the parent flow.
+// (via RETURN, RAISE ERROR, BREAK, or CONTINUE) on every path — i.e. control can
+// never fall off the end of the body into the parent flow.
 //
-// Terminal statements: ReturnStmt, RaiseErrorStmt. An IfStmt is terminal iff it
-// has an ELSE and both branches are terminal (recursively). A LoopStmt is never
-// terminal — BREAK can exit the loop even if the body returns.
+// Terminal statements: ReturnStmt, RaiseErrorStmt, BreakStmt, ContinueStmt. An
+// IfStmt is terminal iff it has an ELSE and both branches are terminal
+// (recursively). A LoopStmt is never terminal — BREAK can exit the loop even if
+// the body returns.
 //
 // Naming kept for history; the predicate is really "last stmt is a guaranteed
 // terminator". Missing this case causes the outer IF to emit a dangling
@@ -230,12 +231,40 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 		return true
 	case *ast.RaiseErrorStmt:
 		return true
+	case *ast.BreakStmt:
+		return true
+	case *ast.ContinueStmt:
+		return true
 	case *ast.IfStmt:
 		if len(s.ElseBody) == 0 {
 			return false
 		}
 		return lastStmtIsReturn(s.ThenBody) && lastStmtIsReturn(s.ElseBody)
+	case *ast.WhileStmt:
+		return isManualWhileTrueCandidate(s)
 	default:
 		return false
 	}
+}
+
+func containsTerminalStmt(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.ReturnStmt, *ast.RaiseErrorStmt:
+			return true
+		case *ast.IfStmt:
+			if containsTerminalStmt(s.ThenBody) || containsTerminalStmt(s.ElseBody) {
+				return true
+			}
+		case *ast.LoopStmt:
+			if containsTerminalStmt(s.Body) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if containsTerminalStmt(s.Body) {
+				return true
+			}
+		}
+	}
+	return false
 }
