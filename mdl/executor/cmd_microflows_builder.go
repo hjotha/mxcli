@@ -53,7 +53,6 @@ type flowBuilder struct {
 	microflowsCacheLoaded bool
 	nanoflowsCache        []*microflows.Nanoflow
 	nanoflowsCacheLoaded  bool
-	previousStmtAnchor   *ast.FlowAnchors
 	manualLoopBackTarget model.ID
 }
 
