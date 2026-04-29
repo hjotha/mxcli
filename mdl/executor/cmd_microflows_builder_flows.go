@@ -265,6 +265,9 @@ func (fb *flowBuilder) addErrorHandlerRejoinFlowForState(state pendingErrorHandl
 }
 
 func (fb *flowBuilder) findExistingRejoinMerge(originID, destinationID model.ID) model.ID {
+	// Error-handler rejoins are rare and microflows are small enough that an
+	// O(objects*flows) scan keeps the write path simpler than maintaining an
+	// incremental merge index.
 	for _, flow := range fb.flows {
 		if flow.OriginID != originID || flow.IsErrorHandler {
 			continue
@@ -296,7 +299,7 @@ func statementReferencesVar(stmt ast.MicroflowStatement, varName string) bool {
 	if stmt == nil || varName == "" {
 		return false
 	}
-	for _, ref := range statementVarRefs(stmt) {
+	for _, ref := range errorHandlerStatementVarRefs(stmt) {
 		if ref == varName {
 			return true
 		}
@@ -316,7 +319,7 @@ func statementsReferenceVar(stmts []ast.MicroflowStatement, varName string) bool
 	return false
 }
 
-func statementVarRefs(stmt ast.MicroflowStatement) []string {
+func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
 	var refs []string
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
@@ -331,14 +334,14 @@ func statementVarRefs(stmt ast.MicroflowStatement) []string {
 		}
 	case *ast.IfStmt:
 		refs = append(refs, exprVarRefs(s.Condition)...)
-		refs = append(refs, statementsVarRefs(s.ThenBody)...)
-		refs = append(refs, statementsVarRefs(s.ElseBody)...)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.ThenBody)...)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.ElseBody)...)
 	case *ast.WhileStmt:
 		refs = append(refs, exprVarRefs(s.Condition)...)
-		refs = append(refs, statementsVarRefs(s.Body)...)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.Body)...)
 	case *ast.LoopStmt:
 		refs = append(refs, s.ListVariable)
-		refs = append(refs, statementsVarRefs(s.Body)...)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.Body)...)
 	case *ast.MfSetStmt:
 		refs = append(refs, extractVarName(s.Target))
 		refs = append(refs, exprVarRefs(s.Value)...)
@@ -394,16 +397,18 @@ func statementVarRefs(stmt ast.MicroflowStatement) []string {
 	return refs
 }
 
-func statementsVarRefs(stmts []ast.MicroflowStatement) []string {
+func errorHandlerStatementsVarRefs(stmts []ast.MicroflowStatement) []string {
 	var refs []string
 	for _, stmt := range stmts {
-		refs = append(refs, statementVarRefs(stmt)...)
+		refs = append(refs, errorHandlerStatementVarRefs(stmt)...)
 	}
 	return refs
 }
 
 // newErrorHandlerFlow creates a SequenceFlow with IsErrorHandler=true,
-// connecting from the bottom of the source activity to the left of the error handler.
+// connecting from the bottom of the source activity to the top of the handler.
+// Studio Pro lays custom error handlers below their source, so the destination
+// anchor enters from above rather than from the normal left-side continuation.
 func newErrorHandlerFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	return &microflows.SequenceFlow{
 		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
