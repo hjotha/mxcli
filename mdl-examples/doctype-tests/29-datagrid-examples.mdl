@@ -67,7 +67,7 @@ create page DgTest.Product_Edit (
   params: { $Product: DgTest.Product },
   title: 'Edit Product',
   layout: Atlas_Core.PopupLayout,
-  url: 'dg/product/edit',
+  url: 'dg/product/edit/{Product/Name}',
   folder: 'DataGrid'
 ) {
   dataview dvProduct (datasource: $Product) {
@@ -235,7 +235,7 @@ create page DgTest.DG05_Association_DataSource (
   params: { $Category: DgTest.Category },
   title: 'Category Products',
   layout: Atlas_Core.PopupLayout,
-  url: 'dg05_association_datasource',
+  url: 'dg05_association_datasource/{Category/Name}',
   folder: 'DataGrid'
 ) {
   dataview dvCategory (datasource: $Category, editable: false) {
