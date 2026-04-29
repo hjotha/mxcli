@@ -52,12 +52,17 @@ type flowBuilder struct {
 	// be overridden by the user. Cleared after each flow is created.
 	previousStmtAnchor *ast.FlowAnchors
 	// Cached flow lists to avoid repeated backend calls during lookups.
-	microflowsCache          []*microflows.Microflow
-	microflowsCacheLoaded    bool
-	nanoflowsCache           []*microflows.Nanoflow
-	nanoflowsCacheLoaded     bool
-	manualLoopBackTarget     model.ID
-	isNanoflow               bool // true when building a nanoflow — default error handling is "" not "Rollback"
+	microflowsCache       []*microflows.Microflow
+	microflowsCacheLoaded bool
+	nanoflowsCache        []*microflows.Nanoflow
+	nanoflowsCacheLoaded  bool
+	manualLoopBackTarget  model.ID
+	isNanoflow            bool // true when building a nanoflow — default error handling is "" not "Rollback"
+	// Pending custom error-handler routing uses two representations: the
+	// currently active handler lives in the flat fields below, while handlers
+	// postponed across branch boundaries are queued in pendingErrorHandlers.
+	// Mutate this state through the helper methods in builder_flows.go so the
+	// active/queued invariant stays synchronized.
 	emptyErrorHandlerFrom    model.ID
 	errorHandlerTailFrom     model.ID
 	errorHandlerSource       model.ID
