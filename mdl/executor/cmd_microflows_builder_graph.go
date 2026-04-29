@@ -553,6 +553,15 @@ func sourceAttributeVarRefs(source string) []string {
 	return refs
 }
 
+func expressionStringVarRefs(expr string) []string {
+	matches := mendixExpressionVariableRefPattern.FindAllStringSubmatch(expr, -1)
+	refs := make([]string, 0, len(matches))
+	for _, match := range matches {
+		refs = append(refs, match[1])
+	}
+	return refs
+}
+
 // addStatement converts an AST statement to a microflow activity and returns its ID.
 func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 	// Extract annotations from the statement and merge into pendingAnnotations

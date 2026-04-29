@@ -121,3 +121,53 @@ func TestBuildFlowGraph_TerminalBranchDuplicateOutputDoesNotForceAlias(t *testin
 		t.Fatalf("retrieve outputs = %#v, want duplicate name preserved without alias", outputs)
 	}
 }
+
+func TestStatementVarRefsIncludesNonCallConsumers(t *testing.T) {
+	refs := referencedVariableSet([]ast.MicroflowStatement{
+		&ast.AggregateListStmt{
+			InputVariable: "Items",
+			Expression:    &ast.VariableExpr{Name: "CurrentItem"},
+		},
+		&ast.ListOperationStmt{
+			InputVariable:  "PrimaryItems",
+			SecondVariable: "SecondaryItems",
+			Condition:      &ast.VariableExpr{Name: "Candidate"},
+			OffsetExpr:     &ast.VariableExpr{Name: "Offset"},
+			LimitExpr:      &ast.VariableExpr{Name: "Limit"},
+		},
+		&ast.CallExternalActionStmt{
+			Arguments: []ast.CallArgument{{Value: &ast.VariableExpr{Name: "ExternalInput"}}},
+		},
+		&ast.RestCallStmt{
+			Auth: &ast.RestAuth{
+				Username: &ast.VariableExpr{Name: "Username"},
+				Password: &ast.VariableExpr{Name: "Password"},
+			},
+			Body: &ast.RestBody{
+				Template:       &ast.VariableExpr{Name: "BodyTemplate"},
+				TemplateParams: []ast.TemplateParam{{Value: &ast.VariableExpr{Name: "TemplateArg"}}},
+				SourceVariable: "BodyObject",
+			},
+		},
+		&ast.SendRestRequestStmt{
+			Parameters:   []ast.SendRestParamDef{{Expression: "$QueryValue + $OtherValue"}},
+			BodyVariable: "RequestBody",
+		},
+		&ast.ImportFromMappingStmt{SourceVariable: "ImportSource"},
+		&ast.ExportToMappingStmt{SourceVariable: "ExportSource"},
+		&ast.TransformJsonStmt{InputVariable: "JsonInput"},
+	})
+
+	for _, name := range []string{
+		"Items", "CurrentItem",
+		"PrimaryItems", "SecondaryItems", "Candidate", "Offset", "Limit",
+		"ExternalInput",
+		"Username", "Password", "BodyTemplate", "TemplateArg", "BodyObject",
+		"QueryValue", "OtherValue", "RequestBody",
+		"ImportSource", "ExportSource", "JsonInput",
+	} {
+		if !refs[name] {
+			t.Fatalf("referencedVariableSet missing %q in %#v", name, refs)
+		}
+	}
+}

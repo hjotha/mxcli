@@ -1,3 +1,10 @@
+create module SampleAliases;
+
+create entity SampleAliases.Item (
+  Name : string(100)
+);
+/
+
 create microflow SampleAliases.ACT_DuplicateOutputPosition ()
 returns SampleAliases.Item as $Item
 begin
