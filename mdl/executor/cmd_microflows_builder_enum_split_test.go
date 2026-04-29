@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -156,6 +157,86 @@ func TestBuildFlowGraph_EnumSplitGroupedCasesShareDestination(t *testing.T) {
 	}
 }
 
+func TestBuildFlowGraph_EnumSplitPreservesEmptyCaseBeforeNamedCases(t *testing.T) {
+	out := describeBuiltEnumSplitBody(t, []ast.MicroflowStatement{
+		&ast.EnumSplitStmt{
+			Variable: "ImageKind",
+			Cases: []ast.EnumSplitCase{
+				{
+					Value: "(empty)",
+					Body: []ast.MicroflowStatement{
+						&ast.LogStmt{
+							Level:       ast.LogError,
+							Message:     &ast.LiteralExpr{Kind: ast.LiteralString, Value: "missing kind"},
+							Annotations: &ast.ActivityAnnotations{Position: &ast.Position{X: -300, Y: -200}},
+						},
+					},
+				},
+				{
+					Value: "Cover",
+					Body: []ast.MicroflowStatement{
+						&ast.LogStmt{
+							Level:       ast.LogInfo,
+							Message:     &ast.LiteralExpr{Kind: ast.LiteralString, Value: "cover"},
+							Annotations: &ast.ActivityAnnotations{Position: &ast.Position{X: -300, Y: 100}},
+						},
+					},
+				},
+				{
+					Value: "Logo",
+					Body: []ast.MicroflowStatement{
+						&ast.LogStmt{
+							Level:       ast.LogInfo,
+							Message:     &ast.LiteralExpr{Kind: ast.LiteralString, Value: "logo"},
+							Annotations: &ast.ActivityAnnotations{Position: &ast.Position{X: -300, Y: -40}},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	assertTextOrder(t, out, "case (empty)", "case Cover", "case Logo")
+}
+
+func TestBuildFlowGraph_EnumSplitPreservesEmptyBodyCaseOrder(t *testing.T) {
+	out := describeBuiltEnumSplitBody(t, []ast.MicroflowStatement{
+		&ast.EnumSplitStmt{
+			Variable: "Event/Type",
+			Cases: []ast.EnumSplitCase{
+				{
+					Values: []string{"CREATE", "DELETE"},
+				},
+				{
+					Value: "UPDATE",
+					Body: []ast.MicroflowStatement{
+						&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "update"}},
+						&ast.ReturnStmt{},
+					},
+				},
+				{
+					Value: "(empty)",
+					Body: []ast.MicroflowStatement{
+						&ast.LogStmt{
+							Level:   ast.LogInfo,
+							Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "empty"},
+							Annotations: &ast.ActivityAnnotations{
+								Anchor: &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideTop},
+							},
+						},
+						&ast.ReturnStmt{
+							Annotations: &ast.ActivityAnnotations{Anchor: &ast.FlowAnchors{To: ast.AnchorSideTop}},
+						},
+					},
+				},
+			},
+		},
+		&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "shared tail"}},
+	})
+
+	assertTextOrder(t, out, "case CREATE, DELETE", "case UPDATE", "case (empty)")
+}
+
 func TestBuildFlowGraph_EnumSplitAllTerminalCasesDoesNotAddDefaultFlow(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.EnumSplitStmt{
@@ -197,6 +278,33 @@ func TestBuildFlowGraph_EnumSplitAllTerminalCasesDoesNotAddDefaultFlow(t *testin
 		if isNoCaseValue(flow.CaseValue) {
 			t.Fatalf("terminal enum split must not synthesize a default NoCase flow: %#v", flow)
 		}
+	}
+}
+
+func describeBuiltEnumSplitBody(t *testing.T, body []ast.MicroflowStatement) string {
+	t.Helper()
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+	mf := &microflows.Microflow{ObjectCollection: oc}
+	e := newTestExecutor()
+
+	return strings.Join(formatMicroflowActivities(e.newExecContext(t.Context()), mf, nil, nil), "\n")
+}
+
+func assertTextOrder(t *testing.T, out string, items ...string) {
+	t.Helper()
+
+	lastIdx := -1
+	for _, item := range items {
+		idx := strings.Index(out, item)
+		if idx == -1 {
+			t.Fatalf("missing %q in output:\n%s", item, out)
+		}
+		if idx < lastIdx {
+			t.Fatalf("expected %q after previous item in output:\n%s", item, out)
+		}
+		lastIdx = idx
 	}
 }
 

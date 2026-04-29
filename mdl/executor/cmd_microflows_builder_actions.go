@@ -292,6 +292,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		id        model.ID
 		values    []string
 		fromSplit bool
+		order     int
 	}
 	var branchTails []branchTail
 	routePendingErrorToElse := len(s.ElseBody) > 0 && fb.errorHandlerSkipVar != "" && s.Variable == fb.errorHandlerSkipVar
@@ -303,7 +304,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		branchIndex++
 		if len(body) == 0 {
 			allBranchesReturn = false
-			branchTails = append(branchTails, branchTail{id: splitID, values: values, fromSplit: true})
+			branchTails = append(branchTails, branchTail{id: splitID, values: values, fromSplit: true, order: branchNumber})
 			return
 		}
 
@@ -366,6 +367,9 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 				}
 				baseDestinationAnchor := flow.DestinationConnectionIndex
 				if branchEntryIsSplit {
+					if len(values) <= 1 && (thisAnchor == nil || thisAnchor.To == ast.AnchorSideUnset) {
+						applySplitCaseOrder(flow, branchNumber)
+					}
 					applyEnumGroupedControlVectors(flow, 0, len(values))
 				}
 				fb.flows = append(fb.flows, flow)
@@ -463,6 +467,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 				} else {
 					flow = newDownwardFlowWithEnumCase(splitID, merge.ID, enumSplitFlowCaseValue(tail.values, 0))
 				}
+				applySplitCaseOrder(flow, tail.order)
 				baseDestinationAnchor := flow.DestinationConnectionIndex
 				applyEnumGroupedControlVectors(flow, 0, len(tail.values))
 				fb.flows = append(fb.flows, flow)
@@ -522,6 +527,39 @@ func enumSplitGroupedDestinationAnchor(baseAnchor, index int) int {
 		offset++
 	}
 	return baseAnchor
+}
+
+type splitCaseOrderAnchor struct {
+	origin      int
+	destination int
+}
+
+var splitCaseOrderAnchors = []splitCaseOrderAnchor{
+	{AnchorTop, AnchorLeft},
+	{AnchorRight, AnchorLeft},
+	{AnchorBottom, AnchorLeft},
+	{AnchorLeft, AnchorLeft},
+	{AnchorTop, AnchorTop},
+	{AnchorRight, AnchorTop},
+	{AnchorBottom, AnchorTop},
+	{AnchorLeft, AnchorTop},
+	{AnchorTop, AnchorRight},
+	{AnchorRight, AnchorRight},
+	{AnchorBottom, AnchorRight},
+	{AnchorLeft, AnchorRight},
+	{AnchorTop, AnchorBottom},
+	{AnchorRight, AnchorBottom},
+	{AnchorBottom, AnchorBottom},
+	{AnchorLeft, AnchorBottom},
+}
+
+func applySplitCaseOrder(flow *microflows.SequenceFlow, order int) {
+	if flow == nil || order < 0 || order >= len(splitCaseOrderAnchors) {
+		return
+	}
+	pair := splitCaseOrderAnchors[order]
+	flow.OriginConnectionIndex = pair.origin
+	flow.DestinationConnectionIndex = pair.destination
 }
 
 func applyEnumGroupedControlVectors(flow *microflows.SequenceFlow, index, total int) {
