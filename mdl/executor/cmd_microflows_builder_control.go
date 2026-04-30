@@ -434,6 +434,10 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 			fb.nextFlowCase = noMergeExitCase
 			fb.nextFlowAnchor = noMergeExitAnchor
 		} else {
+			// Defensive fallback: the no-merge path above always records the
+			// continuing branch tail in noMergeExitID. If future branch handling
+			// changes violate that invariant, continue from the split rather than
+			// leaving the parent disconnected.
 			fb.nextConnectionPoint = splitID
 		}
 	}

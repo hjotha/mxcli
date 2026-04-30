@@ -1221,6 +1221,10 @@ func flowLooksLikeGuardContinuation(
 	case *microflows.EndEvent, *microflows.ErrorEvent:
 		return false
 	}
+	// Builder-generated guard continuations sit on the split's horizontal
+	// centerline. This intentionally relies on mxcli's layout contract so a
+	// real branch that returns to a merge below the split is not collapsed into
+	// a guard-style continuation during describe.
 	return dest.GetPosition().Y == split.GetPosition().Y
 }
 
