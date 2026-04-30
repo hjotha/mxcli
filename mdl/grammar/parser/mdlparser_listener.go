@@ -418,6 +418,18 @@ type MDLParserListener interface {
 	// EnterDeclareStatement is called when entering the declareStatement production.
 	EnterDeclareStatement(c *DeclareStatementContext)
 
+	// EnterEnumSplitStatement is called when entering the enumSplitStatement production.
+	EnterEnumSplitStatement(c *EnumSplitStatementContext)
+
+	// EnterEnumSplitSource is called when entering the enumSplitSource production.
+	EnterEnumSplitSource(c *EnumSplitSourceContext)
+
+	// EnterEnumSplitCase is called when entering the enumSplitCase production.
+	EnterEnumSplitCase(c *EnumSplitCaseContext)
+
+	// EnterEnumSplitCaseValue is called when entering the enumSplitCaseValue production.
+	EnterEnumSplitCaseValue(c *EnumSplitCaseValueContext)
+
 	// EnterSetStatement is called when entering the setStatement production.
 	EnterSetStatement(c *SetStatementContext)
 
@@ -1752,6 +1764,18 @@ type MDLParserListener interface {
 
 	// ExitDeclareStatement is called when exiting the declareStatement production.
 	ExitDeclareStatement(c *DeclareStatementContext)
+
+	// ExitEnumSplitStatement is called when exiting the enumSplitStatement production.
+	ExitEnumSplitStatement(c *EnumSplitStatementContext)
+
+	// ExitEnumSplitSource is called when exiting the enumSplitSource production.
+	ExitEnumSplitSource(c *EnumSplitSourceContext)
+
+	// ExitEnumSplitCase is called when exiting the enumSplitCase production.
+	ExitEnumSplitCase(c *EnumSplitCaseContext)
+
+	// ExitEnumSplitCaseValue is called when exiting the enumSplitCaseValue production.
+	ExitEnumSplitCaseValue(c *EnumSplitCaseValueContext)
 
 	// ExitSetStatement is called when exiting the setStatement production.
 	ExitSetStatement(c *SetStatementContext)

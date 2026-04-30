@@ -900,6 +900,30 @@ func (s *BaseMDLParserListener) EnterDeclareStatement(ctx *DeclareStatementConte
 // ExitDeclareStatement is called when production declareStatement is exited.
 func (s *BaseMDLParserListener) ExitDeclareStatement(ctx *DeclareStatementContext) {}
 
+// EnterEnumSplitStatement is called when production enumSplitStatement is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitStatement(ctx *EnumSplitStatementContext) {}
+
+// ExitEnumSplitStatement is called when production enumSplitStatement is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitStatement(ctx *EnumSplitStatementContext) {}
+
+// EnterEnumSplitSource is called when production enumSplitSource is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitSource(ctx *EnumSplitSourceContext) {}
+
+// ExitEnumSplitSource is called when production enumSplitSource is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitSource(ctx *EnumSplitSourceContext) {}
+
+// EnterEnumSplitCase is called when production enumSplitCase is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitCase(ctx *EnumSplitCaseContext) {}
+
+// ExitEnumSplitCase is called when production enumSplitCase is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitCase(ctx *EnumSplitCaseContext) {}
+
+// EnterEnumSplitCaseValue is called when production enumSplitCaseValue is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitCaseValue(ctx *EnumSplitCaseValueContext) {}
+
+// ExitEnumSplitCaseValue is called when production enumSplitCaseValue is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitCaseValue(ctx *EnumSplitCaseValueContext) {}
+
 // EnterSetStatement is called when production setStatement is entered.
 func (s *BaseMDLParserListener) EnterSetStatement(ctx *SetStatementContext) {}
 

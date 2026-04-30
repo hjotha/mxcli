@@ -323,6 +323,23 @@ if $entity/status = empty then
 end if;
 ```
 
+### ENUM SPLIT Statements
+
+Use `split enum` when a microflow branches on an enumeration value.
+
+```mdl
+split enum $Status
+  case Open, Pending
+    return true;
+  case (empty)
+    return false;
+  else
+    return false;
+end split;
+```
+
+`(empty)` represents an unset enumeration value. Multiple values can share one branch by separating them with commas.
+
 ### LOOP Statements
 
 ```mdl
