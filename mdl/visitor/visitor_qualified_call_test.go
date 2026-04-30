@@ -15,9 +15,9 @@ import (
 // failed to parse with `mismatched input '(' expecting THEN`, blocking the
 // roundtrip for microflows whose ExclusiveSplit uses a RuleSplitCondition.
 func TestQualifiedCallInIfCondition(t *testing.T) {
-	input := `CREATE OR MODIFY MICROFLOW MxAdmin.Test ($S: String) returns Boolean
+	input := `CREATE OR MODIFY MICROFLOW SyntheticQualifiedCall.Test ($S: String) returns Boolean
 BEGIN
-  IF ControlCenterCommons.IsNotEmptyString(String = $S) THEN
+  IF SyntheticRules.Strings.IsNotEmpty(String = $S) THEN
     RETURN true;
   ELSE
     RETURN false;
@@ -45,8 +45,8 @@ END`
 	if !ok {
 		t.Fatalf("expected FunctionCallExpr as if-condition, got %T", ifStmt.Condition)
 	}
-	if call.Name != "ControlCenterCommons.IsNotEmptyString" {
-		t.Errorf("call name = %q, want %q", call.Name, "ControlCenterCommons.IsNotEmptyString")
+	if call.Name != "SyntheticRules.Strings.IsNotEmpty" {
+		t.Errorf("call name = %q, want %q", call.Name, "SyntheticRules.Strings.IsNotEmpty")
 	}
 	if len(call.Arguments) != 1 {
 		t.Fatalf("expected 1 argument, got %d", len(call.Arguments))
