@@ -96,7 +96,7 @@ create microflow DgTest.ACT_ActivateProduct (
 )
   folder 'DataGrid'
 begin
-  change $Product (IsActive = true, Status = Active);
+  change $Product (IsActive = true, Status = DgTest.Status.Active);
   commit $Product;
 end;
 /
@@ -360,7 +360,7 @@ create page DgTest.DG07_Column_Properties (
     -- Status column with dynamic cell class based on value
     column colStatus (
       attribute: Status, caption: 'Status',
-      DynamicCellClass: 'if ($currentObject/Status = ''Active'') then ''text-success'' else ''text-muted'''
+      DynamicCellClass: 'if ($currentObject/Status = DgTest.Status.Active) then ''text-success'' else ''text-muted'''
     )
   }
 };
