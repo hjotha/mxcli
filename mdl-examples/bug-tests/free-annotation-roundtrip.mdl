@@ -1,0 +1,31 @@
+-- ============================================================================
+-- Regression: free microflow annotations remain free after roundtrip
+-- ============================================================================
+--
+-- Symptom:
+--   Free-floating @annotation lines that appear before activity-binding
+--   metadata can be attached to the next activity if the AST/builder loses the
+--   distinction between free and attached annotations.
+--
+-- After fix:
+--   Free annotations are represented only by ActivityAnnotations.FreeAnnotations
+--   and are emitted as standalone Annotation objects before the activity.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/free-annotation-roundtrip.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow SyntheticFreeAnnotation.MF_FreeAnnotationRoundtrip"
+--   The two header annotations should appear before @position and must not be
+--   emitted as attached annotations on the log activity.
+-- ============================================================================
+
+create module SyntheticFreeAnnotation;
+
+create microflow SyntheticFreeAnnotation.MF_FreeAnnotationRoundtrip ()
+begin
+  @annotation 'header note one'
+  @annotation 'header note two'
+  @position(100, 200)
+  @annotation 'attached activity note'
+  log info node 'Synthetic' 'message';
+end;
+/

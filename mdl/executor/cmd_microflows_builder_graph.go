@@ -637,10 +637,9 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		fb.posY = fb.pendingAnnotations.Position.Y
 	}
 	if fb.pendingAnnotations != nil {
-		for _, text := range freeAnnotationTexts(fb.pendingAnnotations) {
+		for _, text := range fb.pendingAnnotations.FreeAnnotations {
 			fb.attachFreeAnnotation(text)
 		}
-		fb.pendingAnnotations.FreeAnnotation = ""
 		fb.pendingAnnotations.FreeAnnotations = nil
 	}
 
