@@ -122,3 +122,19 @@ func TestParseActionActivityPreservesWebServiceActionRawBSONOrder(t *testing.T) 
 		t.Fatalf("serialized raw BSON was not preserved byte-for-byte")
 	}
 }
+
+func TestParseCodeActionParameterValue_MicroflowParameterValue(t *testing.T) {
+	value := parseCodeActionParameterValue(map[string]any{
+		"$ID":       "value-1",
+		"$Type":     "Microflows$MicroflowParameterValue",
+		"Microflow": "SyntheticModule.Callback",
+	})
+
+	got, ok := value.(*microflows.MicroflowParameterValue)
+	if !ok {
+		t.Fatalf("value = %T, want *MicroflowParameterValue", value)
+	}
+	if got.Microflow != "SyntheticModule.Callback" {
+		t.Fatalf("microflow = %q", got.Microflow)
+	}
+}

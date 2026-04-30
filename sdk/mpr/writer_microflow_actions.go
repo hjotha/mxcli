@@ -1237,6 +1237,12 @@ func serializeCodeActionParameterValue(v microflows.CodeActionParameterValue) bs
 			{Key: "$Type", Value: "Microflows$BasicCodeActionParameterValue"},
 			{Key: "Argument", Value: value.Argument},
 		}
+	case *microflows.MicroflowParameterValue:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(value.ID))},
+			{Key: "$Type", Value: "Microflows$MicroflowParameterValue"},
+			{Key: "Microflow", Value: value.Microflow},
+		}
 	case *microflows.EntityTypeCodeActionParameterValue:
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(value.ID))},

@@ -545,6 +545,10 @@ func formatAction(
 				valueStr = v.Expression
 			case *microflows.BasicCodeActionParameterValue:
 				valueStr = v.Argument
+			case *microflows.MicroflowParameterValue:
+				if v.Microflow != "" {
+					valueStr = mdlQuote(v.Microflow)
+				}
 			case *microflows.EntityTypeCodeActionParameterValue:
 				if v.Entity != "" {
 					valueStr = mdlQuote(v.Entity)

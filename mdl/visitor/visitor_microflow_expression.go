@@ -588,6 +588,10 @@ func buildAtomicExpression(ctx parser.IAtomicExpressionContext) ast.Expression {
 		return buildLiteralExpression(lit)
 	}
 
+	if atomCtx.ELLIPSIS() != nil {
+		return &ast.SourceExpr{Source: "..."}
+	}
+
 	// Variable: $Var or $Widget.Attr (data source attribute reference)
 	if v := atomCtx.VARIABLE(); v != nil {
 		varText := v.GetText()

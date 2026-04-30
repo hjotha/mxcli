@@ -245,10 +245,13 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 
 	// Build a map of parameter name -> param type for the Java action
 	entityTypeParams := make(map[string]bool)
+	microflowTypeParams := make(map[string]bool)
 	if jaDef != nil {
 		for _, p := range jaDef.Parameters {
 			if _, ok := p.ParameterType.(*javaactions.EntityTypeParameterType); ok {
 				entityTypeParams[p.Name] = true
+			} else if _, ok := p.ParameterType.(*javaactions.MicroflowType); ok {
+				microflowTypeParams[p.Name] = true
 			}
 		}
 	}
@@ -277,12 +280,31 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Entity:      entityName,
 			}
+		} else if isPlaceholderExpression(arg.Value) {
+			if microflowTypeParams[arg.Name] {
+				value = &microflows.MicroflowParameterValue{
+					BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+					Microflow:   "",
+				}
+			} else {
+				value = &microflows.BasicCodeActionParameterValue{
+					BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+					Argument:    "",
+				}
+			}
 		} else {
 			// Regular parameter: expression-based value
 			valueExpr := fb.exprToString(arg.Value)
-			value = &microflows.BasicCodeActionParameterValue{
-				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-				Argument:    valueExpr,
+			if microflowTypeParams[arg.Name] {
+				value = &microflows.MicroflowParameterValue{
+					BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+					Microflow:   strings.Trim(valueExpr, "'"),
+				}
+			} else {
+				value = &microflows.BasicCodeActionParameterValue{
+					BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+					Argument:    valueExpr,
+				}
 			}
 		}
 
@@ -545,6 +567,11 @@ func (fb *flowBuilder) resolveMappingRefForWrite(ref string, preferExport bool) 
 		}
 	}
 	return ref
+}
+
+func isPlaceholderExpression(expr ast.Expression) bool {
+	source, ok := expr.(*ast.SourceExpr)
+	return ok && strings.TrimSpace(source.Source) == "..."
 }
 
 // addCallExternalActionAction creates a CALL EXTERNAL ACTION statement.

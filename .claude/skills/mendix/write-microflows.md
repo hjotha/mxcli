@@ -865,6 +865,25 @@ download file $GeneratedReport show in browser;
 download file $GeneratedExport;
 ```
 
+## Empty Java-Action Argument (`...`)
+
+When `describe` round-trips a Java-action call that has an unbound parameter
+in Studio Pro, it emits `...` as the argument value. This preserves the
+underlying empty `BasicCodeActionParameterValue.Argument` so that the next
+`describe → exec → describe` cycle stays symmetric.
+
+```mdl
+$Total = call java action SampleModule.Recalculate(
+  CompanyId       = ...,
+  RecalculateAll  = true,
+  ItemList        = ...
+);
+```
+
+`...` is a *round-trip-only* placeholder. New scripts should bind every
+parameter to a real expression; reach for `...` only when you're regenerating
+MDL from an existing project that already had unbound parameters.
+
 ## Error Handling
 
 MDL supports error handling for activities that may fail (microflow calls, commits, external service calls, etc.).

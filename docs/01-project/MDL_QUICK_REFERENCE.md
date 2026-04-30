@@ -786,6 +786,7 @@ Module.OrderResponse_CustomerInfo/Module.CustomerInfo as customer {
 | Create exposed action | `... exposed as 'caption' in 'Category' as $$ ... $$;` | Toolbox-visible in Studio Pro |
 | Drop Java action | `drop java action Module.Name;` | Delete a Java action |
 | Call from microflow | `$Result = call java action Module.Name(Param = value);` | Inside BEGIN...END |
+| Empty argument | `call java action Module.Name(Param = ...);` | `...` placeholder for an unbound code-action parameter (round-trip only) |
 
 **Parameter Types:** `string`, `integer`, `long`, `decimal`, `boolean`, `datetime`, `Module.Entity`, `list of Module.Entity`, `enum Module.EnumName`, `enumeration(Module.EnumName)`, `stringtemplate(sql)`, `stringtemplate(Oql)`, `entity <pEntity>` (type parameter declaration), bare `pEntity` (type parameter reference).
 

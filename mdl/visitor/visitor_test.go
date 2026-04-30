@@ -1686,6 +1686,35 @@ END;`
 	}
 }
 
+func TestCallJavaActionAcceptsPlaceholderArguments(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  $Total = CALL JAVA ACTION Synthetic.Recalculate(CompanyId = ..., RecalculateAll = true, ItemList = ...);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	callStmt, ok := stmt.Body[0].(*ast.CallJavaActionStmt)
+	if !ok {
+		t.Fatalf("body[0] = %T, want *ast.CallJavaActionStmt", stmt.Body[0])
+	}
+	for _, idx := range []int{0, 2} {
+		source, ok := callStmt.Arguments[idx].Value.(*ast.SourceExpr)
+		if !ok {
+			t.Fatalf("argument %d value = %T, want *ast.SourceExpr", idx, callStmt.Arguments[idx].Value)
+		}
+		if source.Source != "..." {
+			t.Fatalf("argument %d source = %q, want ...", idx, source.Source)
+		}
+	}
+}
+
 func TestDeclareAndLogTemplatePreserveMultilineSourceWhitespace(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
