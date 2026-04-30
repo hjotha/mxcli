@@ -1360,7 +1360,7 @@ createObjectStatement
 // CHANGE $Product (Name = $NewName, ModifiedDate = [%CurrentDateTime%]);
 // Aligned with CREATE syntax
 changeObjectStatement
-    : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)?
+    : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)? REFRESH?
     ;
 
 // Shared by SET, LOOP, aggregate expressions, and validation feedback targets.

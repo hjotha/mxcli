@@ -218,7 +218,7 @@ authentication basic, session
 | List declaration | `declare $list list of Module.Entity = empty;` | |
 | Assignment | `set $Var = expression;` | Variable must be declared first |
 | Create object | `$Var = create Module.Entity (attr = value);` | |
-| Change object | `change $entity (attr = value);` | |
+| Change object | `change $entity (attr = value) [refresh];` | `refresh` updates the changed object in the client |
 | Commit | `commit $entity [with events] [refresh];` | |
 | Delete | `delete $entity;` | |
 | Rollback | `rollback $entity [refresh];` | Reverts uncommitted changes |
