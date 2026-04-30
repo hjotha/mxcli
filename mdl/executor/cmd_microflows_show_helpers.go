@@ -48,6 +48,14 @@ func collectAnnotationCaptions(oc *microflows.MicroflowObjectCollection, caption
 	}
 }
 
+// mergeAnnotationsByTarget combines parent-level annotations with the
+// loop-local overlay so each activity gets every caption that points at it,
+// regardless of which collection the annotation flow lives in.
+//
+// When one side is empty the function returns the other map by reference (no
+// copy). The current callers — emitLoopBody passing a freshly built overlay,
+// or a freshly inherited parent map — never mutate the result, so aliasing is
+// safe. New callers that intend to mutate the result must copy first.
 func mergeAnnotationsByTarget(base, overlay map[model.ID][]string) map[model.ID][]string {
 	if len(base) == 0 {
 		return overlay
