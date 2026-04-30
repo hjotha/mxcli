@@ -560,6 +560,19 @@ func TestFormatAction_DownloadFile(t *testing.T) {
 	}
 }
 
+func TestFormatAction_DownloadFileWithoutBrowserFlag(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.DownloadFileAction{
+		FileDocument: "GeneratedReport",
+	}
+
+	got := e.formatAction(action, nil, nil)
+	want := "download file $GeneratedReport;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_ValidationFeedback(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.ValidationFeedbackAction{
@@ -805,6 +818,9 @@ func TestParseReverseAssociationXPathRejectsComplexPredicates(t *testing.T) {
 		"[SampleRuntime.Domain_Runtime != $Runtime]",
 		"[SampleRuntime.Domain_Runtime = $Runtime/Other.Assoc]",
 		"[SampleRuntime.Domain_Runtime = 'literal']",
+		"[_SampleRuntime.Domain_Runtime = $Runtime]",
+		"[SampleRuntime._Domain_Runtime = $Runtime]",
+		"[SampleRuntime.Domain_Runtime = $_Runtime]",
 		"SampleRuntime.Domain_Runtime = $Runtime",
 	}
 

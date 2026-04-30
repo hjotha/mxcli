@@ -114,6 +114,37 @@ func TestDescribeNanoflow_Mock_WithReturnType(t *testing.T) {
 	assertContainsStr(t, out, "nanoflow MyModule.NF_GetName")
 }
 
+func TestDescribeNanoflow_ReturningFlowSkipsEmptyEndEvent(t *testing.T) {
+	mod := mkModule("MyModule")
+	nf := mkNanoflow(mod.ID, "NF_Value")
+	nf.ReturnType = &microflows.StringType{}
+	nf.ObjectCollection = &microflows.MicroflowObjectCollection{
+		Objects: []microflows.MicroflowObject{
+			&microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+			&microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+		},
+		Flows: []*microflows.SequenceFlow{mkFlow("start", "end")},
+	}
+
+	h := mkHierarchy(mod)
+	withContainer(h, nf.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:      func() bool { return true },
+		ListMicroflowsFunc:   func() ([]*microflows.Microflow, error) { return nil, nil },
+		ListNanoflowsFunc:    func() ([]*microflows.Nanoflow, error) { return []*microflows.Nanoflow{nf}, nil },
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
+		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, describeNanoflow(ctx, ast.QualifiedName{Module: "MyModule", Name: "NF_Value"}))
+
+	out := buf.String()
+	assertContainsStr(t, out, "returns String")
+	assertNotContainsStr(t, out, "return;")
+}
+
 // --- DROP NANOFLOW ---
 
 func TestDropNanoflow_Mock(t *testing.T) {
