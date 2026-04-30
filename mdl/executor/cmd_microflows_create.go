@@ -151,15 +151,22 @@ func execCreateMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
 	}
 
 	// Validate and add parameters
-	for _, p := range s.Parameters {
+	for i, p := range s.Parameters {
 		// Validate entity references for List and Entity types.
 		// Built-in modules (e.g. System) are not stored in the MPR domain models;
 		// their types are serialized by qualified name and resolved at runtime.
 		if p.Type.EntityRef != nil && !isBuiltinModuleEntity(p.Type.EntityRef.Module) {
 			entityID := entityResolver(*p.Type.EntityRef)
 			if entityID == "" {
-				return mdlerrors.NewNotFoundMsg("entity", p.Type.EntityRef.Module+"."+p.Type.EntityRef.Name,
-					fmt.Sprintf("entity '%s.%s' not found for parameter '%s'", p.Type.EntityRef.Module, p.Type.EntityRef.Name, p.Name))
+				// Bare qualified name in microflow context is treated as TypeEntity by the
+				// visitor, but it may actually be an enumeration. Try enum lookup before failing.
+				if found := findEnumeration(ctx, p.Type.EntityRef.Module, p.Type.EntityRef.Name); found != nil {
+					s.Parameters[i].Type = ast.DataType{Kind: ast.TypeEnumeration, EnumRef: p.Type.EntityRef}
+					p = s.Parameters[i]
+				} else {
+					return mdlerrors.NewNotFoundMsg("entity", p.Type.EntityRef.Module+"."+p.Type.EntityRef.Name,
+						fmt.Sprintf("entity '%s.%s' not found for parameter '%s'", p.Type.EntityRef.Module, p.Type.EntityRef.Name, p.Name))
+				}
 			}
 		}
 		// Validate enumeration references for Enumeration types
