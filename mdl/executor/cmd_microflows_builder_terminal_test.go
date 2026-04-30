@@ -706,6 +706,77 @@ func TestBuildFlowGraph_EmptyNoOutputHandlerRejoinsAtNextAction(t *testing.T) {
 	t.Fatal("empty no-output handler should rejoin at the next action")
 }
 
+func TestBuildFlowGraph_ExplicitEmptyElseProvidesFalseContinuation(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "HasResponse"},
+			HasElse:   true,
+			ThenBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ErrorResponse"}},
+			},
+		},
+		&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralNull}},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"HasResponse": "Boolean", "ErrorResponse": "Synthetic.Error"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "Synthetic", Name: "Error"}}})
+
+	var splitID, emptyEndID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ExclusiveSplit:
+			splitID = o.ID
+		case *microflows.EndEvent:
+			if o.ReturnValue == "empty" {
+				emptyEndID = o.ID
+			}
+		}
+	}
+	if splitID == "" || emptyEndID == "" {
+		t.Fatalf("expected split and empty return end event, got split=%q emptyEnd=%q", splitID, emptyEndID)
+	}
+
+	for _, flow := range oc.Flows {
+		if flow.OriginID != splitID || flowCaseString(flow.CaseValue) != "false" {
+			continue
+		}
+		if flowPathExists(oc.Flows, flow.DestinationID, emptyEndID) {
+			return
+		}
+	}
+	t.Fatal("expected explicit empty else to produce a false-path continuation")
+}
+
+func flowCaseString(caseValue microflows.CaseValue) string {
+	switch c := caseValue.(type) {
+	case microflows.EnumerationCase:
+		return c.Value
+	case *microflows.EnumerationCase:
+		if c != nil {
+			return c.Value
+		}
+	case microflows.BooleanCase:
+		if c.Value {
+			return "true"
+		}
+		return "false"
+	case *microflows.BooleanCase:
+		if c != nil && c.Value {
+			return "true"
+		}
+		if c != nil {
+			return "false"
+		}
+	}
+	return ""
+}
+
 func flowPathExists(flows []*microflows.SequenceFlow, startID, targetID model.ID) bool {
 	if startID == "" || targetID == "" {
 		return false

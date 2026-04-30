@@ -31,7 +31,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 	// Check if branches end with RETURN (creating their own EndEvents)
 	thenReturns := lastStmtIsReturn(s.ThenBody)
-	hasElseBody := len(s.ElseBody) > 0
+	hasElseBody := s.HasElse || len(s.ElseBody) > 0
 	elseReturns := hasElseBody && lastStmtIsReturn(s.ElseBody)
 	bothReturn := hasElseBody && thenReturns && elseReturns
 	thenNeedsErrorMerge := thenReturns && bodyHasContinuingCustomErrorHandler(s.ThenBody)
