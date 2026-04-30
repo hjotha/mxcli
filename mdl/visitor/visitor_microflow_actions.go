@@ -992,7 +992,7 @@ func buildCreateListStatement(ctx parser.ICreateListStatementContext) *ast.Creat
 }
 
 // buildAddToListStatement converts add to list statement context to AddToListStmt.
-// Grammar: ADD VARIABLE TO VARIABLE
+// Grammar: ADD expression TO VARIABLE
 func buildAddToListStatement(ctx parser.IAddToListStatementContext) *ast.AddToListStmt {
 	if ctx == nil {
 		return nil
@@ -1001,13 +1001,14 @@ func buildAddToListStatement(ctx parser.IAddToListStatementContext) *ast.AddToLi
 
 	stmt := &ast.AddToListStmt{}
 
-	// Get both variables
-	vars := addCtx.AllVARIABLE()
-	if len(vars) >= 1 {
-		stmt.Item = strings.TrimPrefix(vars[0].GetText(), "$")
+	if expr := addCtx.Expression(); expr != nil {
+		stmt.Value = buildExpression(expr)
+		if varExpr, ok := stmt.Value.(*ast.VariableExpr); ok {
+			stmt.Item = varExpr.Name
+		}
 	}
-	if len(vars) >= 2 {
-		stmt.List = strings.TrimPrefix(vars[1].GetText(), "$")
+	if v := addCtx.VARIABLE(); v != nil {
+		stmt.List = strings.TrimPrefix(v.GetText(), "$")
 	}
 
 	return stmt
