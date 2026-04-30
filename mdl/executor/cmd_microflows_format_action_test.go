@@ -99,6 +99,30 @@ func TestFormatAction_ChangeObject_NoChanges(t *testing.T) {
 	}
 }
 
+func TestFormatAction_ChangeObject_WithRefresh(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ChangeObjectAction{
+		ChangeVariable:  "Customer",
+		RefreshInClient: true,
+		Changes: []*microflows.MemberChange{
+			{AttributeQualifiedName: "MyModule.Customer.Name", Value: "'Jane'"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	if got != "change $Customer (Name = 'Jane') refresh;" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestFormatAction_ChangeObject_NoChangesWithRefresh(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ChangeObjectAction{ChangeVariable: "Obj", RefreshInClient: true}
+	got := e.formatAction(action, nil, nil)
+	if got != "change $Obj refresh;" {
+		t.Errorf("got %q", got)
+	}
+}
+
 func TestFormatAction_DeleteObject(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.DeleteObjectAction{DeleteVariable: "Customer"}

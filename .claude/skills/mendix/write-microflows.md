@@ -378,6 +378,9 @@ $NewProduct = create Test.Product (
 change $Product (
   Name = $NewName,
   ModifiedDate = [%CurrentDateTime%]);
+
+-- Refresh the changed object in the client
+change $Product (Name = $NewName) refresh;
 ```
 
 **Note**: Only specify attributes you want to change. Syntax aligned with CREATE.

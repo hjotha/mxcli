@@ -245,7 +245,13 @@ func formatAction(
 				}
 				members = append(members, fmt.Sprintf("%s = %s", memberName, escapeExpressionValue(m.Value)))
 			}
+			if a.RefreshInClient {
+				return fmt.Sprintf("change $%s (%s) refresh;", varName, strings.Join(members, ", "))
+			}
 			return fmt.Sprintf("change $%s (%s);", varName, strings.Join(members, ", "))
+		}
+		if a.RefreshInClient {
+			return fmt.Sprintf("change $%s refresh;", varName)
 		}
 		return fmt.Sprintf("change $%s;", varName)
 

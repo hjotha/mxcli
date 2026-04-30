@@ -857,6 +857,7 @@ func buildChangeObjectStatement(ctx parser.IChangeObjectStatementContext) *ast.C
 	if memberList := changeCtx.MemberAssignmentList(); memberList != nil {
 		stmt.Changes = buildMemberAssignmentList(memberList)
 	}
+	stmt.RefreshInClient = changeCtx.REFRESH() != nil
 
 	return stmt
 }
