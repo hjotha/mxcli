@@ -858,6 +858,8 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 				if strings.Contains(memberName, ".") {
 					// Already qualified, don't double-qualify
 					mc.AttributeQualifiedName = memberName
+				} else if attrQN, ok := fb.resolveAttributeInEntityHierarchy(entityQN, memberName); ok {
+					mc.AttributeQualifiedName = attrQN
 				} else {
 					mc.AttributeQualifiedName = entityQN + "." + memberName
 				}
@@ -867,6 +869,43 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 	}
 
 	resolveMemberChangeFallback(mc, memberName, entityQN)
+}
+
+func (fb *flowBuilder) resolveAttributeInEntityHierarchy(entityQN, attrName string) (string, bool) {
+	if fb == nil || fb.backend == nil || entityQN == "" || attrName == "" {
+		return "", false
+	}
+	seen := make(map[string]bool)
+	for currentQN := entityQN; currentQN != ""; {
+		if seen[currentQN] {
+			return "", false
+		}
+		seen[currentQN] = true
+
+		parts := strings.SplitN(currentQN, ".", 2)
+		if len(parts) != 2 {
+			return "", false
+		}
+		mod, err := fb.backend.GetModuleByName(parts[0])
+		if err != nil || mod == nil {
+			return "", false
+		}
+		dm, err := fb.backend.GetDomainModel(mod.ID)
+		if err != nil || dm == nil {
+			return "", false
+		}
+		entity := dm.FindEntityByName(parts[1])
+		if entity == nil {
+			return "", false
+		}
+		for _, attr := range entity.Attributes {
+			if attr != nil && attr.Name == attrName {
+				return currentQN + "." + attrName, true
+			}
+		}
+		currentQN = entity.GeneralizationRef
+	}
+	return "", false
 }
 
 // resolveMemberChangeFallback preserves the authored member name shape when the
