@@ -237,6 +237,7 @@ func (fb *flowBuilder) addCallNanoflowAction(s *ast.CallNanoflowStmt) model.ID {
 // addCallJavaActionAction creates a CALL JAVA ACTION statement.
 func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.ID {
 	actionQN := s.ActionName.Module + "." + s.ActionName.Name
+	outputVariable := fb.uniqueImplicitOutputVariable(s.OutputVariable)
 
 	// Try to look up the Java action definition to detect EntityTypeParameterType parameters
 	var jaDef *javaactions.JavaAction
@@ -304,14 +305,14 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		JavaAction:         actionQN,
 		ParameterMappings:  mappings,
-		ResultVariableName: s.OutputVariable,
-		UseReturnVariable:  s.OutputVariable != "",
+		ResultVariableName: outputVariable,
+		UseReturnVariable:  outputVariable != "",
 	}
-	if s.OutputVariable != "" && jaDef != nil && fb.varTypes != nil {
+	if outputVariable != "" && jaDef != nil && fb.varTypes != nil {
 		if varType := javaActionReturnVarType(jaDef.ReturnType); varType != "" {
-			fb.varTypes[s.OutputVariable] = varType
+			fb.varTypes[outputVariable] = varType
 		} else if inferred := fb.inferGenericJavaActionReturnType(jaDef, s); inferred != "" {
-			fb.varTypes[s.OutputVariable] = inferred
+			fb.varTypes[outputVariable] = inferred
 		}
 	}
 

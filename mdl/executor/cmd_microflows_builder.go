@@ -413,15 +413,69 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 	case *ast.SourceExpr:
 		if e.Source != "" {
 			// Non-empty Source is the exact expression text to write back.
-			// Rebuilding it here would defeat the whitespace-preservation
-			// purpose of SourceExpr, so keep the parsed tree only for callers
-			// that need semantic inspection.
-			return e
+			// Rebuilding it here would defeat SourceExpr's whitespace-preservation
+			// purpose, but variable aliases still need to be applied so duplicate
+			// same-position outputs do not leave downstream source expressions
+			// referring to the original out-of-scope variable name.
+			return &ast.SourceExpr{
+				Expression: fb.resolveAssociationPaths(e.Expression),
+				Source:     fb.resolveSourceVariables(e.Source),
+			}
 		}
 		return fb.resolveAssociationPaths(e.Expression)
 	default:
 		return expr
 	}
+}
+
+func (fb *flowBuilder) resolveSourceVariables(source string) string {
+	if source == "" || len(fb.variableAliases) == 0 || !strings.Contains(source, "$") {
+		return source
+	}
+
+	var out strings.Builder
+	out.Grow(len(source))
+	inString := false
+	for i := 0; i < len(source); {
+		ch := source[i]
+		if ch == '\'' {
+			out.WriteByte(ch)
+			if inString && i+1 < len(source) && source[i+1] == '\'' {
+				out.WriteByte(source[i+1])
+				i += 2
+				continue
+			}
+			inString = !inString
+			i++
+			continue
+		}
+		if inString || ch != '$' || i+1 >= len(source) || !isSourceVariableStart(source[i+1]) {
+			out.WriteByte(ch)
+			i++
+			continue
+		}
+		j := i + 2
+		for j < len(source) && isSourceVariablePart(source[j]) {
+			j++
+		}
+		name := source[i+1 : j]
+		if alias := fb.variableAliases[name]; alias != "" {
+			out.WriteByte('$')
+			out.WriteString(alias)
+		} else {
+			out.WriteString(source[i:j])
+		}
+		i = j
+	}
+	return out.String()
+}
+
+func isSourceVariableStart(ch byte) bool {
+	return ch == '_' || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+}
+
+func isSourceVariablePart(ch byte) bool {
+	return isSourceVariableStart(ch) || (ch >= '0' && ch <= '9')
 }
 
 // resolvePathSegments processes path segments in an attribute path expression.

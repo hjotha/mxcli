@@ -122,6 +122,105 @@ func TestBuildFlowGraph_TerminalBranchDuplicateOutputAtSamePositionGetsAlias(t *
 	}
 }
 
+func TestBuildFlowGraph_DuplicateJavaActionOutputAtSamePositionGetsAlias(t *testing.T) {
+	entityRef := ast.QualifiedName{Module: "Sample", Name: "Item"}
+	sharedJavaPosition := &ast.ActivityAnnotations{Position: &ast.Position{X: 400, Y: 100}}
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.CallJavaActionStmt{
+					OutputVariable: "Token",
+					ActionName:     ast.QualifiedName{Module: "Sample", Name: "GenerateToken"},
+					Annotations:    sharedJavaPosition,
+				},
+				&ast.CreateObjectStmt{
+					Variable:   "CreatedItem",
+					EntityType: entityRef,
+					Changes: []ast.ChangeItem{{
+						Attribute: "Code",
+						Value:     &ast.VariableExpr{Name: "Token"},
+					}},
+				},
+				&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "CreatedItem"}},
+			},
+		},
+		&ast.CallJavaActionStmt{
+			OutputVariable: "Token",
+			ActionName:     ast.QualifiedName{Module: "Sample", Name: "GenerateToken"},
+			Annotations:    sharedJavaPosition,
+		},
+		&ast.CreateObjectStmt{
+			Variable:   "CreatedItem",
+			EntityType: entityRef,
+			Changes: []ast.ChangeItem{{
+				Attribute: "Code",
+				Value:     &ast.VariableExpr{Name: "Token"},
+			}},
+		},
+		&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "CreatedItem"}},
+	}
+
+	fb := &flowBuilder{
+		posX: 100, posY: 100, baseY: 100, spacing: HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &entityRef}})
+
+	var javaOutputs []string
+	var createCodeValues []string
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.JavaActionCallAction:
+			javaOutputs = append(javaOutputs, action.ResultVariableName)
+		case *microflows.CreateObjectAction:
+			for _, change := range action.InitialMembers {
+				if change.AttributeQualifiedName == "Sample.Item.Code" || change.AttributeQualifiedName == "Code" {
+					createCodeValues = append(createCodeValues, change.Value)
+				}
+			}
+		}
+	}
+
+	if strings.Join(javaOutputs, ",") != "Token,Token_2" {
+		t.Fatalf("java outputs = %#v, want duplicate same-position output aliased", javaOutputs)
+	}
+	if len(createCodeValues) != 2 || createCodeValues[1] != "$Token_2" {
+		t.Fatalf("create Code values = %#v, want second branch to reference $Token_2", createCodeValues)
+	}
+}
+
+func TestExprToString_SourceExprAppliesVariableAliases(t *testing.T) {
+	fb := &flowBuilder{
+		variableAliases: map[string]string{
+			"CurrentItem": "CurrentItem_2",
+		},
+	}
+
+	got := fb.exprToString(&ast.SourceExpr{
+		Source: "if $CurrentItem/Code = empty then '$CurrentItem' else $OtherItem/Code",
+		Expression: &ast.IfThenElseExpr{
+			Condition: &ast.BinaryExpr{
+				Left:     &ast.AttributePathExpr{Variable: "CurrentItem", Path: []string{"Code"}},
+				Operator: "=",
+				Right:    &ast.LiteralExpr{Kind: ast.LiteralEmpty},
+			},
+			ThenExpr: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "$CurrentItem"},
+			ElseExpr: &ast.AttributePathExpr{Variable: "OtherItem", Path: []string{"Code"}},
+		},
+	})
+
+	want := "if $CurrentItem_2/Code = empty then '$CurrentItem' else $OtherItem/Code"
+	if got != want {
+		t.Fatalf("exprToString(SourceExpr) = %q, want %q", got, want)
+	}
+}
+
 func TestStatementVarRefsIncludesNonCallConsumers(t *testing.T) {
 	refs := referencedVariableSet([]ast.MicroflowStatement{
 		&ast.AggregateListStmt{
