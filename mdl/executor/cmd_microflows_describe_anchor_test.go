@@ -50,6 +50,38 @@ func TestEmitAnchorAnnotation_FromAndTo(t *testing.T) {
 	}
 }
 
+func TestEmitAnchorAnnotation_OmitsDefaultRightToLeft(t *testing.T) {
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: "act-default"},
+			},
+		},
+	}
+	incoming := &microflows.SequenceFlow{
+		DestinationID:              "act-default",
+		DestinationConnectionIndex: AnchorLeft,
+	}
+	outgoing := &microflows.SequenceFlow{
+		OriginID:              "act-default",
+		OriginConnectionIndex: AnchorRight,
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		"act-default": {outgoing},
+	}
+	flowsByDest := map[model.ID][]*microflows.SequenceFlow{
+		"act-default": {incoming},
+	}
+
+	var lines []string
+	emitAnchorAnnotation(activity, flowsByOrigin, flowsByDest, &lines, "")
+
+	if len(lines) != 0 {
+		t.Fatalf("expected default anchor line to be omitted, got %v", lines)
+	}
+}
+
 func TestEmitAnchorAnnotation_NoFlowsSkipsEmission(t *testing.T) {
 	activity := &microflows.ActionActivity{
 		BaseActivity: microflows.BaseActivity{
@@ -63,6 +95,53 @@ func TestEmitAnchorAnnotation_NoFlowsSkipsEmission(t *testing.T) {
 
 	if len(lines) != 0 {
 		t.Errorf("expected no lines emitted, got %v", lines)
+	}
+}
+
+func TestEmitAnchorAnnotation_IgnoresLoopBodyTailOutgoingFlow(t *testing.T) {
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: "body-act"},
+			},
+		},
+	}
+	loop := &microflows.LoopedActivity{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: "loop-1"},
+		},
+		ObjectCollection: &microflows.MicroflowObjectCollection{
+			Objects: []microflows.MicroflowObject{activity},
+		},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		"body-act": {
+			{
+				OriginID:              "body-act",
+				DestinationID:         "loop-1",
+				OriginConnectionIndex: AnchorLeft,
+			},
+		},
+	}
+	flowsByDest := map[model.ID][]*microflows.SequenceFlow{
+		"body-act": {
+			{
+				DestinationID:              "body-act",
+				DestinationConnectionIndex: AnchorLeft,
+			},
+		},
+	}
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		"body-act": activity,
+		"loop-1":   loop,
+	}
+
+	var lines []string
+	emitAnchorAnnotationWithActivityMap(activity, flowsByOrigin, flowsByDest, activityMap, &lines, "")
+
+	if len(lines) != 0 {
+		t.Fatalf("expected loop body tail flow to be ignored, got %v", lines)
 	}
 }
 

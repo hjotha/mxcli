@@ -1,0 +1,55 @@
+-- ============================================================================
+-- Bug #326: Describer paired splits with downstream merge instead of nearest
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   When a microflow had two sequential `if ... end if;` blocks, the
+--   describer could pair the FIRST split with the SECOND merge, nesting
+--   the continuation between the two ifs (and even the second if) inside
+--   the first if's body. A describe → exec → describe cycle then mutated
+--   the structure even though the original graph was valid:
+--     -- before fix, after first describe:
+--     if $Logo != empty then
+--       log info node 'App' 'logo';
+--       log info node 'App' 'after logo';   -- wrong: was outside first if
+--       if $Cover != empty then              -- wrong: was sibling, not nested
+--         log info node 'App' 'cover';
+--       end if;
+--     end if;
+--
+-- Root cause:
+--   Split/merge pairing picked any common downstream merge reachable from
+--   both branches, not the nearest one. Error-handler flows were included
+--   in the search, biasing it further.
+--
+-- After fix:
+--   `findMergeForSplit` now uses shortest-path distances per branch and
+--   selects the nearest common merge, ignoring error-handler flows for
+--   structural pairing.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/326-describer-pair-split-with-nearest-merge.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest326.MF_SequentialIfs"
+--   The describe output must keep the two `if ... end if;` blocks as
+--   siblings (with the `log` between them at top level), and the
+--   describe → exec → describe cycle must be a fixpoint.
+-- ============================================================================
+
+create module BugTest326;
+
+create microflow BugTest326.MF_SequentialIfs (
+  $Logo: string,
+  $Cover: string
+)
+begin
+  if $Logo != empty then
+    log info node 'BugTest326' 'logo';
+  end if;
+
+  log info node 'BugTest326' 'after logo';
+
+  if $Cover != empty then
+    log info node 'BugTest326' 'cover';
+  end if;
+end;
+/
