@@ -2,9 +2,9 @@ create microflow SampleModule.ACT_RecalculateOpenItems ()
 returns Void
 begin
   call java action SampleModule.Recalculate(
-    CompanyId       = ...,
+    CompanyId       = empty,
     RecalculateAll  = true,
-    ItemList        = ...
+    ItemList        = empty
   );
   return;
 end;
@@ -18,7 +18,7 @@ begin
   call java action SampleModule.Recalculate(
     CompanyId       = $CompanyId,
     RecalculateAll  = false,
-    ItemList        = ...
+    ItemList        = empty
   );
   return;
 end;

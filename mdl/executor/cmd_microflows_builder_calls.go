@@ -460,8 +460,8 @@ func (fb *flowBuilder) addCallJavaScriptActionAction(s *ast.CallJavaScriptAction
 }
 
 func isPlaceholderExpression(expr ast.Expression) bool {
-	source, ok := expr.(*ast.SourceExpr)
-	return ok && strings.TrimSpace(source.Source) == "..."
+	lit, ok := expr.(*ast.LiteralExpr)
+	return ok && (lit.Kind == ast.LiteralEmpty || lit.Kind == ast.LiteralNull)
 }
 
 // addCallExternalActionAction creates a CALL EXTERNAL ACTION statement.

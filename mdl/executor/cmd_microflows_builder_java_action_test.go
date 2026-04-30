@@ -12,14 +12,14 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
-func TestBuildJavaAction_PlaceholderArgumentPreservesEmptyBasicValue(t *testing.T) {
+func TestBuildJavaAction_EmptyArgumentPreservesEmptyBasicValue(t *testing.T) {
 	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
 	stmt := &ast.CallJavaActionStmt{
 		ActionName: ast.QualifiedName{Module: "SampleModule", Name: "Recalculate"},
 		Arguments: []ast.CallArgument{
-			{Name: "CompanyId", Value: &ast.SourceExpr{Source: "..."}},
+			{Name: "CompanyId", Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty}},
 			{Name: "RecalculateAll", Value: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true}},
-			{Name: "ItemList", Value: &ast.SourceExpr{Source: " ... "}},
+			{Name: "ItemList", Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty}},
 		},
 	}
 
@@ -61,7 +61,7 @@ func TestBuildJavaAction_PlaceholderArgumentPreservesEmptyBasicValue(t *testing.
 	}
 }
 
-func TestBuildJavaAction_PlaceholderMicroflowArgumentUsesMicroflowParameterValue(t *testing.T) {
+func TestBuildJavaAction_EmptyMicroflowArgumentUsesMicroflowParameterValue(t *testing.T) {
 	fb := &flowBuilder{
 		posX:    100,
 		posY:    100,
@@ -87,7 +87,7 @@ func TestBuildJavaAction_PlaceholderMicroflowArgumentUsesMicroflowParameterValue
 	stmt := &ast.CallJavaActionStmt{
 		ActionName: ast.QualifiedName{Module: "SampleModule", Name: "StartAsync"},
 		Arguments: []ast.CallArgument{
-			{Name: "Callback", Value: &ast.SourceExpr{Source: "..."}},
+			{Name: "Callback", Value: &ast.LiteralExpr{Kind: ast.LiteralEmpty}},
 		},
 	}
 

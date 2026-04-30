@@ -1686,11 +1686,11 @@ END;`
 	}
 }
 
-func TestCallJavaActionAcceptsPlaceholderArguments(t *testing.T) {
+func TestCallJavaActionAcceptsEmptyArguments(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
 BEGIN
-  $Total = CALL JAVA ACTION Synthetic.Recalculate(CompanyId = ..., RecalculateAll = true, ItemList = ...);
+  $Total = CALL JAVA ACTION Synthetic.Recalculate(CompanyId = empty, RecalculateAll = true, ItemList = empty);
   RETURN true;
 END;`
 
@@ -1705,12 +1705,12 @@ END;`
 		t.Fatalf("body[0] = %T, want *ast.CallJavaActionStmt", stmt.Body[0])
 	}
 	for _, idx := range []int{0, 2} {
-		source, ok := callStmt.Arguments[idx].Value.(*ast.SourceExpr)
+		lit, ok := callStmt.Arguments[idx].Value.(*ast.LiteralExpr)
 		if !ok {
-			t.Fatalf("argument %d value = %T, want *ast.SourceExpr", idx, callStmt.Arguments[idx].Value)
+			t.Fatalf("argument %d value = %T, want *ast.LiteralExpr", idx, callStmt.Arguments[idx].Value)
 		}
-		if source.Source != "..." {
-			t.Fatalf("argument %d source = %q, want ...", idx, source.Source)
+		if lit.Kind != ast.LiteralNull {
+			t.Fatalf("argument %d kind = %v, want LiteralNull", idx, lit.Kind)
 		}
 	}
 }
