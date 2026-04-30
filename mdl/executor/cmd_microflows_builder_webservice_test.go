@@ -67,8 +67,8 @@ func TestBuildFlowGraph_WebServiceCallCreatesRealAction(t *testing.T) {
 	}}, nil)
 
 	action := firstWebServiceCallAction(t, oc)
-	if action.ServiceID != serviceID {
-		t.Errorf("ServiceID = %q, want %q", action.ServiceID, serviceID)
+	if action.ServiceID != "SampleSOAP.OrderService" {
+		t.Errorf("ServiceID = %q, want SampleSOAP.OrderService", action.ServiceID)
 	}
 	if action.SendMappingID != sendMappingID {
 		t.Errorf("SendMappingID = %q, want %q", action.SendMappingID, sendMappingID)

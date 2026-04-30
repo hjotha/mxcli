@@ -444,7 +444,7 @@ func (fb *flowBuilder) addCallWebServiceAction(s *ast.CallWebServiceStmt) model.
 	action := &microflows.WebServiceCallAction{
 		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
-		ServiceID:         model.ID(fb.resolveWebServiceRefForWrite(s.ServiceID)),
+		ServiceID:         model.ID(s.ServiceID),
 		OperationName:     s.OperationName,
 		SendMappingID:     model.ID(fb.resolveMappingRefForWrite(s.SendMappingID, true)),
 		ReceiveMappingID:  model.ID(fb.resolveMappingRefForWrite(s.ReceiveMappingID, false)),
@@ -490,35 +490,6 @@ func (fb *flowBuilder) addCallWebServiceAction(s *ast.CallWebServiceStmt) model.
 	}
 
 	return activity.ID
-}
-
-func (fb *flowBuilder) resolveWebServiceRefForWrite(ref string) string {
-	if ref == "" || !strings.Contains(ref, ".") || fb.backend == nil {
-		return ref
-	}
-	units, err := fb.backend.ListRawUnitsByType("WebServices$ImportedWebService")
-	if err != nil {
-		return ref
-	}
-	for _, unit := range units {
-		if unit == nil {
-			continue
-		}
-		name := rawUnitName(unit.Contents)
-		if name == "" {
-			continue
-		}
-		if fb.hierarchy != nil && fb.hierarchy.GetQualifiedName(unit.ContainerID, name) == ref {
-			return string(unit.ID)
-		}
-		// Hierarchy can be unavailable in tests or partial backends. Bare-name
-		// fallback keeps those cases writable, but it is intentionally a
-		// best-effort match and can be ambiguous across modules.
-		if name == ref {
-			return string(unit.ID)
-		}
-	}
-	return ref
 }
 
 func (fb *flowBuilder) resolveMappingRefForWrite(ref string, preferExport bool) string {

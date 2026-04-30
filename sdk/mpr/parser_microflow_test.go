@@ -122,3 +122,30 @@ func TestParseActionActivityPreservesWebServiceActionRawBSONOrder(t *testing.T) 
 		t.Fatalf("serialized raw BSON was not preserved byte-for-byte")
 	}
 }
+
+func TestParseWebServiceActionFallsBackToRawBSONForUnsupportedFields(t *testing.T) {
+	action := parseWebServiceCallAction(map[string]any{
+		"$ID":             "soap-action-with-simple-request",
+		"$Type":           "Microflows$CallWebServiceAction",
+		"ImportedService": "SyntheticSOAP.OrderService",
+		"OperationName":   "SubmitOrder",
+		"RequestBodyHandling": map[string]any{
+			"$Type": "Microflows$SimpleRequestHandling",
+			"ParameterMappings": []any{
+				int32(2),
+				map[string]any{
+					"$Type":    "Microflows$WebServiceOperationSimpleParameterMapping",
+					"Argument": "$OrderID",
+				},
+			},
+		},
+	})
+
+	if len(action.RawBSON) == 0 {
+		t.Fatal("RawBSON was empty for unsupported SOAP request details")
+	}
+	serialized := serializeWebServiceCallAction(action)
+	if got := bsonGetKey(serialized, "RequestBodyHandling"); got == nil {
+		t.Fatalf("RequestBodyHandling was not preserved in raw fallback: %#v", serialized)
+	}
+}

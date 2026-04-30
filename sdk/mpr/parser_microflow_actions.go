@@ -448,8 +448,33 @@ func parseWebServiceCallAction(raw map[string]any) *microflows.WebServiceCallAct
 			action.SendMappingID = model.ID(extractString(call["Mapping"]))
 		}
 	}
+	if webServiceActionRequiresRawBSON(raw) {
+		if rawBSON, err := bson.Marshal(raw); err == nil {
+			action.RawBSON = rawBSON
+		}
+	}
 
 	return action
+}
+
+func webServiceActionRequiresRawBSON(raw map[string]any) bool {
+	supported := map[string]bool{
+		"$ID":               true,
+		"$Type":             true,
+		"ErrorHandlingType": true,
+		"ImportedService":   true,
+		"OperationName":     true,
+		"TimeOutExpression": true,
+		"UseRequestTimeOut": true,
+		"NewResultHandling": true,
+		"RequestHandling":   true,
+	}
+	for key := range raw {
+		if !supported[key] {
+			return true
+		}
+	}
+	return false
 }
 
 func parseWebServiceCallActionFromD(raw primitive.D) *microflows.WebServiceCallAction {
