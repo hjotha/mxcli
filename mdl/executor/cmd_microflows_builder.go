@@ -329,6 +329,15 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 			ThenExpr:  fb.resolveAssociationPaths(e.ThenExpr),
 			ElseExpr:  fb.resolveAssociationPaths(e.ElseExpr),
 		}
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			// Non-empty Source is the exact expression text to write back.
+			// Rebuilding it here would defeat the whitespace-preservation
+			// purpose of SourceExpr, so keep the parsed tree only for callers
+			// that need semantic inspection.
+			return e
+		}
+		return fb.resolveAssociationPaths(e.Expression)
 	default:
 		return expr
 	}
@@ -443,6 +452,8 @@ func unwrapParenCall(expr ast.Expression) *ast.FunctionCallExpr {
 			return e
 		case *ast.ParenExpr:
 			expr = e.Inner
+		case *ast.SourceExpr:
+			expr = e.Expression
 		default:
 			return nil
 		}
