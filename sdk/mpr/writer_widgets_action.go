@@ -68,6 +68,8 @@ func serializeClientAction(action pages.ClientAction) bson.D {
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "Forms$FormSettings"},
 			{Key: "Form", Value: a.PageName}, // BY_NAME_REFERENCE - qualified name, or empty string if no page
+			{Key: "ParameterMappings", Value: bson.A{int32(2)}},
+			{Key: "TitleOverride", Value: nil},
 		}
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
@@ -78,41 +80,17 @@ func serializeClientAction(action pages.ClientAction) bson.D {
 			{Key: "PageSettings", Value: pageSettings},
 		}
 	case *pages.PageClientAction:
-		// Build ParameterMappings if any
-		paramMappings := bson.A{int32(len(a.ParameterMappings))}
-		for _, pm := range a.ParameterMappings {
-			// Parameter is BY_NAME_REFERENCE: PageName.ParameterName
-			paramRef := a.PageName + "." + pm.ParameterName
-
-			// Determine the argument value
-			var argument any
-			if pm.Variable != "" {
-				argument = pm.Variable // e.g., "$Customer", "$currentObject"
-			} else if pm.Expression != "" {
-				argument = pm.Expression
-			}
-
-			mapping := bson.D{
-				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-				{Key: "$Type", Value: "Forms$PageParameterMapping"},
-				{Key: "Argument", Value: argument},
-				{Key: "Parameter", Value: paramRef}, // BY_NAME_REFERENCE
-				// Variable must be a non-null Forms$PageVariable object in widget context.
-				// Studio Pro's set_Variable setter requires a non-null value and throws
-				// ArgumentNullException when this field is nil (issue #295).
-				// For Forms$PageParameterMapping the variable name is in Argument; all
-				// sub-fields of the PageVariable object are left empty.
-				{Key: "Variable", Value: buildFormPageVariable("")},
-			}
-			paramMappings = append(paramMappings, mapping)
-		}
-
-		// Use FormSettings with Form (by-name reference) like Studio Pro does
+		// Studio Pro stores ParameterMappings as an empty initialized array [2] and
+		// infers $currentObject from the enclosing widget context (DataGrid, DataView, etc.).
+		// Storing explicit inline Forms$PageParameterMapping objects uses an invalid type
+		// indicator (len instead of 2/3), causing Studio Pro to read 0 mappings and
+		// report CE0115 "parameter not passed" even when mappings are present (issue #296).
 		formSettings := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
 			{Key: "$Type", Value: "Forms$FormSettings"},
 			{Key: "Form", Value: a.PageName}, // BY_NAME_REFERENCE - qualified name
-			{Key: "ParameterMappings", Value: paramMappings},
+			{Key: "ParameterMappings", Value: bson.A{int32(2)}},
+			{Key: "TitleOverride", Value: nil},
 		}
 
 		return bson.D{
@@ -120,6 +98,8 @@ func serializeClientAction(action pages.ClientAction) bson.D {
 			{Key: "$Type", Value: "Forms$FormAction"},
 			{Key: "DisabledDuringExecution", Value: true},
 			{Key: "FormSettings", Value: formSettings},
+			{Key: "NumberOfPagesToClose2", Value: ""},
+			{Key: "PagesForSpecializations", Value: bson.A{int32(2)}},
 		}
 	case *pages.MicroflowClientAction:
 		// Build ParameterMappings if any
