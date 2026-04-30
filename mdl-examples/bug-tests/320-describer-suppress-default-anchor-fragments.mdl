@@ -1,0 +1,55 @@
+-- ============================================================================
+-- Bug #320: DESCRIBE emitted default anchor fragments redundantly
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `describe microflow` printed `@anchor` lines for every activity, even
+--   when every from/to side matched the MDL default for that flow shape:
+--     - regular sequence flows default to `from: right, to: left`
+--     - true branches of IF default to `from: right, to: left`
+--     - false branches of IF default to `from: bottom, to: top`
+--   Output looked like
+--     log info node 'X' 'a';
+--     @anchor(from: right, to: left)         -- noise: this is the default
+--     log info node 'X' 'b';
+--   producing verbose, non-author-friendly DESCRIBE output and noisy
+--   `mxcli diff-local` runs after a roundtrip.
+--
+-- After fix:
+--   `emitAnchorAnnotation` and `emitSplitAnchorAnnotation` (in
+--   cmd_microflows_show_helpers.go) suppress fragments that match the
+--   default and skip the entire annotation when all sides are defaults.
+--   Non-default sides (e.g. `to: top` on a return) are still emitted.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/320-describer-suppress-default-anchor-fragments.mdl -p app.mpr
+--
+--   mxcli -p app.mpr -c "describe microflow BugTest320.MF_LinearDefaults"
+--   The output must contain NO `@anchor` line — every flow uses defaults.
+--
+--   mxcli -p app.mpr -c "describe microflow BugTest320.MF_NonDefaultReturn"
+--   The output must keep `@anchor(to: top)` on the return statement.
+-- ============================================================================
+
+create module BugTest320;
+
+-- Linear flow, all defaults — describe must emit zero @anchor lines.
+create microflow BugTest320.MF_LinearDefaults ()
+begin
+  log info node 'BugTest320' 'a';
+  log info node 'BugTest320' 'b';
+  log info node 'BugTest320' 'c';
+end;
+/
+
+-- One non-default `to: top` on the return — describe must keep that fragment.
+create microflow BugTest320.MF_NonDefaultReturn (
+  $value: integer
+)
+returns boolean as $ok
+begin
+  log info node 'BugTest320' 'check';
+  @anchor(to: top)
+  return $value > 0;
+end;
+/
