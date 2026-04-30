@@ -501,6 +501,46 @@ func TestTraverseFlow_NestedTerminalGuardBranchSuppressesEmptyOuterElse(t *testi
 	}
 }
 
+func TestResolveNestedMergeID_UsesParentMergeBeforeDownstreamJoin(t *testing.T) {
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("parent_merge"): {mkFlow("parent_merge", "downstream_join")},
+	}
+	trueFlow := mkFlow("nested_split", "parent_merge")
+	falseFlow := mkFlow("nested_split", "false_branch")
+
+	got := resolveNestedMergeID(
+		mkID("downstream_join"),
+		mkID("parent_merge"),
+		trueFlow,
+		falseFlow,
+		flowsByOrigin,
+	)
+
+	if got != mkID("parent_merge") {
+		t.Fatalf("nested split used downstream join %q, want parent merge %q", got, mkID("parent_merge"))
+	}
+}
+
+func TestResolveNestedMergeID_KeepsIndependentNestedJoin(t *testing.T) {
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("nested_join"): {mkFlow("nested_join", "parent_merge")},
+	}
+	trueFlow := mkFlow("nested_split", "true_branch")
+	falseFlow := mkFlow("nested_split", "nested_join")
+
+	got := resolveNestedMergeID(
+		mkID("nested_join"),
+		mkID("parent_merge"),
+		trueFlow,
+		falseFlow,
+		flowsByOrigin,
+	)
+
+	if got != mkID("nested_join") {
+		t.Fatalf("nested split merge changed to %q, want local nested join %q", got, mkID("nested_join"))
+	}
+}
+
 // =============================================================================
 // collectErrorHandlerStatements
 // =============================================================================
