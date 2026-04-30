@@ -29,6 +29,16 @@ func convertErrorHandlingType(eh *ast.ErrorHandlingClause) microflows.ErrorHandl
 	}
 }
 
+// ehType returns the error handling type for an activity in this flow context.
+// Nanoflows use "" (omitted) as the default because they have no transactions;
+// microflows use "Rollback".
+func (fb *flowBuilder) ehType(eh *ast.ErrorHandlingClause) microflows.ErrorHandlingType {
+	if fb.isNanoflow && eh == nil {
+		return ""
+	}
+	return convertErrorHandlingType(eh)
+}
+
 // newErrorHandlerFlow creates a SequenceFlow with IsErrorHandler=true,
 // connecting from the bottom of the source activity to the left of the error handler.
 func newErrorHandlerFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
@@ -67,6 +77,7 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 		backend:      fb.backend,
 		hierarchy:    fb.hierarchy,
 		restServices: fb.restServices,
+		isNanoflow:   fb.isNanoflow,
 	}
 
 	var lastErrID model.ID

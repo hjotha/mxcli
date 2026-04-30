@@ -123,7 +123,7 @@ func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
 			AutoGenerateCaption: true,
-			ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+			ErrorHandlingType:   fb.ehType(s.ErrorHandling),
 		},
 		Action: action,
 	}
@@ -145,7 +145,7 @@ func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 func (fb *flowBuilder) addCommitAction(s *ast.MfCommitStmt) model.ID {
 	action := &microflows.CommitObjectsAction{
 		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType: fb.ehType(s.ErrorHandling),
 		CommitVariable:    s.Variable,
 		WithEvents:        s.WithEvents,
 		RefreshInClient:   s.RefreshInClient,
@@ -193,7 +193,7 @@ func (fb *flowBuilder) addDeleteAction(s *ast.DeleteObjectStmt) model.ID {
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
 			AutoGenerateCaption: true,
-			ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+			ErrorHandlingType:   fb.ehType(s.ErrorHandling),
 		},
 		Action: action,
 	}
@@ -672,7 +672,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
 			},
 			AutoGenerateCaption: true,
-			ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+			ErrorHandlingType:   fb.ehType(s.ErrorHandling),
 		},
 		Action: action,
 	}

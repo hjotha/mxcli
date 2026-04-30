@@ -222,6 +222,7 @@ func execCreateNanoflow(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		backend:      ctx.Backend,
 		hierarchy:    hierarchy,
 		restServices: restServices,
+		isNanoflow:   true,
 	}
 
 	nf.ObjectCollection = builder.buildFlowGraph(s.Body, s.ReturnType)

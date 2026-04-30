@@ -58,7 +58,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		},
 		Caption:           caption,
 		SplitCondition:    splitCondition,
-		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+		ErrorHandlingType: fb.ehType(nil),
 	}
 	fb.objects = append(fb.objects, split)
 	splitID := split.ID
@@ -375,6 +375,7 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 		backend:      fb.backend,      // Share backend
 		hierarchy:    fb.hierarchy,    // Share hierarchy
 		restServices: fb.restServices, // Share REST services for parameter classification
+		isNanoflow:   fb.isNanoflow,
 	}
 
 	// Process loop body statements and connect them with flows.
@@ -615,6 +616,7 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 		backend:      fb.backend,
 		hierarchy:    fb.hierarchy,
 		restServices: fb.restServices,
+		isNanoflow:   fb.isNanoflow,
 	}
 
 	var lastBodyID model.ID

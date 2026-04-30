@@ -54,6 +54,7 @@ type flowBuilder struct {
 	nanoflowsCache        []*microflows.Nanoflow
 	nanoflowsCacheLoaded  bool
 	manualLoopBackTarget  model.ID
+	isNanoflow            bool // true when building a nanoflow — default error handling is "" not "Rollback"
 }
 
 // addError records a validation error during flow building.

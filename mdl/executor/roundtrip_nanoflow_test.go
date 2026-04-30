@@ -137,6 +137,7 @@ begin
   retrieve $Items from ` + testModule + `.LoopItem;
   declare $Count Integer = 0;
   loop $Item in $Items
+  begin
     set $Count = $Count + 1;
   end loop;
   return $Count;

@@ -133,7 +133,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 
 	action := &microflows.MicroflowCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:  fb.ehType(s.ErrorHandling),
 		MicroflowCall:      mfCall,
 		ResultVariableName: s.OutputVariable,
 		UseReturnVariable:  s.OutputVariable != "",
@@ -193,7 +193,7 @@ func (fb *flowBuilder) addCallNanoflowAction(s *ast.CallNanoflowStmt) model.ID {
 
 	action := &microflows.NanoflowCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:  fb.ehType(s.ErrorHandling),
 		NanoflowCall:       nfCall,
 		OutputVariableName: s.OutputVariable,
 		UseReturnVariable:  s.OutputVariable != "",
@@ -296,7 +296,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 
 	action := &microflows.JavaActionCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:  fb.ehType(s.ErrorHandling),
 		JavaAction:         actionQN,
 		ParameterMappings:  mappings,
 		ResultVariableName: s.OutputVariable,
@@ -405,7 +405,7 @@ func (fb *flowBuilder) addCallJavaScriptActionAction(s *ast.CallJavaScriptAction
 
 	action := &microflows.JavaScriptActionCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:  fb.ehType(s.ErrorHandling),
 		JavaScriptAction:   actionQN,
 		ParameterMappings:  mappings,
 		OutputVariableName: s.OutputVariable,
@@ -535,7 +535,7 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 
 	action := &microflows.CallExternalAction{
 		BaseElement:          model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:    convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:    fb.ehType(s.ErrorHandling),
 		ConsumedODataService: serviceQN,
 		Name:                 s.ActionName,
 		ParameterMappings:    mappings,
@@ -735,7 +735,7 @@ func (fb *flowBuilder) addDownloadFileAction(s *ast.DownloadFileStmt) model.ID {
 		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
 	}
 	if s.ErrorHandling != nil {
-		action.ErrorHandlingType = convertErrorHandlingType(s.ErrorHandling)
+		action.ErrorHandlingType = fb.ehType(s.ErrorHandling)
 	}
 
 	activity := &microflows.ActionActivity{
@@ -1039,7 +1039,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 		HttpConfiguration: httpConfig,
 		RequestHandling:   requestHandling,
 		ResultHandling:    resultHandling,
-		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType: fb.ehType(s.ErrorHandling),
 		OutputVariable:    s.OutputVariable,
 		UseReturnVariable: s.OutputVariable != "",
 		TimeoutExpression: timeoutExpr,
@@ -1228,7 +1228,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 
 	action := &microflows.ExecuteDatabaseQueryAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:  fb.ehType(s.ErrorHandling),
 		OutputVariableName: s.OutputVariable,
 		Query:              s.QueryName,
 		DynamicQuery:       dynamicQuery,
@@ -1286,7 +1286,7 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 
 	action := &microflows.ImportXmlAction{
 		BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:   fb.ehType(s.ErrorHandling),
 		XmlDocumentVariable: s.SourceVariable,
 	}
 
@@ -1357,7 +1357,7 @@ func (fb *flowBuilder) addTransformJsonAction(s *ast.TransformJsonStmt) model.ID
 
 	action := &microflows.TransformJsonAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType:  fb.ehType(s.ErrorHandling),
 		InputVariableName:  s.InputVariable,
 		OutputVariableName: s.OutputVariable,
 		Transformation:     s.Transformation.String(),
@@ -1392,7 +1392,7 @@ func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) mode
 
 	action := &microflows.ExportXmlAction{
 		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
-		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
+		ErrorHandlingType: fb.ehType(s.ErrorHandling),
 		OutputVariable:    s.OutputVariable,
 		RequestHandling: &microflows.MappingRequestHandling{
 			BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
