@@ -26,7 +26,7 @@ func TestFormatMicroflowActivities_Concurrent_NoRace(t *testing.T) {
 	// Build two distinct microflows whose activities are anchored to
 	// different sides. If the two describe calls share state, one will
 	// emit the other's anchor keyword.
-	mfA := mkRaceMicroflow("mfa-start", "mfa-log", "mfa-end", AnchorRight)
+	mfA := mkRaceMicroflow("mfa-start", "mfa-log", "mfa-end", AnchorTop)
 	mfB := mkRaceMicroflow("mfb-start", "mfb-log", "mfb-end", AnchorBottom)
 
 	e := newTestExecutor()
@@ -50,8 +50,8 @@ func TestFormatMicroflowActivities_Concurrent_NoRace(t *testing.T) {
 	}
 	wg.Wait()
 
-	wantA := "@anchor(from: right, to: left)"
-	wantB := "@anchor(from: bottom, to: left)"
+	wantA := "@anchor(from: top)"
+	wantB := "@anchor(from: bottom)"
 	for i, got := range resultsA {
 		if !strings.Contains(got, wantA) {
 			t.Errorf("worker %d (A) missing %q in output:\n%s", i, wantA, got)

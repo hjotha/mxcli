@@ -1,0 +1,673 @@
+-- ============================================================================
+-- DataGrid2 Examples
+-- ============================================================================
+--
+-- Comprehensive doctype test for the DATAGRID widget
+-- (com.mendix.widget.web.datagrid.Datagrid).
+--
+-- Test matrix:
+--   DG01  Basic — database datasource, flat columns
+--   DG02  Sorting — single column, multi-column, descending
+--   DG03  XPath filter — simple, complex AND/OR
+--   DG04  Microflow datasource
+--   DG05  Association datasource (by-association path)
+--   DG06  Paging — buttons top/bottom/both, virtual scrolling
+--   DG07  Column properties — alignment, width, sortable, hidable, tooltip
+--   DG08  Column ShowContentAs — text, url, email
+--   DG09  Custom content column — widgets inside a column cell
+--   DG10  Control bar — New button with create_object
+--   DG11  CRUD — New / Edit / Delete with $currentObject
+--   DG12  Microflow row actions — pass $currentObject to a microflow
+--   DG13  Selection modes — none, single, multiple
+--   DG14  Design properties — Compact, Striped, Hover, Borders
+--   DG15  Page variable visibility — column visible expression
+--
+-- ============================================================================
+
+-- MARK: Setup
+
+create module DgTest;
+
+create enumeration DgTest.Status (
+  Active   'Active',
+  Inactive 'Inactive',
+  Pending  'Pending'
+);
+
+create enumeration DgTest.Priority (
+  Low    'Low',
+  Medium 'Medium',
+  High   'High'
+);
+
+@position(100, 100)
+create persistent entity DgTest.Product (
+  Name:     string(200) not null,
+  Code:     string(50)  not null,
+  Price:    decimal default 0.00,
+  Stock:    integer default 0,
+  IsActive: boolean default true,
+  Status:   enumeration(DgTest.Status) default Active,
+  Priority: enumeration(DgTest.Priority) default Medium,
+  Url:      string(500),
+  Email:    string(200)
+);
+
+@position(400, 100)
+create persistent entity DgTest.Category (
+  Name:        string(200) not null,
+  Description: string(1000)
+);
+
+create association DgTest.Product_Category
+  from DgTest.Product to DgTest.Category;
+
+-- Helper page: edit form opened from CRUD examples
+create page DgTest.Product_Edit (
+  params: { $Product: DgTest.Product },
+  title: 'Edit Product',
+  layout: Atlas_Core.PopupLayout,
+  url: 'dg/product/edit/{Product/Name}',
+  folder: 'DataGrid'
+) {
+  dataview dvProduct (datasource: $Product) {
+    textbox txtName (label: 'Name', attribute: Name)
+    textbox txtCode (label: 'Code', attribute: Code)
+    footer footer1 {
+      actionbutton btnSave   (caption: 'Save',   action: save_changes close_page,   buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page, buttonstyle: default)
+    }
+  }
+};
+
+-- Helper microflow for DG04 (microflow datasource)
+create microflow DgTest.DSO_GetActiveProducts ()
+  returns list of DgTest.Product
+  folder 'DataGrid'
+begin
+  retrieve $Products from DgTest.Product where [IsActive = true()] sort by Name asc;
+  return $Products;
+end;
+/
+
+-- Helper microflow for DG12 (row action)
+create microflow DgTest.ACT_ActivateProduct (
+  $Product: DgTest.Product
+)
+  folder 'DataGrid'
+begin
+  change $Product (IsActive = true, Status = DgTest.Status.Active);
+  commit $Product;
+end;
+/
+
+-- ============================================================================
+-- DG01: Basic DataGrid — database datasource, minimal config
+-- ============================================================================
+
+/**
+ * DG01: Minimal DataGrid with database datasource and a handful of columns.
+ */
+create page DgTest.DG01_Basic (
+  title: 'Products',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg01_basic',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: database DgTest.Product) {
+    column colName   (attribute: Name,     caption: 'Product Name')
+    column colCode   (attribute: Code,     caption: 'SKU')
+    column colPrice  (attribute: Price,    caption: 'Price')
+    column colStock  (attribute: Stock,    caption: 'In Stock')
+    column colActive (attribute: IsActive, caption: 'Active')
+    column colStatus (attribute: Status,   caption: 'Status')
+  }
+};
+
+-- ============================================================================
+-- DG02: Sorting
+-- ============================================================================
+
+/**
+ * DG02a: Single-column ascending sort.
+ */
+create page DgTest.DG02a_Sort_Single (
+  title: 'Products A–Z',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg02a_sort_single',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: database from DgTest.Product sort by Name asc) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colCode  (attribute: Code,  caption: 'SKU')
+    column colPrice (attribute: Price, caption: 'Price')
+  }
+};
+
+/**
+ * DG02b: Multi-column sort — primary ascending Name, secondary descending Price.
+ */
+create page DgTest.DG02b_Sort_Multi (
+  title: 'Products sorted',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg02b_sort_multi',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database from DgTest.Product sort by Name asc, Price desc
+  ) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colPrice (attribute: Price, caption: 'Price')
+    column colStock (attribute: Stock, caption: 'Stock')
+  }
+};
+
+-- ============================================================================
+-- DG03: XPath filter
+-- ============================================================================
+
+/**
+ * DG03a: Simple equality filter — active products only.
+ */
+create page DgTest.DG03a_Filter_Simple (
+  title: 'Active Products',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg03a_filter_simple',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database from DgTest.Product where [IsActive = true()]
+  ) {
+    column colName   (attribute: Name,   caption: 'Name')
+    column colStatus (attribute: Status, caption: 'Status')
+  }
+};
+
+/**
+ * DG03b: Complex AND/OR filter with multiple criteria.
+ */
+create page DgTest.DG03b_Filter_Complex (
+  title: 'High Priority Active Products',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg03b_filter_complex',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database from DgTest.Product
+      where [IsActive = true() and Priority = 'High'] or [Stock > 100]
+      sort by Name asc
+  ) {
+    column colName     (attribute: Name,     caption: 'Name')
+    column colPriority (attribute: Priority, caption: 'Priority')
+    column colStock    (attribute: Stock,    caption: 'Stock')
+  }
+};
+
+-- ============================================================================
+-- DG04: Microflow datasource
+-- ============================================================================
+
+/**
+ * DG04: DataGrid driven by a microflow that returns a filtered/sorted list.
+ */
+create page DgTest.DG04_Microflow_DataSource (
+  title: 'Active Products (via Microflow)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg04_microflow_datasource',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: microflow DgTest.DSO_GetActiveProducts) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colCode  (attribute: Code,  caption: 'SKU')
+    column colPrice (attribute: Price, caption: 'Price')
+  }
+};
+
+-- ============================================================================
+-- DG05: Association datasource (by-association path from DataView context)
+-- ============================================================================
+
+/**
+ * DG05: DataGrid inside a DataView sourced via an association path.
+ * The outer DataView provides $Category; the inner DataGrid shows its Products.
+ */
+create page DgTest.DG05_Association_DataSource (
+  params: { $Category: DgTest.Category },
+  title: 'Category Products',
+  layout: Atlas_Core.PopupLayout,
+  url: 'dg05_association_datasource/{Category/Name}',
+  folder: 'DataGrid'
+) {
+  dataview dvCategory (datasource: $Category, editable: false) {
+    dynamictext txtName (content: '{1}', contentparams: [{1} = Name])
+    datagrid dg1 (
+      datasource: $Category/DgTest.Product_Category/DgTest.Product
+    ) {
+      column colName  (attribute: Name,  caption: 'Product Name')
+      column colPrice (attribute: Price, caption: 'Price')
+      column colStock (attribute: Stock, caption: 'Stock')
+    }
+  }
+};
+
+-- ============================================================================
+-- DG06: Paging options
+-- ============================================================================
+
+/**
+ * DG06a: Paging buttons shown both above and below the grid.
+ */
+create page DgTest.DG06a_Paging_Both (
+  title: 'Products (paging both)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg06a_paging_both',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database DgTest.Product,
+    PageSize: 10,
+    Pagination: buttons,
+    PagingPosition: both
+  ) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colPrice (attribute: Price, caption: 'Price')
+  }
+};
+
+/**
+ * DG06b: Virtual scrolling — no paging buttons.
+ */
+create page DgTest.DG06b_Paging_VirtualScroll (
+  title: 'Products (virtual scroll)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg06b_virtual_scroll',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database DgTest.Product,
+    PageSize: 50,
+    Pagination: virtualScrolling
+  ) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colPrice (attribute: Price, caption: 'Price')
+  }
+};
+
+/**
+ * DG06c: Paging on top only; buttons shown automatically when needed.
+ */
+create page DgTest.DG06c_Paging_Top (
+  title: 'Products (top paging)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg06c_paging_top',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database DgTest.Product,
+    PageSize: 20,
+    PagingPosition: top,
+    ShowPagingButtons: auto
+  ) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colPrice (attribute: Price, caption: 'Price')
+  }
+};
+
+-- ============================================================================
+-- DG07: Column properties
+-- ============================================================================
+
+/**
+ * DG07: Full column property matrix — alignment, width modes, sortable,
+ * resizable, draggable, hidable, wrapText, tooltip.
+ */
+create page DgTest.DG07_Column_Properties (
+  title: 'DataGrid Column Properties',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg07_column_properties',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: database DgTest.Product) {
+    -- Default column — all properties at their defaults
+    column colName (attribute: Name, caption: 'Product Name')
+
+    -- Right-aligned, fixed width, not sortable/resizable/draggable
+    column colPrice (
+      attribute: Price, caption: 'Price (USD)',
+      Alignment: right,
+      WrapText: false,
+      Sortable: false,
+      Resizable: false,
+      Draggable: false,
+      ColumnWidth: manual, Size: 120,
+      tooltip: 'Unit price excluding tax'
+    )
+
+    -- Auto-fit width, always hidden from column chooser
+    column colCode (
+      attribute: Code, caption: 'SKU',
+      ColumnWidth: autoFit,
+      Hidable: hidden
+    )
+
+    -- Center-aligned stock, not removable from column chooser
+    column colStock (
+      attribute: Stock, caption: 'Stock',
+      Alignment: center,
+      Hidable: no
+    )
+
+    -- Status column with dynamic cell class based on value
+    column colStatus (
+      attribute: Status, caption: 'Status',
+      DynamicCellClass: 'if ($currentObject/Status = DgTest.Status.Active) then ''text-success'' else ''text-muted'''
+    )
+  }
+};
+
+-- ============================================================================
+-- DG08: Column ShowContentAs — text, url, email
+-- ============================================================================
+
+/**
+ * DG08: Columns that render their content as a clickable URL or mailto link.
+ */
+create page DgTest.DG08_ShowContentAs (
+  title: 'Products with links',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg08_show_content_as',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: database DgTest.Product) {
+    column colName  (attribute: Name,  caption: 'Name',    ShowContentAs: text)
+    column colUrl   (attribute: Url,   caption: 'Website', ShowContentAs: url)
+    column colEmail (attribute: Email, caption: 'Email',   ShowContentAs: email)
+  }
+};
+
+-- ============================================================================
+-- DG09: Custom content column — widgets inside a column cell
+-- ============================================================================
+
+/**
+ * DG09: Column with ShowContentAs: customContent renders widgets instead of text.
+ * Used for action buttons and conditional content in each row.
+ */
+create page DgTest.DG09_Custom_Content_Column (
+  title: 'Products with status badges',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg09_custom_content',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: database DgTest.Product) {
+    column colName   (attribute: Name, caption: 'Name')
+    column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent) {
+      dynamictext txtStatus (content: '{1}', contentparams: [{1} = Status])
+    }
+    column colActions (caption: 'Actions', ShowContentAs: customContent) {
+      actionbutton btnEdit (
+        caption: 'Edit',
+        action: show_page DgTest.Product_Edit (Product: $currentObject),
+        buttonstyle: default
+      )
+    }
+  }
+};
+
+-- ============================================================================
+-- DG10: Control bar — New button
+-- ============================================================================
+
+/**
+ * DG10: DataGrid with a control bar containing a New button that creates
+ * a product and immediately opens the edit popup.
+ */
+create page DgTest.DG10_ControlBar (
+  title: 'Manage Products',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg10_controlbar',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database from DgTest.Product sort by Name asc
+  ) {
+    controlbar cb1 {
+      actionbutton btnNew (
+        caption: 'New Product',
+        action: create_object DgTest.Product then show_page DgTest.Product_Edit,
+        buttonstyle: primary
+      )
+    }
+    column colName   (attribute: Name,   caption: 'Name')
+    column colCode   (attribute: Code,   caption: 'SKU')
+    column colStatus (attribute: Status, caption: 'Status')
+  }
+};
+
+-- ============================================================================
+-- DG11: Full CRUD — New / Edit / Delete in a single grid
+-- ============================================================================
+
+/**
+ * DG11: Complete CRUD grid — control bar New, column Edit (show_page with
+ * $currentObject), and column Delete (delete_object).
+ */
+create page DgTest.DG11_CRUD (
+  title: 'Product CRUD',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg11_crud',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: database DgTest.Product) {
+    controlbar cb1 {
+      actionbutton btnNew (
+        caption: 'New',
+        action: create_object DgTest.Product then show_page DgTest.Product_Edit,
+        buttonstyle: primary
+      )
+    }
+    column colName   (attribute: Name,   caption: 'Name')
+    column colCode   (attribute: Code,   caption: 'SKU')
+    column colPrice  (attribute: Price,  caption: 'Price')
+    column colStatus (attribute: Status, caption: 'Status')
+    column colActions (caption: 'Actions', ShowContentAs: customContent) {
+      actionbutton btnEdit (
+        caption: 'Edit',
+        action: show_page DgTest.Product_Edit (Product: $currentObject),
+        buttonstyle: default
+      )
+      actionbutton btnDelete (
+        caption: 'Delete',
+        action: delete_object,
+        buttonstyle: danger
+      )
+    }
+  }
+};
+
+-- ============================================================================
+-- DG12: Microflow row actions — pass $currentObject to a microflow
+-- ============================================================================
+
+/**
+ * DG12: Column with action buttons that call a microflow with $currentObject.
+ * Demonstrates passing the current row's entity to a parameterized microflow.
+ */
+create page DgTest.DG12_MicroflowRowActions (
+  title: 'Products with Microflow Actions',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg12_mf_row_actions',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (datasource: database DgTest.Product) {
+    column colName     (attribute: Name,     caption: 'Name')
+    column colStatus   (attribute: Status,   caption: 'Status')
+    column colPriority (attribute: Priority, caption: 'Priority')
+    column colActions (caption: 'Actions', ShowContentAs: customContent) {
+      actionbutton btnActivate (
+        caption: 'Activate',
+        action: microflow DgTest.ACT_ActivateProduct(Product: $currentObject),
+        buttonstyle: success
+      )
+    }
+  }
+};
+
+-- ============================================================================
+-- DG13: Selection modes
+-- ============================================================================
+
+/**
+ * DG13a: Single-row selection — clicking a row highlights it.
+ */
+create page DgTest.DG13a_Selection_Single (
+  title: 'Products (single select)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg13a_selection_single',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database DgTest.Product,
+    selection: single
+  ) {
+    column colName   (attribute: Name,   caption: 'Name')
+    column colStatus (attribute: Status, caption: 'Status')
+  }
+};
+
+/**
+ * DG13b: Multi-row selection — checkboxes appear for each row.
+ */
+create page DgTest.DG13b_Selection_Multiple (
+  title: 'Products (multi select)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg13b_selection_multiple',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database DgTest.Product,
+    selection: multiple,
+    PageSize: 25,
+    PagingPosition: both
+  ) {
+    column colName   (attribute: Name,     caption: 'Name')
+    column colCode   (attribute: Code,     caption: 'SKU')
+    column colStatus (attribute: Status,   caption: 'Status')
+    column colStock  (attribute: Stock,    caption: 'Stock')
+  }
+};
+
+-- ============================================================================
+-- DG14: Design properties — Compact, Striped, Hover, Borders
+-- ============================================================================
+
+/**
+ * DG14a: Design properties via class string (legacy Atlas CSS approach).
+ */
+create page DgTest.DG14a_Styling_Class (
+  title: 'Products (styled)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg14a_styling_class',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database DgTest.Product,
+    class: 'datagrid-striped datagrid-hover datagrid-sm'
+  ) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colPrice (attribute: Price, caption: 'Price')
+    column colStock (attribute: Stock, caption: 'Stock')
+  }
+};
+
+/**
+ * DG14b: Design properties via the Atlas design system token map.
+ */
+create page DgTest.DG14b_Styling_DesignProps (
+  title: 'Products (design props)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg14b_styling_designprops',
+  folder: 'DataGrid'
+) {
+  datagrid dg1 (
+    datasource: database DgTest.Product,
+    PageSize: 10,
+    PagingPosition: both,
+    designproperties: ['Compact': on, 'Striped': on, 'Hover': on, 'Borders': 'Horizontal']
+  ) {
+    column colName (
+      attribute: Name, caption: 'Name',
+      designproperties: ['Compact': on]
+    )
+    column colPrice (attribute: Price, caption: 'Price', Alignment: right)
+    column colStock (attribute: Stock, caption: 'Stock', Alignment: right)
+  }
+};
+
+-- ============================================================================
+-- DG15: Page variable — column visibility driven by a page-level variable
+-- ============================================================================
+
+/**
+ * DG15: Page variable controls whether the Stock column is visible.
+ * The variable expression uses Mendix expression syntax.
+ */
+create page DgTest.DG15_Variable_Visibility (
+  title: 'Products (conditional column)',
+  layout: Atlas_Core.Atlas_Default,
+  url: 'dg15_variable_visibility',
+  folder: 'DataGrid',
+  variables: { $showStock: boolean = 'if (1 < 2) then true else false' }
+) {
+  datagrid dg1 (datasource: database DgTest.Product) {
+    column colName  (attribute: Name,  caption: 'Name')
+    column colPrice (attribute: Price, caption: 'Price')
+    column colStock (
+      attribute: Stock, caption: 'Stock',
+      visible: '$showStock'
+    )
+    column colStatus (attribute: Status, caption: 'Status')
+  }
+};
+
+-- ============================================================================
+-- Coverage summary
+-- ============================================================================
+--
+-- Datasource types:
+--   ✓ DATABASE (flat)
+--   ✓ DATABASE FROM ... WHERE ... SORT BY (simple + complex XPath)
+--   ✓ MICROFLOW
+--   ✓ Association path ($Param/Module.Assoc/Module.Entity)
+--
+-- Column types:
+--   ✓ Attribute column (all ShowContentAs values: text, url, email, customContent)
+--   ✓ Custom content column (widgets in cell)
+--   ✓ Empty caption column (Actions column with no attribute)
+--
+-- Column properties:
+--   ✓ Alignment (left / center / right)
+--   ✓ WrapText, Sortable, Resizable, Draggable
+--   ✓ Hidable (yes / no / hidden)
+--   ✓ ColumnWidth (auto / manual + Size / autoFit)
+--   ✓ tooltip, DynamicCellClass, visible
+--
+-- DataGrid properties:
+--   ✓ PageSize, Pagination (buttons / virtualScrolling)
+--   ✓ PagingPosition (top / bottom / both), ShowPagingButtons
+--   ✓ selection (none / single / multiple)
+--   ✓ class, designproperties
+--
+-- Control bar:
+--   ✓ New button (create_object THEN show_page)
+--   ✓ Delete button (delete_object)
+--
+-- Row actions:
+--   ✓ SHOW_PAGE with $currentObject parameter
+--   ✓ MICROFLOW with $currentObject parameter
+--   ✓ DELETE_OBJECT inline
+--
+-- Page features:
+--   ✓ variables: { $name: type = expression } for column visibility
+--
+-- ============================================================================
