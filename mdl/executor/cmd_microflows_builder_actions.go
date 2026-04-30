@@ -493,16 +493,24 @@ func (fb *flowBuilder) addListOperationAction(s *ast.ListOperationStmt) model.ID
 			ListVariable: s.InputVariable,
 		}
 	case ast.ListOpFind:
-		operation = &microflows.FindOperation{
-			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-			ListVariable: s.InputVariable,
-			Expression:   fb.exprToString(s.Condition),
+		if op := fb.listAttributeOperation(s, false); op != nil {
+			operation = op
+		} else {
+			operation = &microflows.FindOperation{
+				BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+				ListVariable: s.InputVariable,
+				Expression:   fb.exprToString(s.Condition),
+			}
 		}
 	case ast.ListOpFilter:
-		operation = &microflows.FilterOperation{
-			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-			ListVariable: s.InputVariable,
-			Expression:   fb.exprToString(s.Condition),
+		if op := fb.listAttributeOperation(s, true); op != nil {
+			operation = op
+		} else {
+			operation = &microflows.FilterOperation{
+				BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+				ListVariable: s.InputVariable,
+				Expression:   fb.exprToString(s.Condition),
+			}
 		}
 	case ast.ListOpSort:
 		// Resolve entity type from input variable for qualified attribute names
@@ -622,6 +630,67 @@ func (fb *flowBuilder) addListOperationAction(s *ast.ListOperationStmt) model.ID
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 	return activity.ID
+}
+
+func (fb *flowBuilder) listAttributeOperation(s *ast.ListOperationStmt, filter bool) microflows.ListOperation {
+	binary, ok := s.Condition.(*ast.BinaryExpr)
+	if !ok || binary.Operator != "=" {
+		return nil
+	}
+	fieldName, ok := listOperationFieldName(binary.Left)
+	if !ok || fieldName == "" {
+		return nil
+	}
+	expression := fb.exprToString(binary.Right)
+	if expression == "" {
+		return nil
+	}
+
+	attributeName, associationName := fb.resolveListOperationMember(s.InputVariable, fieldName)
+	if associationName == "" && !strings.Contains(attributeName, ".") {
+		return nil
+	}
+	if filter {
+		return &microflows.FilterByAttributeOperation{
+			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+			ListVariable: s.InputVariable,
+			Attribute:    attributeName,
+			Association:  associationName,
+			Expression:   expression,
+		}
+	}
+	return &microflows.FindByAttributeOperation{
+		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
+		ListVariable: s.InputVariable,
+		Attribute:    attributeName,
+		Association:  associationName,
+		Expression:   expression,
+	}
+}
+
+func listOperationFieldName(expr ast.Expression) (string, bool) {
+	switch e := expr.(type) {
+	case *ast.IdentifierExpr:
+		return e.Name, true
+	case *ast.QualifiedNameExpr:
+		return e.QualifiedName.String(), true
+	default:
+		return "", false
+	}
+}
+
+func (fb *flowBuilder) resolveListOperationMember(listVariable, memberName string) (attributeName, associationName string) {
+	entityQN := ""
+	if fb.varTypes != nil {
+		if listType := fb.varTypes[listVariable]; strings.HasPrefix(listType, "List of ") {
+			entityQN = strings.TrimPrefix(listType, "List of ")
+		}
+	}
+	// Reuse the member-change resolver so list operations follow the same
+	// attribute-vs-association qualification rules as change-object members.
+	memberChange := &microflows.MemberChange{}
+	fb.resolveMemberChange(memberChange, memberName, entityQN)
+	return memberChange.AttributeQualifiedName, memberChange.AssociationQualifiedName
 }
 
 // addAggregateListAction creates aggregate operations like COUNT, SUM, AVERAGE, etc.

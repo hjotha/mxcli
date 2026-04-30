@@ -1025,6 +1025,24 @@ func serializeListOperation(op microflows.ListOperation) bson.D {
 			{Key: "Expression", Value: o.Expression},
 			{Key: "ListName", Value: o.ListVariable}, // storageName: ListName
 		}
+	case *microflows.FindByAttributeOperation:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
+			{Key: "$Type", Value: "Microflows$Find"},
+			{Key: "Association", Value: o.Association},
+			{Key: "Attribute", Value: o.Attribute},
+			{Key: "Expression", Value: o.Expression},
+			{Key: "ListName", Value: o.ListVariable},
+		}
+	case *microflows.FilterByAttributeOperation:
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(string(o.ID))},
+			{Key: "$Type", Value: "Microflows$Filter"},
+			{Key: "Association", Value: o.Association},
+			{Key: "Attribute", Value: o.Attribute},
+			{Key: "Expression", Value: o.Expression},
+			{Key: "ListName", Value: o.ListVariable},
+		}
 	case *microflows.SortOperation:
 		// Build sorting items
 		sortings := bson.A{int32(3)} // Array with items marker
