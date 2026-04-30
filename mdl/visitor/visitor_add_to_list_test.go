@@ -67,4 +67,11 @@ END;`
 	if addStmt.Item != "Order" {
 		t.Fatalf("Item = %q, want Order", addStmt.Item)
 	}
+	varExpr, ok := addStmt.Value.(*ast.VariableExpr)
+	if !ok {
+		t.Fatalf("Value = %T, want VariableExpr", addStmt.Value)
+	}
+	if varExpr.Name != "Order" {
+		t.Fatalf("Value.Name = %q, want Order", varExpr.Name)
+	}
 }
