@@ -1202,7 +1202,7 @@ create or replace page PgTest.P017_SnippetCall_With_Params
   params: {
     $Customer: PgTest.Customer
   },
-  url: 'p017_snippet_with_params',
+  url: 'p017_snippet_with_params/{Customer/Name}',
   folder: 'Snippets'
 )
 {
