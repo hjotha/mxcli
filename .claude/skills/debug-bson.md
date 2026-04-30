@@ -9,6 +9,7 @@ Use when encountering:
 - **Studio Pro crash on open** with `RevStatusCache.CreateDeleteStatusItem` in stack trace
 - **`mx diff` crash** with "Sequence contains no matching element"
 - **CE1613** "The selected attribute/enumeration no longer exists"
+- **CE0115** "The arguments that are passed to page X do not match the expected parameters"
 - **CE0463** "The definition of this widget has changed"
 - **CE0642** "Property X is required"
 - **CE0091** validation errors on widget properties
@@ -305,6 +306,51 @@ for t, props in crash_props.items():
 **Symptoms**: New properties missing, old properties present, wrong property count.
 
 **Fix**: Extract a fresh template from a project with `mx update-widgets` applied. The Type section must match the installed widget version exactly.
+
+### CE0115: Arguments Passed to Page Do Not Match Expected Parameters
+
+**Symptom**: `mx check` reports `[CE0115] "The arguments that are passed to page 'X' do not match the expected parameters."` on an action button that uses `show_page TargetPage (Param: $currentObject)`.
+
+**Root cause**: The BSON array type indicator rule. Every Mendix BSON array must begin with an `int32` **type indicator** of `2` or `3`. This indicator is skipped by `extractBsonArray` and by Studio Pro's reader. Writing `int32(len(items))` as the first element instead produces an invalid indicator when `len ≠ 2` and `len ≠ 3` — Studio Pro cannot recognise the array and reads 0 parameter mappings.
+
+**Type indicator values**:
+| First element | Meaning |
+|---------------|---------|
+| `int32(3)` | Initialized array — used for `Items`, `DesignProperties`, and most non-empty lists |
+| `int32(2)` | Initialized empty array — used for `ParameterMappings`, `PagesForSpecializations`, `Parameters` |
+| Any other value | **Invalid** — Studio Pro ignores the entire array |
+
+**How Studio Pro stores page parameter mappings**: Studio Pro does **not** store explicit `Forms$PageParameterMapping` objects in BSON. It always writes `ParameterMappings: [2]` (type indicator only, no inline objects) and infers `$currentObject` at runtime from the enclosing widget context — DataGrid row, DataView datasource, etc. No matter what the MDL source specifies for `(Param: $currentObject)`, the correct serialization is always the empty `[2]` array.
+
+**Correct writer pattern for `Forms$FormAction`**:
+```go
+formSettings := bson.D{
+    {Key: "$ID",               Value: idToBsonBinary(generateUUID())},
+    {Key: "$Type",             Value: "Forms$FormSettings"},
+    {Key: "Form",              Value: pageName},          // BY_NAME_REFERENCE
+    {Key: "ParameterMappings", Value: bson.A{int32(2)}}, // always empty; runtime infers mapping
+    {Key: "TitleOverride",     Value: nil},
+}
+return bson.D{
+    {Key: "$ID",                    Value: idToBsonBinary(id)},
+    {Key: "$Type",                  Value: "Forms$FormAction"},
+    {Key: "DisabledDuringExecution", Value: true},
+    {Key: "FormSettings",           Value: formSettings},
+    {Key: "NumberOfPagesToClose2",  Value: ""},
+    {Key: "PagesForSpecializations", Value: bson.A{int32(2)}},
+}
+```
+
+**What NOT to do**:
+```go
+// WRONG: produces [1, {mapping}] — invalid type indicator 1
+paramMappings := bson.A{int32(len(a.ParameterMappings))}
+for _, pm := range a.ParameterMappings {
+    paramMappings = append(paramMappings, bson.D{...Forms$PageParameterMapping...})
+}
+```
+
+**Diagnostic check**: Inspect the raw `ParameterMappings` array in a Python BSON dump. If it shows `[1, {...}]` instead of `[2]`, the type indicator is wrong. Studio Pro-generated pages always show `[2]`.
 
 ## Key Principles
 
