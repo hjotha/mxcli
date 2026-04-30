@@ -715,6 +715,43 @@ func TestCollectErrorHandlerStatements_StopsAtMerge(t *testing.T) {
 	}
 }
 
+func TestCollectErrorHandlerStatements_StructuredIfEmitsEndIf(t *testing.T) {
+	e := newTestExecutor()
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$latestHttpResponse != empty"},
+		},
+		mkID("return_error"): &microflows.EndEvent{
+			BaseMicroflowObject: mkObj("return_error"),
+			ReturnValue:         "latestHttpResponse",
+		},
+		mkID("merge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")},
+		mkID("after"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("after")},
+			Action:       &microflows.LogMessageAction{LogLevel: "Info", LogNodeName: "'Synthetic'", MessageTemplate: &model.Text{Translations: map[string]string{"en_US": "after"}}},
+		},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("split"): {
+			mkBranchFlow("split", "return_error", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("split", "merge", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("merge"): {mkFlow("merge", "after")},
+	}
+
+	stmts := e.collectErrorHandlerStatements(mkID("split"), activityMap, flowsByOrigin, nil, nil)
+	got := strings.Join(stmts, "\n")
+
+	assertContains(t, got, "if $latestHttpResponse != empty then")
+	assertContains(t, got, "return $latestHttpResponse;")
+	assertContains(t, got, "end if;")
+	if strings.Contains(got, "after") {
+		t.Fatalf("error handler traversal crossed the rejoin merge: %s", got)
+	}
+}
+
 func TestCollectErrorHandlerStatements_EmptyID(t *testing.T) {
 	e := newTestExecutor()
 	stmts := e.collectErrorHandlerStatements("", nil, nil, nil, nil)
