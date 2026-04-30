@@ -648,21 +648,8 @@ func traverseFlow(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
-		// Guard pattern: true branch is a single EndEvent (RETURN),
-		// but only when the false branch does NOT also end directly.
-		// If both branches return, use normal IF/ELSE/END IF.
-		isGuard := false
-		if trueFlow != nil {
-			if _, isEnd := activityMap[trueFlow.DestinationID].(*microflows.EndEvent); isEnd {
-				isGuard = true
-				// Not a guard if both branches return directly
-				if falseFlow != nil {
-					if _, falseIsEnd := activityMap[falseFlow.DestinationID].(*microflows.EndEvent); falseIsEnd {
-						isGuard = false
-					}
-				}
-			}
-		}
+		trueTerminates := branchFlowTerminatesBeforeMerge(trueFlow, mergeID, activityMap, flowsByOrigin, splitMergeMap)
+		isGuard := trueTerminates && !branchFlowStartsAtTerminal(falseFlow, activityMap)
 
 		if isGuard {
 			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
@@ -703,14 +690,7 @@ func traverseFlow(
 			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
-			// Continue after the merge point
-			if mergeID != "" {
-				visited[mergeID] = true
-				nextFlows := flowsByOrigin[mergeID]
-				for _, flow := range nextFlows {
-					traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-				}
-			}
+			continueAfterSplitJoin(ctx, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		}
 		return
 	}
@@ -818,19 +798,8 @@ func traverseFlowUntilMerge(
 			*lines = append(*lines, indentStr+stmt)
 		}
 
-		// Guard pattern: true branch is a single EndEvent (RETURN),
-		// but only when the false branch does NOT also end directly.
-		isGuard := false
-		if trueFlow != nil {
-			if _, isEnd := activityMap[trueFlow.DestinationID].(*microflows.EndEvent); isEnd {
-				isGuard = true
-				if falseFlow != nil {
-					if _, falseIsEnd := activityMap[falseFlow.DestinationID].(*microflows.EndEvent); falseIsEnd {
-						isGuard = false
-					}
-				}
-			}
-		}
+		trueTerminates := branchFlowTerminatesBeforeMerge(trueFlow, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap)
+		isGuard := trueTerminates && !branchFlowStartsAtTerminal(falseFlow, activityMap)
 
 		if isGuard {
 			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
@@ -871,14 +840,7 @@ func traverseFlowUntilMerge(
 			*lines = append(*lines, indentStr+"end if;")
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
 
-			// Continue after nested merge
-			if nestedMergeID != "" && nestedMergeID != mergeID {
-				visited[nestedMergeID] = true
-				nextFlows := flowsByOrigin[nestedMergeID]
-				for _, flow := range nextFlows {
-					traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-				}
-			}
+			continueAfterNestedSplitJoin(ctx, nestedMergeID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 		}
 		return
 	}
@@ -915,6 +877,65 @@ func traverseFlowUntilMerge(
 	for _, flow := range normalFlows {
 		traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 	}
+}
+
+func continueAfterSplitJoin(
+	ctx *ExecContext,
+	joinID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	if joinID == "" {
+		return
+	}
+	if _, isMerge := activityMap[joinID].(*microflows.ExclusiveMerge); isMerge {
+		visited[joinID] = true
+		for _, flow := range flowsByOrigin[joinID] {
+			traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		}
+		return
+	}
+	traverseFlow(ctx, joinID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+}
+
+func continueAfterNestedSplitJoin(
+	ctx *ExecContext,
+	joinID model.ID,
+	parentMergeID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	if joinID == "" || joinID == parentMergeID {
+		return
+	}
+	if _, isMerge := activityMap[joinID].(*microflows.ExclusiveMerge); isMerge {
+		visited[joinID] = true
+		for _, flow := range flowsByOrigin[joinID] {
+			traverseFlowUntilMerge(ctx, flow.DestinationID, parentMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		}
+		return
+	}
+	traverseFlowUntilMerge(ctx, joinID, parentMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 }
 
 // traverseLoopBody traverses activities inside a loop body.
@@ -1287,6 +1308,88 @@ func findNormalFlows(flows []*microflows.SequenceFlow) []*microflows.SequenceFlo
 		}
 	}
 	return result
+}
+
+func branchFlowTerminatesBeforeMerge(
+	flow *microflows.SequenceFlow,
+	mergeID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+) bool {
+	if flow == nil {
+		return false
+	}
+	return objectTerminatesBeforeMerge(flow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, map[model.ID]bool{})
+}
+
+func branchFlowStartsAtTerminal(flow *microflows.SequenceFlow, activityMap map[model.ID]microflows.MicroflowObject) bool {
+	if flow == nil {
+		return false
+	}
+	switch activityMap[flow.DestinationID].(type) {
+	case *microflows.EndEvent, *microflows.ErrorEvent:
+		return true
+	default:
+		return false
+	}
+}
+
+func objectTerminatesBeforeMerge(
+	currentID model.ID,
+	mergeID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+) bool {
+	if currentID == "" || currentID == mergeID || visited[currentID] {
+		return false
+	}
+	visited[currentID] = true
+
+	obj := activityMap[currentID]
+	switch obj.(type) {
+	case *microflows.EndEvent, *microflows.ErrorEvent:
+		return true
+	case *microflows.ExclusiveSplit, *microflows.InheritanceSplit:
+		nestedMergeID := splitMergeMap[currentID]
+		if nestedMergeID == "" {
+			nestedMergeID = mergeID
+		}
+		flows := findNormalFlows(flowsByOrigin[currentID])
+		if len(flows) == 0 {
+			return false
+		}
+		for _, flow := range flows {
+			if !objectTerminatesBeforeMerge(flow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap, cloneVisited(visited)) {
+				return false
+			}
+		}
+		return true
+	case *microflows.ExclusiveMerge:
+		// A non-matching merge is just an intermediate join. Follow it; only the
+		// caller's mergeID is treated as the non-terminal fall-through boundary.
+	}
+
+	flows := findNormalFlows(flowsByOrigin[currentID])
+	if len(flows) == 0 {
+		return false
+	}
+	for _, flow := range flows {
+		if !objectTerminatesBeforeMerge(flow.DestinationID, mergeID, activityMap, flowsByOrigin, splitMergeMap, cloneVisited(visited)) {
+			return false
+		}
+	}
+	return true
+}
+
+func cloneVisited(visited map[model.ID]bool) map[model.ID]bool {
+	cloned := make(map[model.ID]bool, len(visited))
+	for id, seen := range visited {
+		cloned[id] = seen
+	}
+	return cloned
 }
 
 // formatErrorHandlingSuffix returns the ON ERROR suffix for an activity based on its ErrorHandlingType.
