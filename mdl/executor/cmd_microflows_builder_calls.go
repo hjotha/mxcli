@@ -734,11 +734,28 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 	//   The grammar splits "Module.Association" into two segments: {Module, /} and {Association, .}
 	var attributeName string
 	var associationName string
-	if entityQName, ok := fb.varTypes[s.AttributePath.Variable]; ok && len(s.AttributePath.Segments) > 0 {
+	entityQName := ""
+	if fb.varTypes != nil {
+		entityQName = fb.varTypes[s.AttributePath.Variable]
+	}
+	if len(s.AttributePath.Segments) > 0 {
 		segs := s.AttributePath.Segments
 		if len(segs) == 1 {
-			// Single segment: direct attribute access
-			attributeName = entityQName + "." + segs[0].Name
+			switch strings.Count(segs[0].Name, ".") {
+			case 0:
+				// Single bare segment: direct attribute access.
+				if entityQName != "" {
+					attributeName = entityQName + "." + segs[0].Name
+				} else {
+					attributeName = segs[0].Name
+				}
+			case 1:
+				// Qualified association names use Module.Association.
+				associationName = segs[0].Name
+			default:
+				// Fully-qualified attributes use Module.Entity.Attribute.
+				attributeName = segs[0].Name
+			}
 		} else if len(segs) >= 2 && segs[0].Separator == "/" && segs[1].Separator == "." {
 			// Two+ segments starting with / then .: association qualified name
 			// Reconstruct "Module.AssociationName" from segments
@@ -747,11 +764,17 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 				parts[i] = seg.Name
 			}
 			associationName = strings.Join(parts, ".")
+		} else if entityQName == "" && strings.Count(segs[0].Name, ".") == 1 {
+			associationName = segs[0].Name
 		} else {
 			// Fallback: treat first segment as attribute
-			attributeName = entityQName + "." + segs[0].Name
+			if entityQName != "" {
+				attributeName = entityQName + "." + segs[0].Name
+			} else {
+				attributeName = segs[0].Name
+			}
 		}
-	} else if entityQName, ok := fb.varTypes[s.AttributePath.Variable]; ok && len(s.AttributePath.Path) > 0 {
+	} else if entityQName != "" && len(s.AttributePath.Path) > 0 {
 		// Fallback for legacy Path without Segments
 		attributeName = entityQName + "." + s.AttributePath.Path[0]
 	}
