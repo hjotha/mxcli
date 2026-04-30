@@ -1,0 +1,66 @@
+-- ============================================================================
+-- Bug #328: DESCRIBE MICROFLOW omitted nested loop body continuation flows
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Some microflow graphs store the loop boundary flow (last body activity →
+--   loop iterator) in the loop's local object collection, while the real
+--   body-to-body continuation flows are stored in the parent microflow
+--   graph. When a body activity already had a local outgoing flow (the
+--   boundary one), the describer ignored parent-level flows with the same
+--   origin. Result: activities downstream of that origin disappeared from
+--   the described loop body — most visible on nested loops, where the
+--   inner body collapsed into one statement.
+--
+-- Root cause:
+--   `emitLoopBody` built a fresh `loopFlowsByOrigin` from the loop's local
+--   object collection only, then short-circuited when an origin had a
+--   local entry, never merging the equivalent parent-level flows.
+--
+-- After fix:
+--   The describer now merges parent-level body flows into the loop-local
+--   traversal map for any origin that lives in the loop body, including
+--   nested loop descendants collected recursively.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/328-describer-nested-loop-body-flows.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest328.MF_NestedLoops"
+--   The describe output must contain BOTH outer- and inner-loop body
+--   activities and must be a fixpoint under describe → exec → describe.
+-- ============================================================================
+
+create module BugTest328;
+
+create entity BugTest328.Item (
+  Name : string(100)
+);
+/
+
+create entity BugTest328.Role (
+  Name : string(100)
+);
+/
+
+create microflow BugTest328.MF_NestedLoops (
+  $Items: list of BugTest328.Item,
+  $Roles: list of BugTest328.Role
+)
+begin
+  log info node 'BugTest328' 'before outer';
+
+  loop $Item in $Items
+  begin
+    log info node 'BugTest328' 'outer head';
+
+    loop $Role in $Roles
+    begin
+      log info node 'BugTest328' 'inner body';
+      log info node 'BugTest328' 'inner tail';
+    end loop;
+
+    log info node 'BugTest328' 'outer tail';
+  end loop;
+
+  log info node 'BugTest328' 'after outer';
+end;
+/
