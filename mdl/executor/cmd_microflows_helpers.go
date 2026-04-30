@@ -384,6 +384,11 @@ func expressionToXPath(expr ast.Expression) string {
 		return expressionToString(expr)
 	case *ast.QualifiedNameExpr:
 		return qualifiedNameToXPath(e)
+	case *ast.SourceExpr:
+		if e.Source != "" {
+			return e.Source
+		}
+		return expressionToXPath(e.Expression)
 	default:
 		// For all other expression types, the standard serialization is correct
 		return expressionToString(expr)

@@ -515,6 +515,40 @@ func TestResolveAssociationPaths(t *testing.T) {
 	}
 }
 
+func TestResolveAssociationPathsUnwrapsEmptySourceExpr(t *testing.T) {
+	fb := &flowBuilder{}
+	resolved := fb.resolveAssociationPaths(&ast.SourceExpr{
+		Expression: &ast.VariableExpr{Name: "CurrentObject"},
+	})
+
+	if _, ok := resolved.(*ast.SourceExpr); ok {
+		t.Fatalf("empty SourceExpr should unwrap to resolved inner expression, got %T", resolved)
+	}
+	if got := expressionToString(resolved); got != "$CurrentObject" {
+		t.Fatalf("resolved expression = %q, want $CurrentObject", got)
+	}
+}
+
+func TestResolveAssociationPathsKeepsNonEmptySourceExprVerbatim(t *testing.T) {
+	source := "$CurrentObject/Module.Assoc/Name\n"
+	fb := &flowBuilder{}
+	resolved := fb.resolveAssociationPaths(&ast.SourceExpr{
+		Expression: &ast.AttributePathExpr{
+			Variable: "CurrentObject",
+			Path:     []string{"Module.Assoc", "Name"},
+		},
+		Source: source,
+	})
+
+	sourceExpr, ok := resolved.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("non-empty SourceExpr should remain SourceExpr, got %T", resolved)
+	}
+	if sourceExpr.Source != source {
+		t.Fatalf("source = %q, want %q", sourceExpr.Source, source)
+	}
+}
+
 // TestExprToStringNoSpaces verifies that association navigation expressions
 // produce no extra spaces around separators after parsing.
 // Issue #120: generated $Order / Module.Assoc / Name instead of $Order/Module.Assoc/Name

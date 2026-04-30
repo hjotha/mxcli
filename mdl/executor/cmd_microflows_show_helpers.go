@@ -114,6 +114,17 @@ func emitAnchorAnnotation(
 	lines *[]string,
 	indentStr string,
 ) {
+	emitAnchorAnnotationWithActivityMap(obj, flowsByOrigin, flowsByDest, nil, lines, indentStr)
+}
+
+func emitAnchorAnnotationWithActivityMap(
+	obj microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	lines *[]string,
+	indentStr string,
+) {
 	id := obj.GetID()
 
 	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
@@ -131,7 +142,13 @@ func emitAnchorAnnotation(
 
 	var from, to string
 	if outgoing := flowsByOrigin[id]; len(outgoing) > 0 {
-		from = anchorSideKeyword(outgoing[0].OriginConnectionIndex)
+		for _, flow := range outgoing {
+			if isNonWritableLoopBodyTailFlow(id, flow, activityMap) {
+				continue
+			}
+			from = anchorSideKeyword(flow.OriginConnectionIndex)
+			break
+		}
 	}
 	if incoming := flowsByDest[id]; len(incoming) > 0 {
 		to = anchorSideKeyword(incoming[0].DestinationConnectionIndex)
@@ -140,14 +157,35 @@ func emitAnchorAnnotation(
 	if from == "" && to == "" {
 		return
 	}
+	defaultFrom := anchorSideKeyword(AnchorRight)
+	defaultTo := anchorSideKeyword(AnchorLeft)
 	var parts []string
-	if from != "" {
+	if from != "" && from != defaultFrom {
 		parts = append(parts, "from: "+from)
 	}
-	if to != "" {
+	if to != "" && to != defaultTo {
 		parts = append(parts, "to: "+to)
 	}
+	if len(parts) == 0 {
+		return
+	}
 	*lines = append(*lines, indentStr+fmt.Sprintf("@anchor(%s)", strings.Join(parts, ", ")))
+}
+
+func isNonWritableLoopBodyTailFlow(originID model.ID, flow *microflows.SequenceFlow, activityMap map[model.ID]microflows.MicroflowObject) bool {
+	if flow == nil || activityMap == nil {
+		return false
+	}
+	loop, ok := activityMap[flow.DestinationID].(*microflows.LoopedActivity)
+	if !ok || loop.ObjectCollection == nil {
+		return false
+	}
+	for _, obj := range loop.ObjectCollection.Objects {
+		if obj.GetID() == originID {
+			return true
+		}
+	}
+	return false
 }
 
 // emitSplitAnchorAnnotation emits the split form of @anchor — the incoming
@@ -189,13 +227,18 @@ func emitSplitAnchorAnnotation(
 	}
 
 	var parts []string
-	if inTo != "" {
+	splitDefaultIn := anchorSideKeyword(AnchorLeft)
+	trueDefaultFroms := []string{anchorSideKeyword(AnchorRight), anchorSideKeyword(AnchorBottom)}
+	trueDefaultTos := []string{anchorSideKeyword(AnchorLeft)}
+	falseDefaultFroms := []string{anchorSideKeyword(AnchorBottom), anchorSideKeyword(AnchorRight)}
+	falseDefaultTos := []string{anchorSideKeyword(AnchorTop), anchorSideKeyword(AnchorLeft)}
+	if inTo != "" && inTo != splitDefaultIn {
 		parts = append(parts, "to: "+inTo)
 	}
-	if p := branchAnchorFragment("true", trueFrom, trueTo); p != "" {
+	if p := branchAnchorFragmentWithDefaultSides("true", trueFrom, trueTo, trueDefaultFroms, trueDefaultTos); p != "" {
 		parts = append(parts, p)
 	}
-	if p := branchAnchorFragment("false", falseFrom, falseTo); p != "" {
+	if p := branchAnchorFragmentWithDefaultSides("false", falseFrom, falseTo, falseDefaultFroms, falseDefaultTos); p != "" {
 		parts = append(parts, p)
 	}
 	if len(parts) == 0 {
@@ -218,6 +261,66 @@ func branchAnchorFragment(label, from, to string) string {
 		inner = append(inner, "to: "+to)
 	}
 	return fmt.Sprintf("%s: (%s)", label, strings.Join(inner, ", "))
+}
+
+// branchAnchorFragmentWithDefaultSides returns the `label: (from: X, to: Y)`
+// fragment for a branch anchor, suppressing sides that match the layout
+// default and removing the whole fragment when both sides reduce to default.
+//
+// The function applies suppression in two passes:
+//
+//  1. Primary suppression — if `from` or `to` is one of the documented
+//     defaults for this branch (e.g. true branch defaults to from=right or
+//     from=bottom and to=left), zero it out.
+//
+//  2. Secondary suppression — when ONE side has already been zeroed by pass 1,
+//     check whether the surviving side is itself a layout-equivalent default
+//     that Studio Pro auto-routes. The combinations were observed against
+//     real Studio Pro output: e.g. on a false branch with no FROM, Studio Pro
+//     routes to bottom or right automatically; on a true branch with no FROM,
+//     Studio Pro routes to bottom when the target sits below the split.
+//     Suppressing these prevents the describer from emitting fragments that
+//     Studio Pro would have layered identically anyway.
+//
+// The secondary pass is intentionally order-dependent: it relies on `from` and
+// `to` being post-primary-suppression. Paired manual anchors like
+// `false: (from: left, to: right)` survive both passes because neither side
+// was zeroed by pass 1.
+func branchAnchorFragmentWithDefaultSides(label, from, to string, defaultFroms, defaultTos []string) string {
+	if containsString(defaultFroms, from) {
+		from = ""
+	}
+	if containsString(defaultTos, to) {
+		to = ""
+	}
+	// Secondary suppression: see function comment above for the reasoning.
+	// Inputs to this switch are already post-primary-suppression.
+	top := anchorSideKeyword(AnchorTop)
+	bottom := anchorSideKeyword(AnchorBottom)
+	right := anchorSideKeyword(AnchorRight)
+	switch label {
+	case "false":
+		if to == "" && from == top {
+			from = ""
+		}
+		if from == "" && (to == bottom || to == right) {
+			to = ""
+		}
+	case "true":
+		if from == "" && to == bottom {
+			to = ""
+		}
+	}
+	return branchAnchorFragment(label, from, to)
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 // emitLoopAnchorAnnotation emits the loop form of @anchor for a LoopedActivity.
@@ -327,6 +430,7 @@ func emitObjectAnnotations(
 	annotationsByTarget map[model.ID][]string,
 	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
 	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	activityMap map[model.ID]microflows.MicroflowObject,
 ) {
 	currentID := obj.GetID()
 
@@ -337,7 +441,7 @@ func emitObjectAnnotations(
 		// @anchor — emit whenever attached flows exist, for roundtrip fidelity.
 		// The emitter sorts out the right form (simple / split / loop) based on
 		// the object type.
-		emitAnchorAnnotation(obj, flowsByOrigin, flowsByDest, lines, indentStr)
+		emitAnchorAnnotationWithActivityMap(obj, flowsByOrigin, flowsByDest, activityMap, lines, indentStr)
 	}
 
 	if activity, ok := obj.(*microflows.ActionActivity); ok {
@@ -387,8 +491,20 @@ func emitActivityStatement(
 		return
 	}
 
+	// When the activity is unsupported by the describer (e.g. CallWebServiceAction,
+	// CastAction, InheritanceSplit placeholder) we fall back to emitting just an
+	// MDL line comment. Decorating that comment with @position/@anchor/@annotation
+	// leaves the annotations orphaned — the grammar only accepts `annotation*`
+	// as a prefix of a real microflowStatement, so line comments preceded by
+	// annotations cause "no viable alternative at input '@position...end'" during
+	// exec. Emit the comment on its own instead.
+	if strings.HasPrefix(strings.TrimSpace(stmt), "--") {
+		*lines = append(*lines, indentStr+stmt)
+		return
+	}
+
 	// Emit @ annotations before the statement
-	emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+	emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 
 	currentID := obj.GetID()
 	flows := flowsByOrigin[currentID]
@@ -506,6 +622,10 @@ func traverseFlow(
 	// Handle ExclusiveSplit specially - need to process both branches
 	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
 		startLine := len(*lines) + headerLineCount
+		if stmt != "" {
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
+			*lines = append(*lines, indentStr+stmt)
+		}
 
 		flows := flowsByOrigin[currentID]
 		mergeID := splitMergeMap[currentID]
@@ -524,7 +644,7 @@ func traverseFlow(
 		}
 
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
@@ -599,7 +719,7 @@ func traverseFlow(
 	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
 		startLine := len(*lines) + headerLineCount
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
@@ -674,6 +794,10 @@ func traverseFlowUntilMerge(
 	// Handle nested ExclusiveSplit
 	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
 		startLine := len(*lines) + headerLineCount
+		if stmt != "" {
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
+			*lines = append(*lines, indentStr+stmt)
+		}
 
 		flows := flowsByOrigin[currentID]
 		nestedMergeID := splitMergeMap[currentID]
@@ -690,7 +814,7 @@ func traverseFlowUntilMerge(
 		}
 
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
@@ -763,7 +887,7 @@ func traverseFlowUntilMerge(
 	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
 		startLine := len(*lines) + headerLineCount
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
@@ -843,7 +967,7 @@ func traverseLoopBody(
 		}
 
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
@@ -923,7 +1047,7 @@ func traverseLoopBody(
 	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
 		startLine := len(*lines) + headerLineCount
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 

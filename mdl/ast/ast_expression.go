@@ -125,8 +125,8 @@ type IfThenElseExpr struct {
 
 func (e *IfThenElseExpr) isExpression() {}
 
-// SourceExpr preserves source text for expressions that do not have a richer
-// AST representation yet.
+// SourceExpr preserves original expression source text while keeping the parsed
+// expression tree available for callers that need semantic inspection.
 type SourceExpr struct {
 	Expression Expression
 	Source     string
