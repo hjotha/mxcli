@@ -213,12 +213,7 @@ func (fb *flowBuilder) addCallNanoflowAction(s *ast.CallNanoflowStmt) model.ID {
 		fb.registerResultVariableType(s.OutputVariable, fb.lookupNanoflowReturnType(nfQN))
 	}
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -320,12 +315,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
