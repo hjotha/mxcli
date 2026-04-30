@@ -379,7 +379,11 @@ var mdlGeneratedKeywords = []protocol.CompletionItem{
 	{Label: "RESPONSE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "REQUEST", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "SEND", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
-	{Label: "RECEIVE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
+
+	// Service keyword
+	{Label: "RECEIVE", Kind: protocol.CompletionItemKindKeyword, Detail: "Service keyword"},
+
+	// REST keyword
 	{Label: "DEPRECATED", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "RESOURCE", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
 	{Label: "JSON", Kind: protocol.CompletionItemKindKeyword, Detail: "REST keyword"},
