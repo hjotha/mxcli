@@ -1,0 +1,31 @@
+-- ============================================================================
+-- Regression: Qualified function calls in microflow expressions
+-- ============================================================================
+--
+-- Symptom:
+--   Qualified function/microflow-style calls used as IF conditions failed to
+--   parse when the expression callee was not a built-in function name.
+--
+-- After fix:
+--   The expression grammar accepts qualified names as function call targets,
+--   including three-segment names emitted by describe for rule-like split
+--   conditions.
+--
+-- Usage:
+--   mxcli check mdl-examples/bug-tests/qualified-function-call-expression.mdl
+-- ============================================================================
+
+create module SyntheticQualifiedCall;
+
+create microflow SyntheticQualifiedCall.MF_QualifiedCall (
+  $S: string
+)
+returns boolean as $Result
+begin
+  if SyntheticRules.Strings.IsNotEmpty(String = $S) then
+    return true;
+  else
+    return false;
+  end if;
+end;
+/
