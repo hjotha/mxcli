@@ -902,15 +902,18 @@ func serializeRestResultHandling(rh microflows.ResultHandling, outputVar string)
 			{Key: "$Type", Value: "Microflows$ResultHandling"},
 			{Key: "Bind", Value: true},
 		}
-		// ImportMappingCall - uses ReturnValueMapping (Studio Pro field name)
-		// with all required fields to make the mapping link visible in Studio Pro.
-		// SingleObject drives ForceSingleOccurrence and Range.SingleObject.
+		// ImportMappingCall uses ReturnValueMapping (Studio Pro field name) with
+		// all required fields to make the mapping link visible in Studio Pro.
+		forceSingleOccurrence := h.SingleObject
+		if h.ForceSingleOccurrence != nil {
+			forceSingleOccurrence = *h.ForceSingleOccurrence
+		}
 		importCall := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 			{Key: "$Type", Value: "Microflows$ImportMappingCall"},
 			{Key: "Commit", Value: "YesWithoutEvents"},
 			{Key: "ContentType", Value: "Json"},
-			{Key: "ForceSingleOccurrence", Value: h.SingleObject},
+			{Key: "ForceSingleOccurrence", Value: forceSingleOccurrence},
 			{Key: "ObjectHandlingBackup", Value: "Create"},
 			{Key: "ParameterVariableName", Value: ""},
 			{Key: "Range", Value: bson.D{
@@ -1351,19 +1354,24 @@ func serializeExecuteDatabaseQueryAction(a *microflows.ExecuteDatabaseQueryActio
 }
 
 func serializeImportXmlAction(a *microflows.ImportXmlAction) bson.D {
+	forceSingleOccurrence := false
+	if a.ResultHandling.ForceSingleOccurrence != nil {
+		forceSingleOccurrence = *a.ResultHandling.ForceSingleOccurrence
+	}
+
 	// Build ImportMappingCall
 	importCall := bson.D{
 		{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 		{Key: "$Type", Value: "Microflows$ImportMappingCall"},
 		{Key: "Commit", Value: "YesWithoutEvents"},
 		{Key: "ContentType", Value: "Json"},
-		{Key: "ForceSingleOccurrence", Value: false},
+		{Key: "ForceSingleOccurrence", Value: forceSingleOccurrence},
 		{Key: "ObjectHandlingBackup", Value: "Create"},
 		{Key: "ParameterVariableName", Value: ""},
 		{Key: "Range", Value: bson.D{
 			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 			{Key: "$Type", Value: "Microflows$ConstantRange"},
-			{Key: "SingleObject", Value: false},
+			{Key: "SingleObject", Value: a.ResultHandling.SingleObject},
 		}},
 		{Key: "ReturnValueMapping", Value: string(a.ResultHandling.MappingID)},
 	}
