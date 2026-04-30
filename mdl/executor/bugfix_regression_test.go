@@ -694,6 +694,28 @@ func TestEmptyChangeObjectRefreshesInClient(t *testing.T) {
 	if !action.RefreshInClient {
 		t.Fatal("empty change object must refresh in client to remain valid without member changes or commit")
 	}
+
+	id = fb.addChangeObjectAction(&ast.ChangeObjectStmt{
+		Variable: "Object",
+		Changes: []ast.ChangeItem{{
+			Attribute: "Name",
+			Value:     &ast.LiteralExpr{Kind: ast.LiteralString, Value: "changed"},
+		}},
+	})
+	if id == "" || len(fb.objects) != 2 {
+		t.Fatalf("expected second change object activity, got id=%q objects=%d", id, len(fb.objects))
+	}
+	activity, ok = fb.objects[1].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object type = %T, want *microflows.ActionActivity", fb.objects[1])
+	}
+	action, ok = activity.Action.(*microflows.ChangeObjectAction)
+	if !ok {
+		t.Fatalf("action type = %T, want *microflows.ChangeObjectAction", activity.Action)
+	}
+	if action.RefreshInClient {
+		t.Fatal("non-empty change object must not infer refresh in client")
+	}
 }
 
 func TestListFindAttributeEqualsExpressionUsesAttributeOperation(t *testing.T) {

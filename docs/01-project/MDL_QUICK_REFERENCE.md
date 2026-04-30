@@ -1055,6 +1055,8 @@ Cross-reference commands require `refresh catalog full` to populate reference da
 | Setup mxcli | `mxcli setup mxcli [--os linux]` | Download platform-specific mxcli binary |
 | LSP server | `mxcli lsp --stdio` | Language server for VS Code |
 
+Set `MXCLI_EXEC_TIMEOUT` to override the per-statement execution timeout used by `mxcli exec` (for example `MXCLI_EXEC_TIMEOUT=12m` or `MXCLI_EXEC_TIMEOUT=900`).
+
 ## ANTLR4 Parser Architecture
 
 The MDL parser uses ANTLR4 for grammar definition, enabling cross-language grammar sharing (Go, TypeScript, Java, Python).
