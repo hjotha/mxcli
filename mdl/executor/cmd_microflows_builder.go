@@ -66,6 +66,8 @@ type flowBuilder struct {
 	errorHandlerTailFrom     model.ID
 	errorHandlerSource       model.ID
 	errorHandlerSkipVar      string
+	errorHandlerTailCase     string
+	errorHandlerTailAnchor   *ast.FlowAnchors
 	errorHandlerTailIsSource bool
 	errorHandlerReturnValue  string
 	pendingErrorHandlers     []pendingErrorHandlerState

@@ -706,6 +706,66 @@ func TestBuildFlowGraph_EmptyNoOutputHandlerRejoinsAtNextAction(t *testing.T) {
 	t.Fatal("empty no-output handler should rejoin at the next action")
 }
 
+func TestBuildFlowGraph_ErrorHandlerEmptyElseKeepsFalseCaseOnRejoin(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "Synthetic", Name: "PatchRemoteState"},
+			ErrorHandling: &ast.ErrorHandlingClause{
+				Type: ast.ErrorHandlingCustom,
+				Body: []ast.MicroflowStatement{
+					&ast.IfStmt{
+						Condition: &ast.VariableExpr{Name: "HasResponse"},
+						HasElse:   true,
+						ThenBody: []ast.MicroflowStatement{
+							&ast.ReturnStmt{Value: &ast.VariableExpr{Name: "ErrorResponse"}},
+						},
+					},
+				},
+			},
+		},
+		&ast.CallMicroflowStmt{
+			MicroflowName: ast.QualifiedName{Module: "Synthetic", Name: "ContinueAfterPatch"},
+		},
+		&ast.ReturnStmt{Value: &ast.LiteralExpr{Kind: ast.LiteralNull}},
+	}
+
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		declaredVars: map[string]string{"HasResponse": "Boolean", "ErrorResponse": "Synthetic.Error"},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, &ast.MicroflowReturnType{Type: ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "Synthetic", Name: "Error"}}})
+
+	var splitID, continuationID model.ID
+	for _, obj := range oc.Objects {
+		switch o := obj.(type) {
+		case *microflows.ExclusiveSplit:
+			if condition, ok := o.SplitCondition.(*microflows.ExpressionSplitCondition); ok && condition.Expression == "$HasResponse" {
+				splitID = o.ID
+			}
+		case *microflows.ActionActivity:
+			if action, ok := o.Action.(*microflows.MicroflowCallAction); ok && action.MicroflowCall != nil && action.MicroflowCall.Microflow == "Synthetic.ContinueAfterPatch" {
+				continuationID = o.ID
+			}
+		}
+	}
+	if splitID == "" || continuationID == "" {
+		t.Fatalf("expected error-handler split and continuation call, got split=%q continuation=%q", splitID, continuationID)
+	}
+
+	for _, flow := range oc.Flows {
+		if flow.OriginID != splitID || flowCaseString(flow.CaseValue) != "false" {
+			continue
+		}
+		if flow.DestinationID == continuationID || flowPathExists(oc.Flows, flow.DestinationID, continuationID) {
+			return
+		}
+	}
+	t.Fatal("expected deferred custom error-handler ELSE path to retain CaseValue=false when rejoining")
+}
+
 func TestBuildFlowGraph_ExplicitEmptyElseProvidesFalseContinuation(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.IfStmt{
