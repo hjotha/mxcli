@@ -728,10 +728,11 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 	}
 
 	// Build attribute or association name from variable type and attribute path.
-	// Single segment with /: attribute access ($Product/Code → "Module.Entity.Code")
-	// Two segments where first uses / and second uses .: association traversal
-	//   ($Instructor/Module.Association → AssociationName = "Module.Association")
-	//   The grammar splits "Module.Association" into two segments: {Module, /} and {Association, .}
+	// The current grammar keeps `$Product/Module.Association` as one slash
+	// segment, so dot count on that segment is the disambiguator:
+	//   0 dots: attribute relative to the target entity.
+	//   1 dot: association qualified by module.
+	//   2+ dots: fully qualified attribute.
 	var attributeName string
 	var associationName string
 	entityQName := ""
@@ -756,14 +757,6 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 				// Fully-qualified attributes use Module.Entity.Attribute.
 				attributeName = segs[0].Name
 			}
-		} else if len(segs) >= 2 && segs[0].Separator == "/" && segs[1].Separator == "." {
-			// Two+ segments starting with / then .: association qualified name
-			// Reconstruct "Module.AssociationName" from segments
-			parts := make([]string, len(segs))
-			for i, seg := range segs {
-				parts[i] = seg.Name
-			}
-			associationName = strings.Join(parts, ".")
 		} else if entityQName == "" && strings.Count(segs[0].Name, ".") == 1 {
 			associationName = segs[0].Name
 		} else {
