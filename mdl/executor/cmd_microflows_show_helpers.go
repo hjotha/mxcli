@@ -1600,9 +1600,11 @@ func collectErrorHandlerStatements(
 			if trueFlow != nil {
 				traverse(trueFlow.DestinationID, nestedMergeID, indent+1)
 			}
-			if falseFlow != nil && falseFlow.DestinationID != nestedMergeID {
+			if falseFlow != nil {
 				statements = append(statements, indentStr+"else")
-				traverse(falseFlow.DestinationID, nestedMergeID, indent+1)
+				if falseFlow.DestinationID != nestedMergeID {
+					traverse(falseFlow.DestinationID, nestedMergeID, indent+1)
+				}
 			}
 			if stmt != "" {
 				statements = append(statements, indentStr+"end if;")

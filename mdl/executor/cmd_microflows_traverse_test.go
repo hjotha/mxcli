@@ -746,6 +746,7 @@ func TestCollectErrorHandlerStatements_StructuredIfEmitsEndIf(t *testing.T) {
 
 	assertContains(t, got, "if $latestHttpResponse != empty then")
 	assertContains(t, got, "return $latestHttpResponse;")
+	assertContains(t, got, "else")
 	assertContains(t, got, "end if;")
 	if strings.Contains(got, "after") {
 		t.Fatalf("error handler traversal crossed the rejoin merge: %s", got)
