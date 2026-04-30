@@ -131,7 +131,9 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	}
 	useReturnVariable := s.OutputVariable != ""
 	if s.OutputVariable != "" && fb.callOutputDeclarations != nil {
-		useReturnVariable = fb.callOutputDeclarations[s]
+		if planned, ok := fb.callOutputDeclarations[s]; ok {
+			useReturnVariable = planned
+		}
 	}
 
 	action := &microflows.MicroflowCallAction{

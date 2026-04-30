@@ -171,3 +171,29 @@ func TestStatementVarRefsIncludesNonCallConsumers(t *testing.T) {
 		}
 	}
 }
+
+func TestAddCallMicroflowAction_DefaultsToReturnVariableWhenPlanMissing(t *testing.T) {
+	fb := &flowBuilder{
+		posX:                   100,
+		posY:                   100,
+		spacing:                HorizontalSpacing,
+		callOutputDeclarations: map[*ast.CallMicroflowStmt]bool{},
+	}
+
+	fb.addCallMicroflowAction(&ast.CallMicroflowStmt{
+		OutputVariable: "Result",
+		MicroflowName:  ast.QualifiedName{Module: "Synthetic", Name: "Compute"},
+	})
+
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object is %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.MicroflowCallAction)
+	if !ok {
+		t.Fatalf("action is %T, want *microflows.MicroflowCallAction", activity.Action)
+	}
+	if !action.UseReturnVariable {
+		t.Fatalf("unplanned output variable should default to UseReturnVariable=true")
+	}
+}
