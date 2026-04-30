@@ -79,6 +79,7 @@ func formatActivity(
 		if ctx != nil && ctx.DescribingMicroflowHasReturnValue {
 			return ""
 		}
+		// Without render context, default to the void-flow form.
 		return "return;"
 
 	case *microflows.ActionActivity:
@@ -351,30 +352,30 @@ func formatAction(
 
 			stmt := fmt.Sprintf("retrieve $%s from %s", outputVar, entityName)
 
-		if dbSource.XPathConstraint != "" {
-			constraint := strings.TrimSpace(dbSource.XPathConstraint)
-			// XPath may contain multiple predicates like [a][b] or [a]\n[b].
-			// Split them and join with MDL 'and' so the parser sees
-			// separate xpathConstraint nodes.
-			if strings.HasPrefix(constraint, "[") && strings.HasSuffix(constraint, "]") {
-				// Split on "][" boundary (possibly separated by \n literals),
-				// then re-wrap each predicate.
-				inner := constraint[1 : len(constraint)-1]
-				// Normalise real newlines between predicates: ]\n[ → ][
-				inner = strings.ReplaceAll(inner, "]\n[", "][")
-				parts := strings.Split(inner, "][")
-				if len(parts) > 1 {
-					var wrapped []string
-					for _, p := range parts {
-						wrapped = append(wrapped, "["+strings.TrimSpace(p)+"]")
+			if dbSource.XPathConstraint != "" {
+				constraint := strings.TrimSpace(dbSource.XPathConstraint)
+				// XPath may contain multiple predicates like [a][b] or [a]\n[b].
+				// Split them and join with MDL 'and' so the parser sees
+				// separate xpathConstraint nodes.
+				if strings.HasPrefix(constraint, "[") && strings.HasSuffix(constraint, "]") {
+					// Split on "][" boundary (possibly separated by \n literals),
+					// then re-wrap each predicate.
+					inner := constraint[1 : len(constraint)-1]
+					// Normalise real newlines between predicates: ]\n[ to ][
+					inner = strings.ReplaceAll(inner, "]\n[", "][")
+					parts := strings.Split(inner, "][")
+					if len(parts) > 1 {
+						var wrapped []string
+						for _, p := range parts {
+							wrapped = append(wrapped, "["+strings.TrimSpace(p)+"]")
+						}
+						constraint = strings.Join(wrapped, "\n    ")
+					} else {
+						constraint = parts[0]
 					}
-					constraint = strings.Join(wrapped, "\n    ")
-				} else {
-					constraint = parts[0]
 				}
+				stmt += fmt.Sprintf("\n    where %s", constraint)
 			}
-			stmt += fmt.Sprintf("\n    where %s", constraint)
-		}
 
 			// Output SORT BY clause if present
 			if len(dbSource.Sorting) > 0 {
@@ -1378,7 +1379,13 @@ func isSimpleMendixName(name string) bool {
 		return false
 	}
 	for i, r := range name {
-		if r == '_' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || i > 0 && r >= '0' && r <= '9' {
+		if i == 0 {
+			if r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' {
+				continue
+			}
+			return false
+		}
+		if r == '_' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
 			continue
 		}
 		return false
