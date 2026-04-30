@@ -49,11 +49,59 @@ type flowBuilder struct {
 	// be overridden by the user. Cleared after each flow is created.
 	previousStmtAnchor *ast.FlowAnchors
 	// Cached flow lists to avoid repeated backend calls during lookups.
-	microflowsCache       []*microflows.Microflow
-	microflowsCacheLoaded bool
-	nanoflowsCache        []*microflows.Nanoflow
-	nanoflowsCacheLoaded  bool
-	manualLoopBackTarget  model.ID
+	microflowsCache        []*microflows.Microflow
+	microflowsCacheLoaded  bool
+	nanoflowsCache         []*microflows.Nanoflow
+	nanoflowsCacheLoaded   bool
+	manualLoopBackTarget   model.ID
+	callOutputDeclarations map[*ast.CallMicroflowStmt]bool
+	variableAliases        map[string]string
+	outputVarPositions     map[string]model.Point
+}
+
+type flowBuilderVariableState struct {
+	varTypes           map[string]string
+	declaredVars       map[string]string
+	variableAliases    map[string]string
+	outputVarPositions map[string]model.Point
+}
+
+func (fb *flowBuilder) snapshotVariableState() flowBuilderVariableState {
+	return flowBuilderVariableState{
+		varTypes:           cloneStringMap(fb.varTypes),
+		declaredVars:       cloneStringMap(fb.declaredVars),
+		variableAliases:    cloneStringMap(fb.variableAliases),
+		outputVarPositions: clonePointMap(fb.outputVarPositions),
+	}
+}
+
+func (fb *flowBuilder) restoreVariableState(state flowBuilderVariableState) {
+	fb.varTypes = state.varTypes
+	fb.declaredVars = state.declaredVars
+	fb.variableAliases = state.variableAliases
+	fb.outputVarPositions = state.outputVarPositions
+}
+
+func cloneStringMap(in map[string]string) map[string]string {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
+func clonePointMap(in map[string]model.Point) map[string]model.Point {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]model.Point, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
 }
 
 // addError records a validation error during flow building.
@@ -139,6 +187,52 @@ func (fb *flowBuilder) registerResultVariableType(varName string, dt microflows.
 	if fb.declaredVars != nil {
 		fb.declaredVars[varName] = dt.GetTypeName()
 	}
+}
+
+func (fb *flowBuilder) resolveVariableName(varName string) string {
+	if varName == "" || fb.variableAliases == nil {
+		return varName
+	}
+	if alias := fb.variableAliases[varName]; alias != "" {
+		return alias
+	}
+	return varName
+}
+
+func (fb *flowBuilder) resolveVariablePath(path string) string {
+	if before, after, ok := strings.Cut(path, "/"); ok {
+		return fb.resolveVariableName(before) + "/" + after
+	}
+	return fb.resolveVariableName(path)
+}
+
+func (fb *flowBuilder) uniqueImplicitOutputVariable(varName string) string {
+	if varName == "" {
+		return ""
+	}
+	if fb.outputVarPositions == nil {
+		fb.outputVarPositions = make(map[string]model.Point)
+	}
+	position := model.Point{X: fb.posX, Y: fb.posY}
+	if previous, ok := fb.outputVarPositions[varName]; ok &&
+		previous.X == position.X && previous.Y == position.Y &&
+		fb.isVariableDeclared(varName) {
+		if fb.variableAliases == nil {
+			fb.variableAliases = make(map[string]string)
+		}
+		for i := 2; ; i++ {
+			candidate := fmt.Sprintf("%s_%d", varName, i)
+			if !fb.isVariableDeclared(candidate) {
+				fb.variableAliases[varName] = candidate
+				return candidate
+			}
+		}
+	}
+	if fb.variableAliases != nil {
+		delete(fb.variableAliases, varName)
+	}
+	fb.outputVarPositions[varName] = position
+	return varName
 }
 
 // lookupMicroflowReturnType resolves the return type of a called microflow by
@@ -294,10 +388,12 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 	}
 
 	switch e := expr.(type) {
+	case *ast.VariableExpr:
+		return &ast.VariableExpr{Name: fb.resolveVariableName(e.Name)}
 	case *ast.AttributePathExpr:
 		resolved := fb.resolvePathSegments(e.Path)
 		return &ast.AttributePathExpr{
-			Variable: e.Variable,
+			Variable: fb.resolveVariableName(e.Variable),
 			Path:     resolved,
 			Segments: e.Segments,
 		}

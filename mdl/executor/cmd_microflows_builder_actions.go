@@ -54,16 +54,17 @@ func (fb *flowBuilder) addCreateVariableAction(s *ast.DeclareStmt) model.ID {
 
 // addChangeVariableAction creates a SET statement as a ChangeVariableAction.
 func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
+	target := fb.resolveVariablePath(s.Target)
 	// Validate that the variable has been declared
-	if !fb.isVariableDeclared(s.Target) {
+	if !fb.isVariableDeclared(target) {
 		fb.addErrorWithExample(
-			fmt.Sprintf("variable '%s' is not declared", s.Target),
-			errorExampleDeclareVariable(s.Target))
+			fmt.Sprintf("variable '%s' is not declared", target),
+			errorExampleDeclareVariable(target))
 	}
 
 	action := &microflows.ChangeVariableAction{
 		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-		VariableName: s.Target,
+		VariableName: target,
 		Value:        fb.exprToString(s.Value),
 	}
 
@@ -86,9 +87,10 @@ func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
 
 // addCreateObjectAction creates a CREATE OBJECT statement.
 func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
+	outputVariable := fb.uniqueImplicitOutputVariable(s.Variable)
 	action := &microflows.CreateObjectAction{
 		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-		OutputVariable: s.Variable,
+		OutputVariable: outputVariable,
 		Commit:         microflows.CommitTypeNo,
 	}
 	// Set entity reference as qualified name (BY_NAME_REFERENCE)
@@ -100,7 +102,7 @@ func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 
 	// Register variable type for CHANGE statements
 	if fb.varTypes != nil && entityQN != "" {
-		fb.varTypes[s.Variable] = entityQN
+		fb.varTypes[outputVariable] = entityQN
 	}
 
 	// Build InitialMembers for each SET assignment
@@ -239,9 +241,10 @@ func (fb *flowBuilder) addRollbackAction(s *ast.RollbackStmt) model.ID {
 
 // addChangeObjectAction creates a CHANGE statement.
 func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
+	changeVariable := fb.resolveVariableName(s.Variable)
 	action := &microflows.ChangeObjectAction{
 		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-		ChangeVariable: s.Variable,
+		ChangeVariable: changeVariable,
 		Commit:         microflows.CommitTypeNo,
 		// Studio Pro rejects an empty non-committing change action unless it
 		// refreshes in client. The CE0032 message mentions only items/commit,
@@ -252,7 +255,7 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 	// Look up entity type from variable scope
 	entityQN := ""
 	if fb.varTypes != nil {
-		entityQN = fb.varTypes[s.Variable]
+		entityQN = fb.varTypes[changeVariable]
 	}
 
 	// Build MemberChange items for each SET assignment
@@ -286,6 +289,7 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 // addRetrieveAction creates a RETRIEVE statement.
 func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	var source microflows.RetrieveSource
+	outputVariable := fb.uniqueImplicitOutputVariable(s.Variable)
 
 	if s.StartVariable != "" {
 		// Association retrieve: RETRIEVE $List FROM $Parent/Module.AssocName
@@ -301,7 +305,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		assocInfo := fb.lookupAssociation(s.Source.Module, s.Source.Name)
 		startVarType := ""
 		if fb.varTypes != nil {
-			startVarType = fb.varTypes[s.StartVariable]
+			startVarType = fb.varTypes[fb.resolveVariableName(s.StartVariable)]
 		}
 
 		outputUsedAsList := fb.listInputVariables != nil && fb.listInputVariables[s.Variable]
@@ -322,17 +326,17 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			dbSource := &microflows.DatabaseRetrieveSource{
 				BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
 				EntityQualifiedName: assocInfo.parentEntityQN,
-				XPathConstraint:     "[" + assocQN + " = $" + s.StartVariable + "]",
+				XPathConstraint:     "[" + assocQN + " = $" + fb.resolveVariableName(s.StartVariable) + "]",
 			}
 			source = dbSource
 			if fb.varTypes != nil {
-				fb.varTypes[s.Variable] = "List of " + assocInfo.parentEntityQN
+				fb.varTypes[outputVariable] = "List of " + assocInfo.parentEntityQN
 			}
 		} else {
 			// Forward traversal or ReferenceSet: use AssociationRetrieveSource
 			source = &microflows.AssociationRetrieveSource{
 				BaseElement:              model.BaseElement{ID: model.ID(types.GenerateID())},
-				StartVariable:            s.StartVariable,
+				StartVariable:            fb.resolveVariableName(s.StartVariable),
 				AssociationQualifiedName: assocQN,
 			}
 			if fb.varTypes != nil {
@@ -345,9 +349,9 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						otherEntity = assocInfo.parentEntityQN
 					}
 					if startVarType == assocInfo.childEntityQN && !outputUsedAsObject {
-						fb.varTypes[s.Variable] = "List of " + otherEntity
+						fb.varTypes[outputVariable] = "List of " + otherEntity
 					} else {
-						fb.varTypes[s.Variable] = otherEntity
+						fb.varTypes[outputVariable] = otherEntity
 					}
 				} else if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReferenceSet {
 					// ReferenceSet traversal returns a list of the entity on the other side,
@@ -357,13 +361,13 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						otherEntity = assocInfo.parentEntityQN
 					}
 					if otherEntity != "" {
-						fb.varTypes[s.Variable] = "List of " + otherEntity
+						fb.varTypes[outputVariable] = "List of " + otherEntity
 					} else {
-						fb.varTypes[s.Variable] = "List of " + assocQN
+						fb.varTypes[outputVariable] = "List of " + assocQN
 					}
 				} else {
 					// ReferenceSet or unknown: returns a list
-					fb.varTypes[s.Variable] = "List of " + assocQN
+					fb.varTypes[outputVariable] = "List of " + assocQN
 				}
 			}
 		}
@@ -437,17 +441,17 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		if fb.varTypes != nil {
 			if s.Limit == "1" {
 				// LIMIT 1 returns a single entity
-				fb.varTypes[s.Variable] = entityQN
+				fb.varTypes[outputVariable] = entityQN
 			} else {
 				// No LIMIT or LIMIT > 1 returns a list
-				fb.varTypes[s.Variable] = "List of " + entityQN
+				fb.varTypes[outputVariable] = "List of " + entityQN
 			}
 		}
 	}
 
 	action := &microflows.RetrieveAction{
 		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-		OutputVariable: s.Variable,
+		OutputVariable: outputVariable,
 		Source:         source,
 	}
 

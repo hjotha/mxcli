@@ -119,6 +119,64 @@ func TestLastStmtIsReturn_LoopNotTerminal(t *testing.T) {
 	}
 }
 
+func TestBuildFlowGraph_DuplicateUnusedCallOutputsDoNotDeclareReturnVariable(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "NeedsFirstRefresh"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.CallMicroflowStmt{
+					OutputVariable: "UpdatedRecord",
+					MicroflowName:  ast.QualifiedName{Module: "SampleService", Name: "RefreshPrimary"},
+				},
+			},
+		},
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "NeedsSecondRefresh"},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.CallMicroflowStmt{
+					OutputVariable: "UpdatedRecord",
+					MicroflowName:  ast.QualifiedName{Module: "SampleService", Name: "RefreshSecondary"},
+				},
+			},
+		},
+		&ast.ReturnStmt{},
+	}
+
+	fb := &flowBuilder{
+		posX:    100,
+		posY:    100,
+		spacing: HorizontalSpacing,
+		varTypes: map[string]string{
+			"NeedsFirstRefresh":  "Boolean",
+			"NeedsSecondRefresh": "Boolean",
+		},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var useReturn []bool
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		action, ok := activity.Action.(*microflows.MicroflowCallAction)
+		if !ok || action.ResultVariableName != "UpdatedRecord" {
+			continue
+		}
+		useReturn = append(useReturn, action.UseReturnVariable)
+	}
+	if len(useReturn) != 2 {
+		t.Fatalf("expected two duplicate call outputs, got %d", len(useReturn))
+	}
+	for _, use := range useReturn {
+		if use {
+			t.Fatalf("unused duplicate call outputs should not declare return variables, got %#v", useReturn)
+		}
+	}
+}
+
 func TestBuildFlowGraph_LoopIfPreservesBreakAndContinue(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.LoopStmt{

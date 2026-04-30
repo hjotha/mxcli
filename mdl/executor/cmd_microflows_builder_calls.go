@@ -130,13 +130,17 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		Microflow:         mfQN,
 		ParameterMappings: mappings,
 	}
+	useReturnVariable := s.OutputVariable != ""
+	if s.OutputVariable != "" && fb.callOutputDeclarations != nil {
+		useReturnVariable = fb.callOutputDeclarations[s]
+	}
 
 	action := &microflows.MicroflowCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		MicroflowCall:      mfCall,
 		ResultVariableName: s.OutputVariable,
-		UseReturnVariable:  s.OutputVariable != "",
+		UseReturnVariable:  useReturnVariable,
 	}
 
 	activityX := fb.posX
@@ -155,7 +159,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	if s.OutputVariable != "" {
+	if s.OutputVariable != "" && useReturnVariable {
 		fb.registerResultVariableType(s.OutputVariable, fb.lookupMicroflowReturnType(mfQN))
 	}
 
