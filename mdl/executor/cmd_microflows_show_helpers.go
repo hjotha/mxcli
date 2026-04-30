@@ -956,164 +956,11 @@ func traverseLoopBody(
 	headerLineCount int,
 	annotationsByTarget map[model.ID][]string,
 ) {
-	if currentID == "" || visited[currentID] {
-		return
-	}
-
-	obj := activityMap[currentID]
-	if obj == nil {
-		return
-	}
-
-	visited[currentID] = true
-
-	stmt := formatActivity(ctx, obj, entityNames, microflowNames)
-	indentStr := strings.Repeat("  ", indent)
-
-	// Handle ExclusiveSplit (if/else) inside loop body
-	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
-		startLine := len(*lines) + headerLineCount
-
-		flows := flowsByOrigin[currentID]
-		mergeID := splitMergeMap[currentID]
-
-		trueFlow, falseFlow := findBranchFlows(flows)
-
-		// Empty-then swap: negate when true branch is empty but false branch has content.
-		if trueFlow != nil && falseFlow != nil && mergeID != "" {
-			if trueFlow.DestinationID == mergeID && falseFlow.DestinationID != mergeID {
-				stmt = negateIfCondition(stmt)
-				trueFlow, falseFlow = falseFlow, trueFlow
-			}
-		}
-
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
-		// Guard pattern: true branch is a single EndEvent/BreakEvent/ContinueEvent
-		isGuard := false
-		if trueFlow != nil {
-			trueTarget := activityMap[trueFlow.DestinationID]
-			switch trueTarget.(type) {
-			case *microflows.EndEvent, *microflows.BreakEvent, *microflows.ContinueEvent:
-				isGuard = true
-				if falseFlow != nil {
-					falseTarget := activityMap[falseFlow.DestinationID]
-					switch falseTarget.(type) {
-					case *microflows.EndEvent, *microflows.BreakEvent, *microflows.ContinueEvent:
-						isGuard = false
-					}
-				}
-			}
-		}
-
-		if isGuard {
-			// Emit true branch (the guard action)
-			traverseLoopBody(ctx, trueFlow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
-			*lines = append(*lines, indentStr+"end if;")
-			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-
-			// Continue from the false branch
-			if falseFlow != nil {
-				contID := falseFlow.DestinationID
-				if _, isMerge := activityMap[contID].(*microflows.ExclusiveMerge); isMerge {
-					visited[contID] = true
-					for _, flow := range flowsByOrigin[contID] {
-						contID = flow.DestinationID
-						break
-					}
-				}
-				traverseLoopBody(ctx, contID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-			}
-		} else {
-			// Normal if/else
-			if trueFlow != nil {
-				traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
-			}
-
-			if falseFlow != nil {
-				elseLineIdx := len(*lines)
-				*lines = append(*lines, indentStr+"else")
-				visitedFalseBranch := make(map[model.ID]bool)
-				for id := range visited {
-					visitedFalseBranch[id] = true
-				}
-				traverseFlowUntilMerge(ctx, falseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
-				// Remove empty else block
-				if len(*lines) == elseLineIdx+1 {
-					*lines = (*lines)[:elseLineIdx]
-				}
-			}
-
-			*lines = append(*lines, indentStr+"end if;")
-			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-
-			// Continue after merge within the loop body
-			if mergeID != "" {
-				visited[mergeID] = true
-				nextFlows := flowsByOrigin[mergeID]
-				for _, flow := range nextFlows {
-					if _, inLoop := activityMap[flow.DestinationID]; inLoop {
-						traverseLoopBody(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-					}
-				}
-			}
-		}
-		return
-	}
-
-	// Handle nested LoopedActivity specially
-	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
-		startLine := len(*lines) + headerLineCount
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
-		*lines = append(*lines, indentStr+"begin")
-		emitLoopBody(ctx, loop, flowsByOrigin, flowsByDest, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-
-		*lines = append(*lines, indentStr+loopEndKeyword(loop)+";")
-		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-
-		// Continue after the nested loop within the parent loop body
-		flows := flowsByOrigin[currentID]
-		for _, flow := range flows {
-			if _, inLoop := activityMap[flow.DestinationID]; inLoop {
-				traverseLoopBody(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-			}
-		}
-		return
-	}
-
-	// Handle ExclusiveMerge — traverse through without outputting anything
-	if _, isMerge := obj.(*microflows.ExclusiveMerge); isMerge {
-		if isMergePairedWithSplit(currentID, splitMergeMap) {
-			return
-		}
-		flows := flowsByOrigin[currentID]
-		for _, flow := range flows {
-			if _, inLoop := activityMap[flow.DestinationID]; inLoop {
-				traverseLoopBody(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-			}
-		}
-		return
-	}
-
-	// Regular activity
-	startLine := len(*lines) + headerLineCount
-	normalFlows := findNormalFlows(flowsByOrigin[currentID])
-	emitActivityStatement(ctx, obj, stmt, flowsByOrigin, flowsByDest, activityMap, entityNames, microflowNames, lines, indentStr, annotationsByTarget)
-	recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-
-	// Follow normal (non-error-handler) outgoing flows within the loop body
-	for _, flow := range normalFlows {
-		if _, inLoop := activityMap[flow.DestinationID]; inLoop {
-			traverseLoopBody(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-		}
-	}
+	// Loop bodies can contain the same structured control flow as top-level
+	// microflows. Reuse the main traversal with a loop-local split/merge map so
+	// nested IF/ELSE blocks emit `else` / `end if;` correctly.
+	loopSplitMergeMap := findSplitMergePointsForGraph(ctx, activityMap, flowsByOrigin)
+	traverseFlow(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, loopSplitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 }
 
 // emitLoopBody processes the inner objects of a LoopedActivity.
@@ -1140,6 +987,7 @@ func emitLoopBody(
 	for _, loopObj := range loop.ObjectCollection.Objects {
 		loopActivityMap[loopObj.GetID()] = loopObj
 	}
+	loopObjectIDs := collectLoopObjectIDs(loop.ObjectCollection)
 
 	// Build flow graph from the loop's own ObjectCollection flows
 	loopFlowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
@@ -1150,9 +998,9 @@ func emitLoopBody(
 	}
 	// Also include parent flows that originate from loop body objects (for backward compatibility)
 	for originID, flows := range flowsByOrigin {
-		if _, inLoop := loopActivityMap[originID]; inLoop {
-			if _, exists := loopFlowsByOrigin[originID]; !exists {
-				loopFlowsByOrigin[originID] = flows
+		if loopObjectIDs[originID] {
+			for _, flow := range flows {
+				loopFlowsByOrigin[originID] = appendSequenceFlowIfMissing(loopFlowsByOrigin[originID], flow)
 			}
 		}
 	}
@@ -1167,9 +1015,9 @@ func emitLoopBody(
 		}
 	}
 	for destID, flows := range flowsByDest {
-		if _, inLoop := loopActivityMap[destID]; inLoop {
-			if _, exists := loopFlowsByDest[destID]; !exists {
-				loopFlowsByDest[destID] = flows
+		if loopObjectIDs[destID] {
+			for _, flow := range flows {
+				loopFlowsByDest[destID] = appendSequenceFlowIfMissing(loopFlowsByDest[destID], flow)
 			}
 		}
 	}
@@ -1187,10 +1035,12 @@ func emitLoopBody(
 		}
 	}
 	var firstID model.ID
+	var firstObj microflows.MicroflowObject
 	for id, count := range incomingCount {
-		if count == 0 {
+		obj := loopActivityMap[id]
+		if count == 0 && preferLoopBodyStart(obj, firstObj) {
 			firstID = id
-			break
+			firstObj = obj
 		}
 	}
 
@@ -1201,6 +1051,72 @@ func emitLoopBody(
 		loopSplitMergeMap := findSplitMergePoints(ctx, loop.ObjectCollection, loopActivityMap)
 		traverseLoopBody(ctx, firstID, loopActivityMap, loopFlowsByOrigin, loopFlowsByDest, loopSplitMergeMap, loopVisited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 	}
+}
+
+func collectLoopObjectIDs(oc *microflows.MicroflowObjectCollection) map[model.ID]bool {
+	result := make(map[model.ID]bool)
+	collectLoopObjectIDsInto(oc, result)
+	return result
+}
+
+func collectLoopObjectIDsInto(oc *microflows.MicroflowObjectCollection, result map[model.ID]bool) {
+	if oc == nil {
+		return
+	}
+	for _, obj := range oc.Objects {
+		if obj == nil {
+			continue
+		}
+		result[obj.GetID()] = true
+		if loop, ok := obj.(*microflows.LoopedActivity); ok {
+			collectLoopObjectIDsInto(loop.ObjectCollection, result)
+		}
+	}
+}
+
+func appendSequenceFlowIfMissing(flows []*microflows.SequenceFlow, candidate *microflows.SequenceFlow) []*microflows.SequenceFlow {
+	if candidate == nil {
+		return flows
+	}
+	candidateKey := sequenceFlowIdentity(candidate)
+	for _, flow := range flows {
+		if sequenceFlowIdentity(flow) == candidateKey {
+			return flows
+		}
+	}
+	return append(flows, candidate)
+}
+
+// sequenceFlowIdentity returns a stable key used to deduplicate flows when
+// merging the parent graph into a loop's local map. Production data always
+// carries a UUID, so the ID branch is the common path. The composite fallback
+// covers test helpers and any other call site that constructs flows without
+// IDs — including CaseValue prevents two split branches with the same
+// origin/destination but different case values from being mistakenly
+// deduplicated.
+func sequenceFlowIdentity(flow *microflows.SequenceFlow) string {
+	if flow == nil {
+		return ""
+	}
+	if flow.ID != "" {
+		return string(flow.ID)
+	}
+	return fmt.Sprintf("%s>%s:%t:%d:%d:%v", flow.OriginID, flow.DestinationID, flow.IsErrorHandler, flow.OriginConnectionIndex, flow.DestinationConnectionIndex, flow.CaseValue)
+}
+
+func preferLoopBodyStart(candidate, current microflows.MicroflowObject) bool {
+	if candidate == nil {
+		return false
+	}
+	if current == nil {
+		return true
+	}
+	candidatePos := candidate.GetPosition()
+	currentPos := current.GetPosition()
+	if candidatePos.X != currentPos.X {
+		return candidatePos.X < currentPos.X
+	}
+	return candidatePos.Y < currentPos.Y
 }
 
 // isMergePairedWithSplit reports whether an ExclusiveMerge appears as the

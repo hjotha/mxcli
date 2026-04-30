@@ -844,16 +844,25 @@ func findSplitMergePoints(
 	oc *microflows.MicroflowObjectCollection,
 	activityMap map[model.ID]microflows.MicroflowObject,
 ) map[model.ID]model.ID {
-	result := make(map[model.ID]model.ID)
-
 	// Build flow graph for forward traversal
 	flowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
 	for _, flow := range oc.Flows {
 		flowsByOrigin[flow.OriginID] = append(flowsByOrigin[flow.OriginID], flow)
 	}
 
-	// For each ExclusiveSplit, find its merge point
-	for _, obj := range oc.Objects {
+	return findSplitMergePointsForGraph(ctx, activityMap, flowsByOrigin)
+}
+
+// findSplitMergePointsForGraph finds the corresponding merge point for each
+// split in an already materialized flow graph. Nested traversals such as loop
+// bodies use this because they do not have a top-level object collection.
+func findSplitMergePointsForGraph(
+	ctx *ExecContext,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+) map[model.ID]model.ID {
+	result := make(map[model.ID]model.ID)
+	for _, obj := range activityMap {
 		if _, ok := obj.(*microflows.ExclusiveSplit); ok {
 			splitID := obj.GetID()
 			// Find merge by following both branches until they converge

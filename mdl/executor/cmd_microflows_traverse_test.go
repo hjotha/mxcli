@@ -230,6 +230,159 @@ func TestTraverseFlow_IfWithoutElse(t *testing.T) {
 	}
 }
 
+func TestTraverseFlow_LoopBodyMergesParentFlowsForExistingOrigin(t *testing.T) {
+	e := newTestExecutor()
+
+	logActivity := func(id, message string, x, y int) *microflows.ActionActivity {
+		return &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{
+				BaseMicroflowObject: microflows.BaseMicroflowObject{
+					BaseElement: model.BaseElement{ID: mkID(id)},
+					Position:    model.Point{X: x, Y: y},
+				},
+			},
+			Action: &microflows.LogMessageAction{
+				LogLevel:        "Info",
+				LogNodeName:     "'Synthetic'",
+				MessageTemplate: &model.Text{Translations: map[string]string{"en_US": message}},
+			},
+		}
+	}
+
+	nestedLoop := &microflows.LoopedActivity{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: mkID("nested")},
+			Position:    model.Point{X: 500, Y: 100},
+		},
+		LoopSource: &microflows.IterableList{
+			VariableName:     "role",
+			ListVariableName: "roles",
+		},
+		ObjectCollection: &microflows.MicroflowObjectCollection{
+			Objects: []microflows.MicroflowObject{
+				logActivity("nested-log", "nested", 120, 80),
+				logActivity("nested-tail", "nested-tail", 320, 80),
+			},
+			Flows: []*microflows.SequenceFlow{
+				// Same pattern one level deeper: the loop-boundary flow is
+				// local, while the real body continuation is supplied by the
+				// parent graph that must be threaded into nested loops.
+				mkFlow("nested-log", "nested"),
+			},
+		},
+	}
+	outerLoop := &microflows.LoopedActivity{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: mkID("loop")},
+		},
+		LoopSource: &microflows.IterableList{
+			VariableName:     "item",
+			ListVariableName: "items",
+		},
+		ObjectCollection: &microflows.MicroflowObjectCollection{
+			// Adversarial order: storage lists the nested loop first, but the
+			// flow graph and positions define the actual body order.
+			Objects: []microflows.MicroflowObject{
+				nestedLoop,
+				logActivity("setup", "setup", 100, 100),
+				logActivity("fetch", "fetch", 300, 100),
+			},
+			Flows: []*microflows.SequenceFlow{
+				mkFlow("setup", "fetch"),
+				// This local loop-boundary flow gives "fetch" an existing
+				// local origin entry. Parent-level body flows with the same
+				// origin must still be merged in.
+				mkFlow("fetch", "loop"),
+			},
+		},
+	}
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("loop"):  outerLoop,
+		mkID("end"):   &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"):  {mkFlow("start", "loop")},
+		mkID("loop"):   {mkFlow("loop", "end")},
+		mkID("fetch"):  {mkFlow("fetch", "nested")},
+		mkID("nested"): {mkFlow("nested", "loop")},
+		mkID("nested-log"): {
+			mkFlow("nested-log", "nested-tail"),
+		},
+		mkID("nested-tail"): {mkFlow("nested-tail", "nested")},
+	}
+
+	var lines []string
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, nil, make(map[model.ID]bool), nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	for _, want := range []string{
+		"log info node 'Synthetic' 'setup';",
+		"log info node 'Synthetic' 'fetch';",
+		"loop $role in $roles",
+		"log info node 'Synthetic' 'nested';",
+		"log info node 'Synthetic' 'nested-tail';",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %q in output:\n%s", want, out)
+		}
+	}
+	if strings.Index(out, "setup") > strings.Index(out, "fetch") ||
+		strings.Index(out, "fetch") > strings.Index(out, "loop $role in $roles") {
+		t.Fatalf("loop body emitted in wrong order:\n%s", out)
+	}
+}
+
+func TestTraverseFlow_LoopBodyEmitsStructuredIfElse(t *testing.T) {
+	split := &microflows.ExclusiveSplit{
+		BaseMicroflowObject: mkObj("split"),
+		SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$Item/IsActive"},
+	}
+	trueLog := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("true_log")},
+		Action: &microflows.LogMessageAction{
+			LogLevel:    "Info",
+			LogNodeName: "'App'",
+			MessageTemplate: &model.Text{
+				Translations: map[string]string{"en_US": "active"},
+			},
+		},
+	}
+	falseLog := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("false_log")},
+		Action: &microflows.LogMessageAction{
+			LogLevel:    "Info",
+			LogNodeName: "'App'",
+			MessageTemplate: &model.Text{
+				Translations: map[string]string{"en_US": "inactive"},
+			},
+		},
+	}
+	merge := &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("merge")}
+	loop := &microflows.LoopedActivity{
+		BaseMicroflowObject: mkObj("loop"),
+		ObjectCollection: &microflows.MicroflowObjectCollection{
+			Objects: []microflows.MicroflowObject{split, trueLog, falseLog, merge},
+			Flows: []*microflows.SequenceFlow{
+				mkBranchFlow("split", "true_log", &microflows.ExpressionCase{Expression: "true"}),
+				mkBranchFlow("split", "false_log", &microflows.ExpressionCase{Expression: "false"}),
+				mkFlow("true_log", "merge"),
+				mkFlow("false_log", "merge"),
+			},
+		},
+	}
+
+	var lines []string
+	emitLoopBody(nil, loop, nil, nil, nil, nil, &lines, 0, nil, 0, nil)
+	out := strings.Join(lines, "\n")
+	for _, want := range []string{"if $Item/IsActive then", "else", "end if;"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("loop body should emit structured %q, got:\n%s", want, out)
+		}
+	}
+}
+
 // TestTraverseFlow_UnsupportedActivitySkipsAnnotations verifies that when the
 // describer falls back to a `-- Unsupported action type: ...` placeholder, it
 // does NOT also emit @position / @anchor before the comment. Annotations are
