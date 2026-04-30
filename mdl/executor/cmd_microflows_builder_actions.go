@@ -249,7 +249,7 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 		// Studio Pro rejects an empty non-committing change action unless it
 		// refreshes in client. The CE0032 message mentions only items/commit,
 		// but mx check accepts RefreshInClient=true as the third valid escape.
-		RefreshInClient: len(s.Changes) == 0,
+		RefreshInClient: s.RefreshInClient || len(s.Changes) == 0,
 	}
 
 	// Look up entity type from variable scope
