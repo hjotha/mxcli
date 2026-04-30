@@ -133,10 +133,16 @@ func parseLexerGrammar(path string) ([]tokenEntry, error) {
 				continue
 			}
 
+			category := currentCategory
+			if tokenName == "RECEIVE" {
+				// RECEIVE is shared by REST and legacy SOAP call-web-service statements.
+				category = "Service keyword"
+			}
+
 			entries = append(entries, tokenEntry{
 				Name:     tokenName,
 				Text:     text,
-				Category: currentCategory,
+				Category: category,
 			})
 			continue
 		}

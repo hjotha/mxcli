@@ -501,6 +501,9 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 	case *microflows.RestCallAction:
 		return serializeRestCallAction(a)
 
+	case *microflows.WebServiceCallAction:
+		return serializeWebServiceCallAction(a)
+
 	case *microflows.RestOperationCallAction:
 		return serializeRestOperationCallAction(a)
 
@@ -671,6 +674,59 @@ func serializeRestCallAction(a *microflows.RestCallAction) bson.D {
 		)
 	}
 
+	return doc
+}
+
+func serializeWebServiceCallAction(a *microflows.WebServiceCallAction) bson.D {
+	if len(a.RawBSON) > 0 {
+		var raw bson.D
+		if err := bson.Unmarshal(a.RawBSON, &raw); err == nil {
+			return raw
+		}
+	}
+
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
+		{Key: "ImportedService", Value: string(a.ServiceID)},
+		{Key: "OperationName", Value: a.OperationName},
+		{Key: "TimeOutExpression", Value: a.TimeoutExpression},
+		{Key: "UseRequestTimeOut", Value: a.TimeoutExpression != ""},
+	}
+	if a.SendMappingID != "" {
+		doc = append(doc, bson.E{Key: "RequestHandling", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+			{Key: "$Type", Value: "Microflows$WebServiceOperationAdvancedRequestHandling"},
+			{Key: "ExportMappingCall", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+				{Key: "$Type", Value: "Microflows$ExportMappingCall"},
+				{Key: "Mapping", Value: string(a.SendMappingID)},
+				// Mendix storage lists encode their first element as a
+				// constant storage-list-type marker (`2` for object lists),
+				// NOT the element count. The empty ExportMappingCall shape
+				// used by other writers in this file follows the same
+				// convention; see #338 / #374 for prior fixes that aligned
+				// other writers on this marker.
+				{Key: "ParameterMappings", Value: bson.A{int32(2)}},
+			}},
+		}})
+	}
+	if a.OutputVariable != "" || a.ReceiveMappingID != "" {
+		resultHandling := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+			{Key: "$Type", Value: "Microflows$WebServiceOperationResultHandling"},
+			{Key: "ResultVariableName", Value: a.OutputVariable},
+		}
+		if a.ReceiveMappingID != "" {
+			resultHandling = append(resultHandling, bson.E{Key: "ImportMappingCall", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+				{Key: "$Type", Value: "Microflows$ImportMappingCall"},
+				{Key: "ReturnValueMapping", Value: string(a.ReceiveMappingID)},
+			}})
+		}
+		doc = append(doc, bson.E{Key: "NewResultHandling", Value: resultHandling})
+	}
 	return doc
 }
 

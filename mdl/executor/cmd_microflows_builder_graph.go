@@ -486,6 +486,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addCallJavaActionAction(s)
 	case *ast.CallJavaScriptActionStmt:
 		return fb.addCallJavaScriptActionAction(s)
+	case *ast.CallWebServiceStmt:
+		return fb.addCallWebServiceAction(s)
 	case *ast.ExecuteDatabaseQueryStmt:
 		return fb.addExecuteDatabaseQueryAction(s)
 	case *ast.CallExternalActionStmt:

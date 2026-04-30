@@ -1064,6 +1064,12 @@ func (s *BaseMDLParserListener) EnterCallJavaScriptActionStatement(ctx *CallJava
 func (s *BaseMDLParserListener) ExitCallJavaScriptActionStatement(ctx *CallJavaScriptActionStatementContext) {
 }
 
+// EnterCallWebServiceStatement is called when production callWebServiceStatement is entered.
+func (s *BaseMDLParserListener) EnterCallWebServiceStatement(ctx *CallWebServiceStatementContext) {}
+
+// ExitCallWebServiceStatement is called when production callWebServiceStatement is exited.
+func (s *BaseMDLParserListener) ExitCallWebServiceStatement(ctx *CallWebServiceStatementContext) {}
+
 // EnterExecuteDatabaseQueryStatement is called when production executeDatabaseQueryStatement is entered.
 func (s *BaseMDLParserListener) EnterExecuteDatabaseQueryStatement(ctx *ExecuteDatabaseQueryStatementContext) {
 }

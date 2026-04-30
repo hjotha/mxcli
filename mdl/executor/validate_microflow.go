@@ -167,6 +167,8 @@ func stmtActivityName(stmt ast.MicroflowStatement) string {
 		return "call java action"
 	case *ast.CallJavaScriptActionStmt:
 		return "call javascript action"
+	case *ast.CallWebServiceStmt:
+		return "call web service"
 	case *ast.ExecuteDatabaseQueryStmt:
 		return "execute database query"
 	default:
@@ -487,6 +489,8 @@ func stmtErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
 	case *ast.DownloadFileStmt:
 		return s.ErrorHandling
 	case *ast.CallJavaScriptActionStmt:
+		return s.ErrorHandling
+	case *ast.CallWebServiceStmt:
 		return s.ErrorHandling
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.ErrorHandling
