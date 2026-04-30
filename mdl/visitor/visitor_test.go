@@ -542,6 +542,41 @@ END;`
 	t.Log("IF/THEN/ELSE parsed correctly - actions in correct branches")
 }
 
+func TestIfThenEmptyElsePreservesElsePresence(t *testing.T) {
+	input := `create microflow Test.EmptyElse()
+returns String
+begin
+  if $latestHttpResponse != empty then
+    return 'error';
+  else
+  end if;
+  return empty;
+end;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	if len(stmt.Body) == 0 {
+		t.Fatal("expected microflow body")
+	}
+	ifStmt, ok := stmt.Body[0].(*ast.IfStmt)
+	if !ok {
+		t.Fatalf("expected first statement to be IfStmt, got %T", stmt.Body[0])
+	}
+	if !ifStmt.HasElse {
+		t.Fatal("expected explicit empty else to be preserved")
+	}
+	if len(ifStmt.ElseBody) != 0 {
+		t.Fatalf("empty else body length = %d, want 0", len(ifStmt.ElseBody))
+	}
+}
+
 // TestValidationFeedbackInsideIf verifies VALIDATION FEEDBACK works inside IF blocks.
 // Bug Report: "VALIDATION FEEDBACK Not Recognized"
 func TestValidationFeedbackInsideIf(t *testing.T) {
