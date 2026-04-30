@@ -94,6 +94,11 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 				v.walkBody(c.Body)
 			}
 			v.walkBody(stmt.ElseBody)
+		case *ast.InheritanceSplitStmt:
+			for _, c := range stmt.Cases {
+				v.walkBody(c.Body)
+			}
+			v.walkBody(stmt.ElseBody)
 		case *ast.DeclareStmt:
 			// Track list variables declared as empty (candidates for the empty-list-in-loop anti-pattern)
 			if stmt.Type.Kind == ast.TypeListOf {
@@ -302,6 +307,16 @@ func bodyReturns(stmts []ast.MicroflowStatement) bool {
 			}
 		}
 		return len(s.Cases) > 0
+	case *ast.InheritanceSplitStmt:
+		if len(s.Cases) == 0 || len(s.ElseBody) == 0 || !bodyReturns(s.ElseBody) {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyReturns(c.Body) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }
@@ -347,6 +362,17 @@ func (v *microflowValidator) checkBranchScoping(body []ast.MicroflowStatement) {
 			}
 			for varName := range collectDeclaredVars(stmt.ElseBody) {
 				branchVars[varName] = "enum split else branch"
+			}
+			v.checkBranchScoping(stmt.ElseBody)
+		case *ast.InheritanceSplitStmt:
+			for _, c := range stmt.Cases {
+				for varName := range collectDeclaredVars(c.Body) {
+					branchVars[varName] = "split type branch"
+				}
+				v.checkBranchScoping(c.Body)
+			}
+			for varName := range collectDeclaredVars(stmt.ElseBody) {
+				branchVars[varName] = "split type else branch"
 			}
 			v.checkBranchScoping(stmt.ElseBody)
 		case *ast.LoopStmt:
@@ -435,6 +461,19 @@ func collectDeclaredVars(body []ast.MicroflowStatement) map[string]bool {
 			for varName := range collectDeclaredVars(stmt.ElseBody) {
 				vars[varName] = true
 			}
+		case *ast.CastObjectStmt:
+			if stmt.OutputVariable != "" {
+				vars[stmt.OutputVariable] = true
+			}
+		case *ast.InheritanceSplitStmt:
+			for _, c := range stmt.Cases {
+				for varName := range collectDeclaredVars(c.Body) {
+					vars[varName] = true
+				}
+			}
+			for varName := range collectDeclaredVars(stmt.ElseBody) {
+				vars[varName] = true
+			}
 		}
 	}
 	return vars
@@ -467,6 +506,20 @@ func referencedVars(stmt ast.MicroflowStatement) []string {
 		refs = append(refs, exprVarRefs(s.Message)...)
 	case *ast.EnumSplitStmt:
 		refs = append(refs, extractVarName(s.Variable))
+		for _, c := range s.Cases {
+			for _, nested := range c.Body {
+				refs = append(refs, referencedVars(nested)...)
+			}
+		}
+		for _, nested := range s.ElseBody {
+			refs = append(refs, referencedVars(nested)...)
+		}
+	case *ast.CastObjectStmt:
+		if s.ObjectVariable != "" {
+			refs = append(refs, s.ObjectVariable)
+		}
+	case *ast.InheritanceSplitStmt:
+		refs = append(refs, s.Variable)
 		for _, c := range s.Cases {
 			for _, nested := range c.Body {
 				refs = append(refs, referencedVars(nested)...)

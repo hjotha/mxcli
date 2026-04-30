@@ -574,6 +574,11 @@ func (c *flowRefCollector) collectFromStatements(stmts []ast.MicroflowStatement)
 				c.collectFromStatements(cse.Body)
 			}
 			c.collectFromStatements(s.ElseBody)
+		case *ast.InheritanceSplitStmt:
+			for _, cse := range s.Cases {
+				c.collectFromStatements(cse.Body)
+			}
+			c.collectFromStatements(s.ElseBody)
 		case *ast.LoopStmt:
 			c.collectFromStatements(s.Body)
 		}
