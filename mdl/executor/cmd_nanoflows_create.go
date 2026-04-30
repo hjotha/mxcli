@@ -134,12 +134,19 @@ func execCreateNanoflow(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 	}
 
 	// Validate and add parameters
-	for _, p := range s.Parameters {
+	for i, p := range s.Parameters {
 		if p.Type.EntityRef != nil && !isBuiltinModuleEntity(p.Type.EntityRef.Module) {
 			entityID := entityResolver(*p.Type.EntityRef)
 			if entityID == "" {
-				return mdlerrors.NewNotFoundMsg("entity", p.Type.EntityRef.Module+"."+p.Type.EntityRef.Name,
-					fmt.Sprintf("entity '%s.%s' not found for parameter '%s'", p.Type.EntityRef.Module, p.Type.EntityRef.Name, p.Name))
+				// Bare qualified name in microflow context is treated as TypeEntity by the
+				// visitor, but it may actually be an enumeration. Try enum lookup before failing.
+				if found := findEnumeration(ctx, p.Type.EntityRef.Module, p.Type.EntityRef.Name); found != nil {
+					s.Parameters[i].Type = ast.DataType{Kind: ast.TypeEnumeration, EnumRef: p.Type.EntityRef}
+					p = s.Parameters[i]
+				} else {
+					return mdlerrors.NewNotFoundMsg("entity", p.Type.EntityRef.Module+"."+p.Type.EntityRef.Name,
+						fmt.Sprintf("entity '%s.%s' not found for parameter '%s'", p.Type.EntityRef.Module, p.Type.EntityRef.Name, p.Name))
+				}
 			}
 		}
 		if p.Type.Kind == ast.TypeEnumeration && p.Type.EnumRef != nil {

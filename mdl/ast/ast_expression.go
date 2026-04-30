@@ -125,6 +125,15 @@ type IfThenElseExpr struct {
 
 func (e *IfThenElseExpr) isExpression() {}
 
+// SourceExpr preserves original expression source text while keeping the parsed
+// expression tree available for callers that need semantic inspection.
+type SourceExpr struct {
+	Expression Expression
+	Source     string
+}
+
+func (e *SourceExpr) isExpression() {}
+
 // ============================================================================
 // XPath-Specific Expression Types
 // ============================================================================

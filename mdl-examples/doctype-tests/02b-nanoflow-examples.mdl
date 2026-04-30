@@ -3,6 +3,8 @@
 
 -- Setup
 create module NanoflowExamples;
+create module role NanoflowExamples.User;
+create module role NanoflowExamples.Admin;
 create entity NanoflowExamples.Product (
     Name : String(200),
     Price : Decimal,
@@ -34,13 +36,11 @@ create nanoflow NanoflowExamples.NF_SaveProduct
     ($Product : NanoflowExamples.Product)
     folder 'Actions'
 begin
-    declare $IsValid Boolean;
-    call nanoflow NanoflowExamples.NF_ValidateProduct($Product: $Product)
-        returns $IsValid;
+    $IsValid = call nanoflow NanoflowExamples.NF_ValidateProduct($Product = $Product);
     if not($IsValid) then
         return;
     end if;
-    change $Product (IsValid: true);
+    change $Product (IsValid = true);
     log info 'Product validated and saved';
 end;
 
