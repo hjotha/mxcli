@@ -193,10 +193,10 @@ func applyUserAnchors(flow *microflows.SequenceFlow, origin *ast.FlowAnchors, de
 }
 
 func branchDestinationAnchor(branchAnchor, stmtAnchor *ast.FlowAnchors) *ast.FlowAnchors {
-	if stmtAnchor != nil && stmtAnchor.To != ast.AnchorSideUnset {
-		return stmtAnchor
+	if branchAnchor != nil && branchAnchor.To != ast.AnchorSideUnset {
+		return branchAnchor
 	}
-	return branchAnchor
+	return stmtAnchor
 }
 
 func pendingFlowAnchors(previousAnchor, pendingAnchor, stmtAnchor *ast.FlowAnchors) (*ast.FlowAnchors, *ast.FlowAnchors) {
