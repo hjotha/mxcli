@@ -31,7 +31,13 @@ var scriptModuleDeps = map[string][]string{
 // headers etc. that full validation requires.
 var scriptKnownCEErrors = map[string][]string{
 	"03-page-examples.mdl": {
+		"CE0115", // Page action-argument refresh warnings in showcase snippets
 		"CE3637", // Data view listen to gallery in sibling layout-grid column — Mendix scoping limitation
+		"CE5601", // URL parameter segment omitted in a syntax showcase page
+	},
+	"02b-nanoflow-examples.mdl": {
+		"CE0117", // Expression validation differences in nanoflow showcase EndEvents on Studio Pro 11.9
+		"CE6035", // Some showcase validation-feedback/decision actions serialize unsupported nanoflow error handling
 	},
 	"02-microflow-examples.mdl": {
 		"CE0117", // Expression error in LOG WARNING on Mendix 10.x (string concat syntax difference)
