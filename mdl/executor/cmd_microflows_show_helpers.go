@@ -157,11 +157,13 @@ func emitAnchorAnnotationWithActivityMap(
 	if from == "" && to == "" {
 		return
 	}
+	defaultFrom := anchorSideKeyword(AnchorRight)
+	defaultTo := anchorSideKeyword(AnchorLeft)
 	var parts []string
-	if from != "" && from != "right" {
+	if from != "" && from != defaultFrom {
 		parts = append(parts, "from: "+from)
 	}
-	if to != "" && to != "left" {
+	if to != "" && to != defaultTo {
 		parts = append(parts, "to: "+to)
 	}
 	if len(parts) == 0 {
@@ -225,13 +227,18 @@ func emitSplitAnchorAnnotation(
 	}
 
 	var parts []string
-	if inTo != "" && inTo != "left" {
+	splitDefaultIn := anchorSideKeyword(AnchorLeft)
+	trueDefaultFroms := []string{anchorSideKeyword(AnchorRight), anchorSideKeyword(AnchorBottom)}
+	trueDefaultTos := []string{anchorSideKeyword(AnchorLeft)}
+	falseDefaultFroms := []string{anchorSideKeyword(AnchorBottom), anchorSideKeyword(AnchorRight)}
+	falseDefaultTos := []string{anchorSideKeyword(AnchorTop), anchorSideKeyword(AnchorLeft)}
+	if inTo != "" && inTo != splitDefaultIn {
 		parts = append(parts, "to: "+inTo)
 	}
-	if p := branchAnchorFragmentWithDefaultSides("true", trueFrom, trueTo, []string{"right", "bottom"}, []string{"left"}); p != "" {
+	if p := branchAnchorFragmentWithDefaultSides("true", trueFrom, trueTo, trueDefaultFroms, trueDefaultTos); p != "" {
 		parts = append(parts, p)
 	}
-	if p := branchAnchorFragmentWithDefaultSides("false", falseFrom, falseTo, []string{"bottom", "right"}, []string{"top", "left"}); p != "" {
+	if p := branchAnchorFragmentWithDefaultSides("false", falseFrom, falseTo, falseDefaultFroms, falseDefaultTos); p != "" {
 		parts = append(parts, p)
 	}
 	if len(parts) == 0 {
@@ -256,6 +263,29 @@ func branchAnchorFragment(label, from, to string) string {
 	return fmt.Sprintf("%s: (%s)", label, strings.Join(inner, ", "))
 }
 
+// branchAnchorFragmentWithDefaultSides returns the `label: (from: X, to: Y)`
+// fragment for a branch anchor, suppressing sides that match the layout
+// default and removing the whole fragment when both sides reduce to default.
+//
+// The function applies suppression in two passes:
+//
+//  1. Primary suppression — if `from` or `to` is one of the documented
+//     defaults for this branch (e.g. true branch defaults to from=right or
+//     from=bottom and to=left), zero it out.
+//
+//  2. Secondary suppression — when ONE side has already been zeroed by pass 1,
+//     check whether the surviving side is itself a layout-equivalent default
+//     that Studio Pro auto-routes. The combinations were observed against
+//     real Studio Pro output: e.g. on a false branch with no FROM, Studio Pro
+//     routes to bottom or right automatically; on a true branch with no FROM,
+//     Studio Pro routes to bottom when the target sits below the split.
+//     Suppressing these prevents the describer from emitting fragments that
+//     Studio Pro would have layered identically anyway.
+//
+// The secondary pass is intentionally order-dependent: it relies on `from` and
+// `to` being post-primary-suppression. Paired manual anchors like
+// `false: (from: left, to: right)` survive both passes because neither side
+// was zeroed by pass 1.
 func branchAnchorFragmentWithDefaultSides(label, from, to string, defaultFroms, defaultTos []string) string {
 	if containsString(defaultFroms, from) {
 		from = ""
@@ -263,20 +293,21 @@ func branchAnchorFragmentWithDefaultSides(label, from, to string, defaultFroms, 
 	if containsString(defaultTos, to) {
 		to = ""
 	}
-	// Studio Pro / the builder can choose equivalent branch sides based on the
-	// relative layout of the branch destination. Suppress those single-sided
-	// fragments only when the opposite side is already default; paired manual
-	// anchors such as false: (from: left, to: right) still roundtrip visibly.
+	// Secondary suppression: see function comment above for the reasoning.
+	// Inputs to this switch are already post-primary-suppression.
+	top := anchorSideKeyword(AnchorTop)
+	bottom := anchorSideKeyword(AnchorBottom)
+	right := anchorSideKeyword(AnchorRight)
 	switch label {
 	case "false":
-		if to == "" && from == "top" {
+		if to == "" && from == top {
 			from = ""
 		}
-		if from == "" && (to == "bottom" || to == "right") {
+		if from == "" && (to == bottom || to == right) {
 			to = ""
 		}
 	case "true":
-		if from == "" && to == "bottom" {
+		if from == "" && to == bottom {
 			to = ""
 		}
 	}
@@ -601,7 +632,7 @@ func traverseFlow(
 		}
 
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
@@ -771,7 +802,7 @@ func traverseFlowUntilMerge(
 		}
 
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
@@ -924,7 +955,7 @@ func traverseLoopBody(
 		}
 
 		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest)
+			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			*lines = append(*lines, indentStr+stmt)
 		}
 
