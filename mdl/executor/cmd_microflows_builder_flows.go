@@ -167,7 +167,7 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHand
 	}
 	if state.skipVar != "" {
 		if statementReferencesVar(stmt, state.skipVar) {
-			if !fb.hasReturnValue {
+			if !fb.hasDeclaredReturnValue() {
 				if derivedVar := outputDerivedVariable(stmt, state.skipVar); derivedVar != "" {
 					state.skipVar = derivedVar
 				}
@@ -471,18 +471,17 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 
 	// Build error handler activities
 	errBuilder := &flowBuilder{
-		posX:           errorX,
-		posY:           errorY,
-		baseY:          errorY,
-		spacing:        HorizontalSpacing,
-		returnType:     fb.returnType,
-		hasReturnValue: fb.hasReturnValue,
-		varTypes:       fb.varTypes,
-		declaredVars:   fb.declaredVars,
-		measurer:       fb.measurer,
-		backend:        fb.backend,
-		hierarchy:      fb.hierarchy,
-		restServices:   fb.restServices,
+		posX:         errorX,
+		posY:         errorY,
+		baseY:        errorY,
+		spacing:      HorizontalSpacing,
+		returnType:   fb.returnType,
+		varTypes:     fb.varTypes,
+		declaredVars: fb.declaredVars,
+		measurer:     fb.measurer,
+		backend:      fb.backend,
+		hierarchy:    fb.hierarchy,
+		restServices: fb.restServices,
 	}
 
 	var lastErrID model.ID
