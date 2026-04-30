@@ -1458,14 +1458,6 @@ func objectTerminatesBeforeMerge(
 	return true
 }
 
-func cloneVisited(visited map[model.ID]bool) map[model.ID]bool {
-	cloned := make(map[model.ID]bool, len(visited))
-	for id, seen := range visited {
-		cloned[id] = seen
-	}
-	return cloned
-}
-
 // formatErrorHandlingSuffix returns the ON ERROR suffix for an activity based on its ErrorHandlingType.
 // Returns empty string if no special error handling.
 func formatErrorHandlingSuffix(errType microflows.ErrorHandlingType) string {
