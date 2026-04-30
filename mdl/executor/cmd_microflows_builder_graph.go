@@ -127,7 +127,7 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	if fb.pendingAnnotations != nil {
 		// Free annotations before a statement stay unattached; trailing free
 		// annotations are drained after the statement loop below.
-		for _, text := range freeAnnotationTexts(fb.pendingAnnotations) {
+		for _, text := range fb.pendingAnnotations.FreeAnnotations {
 			fb.attachFreeAnnotation(text)
 		}
 		if fb.pendingAnnotations.AnnotationText != "" {
