@@ -75,7 +75,7 @@ func TestBuildFlowGraph_DuplicateImplicitOutputAtSamePositionGetsLocalAlias(t *t
 	}
 }
 
-func TestBuildFlowGraph_TerminalBranchDuplicateOutputDoesNotForceAlias(t *testing.T) {
+func TestBuildFlowGraph_TerminalBranchDuplicateOutputAtSamePositionGetsAlias(t *testing.T) {
 	entityRef := ast.QualifiedName{Module: "Sample", Name: "Item"}
 	sharedPosition := &ast.ActivityAnnotations{Position: &ast.Position{X: 400, Y: 100}}
 	body := []ast.MicroflowStatement{
@@ -117,8 +117,8 @@ func TestBuildFlowGraph_TerminalBranchDuplicateOutputDoesNotForceAlias(t *testin
 			outputs = append(outputs, retrieve.OutputVariable)
 		}
 	}
-	if strings.Join(outputs, ",") != "CurrentItem,CurrentItem" {
-		t.Fatalf("retrieve outputs = %#v, want duplicate name preserved without alias", outputs)
+	if strings.Join(outputs, ",") != "CurrentItem,CurrentItem_2" {
+		t.Fatalf("retrieve outputs = %#v, want duplicate same-position output aliased", outputs)
 	}
 }
 

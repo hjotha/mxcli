@@ -60,18 +60,16 @@ type flowBuilder struct {
 }
 
 type flowBuilderVariableState struct {
-	varTypes           map[string]string
-	declaredVars       map[string]string
-	variableAliases    map[string]string
-	outputVarPositions map[string]model.Point
+	varTypes        map[string]string
+	declaredVars    map[string]string
+	variableAliases map[string]string
 }
 
 func (fb *flowBuilder) snapshotVariableState() flowBuilderVariableState {
 	return flowBuilderVariableState{
-		varTypes:           cloneStringMap(fb.varTypes),
-		declaredVars:       cloneStringMap(fb.declaredVars),
-		variableAliases:    cloneStringMap(fb.variableAliases),
-		outputVarPositions: clonePointMap(fb.outputVarPositions),
+		varTypes:        cloneStringMap(fb.varTypes),
+		declaredVars:    cloneStringMap(fb.declaredVars),
+		variableAliases: cloneStringMap(fb.variableAliases),
 	}
 }
 
@@ -79,7 +77,6 @@ func (fb *flowBuilder) restoreVariableState(state flowBuilderVariableState) {
 	fb.varTypes = state.varTypes
 	fb.declaredVars = state.declaredVars
 	fb.variableAliases = state.variableAliases
-	fb.outputVarPositions = state.outputVarPositions
 }
 
 func cloneStringMap(in map[string]string) map[string]string {
@@ -87,17 +84,6 @@ func cloneStringMap(in map[string]string) map[string]string {
 		return nil
 	}
 	out := make(map[string]string, len(in))
-	for key, value := range in {
-		out[key] = value
-	}
-	return out
-}
-
-func clonePointMap(in map[string]model.Point) map[string]model.Point {
-	if in == nil {
-		return nil
-	}
-	out := make(map[string]model.Point, len(in))
 	for key, value := range in {
 		out[key] = value
 	}
@@ -215,8 +201,7 @@ func (fb *flowBuilder) uniqueImplicitOutputVariable(varName string) string {
 	}
 	position := model.Point{X: fb.posX, Y: fb.posY}
 	if previous, ok := fb.outputVarPositions[varName]; ok &&
-		previous.X == position.X && previous.Y == position.Y &&
-		fb.isVariableDeclared(varName) {
+		previous.X == position.X && previous.Y == position.Y {
 		if fb.variableAliases == nil {
 			fb.variableAliases = make(map[string]string)
 		}
