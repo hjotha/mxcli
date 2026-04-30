@@ -198,6 +198,14 @@ func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 					inputs[s.ListVariable] = true
 				}
 				walk(s.Body)
+			case *ast.AddToListStmt:
+				if s.List != "" {
+					inputs[s.List] = true
+				}
+			case *ast.RemoveFromListStmt:
+				if s.List != "" {
+					inputs[s.List] = true
+				}
 			case *ast.WhileStmt:
 				walk(s.Body)
 			case *ast.IfStmt:

@@ -543,13 +543,14 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		outputUsedAsObject := fb.objectInputVariables != nil && fb.objectInputVariables[s.Variable]
 		// Owner-both Reference associations need later usage context: the same
 		// compact retrieve can be consumed as either a list or a single object.
+		// Owner="" means metadata was unavailable, so keep the association source.
 		expandReverseReference := assocInfo != nil &&
 			assocInfo.Type == domainmodel.AssociationTypeReference &&
 			assocInfo.Owner != "" &&
 			assocInfo.parentPersistable &&
 			assocInfo.childEntityQN != "" &&
 			startVarType == assocInfo.childEntityQN &&
-			(assocInfo.Owner != domainmodel.AssociationOwnerBoth || outputUsedAsList && !outputUsedAsObject)
+			(assocInfo.Owner != domainmodel.AssociationOwnerBoth || (outputUsedAsList && !outputUsedAsObject))
 
 		if expandReverseReference {
 			// Reverse traversal on Reference: child → parent (one-to-many)

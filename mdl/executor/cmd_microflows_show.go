@@ -432,10 +432,17 @@ func describeNanoflow(ctx *ExecContext, name ast.QualifiedName) error {
 	lines = append(lines, "begin")
 
 	// Wrap nanoflow in a Microflow to reuse formatMicroflowActivities
+	wrapperMf := &microflows.Microflow{
+		ReturnType:       targetNf.ReturnType,
+		ObjectCollection: targetNf.ObjectCollection,
+	}
+	prevDescribingReturnValue := ctx.DescribingMicroflowHasReturnValue
+	ctx.DescribingMicroflowHasReturnValue = microflowHasReturnValue(wrapperMf)
+	defer func() {
+		ctx.DescribingMicroflowHasReturnValue = prevDescribingReturnValue
+	}()
+
 	if targetNf.ObjectCollection != nil && len(targetNf.ObjectCollection.Objects) > 0 {
-		wrapperMf := &microflows.Microflow{
-			ObjectCollection: targetNf.ObjectCollection,
-		}
 		activityLines := formatMicroflowActivities(ctx, wrapperMf, entityNames, microflowNames)
 		for _, line := range activityLines {
 			lines = append(lines, "  "+line)
