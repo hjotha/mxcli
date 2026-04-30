@@ -1382,6 +1382,9 @@ changeObjectStatement
     : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)? REFRESH?
     ;
 
+// Shared by SET, LOOP, aggregate expressions, and validation feedback targets.
+// The segment is a qualifiedName so `$Obj/Module.Association` remains a
+// single slash segment rather than being split at the dot.
 attributePath
     : VARIABLE ((SLASH | DOT) qualifiedName)+
     ;
