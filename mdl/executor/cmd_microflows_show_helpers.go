@@ -498,6 +498,9 @@ func emitObjectAnnotations(
 	if split, ok := obj.(*microflows.InheritanceSplit); ok && split.Caption != "" {
 		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
 	}
+	if loop, ok := obj.(*microflows.LoopedActivity); ok && loop.Caption != "" {
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(loop.Caption)))
+	}
 
 	// @annotation (attached Annotation objects)
 	if annotationsByTarget != nil {
