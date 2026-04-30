@@ -1,0 +1,61 @@
+-- ============================================================================
+-- Bug #306: Annotations emitted before unsupported-activity comments
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Activities whose BSON type isn't yet implemented in mxcli's describer
+--   render as `-- unsupported: <Type>` comments. Before the fix, the
+--   describer still prefixed these comment lines with `@position`,
+--   `@anchor`, etc. The grammar only accepts annotations as prefixes of
+--   real microflow statements (not comments), so the resulting MDL failed
+--   to re-parse with errors like:
+--     line N:0 mismatched input '@' expecting {...}
+--
+-- After fix:
+--   When a formatted statement begins with `--`, `emitObjectAnnotations`
+--   is skipped — only the comment is emitted. Annotations on SUPPORTED
+--   activities continue to be emitted as before.
+--
+-- Reproducibility note:
+--   The unsupported-activity branch can only be triggered by an .mpr
+--   containing a BSON activity type that mxcli does not yet describe
+--   (typical examples are very new or rarely-used activity types). Pure
+--   MDL cannot create such an activity. The Go-side regression
+--   `TestTraverseFlow_UnsupportedActivitySkipsAnnotations` covers that
+--   path directly.
+--
+--   This script provides a POSITIVE CONTROL: a microflow whose every
+--   activity carries position / caption / anchor annotations. Its describe
+--   output must (a) parse with `mxcli check`, and (b) round-trip cleanly,
+--   confirming the annotation-emission codepath still works for the
+--   common case.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/306-describer-annotations-before-unsupported-comment.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest306.MF_AnnotatedFlow"
+--   The output must re-execute cleanly against the same project.
+-- ============================================================================
+
+create module BugTest306;
+
+create microflow BugTest306.MF_AnnotatedFlow (
+  $input: string
+)
+returns string as $result
+begin
+  declare $result string = empty;
+
+  @caption 'log entry'
+  log info node 'BugTest306' 'flow started';
+
+  @caption 'guard'
+  if $input != empty then
+    @caption 'happy path'
+    set $result = 'value: ' + $input;
+  else
+    set $result = 'no value';
+  end if;
+
+  return $result;
+end;
+/

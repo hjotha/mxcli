@@ -1685,3 +1685,262 @@ END;`
 		t.Fatalf("free annotation = %q, want empty", logStmt.Annotations.FreeAnnotation)
 	}
 }
+
+func TestDeclareAndLogTemplatePreserveMultilineSourceWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.Check ()
+RETURNS Boolean AS $Success
+BEGIN
+  DECLARE $Endpoint String = @Synthetic.Endpoint
++ '/items?page=' + toString($Page)
++ '&token=' + (if $Token!=empty then $Token/Value
+else
+'');
+  LOG INFO NODE 'SyntheticLog' 'Processed {1} items for {2}' WITH ({1} = toString($Count)
+
+, {2} = $Endpoint);
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	decl, ok := stmt.Body[0].(*ast.DeclareStmt)
+	if !ok {
+		t.Fatalf("Expected DeclareStmt, got %T", stmt.Body[0])
+	}
+	logStmt, ok := stmt.Body[1].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[1])
+	}
+
+	declSource, ok := decl.InitialValue.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr declare value, got %T", decl.InitialValue)
+	}
+	wantDecl := "@Synthetic.Endpoint\n+ '/items?page=' + toString($Page)\n+ '&token=' + (if $Token!=empty then $Token/Value\nelse\n'')"
+	if declSource.Source != wantDecl {
+		t.Fatalf("declare source = %q, want %q", declSource.Source, wantDecl)
+	}
+
+	firstParam, ok := logStmt.Template[0].Value.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("Expected SourceExpr first log template param, got %T", logStmt.Template[0].Value)
+	}
+	if firstParam.Source != "toString($Count)\n\n" {
+		t.Fatalf("template param source = %q, want trailing blank line", firstParam.Source)
+	}
+}
+
+func TestActionExpressionSlotsPreserveSourceWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.PreserveExpressionSlots (
+  $Input: String,
+  $Count: Integer,
+  $Flag: Boolean,
+  $OtherFlag: Boolean
+)
+RETURNS Boolean AS $Result
+BEGIN
+  $Created = CREATE Synthetic.Entity (Name = if $Count=0 then 'zero'
+else 'many'
+, Description = 'sample');
+  CHANGE $Created (Name = 'updated'
+, Description = 'sample');
+  $Loaded = CALL JAVA ACTION Synthetic.LoadValue(envVarName = 'SYNTHETIC_VALUE'
+, defaultValue = @Synthetic.DefaultValue);
+  IF isMatch( $Input, '[0-9]+') THEN
+    SHOW MESSAGE 'Value {1}' TYPE Information OBJECTS [if $Flag then 'enabled'
+else 'disabled'
+, $Input];
+  END IF;
+  RETURN $Flag
+and
+$OtherFlag;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+
+	createStmt := mf.Body[0].(*ast.CreateObjectStmt)
+	if source, ok := createStmt.Changes[0].Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected create assignment SourceExpr, got %T", createStmt.Changes[0].Value)
+	} else if !strings.Contains(source.Source, "\nelse 'many'\n") {
+		t.Fatalf("create assignment source lost line breaks: %q", source.Source)
+	}
+
+	changeStmt := mf.Body[1].(*ast.ChangeObjectStmt)
+	if source, ok := changeStmt.Changes[0].Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected change assignment SourceExpr, got %T", changeStmt.Changes[0].Value)
+	} else if !strings.Contains(source.Source, "\n") {
+		t.Fatalf("change assignment source lost trailing separator whitespace: %q", source.Source)
+	}
+
+	callStmt := mf.Body[2].(*ast.CallJavaActionStmt)
+	if source, ok := callStmt.Arguments[0].Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected call argument SourceExpr, got %T", callStmt.Arguments[0].Value)
+	} else if !strings.Contains(source.Source, "\n") {
+		t.Fatalf("call argument source lost trailing separator whitespace: %q", source.Source)
+	}
+
+	ifStmt := mf.Body[3].(*ast.IfStmt)
+	if source, ok := ifStmt.Condition.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected if condition SourceExpr, got %T", ifStmt.Condition)
+	} else if source.Source != "isMatch( $Input, '[0-9]+')" {
+		t.Fatalf("if condition source = %q", source.Source)
+	}
+
+	showStmt := ifStmt.ThenBody[0].(*ast.ShowMessageStmt)
+	if source, ok := showStmt.TemplateArgs[0].(*ast.SourceExpr); !ok {
+		t.Fatalf("expected show-message argument SourceExpr, got %T", showStmt.TemplateArgs[0])
+	} else if !strings.Contains(source.Source, "\nelse 'disabled'\n") {
+		t.Fatalf("show-message argument source lost line breaks: %q", source.Source)
+	}
+
+	returnStmt := mf.Body[4].(*ast.ReturnStmt)
+	if source, ok := returnStmt.Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected return SourceExpr, got %T", returnStmt.Value)
+	} else if source.Source != "$Flag\nand\n$OtherFlag" {
+		t.Fatalf("return source = %q", source.Source)
+	}
+}
+
+func TestRetrieveXPathPreservesOriginalPathSpacing(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.PreserveXPathPathSpacing ()
+BEGIN
+  RETRIEVE $Items FROM Synthetic.Item
+    WHERE Synthetic.Item_Group/Synthetic.Group/Synthetic.Group_Company = $Company;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	retrieveStmt := mf.Body[0].(*ast.RetrieveStmt)
+	source, ok := retrieveStmt.Where.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("expected retrieve XPath SourceExpr, got %T", retrieveStmt.Where)
+	}
+	want := "Synthetic.Item_Group/Synthetic.Group/Synthetic.Group_Company = $Company"
+	if source.Source != want {
+		t.Fatalf("XPath source = %q, want %q", source.Source, want)
+	}
+}
+
+func TestTrailingExpressionWhitespacePreservedForRoundtripSlots(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.PreserveTrailingExpressionWhitespace (
+  $Object: Synthetic.Entity
+)
+RETURNS Boolean AS $Result
+BEGIN
+  DECLARE $Prefix String = 'Hello'
+;
+  SET $Prefix = substring($Prefix, 0, 1)
+;
+  CHANGE $Object (Name = $Prefix );
+  LOG INFO NODE @Synthetic.LogNode
+ 'Processed {1}' WITH ({1} = $Prefix );
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	decl := mf.Body[0].(*ast.DeclareStmt)
+	if source, ok := decl.InitialValue.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected declare initial value SourceExpr, got %T", decl.InitialValue)
+	} else if source.Source != "'Hello'\n" {
+		t.Fatalf("declare source = %q", source.Source)
+	}
+
+	setStmt := mf.Body[1].(*ast.MfSetStmt)
+	if source, ok := setStmt.Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected set value SourceExpr, got %T", setStmt.Value)
+	} else if source.Source != "substring($Prefix, 0, 1)\n" {
+		t.Fatalf("set source = %q", source.Source)
+	}
+
+	changeStmt := mf.Body[2].(*ast.ChangeObjectStmt)
+	if source, ok := changeStmt.Changes[0].Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected change value SourceExpr, got %T", changeStmt.Changes[0].Value)
+	} else if source.Source != "$Prefix " {
+		t.Fatalf("change source = %q", source.Source)
+	}
+
+	logStmt := mf.Body[3].(*ast.LogStmt)
+	if source, ok := logStmt.Node.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected log node SourceExpr, got %T", logStmt.Node)
+	} else if source.Source != "@Synthetic.LogNode\n" {
+		t.Fatalf("log node source = %q", source.Source)
+	}
+	if source, ok := logStmt.Template[0].Value.(*ast.SourceExpr); !ok {
+		t.Fatalf("expected log template SourceExpr, got %T", logStmt.Template[0].Value)
+	} else if source.Source != "$Prefix " {
+		t.Fatalf("template source = %q", source.Source)
+	}
+}
+
+func TestRetrieveRangeExpressionsPreserveTrailingWhitespace(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.PreserveRetrieveRangeWhitespace (
+  $UseFirstPage: Boolean,
+  $PageSize: Integer,
+  $PageNumber: Integer
+)
+RETURNS List OF Synthetic.Entity
+BEGIN
+  RETRIEVE $Items FROM Synthetic.Entity
+    LIMIT $PageSize
+
+    OFFSET IF $UseFirstPage THEN 0
+ELSE
+$PageSize * ($PageNumber - 1)
+;
+  RETURN $Items;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	retrieveStmt, ok := mf.Body[0].(*ast.RetrieveStmt)
+	if !ok {
+		t.Fatalf("expected RetrieveStmt, got %T", mf.Body[0])
+	}
+	if retrieveStmt.Limit != "$PageSize\n" {
+		t.Fatalf("limit source = %q", retrieveStmt.Limit)
+	}
+	wantOffset := "IF $UseFirstPage THEN 0\nELSE\n$PageSize * ($PageNumber - 1)\n"
+	if retrieveStmt.Offset != wantOffset {
+		t.Fatalf("offset source = %q, want %q", retrieveStmt.Offset, wantOffset)
+	}
+}
+
+func TestShouldPreserveExpressionSourceIgnoresStringLiteralPunctuation(t *testing.T) {
+	if shouldPreserveExpressionSource("'Processed {1} items!'") {
+		t.Fatal("plain string literal punctuation should not force SourceExpr preservation")
+	}
+	if shouldPreserveExpressionSource("'Owner''s item: {1}'") {
+		t.Fatal("escaped quotes and colon inside a string literal should not force SourceExpr preservation")
+	}
+	if !shouldPreserveExpressionSource("$Token!=empty") {
+		t.Fatal("compact operators outside string literals should preserve source")
+	}
+	if !shouldPreserveExpressionSource("substring($Text,0,find($Text, '.'))") {
+		t.Fatal("compact comma-separated arguments should preserve source")
+	}
+	if !shouldPreserveExpressionSource("not($Object/Flag)") {
+		t.Fatal("compact not() expressions should preserve source")
+	}
+}

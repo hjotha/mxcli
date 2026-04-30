@@ -5,6 +5,7 @@ package visitor
 import (
 	"strings"
 
+	"github.com/antlr4-go/antlr/v4"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
 )
@@ -530,7 +531,8 @@ func buildDeclareStatement(ctx parser.IDeclareStatementContext) *ast.DeclareStmt
 
 	// Get optional initial value
 	if expr := declCtx.Expression(); expr != nil {
-		stmt.InitialValue = buildExpression(expr)
+		stmt.InitialValue = buildSourceExpression(expr)
+		stmt.InitialValue = appendStatementExpressionTrailingWhitespace(expr, stmt.InitialValue)
 	}
 
 	return stmt
@@ -553,9 +555,12 @@ func buildSetStatement(ctx parser.ISetStatementContext) ast.MicroflowStatement {
 		targetVar = ap.GetText()
 	}
 
-	// Get value expression
+	// Get value expression. Keep the structured expression for list/aggregate
+	// detection, then preserve source text for plain SET statements.
 	var valueExpr ast.Expression
+	var valueExprCtx parser.IExpressionContext
 	if expr := setCtx.Expression(); expr != nil {
+		valueExprCtx = expr
 		valueExpr = buildExpression(expr)
 	}
 
@@ -688,6 +693,11 @@ func buildSetStatement(ctx parser.ISetStatementContext) ast.MicroflowStatement {
 				Attribute:      attr,
 			}
 		}
+	}
+
+	if valueExprCtx != nil {
+		valueExpr = buildSourceExpression(valueExprCtx)
+		valueExpr = appendStatementExpressionTrailingWhitespace(valueExprCtx, valueExpr)
 	}
 
 	// Default: regular SET statement
@@ -960,7 +970,7 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 		if len(xpathConstraints) == 1 {
 			xcCtx := xpathConstraints[0].(*parser.XpathConstraintContext)
 			if xpathExpr := xcCtx.XpathExpr(); xpathExpr != nil {
-				stmt.Where = buildXPathExpr(xpathExpr)
+				stmt.Where = buildXPathSourceExpression(xpathExpr)
 			}
 		} else if len(xpathConstraints) > 1 {
 			// Multiple predicates [cond1][cond2] — combine with AND
@@ -968,7 +978,7 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 			for _, xc := range xpathConstraints {
 				xcCtx := xc.(*parser.XpathConstraintContext)
 				if xpathExpr := xcCtx.XpathExpr(); xpathExpr != nil {
-					andExprs = append(andExprs, buildXPathExpr(xpathExpr))
+					andExprs = append(andExprs, buildXPathSourceExpression(xpathExpr))
 				}
 			}
 			if len(andExprs) == 1 {
@@ -982,7 +992,7 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 				stmt.Where = result
 			}
 		} else if expr := retrCtx.Expression(0); expr != nil {
-			stmt.Where = buildExpression(expr)
+			stmt.Where = buildRetrieveWhereExpression(expr)
 		}
 	}
 
@@ -998,10 +1008,10 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 
 	// Get LIMIT and OFFSET expressions
 	if limitExpr := retrCtx.GetLimitExpr(); limitExpr != nil {
-		stmt.Limit = limitExpr.GetText()
+		stmt.Limit = retrieveRangeExpressionSource(limitExpr) + retrieveLimitTrailingWhitespace(retrCtx, limitExpr)
 	}
 	if offsetExpr := retrCtx.GetOffsetExpr(); offsetExpr != nil {
-		stmt.Offset = offsetExpr.GetText()
+		stmt.Offset = retrieveRangeExpressionSource(offsetExpr) + retrieveRangeExpressionTrailingWhitespace(offsetExpr)
 	}
 
 	// Check for ON ERROR clause
@@ -1010,6 +1020,98 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 	}
 
 	return stmt
+}
+
+func retrieveRangeExpressionSource(exprCtx parser.IExpressionContext) string {
+	if exprCtx == nil {
+		return ""
+	}
+	if prc, ok := exprCtx.(antlr.ParserRuleContext); ok {
+		if source := strings.TrimSpace(extractOriginalText(prc)); source != "" {
+			return source
+		}
+	}
+	return exprCtx.GetText()
+}
+
+func retrieveLimitTrailingWhitespace(retrCtx *parser.RetrieveStatementContext, limitExpr parser.IExpressionContext) string {
+	if retrCtx == nil || limitExpr == nil {
+		return ""
+	}
+	exprRule, ok := limitExpr.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+
+	start := exprRule.GetStop().GetStop() + 1
+	if offset := retrCtx.OFFSET(); offset != nil && offset.GetSymbol() != nil {
+		gap := whitespaceBetween(input, start, offset.GetSymbol().GetStart()-1)
+		return retrieveInterClauseWhitespaceSuffix(gap)
+	}
+	return whitespaceUntilDelimiter(input, start, ";")
+}
+
+func retrieveRangeExpressionTrailingWhitespace(exprCtx parser.IExpressionContext) string {
+	exprRule, ok := exprCtx.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+	return whitespaceUntilDelimiter(input, exprRule.GetStop().GetStop()+1, ";")
+}
+
+func whitespaceBetween(input antlr.CharStream, start, end int) string {
+	if start < 0 || end < start || start >= input.Size() {
+		return ""
+	}
+	gap := input.GetText(start, end)
+	if strings.TrimSpace(gap) != "" {
+		return ""
+	}
+	return gap
+}
+
+// retrieveInterClauseWhitespaceSuffix returns the whitespace gap between a
+// retrieve expression and the next clause keyword (LIMIT/OFFSET), with the
+// trailing newline + indent that the formatter will re-emit stripped off.
+//
+// The formatter writes each subsequent clause on its own line indented by
+// `formatRetrieveContinuationIndent` spaces, so the original source's trailing
+// "\n<indent>" is structural and would duplicate after a roundtrip if kept.
+// Anything before that final newline (blank lines, comments, additional
+// indentation) is preserved as authored. When the gap does not end in a
+// recognisable line-break-then-indent sequence we return "" — the formatter
+// will lay out the clause normally.
+func retrieveInterClauseWhitespaceSuffix(gap string) string {
+	if gap == "" {
+		return ""
+	}
+	// Trim the trailing newline + structural indentation the formatter will
+	// re-emit. We strip whatever indent (spaces or tabs) follows the final
+	// newline so this stays robust if the formatter changes its indent width.
+	for i := len(gap) - 1; i >= 0; i-- {
+		c := gap[i]
+		if c == ' ' || c == '\t' {
+			continue
+		}
+		if c == '\n' {
+			// Include a preceding \r in the strip so CRLF line endings work.
+			cut := i
+			if cut > 0 && gap[cut-1] == '\r' {
+				cut--
+			}
+			return gap[:cut]
+		}
+		break
+	}
+	return ""
 }
 
 // buildSortColumnMicroflow builds a sort column definition from a SortColumnContext.
@@ -1051,7 +1153,7 @@ func buildIfStatement(ctx parser.IIfStatementContext) *ast.IfStmt {
 	// Get all expressions (condition for IF and ELSIFs)
 	exprs := ifCtx.AllExpression()
 	if len(exprs) > 0 {
-		stmt.Condition = buildExpression(exprs[0])
+		stmt.Condition = buildSourceExpression(exprs[0])
 	}
 
 	// Get all microflow bodies (THEN, ELSIF THENs, ELSE)
@@ -1104,7 +1206,7 @@ func buildWhileStatement(ctx parser.IWhileStatementContext) *ast.WhileStmt {
 
 	// Get condition expression
 	if expr := wsCtx.Expression(); expr != nil {
-		stmt.Condition = buildExpression(expr)
+		stmt.Condition = buildSourceExpression(expr)
 	}
 
 	// Get body
@@ -1113,6 +1215,89 @@ func buildWhileStatement(ctx parser.IWhileStatementContext) *ast.WhileStmt {
 	}
 
 	return stmt
+}
+
+func buildSourceExpression(ctx parser.IExpressionContext) ast.Expression {
+	if ctx == nil {
+		return nil
+	}
+	expr := buildExpression(ctx)
+	if prc, ok := ctx.(antlr.ParserRuleContext); ok {
+		if source := strings.TrimSpace(extractOriginalText(prc)); source != "" {
+			if shouldPreserveExpressionSource(source) {
+				return &ast.SourceExpr{Expression: expr, Source: source}
+			}
+		}
+	}
+	return expr
+}
+
+func buildXPathSourceExpression(ctx parser.IXpathExprContext) ast.Expression {
+	if ctx == nil {
+		return nil
+	}
+	expr := buildXPathExpr(ctx)
+	if prc, ok := ctx.(antlr.ParserRuleContext); ok {
+		if source := strings.TrimSpace(extractOriginalText(prc)); source != "" {
+			return &ast.SourceExpr{Expression: expr, Source: source}
+		}
+	}
+	return expr
+}
+
+func buildRetrieveWhereExpression(ctx parser.IExpressionContext) ast.Expression {
+	if ctx == nil {
+		return nil
+	}
+	expr := buildExpression(ctx)
+	if prc, ok := ctx.(antlr.ParserRuleContext); ok {
+		if source := strings.TrimSpace(extractOriginalText(prc)); source != "" {
+			if shouldPreserveExpressionSource(source) || strings.Contains(source, "/") {
+				return &ast.SourceExpr{Expression: expr, Source: source}
+			}
+		}
+	}
+	return expr
+}
+
+func shouldPreserveExpressionSource(source string) bool {
+	if strings.ContainsAny(source, "\r\n") {
+		return true
+	}
+	inString := false
+	for i := 0; i < len(source); i++ {
+		if source[i] == '\'' {
+			if inString && i+1 < len(source) && source[i+1] == '\'' {
+				i++
+				continue
+			}
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		switch source[i] {
+		case '=', '!', '<', '>', '+', '-', '*', ':', ',':
+			if i > 0 && source[i-1] != ' ' && source[i-1] != '\t' {
+				return true
+			}
+			if i+1 < len(source) && source[i+1] != ' ' && source[i+1] != '\t' && source[i+1] != '=' {
+				return true
+			}
+		}
+	}
+	// Mendix's `not(<expr>)` function call has no surrounding spaces in
+	// idiomatic source, but the parser would re-emit it as `not (<expr>)`
+	// (function-call AST node loses the no-space affordance). Preserving the
+	// original source keeps the compact form across describe → exec →
+	// describe. The substring check is intentionally loose; false positives
+	// (e.g. an attribute name containing "not(") only over-preserve and have
+	// no semantic effect since the parsed expression is what runs.
+	if strings.Contains(strings.ToLower(source), "not(") {
+		return true
+	}
+	return false
 }
 
 // buildReturnStatement converts RETURN statement context to ReturnStmt.
@@ -1126,7 +1311,7 @@ func buildReturnStatement(ctx parser.IReturnStatementContext) *ast.ReturnStmt {
 
 	// Get optional return value
 	if expr := retCtx.Expression(); expr != nil {
-		stmt.Value = buildExpression(expr)
+		stmt.Value = buildSourceExpression(expr)
 	}
 
 	return stmt

@@ -8,13 +8,50 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// TestPageClientAction_Variable_NonNull verifies that Forms$PageParameterMapping
-// always includes a non-null Forms$PageVariable in the Variable field (issue #295).
-// Studio Pro's set_Variable property setter requires a non-null PageVariable and
-// throws ArgumentNullException when it receives nil.
-func TestPageClientAction_Variable_NonNull(t *testing.T) {
+// getFormSettings extracts FormSettings from a serialized Forms$FormAction document.
+func getFormSettings(t *testing.T, doc bson.D) bson.D {
+	t.Helper()
+	for _, e := range doc {
+		if e.Key == "FormSettings" {
+			fs, ok := e.Value.(bson.D)
+			if !ok {
+				t.Fatalf("FormSettings is not bson.D, got %T", e.Value)
+			}
+			return fs
+		}
+	}
+	t.Fatal("FormSettings not found")
+	return nil
+}
+
+// getParamMappings extracts ParameterMappings from a FormSettings document.
+func getParamMappings(t *testing.T, formSettings bson.D) primitive.A {
+	t.Helper()
+	for _, e := range formSettings {
+		if e.Key == "ParameterMappings" {
+			arr, ok := e.Value.(primitive.A)
+			if !ok {
+				t.Fatalf("ParameterMappings is not primitive.A, got %T", e.Value)
+			}
+			return arr
+		}
+	}
+	t.Fatal("ParameterMappings not found")
+	return nil
+}
+
+// TestPageClientAction_ParameterMappings_TypeIndicator verifies that
+// Forms$FormAction always serializes ParameterMappings as [2] (type indicator
+// only, no inline mapping objects), matching Studio Pro's native format.
+//
+// Studio Pro infers $currentObject from the enclosing widget context at runtime
+// rather than reading explicit Forms$PageParameterMapping objects from BSON.
+// Using int32(len) as the array's first element produces an invalid type
+// indicator that Studio Pro cannot read, causing CE0115 (issue #296).
+func TestPageClientAction_ParameterMappings_TypeIndicator(t *testing.T) {
 	action := &pages.PageClientAction{
 		BaseElement: model.BaseElement{ID: "action-id"},
 		PageName:    "AuditTrail.Log_View",
@@ -32,75 +69,27 @@ func TestPageClientAction_Variable_NonNull(t *testing.T) {
 		t.Fatal("serializeClientAction returned nil")
 	}
 
-	// Navigate to FormSettings.ParameterMappings[1] (index 0 is the count int32)
-	var formSettings bson.D
-	for _, e := range doc {
-		if e.Key == "FormSettings" {
-			formSettings, _ = e.Value.(bson.D)
-		}
-	}
-	if formSettings == nil {
-		t.Fatal("FormSettings is nil")
-	}
+	formSettings := getFormSettings(t, doc)
+	mappings := getParamMappings(t, formSettings)
 
-	var paramMappings bson.A
-	for _, e := range formSettings {
-		if e.Key == "ParameterMappings" {
-			paramMappings, _ = e.Value.(bson.A)
-		}
+	// Must be exactly [int32(2)] — type indicator only, no inline objects.
+	// Studio Pro's reader skips the type indicator (2 or 3) and reads the rest
+	// as items; any other first-element value is treated as invalid.
+	if len(mappings) != 1 {
+		t.Fatalf("ParameterMappings: want exactly 1 element (type indicator), got %d", len(mappings))
 	}
-	if len(paramMappings) < 2 {
-		t.Fatalf("ParameterMappings: want at least 2 elements (count + mapping), got %d", len(paramMappings))
-	}
-
-	// Element 0 is the int32 count; element 1 is the first mapping
-	mapping, ok := paramMappings[1].(bson.D)
+	indicator, ok := mappings[0].(int32)
 	if !ok {
-		t.Fatalf("ParameterMappings[1] is not bson.D, got %T", paramMappings[1])
+		t.Fatalf("ParameterMappings[0] is not int32, got %T", mappings[0])
 	}
-
-	var bsonType, argument string
-	var variable any
-	for _, e := range mapping {
-		switch e.Key {
-		case "$Type":
-			bsonType, _ = e.Value.(string)
-		case "Argument":
-			argument, _ = e.Value.(string)
-		case "Variable":
-			variable = e.Value
-		}
-	}
-
-	if bsonType != "Forms$PageParameterMapping" {
-		t.Errorf("$Type = %q, want %q", bsonType, "Forms$PageParameterMapping")
-	}
-	if argument != "$currentObject" {
-		t.Errorf("Argument = %q, want %q", argument, "$currentObject")
-	}
-	if variable == nil {
-		t.Fatal("Variable is nil — Studio Pro requires a non-null Forms$PageVariable (issue #295)")
-	}
-
-	varDoc, ok := variable.(bson.D)
-	if !ok {
-		t.Fatalf("Variable is not bson.D, got %T", variable)
-	}
-
-	var varType string
-	for _, e := range varDoc {
-		if e.Key == "$Type" {
-			varType, _ = e.Value.(string)
-		}
-	}
-	if varType != "Forms$PageVariable" {
-		t.Errorf("Variable.$Type = %q, want %q", varType, "Forms$PageVariable")
+	if indicator != 2 {
+		t.Errorf("ParameterMappings type indicator = %d, want 2", indicator)
 	}
 }
 
-// TestPageClientAction_NoParams_NoMappings verifies that a PageClientAction
-// without parameter mappings serializes correctly (no regression).
-func TestPageClientAction_NoParams_NoMappings(t *testing.T) {
+// TestPageClientAction_NoParams_TypeIndicator verifies that a PageClientAction
+// without parameter mappings still serializes ParameterMappings as [2].
+func TestPageClientAction_NoParams_TypeIndicator(t *testing.T) {
 	action := &pages.PageClientAction{
 		BaseElement: model.BaseElement{ID: "action-id"},
 		PageName:    "Sales.Customer_Overview",
@@ -120,58 +109,45 @@ func TestPageClientAction_NoParams_NoMappings(t *testing.T) {
 	if bsonType != "Forms$FormAction" {
 		t.Errorf("$Type = %q, want %q", bsonType, "Forms$FormAction")
 	}
+
+	formSettings := getFormSettings(t, doc)
+	mappings := getParamMappings(t, formSettings)
+	if len(mappings) != 1 {
+		t.Fatalf("ParameterMappings: want [2], got %v", mappings)
+	}
 }
 
-// TestPageClientAction_MultipleParams_AllHaveVariable verifies that each
-// mapping in a multi-param action has a non-null Variable field.
-func TestPageClientAction_MultipleParams_AllHaveVariable(t *testing.T) {
+// TestPageClientAction_RequiredFields verifies that Forms$FormAction includes
+// all fields required by Studio Pro: NumberOfPagesToClose2, PagesForSpecializations,
+// and FormSettings.TitleOverride.
+func TestPageClientAction_RequiredFields(t *testing.T) {
 	action := &pages.PageClientAction{
 		BaseElement: model.BaseElement{ID: "action-id"},
 		PageName:    "Sales.Order_Detail",
 		ParameterMappings: []*pages.PageClientParameterMapping{
-			{
-				BaseElement:   model.BaseElement{ID: "m1"},
-				ParameterName: "Order",
-				Variable:      "$Order",
-			},
-			{
-				BaseElement:   model.BaseElement{ID: "m2"},
-				ParameterName: "Customer",
-				Variable:      "$Customer",
-			},
+			{ParameterName: "Order", Variable: "$Order"},
+			{ParameterName: "Customer", Variable: "$Customer"},
 		},
 	}
 
 	doc := serializeClientAction(action)
 
-	var formSettings bson.D
+	fields := map[string]bool{}
 	for _, e := range doc {
-		if e.Key == "FormSettings" {
-			formSettings, _ = e.Value.(bson.D)
+		fields[e.Key] = true
+	}
+	for _, required := range []string{"NumberOfPagesToClose2", "PagesForSpecializations"} {
+		if !fields[required] {
+			t.Errorf("Forms$FormAction missing required field %q", required)
 		}
 	}
 
-	var paramMappings bson.A
+	formSettings := getFormSettings(t, doc)
+	fsFields := map[string]bool{}
 	for _, e := range formSettings {
-		if e.Key == "ParameterMappings" {
-			paramMappings, _ = e.Value.(bson.A)
-		}
+		fsFields[e.Key] = true
 	}
-
-	// Index 0 is the int32 count; indices 1 and 2 are the mappings
-	for i := 1; i <= 2; i++ {
-		m, ok := paramMappings[i].(bson.D)
-		if !ok {
-			t.Fatalf("ParameterMappings[%d] is not bson.D", i)
-		}
-		var varVal any
-		for _, e := range m {
-			if e.Key == "Variable" {
-				varVal = e.Value
-			}
-		}
-		if varVal == nil {
-			t.Errorf("ParameterMappings[%d].Variable is nil — must be non-null Forms$PageVariable", i)
-		}
+	if !fsFields["TitleOverride"] {
+		t.Errorf("FormSettings missing required field %q", "TitleOverride")
 	}
 }
