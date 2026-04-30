@@ -40,6 +40,24 @@ func TestAddToListBuilderKeepsSimpleVariableFallback(t *testing.T) {
 	}
 }
 
+func TestCollectObjectInputVariablesSeesAddExpressionValue(t *testing.T) {
+	inputs := collectObjectInputVariables([]ast.MicroflowStatement{
+		&ast.AddToListStmt{
+			Value: &ast.FunctionCallExpr{
+				Name: "head",
+				Arguments: []ast.Expression{
+					&ast.VariableExpr{Name: "SourceItems"},
+				},
+			},
+			List: "Items",
+		},
+	})
+
+	if !inputs["SourceItems"] {
+		t.Fatalf("SourceItems was not collected from add expression: %#v", inputs)
+	}
+}
+
 func lastChangeListAction(t *testing.T, fb *flowBuilder) *microflows.ChangeListAction {
 	t.Helper()
 
