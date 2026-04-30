@@ -171,7 +171,6 @@ type ActivityAnnotations struct {
 	Caption         string       // @caption 'text'
 	Color           string       // @color Green
 	AnnotationText  string       // @annotation 'text'
-	FreeAnnotation  string       // @annotation 'text' before @position/@anchor, kept free-floating
 	FreeAnnotations []string     // Multiple free-floating @annotation lines in source order
 	Excluded        bool         // @excluded
 	Anchor          *FlowAnchors // @anchor(from: X, to: Y) — anchors of the flow leaving this statement

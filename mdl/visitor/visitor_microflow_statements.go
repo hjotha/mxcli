@@ -279,9 +279,6 @@ func extractMicroflowAnnotations(annotations []parser.IAnnotationContext) *ast.A
 				if text != "" {
 					if !seenActivityMetadata && hasLaterActivityAnnotation(annotations, i+1) {
 						result.FreeAnnotations = append(result.FreeAnnotations, text)
-						if result.FreeAnnotation == "" {
-							result.FreeAnnotation = text
-						}
 					} else {
 						result.AnnotationText = text
 					}
