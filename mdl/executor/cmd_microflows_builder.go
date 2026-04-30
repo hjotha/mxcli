@@ -25,7 +25,6 @@ type flowBuilder struct {
 	spacing             int
 	returnValue         string // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
 	returnType          *ast.MicroflowReturnType
-	hasReturnValue      bool              // True when the microflow declares a non-void return type
 	endsWithReturn      bool              // True if the flow already ends with EndEvent(s) from RETURN statements
 	lastReturnEndID     model.ID          // Last explicit RETURN EndEvent, used as a fallback error-handler target
 	varTypes            map[string]string // Variable name -> entity qualified name (for CHANGE statements)
@@ -85,6 +84,10 @@ func (fb *flowBuilder) addErrorWithExample(message, example string) {
 // GetErrors returns all validation errors collected during build.
 func (fb *flowBuilder) GetErrors() []string {
 	return fb.errors
+}
+
+func (fb *flowBuilder) hasDeclaredReturnValue() bool {
+	return fb.returnType != nil && fb.returnType.Type.Kind != ast.TypeVoid
 }
 
 // errorExampleDeclareVariable returns an example for declaring a variable.

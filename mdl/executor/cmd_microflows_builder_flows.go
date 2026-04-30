@@ -177,7 +177,7 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHand
 	}
 	if state.skipVar != "" {
 		if statementReferencesVar(stmt, state.skipVar) {
-			if !fb.hasReturnValue {
+			if !fb.hasDeclaredReturnValue() {
 				if derivedVar := outputDerivedVariable(stmt, state.skipVar); derivedVar != "" {
 					state.skipVar = derivedVar
 				}

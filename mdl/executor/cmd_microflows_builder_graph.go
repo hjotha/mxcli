@@ -31,7 +31,6 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 	if returns != nil && returns.Variable != "" {
 		fb.returnValue = "$" + returns.Variable
 	}
-	fb.hasReturnValue = returns != nil && returns.Type.Kind != ast.TypeVoid
 	// Set baseY for branch restoration (this is the center line)
 	fb.baseY = fb.posY
 
