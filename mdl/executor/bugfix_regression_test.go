@@ -743,6 +743,47 @@ func TestListFindAttributeEqualsExpressionUsesAttributeOperation(t *testing.T) {
 	}
 }
 
+func TestListFindUnknownListTypeFallsBackToExpressionOperation(t *testing.T) {
+	fb := &flowBuilder{
+		posX:    100,
+		posY:    100,
+		spacing: HorizontalSpacing,
+	}
+
+	id := fb.addListOperationAction(&ast.ListOperationStmt{
+		OutputVariable: "ExistingItem",
+		Operation:      ast.ListOpFind,
+		InputVariable:  "Items",
+		Condition: &ast.BinaryExpr{
+			Left:     &ast.IdentifierExpr{Name: "Code"},
+			Operator: "=",
+			Right:    &ast.LiteralExpr{Kind: ast.LiteralString, Value: "A"},
+		},
+	})
+	if id == "" || len(fb.objects) != 1 {
+		t.Fatalf("expected one list operation activity, got id=%q objects=%d", id, len(fb.objects))
+	}
+
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("object type = %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.ListOperationAction)
+	if !ok {
+		t.Fatalf("action type = %T, want *microflows.ListOperationAction", activity.Action)
+	}
+	if _, ok := action.Operation.(*microflows.FindByAttributeOperation); ok {
+		t.Fatal("expected expression fallback, got *microflows.FindByAttributeOperation")
+	}
+	op, ok := action.Operation.(*microflows.FindOperation)
+	if !ok {
+		t.Fatalf("operation type = %T, want *microflows.FindOperation", action.Operation)
+	}
+	if op.Expression == "" {
+		t.Fatal("expected expression fallback to preserve the condition")
+	}
+}
+
 func TestCallMicroflowUnknownResultTypeStillDeclaresVariable(t *testing.T) {
 	fb := &flowBuilder{
 		varTypes:     map[string]string{"Result": "Old.ModuleEntity"},

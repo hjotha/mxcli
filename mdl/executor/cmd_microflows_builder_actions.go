@@ -648,6 +648,9 @@ func (fb *flowBuilder) listAttributeOperation(s *ast.ListOperationStmt, filter b
 	}
 
 	attributeName, associationName := fb.resolveListOperationMember(s.InputVariable, fieldName)
+	if associationName == "" && !strings.Contains(attributeName, ".") {
+		return nil
+	}
 	if filter {
 		return &microflows.FilterByAttributeOperation{
 			BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
@@ -684,6 +687,8 @@ func (fb *flowBuilder) resolveListOperationMember(listVariable, memberName strin
 			entityQN = strings.TrimPrefix(listType, "List of ")
 		}
 	}
+	// Reuse the member-change resolver so list operations follow the same
+	// attribute-vs-association qualification rules as change-object members.
 	memberChange := &microflows.MemberChange{}
 	fb.resolveMemberChange(memberChange, memberName, entityQN)
 	return memberChange.AttributeQualifiedName, memberChange.AssociationQualifiedName
