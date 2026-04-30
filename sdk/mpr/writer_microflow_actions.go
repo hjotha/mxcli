@@ -702,10 +702,12 @@ func serializeWebServiceCallAction(a *microflows.WebServiceCallAction) bson.D {
 				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
 				{Key: "$Type", Value: "Microflows$ExportMappingCall"},
 				{Key: "Mapping", Value: string(a.SendMappingID)},
-				// Studio Pro uses an array whose first element is the declared
-				// count. The legacy SOAP fixture has no parameter mappings, so
-				// this marker matches the empty ExportMappingCall shape used by
-				// existing microflow/rule-call writers.
+				// Mendix storage lists encode their first element as a
+				// constant storage-list-type marker (`2` for object lists),
+				// NOT the element count. The empty ExportMappingCall shape
+				// used by other writers in this file follows the same
+				// convention; see #338 / #374 for prior fixes that aligned
+				// other writers on this marker.
 				{Key: "ParameterMappings", Value: bson.A{int32(2)}},
 			}},
 		}})
