@@ -249,6 +249,7 @@ type IfStmt struct {
 	Condition   Expression           // IF condition
 	ThenBody    []MicroflowStatement // THEN branch
 	ElseBody    []MicroflowStatement // ELSE branch (optional)
+	HasElse     bool                 // true when the source contained ELSE, even if the body is empty
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
