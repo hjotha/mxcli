@@ -10,9 +10,12 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
 // buildWithAnchors is a test helper that builds the flow graph for a simple
@@ -160,6 +163,48 @@ func TestBuilder_AnchorTrueBranchTo_EmptyThenIfWithElse(t *testing.T) {
 	// Empty THEN → merge: must honor the user's Right→Top anchor, not the default Right→Left.
 	if !hasFlow(oc.Flows, AnchorRight, AnchorTop) {
 		t.Errorf("expected true branch split→merge flow Right→Top, got %+v", oc.Flows)
+	}
+}
+
+func TestDescribe_FalseBranchFromTop_IfWithoutElseIsDefault(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.LiteralExpr{Kind: ast.LiteralBoolean, Value: true},
+			ThenBody: []ast.MicroflowStatement{
+				&ast.LogStmt{Level: ast.LogInfo, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "inside"}},
+			},
+			Annotations: &ast.ActivityAnnotations{
+				FalseBranchAnchor: &ast.FlowAnchors{From: ast.AnchorSideTop, To: ast.AnchorSideUnset},
+			},
+		},
+		&ast.ReturnStmt{},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var split microflows.MicroflowObject
+	for _, obj := range oc.Objects {
+		if _, ok := obj.(*microflows.ExclusiveSplit); ok {
+			split = obj
+			break
+		}
+	}
+	if split == nil {
+		t.Fatal("expected exclusive split")
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{}
+	flowsByDest := map[model.ID][]*microflows.SequenceFlow{}
+	for _, flow := range oc.Flows {
+		flowsByOrigin[flow.OriginID] = append(flowsByOrigin[flow.OriginID], flow)
+		flowsByDest[flow.DestinationID] = append(flowsByDest[flow.DestinationID], flow)
+	}
+
+	var lines []string
+	emitAnchorAnnotation(split, flowsByOrigin, flowsByDest, &lines, "")
+	if len(lines) != 0 {
+		t.Fatalf("expected false branch from-top default anchor to be omitted, got %q", strings.Join(lines, "\n"))
 	}
 }
 

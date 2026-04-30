@@ -51,10 +51,11 @@ func buildLogStatement(ctx parser.ILogStatementContext) *ast.LogStmt {
 	// LOG always has a message expression; when NODE is present the first
 	// expression is the node and the second is the message.
 	if logCtx.NODE() != nil && len(exprs) > 1 {
-		stmt.Node = buildExpression(exprs[0])
-		stmt.Message = buildExpression(exprs[1])
+		stmt.Node = buildSourceExpression(exprs[0])
+		stmt.Node = appendLogNodeTrailingWhitespace(exprs[0], exprs[1], stmt.Node)
+		stmt.Message = buildSourceExpression(exprs[1])
 	} else if len(exprs) > 0 {
-		stmt.Message = buildExpression(exprs[0])
+		stmt.Message = buildSourceExpression(exprs[0])
 	}
 
 	// Parse template parameters: WITH ({1} = expr, {2} = expr, ...)
@@ -79,7 +80,8 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 	var result []ast.TemplateParam
 
 	// Handle WITH ({1} = expr, {2} = expr, ...) syntax
-	for _, param := range paramsCtx.AllTemplateParam() {
+	allParams := paramsCtx.AllTemplateParam()
+	for i, param := range allParams {
 		paramCtx := param.(*parser.TemplateParamContext)
 		indexStr := paramCtx.NUMBER_LITERAL().GetText()
 		index, _ := strconv.Atoi(indexStr)
@@ -89,7 +91,8 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 
 		// Parse the expression and check for data source attribute reference
 		if exprCtx := paramCtx.Expression(); exprCtx != nil {
-			expr := buildExpression(exprCtx)
+			expr := buildSourceExpression(exprCtx)
+			expr = appendTemplateParamTrailingWhitespace(paramsCtx, allParams, i, exprCtx, expr)
 			tp.Value = expr
 
 			// Check if this is a $Widget.Attr pattern (AttributePathExpr with Path)
@@ -115,6 +118,238 @@ func buildTemplateParams(ctx parser.ITemplateParamsContext) []ast.TemplateParam 
 	}
 
 	return result
+}
+
+func appendTemplateParamTrailingWhitespace(
+	paramsCtx *parser.TemplateParamsContext,
+	allParams []parser.ITemplateParamContext,
+	index int,
+	exprCtx parser.IExpressionContext,
+	expr ast.Expression,
+) ast.Expression {
+	trailing := templateParamTrailingWhitespace(paramsCtx, allParams, index, exprCtx)
+	if trailing == "" {
+		return expr
+	}
+
+	return appendSourceExpressionSuffix(exprCtx, expr, trailing)
+}
+
+func templateParamTrailingWhitespace(
+	paramsCtx *parser.TemplateParamsContext,
+	allParams []parser.ITemplateParamContext,
+	index int,
+	exprCtx parser.IExpressionContext,
+) string {
+	exprRule, ok := exprCtx.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+
+	start := exprRule.GetStop().GetStop() + 1
+	end := -1
+	delimiter := byte(')')
+	if index+1 < len(allParams) {
+		nextParam := allParams[index+1].(antlr.ParserRuleContext)
+		end = nextParam.GetStart().GetStart() - 1
+		delimiter = ','
+	} else if paramsCtx.GetStop() != nil {
+		end = paramsCtx.GetStop().GetStart() - 1
+	}
+	if start < 0 || end < start {
+		return ""
+	}
+
+	gap := input.GetText(start, end)
+	if delimiter == ',' {
+		comma := strings.IndexByte(gap, ',')
+		if comma == -1 {
+			return ""
+		}
+		gap = gap[:comma]
+	}
+	if strings.TrimSpace(gap) != "" {
+		return ""
+	}
+	return gap
+}
+
+func nextParserRuleContext[T any](items []T, index int) antlr.ParserRuleContext {
+	if index+1 >= len(items) {
+		return nil
+	}
+	next, _ := any(items[index+1]).(antlr.ParserRuleContext)
+	return next
+}
+
+func appendExpressionListTrailingWhitespace(
+	parent antlr.ParserRuleContext,
+	next antlr.ParserRuleContext,
+	exprCtx parser.IExpressionContext,
+	expr ast.Expression,
+) ast.Expression {
+	trailing := expressionListTrailingWhitespace(parent, next, exprCtx)
+	if trailing == "" {
+		return expr
+	}
+
+	return appendSourceExpressionSuffix(exprCtx, expr, trailing)
+}
+
+func expressionListTrailingWhitespace(
+	parent antlr.ParserRuleContext,
+	next antlr.ParserRuleContext,
+	exprCtx parser.IExpressionContext,
+) string {
+	exprRule, ok := exprCtx.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+
+	start := exprRule.GetStop().GetStop() + 1
+	end := -1
+	if next != nil {
+		end = next.GetStart().GetStart() - 1
+	} else if parent != nil && parent.GetStop() != nil {
+		end = parent.GetStop().GetStart() - 1
+	}
+	if start < 0 || end < start {
+		if next == nil {
+			return whitespaceUntilDelimiter(input, start, ")]")
+		}
+		return ""
+	}
+
+	gap := input.GetText(start, end)
+	if next != nil {
+		comma := strings.IndexByte(gap, ',')
+		if comma == -1 {
+			return ""
+		}
+		gap = gap[:comma]
+	}
+	if strings.TrimSpace(gap) != "" {
+		return ""
+	}
+	return gap
+}
+
+func appendStatementExpressionTrailingWhitespace(
+	exprCtx parser.IExpressionContext,
+	expr ast.Expression,
+) ast.Expression {
+	trailing := statementExpressionTrailingWhitespace(exprCtx)
+	if trailing == "" {
+		return expr
+	}
+	return appendSourceExpressionSuffix(exprCtx, expr, trailing)
+}
+
+func statementExpressionTrailingWhitespace(exprCtx parser.IExpressionContext) string {
+	exprRule, ok := exprCtx.(antlr.ParserRuleContext)
+	if !ok || exprRule.GetStop() == nil {
+		return ""
+	}
+	input := exprRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+
+	start := exprRule.GetStop().GetStop() + 1
+	if start < 0 || start >= input.Size() {
+		return ""
+	}
+
+	return whitespaceUntilDelimiter(input, start, ";")
+}
+
+func appendLogNodeTrailingWhitespace(
+	nodeCtx parser.IExpressionContext,
+	messageCtx parser.IExpressionContext,
+	expr ast.Expression,
+) ast.Expression {
+	trailing := expressionGapWhitespace(nodeCtx, messageCtx)
+	if trailing == "" || !strings.ContainsAny(trailing, "\r\n") {
+		return expr
+	}
+	// formatAction always writes one space between the node and message slots.
+	// Preserve the source line break but avoid duplicating indentation spaces.
+	trailing = strings.TrimRight(trailing, " \t")
+	if trailing == "" {
+		return expr
+	}
+	return appendSourceExpressionSuffix(nodeCtx, expr, trailing)
+}
+
+func expressionGapWhitespace(
+	leftCtx parser.IExpressionContext,
+	rightCtx parser.IExpressionContext,
+) string {
+	leftRule, ok := leftCtx.(antlr.ParserRuleContext)
+	if !ok || leftRule.GetStop() == nil {
+		return ""
+	}
+	rightRule, ok := rightCtx.(antlr.ParserRuleContext)
+	if !ok || rightRule.GetStart() == nil {
+		return ""
+	}
+	input := leftRule.GetStop().GetInputStream()
+	if input == nil {
+		return ""
+	}
+	start := leftRule.GetStop().GetStop() + 1
+	end := rightRule.GetStart().GetStart() - 1
+	if start < 0 || end < start {
+		return ""
+	}
+	gap := input.GetText(start, end)
+	if strings.TrimSpace(gap) != "" {
+		return ""
+	}
+	return gap
+}
+
+func whitespaceUntilDelimiter(input antlr.CharStream, start int, delimiters string) string {
+	if start < 0 || start >= input.Size() {
+		return ""
+	}
+	end := start
+	for end < input.Size() {
+		ch := input.GetText(end, end)
+		if strings.Contains(delimiters, ch) {
+			break
+		}
+		if strings.TrimSpace(ch) != "" {
+			return ""
+		}
+		end++
+	}
+	if end >= input.Size() || end == start {
+		return ""
+	}
+	return input.GetText(start, end-1)
+}
+
+func appendSourceExpressionSuffix(
+	exprCtx parser.IExpressionContext,
+	expr ast.Expression,
+	suffix string,
+) ast.Expression {
+	source := strings.TrimSpace(extractOriginalText(exprCtx.(antlr.ParserRuleContext)))
+	innerExpr := expr
+	if sourceExpr, ok := expr.(*ast.SourceExpr); ok {
+		source = sourceExpr.Source
+		innerExpr = sourceExpr.Expression
+	}
+	return &ast.SourceExpr{Expression: innerExpr, Source: source + suffix}
 }
 
 // buildCallMicroflowStatement converts CALL MICROFLOW statement context to CallMicroflowStmt.
@@ -357,7 +592,8 @@ func buildCallArgumentList(ctx parser.ICallArgumentListContext) []ast.CallArgume
 	listCtx := ctx.(*parser.CallArgumentListContext)
 	var args []ast.CallArgument
 
-	for _, argCtx := range listCtx.AllCallArgument() {
+	allArgs := listCtx.AllCallArgument()
+	for i, argCtx := range allArgs {
 		arg := argCtx.(*parser.CallArgumentContext)
 		ca := ast.CallArgument{}
 
@@ -368,7 +604,8 @@ func buildCallArgumentList(ctx parser.ICallArgumentListContext) []ast.CallArgume
 			ca.Name = parameterNameText(pn)
 		}
 		if expr := arg.Expression(); expr != nil {
-			ca.Value = buildExpression(expr)
+			value := buildSourceExpression(expr)
+			ca.Value = appendExpressionListTrailingWhitespace(listCtx, nextParserRuleContext(allArgs, i), expr, value)
 		}
 
 		args = append(args, ca)
@@ -385,7 +622,8 @@ func buildMemberAssignmentList(ctx parser.IMemberAssignmentListContext) []ast.Ch
 	listCtx := ctx.(*parser.MemberAssignmentListContext)
 	var items []ast.ChangeItem
 
-	for _, assignCtx := range listCtx.AllMemberAssignment() {
+	allAssignments := listCtx.AllMemberAssignment()
+	for i, assignCtx := range allAssignments {
 		assign := assignCtx.(*parser.MemberAssignmentContext)
 		ci := ast.ChangeItem{}
 
@@ -394,7 +632,8 @@ func buildMemberAssignmentList(ctx parser.IMemberAssignmentListContext) []ast.Ch
 			ci.Attribute = memberAttributeNameText(name)
 		}
 		if expr := assign.Expression(); expr != nil {
-			ci.Value = buildExpression(expr)
+			value := buildSourceExpression(expr)
+			ci.Value = appendExpressionListTrailingWhitespace(listCtx, nextParserRuleContext(allAssignments, i), expr, value)
 		}
 
 		items = append(items, ci)
@@ -411,7 +650,8 @@ func buildChangeList(ctx parser.IChangeListContext) []ast.ChangeItem {
 	listCtx := ctx.(*parser.ChangeListContext)
 	var items []ast.ChangeItem
 
-	for _, itemCtx := range listCtx.AllChangeItem() {
+	allItems := listCtx.AllChangeItem()
+	for i, itemCtx := range allItems {
 		item := itemCtx.(*parser.ChangeItemContext)
 		ci := ast.ChangeItem{}
 
@@ -419,7 +659,8 @@ func buildChangeList(ctx parser.IChangeListContext) []ast.ChangeItem {
 			ci.Attribute = id.GetText()
 		}
 		if expr := item.Expression(); expr != nil {
-			ci.Value = buildExpression(expr)
+			value := buildSourceExpression(expr)
+			ci.Value = appendExpressionListTrailingWhitespace(listCtx, nextParserRuleContext(allItems, i), expr, value)
 		}
 
 		items = append(items, ci)
@@ -471,7 +712,7 @@ func buildListOperationStatement(ctx parser.IListOperationStatementContext) *ast
 				stmt.InputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
 			}
 			if expr := op.Expression(0); expr != nil {
-				stmt.Condition = buildExpression(expr)
+				stmt.Condition = buildSourceExpression(expr)
 			}
 		} else if op.FILTER() != nil {
 			stmt.Operation = ast.ListOpFilter
@@ -479,7 +720,7 @@ func buildListOperationStatement(ctx parser.IListOperationStatementContext) *ast
 				stmt.InputVariable = strings.TrimPrefix(vars[0].GetText(), "$")
 			}
 			if expr := op.Expression(0); expr != nil {
-				stmt.Condition = buildExpression(expr)
+				stmt.Condition = buildSourceExpression(expr)
 			}
 		} else if op.SORT() != nil {
 			stmt.Operation = ast.ListOpSort
@@ -536,10 +777,10 @@ func buildListOperationStatement(ctx parser.IListOperationStatementContext) *ast
 			}
 			exprs := op.AllExpression()
 			if len(exprs) >= 1 {
-				stmt.OffsetExpr = buildExpression(exprs[0])
+				stmt.OffsetExpr = buildSourceExpression(exprs[0])
 			}
 			if len(exprs) >= 2 {
-				stmt.LimitExpr = buildExpression(exprs[1])
+				stmt.LimitExpr = buildSourceExpression(exprs[1])
 			}
 		}
 	}
@@ -603,7 +844,7 @@ func buildAggregateListStatement(ctx parser.IAggregateListStatementContext) *ast
 			stmt.Operation = ast.AggregateSum
 			if exprCtx := op.Expression(); exprCtx != nil {
 				stmt.IsExpression = true
-				stmt.Expression = buildExpression(exprCtx)
+				stmt.Expression = buildSourceExpression(exprCtx)
 				if v := op.VARIABLE(); v != nil {
 					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
 				}
@@ -614,7 +855,7 @@ func buildAggregateListStatement(ctx parser.IAggregateListStatementContext) *ast
 			stmt.Operation = ast.AggregateAverage
 			if exprCtx := op.Expression(); exprCtx != nil {
 				stmt.IsExpression = true
-				stmt.Expression = buildExpression(exprCtx)
+				stmt.Expression = buildSourceExpression(exprCtx)
 				if v := op.VARIABLE(); v != nil {
 					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
 				}
@@ -625,7 +866,7 @@ func buildAggregateListStatement(ctx parser.IAggregateListStatementContext) *ast
 			stmt.Operation = ast.AggregateMinimum
 			if exprCtx := op.Expression(); exprCtx != nil {
 				stmt.IsExpression = true
-				stmt.Expression = buildExpression(exprCtx)
+				stmt.Expression = buildSourceExpression(exprCtx)
 				if v := op.VARIABLE(); v != nil {
 					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
 				}
@@ -636,7 +877,7 @@ func buildAggregateListStatement(ctx parser.IAggregateListStatementContext) *ast
 			stmt.Operation = ast.AggregateMaximum
 			if exprCtx := op.Expression(); exprCtx != nil {
 				stmt.IsExpression = true
-				stmt.Expression = buildExpression(exprCtx)
+				stmt.Expression = buildSourceExpression(exprCtx)
 				if v := op.VARIABLE(); v != nil {
 					stmt.InputVariable = strings.TrimPrefix(v.GetText(), "$")
 				}
@@ -827,7 +1068,7 @@ func buildShowPageArgList(ctx parser.IShowPageArgListContext) []ast.ShowPageArg 
 			// Widget-style: Param: $value
 			spa.ParamName = identifierOrKeywordText(iok)
 			if expr := arg.Expression(); expr != nil {
-				spa.Value = buildExpression(expr)
+				spa.Value = buildSourceExpression(expr)
 			}
 		} else {
 			// Canonical: $Param = $value
@@ -838,7 +1079,7 @@ func buildShowPageArgList(ctx parser.IShowPageArgListContext) []ast.ShowPageArg 
 			if len(vars) >= 2 {
 				spa.Value = &ast.VariableExpr{Name: strings.TrimPrefix(vars[1].GetText(), "$")}
 			} else if expr := arg.Expression(); expr != nil {
-				spa.Value = buildExpression(expr)
+				spa.Value = buildSourceExpression(expr)
 			}
 		}
 
@@ -861,7 +1102,7 @@ func buildShowMessageStatement(ctx parser.IShowMessageStatementContext) *ast.Sho
 	}
 
 	if expr := smCtx.Expression(); expr != nil {
-		stmt.Message = buildExpression(expr)
+		stmt.Message = buildSourceExpression(expr)
 	}
 
 	if id := smCtx.IdentifierOrKeyword(); id != nil {
@@ -871,8 +1112,11 @@ func buildShowMessageStatement(ctx parser.IShowMessageStatementContext) *ast.Sho
 	// Build template arguments (optional)
 	if exprList := smCtx.ExpressionList(); exprList != nil {
 		listCtx := exprList.(*parser.ExpressionListContext)
-		for _, expr := range listCtx.AllExpression() {
-			stmt.TemplateArgs = append(stmt.TemplateArgs, buildExpression(expr))
+		allExprs := listCtx.AllExpression()
+		for i, expr := range allExprs {
+			value := buildSourceExpression(expr)
+			value = appendExpressionListTrailingWhitespace(listCtx, nextParserRuleContext(allExprs, i), expr, value)
+			stmt.TemplateArgs = append(stmt.TemplateArgs, value)
 		}
 	}
 
@@ -913,14 +1157,17 @@ func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementCon
 
 	// Build message expression
 	if msgExpr := vfCtx.Expression(); msgExpr != nil {
-		stmt.Message = buildExpression(msgExpr)
+		stmt.Message = buildSourceExpression(msgExpr)
 	}
 
 	// Build template arguments (optional)
 	if exprList := vfCtx.ExpressionList(); exprList != nil {
 		listCtx := exprList.(*parser.ExpressionListContext)
-		for _, expr := range listCtx.AllExpression() {
-			stmt.TemplateArgs = append(stmt.TemplateArgs, buildExpression(expr))
+		allExprs := listCtx.AllExpression()
+		for i, expr := range allExprs {
+			value := buildSourceExpression(expr)
+			value = appendExpressionListTrailingWhitespace(listCtx, nextParserRuleContext(allExprs, i), expr, value)
+			stmt.TemplateArgs = append(stmt.TemplateArgs, value)
 		}
 	}
 
@@ -1015,7 +1262,7 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
 				Value: unquoteString(strLit.GetText()),
 			}
 		} else if expr := urlC.Expression(); expr != nil {
-			stmt.URL = buildExpression(expr)
+			stmt.URL = buildSourceExpression(expr)
 		}
 	}
 
@@ -1038,7 +1285,7 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
 			header.Name = unquoteString(strLit.GetText())
 		}
 		if expr := hdrCtx.Expression(); expr != nil {
-			header.Value = buildExpression(expr)
+			header.Value = buildSourceExpression(expr)
 		}
 		stmt.Headers = append(stmt.Headers, header)
 	}
@@ -1049,8 +1296,8 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
 		exprs := authCtx.AllExpression()
 		if len(exprs) >= 2 {
 			stmt.Auth = &ast.RestAuth{
-				Username: buildExpression(exprs[0]),
-				Password: buildExpression(exprs[1]),
+				Username: buildSourceExpression(exprs[0]),
+				Password: buildSourceExpression(exprs[1]),
 			}
 		}
 	}
@@ -1078,7 +1325,7 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
 					Value: unquoteString(strLit.GetText()),
 				}
 			} else if expr := bodyCtx.Expression(); expr != nil {
-				body.Template = buildExpression(expr)
+				body.Template = buildSourceExpression(expr)
 			}
 			// Get template parameters
 			if tplParams := bodyCtx.TemplateParams(); tplParams != nil {
@@ -1093,7 +1340,7 @@ func buildRestCallStatement(ctx parser.IRestCallStatementContext) *ast.RestCallS
 	if timeoutClause := restCtx.RestCallTimeoutClause(); timeoutClause != nil {
 		timeoutCtx := timeoutClause.(*parser.RestCallTimeoutClauseContext)
 		if expr := timeoutCtx.Expression(); expr != nil {
-			stmt.Timeout = buildExpression(expr)
+			stmt.Timeout = buildSourceExpression(expr)
 		}
 	}
 
