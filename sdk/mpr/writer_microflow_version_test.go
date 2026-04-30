@@ -86,12 +86,12 @@ func TestSerializeEndEvent_EmptyReturnValueHasNoTrailingLineBreak(t *testing.T) 
 			Position:    model.Point{X: 10, Y: 20},
 			Size:        model.Size{Width: 20, Height: 20},
 		},
-		ReturnValue: "empty",
+		ReturnValue: "",
 	}
 
 	doc := serializeMicroflowObject(end)
-	if got := bsonGetKey(doc, "ReturnValue"); got != "empty" {
-		t.Fatalf("ReturnValue = %q, want %q", got, "empty")
+	if got := bsonGetKey(doc, "ReturnValue"); got != "" {
+		t.Fatalf("ReturnValue = %q, want empty string", got)
 	}
 }
 
