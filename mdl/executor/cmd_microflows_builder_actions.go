@@ -360,7 +360,9 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 
 		lastID := model.ID("")
 		pendingCase := ""
+		var prevAnchor *ast.FlowAnchors
 		for _, stmt := range br.body {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID == "" {
 				continue
@@ -371,14 +373,26 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 			}
 			if lastID == "" {
 				fb.addGroupedEnumSplitFlows(splitID, actID, br.values, i, splitX+SplitWidth+HorizontalSpacing/4, branchY)
+				// The first statement in a case can carry @anchor(from:…,
+				// to:…) that should apply to the split→firstActivity flow.
+				// addGroupedEnumSplitFlows appends one flow per case value;
+				// anchor the last one so `@anchor(to: top)` etc. round-trips
+				// through describe → exec without silently dropping.
+				if thisAnchor != nil && len(fb.flows) > 0 {
+					applyUserAnchors(fb.flows[len(fb.flows)-1], nil, thisAnchor)
+				}
 			} else {
+				var flow *microflows.SequenceFlow
 				if pendingCase != "" {
-					fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, actID, pendingCase))
+					flow = newHorizontalFlowWithCase(lastID, actID, pendingCase)
 					pendingCase = ""
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastID, actID))
+					flow = newHorizontalFlow(lastID, actID)
 				}
+				applyUserAnchors(flow, prevAnchor, thisAnchor)
+				fb.flows = append(fb.flows, flow)
 			}
+			prevAnchor = thisAnchor
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
 				fb.nextConnectionPoint = ""
