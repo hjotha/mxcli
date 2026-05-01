@@ -205,6 +205,14 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				flow := newUpwardFlow(lastElseID, mergeID)
 				applyUserAnchors(flow, prevElseAnchor, nil)
 				fb.flows = append(fb.flows, flow)
+			} else {
+				// Empty ELSE body - connect split directly to merge going down (false case).
+				// Without this, the split has no outgoing "false" flow and Studio Pro
+				// raises CE0079 ("condition value should be configured for an outgoing
+				// flow"). Mirrors the empty-THEN handling in the `else` branch above.
+				flow := newDownwardFlowWithCase(splitID, mergeID, "false")
+				applyUserAnchors(flow, falseBranchAnchor, falseBranchAnchor)
+				fb.flows = append(fb.flows, flow)
 			}
 		}
 	} else {
