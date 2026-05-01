@@ -320,6 +320,15 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 	if len(s.ElseBody) > 0 {
 		branches = append(branches, branch{body: s.ElseBody})
 	}
+	// Studio Pro lays each split branch with one of 16 distinct
+	// origin/destination connection-index pairs (see splitCaseOrderAnchors).
+	// More than 16 branches collide on connection index 0 and produce an
+	// invalid graph that Studio Pro silently rejects on load. Fail the build
+	// loudly here instead of letting the corruption ship.
+	if len(branches) > len(splitCaseOrderAnchors) {
+		fb.addError("enum split %q has %d branches but only %d distinct anchor positions are supported; reduce the number of cases or split into nested decisions",
+			"$"+s.Variable, len(branches), len(splitCaseOrderAnchors))
+	}
 
 	branchWidth := fb.measurer.measureStatements(appendEnumBodies(s)).Width
 	if branchWidth == 0 {

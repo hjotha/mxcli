@@ -264,12 +264,14 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 				return false
 			}
 		}
-		if len(s.ElseBody) == 0 {
-			// A described enum split may have no default flow at all. When every
-			// explicit case terminates, there is no split continuation to thread
-			// into the parent flow.
-			return true
-		}
+		// Every reachable branch terminates, so the split has no continuation
+		// to thread into the parent flow. This intentionally diverges from
+		// `bodyReturns` in validate_microflow.go, which treats an enum split
+		// without an `else` as non-terminal because authored MDL is expected
+		// to provide an `else` body covering missing values. Here we accept
+		// described-from-MPR graphs where Studio Pro produced an exhaustive
+		// set of value cases without a default flow — so the no-else case is
+		// terminal too.
 		return true
 	default:
 		return false
