@@ -518,7 +518,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.ResultVariableName != "" {
+		if a.UseReturnVariable && a.ResultVariableName != "" {
 			return fmt.Sprintf("$%s = call microflow %s(%s);", a.ResultVariableName, mfName, paramStr)
 		}
 		return fmt.Sprintf("call microflow %s(%s);", mfName, paramStr)
@@ -547,7 +547,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.OutputVariableName != "" {
+		if a.UseReturnVariable && a.OutputVariableName != "" {
 			return fmt.Sprintf("$%s = call nanoflow %s(%s);", a.OutputVariableName, nfName, paramStr)
 		}
 		return fmt.Sprintf("call nanoflow %s(%s);", nfName, paramStr)
@@ -601,7 +601,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.ResultVariableName != "" {
+		if a.UseReturnVariable && a.ResultVariableName != "" {
 			return fmt.Sprintf("$%s = call java action %s(%s);", a.ResultVariableName, javaActionName, paramStr)
 		}
 		return fmt.Sprintf("call java action %s(%s);", javaActionName, paramStr)
@@ -626,7 +626,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.ResultVariableName != "" {
+		if a.UseReturnVariable && a.ResultVariableName != "" {
 			return fmt.Sprintf("$%s = call external action %s.%s(%s);", a.ResultVariableName, serviceName, actionName, paramStr)
 		}
 		return fmt.Sprintf("call external action %s.%s(%s);", serviceName, actionName, paramStr)
@@ -768,7 +768,7 @@ func formatAction(
 		return fmt.Sprintf("get workflow data $%s as %s;", a.WorkflowVariable, a.Workflow)
 
 	case *microflows.WorkflowCallAction:
-		if a.OutputVariableName != "" {
+		if a.UseReturnVariable && a.OutputVariableName != "" {
 			return fmt.Sprintf("$%s = call workflow %s ($%s);", a.OutputVariableName, a.Workflow, a.WorkflowContextVariable)
 		}
 		return fmt.Sprintf("call workflow %s ($%s);", a.Workflow, a.WorkflowContextVariable)
@@ -865,7 +865,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.OutputVariableName != "" {
+		if a.UseReturnVariable && a.OutputVariableName != "" {
 			return fmt.Sprintf("$%s = call javascript action %s(%s);", a.OutputVariableName, jsActionName, paramStr)
 		}
 		return fmt.Sprintf("call javascript action %s(%s);", jsActionName, paramStr)
