@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strings"
@@ -435,6 +436,86 @@ func (fb *flowBuilder) addCallJavaScriptActionAction(s *ast.CallJavaScriptAction
 	}
 
 	return activity.ID
+}
+
+// addCallWebServiceAction creates a legacy SOAP WebServiceCallAction.
+func (fb *flowBuilder) addCallWebServiceAction(s *ast.CallWebServiceStmt) model.ID {
+	activityX := fb.posX
+	action := &microflows.WebServiceCallAction{
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: convertErrorHandlingType(s.ErrorHandling),
+		ServiceID:         model.ID(s.ServiceID),
+		OperationName:     s.OperationName,
+		SendMappingID:     model.ID(fb.resolveMappingRefForWrite(s.SendMappingID, true)),
+		ReceiveMappingID:  model.ID(fb.resolveMappingRefForWrite(s.ReceiveMappingID, false)),
+		OutputVariable:    s.OutputVariable,
+		UseReturnVariable: s.OutputVariable != "",
+	}
+	if s.RawBSONBase64 != "" {
+		raw, err := base64.StdEncoding.DecodeString(s.RawBSONBase64)
+		if err != nil {
+			fb.addError("invalid raw web service action payload: %v", err)
+		} else {
+			action.RawBSON = raw
+		}
+	}
+	if s.Timeout != nil {
+		action.TimeoutExpression = fb.exprToString(s.Timeout)
+	}
+
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+				Position:    model.Point{X: fb.posX, Y: fb.posY},
+				Size:        model.Size{Width: ActivityWidth, Height: ActivityHeight},
+			},
+			AutoGenerateCaption: true,
+			ErrorHandlingType:   convertErrorHandlingType(s.ErrorHandling),
+		},
+		Action: action,
+	}
+
+	fb.objects = append(fb.objects, activity)
+	fb.posX += fb.spacing
+
+	if s.OutputVariable != "" && fb.declaredVars != nil {
+		fb.declaredVars[s.OutputVariable] = "Unknown"
+	}
+
+	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+		errorY := fb.posY + VerticalSpacing
+		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
+		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
+	}
+
+	return activity.ID
+}
+
+func (fb *flowBuilder) resolveMappingRefForWrite(ref string, preferExport bool) string {
+	if ref == "" || !strings.Contains(ref, ".") || fb.backend == nil {
+		return ref
+	}
+	moduleName, name, ok := strings.Cut(ref, ".")
+	if !ok || moduleName == "" || name == "" {
+		return ref
+	}
+	if preferExport {
+		if mapping, err := fb.backend.GetExportMappingByQualifiedName(moduleName, name); err == nil && mapping != nil {
+			return string(mapping.ID)
+		}
+		if mapping, err := fb.backend.GetImportMappingByQualifiedName(moduleName, name); err == nil && mapping != nil {
+			return string(mapping.ID)
+		}
+	} else {
+		if mapping, err := fb.backend.GetImportMappingByQualifiedName(moduleName, name); err == nil && mapping != nil {
+			return string(mapping.ID)
+		}
+		if mapping, err := fb.backend.GetExportMappingByQualifiedName(moduleName, name); err == nil && mapping != nil {
+			return string(mapping.ID)
+		}
+	}
+	return ref
 }
 
 // addCallExternalActionAction creates a CALL EXTERNAL ACTION statement.

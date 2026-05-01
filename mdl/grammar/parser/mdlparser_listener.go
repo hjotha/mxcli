@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -418,6 +418,18 @@ type MDLParserListener interface {
 	// EnterDeclareStatement is called when entering the declareStatement production.
 	EnterDeclareStatement(c *DeclareStatementContext)
 
+	// EnterEnumSplitStatement is called when entering the enumSplitStatement production.
+	EnterEnumSplitStatement(c *EnumSplitStatementContext)
+
+	// EnterEnumSplitSource is called when entering the enumSplitSource production.
+	EnterEnumSplitSource(c *EnumSplitSourceContext)
+
+	// EnterEnumSplitCase is called when entering the enumSplitCase production.
+	EnterEnumSplitCase(c *EnumSplitCaseContext)
+
+	// EnterEnumSplitCaseValue is called when entering the enumSplitCaseValue production.
+	EnterEnumSplitCaseValue(c *EnumSplitCaseValueContext)
+
 	// EnterSetStatement is called when entering the setStatement production.
 	EnterSetStatement(c *SetStatementContext)
 
@@ -498,6 +510,12 @@ type MDLParserListener interface {
 
 	// EnterCallJavaScriptActionStatement is called when entering the callJavaScriptActionStatement production.
 	EnterCallJavaScriptActionStatement(c *CallJavaScriptActionStatementContext)
+
+	// EnterCallWebServiceStatement is called when entering the callWebServiceStatement production.
+	EnterCallWebServiceStatement(c *CallWebServiceStatementContext)
+
+	// EnterWebServiceReference is called when entering the webServiceReference production.
+	EnterWebServiceReference(c *WebServiceReferenceContext)
 
 	// EnterExecuteDatabaseQueryStatement is called when entering the executeDatabaseQueryStatement production.
 	EnterExecuteDatabaseQueryStatement(c *ExecuteDatabaseQueryStatementContext)
@@ -1750,6 +1768,18 @@ type MDLParserListener interface {
 	// ExitDeclareStatement is called when exiting the declareStatement production.
 	ExitDeclareStatement(c *DeclareStatementContext)
 
+	// ExitEnumSplitStatement is called when exiting the enumSplitStatement production.
+	ExitEnumSplitStatement(c *EnumSplitStatementContext)
+
+	// ExitEnumSplitSource is called when exiting the enumSplitSource production.
+	ExitEnumSplitSource(c *EnumSplitSourceContext)
+
+	// ExitEnumSplitCase is called when exiting the enumSplitCase production.
+	ExitEnumSplitCase(c *EnumSplitCaseContext)
+
+	// ExitEnumSplitCaseValue is called when exiting the enumSplitCaseValue production.
+	ExitEnumSplitCaseValue(c *EnumSplitCaseValueContext)
+
 	// ExitSetStatement is called when exiting the setStatement production.
 	ExitSetStatement(c *SetStatementContext)
 
@@ -1830,6 +1860,12 @@ type MDLParserListener interface {
 
 	// ExitCallJavaScriptActionStatement is called when exiting the callJavaScriptActionStatement production.
 	ExitCallJavaScriptActionStatement(c *CallJavaScriptActionStatementContext)
+
+	// ExitCallWebServiceStatement is called when exiting the callWebServiceStatement production.
+	ExitCallWebServiceStatement(c *CallWebServiceStatementContext)
+
+	// ExitWebServiceReference is called when exiting the webServiceReference production.
+	ExitWebServiceReference(c *WebServiceReferenceContext)
 
 	// ExitExecuteDatabaseQueryStatement is called when exiting the executeDatabaseQueryStatement production.
 	ExitExecuteDatabaseQueryStatement(c *ExecuteDatabaseQueryStatementContext)

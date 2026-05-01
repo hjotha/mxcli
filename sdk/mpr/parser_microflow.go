@@ -502,9 +502,9 @@ func parseActionActivity(raw map[string]any) *microflows.ActionActivity {
 		activity.ErrorHandlingType = microflows.ErrorHandlingType(errorHandling)
 	}
 
-	// Parse the action
-	if action, ok := raw["Action"].(map[string]any); ok {
-		activity.Action = parseMicroflowAction(action)
+	// Parse the action.
+	if action := parseMicroflowActionValue(raw["Action"]); action != nil {
+		activity.Action = action
 	}
 
 	return activity
@@ -544,6 +544,7 @@ var microflowActionParsers = map[string]func(map[string]any) microflows.Microflo
 	"Microflows$JavaActionCallAction":       func(r map[string]any) microflows.MicroflowAction { return parseJavaActionCallAction(r) },
 	"Microflows$JavaScriptActionCallAction": func(r map[string]any) microflows.MicroflowAction { return parseJavaScriptActionCallAction(r) },
 	"Microflows$CallExternalAction":         func(r map[string]any) microflows.MicroflowAction { return parseCallExternalAction(r) },
+	"Microflows$CallWebServiceAction":       func(r map[string]any) microflows.MicroflowAction { return parseWebServiceCallAction(r) },
 
 	// Client actions (ShowFormAction is storageName for ShowPageAction)
 	"Microflows$ShowFormAction":           func(r map[string]any) microflows.MicroflowAction { return parseShowPageAction(r) },
@@ -599,6 +600,27 @@ func parseMicroflowAction(raw map[string]any) microflows.MicroflowAction {
 		return fn(raw)
 	}
 	return &microflows.UnknownAction{TypeName: typeName}
+}
+
+func parseMicroflowActionValue(raw any) microflows.MicroflowAction {
+	switch action := raw.(type) {
+	case primitive.D:
+		actionMap := action.Map()
+		typeName, _ := actionMap["$Type"].(string)
+		if typeName == "Microflows$CallWebServiceAction" {
+			return parseWebServiceCallActionFromD(action)
+		}
+		return parseMicroflowAction(actionMap)
+	case map[string]any:
+		return parseMicroflowAction(action)
+	case primitive.M:
+		return parseMicroflowAction(map[string]any(action))
+	default:
+		if actionMap := extractBsonMap(raw); actionMap != nil {
+			return parseMicroflowAction(actionMap)
+		}
+		return nil
+	}
 }
 
 func parseCreateVariableAction(raw map[string]any) *microflows.CreateVariableAction {

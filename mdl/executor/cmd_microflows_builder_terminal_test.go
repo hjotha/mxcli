@@ -247,3 +247,46 @@ func TestBuildFlowGraph_ManualWhileTrueTerminalDoesNotAddFallthroughEnd(t *testi
 		}
 	}
 }
+
+func TestLastStmtIsReturn_EnumSplitAllBranchesReturn_Terminal(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.EnumSplitStmt{
+			Cases: []ast.EnumSplitCase{
+				{Values: []string{"Open"}, Body: []ast.MicroflowStatement{&ast.ReturnStmt{}}},
+				{Values: []string{"Closed"}, Body: []ast.MicroflowStatement{&ast.RaiseErrorStmt{}}},
+			},
+			ElseBody: []ast.MicroflowStatement{&ast.ReturnStmt{}},
+		},
+	}
+	if !lastStmtIsReturn(body) {
+		t.Error("ENUM split where all cases and ELSE terminate must be terminal")
+	}
+}
+
+func TestLastStmtIsReturn_EnumSplitWithoutElseAllBranchesReturn_Terminal(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.EnumSplitStmt{
+			Cases: []ast.EnumSplitCase{
+				{Values: []string{"Open"}, Body: []ast.MicroflowStatement{&ast.ReturnStmt{}}},
+				{Values: []string{"Closed"}, Body: []ast.MicroflowStatement{&ast.ReturnStmt{}}},
+			},
+		},
+	}
+	if !lastStmtIsReturn(body) {
+		t.Error("ENUM split without ELSE must be terminal when every emitted case terminates")
+	}
+}
+
+func TestLastStmtIsReturn_EnumSplitWithoutElseNonTerminalCase_NotTerminal(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.EnumSplitStmt{
+			Cases: []ast.EnumSplitCase{
+				{Values: []string{"Open"}, Body: []ast.MicroflowStatement{&ast.ReturnStmt{}}},
+				{Values: []string{"Closed"}, Body: []ast.MicroflowStatement{&ast.LogStmt{}}},
+			},
+		},
+	}
+	if lastStmtIsReturn(body) {
+		t.Error("ENUM split without ELSE must not be terminal when any emitted case can continue")
+	}
+}

@@ -43,6 +43,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 	// Check each statement type
 	if decl := mfCtx.DeclareStatement(); decl != nil {
 		stmt = buildDeclareStatement(decl)
+	} else if enumSplit := mfCtx.EnumSplitStatement(); enumSplit != nil {
+		stmt = buildEnumSplitStatement(enumSplit)
 	} else if set := mfCtx.SetStatement(); set != nil {
 		stmt = buildSetStatement(set)
 	} else if createList := mfCtx.CreateListStatement(); createList != nil {
@@ -80,6 +82,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildCallJavaActionStatement(call)
 	} else if call := mfCtx.CallJavaScriptActionStatement(); call != nil {
 		stmt = buildCallJavaScriptActionStatement(call)
+	} else if call := mfCtx.CallWebServiceStatement(); call != nil {
+		stmt = buildCallWebServiceStatement(call)
 	} else if call := mfCtx.ExecuteDatabaseQueryStatement(); call != nil {
 		stmt = buildExecuteDatabaseQueryStatement(call)
 	} else if call := mfCtx.CallExternalActionStatement(); call != nil {
@@ -148,6 +152,55 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 	}
 
 	return stmt
+}
+
+func buildEnumSplitStatement(ctx parser.IEnumSplitStatementContext) *ast.EnumSplitStmt {
+	if ctx == nil {
+		return nil
+	}
+	enumCtx := ctx.(*parser.EnumSplitStatementContext)
+
+	stmt := &ast.EnumSplitStmt{}
+	if source := enumCtx.EnumSplitSource(); source != nil {
+		sourceCtx := source.(*parser.EnumSplitSourceContext)
+		if attr := sourceCtx.AttributePath(); attr != nil {
+			stmt.Variable = strings.TrimPrefix(attr.GetText(), "$")
+		} else if variable := sourceCtx.VARIABLE(); variable != nil {
+			stmt.Variable = strings.TrimPrefix(variable.GetText(), "$")
+		}
+	}
+
+	for _, caseCtx := range enumCtx.AllEnumSplitCase() {
+		c := caseCtx.(*parser.EnumSplitCaseContext)
+		values := make([]string, 0, len(c.AllEnumSplitCaseValue()))
+		for _, valueCtx := range c.AllEnumSplitCaseValue() {
+			values = append(values, enumSplitCaseValueText(valueCtx))
+		}
+		if len(values) == 0 {
+			continue
+		}
+		stmt.Cases = append(stmt.Cases, ast.EnumSplitCase{
+			Value:  values[0],
+			Values: values,
+			Body:   buildMicroflowBody(c.MicroflowBody()),
+		})
+	}
+
+	if enumCtx.ELSE() != nil && enumCtx.MicroflowBody() != nil {
+		stmt.ElseBody = buildMicroflowBody(enumCtx.MicroflowBody())
+	}
+
+	return stmt
+}
+
+func enumSplitCaseValueText(ctx parser.IEnumSplitCaseValueContext) string {
+	if ctx == nil {
+		return ""
+	}
+	if strings.EqualFold(ctx.GetText(), "(empty)") {
+		return "(empty)"
+	}
+	return ctx.GetText()
 }
 
 // extractMicroflowAnnotations extracts activity annotations from annotation contexts.
@@ -416,6 +469,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		s.Annotations = ann
+	case *ast.EnumSplitStmt:
+		s.Annotations = ann
 	case *ast.MfSetStmt:
 		s.Annotations = ann
 	case *ast.ReturnStmt:
@@ -449,6 +504,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	case *ast.CallJavaActionStmt:
 		s.Annotations = ann
 	case *ast.CallJavaScriptActionStmt:
+		s.Annotations = ann
+	case *ast.CallWebServiceStmt:
 		s.Annotations = ann
 	case *ast.ExecuteDatabaseQueryStmt:
 		s.Annotations = ann
@@ -853,6 +910,7 @@ func buildChangeObjectStatement(ctx parser.IChangeObjectStatementContext) *ast.C
 	if memberList := changeCtx.MemberAssignmentList(); memberList != nil {
 		stmt.Changes = buildMemberAssignmentList(memberList)
 	}
+	stmt.RefreshInClient = changeCtx.REFRESH() != nil
 
 	return stmt
 }

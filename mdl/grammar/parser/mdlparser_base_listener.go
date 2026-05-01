@@ -1,4 +1,4 @@
-// Code generated from MDLParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from MDLParser.g4 by ANTLR 4.13.1. DO NOT EDIT.
 
 package parser // MDLParser
 import "github.com/antlr4-go/antlr/v4"
@@ -900,6 +900,30 @@ func (s *BaseMDLParserListener) EnterDeclareStatement(ctx *DeclareStatementConte
 // ExitDeclareStatement is called when production declareStatement is exited.
 func (s *BaseMDLParserListener) ExitDeclareStatement(ctx *DeclareStatementContext) {}
 
+// EnterEnumSplitStatement is called when production enumSplitStatement is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitStatement(ctx *EnumSplitStatementContext) {}
+
+// ExitEnumSplitStatement is called when production enumSplitStatement is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitStatement(ctx *EnumSplitStatementContext) {}
+
+// EnterEnumSplitSource is called when production enumSplitSource is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitSource(ctx *EnumSplitSourceContext) {}
+
+// ExitEnumSplitSource is called when production enumSplitSource is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitSource(ctx *EnumSplitSourceContext) {}
+
+// EnterEnumSplitCase is called when production enumSplitCase is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitCase(ctx *EnumSplitCaseContext) {}
+
+// ExitEnumSplitCase is called when production enumSplitCase is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitCase(ctx *EnumSplitCaseContext) {}
+
+// EnterEnumSplitCaseValue is called when production enumSplitCaseValue is entered.
+func (s *BaseMDLParserListener) EnterEnumSplitCaseValue(ctx *EnumSplitCaseValueContext) {}
+
+// ExitEnumSplitCaseValue is called when production enumSplitCaseValue is exited.
+func (s *BaseMDLParserListener) ExitEnumSplitCaseValue(ctx *EnumSplitCaseValueContext) {}
+
 // EnterSetStatement is called when production setStatement is entered.
 func (s *BaseMDLParserListener) EnterSetStatement(ctx *SetStatementContext) {}
 
@@ -1063,6 +1087,18 @@ func (s *BaseMDLParserListener) EnterCallJavaScriptActionStatement(ctx *CallJava
 // ExitCallJavaScriptActionStatement is called when production callJavaScriptActionStatement is exited.
 func (s *BaseMDLParserListener) ExitCallJavaScriptActionStatement(ctx *CallJavaScriptActionStatementContext) {
 }
+
+// EnterCallWebServiceStatement is called when production callWebServiceStatement is entered.
+func (s *BaseMDLParserListener) EnterCallWebServiceStatement(ctx *CallWebServiceStatementContext) {}
+
+// ExitCallWebServiceStatement is called when production callWebServiceStatement is exited.
+func (s *BaseMDLParserListener) ExitCallWebServiceStatement(ctx *CallWebServiceStatementContext) {}
+
+// EnterWebServiceReference is called when production webServiceReference is entered.
+func (s *BaseMDLParserListener) EnterWebServiceReference(ctx *WebServiceReferenceContext) {}
+
+// ExitWebServiceReference is called when production webServiceReference is exited.
+func (s *BaseMDLParserListener) ExitWebServiceReference(ctx *WebServiceReferenceContext) {}
 
 // EnterExecuteDatabaseQueryStatement is called when production executeDatabaseQueryStatement is entered.
 func (s *BaseMDLParserListener) EnterExecuteDatabaseQueryStatement(ctx *ExecuteDatabaseQueryStatementContext) {
