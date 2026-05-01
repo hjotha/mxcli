@@ -153,3 +153,16 @@ func TestBuilder_IfBranchAnchorOverrides(t *testing.T) {
 			falseF.OriginConnectionIndex, falseF.DestinationConnectionIndex, AnchorBottom, AnchorTop)
 	}
 }
+
+func TestBranchDestinationAnchorPrefersBranchToSide(t *testing.T) {
+	branchAnchor := &ast.FlowAnchors{From: ast.AnchorSideRight, To: ast.AnchorSideTop}
+	stmtAnchor := &ast.FlowAnchors{From: ast.AnchorSideBottom, To: ast.AnchorSideLeft}
+
+	got := branchDestinationAnchor(branchAnchor, stmtAnchor)
+	if got != branchAnchor {
+		t.Fatal("expected branch-level destination anchor to win for split-to-branch flow")
+	}
+	if got.To != ast.AnchorSideTop {
+		t.Fatalf("destination side = %v, want top", got.To)
+	}
+}

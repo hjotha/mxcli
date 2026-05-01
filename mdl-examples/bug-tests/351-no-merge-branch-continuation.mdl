@@ -1,0 +1,46 @@
+-- ============================================================================
+-- Bug #351 (part): No-merge branch continuation
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   When an `if/else` had ONE terminal branch (e.g. `return`) and ONE
+--   continuing branch, the builder did not need to insert an
+--   `ExclusiveMerge`. In that no-merge shape the parent flow that came
+--   after the IF was still being attached to the original split node
+--   instead of the tail of the continuing branch. The resulting graph
+--   re-described as if the post-IF activity belonged to the split, and
+--   `mx check` could fail with CE0117 because the next activity had
+--   ambiguous incoming flows.
+--
+-- After fix:
+--   When the merge is skipped, the parent flow is attached to the tail
+--   of the continuing branch (not the split). Both branches with merges
+--   and no-merge shapes are now handled symmetrically.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/351-no-merge-branch-continuation.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest351.MF_NoMergeIfElse"
+--   `mx check` against the resulting MPR must report 0 errors and the
+--   describe → exec → describe cycle must converge to a fixpoint.
+-- ============================================================================
+
+create module BugTest351;
+
+-- IF with one terminal branch (return) and one continuing branch (log).
+-- The post-IF `log info ... 'after branch'` and the final `return false;`
+-- must connect to the ELSE tail, not to the split.
+create microflow BugTest351.MF_NoMergeIfElse (
+  $Done: boolean
+)
+returns boolean as $Result
+begin
+  if $Done then
+    return true;
+  else
+    log info node 'BugTest351' 'else branch';
+  end if;
+
+  log info node 'BugTest351' 'after branch';
+  return false;
+end;
+/
