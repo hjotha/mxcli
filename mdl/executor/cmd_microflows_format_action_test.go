@@ -3,12 +3,15 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	mdltypes "github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // =============================================================================
@@ -1139,5 +1142,108 @@ func TestGetActionErrorHandlingType_JavaScriptActionCallAction(t *testing.T) {
 	got := getActionErrorHandlingType(activity)
 	if got != microflows.ErrorHandlingTypeContinue {
 		t.Errorf("got %q, want %q", got, microflows.ErrorHandlingTypeContinue)
+	}
+}
+
+func TestFormatAction_WebServiceCallResolvesKnownReferences(t *testing.T) {
+	moduleID := mkID("soap-module")
+	serviceID := mkID("soap-service")
+	sendMappingID := mkID("soap-send")
+	receiveMappingID := mkID("soap-receive")
+	serviceContents, err := bson.Marshal(bson.M{"Name": "OrderService"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	backend := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListRawUnitsByTypeFunc: func(typePrefix string) ([]*mdltypes.RawUnit, error) {
+			if typePrefix != "WebServices$ImportedWebService" {
+				t.Fatalf("unexpected type prefix %q", typePrefix)
+			}
+			return []*mdltypes.RawUnit{{
+				ID:          serviceID,
+				ContainerID: moduleID,
+				Type:        "WebServices$ImportedWebService",
+				Contents:    serviceContents,
+			}}, nil
+		},
+		ListExportMappingsFunc: func() ([]*model.ExportMapping, error) {
+			return []*model.ExportMapping{{
+				BaseElement: model.BaseElement{ID: sendMappingID},
+				ContainerID: moduleID,
+				Name:        "OrderRequest",
+			}}, nil
+		},
+		ListImportMappingsFunc: func() ([]*model.ImportMapping, error) {
+			return []*model.ImportMapping{{
+				BaseElement: model.BaseElement{ID: receiveMappingID},
+				ContainerID: moduleID,
+				Name:        "OrderResponse",
+			}}, nil
+		},
+	}
+	h := mkHierarchy(&model.Module{BaseElement: model.BaseElement{ID: moduleID}, Name: "SyntheticSOAP"})
+	ctx, _ := newMockCtx(t, withBackend(backend), withHierarchy(h))
+
+	action := &microflows.WebServiceCallAction{
+		ServiceID:         serviceID,
+		OperationName:     "FetchOrders",
+		SendMappingID:     sendMappingID,
+		ReceiveMappingID:  receiveMappingID,
+		OutputVariable:    "Root",
+		UseReturnVariable: true,
+	}
+	got := formatAction(ctx, action, nil, nil)
+	want := "$Root = call web service SyntheticSOAP.OrderService\noperation FetchOrders\nsend mapping SyntheticSOAP.OrderRequest\nreceive mapping SyntheticSOAP.OrderResponse;"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_WebServiceCallKeepsRawReferencesWhenUnknown(t *testing.T) {
+	backend := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListRawUnitsByTypeFunc: func(typePrefix string) ([]*mdltypes.RawUnit, error) {
+			return nil, nil
+		},
+		ListExportMappingsFunc: func() ([]*model.ExportMapping, error) {
+			return nil, nil
+		},
+		ListImportMappingsFunc: func() ([]*model.ImportMapping, error) {
+			return nil, nil
+		},
+	}
+	ctx, _ := newMockCtx(t, withBackend(backend), withHierarchy(mkHierarchy()))
+
+	action := &microflows.WebServiceCallAction{
+		ServiceID:        "dangling-service-id",
+		OperationName:    "FetchOrders",
+		SendMappingID:    "dangling-send-id",
+		ReceiveMappingID: "dangling-receive-id",
+		OutputVariable:   "Root",
+	}
+	got := formatAction(ctx, action, nil, nil)
+	want := "$Root = call web service 'dangling-service-id'\noperation FetchOrders\nsend mapping 'dangling-send-id'\nreceive mapping 'dangling-receive-id';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_WebServiceCallRaw(t *testing.T) {
+	raw, err := bson.Marshal(bson.D{
+		{Key: "$ID", Value: "soap-action"},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "OperationName", Value: "FetchOrders"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := formatAction(nil, &microflows.WebServiceCallAction{
+		OutputVariable: "Root",
+		RawBSON:        raw,
+	}, nil, nil)
+	if !strings.HasPrefix(got, "$Root = call web service raw '") {
+		t.Fatalf("got %q", got)
 	}
 }
