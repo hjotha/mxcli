@@ -56,11 +56,11 @@ func runMarketplace(t *testing.T, handler http.HandlerFunc, args ...string) (str
 
 func TestMarketplaceSearch_TableOutput(t *testing.T) {
 	out, err := runMarketplace(t, func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.RawQuery, "search=database") {
-			t.Errorf("expected search=database in query, got %q", r.URL.RawQuery)
+		if !strings.Contains(r.URL.RawQuery, "search=community") {
+			t.Errorf("expected search=community in query, got %q", r.URL.RawQuery)
 		}
 		_, _ = w.Write([]byte(sampleContentList))
-	}, "search", "database")
+	}, "search", "community")
 
 	if err != nil {
 		t.Fatalf("run: %v\noutput: %s", err, out)
@@ -76,7 +76,7 @@ func TestMarketplaceSearch_TableOutput(t *testing.T) {
 func TestMarketplaceSearch_JSON(t *testing.T) {
 	out, err := runMarketplace(t, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(sampleContentList))
-	}, "search", "database", "--json")
+	}, "search", "community", "--json")
 
 	if err != nil {
 		t.Fatal(err)

@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +32,48 @@ const sampleContentList = `{
         "versionNumber": "11.5.0",
         "minSupportedMendixVersion": "10.24.0",
         "publicationDate": "2026-01-13T06:57:14.512Z"
+      }
+    }
+  ]
+}`
+
+// sampleMultiContentList has two items: one matching "database", one not.
+const sampleMultiContentList = `{
+  "items": [
+    {
+      "contentId": 2888,
+      "publisher": "Mendix",
+      "type": "Module",
+      "latestVersion": {
+        "name": "Database Connector",
+        "versionId": "aaaa",
+        "versionNumber": "3.1.0",
+        "minSupportedMendixVersion": "9.0.0",
+        "publicationDate": "2025-06-01T00:00:00Z"
+      }
+    },
+    {
+      "contentId": 170,
+      "publisher": "Mendix",
+      "type": "Module",
+      "latestVersion": {
+        "name": "Community Commons",
+        "versionId": "bbbb",
+        "versionNumber": "11.5.0",
+        "minSupportedMendixVersion": "10.24.0",
+        "publicationDate": "2026-01-13T00:00:00Z"
+      }
+    },
+    {
+      "contentId": 999,
+      "publisher": "ACME",
+      "type": "Module",
+      "latestVersion": {
+        "name": "Advanced Database Tools",
+        "versionId": "cccc",
+        "versionNumber": "1.0.0",
+        "minSupportedMendixVersion": "9.0.0",
+        "publicationDate": "2024-01-01T00:00:00Z"
       }
     }
   ]
@@ -79,9 +122,11 @@ func TestSearch_PassesQueryAndLimit(t *testing.T) {
 		gotPath = r.URL.Path
 		gotQuery = r.URL.RawQuery
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(sampleContentList))
+		_, _ = w.Write([]byte(sampleMultiContentList))
 	})
 
+	// User requests limit=3 but because the API ignores ?search=, we fetch
+	// searchFetchLimit items and apply client-side filtering.
 	result, err := client.Search(context.Background(), "database", 3)
 	if err != nil {
 		t.Fatalf("Search: %v", err)
@@ -90,13 +135,72 @@ func TestSearch_PassesQueryAndLimit(t *testing.T) {
 		t.Errorf("path: got %q, want /v1/content", gotPath)
 	}
 	if !strings.Contains(gotQuery, "search=database") {
-		t.Errorf("query missing search: %q", gotQuery)
+		t.Errorf("query missing search param: %q", gotQuery)
 	}
-	if !strings.Contains(gotQuery, "limit=3") {
-		t.Errorf("query missing limit: %q", gotQuery)
+	// API receives searchFetchLimit, not the user's limit=3
+	if !strings.Contains(gotQuery, "limit="+strconv.Itoa(searchFetchLimit)) {
+		t.Errorf("expected API to receive limit=%d, got query %q", searchFetchLimit, gotQuery)
+	}
+	// Client-side filter: only items whose name contains "database"
+	if len(result.Items) != 2 {
+		t.Errorf("expected 2 filtered items (Database Connector + Advanced Database Tools), got %d", len(result.Items))
+	}
+}
+
+func TestSearch_ClientSideFiltering(t *testing.T) {
+	client, _ := newMockServer(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(sampleMultiContentList))
+	})
+
+	result, err := client.Search(context.Background(), "community", 20)
+	if err != nil {
+		t.Fatal(err)
 	}
 	if len(result.Items) != 1 || result.Items[0].ContentID != 170 {
-		t.Errorf("unexpected result: %+v", result)
+		t.Errorf("expected only Community Commons (170), got %+v", result.Items)
+	}
+}
+
+func TestSearch_ClientSideFiltering_NoMatch(t *testing.T) {
+	client, _ := newMockServer(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(sampleMultiContentList))
+	})
+
+	result, err := client.Search(context.Background(), "zzzznonexistent", 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) != 0 {
+		t.Errorf("expected 0 results for nonexistent query, got %d", len(result.Items))
+	}
+}
+
+func TestSearch_ClientSideFiltering_LimitApplied(t *testing.T) {
+	client, _ := newMockServer(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(sampleMultiContentList))
+	})
+
+	// 2 items match "database", but user wants only 1
+	result, err := client.Search(context.Background(), "database", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) != 1 {
+		t.Errorf("expected limit of 1 applied after filtering, got %d items", len(result.Items))
+	}
+}
+
+func TestSearch_PublisherFiltering(t *testing.T) {
+	client, _ := newMockServer(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(sampleMultiContentList))
+	})
+
+	result, err := client.Search(context.Background(), "acme", 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) != 1 || result.Items[0].ContentID != 999 {
+		t.Errorf("expected ACME item (999), got %+v", result.Items)
 	}
 }
 

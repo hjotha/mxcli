@@ -10,7 +10,13 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
+
+// searchFetchLimit is the number of items fetched from the API when a search
+// query is provided. The marketplace API accepts the ?search= parameter but
+// does not filter server-side, so we fetch a larger page and filter locally.
+const searchFetchLimit = 200
 
 // Client is a typed wrapper around the marketplace REST API. Callers
 // obtain an authenticated http.Client via internal/auth.ClientFor and
@@ -38,13 +44,21 @@ func NewWithBaseURL(httpClient *http.Client, baseURL string) *Client {
 
 // Search lists marketplace content matching a query. limit is the
 // maximum number of results to return; pass 0 for the API default.
+//
+// Note: the marketplace API accepts ?search= but does not filter server-side.
+// When query is non-empty, this method fetches a larger page and applies
+// client-side filtering on the item name and publisher (case-insensitive
+// substring match). The user-supplied limit is applied after filtering.
 func (c *Client) Search(ctx context.Context, query string, limit int) (*ContentList, error) {
 	q := url.Values{}
+	fetchLimit := limit
 	if query != "" {
-		q.Set("search", query)
+		// Fetch a larger page so client-side filtering has enough candidates.
+		q.Set("search", query) // kept in case the API ever starts honouring it
+		fetchLimit = searchFetchLimit
 	}
-	if limit > 0 {
-		q.Set("limit", strconv.Itoa(limit))
+	if fetchLimit > 0 {
+		q.Set("limit", strconv.Itoa(fetchLimit))
 	}
 	path := "/v1/content"
 	if len(q) > 0 {
@@ -54,7 +68,31 @@ func (c *Client) Search(ctx context.Context, query string, limit int) (*ContentL
 	if err := c.get(ctx, path, &out); err != nil {
 		return nil, err
 	}
+
+	if query != "" {
+		out.Items = filterItems(out.Items, query)
+		if limit > 0 && len(out.Items) > limit {
+			out.Items = out.Items[:limit]
+		}
+	}
 	return &out, nil
+}
+
+// filterItems returns items whose name or publisher contains query
+// (case-insensitive substring match).
+func filterItems(items []Content, query string) []Content {
+	q := strings.ToLower(query)
+	var matched []Content
+	for _, item := range items {
+		name := ""
+		if item.LatestVersion != nil {
+			name = strings.ToLower(item.LatestVersion.Name)
+		}
+		if strings.Contains(name, q) || strings.Contains(strings.ToLower(item.Publisher), q) {
+			matched = append(matched, item)
+		}
+	}
+	return matched
 }
 
 // Get returns the full detail for a single content item by ID.
