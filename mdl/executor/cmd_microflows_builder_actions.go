@@ -132,12 +132,7 @@ func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.Variable)
 
 	return activity.ID
 }
@@ -168,12 +163,7 @@ func (fb *flowBuilder) addCommitAction(s *ast.MfCommitStmt) model.ID {
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, "")
 
 	return activity.ID
 }
@@ -202,12 +192,7 @@ func (fb *flowBuilder) addDeleteAction(s *ast.DeleteObjectStmt) model.ID {
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, "")
 
 	return activity.ID
 }
@@ -930,12 +915,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.Variable)
 
 	return activity.ID
 }

@@ -23,8 +23,10 @@ type flowBuilder struct {
 	posY                int
 	baseY               int // Base Y position (for returning after ELSE branches)
 	spacing             int
-	returnValue         string            // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnValue         string // Return value expression for RETURN statement (used by buildFlowGraph final EndEvent)
+	returnType          *ast.MicroflowReturnType
 	endsWithReturn      bool              // True if the flow already ends with EndEvent(s) from RETURN statements
+	lastReturnEndID     model.ID          // Last explicit RETURN EndEvent, used as a fallback error-handler target
 	varTypes            map[string]string // Variable name -> entity qualified name (for CHANGE statements)
 	declaredVars        map[string]string // Declared primitive variables: name -> type (e.g., "$IsValid" -> "Boolean")
 	errors              []string          // Validation errors collected during build
@@ -54,6 +56,20 @@ type flowBuilder struct {
 	nanoflowsCache        []*microflows.Nanoflow
 	nanoflowsCacheLoaded  bool
 	manualLoopBackTarget  model.ID
+	// Pending custom error-handler routing uses two representations: the
+	// currently active handler lives in the flat fields below, while handlers
+	// postponed across branch boundaries are queued in pendingErrorHandlers.
+	// Mutate this state through the helper methods in builder_flows.go so the
+	// active/queued invariant stays synchronized.
+	emptyErrorHandlerFrom    model.ID
+	errorHandlerTailFrom     model.ID
+	errorHandlerSource       model.ID
+	errorHandlerSkipVar      string
+	errorHandlerTailCase     string
+	errorHandlerTailAnchor   *ast.FlowAnchors
+	errorHandlerTailIsSource bool
+	errorHandlerReturnValue  string
+	pendingErrorHandlers     []pendingErrorHandlerState
 }
 
 type flowBuilderVariableState struct {
@@ -97,6 +113,10 @@ func (fb *flowBuilder) addErrorWithExample(message, example string) {
 // GetErrors returns all validation errors collected during build.
 func (fb *flowBuilder) GetErrors() []string {
 	return fb.errors
+}
+
+func (fb *flowBuilder) hasDeclaredReturnValue() bool {
+	return fb.returnType != nil && fb.returnType.Type.Kind != ast.TypeVoid
 }
 
 // errorExampleDeclareVariable returns an example for declaring a variable.

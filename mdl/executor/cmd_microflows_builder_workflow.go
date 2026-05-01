@@ -26,11 +26,7 @@ func (fb *flowBuilder) wrapAction(action microflows.MicroflowAction, errorHandli
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	if errorHandling != nil && len(errorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, errorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, errorHandling, "")
 	return activity.ID
 }
 
