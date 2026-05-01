@@ -54,6 +54,7 @@ BSON schema Registry ◄──── multi-version Support
 | [Microflow ADD Expression To List](PROPOSAL_microflow_add_expression_to_list.md) | Draft | Preserve expression-valued list-add actions in microflow round-trips | — |
 | [Microflow ENUM SPLIT Statement](PROPOSAL_microflow_enum_split_statement.md) | Draft | Preserve enumeration decision splits in microflow round-trips | — |
 | [Microflow CHANGE Refresh Modifier](PROPOSAL_microflow_change_refresh_modifier.md) | Draft | Preserve `RefreshInClient` on change-object actions | — |
+| [Microflow Inheritance Split And Cast Statements](PROPOSAL_microflow_inheritance_split_statement.md) | Draft | Preserve type-based microflow decisions and cast actions in round-trips | — |
 | [LLM MDL Assistance](PROPOSAL_llm_mdl_assistance.md) | Proposed | Enhanced error messages with examples, reorganized skills by use case | — |
 
 ### Testing & Evaluation

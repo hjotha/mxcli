@@ -154,6 +154,15 @@ func newHorizontalFlowWithEnumCase(originID, destinationID model.ID, caseValue s
 	return flow
 }
 
+func newHorizontalFlowWithInheritanceCase(originID, destinationID model.ID, entity string) *microflows.SequenceFlow {
+	flow := newHorizontalFlow(originID, destinationID)
+	flow.CaseValue = &microflows.InheritanceCase{
+		BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
+		EntityQualifiedName: entity,
+	}
+	return flow
+}
+
 // newDownwardFlowWithCase creates a SequenceFlow going down from origin (Bottom) to destination (Left)
 // Used when TRUE path goes below the main line
 func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
@@ -166,6 +175,20 @@ func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string)
 		CaseValue: microflows.EnumerationCase{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Value:       caseValue, // "true" or "false" as string
+		},
+	}
+}
+
+func newDownwardFlowWithInheritanceCase(originID, destinationID model.ID, entity string) *microflows.SequenceFlow {
+	return &microflows.SequenceFlow{
+		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
+		OriginID:                   originID,
+		DestinationID:              destinationID,
+		OriginConnectionIndex:      AnchorBottom,
+		DestinationConnectionIndex: AnchorLeft,
+		CaseValue: &microflows.InheritanceCase{
+			BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
+			EntityQualifiedName: entity,
 		},
 	}
 }
@@ -273,6 +296,16 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 			// explicit case terminates, there is no split continuation to thread
 			// into the parent flow.
 			return true
+		}
+		return true
+	case *ast.InheritanceSplitStmt:
+		if len(s.Cases) == 0 || len(s.ElseBody) == 0 || !lastStmtIsReturn(s.ElseBody) {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !lastStmtIsReturn(c.Body) {
+				return false
+			}
 		}
 		return true
 	default:
