@@ -57,6 +57,34 @@ type flowBuilder struct {
 	isNanoflow            bool // true when building a nanoflow — default error handling is "" not "Rollback"
 }
 
+type flowBuilderVariableState struct {
+	varTypes     map[string]string
+	declaredVars map[string]string
+}
+
+func (fb *flowBuilder) snapshotVariableState() flowBuilderVariableState {
+	return flowBuilderVariableState{
+		varTypes:     cloneStringMap(fb.varTypes),
+		declaredVars: cloneStringMap(fb.declaredVars),
+	}
+}
+
+func (fb *flowBuilder) restoreVariableState(state flowBuilderVariableState) {
+	fb.varTypes = state.varTypes
+	fb.declaredVars = state.declaredVars
+}
+
+func cloneStringMap(in map[string]string) map[string]string {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
 // addError records a validation error during flow building.
 func (fb *flowBuilder) addError(format string, args ...any) {
 	fb.errors = append(fb.errors, fmt.Sprintf(format, args...))

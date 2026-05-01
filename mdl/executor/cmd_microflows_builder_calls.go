@@ -131,7 +131,6 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		Microflow:         mfQN,
 		ParameterMappings: mappings,
 	}
-
 	action := &microflows.MicroflowCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  fb.ehType(s.ErrorHandling),

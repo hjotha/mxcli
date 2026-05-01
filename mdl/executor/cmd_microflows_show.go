@@ -751,6 +751,7 @@ func formatMicroflowActivities(
 	}
 
 	var lines []string
+	lines = append(lines, duplicateOutputVariableWarnings(mf.ObjectCollection)...)
 
 	// Sort flows by OriginConnectionIndex for each origin
 	for originID := range flowsByOrigin {
@@ -780,6 +781,95 @@ func formatMicroflowActivities(
 	traverseFlow(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, &lines, 0, nil, 0, annotationsByTarget)
 
 	return lines
+}
+
+func duplicateOutputVariableWarnings(oc *microflows.MicroflowObjectCollection) []string {
+	type occurrence struct {
+		variable string
+		pos      model.Point
+	}
+	var occurrences []occurrence
+	var walk func(*microflows.MicroflowObjectCollection)
+	walk = func(collection *microflows.MicroflowObjectCollection) {
+		if collection == nil {
+			return
+		}
+		for _, obj := range collection.Objects {
+			if activity, ok := obj.(*microflows.ActionActivity); ok {
+				if name := actionOutputVariableName(activity.Action); name != "" {
+					occurrences = append(occurrences, occurrence{variable: name, pos: obj.GetPosition()})
+				}
+			}
+			if loop, ok := obj.(*microflows.LoopedActivity); ok {
+				walk(loop.ObjectCollection)
+			}
+		}
+	}
+	walk(oc)
+
+	counts := make(map[string]int)
+	firstPos := make(map[string]model.Point)
+	for _, occ := range occurrences {
+		counts[occ.variable]++
+		if _, ok := firstPos[occ.variable]; !ok {
+			firstPos[occ.variable] = occ.pos
+		}
+	}
+
+	var names []string
+	for name, count := range counts {
+		if count > 1 {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+
+	warnings := make([]string, 0, len(names))
+	for _, name := range names {
+		pos := firstPos[name]
+		warnings = append(warnings, fmt.Sprintf("-- WARNING: duplicate output variable $%s at position (%d, %d) - model is invalid; open in Studio Pro to fix", name, pos.X, pos.Y))
+	}
+	return warnings
+}
+
+func actionOutputVariableName(action any) string {
+	switch a := action.(type) {
+	case *microflows.CreateObjectAction:
+		return a.OutputVariable
+	case *microflows.RetrieveAction:
+		return a.OutputVariable
+	case *microflows.JavaActionCallAction:
+		if a.UseReturnVariable {
+			return a.ResultVariableName
+		}
+	case *microflows.MicroflowCallAction:
+		if a.UseReturnVariable {
+			return a.ResultVariableName
+		}
+	case *microflows.NanoflowCallAction:
+		if a.UseReturnVariable {
+			return a.OutputVariableName
+		}
+	case *microflows.JavaScriptActionCallAction:
+		if a.UseReturnVariable {
+			return a.OutputVariableName
+		}
+	case *microflows.AggregateListAction:
+		return a.OutputVariable
+	case *microflows.ListOperationAction:
+		return a.OutputVariable
+	case *microflows.RestCallAction:
+		return a.OutputVariable
+	case *microflows.ImportMappingCallAction:
+		return a.OutputVariable
+	case *microflows.ExportMappingCallAction:
+		return a.OutputVariable
+	case *microflows.CallExternalAction:
+		if a.UseReturnVariable {
+			return a.ResultVariableName
+		}
+	}
+	return ""
 }
 
 // formatMicroflowActivitiesWithSourceMap generates MDL statements and populates a source map
@@ -815,6 +905,7 @@ func formatMicroflowActivitiesWithSourceMap(
 	}
 
 	var lines []string
+	lines = append(lines, duplicateOutputVariableWarnings(mf.ObjectCollection)...)
 
 	for originID := range flowsByOrigin {
 		flows := flowsByOrigin[originID]
