@@ -735,6 +735,10 @@ func (b *Builder) ExitDropStatement(ctx *parser.DropStatementContext) {
 		b.statements = append(b.statements, &ast.DropMicroflowStmt{
 			Name: buildQualifiedName(names[0]),
 		})
+	} else if ctx.NANOFLOW() != nil {
+		b.statements = append(b.statements, &ast.DropNanoflowStmt{
+			Name: buildQualifiedName(names[0]),
+		})
 	} else if ctx.PAGE() != nil {
 		b.statements = append(b.statements, &ast.DropPageStmt{
 			Name: buildQualifiedName(names[0]),

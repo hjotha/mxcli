@@ -98,6 +98,53 @@ func TestEmitAnchorAnnotation_NoFlowsSkipsEmission(t *testing.T) {
 	}
 }
 
+func TestEmitAnchorAnnotation_IgnoresLoopBodyTailOutgoingFlow(t *testing.T) {
+	activity := &microflows.ActionActivity{
+		BaseActivity: microflows.BaseActivity{
+			BaseMicroflowObject: microflows.BaseMicroflowObject{
+				BaseElement: model.BaseElement{ID: "body-act"},
+			},
+		},
+	}
+	loop := &microflows.LoopedActivity{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: "loop-1"},
+		},
+		ObjectCollection: &microflows.MicroflowObjectCollection{
+			Objects: []microflows.MicroflowObject{activity},
+		},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		"body-act": {
+			{
+				OriginID:              "body-act",
+				DestinationID:         "loop-1",
+				OriginConnectionIndex: AnchorLeft,
+			},
+		},
+	}
+	flowsByDest := map[model.ID][]*microflows.SequenceFlow{
+		"body-act": {
+			{
+				DestinationID:              "body-act",
+				DestinationConnectionIndex: AnchorLeft,
+			},
+		},
+	}
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		"body-act": activity,
+		"loop-1":   loop,
+	}
+
+	var lines []string
+	emitAnchorAnnotationWithActivityMap(activity, flowsByOrigin, flowsByDest, activityMap, &lines, "")
+
+	if len(lines) != 0 {
+		t.Fatalf("expected loop body tail flow to be ignored, got %v", lines)
+	}
+}
+
 func TestAnchorRoundtripViaParserBuilder(t *testing.T) {
 	// Build an AST with an @anchor on a statement, run it through the builder,
 	// and verify the resulting SequenceFlow has the right anchors. Then the

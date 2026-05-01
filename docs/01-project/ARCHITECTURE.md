@@ -266,7 +266,7 @@ sequenceDiagram
 | `mdl/grammar` | ANTLR4 lexer/parser (generated from MDLLexer.g4 + MDLParser.g4) |
 | `mdl/ast` | AST node types for MDL statements |
 | `mdl/visitor` | ANTLR listener that builds AST from parse tree |
-| `mdl/executor` | Thin orchestrator: parses AST, calls `ctx.Backend.*`, formats output. **No `sdk/mpr` imports.** |
+| `mdl/executor` | Thin orchestrator: parses AST, calls `ctx.Backend.*`, formats output. Handles microflows, nanoflows, pages, workflows, domain models, security, and all other MDL document types. **No `sdk/mpr` imports.** |
 | `mdl/backend` | Domain-specific backend interfaces (`FullBackend`, `PageMutator`, `WorkflowMutator`, `BackendFactory`) |
 | `mdl/backend/mpr` | MPR-backed implementation of all backend interfaces; owns all BSON mutation logic |
 | `mdl/backend/mock` | `MockBackend` with Func-field injection for unit testing without a `.mpr` file |

@@ -1,0 +1,33 @@
+-- ============================================================================
+-- Bug #339: Empty change-object actions must refresh in client
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Rebuilding an empty change-object activity from MDL wrote a non-committing
+--   ChangeObjectAction with no member changes and RefreshInClient=false.
+--   Studio Pro / mx check rejected that activity with CE0032:
+--     "Change action has no items specified and does not commit the object."
+--
+-- After fix:
+--   `change $Object;` is serialized as a refresh-only change action by setting
+--   RefreshInClient=true. Although the CE0032 text mentions only items/commit,
+--   empirical mx check validation accepts refresh as the third valid escape.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/339-empty-change-refresh-in-client.mdl -p app.mpr
+--   mx check app.mpr
+--   Expected: 0 new CE0032 errors for BugTest339.MF_RefreshOnlyChange.
+-- ============================================================================
+
+create module BugTest339;
+
+create entity BugTest339.Item (
+  Name: String(100)
+);
+
+create microflow BugTest339.MF_RefreshOnlyChange ()
+begin
+  $Item = create BugTest339.Item;
+  change $Item;
+end;
+/

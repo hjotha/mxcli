@@ -164,7 +164,7 @@ func TestEmitObjectAnnotations_EscapesMultilineText(t *testing.T) {
 
 	var lines []string
 	// Pass nil flow maps — @anchor emission is intentionally suppressed here.
-	emitObjectAnnotations(obj, &lines, "", annotationsByTarget, nil, nil)
+	emitObjectAnnotations(obj, &lines, "", annotationsByTarget, nil, nil, nil)
 
 	got := strings.Join(lines, "\n")
 	if !strings.Contains(got, "@caption 'Caption\\nLine'") {
@@ -172,6 +172,69 @@ func TestEmitObjectAnnotations_EscapesMultilineText(t *testing.T) {
 	}
 	if !strings.Contains(got, "@annotation 'Note\\nLine\\tTabbed'") {
 		t.Fatalf("expected escaped annotation, got:\n%s", got)
+	}
+}
+
+func TestEmitObjectAnnotations_LoopCaption(t *testing.T) {
+	obj := &microflows.LoopedActivity{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: mkID("loop")},
+			Position:    model.Point{X: 100, Y: 200},
+		},
+		Caption: "Loop owner's\ncaption",
+	}
+
+	var lines []string
+	// Pass nil flow maps — @anchor emission is intentionally suppressed here.
+	emitObjectAnnotations(obj, &lines, "", nil, nil, nil, nil)
+
+	got := strings.Join(lines, "\n")
+	if !strings.Contains(got, "@caption 'Loop owner''s\\ncaption'") {
+		t.Fatalf("expected escaped loop caption, got:\n%s", got)
+	}
+}
+
+func TestPrependFreeAnnotationLines_ModelAnnotationsStayFree(t *testing.T) {
+	oc := &microflows.MicroflowObjectCollection{
+		Objects: []microflows.MicroflowObject{
+			&microflows.Annotation{
+				BaseMicroflowObject: mkObj("free-note"),
+				Caption:             "free synthetic note",
+			},
+			&microflows.Annotation{
+				BaseMicroflowObject: mkObj("attached-note"),
+				Caption:             "attached synthetic note",
+			},
+		},
+		AnnotationFlows: []*microflows.AnnotationFlow{
+			{
+				BaseElement:   model.BaseElement{ID: mkID("annotation-flow")},
+				OriginID:      mkID("attached-note"),
+				DestinationID: mkID("activity"),
+			},
+		},
+	}
+
+	activityLines := []string{
+		"@position(100, 200)",
+		"@annotation 'attached synthetic note'",
+		"log info 'Synthetic' 'message';",
+	}
+
+	gotLines := prependFreeAnnotationLines(oc, activityLines)
+	got := strings.Join(gotLines, "\n")
+
+	want := strings.Join([]string{
+		"@annotation 'free synthetic note'",
+		"@position(100, 200)",
+		"@annotation 'attached synthetic note'",
+		"log info 'Synthetic' 'message';",
+	}, "\n")
+	if got != want {
+		t.Fatalf("free annotation describe output mismatch\nwant:\n%s\n\ngot:\n%s", want, got)
+	}
+	if strings.Count(got, "attached synthetic note") != 1 {
+		t.Fatalf("attached annotation was emitted as free too:\n%s", got)
 	}
 }
 

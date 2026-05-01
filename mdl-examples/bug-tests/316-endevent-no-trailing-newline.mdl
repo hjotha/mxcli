@@ -1,0 +1,44 @@
+-- ============================================================================
+-- Bug #316: Synthetic trailing newline appended to EndEvent ReturnValue
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   The microflow writer appended `"\n"` to every non-empty `ReturnValue`
+--   when serializing EndEvent objects. Pristine Studio Pro MPRs do not
+--   store that trailing newline, so any roundtrip through mxcli left a
+--   detectable BSON drift versus the original .mpr — visible in `mx check`
+--   diffs and in `mxcli diff-local` output even when no semantic change
+--   had been authored.
+--
+-- After fix:
+--   `writer_microflow.go` passes `ReturnValue` through directly. Empty
+--   return values stay empty; non-empty ones are written without an
+--   extra trailing newline.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/316-endevent-no-trailing-newline.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest316.MF_ReturnExpr"
+--   The describe output must round-trip cleanly under describe → exec → describe
+--   and (when applied to a pristine Studio Pro project) `mx check` must
+--   not report any cosmetic diff in the EndEvent ReturnValue field.
+-- ============================================================================
+
+create module BugTest316;
+
+-- Microflow with a non-empty return value: the EndEvent's ReturnValue must
+-- not pick up a synthetic trailing newline on serialization.
+create microflow BugTest316.MF_ReturnExpr (
+  $value: integer
+)
+returns boolean as $isPositive
+begin
+  return $value > 0;
+end;
+/
+
+-- Microflow with no return value (procedure): EndEvent ReturnValue stays empty.
+create microflow BugTest316.MF_NoReturn ()
+begin
+  log info node 'BugTest316' 'side effect only';
+end;
+/

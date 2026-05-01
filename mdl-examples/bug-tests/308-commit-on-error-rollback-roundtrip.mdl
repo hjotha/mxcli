@@ -1,0 +1,53 @@
+-- ============================================================================
+-- Bug #308: `commit ... on error rollback` lost during describe → exec → describe
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Authoring `commit $X on error rollback;` and then re-executing the
+--   describe output silently dropped the `on error rollback` clause —
+--   subsequent describes printed plain `commit $X;`. In Studio Pro the
+--   "Action call action" still showed Rollback, but mxcli's view of the
+--   model diverged from the BSON, so any further mutation could mis-write
+--   the field.
+--
+-- Root cause:
+--   The commit writer omitted `ErrorHandlingType` when its value was
+--   Rollback (treating Rollback as implicit). The parser then left the
+--   absent field as the empty string, so the describer printed `commit $X`
+--   without a clause.
+--
+-- After fix:
+--   Parser defaults absent commit `ErrorHandlingType` to Rollback; the
+--   writer always emits the field, defaulting to Rollback. The behaviour
+--   is symmetric and round-trips cleanly.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/308-commit-on-error-rollback-roundtrip.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest308.MF_CommitRollback"
+--   The output must contain `on error rollback` and must be a fixpoint
+--   under describe → exec → describe.
+-- ============================================================================
+
+create module BugTest308;
+
+create entity BugTest308.Item (
+  Name : string(100)
+);
+/
+
+create microflow BugTest308.MF_CommitRollback (
+  $Item: BugTest308.Item
+)
+begin
+  commit $Item on error rollback;
+end;
+/
+
+-- Negative control: explicit `on error continue` must survive equally.
+create microflow BugTest308.MF_CommitContinue (
+  $Item: BugTest308.Item
+)
+begin
+  commit $Item on error continue;
+end;
+/

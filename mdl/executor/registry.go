@@ -33,7 +33,7 @@ func NewRegistry() *Registry {
 	registerDatabaseConnectionHandlers(r)
 	registerEntityHandlers(r)
 	registerAssociationHandlers(r)
-	registerMicroflowHandlers(r)
+	registerMicroflowAndNanoflowHandlers(r)
 	registerPageHandlers(r)
 	registerSecurityHandlers(r)
 	registerNavigationHandlers(r)

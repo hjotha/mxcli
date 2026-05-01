@@ -109,6 +109,21 @@ grant execute on microflow MyModule.ACT_Customer_Create to MyModule.User, MyModu
 revoke execute on microflow MyModule.ACT_Customer_Create from MyModule.User;
 ```
 
+### Nanoflow Access
+
+```sql
+-- Grant execute access (same syntax as microflows)
+grant execute on nanoflow MyModule.NF_ValidateCart to MyModule.User, MyModule.Admin;
+
+-- Revoke from specific roles
+revoke execute on nanoflow MyModule.NF_ValidateCart from MyModule.User;
+
+-- Show current access
+show access on nanoflow MyModule.NF_ValidateCart;
+```
+
+> **Note:** Security roles persist through DROP+CREATE of the same nanoflow name within a session (by design, for refactor-in-place workflows).
+
 ### Page Access
 
 ```sql

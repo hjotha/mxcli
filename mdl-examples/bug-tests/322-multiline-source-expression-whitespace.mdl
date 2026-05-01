@@ -1,0 +1,61 @@
+-- ============================================================================
+-- Bug #322: Multiline source expression whitespace lost on roundtrip
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   The visitor rebuilt expression strings from parsed expression nodes,
+--   so original line breaks and whitespace inside DECLARE initial values
+--   and LOG template parameters were normalized away. A multiline
+--   `declare $X string = ...` statement that authors had carefully
+--   formatted across several lines came back as a single very long line
+--   after describe → exec → describe. Inter-parameter blank lines in
+--   `LOG ... WITH (...)` were similarly collapsed, making real-world
+--   microflows non-fixpoint and producing noisy `mxcli diff-local` output.
+--
+-- After fix:
+--   Added a `SourceExpr` AST node that wraps an expression with its
+--   original source text. The visitor uses `buildSourceExpression` for
+--   source-sensitive declare/log/while expressions, and the executor
+--   serializes `SourceExpr` through to MDL output so the original
+--   whitespace and line breaks survive every roundtrip.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/322-multiline-source-expression-whitespace.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest322.MF_MultilineDeclare"
+--   mxcli -p app.mpr -c "describe microflow BugTest322.MF_MultilineLogTemplate"
+--   The describe outputs must keep the multiline shape and must be
+--   fixpoints under describe → exec → describe.
+-- ============================================================================
+
+create module BugTest322;
+
+-- DECLARE initial value spread across several lines with leading `+`. The
+-- describer must preserve the line breaks rather than collapse them onto
+-- one line.
+create microflow BugTest322.MF_MultilineDeclare (
+  $Page: integer,
+  $Token: string
+)
+returns string as $Endpoint
+begin
+  declare $Endpoint string = '/api/v1'
++ '/items?page=' + toString($Page)
++ '&token=' + $Token;
+
+  return $Endpoint;
+end;
+/
+
+-- LOG template parameters separated by a blank line. The newline-only
+-- whitespace between `{1} = toString($Count)` and the next parameter must
+-- survive the roundtrip.
+create microflow BugTest322.MF_MultilineLogTemplate (
+  $Count: integer,
+  $Endpoint: string
+)
+begin
+  log info node 'BugTest322' 'Processed {1} items for {2}' with ({1} = toString($Count)
+
+, {2} = $Endpoint);
+end;
+/

@@ -187,6 +187,11 @@ Example:
 					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 					os.Exit(1)
 				}
+			} else if upper == "NANOFLOW" {
+				if err := exec.NanoflowELK(name); err != nil {
+					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+					os.Exit(1)
+				}
 			} else if upper == "PAGE" {
 				if err := exec.PageWireframeJSON(name); err != nil {
 					fmt.Fprintf(os.Stderr, "Error: %v\n", err)

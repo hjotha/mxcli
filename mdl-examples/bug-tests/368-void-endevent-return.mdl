@@ -1,0 +1,66 @@
+-- ============================================================================
+-- Bug #368: Empty EndEvent termination paths dropped in void microflow describe
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   The describer skipped every empty `EndEvent` unconditionally. For
+--   void microflows that meant any explicit terminal `EndEvent` (e.g.
+--   the end of an early-exit branch) was lost on describe — even though
+--   `return;` is a valid void microflow termination. The roundtrip then
+--   fabricated a fall-through to the synthetic end and changed semantics
+--   for branches that originally had a deliberate early termination.
+--
+--   Conversely, in value-returning microflows, an empty EndEvent
+--   represented an invalid bare `return;` — emitting it was rejected by
+--   the parser on re-exec.
+--
+-- After fix:
+--   `cmd_microflows_show.go` now tracks whether the microflow has a
+--   return value:
+--     - void microflows describe empty EndEvents as `return;` so explicit
+--       termination paths survive describe → exec → describe.
+--     - value-returning microflows continue to suppress empty EndEvents
+--       so re-exec does not encounter bare `return;` (which is invalid
+--       MDL for value-returning shapes).
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/368-void-endevent-return.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest368.MF_VoidEarlyExit"
+--   The void microflow's describe output must contain `return;` for the
+--   early-exit branch. `mx check` must report 0 errors.
+-- ============================================================================
+
+create module BugTest368;
+
+-- Void microflow with an early-exit branch. The `if` THEN branch must
+-- describe as an explicit `return;` (not be silently dropped).
+create microflow BugTest368.MF_VoidEarlyExit (
+  $Skip: boolean
+)
+begin
+  if $Skip then
+    return;
+  end if;
+
+  log info node 'BugTest368' 'continued path';
+end;
+/
+
+-- Value-returning microflow with the same shape — describer must NOT
+-- emit a bare `return;` for the implicit end EndEvent because that would
+-- be invalid in a value-returning microflow.
+create microflow BugTest368.MF_BoolEarlyExit (
+  $Skip: boolean
+)
+returns boolean as $Done
+begin
+  declare $Done boolean = false;
+
+  if $Skip then
+    return false;
+  end if;
+
+  set $Done = true;
+  return $Done;
+end;
+/

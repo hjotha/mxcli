@@ -1,0 +1,57 @@
+-- ============================================================================
+-- Bug #304: Empty `else` branch emitted by DESCRIBE MICROFLOW
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `describe microflow` printed an `else` line for every IF whose false
+--   branch jumped straight to the merge point (the shape produced by an
+--   `if X then ... end if;` with no else body and a non-terminal true branch).
+--   Output looked like
+--     if $X > 0 then
+--       ...
+--     else
+--     end if;
+--   The empty else block re-parsed as a real branch, breaking
+--   describe → exec → describe fixpoint and creating cosmetic BSON drift.
+--
+-- After fix:
+--   Split traversal in cmd_microflows_show_helpers.go skips the `else`
+--   keyword when the false branch destination is the matching merge point.
+--   Explicit else bodies (with at least one activity) are still emitted.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/304-describer-empty-else-branch.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest304.MF_IfWithoutElse"
+--   The output must NOT contain an `else` keyword and MUST be a fixpoint
+--   under describe → exec → describe.
+-- ============================================================================
+
+create module BugTest304;
+
+create microflow BugTest304.MF_IfWithoutElse (
+  $value: integer
+)
+begin
+  if $value > 0 then
+    log info node 'BugTest304' 'positive value';
+  end if;
+
+  log info node 'BugTest304' 'always logged';
+end;
+/
+
+-- Negative control: explicit else body MUST still be preserved.
+create microflow BugTest304.MF_IfWithElse (
+  $value: integer
+)
+returns string as $label
+begin
+  declare $label string = empty;
+
+  if $value > 0 then
+    return 'positive';
+  else
+    return 'non-positive';
+  end if;
+end;
+/

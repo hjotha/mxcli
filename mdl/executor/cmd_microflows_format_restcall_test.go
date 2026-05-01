@@ -31,6 +31,20 @@ func TestFormatRestCallAction_GET(t *testing.T) {
 	assertContains(t, got, "returns String")
 }
 
+func TestFormatRestCallAction_HttpResponse(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.RestCallAction{
+		HttpConfiguration: &microflows.HttpConfiguration{
+			HttpMethod:       microflows.HttpMethodGet,
+			LocationTemplate: "https://api.example.com/orders",
+		},
+		ResultHandling: &microflows.ResultHandlingHttpResponse{VariableName: "Response"},
+	}
+	got := e.formatRestCallAction(action)
+	assertContains(t, got, "$Response = ")
+	assertContains(t, got, "returns response")
+}
+
 func TestFormatRestCallAction_POST_CustomBody(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.RestCallAction{

@@ -1,0 +1,63 @@
+-- ============================================================================
+-- Bug #312: Reference validation flagged broken calls inside excluded microflows
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `mxcli check --references` walked every microflow body — including ones
+--   marked `@excluded` — and reported missing microflow / page / java-action
+--   references in them. Excluded documents are not part of the build, and
+--   Studio Pro tolerates dangling references in them, so this produced
+--   false positives during agentic workflows that legitimately stash
+--   broken intermediate state inside excluded scaffolding.
+--
+-- Root cause:
+--   The validator collected references from every CreateMicroflowStmt
+--   without checking the Excluded flag.
+--
+-- After fix:
+--   `validate.go` skips reference collection for excluded microflows.
+--   Included microflows are still validated normally, so the negative
+--   case (typo in a real call) still fails the check.
+--
+-- Usage:
+--   mxcli check --references mdl-examples/bug-tests/312-validate-skip-excluded-microflows.mdl -p app.mpr
+--   The check must succeed: the excluded microflow's broken call to
+--   BugTest312.NoSuchTarget is ignored.
+--
+--   To verify the negative case still triggers, remove `@excluded` from
+--   the second microflow and re-run — `mxcli check --references` should
+--   then report the missing reference.
+-- ============================================================================
+
+create module BugTest312;
+
+create microflow BugTest312.MF_RealTarget ()
+returns string as $msg
+begin
+  return 'real target';
+end;
+/
+
+-- Excluded scaffolding that contains a broken call. mxcli check --references
+-- must NOT report this as an error.
+@excluded
+create microflow BugTest312.MF_ExcludedWithBrokenCall ()
+returns string as $msg
+begin
+  declare $msg string = empty;
+  $msg = call microflow BugTest312.NoSuchTarget();
+  return $msg;
+end;
+/
+
+-- Negative control: an INCLUDED microflow whose call is valid. Together with
+-- the excluded one above, the check confirms the validator still walks
+-- non-excluded microflows.
+create microflow BugTest312.MF_IncludedValid ()
+returns string as $msg
+begin
+  declare $msg string = empty;
+  $msg = call microflow BugTest312.MF_RealTarget();
+  return $msg;
+end;
+/

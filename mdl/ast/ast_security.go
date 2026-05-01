@@ -102,6 +102,22 @@ type RevokeMicroflowAccessStmt struct {
 
 func (s *RevokeMicroflowAccessStmt) isStatement() {}
 
+// GrantNanoflowAccessStmt represents: GRANT EXECUTE ON NANOFLOW Module.NF TO role1, role2
+type GrantNanoflowAccessStmt struct {
+	Nanoflow QualifiedName
+	Roles    []QualifiedName
+}
+
+func (s *GrantNanoflowAccessStmt) isStatement() {}
+
+// RevokeNanoflowAccessStmt represents: REVOKE EXECUTE ON NANOFLOW Module.NF FROM role1, role2
+type RevokeNanoflowAccessStmt struct {
+	Nanoflow QualifiedName
+	Roles    []QualifiedName
+}
+
+func (s *RevokeNanoflowAccessStmt) isStatement() {}
+
 // GrantPageAccessStmt represents: GRANT VIEW ON PAGE Module.Page TO role1, role2
 type GrantPageAccessStmt struct {
 	Page  QualifiedName

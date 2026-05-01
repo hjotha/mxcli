@@ -48,11 +48,12 @@ func (m *Microflow) GetContainerID() model.ID {
 // Nanoflows run on the client side and have restrictions on which activities can be used.
 type Nanoflow struct {
 	model.BaseElement
-	ContainerID   model.ID `json:"containerId"`
-	Name          string   `json:"name"`
-	Documentation string   `json:"documentation,omitempty"`
-	MarkAsUsed    bool     `json:"markAsUsed"`
-	Excluded      bool     `json:"excluded"`
+	ContainerID        model.ID   `json:"containerId"`
+	Name               string     `json:"name"`
+	Documentation      string     `json:"documentation,omitempty"`
+	MarkAsUsed         bool       `json:"markAsUsed"`
+	Excluded           bool       `json:"excluded"`
+	AllowedModuleRoles []model.ID `json:"allowedModuleRoles,omitempty"`
 
 	// Return type
 	ReturnType DataType `json:"returnType,omitempty"`

@@ -34,6 +34,7 @@ type executorCache struct {
 
 	// Track items created during this session (not yet visible via reader)
 	createdMicroflows map[string]*createdMicroflowInfo // qualifiedName -> info
+	createdNanoflows  map[string]*createdNanoflowInfo  // qualifiedName -> info
 	createdPages      map[string]*createdPageInfo      // qualifiedName -> info
 	createdSnippets   map[string]*createdSnippetInfo   // qualifiedName -> info
 
@@ -45,6 +46,7 @@ type executorCache struct {
 	// rewrites. Reusing both keeps the rewrite semantically equivalent to an
 	// in-place update.
 	droppedMicroflows map[string]*droppedUnitInfo // qualifiedName -> original IDs
+	droppedNanoflows  map[string]*droppedUnitInfo // qualifiedName -> original IDs
 
 	// Track domain models modified during this session for finalization
 	modifiedDomainModels map[model.ID]string // domain model unit ID -> module name
@@ -62,6 +64,15 @@ type createdMicroflowInfo struct {
 	ModuleName       string
 	ContainerID      model.ID
 	ReturnEntityName string // Qualified entity name from return type (e.g., "Module.Entity")
+}
+
+// createdNanoflowInfo tracks a nanoflow created during this session.
+type createdNanoflowInfo struct {
+	ID               model.ID
+	Name             string
+	ModuleName       string
+	ContainerID      model.ID
+	ReturnEntityName string
 }
 
 // createdPageInfo tracks a page created during this session.
@@ -399,5 +410,38 @@ func consumeDroppedMicroflow(ctx *ExecContext, qualifiedName string) *droppedUni
 		return nil
 	}
 	delete(ctx.Cache.droppedMicroflows, qualifiedName)
+	return info
+}
+
+// rememberDroppedNanoflow records the UnitID and ContainerID of a nanoflow
+// that is about to be deleted so a subsequent CREATE OR REPLACE/MODIFY can reuse them.
+func rememberDroppedNanoflow(ctx *ExecContext, qualifiedName string, id, containerID model.ID, allowedRoles []model.ID) {
+	if ctx == nil || qualifiedName == "" || id == "" {
+		return
+	}
+	if ctx.Cache == nil {
+		ctx.Cache = &executorCache{}
+	}
+	if ctx.Cache.droppedNanoflows == nil {
+		ctx.Cache.droppedNanoflows = make(map[string]*droppedUnitInfo)
+	}
+	ctx.Cache.droppedNanoflows[qualifiedName] = &droppedUnitInfo{
+		ID:           id,
+		ContainerID:  containerID,
+		AllowedRoles: cloneRoleIDs(allowedRoles),
+	}
+}
+
+// consumeDroppedNanoflow returns the original IDs of a nanoflow dropped
+// earlier in this session (if any) and removes the entry.
+func consumeDroppedNanoflow(ctx *ExecContext, qualifiedName string) *droppedUnitInfo {
+	if ctx == nil || ctx.Cache == nil || ctx.Cache.droppedNanoflows == nil {
+		return nil
+	}
+	info, ok := ctx.Cache.droppedNanoflows[qualifiedName]
+	if !ok {
+		return nil
+	}
+	delete(ctx.Cache.droppedNanoflows, qualifiedName)
 	return info
 }

@@ -1,0 +1,56 @@
+-- ============================================================================
+-- Bug #295: SHOW PAGE parameter mappings produced unopenable Studio Pro MPRs
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   When `mxcli exec` wrote a microflow `show page X (Param: $Var)`, the
+--   `Forms$PageParameterMapping.Variable` field was serialized as BSON
+--   `null`. Studio Pro rejected this on project load with a runtime
+--   exception, making the entire MPR unopenable. The originating bug
+--   also affected SNIPPET ACTIONBUTTON SHOW_PAGE (#295), but the root
+--   cause is in the writer's serialization of PageParameterMapping.
+--
+--   Additionally, `FormSettings.ParameterMappings` used the mapping count
+--   as the BSON storage-list first element instead of Mendix's storage-list
+--   marker (`int32(2)`).
+--
+-- After fix:
+--   `writer_microflow_actions.go` now writes
+--   - `Variable` as a valid empty `Forms$PageVariable` object via
+--     `emptyPageVariable()`
+--   - `ParameterMappings` storage-list with the constant marker `int32(2)`
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/295-showpage-parameter-mapping-validity.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest295.ACT_OpenProductPage"
+--   `mx check` against the resulting MPR must report 0 errors and the
+--   project must be openable in Studio Pro.
+-- ============================================================================
+
+create module BugTest295;
+
+create entity BugTest295.Product (
+  Name : string(100)
+);
+/
+
+create page BugTest295.Product_Detail
+(
+  params: {
+    $Product: BugTest295.Product
+  },
+  title: 'Product Detail',
+  layout: Atlas_Core.Atlas_Default
+)
+{
+  dynamictext txtName (content: 'Product detail', rendermode: H4)
+}
+/
+
+create microflow BugTest295.ACT_OpenProductPage (
+  $Product: BugTest295.Product
+)
+begin
+  show page BugTest295.Product_Detail (Product: $Product);
+end;
+/

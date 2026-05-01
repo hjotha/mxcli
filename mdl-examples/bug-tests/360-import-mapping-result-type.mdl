@@ -1,0 +1,66 @@
+-- ============================================================================
+-- Bug #360: Import-from-mapping result variable type was not registered
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `import from mapping` actions wrote the correct
+--   `Forms$ResultHandlingMapping` BSON, but the builder did not register
+--   the inferred result type onto the output variable in its variable
+--   scope. Subsequent activities that touched the imported result
+--   (`change`, `commit`, `$Var/Attribute`, association paths) ran without
+--   type info, which caused:
+--     - the writer to fall back to untyped expressions
+--     - re-describes to lose the right declaration shape
+--     - downstream activities to fail with CE0117 in Studio Pro
+--
+-- After fix:
+--   `addImportFromMappingAction` now also writes the result type into
+--   `flowBuilder.varTypes`. When the mapping's JSON structure produces a
+--   single object, the variable becomes `Module.Entity`. When it produces
+--   an array, the variable becomes `List of Module.Entity`. The
+--   ResultHandlingMapping BSON path is unchanged.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/360-import-mapping-result-type.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest360.MF_ImportPet"
+--   `mx check` against the resulting MPR must report 0 errors and the
+--   `change $Pet (...)` statement after the import must resolve.
+-- ============================================================================
+
+create module BugTest360;
+
+create json structure BugTest360.JSON_Pet
+snippet '{"id": 1, "name": "Fido", "status": "available"}';
+
+create non-persistent entity BugTest360.PetResponse (
+  PetId : integer,
+  Name : string,
+  Status : string
+);
+/
+
+create import mapping BugTest360.IMM_Pet
+  with json structure BugTest360.JSON_Pet
+{
+  create BugTest360.PetResponse {
+    PetId = id,
+    Name = name,
+    Status = status
+  }
+};
+
+-- Caller — uses the imported `$Pet` in a downstream `change`. Without
+-- the result-type registration, the change activity has no resolved
+-- entity for `Status` and Studio Pro surfaces CE0117.
+create microflow BugTest360.MF_ImportPet (
+  $Json: string
+)
+returns BugTest360.PetResponse as $Pet
+begin
+  $Pet = import from mapping BugTest360.IMM_Pet ($Json);
+
+  if $Pet != empty then
+    change $Pet (Status = $Pet/Status + ' (processed)');
+  end if;
+end;
+/

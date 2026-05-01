@@ -1,0 +1,63 @@
+-- ============================================================================
+-- Bug #310: Branch anchor `to:` side dropped on direct split-to-merge flows
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   When an IF had a branch anchor whose `to:` side wasn't the default Left
+--   AND that branch body was empty (so the split connected straight to the
+--   merge), the writer applied only the branch FROM side and let the
+--   default destination (Left) overwrite the user-provided `to:` side.
+--   Re-describing turned
+--     @anchor(to: left, false: (from: bottom, to: top))
+--   into
+--     @anchor(to: left, false: (from: bottom, to: left))
+--   silently changing the visual layout in Studio Pro on roundtrip.
+--
+-- Root cause:
+--   Several split-to-merge shortcuts called `applyUserAnchors` with the
+--   branch anchor only as the origin override and `nil` as the destination
+--   override.
+--
+-- After fix:
+--   `applyUserAnchors` now receives the branch anchor for both origin and
+--   destination overrides on split-to-merge shortcuts, matching the
+--   behavior used when a branch has a first statement.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/310-anchor-split-to-merge-destination.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest310.MF_AnchorFalseBranch"
+--   The output must preserve `false: (from: bottom, to: top)` on the
+--   IF anchor and must be a fixpoint under describe → exec → describe.
+-- ============================================================================
+
+create module BugTest310;
+
+-- IF-without-ELSE with a non-default false-branch destination.
+create microflow BugTest310.MF_AnchorFalseBranch (
+  $value: integer
+)
+begin
+  @anchor(to: left, false: (from: bottom, to: top))
+  if $value > 0 then
+    log info node 'BugTest310' 'inside';
+  end if;
+
+  log info node 'BugTest310' 'after';
+end;
+/
+
+-- IF with empty THEN body — true branch goes straight to merge with a
+-- non-default destination side.
+create microflow BugTest310.MF_AnchorEmptyThen (
+  $value: integer
+)
+begin
+  @anchor(to: left, true: (from: right, to: top))
+  if $value > 0 then
+  else
+    log info node 'BugTest310' 'else only';
+  end if;
+
+  log info node 'BugTest310' 'after';
+end;
+/

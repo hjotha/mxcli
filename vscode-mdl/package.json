@@ -157,12 +157,12 @@
         },
         {
           "command": "mendix.previewDiagram",
-          "when": "view == mendixProjectTree && viewItem =~ /^(domainmodel|entity|microflow|page|systemoverview)$/",
+          "when": "view == mendixProjectTree && viewItem =~ /^(domainmodel|entity|microflow|nanoflow|page|systemoverview)$/",
           "group": "mendix@7"
         },
         {
           "command": "mendix.previewDiagramWithSource",
-          "when": "view == mendixProjectTree && viewItem =~ /^(microflow|entity|domainmodel|externalentity|page)$/",
+          "when": "view == mendixProjectTree && viewItem =~ /^(microflow|nanoflow|entity|domainmodel|externalentity|page)$/",
           "group": "mendix@8"
         }
       ],

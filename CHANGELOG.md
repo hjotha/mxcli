@@ -18,6 +18,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **OpenAPI import for REST clients** — `CREATE REST CLIENT` now accepts `OpenAPI: 'path/or/url'` to auto-generate a consumed REST service document from an OpenAPI 3.0 spec (JSON or YAML); operations, path/query parameters, request bodies, response types, resource groups (tags), and Basic auth are derived automatically; spec content is stored in `OpenApiFile` for Studio Pro parity (#207)
 - **DESCRIBE CONTRACT OPERATION FROM OPENAPI** — Preview what would be generated from an OpenAPI spec without writing to the project
 
+- **Flow bug fixes** — Module existence validation for SHOW NANOFLOWS and SHOW MICROFLOWS, numeric return literals no longer get spurious `$` prefix, empty flow names rejected at create time, `NanoflowCallAction` error handling type resolved correctly, `not()` expression spacing preserved on roundtrip, JavaScript action call rendering in DESCRIBE output
+- **Nanoflow diff support** — `mxcli diff` now detects and displays nanoflow changes (previously silently skipped)
+- **Nanoflow validation parity** — `mxcli check` now runs full body validation on nanoflows (undeclared variables, missing returns, branch scoping) via shared `validateFlowBody` helper; `allNames()` includes nanoflows for forward-reference detection
+- **DownloadFileStmt denylist** — `DOWNLOAD FILE` added to nanoflow disallowed action list
+- **JavaScript action MDL syntax** — `call javascript action Module.ActionName(params)` now fully supported in CREATE NANOFLOW/MICROFLOW bodies: grammar, parser, builder, serializer, and roundtrip
+- **LSP snippet completions** — Added `CREATE NANOFLOW (with params)`, `CALL MICROFLOW`, `CALL NANOFLOW`, `CALL JAVASCRIPT ACTION`, `CALL JAVA ACTION` snippets
+- **Flow builder cache** — `lookupMicroflowReturnType` and `lookupNanoflowReturnType` now cache results with lazy-load bool flags, avoiding repeated `ListNanoflows`/`ListMicroflows` calls; nanoflow lookup uses `GetRawUnitByName` fast path
+- **Parser fixes** — Negative literals no longer greedily consumed by lexer (`-?` removed from `NUMBER_LITERAL`); XPath multi-predicate brackets correctly split and re-wrapped; multi-line string literals in change/create object expressions escaped; `ExclusiveSplit` (if/else) inside loop bodies now emits correct `end if;`
+- **Empty action params** — JS and Java action parameters with empty/nil values are omitted from DESCRIBE output instead of rendering as `...` or bare `= )`
+- **Association retrieve roundtrip fidelity** — `retrieve $X from $Y/Module.Association` syntax preserved on roundtrip (previously converted to `from Entity where Assoc = $Y`)
+- **DESCRIBE empty-then optimization** — If/else blocks with empty true branches are swapped and condition negated for readable output
+
 ### Changed
 
 - **MDL string literal escapes** — `mdlQuote`/`unquoteString` now treat `\n`, `\r`, `\t`, and `\\` inside single-quoted literals as escape sequences (previously a literal backslash followed by the letter). This is a compatibility break for any MDL script that intentionally embedded a raw `\n` / `\t` / `\\` as two characters; such scripts must now double the backslash (`\\n` to preserve the two-character form). Applies to `LOG` messages, `@caption`/`@annotation` text, and other string literals round-tripped via the describer.

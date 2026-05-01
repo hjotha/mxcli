@@ -37,6 +37,8 @@ func describeMermaid(ctx *ExecContext, objectType, name string) error {
 		return microflowToMermaid(ctx, qn)
 	case "page":
 		return pageToMermaid(ctx, qn)
+	case "nanoflow":
+		return nanoflowToMermaid(ctx, qn)
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("mermaid format not supported for type: %s", objectType))
 	}
@@ -194,13 +196,9 @@ func microflowToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Build entity name lookup
-	entityNames := make(map[model.ID]string)
-	domainModels, _ := ctx.Backend.ListDomainModels()
-	for _, dm := range domainModels {
-		modName := h.GetModuleName(dm.ContainerID)
-		for _, entity := range dm.Entities {
-			entityNames[entity.ID] = modName + "." + entity.Name
-		}
+	entityNames, err := buildEntityNames(ctx, h)
+	if err != nil {
+		return err
 	}
 
 	// Find the microflow
@@ -223,22 +221,69 @@ func microflowToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("microflow", name.String())
 	}
 
-	return renderMicroflowMermaid(ctx, targetMf, entityNames)
+	return renderFlowMermaid(ctx, targetMf.ObjectCollection, entityNames)
 }
 
-// renderMicroflowMermaid renders a microflow as a Mermaid flowchart.
-func renderMicroflowMermaid(ctx *ExecContext, mf *microflows.Microflow, entityNames map[model.ID]string) error {
+// nanoflowToMermaid renders a nanoflow as a Mermaid flowchart.
+func nanoflowToMermaid(ctx *ExecContext, name ast.QualifiedName) error {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	// Build entity name lookup
+	entityNames, err := buildEntityNames(ctx, h)
+	if err != nil {
+		return err
+	}
+
+	// Find the nanoflow
+	allNanoflows, err := ctx.Backend.ListNanoflows()
+	if err != nil {
+		return mdlerrors.NewBackend("list nanoflows", err)
+	}
+
+	for _, nf := range allNanoflows {
+		modID := h.FindModuleID(nf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName == name.Module && nf.Name == name.Name {
+			return renderFlowMermaid(ctx, nf.ObjectCollection, entityNames)
+		}
+	}
+
+	return mdlerrors.NewNotFound("nanoflow", name.String())
+}
+
+// buildEntityNames builds a map from entity ID to qualified name (Module.Entity)
+// using the hierarchy for module name resolution.
+func buildEntityNames(ctx *ExecContext, h *ContainerHierarchy) (map[model.ID]string, error) {
+	entityNames := make(map[model.ID]string)
+	domainModels, err := ctx.Backend.ListDomainModels()
+	if err != nil {
+		return nil, mdlerrors.NewBackend("list domain models", err)
+	}
+	for _, dm := range domainModels {
+		modName := h.GetModuleName(dm.ContainerID)
+		for _, entity := range dm.Entities {
+			entityNames[entity.ID] = modName + "." + entity.Name
+		}
+	}
+	return entityNames, nil
+}
+
+// renderFlowMermaid renders a flow's object collection as a Mermaid flowchart.
+func renderFlowMermaid(ctx *ExecContext, oc *microflows.MicroflowObjectCollection, entityNames map[model.ID]string) error {
 	var sb strings.Builder
 	sb.WriteString("flowchart LR\n")
 
-	if mf.ObjectCollection == nil || len(mf.ObjectCollection.Objects) == 0 {
+	if oc == nil || len(oc.Objects) == 0 {
 		sb.WriteString("    start([Start]) --> stop([End])\n")
 		fmt.Fprint(ctx.Output, sb.String())
 		return nil
 	}
 
 	// Collect all objects and flows recursively (including nested loop bodies)
-	allObjects, allFlows := collectAllObjectsAndFlows(mf.ObjectCollection)
+	allObjects, allFlows := collectAllObjectsAndFlows(oc)
 
 	// Build activity map and find start event
 	activityMap := make(map[model.ID]microflows.MicroflowObject)
@@ -520,6 +565,11 @@ func mermaidActionLabel(a *microflows.ActionActivity, entityNames map[model.ID]s
 			return "Call " + sanitizeMermaidLabel(mermaidTruncate(act.MicroflowCall.Microflow, 30))
 		}
 		return "Call Microflow"
+	case *microflows.NanoflowCallAction:
+		if act.NanoflowCall != nil && act.NanoflowCall.Nanoflow != "" {
+			return "Call " + sanitizeMermaidLabel(mermaidTruncate(act.NanoflowCall.Nanoflow, 30))
+		}
+		return "Call Nanoflow"
 	case *microflows.JavaActionCallAction:
 		if act.JavaAction != "" {
 			return "Call " + sanitizeMermaidLabel(mermaidTruncate(act.JavaAction, 30))
@@ -713,6 +763,23 @@ func mermaidActionDetails(a *microflows.ActionActivity, entityNames map[model.ID
 		}
 		if act.ResultVariableName != "" {
 			lines = append(lines, "Result: $"+act.ResultVariableName)
+		}
+
+	case *microflows.NanoflowCallAction:
+		if act.NanoflowCall != nil {
+			if act.NanoflowCall.Nanoflow != "" {
+				lines = append(lines, "Nanoflow: "+act.NanoflowCall.Nanoflow)
+			}
+			for _, pm := range act.NanoflowCall.ParameterMappings {
+				paramName := pm.Parameter
+				if idx := strings.LastIndex(paramName, "."); idx >= 0 {
+					paramName = paramName[idx+1:]
+				}
+				lines = append(lines, paramName+" = "+mermaidTruncate(pm.Argument, 50))
+			}
+		}
+		if act.OutputVariableName != "" {
+			lines = append(lines, "Result: $"+act.OutputVariableName)
 		}
 
 	case *microflows.ShowPageAction:

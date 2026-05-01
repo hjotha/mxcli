@@ -45,6 +45,7 @@ func TestShowMicroflows_Mock_FilterByModule(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc:    func() bool { return true },
 		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return []*microflows.Microflow{mf1, mf2}, nil },
+		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod1, mod2}, nil },
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
@@ -114,3 +115,39 @@ func TestDescribeMicroflow_Mock_NotFound(t *testing.T) {
 
 // Backend error: cmd_error_mock_test.go (TestShowMicroflows_Mock_BackendError, TestShowNanoflows_Mock_BackendError)
 // JSON: cmd_json_mock_test.go (TestShowMicroflows_Mock_JSON, TestShowNanoflows_Mock_JSON)
+
+// --- OBS-2: Module not found error for SHOW MICROFLOWS ---
+
+func TestShowMicroflows_Mock_ModuleNotFound(t *testing.T) {
+	mod := mkModule("Sales")
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:    func() bool { return true },
+		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListMicroflowsFunc: func() ([]*microflows.Microflow, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	err := listMicroflows(ctx, "NonExistent")
+	assertError(t, err)
+	assertContainsStr(t, err.Error(), "not found")
+}
+
+// --- OBS-8: Empty microflow name validation ---
+
+func TestCreateMicroflow_Mock_EmptyName(t *testing.T) {
+	mod := mkModule("MyModule")
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	stmt := &ast.CreateMicroflowStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: ""},
+	}
+	err := execCreateMicroflow(ctx, stmt)
+	assertError(t, err)
+	assertContainsStr(t, err.Error(), "must not be empty")
+}

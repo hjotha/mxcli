@@ -1194,6 +1194,56 @@ Similar to CreateChangeAction but uses `microflows$ChangeAction`:
 
 ---
 
+## Nanoflow Mapping
+
+Nanoflows share the `Microflows` BSON domain — all action types, parameters, and flow structures are identical to microflows.
+
+### BSON Type
+
+| Unit Type | BSON `$Type` | Go Struct |
+|-----------|-------------|-----------|
+| Nanoflow | `Microflows$Nanoflow` | `microflows.Nanoflow` |
+
+### Key Differences from Microflow
+
+| Field | Microflow | Nanoflow |
+|-------|-----------|----------|
+| `$Type` | `Microflows$Microflow` | `Microflows$Nanoflow` |
+| `AllowConcurrentExecution` | Present | Absent |
+| `ConcurrencyErrorMicroflow` | Present | Absent |
+| `ConcurrenyErrorMessage` | Present | Absent |
+| `ApplyEntityAccess` | Present | Absent |
+
+All other fields — `ObjectCollection`, `Parameters`, `ReturnType`, `AllowedModuleRoles`, `Documentation`, `Excluded`, `MarkAsUsed` — are identical.
+
+### Allowed Actions
+
+Nanoflows run client-side. The following action types are **disallowed** in nanoflows:
+
+- `Microflows$DownloadFileAction` — requires server response
+- `Microflows$ImportMappingCallAction` — requires server context
+- `Microflows$ExportMappingCallAction` — requires server context
+- `Microflows$RestCallAction` — use JavaScript actions for HTTP from client
+- `Microflows$WebServiceCallAction` — server-side only
+
+The following are **nanoflow-specific** (allowed only in nanoflows):
+
+- `Microflows$SynchronizeAction` — triggers offline data sync
+
+### JavaScript Action Calls
+
+JavaScript actions use `Microflows$JavaScriptActionCallAction` (not `JavaActionCallAction`):
+
+| Field | JavaAction | JavaScriptAction |
+|-------|-----------|-----------------|
+| `$Type` | `Microflows$JavaActionCallAction` | `Microflows$JavaScriptActionCallAction` |
+| Action reference | `JavaAction` | `JavaScriptAction` |
+| Result variable | `ResultVariableName` | `OutputVariableName` |
+| Parameter mapping type | `Microflows$JavaActionParameterMapping` | `Microflows$JavaScriptActionParameterMapping` |
+| Parameter value key | `Value` | `ParameterValue` |
+
+---
+
 ## Debugging BSON Issues
 
 When Studio Pro doesn't display data correctly (e.g., missing attributes, incorrect values), follow this debugging approach:

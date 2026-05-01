@@ -193,3 +193,33 @@ func TestExpressionToString_NestedBuiltins(t *testing.T) {
 		t.Errorf("expressionToString = %q, want %q", got, want)
 	}
 }
+
+// --- RT-1: not() with parenthesized operand should not have space ---
+
+func TestExpressionToString_NotWithParens(t *testing.T) {
+	// not($x) should remain not($x), not "not ($x)"
+	expr := &ast.UnaryExpr{
+		Operator: "not",
+		Operand: &ast.ParenExpr{
+			Inner: &ast.IdentifierExpr{Name: "$IsActive"},
+		},
+	}
+	got := expressionToString(expr)
+	want := "not($IsActive)"
+	if got != want {
+		t.Errorf("expressionToString = %q, want %q", got, want)
+	}
+}
+
+func TestExpressionToString_NotWithoutParens(t *testing.T) {
+	// not $x should remain "not $x" (with space)
+	expr := &ast.UnaryExpr{
+		Operator: "not",
+		Operand:  &ast.IdentifierExpr{Name: "$IsActive"},
+	}
+	got := expressionToString(expr)
+	want := "not $IsActive"
+	if got != want {
+		t.Errorf("expressionToString = %q, want %q", got, want)
+	}
+}

@@ -3,6 +3,8 @@
 package mpr
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 
@@ -13,16 +15,20 @@ import (
 func serializeSnippetCall(s *pages.SnippetCallWidget) bson.D {
 	// Build parameter mappings array.
 	// Format: [count, mapping1, mapping2, ...] where count is the Mendix array version marker.
+	// Type is Forms$SnippetParameterMapping (not Forms$PageParameterMapping).
+	// The variable reference goes in Variable.PageParameter; Argument is always empty.
 	paramMappings := bson.A{int32(len(s.ParameterMappings))}
 	for _, pm := range s.ParameterMappings {
 		// Parameter is BY_NAME_REFERENCE: SnippetQualifiedName.ParameterName
 		paramRef := s.SnippetName + "." + pm.ParamName
+		// Strip leading $ from the variable name for PageParameter sub-field
+		varName := strings.TrimPrefix(pm.Argument, "$")
 		paramMappings = append(paramMappings, bson.D{
 			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
-			{Key: "$Type", Value: "Forms$PageParameterMapping"},
-			{Key: "Argument", Value: pm.Argument},
+			{Key: "$Type", Value: "Forms$SnippetParameterMapping"},
+			{Key: "Argument", Value: ""},
 			{Key: "Parameter", Value: paramRef},
-			{Key: "Variable", Value: nil},
+			{Key: "Variable", Value: buildFormPageVariable(varName)},
 		})
 	}
 

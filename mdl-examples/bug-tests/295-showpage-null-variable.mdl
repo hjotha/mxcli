@@ -1,0 +1,52 @@
+-- Bug test: SHOW_PAGE inside a widget action must not produce null PageParameterMapping.Variable.
+-- Issue #295: buttons calling SHOW_PAGE with a variable argument serialized
+-- Variable: null in BSON (Forms$PageParameterMapping), causing Studio Pro to throw:
+--   ArgumentNullException: Value cannot be null (Parameter 'value')
+--   at PageParameterMapping.set_Variable(PageVariable value)
+--
+-- After the fix: every Forms$PageParameterMapping in a Forms$FormAction carries
+-- a non-null Forms$PageVariable embedded object in its Variable field.
+--
+-- Run with: mxcli check 295-showpage-null-variable.mdl
+create module bug295;
+
+create persistent entity bug295.Product (
+  /** Auto-incrementing product ID */
+  ProductId: autonumber default 1,
+  /** Product name (required) */
+  Name: string(200) not null error 'Product name is required'
+);
+
+-- Target page that accepts an entity parameter.
+CREATE PAGE bug295.Product_Detail (
+  Title: 'Product Detail',
+  Url: 'Product_Detail',
+  layout: Atlas_Core.Atlas_Default,
+  Params: { $Product: bug295.Product }
+) {
+  DATAVIEW dv1 (DataSource: $Product) {
+    DYNAMICTEXT txt1 (Content: '$Product/Name')
+  }
+};
+
+-- Overview page with a DataGrid column button that opens the detail page
+-- and passes $currentObject as the page parameter.  This is the scenario
+-- that previously produced a null PageParameterMapping.Variable in BSON.
+CREATE PAGE bug295.Product_Overview (
+  Title: 'Products',
+  Url: 'Product_Overview',
+  layout: Atlas_Core.Atlas_Default
+) {
+  DATAGRID dg1 (
+    DataSource: bug295.Product,
+    Caption: 'Products'
+  ) {
+    COLUMN colName (Attribute: Name, Caption: 'Name')
+    COLUMN colActions (Caption: 'Actions') {
+      ACTIONBUTTON btnDetail (
+        Caption: 'Detail',
+        Action: SHOW_PAGE bug295.Product_Detail (Product: $currentObject)
+      )
+    }
+  }
+};

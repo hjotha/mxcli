@@ -670,6 +670,118 @@ func execRevokeMicroflowAccess(ctx *ExecContext, s *ast.RevokeMicroflowAccessStm
 	return mdlerrors.NewNotFound("microflow", s.Microflow.Module+"."+s.Microflow.Name)
 }
 
+// execGrantNanoflowAccess handles GRANT EXECUTE ON NANOFLOW Module.NF TO roles.
+func execGrantNanoflowAccess(ctx *ExecContext, s *ast.GrantNanoflowAccessStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	nfs, err := ctx.Backend.ListNanoflows()
+	if err != nil {
+		return mdlerrors.NewBackend("list nanoflows", err)
+	}
+
+	for _, nf := range nfs {
+		modID := h.FindModuleID(nf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Nanoflow.Module || nf.Name != s.Nanoflow.Name {
+			continue
+		}
+
+		for _, role := range s.Roles {
+			if err := validateModuleRole(ctx, role); err != nil {
+				return err
+			}
+		}
+
+		existing := make(map[string]bool)
+		var merged []string
+		for _, r := range nf.AllowedModuleRoles {
+			existing[string(r)] = true
+			merged = append(merged, string(r))
+		}
+		var added []string
+		for _, role := range s.Roles {
+			qn := role.Module + "." + role.Name
+			if !existing[qn] {
+				merged = append(merged, qn)
+				added = append(added, qn)
+			}
+		}
+
+		if err := ctx.Backend.UpdateAllowedRoles(nf.ID, merged); err != nil {
+			return mdlerrors.NewBackend("update nanoflow access", err)
+		}
+
+		if len(added) == 0 {
+			fmt.Fprintf(ctx.Output, "All specified roles already have execute access on %s.%s\n", modName, nf.Name)
+		} else {
+			fmt.Fprintf(ctx.Output, "Granted execute access on %s.%s to %s\n", modName, nf.Name, strings.Join(added, ", "))
+		}
+		return nil
+	}
+
+	return mdlerrors.NewNotFound("nanoflow", s.Nanoflow.Module+"."+s.Nanoflow.Name)
+}
+
+// execRevokeNanoflowAccess handles REVOKE EXECUTE ON NANOFLOW Module.NF FROM roles.
+func execRevokeNanoflowAccess(ctx *ExecContext, s *ast.RevokeNanoflowAccessStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	nfs, err := ctx.Backend.ListNanoflows()
+	if err != nil {
+		return mdlerrors.NewBackend("list nanoflows", err)
+	}
+
+	for _, nf := range nfs {
+		modID := h.FindModuleID(nf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName != s.Nanoflow.Module || nf.Name != s.Nanoflow.Name {
+			continue
+		}
+
+		toRemove := make(map[string]bool)
+		for _, role := range s.Roles {
+			toRemove[role.Module+"."+role.Name] = true
+		}
+
+		var remaining []string
+		var removed []string
+		for _, r := range nf.AllowedModuleRoles {
+			if toRemove[string(r)] {
+				removed = append(removed, string(r))
+			} else {
+				remaining = append(remaining, string(r))
+			}
+		}
+
+		if err := ctx.Backend.UpdateAllowedRoles(nf.ID, remaining); err != nil {
+			return mdlerrors.NewBackend("update nanoflow access", err)
+		}
+
+		if len(removed) == 0 {
+			fmt.Fprintf(ctx.Output, "None of the specified roles had execute access on %s.%s\n", modName, nf.Name)
+		} else {
+			fmt.Fprintf(ctx.Output, "Revoked execute access on %s.%s from %s\n", modName, nf.Name, strings.Join(removed, ", "))
+		}
+		return nil
+	}
+
+	return mdlerrors.NewNotFound("nanoflow", s.Nanoflow.Module+"."+s.Nanoflow.Name)
+}
+
 // execGrantPageAccess handles GRANT VIEW ON PAGE Module.Page TO roles.
 func execGrantPageAccess(ctx *ExecContext, s *ast.GrantPageAccessStmt) error {
 	if !ctx.ConnectedForWrite() {

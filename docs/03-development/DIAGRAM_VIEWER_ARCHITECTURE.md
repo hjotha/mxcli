@@ -47,6 +47,7 @@ The Go backend reads Mendix model data from the MPR file and outputs **Mermaid s
 |----------|-------------|-------------|
 | Domain Model | `erDiagram` | Entities, attributes, associations, generalizations |
 | Microflow | `flowchart LR` | Activities, splits, merge points, sequence flows |
+| Nanoflow | `flowchart LR` | Same as microflow (shares flow rendering) |
 | Page | `block-beta` | Widget tree structure |
 
 ### Domain Model Example

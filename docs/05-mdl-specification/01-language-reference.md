@@ -629,7 +629,7 @@ Creates a microflow with activities, parameters, return type, and control flow.
 
 **Syntax:**
 ```sql
-create [or replace] microflow <qualified-name>
+create [or modify] microflow <qualified-name>
   [folder '<path>']
 begin
   [<statements>]
@@ -705,6 +705,48 @@ Shows the full MDL definition of an existing microflow (round-trippable output).
 
 ```sql
 drop microflow <qualified-name>
+```
+
+### CREATE NANOFLOW
+
+Creates a nanoflow (client-side flow). Uses the same body syntax as microflows, but only client-side activities are allowed (no Java actions, REST calls, workflow actions, etc.).
+
+**Syntax:**
+```sql
+create [or modify] nanoflow <qualified-name>
+  [folder '<path>']
+begin
+  [<statements>]
+end;
+```
+
+**Restrictions:**
+- No `ErrorEvent`, Java action calls, REST/web service calls, workflow actions, import/export mapping actions, or database queries
+- Return type cannot be `Binary`
+- Activities are the same as microflows minus server-side-only actions (see `PROPOSAL_nanoflow_support.md` for the full list of 22 disallowed action types)
+
+**Example:**
+```sql
+create nanoflow Shop.ACT_ValidateCart
+folder 'Cart'
+begin
+  declare $Valid boolean = true;
+  if $Cart/ItemCount = 0 then
+    validation feedback $Cart/ItemCount message 'Cart is empty';
+    set $Valid = false;
+  end if;
+  return $Valid;
+end;
+```
+
+### DESCRIBE NANOFLOW
+
+Shows the full MDL definition of an existing nanoflow (round-trippable output as `CREATE OR MODIFY NANOFLOW`).
+
+### DROP NANOFLOW
+
+```sql
+drop nanoflow <qualified-name>
 ```
 
 ---
@@ -923,6 +965,7 @@ Shows which roles have access to a specific element.
 **Syntax:**
 ```sql
 show access on microflow <module>.<name>
+show access on nanoflow <module>.<name>
 show access on page <module>.<name>
 show access on <module>.<entity>
 ```
@@ -982,6 +1025,24 @@ Removes execute access on a microflow from one or more module roles.
 **Syntax:**
 ```sql
 revoke execute on microflow <module>.<name> from <module>.<role> [, ...]
+```
+
+### GRANT EXECUTE ON NANOFLOW
+
+Grants execute access on a nanoflow to one or more module roles.
+
+**Syntax:**
+```sql
+grant execute on nanoflow <module>.<name> to <module>.<role> [, ...]
+```
+
+### REVOKE EXECUTE ON NANOFLOW
+
+Removes execute access on a nanoflow from one or more module roles.
+
+**Syntax:**
+```sql
+revoke execute on nanoflow <module>.<name> from <module>.<role> [, ...]
 ```
 
 ### GRANT VIEW ON PAGE
@@ -1477,6 +1538,7 @@ statement       = connect_stmt | disconnect_stmt | status_stmt
                 | create_entity_stmt | alter_entity_stmt | drop_entity_stmt
                 | create_assoc_stmt | drop_assoc_stmt
                 | create_microflow_stmt | drop_microflow_stmt
+                | create_nanoflow_stmt | drop_nanoflow_stmt
                 | create_page_stmt | alter_page_stmt | drop_page_stmt
                 | move_stmt
                 | security_stmt | grant_stmt | revoke_stmt

@@ -312,7 +312,7 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 		// SHOW DEMO USERS
 		b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowDemoUsers})
 	} else if ctx.ACCESS() != nil {
-		// SHOW ACCESS ON [MICROFLOW|PAGE] Module.Entity
+		// SHOW ACCESS ON [MICROFLOW|PAGE|WORKFLOW|NANOFLOW] Module.Entity
 		if qn := ctx.QualifiedName(); qn != nil {
 			name := buildQualifiedName(qn)
 			if ctx.MICROFLOW() != nil {
@@ -328,6 +328,11 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 			} else if ctx.WORKFLOW() != nil {
 				b.statements = append(b.statements, &ast.ShowStmt{
 					ObjectType: ast.ShowAccessOnWorkflow,
+					Name:       &name,
+				})
+			} else if ctx.NANOFLOW() != nil {
+				b.statements = append(b.statements, &ast.ShowStmt{
+					ObjectType: ast.ShowAccessOnNanoflow,
 					Name:       &name,
 				})
 			} else {

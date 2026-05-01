@@ -62,6 +62,58 @@ func (b *Builder) ExitCreateMicroflowStatement(ctx *parser.CreateMicroflowStatem
 	b.statements = append(b.statements, stmt)
 }
 
+func (b *Builder) ExitCreateNanoflowStatement(ctx *parser.CreateNanoflowStatementContext) {
+	stmt := &ast.CreateNanoflowStmt{
+		Name: buildQualifiedName(ctx.QualifiedName()),
+	}
+
+	// Parse parameters
+	if paramList := ctx.MicroflowParameterList(); paramList != nil {
+		stmt.Parameters = buildMicroflowParameters(paramList)
+	}
+
+	// Parse return type
+	if retType := ctx.MicroflowReturnType(); retType != nil {
+		stmt.ReturnType = buildMicroflowReturnType(retType)
+	}
+
+	// Parse options (FOLDER, COMMENT)
+	if opts := ctx.MicroflowOptions(); opts != nil {
+		optsCtx := opts.(*parser.MicroflowOptionsContext)
+		for _, opt := range optsCtx.AllMicroflowOption() {
+			optCtx := opt.(*parser.MicroflowOptionContext)
+			if optCtx.COMMENT() != nil && optCtx.STRING_LITERAL() != nil {
+				stmt.Comment = unquoteString(optCtx.STRING_LITERAL().GetText())
+			}
+			if optCtx.FOLDER() != nil && optCtx.STRING_LITERAL() != nil {
+				stmt.Folder = unquoteString(optCtx.STRING_LITERAL().GetText())
+			}
+		}
+	}
+
+	// Parse body
+	if body := ctx.MicroflowBody(); body != nil {
+		stmt.Body = buildMicroflowBody(body)
+	}
+
+	// Check for CREATE OR MODIFY, extract doc comment, and parse @excluded
+	createStmt := findParentCreateStatement(ctx)
+	if createStmt != nil {
+		if createStmt.OR() != nil && (createStmt.MODIFY() != nil || createStmt.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+		for _, ann := range createStmt.AllAnnotation() {
+			annCtx := ann.(*parser.AnnotationContext)
+			if strings.EqualFold(annCtx.AnnotationName().GetText(), "excluded") {
+				stmt.Excluded = true
+			}
+		}
+	}
+	stmt.Documentation = findDocCommentText(ctx)
+
+	b.statements = append(b.statements, stmt)
+}
+
 // buildMicroflowDataType converts a data type context to ast.DataType for microflow context.
 // In microflow parameters/return types, bare qualified names are entity references (not enumerations).
 func buildMicroflowDataType(ctx parser.IDataTypeContext) ast.DataType {

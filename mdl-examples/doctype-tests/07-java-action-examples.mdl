@@ -1744,6 +1744,54 @@ end;
 
 -- MARK: Summary
 
+-- MARK: Level 9 - Imports in $$ block and DROP/RENAME
+
+-- ============================================================================
+-- LEVEL 9: Import extraction, DROP, and RENAME
+-- ============================================================================
+-- Import statements placed inside the $$ block are automatically extracted
+-- and placed in the Java file's import section (issue #127). This is the
+-- natural style for AI-generated Java action code.
+
+-- ----------------------------------------------------------------------------
+-- 9.1: Java action with imports inside the $$ block
+-- ----------------------------------------------------------------------------
+-- All import lines are moved to the file-level import section automatically.
+-- The executeAction() method body receives only the non-import lines.
+
+create java action JaTest.ParseCSV(CsvText: string not null) returns string
+as $$
+import java.io.BufferedReader;
+import java.io.StringReader;
+BufferedReader reader = new BufferedReader(new StringReader(CsvText));
+String firstLine = reader.readLine();
+reader.close();
+return firstLine != null ? firstLine : "";
+$$;
+
+create java action JaTest.ComputeHash(Input: string not null) returns string
+as $$
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
+MessageDigest digest = MessageDigest.getInstance("SHA-256");
+byte[] hash = digest.digest(Input.getBytes(StandardCharsets.UTF_8));
+return HexFormat.of().formatHex(hash);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- 9.2: RENAME JAVA ACTION — renames BSON document and .java source file
+-- ----------------------------------------------------------------------------
+
+rename java action JaTest.ParseCSV to ReadCsvFirstLine;
+
+-- ----------------------------------------------------------------------------
+-- 9.3: DROP JAVA ACTION — removes MPR unit and .java source file
+-- ----------------------------------------------------------------------------
+
+drop java action JaTest.ReadCsvFirstLine;
+drop java action JaTest.ComputeHash;
+
 -- ============================================================================
 -- Java Action Feature Summary
 -- ============================================================================

@@ -1,0 +1,56 @@
+-- ============================================================================
+-- Bug #352 (part): Compact reverse-association retrieve formatter
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Some Mendix models store a compact association retrieve as a
+--   `DatabaseRetrieveSource` with a single XPath predicate of the form
+--     [Module.Association = $Variable]
+--   and `Range = All`. When described, the formatter emitted the verbose
+--   shape
+--     retrieve $Domains from Module.Domain
+--       where Module.Domain_Runtime = $Runtime;
+--   On `mxcli exec`, that verbose shape is rebuilt as XPath. Studio Pro
+--   then accepts it but `describe → exec → describe` is no longer a
+--   fixpoint, and tooling that expects the compact form sees drift.
+--
+-- After fix:
+--   When the source is a database retrieve over a single equality
+--   predicate against a known association whose other side matches the
+--   start variable's type, and `Range = All`, the formatter emits the
+--   compact form `retrieve $Out from $Var/Module.Association`.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/352-retrieve-compact-reverse-association.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest352a.MF_FetchDomains"
+--   The describe output must use the compact `from $Runtime/Mod.Assoc`
+--   form, and `mx check` must report 0 errors.
+-- ============================================================================
+
+create module BugTest352a;
+
+create entity BugTest352a.Runtime (
+  Name : string(100)
+);
+/
+
+create entity BugTest352a.Domain (
+  Name : string(100)
+);
+/
+
+create association BugTest352a.Domain_Runtime
+  from BugTest352a.Domain
+  to BugTest352a.Runtime;
+/
+
+-- Compact reverse-association retrieve. Describe → exec → describe must
+-- preserve the `from $Runtime/BugTest352a.Domain_Runtime` shape.
+create microflow BugTest352a.MF_FetchDomains (
+  $Runtime: BugTest352a.Runtime
+)
+returns list of BugTest352a.Domain as $Domains
+begin
+  retrieve $Domains from $Runtime/BugTest352a.Domain_Runtime;
+end;
+/

@@ -79,6 +79,46 @@ func TestDescribeMermaid_Microflow_Mock(t *testing.T) {
 	assertContainsStr(t, out, "flowchart")
 }
 
+func TestDescribeMermaid_Nanoflow_Mock(t *testing.T) {
+	mod := mkModule("MyModule")
+	nf := &microflows.Nanoflow{
+		BaseElement: model.BaseElement{ID: nextID("nf")},
+		ContainerID: mod.ID,
+		Name:        "NF_Process",
+	}
+
+	h := mkHierarchy(mod)
+	withContainer(h, nf.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:      func() bool { return true },
+		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListNanoflowsFunc:    func() ([]*microflows.Nanoflow, error) { return []*microflows.Nanoflow{nf}, nil },
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, describeMermaid(ctx, "nanoflow", "MyModule.NF_Process"))
+
+	out := buf.String()
+	assertContainsStr(t, out, "flowchart")
+}
+
+func TestDescribeMermaid_Nanoflow_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:      func() bool { return true },
+		ListModulesFunc:      func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListNanoflowsFunc:    func() ([]*microflows.Nanoflow, error) { return nil, nil },
+		ListDomainModelsFunc: func() ([]*domainmodel.DomainModel, error) { return nil, nil },
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertError(t, describeMermaid(ctx, "nanoflow", "MyModule.NoSuch"))
+}
+
 func TestDescribeMermaid_Microflow_NotFound(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
@@ -114,7 +154,7 @@ func TestDescribeMermaid_UnsupportedType(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := describeMermaid(ctx, "nanoflow", "MyModule.Something")
+	err := describeMermaid(ctx, "workflow", "MyModule.Something")
 	assertError(t, err)
 	assertContainsStr(t, fmt.Sprint(err), "not supported")
 }

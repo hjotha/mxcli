@@ -194,6 +194,8 @@ actionbutton widgetName (caption: 'Caption', action: ACTION_TYPE [, buttonstyle:
 - `action: delete` - Delete object
 - `action: microflow Module.MicroflowName` - Call microflow
 - `action: microflow Module.MicroflowName(Param: $value)` - Call microflow with parameters
+- `action: nanoflow Module.NanoflowName` - Call nanoflow (client-side)
+- `action: nanoflow Module.NanoflowName(Param: $value)` - Call nanoflow with parameters
 - `action: show_page Module.PageName` - Navigate to page
 - `action: show_page Module.PageName(Param: $value)` - Navigate with parameters
 - `action: show_page Module.PageName($Param = $value)` - Also accepted (microflow-style)
@@ -341,6 +343,7 @@ column colActions (caption: 'Actions') {
 | `datasource: database from Module.Entity` | Direct database query |
 | `datasource: $Variable` | Variable bound (requires DATAVIEW parent with entity) |
 | `datasource: microflow Module.GetData()` | Microflow datasource |
+| `datasource: nanoflow Module.GetData()` | Nanoflow datasource (client-side, no server roundtrip) |
 | `datasource: selection widgetName` | Listen to selection from another widget |
 | `datasource: association path` | Retrieve by association from context (ByAssociation) |
 | `datasource: $currentObject/Module.Assoc` | Sugar for `association` — same semantics, reads more naturally |

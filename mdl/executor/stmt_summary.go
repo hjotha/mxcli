@@ -97,6 +97,10 @@ func stmtSummary(stmt ast.Statement) string {
 		return fmt.Sprintf("grant execute on microflow %s", s.Microflow)
 	case *ast.RevokeMicroflowAccessStmt:
 		return fmt.Sprintf("revoke execute on microflow %s", s.Microflow)
+	case *ast.GrantNanoflowAccessStmt:
+		return fmt.Sprintf("grant execute on nanoflow %s", s.Nanoflow)
+	case *ast.RevokeNanoflowAccessStmt:
+		return fmt.Sprintf("revoke execute on nanoflow %s", s.Nanoflow)
 	case *ast.GrantPageAccessStmt:
 		return fmt.Sprintf("grant view on page %s", s.Page)
 	case *ast.RevokePageAccessStmt:

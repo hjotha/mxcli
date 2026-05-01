@@ -157,6 +157,8 @@ func diffStatement(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
 		return diffAssociation(ctx, s)
 	case *ast.CreateMicroflowStmt:
 		return diffMicroflow(ctx, s)
+	case *ast.CreateNanoflowStmt:
+		return diffNanoflow(ctx, s)
 	default:
 		return nil, nil // Skip unsupported statements
 	}
@@ -312,6 +314,52 @@ func diffMicroflow(ctx *ExecContext, s *ast.CreateMicroflowStmt) (*DiffResult, e
 			ctx.Output = &buf
 			describeMicroflow(ctx, s.Name)
 			ctx.Output = oldOutput
+			result.Current = strings.TrimSuffix(buf.String(), "\n")
+			result.Changes = compareMicroflows(ctx, result.Current, result.Proposed)
+			return result, nil
+		}
+	}
+
+	result.IsNew = true
+	return result, nil
+}
+
+// diffNanoflow compares a CREATE NANOFLOW statement against the project
+func diffNanoflow(ctx *ExecContext, s *ast.CreateNanoflowStmt) (*DiffResult, error) {
+	result := &DiffResult{
+		ObjectType: "Nanoflow",
+		ObjectName: s.Name,
+		Proposed:   nanoflowStmtToMDL(ctx, s),
+	}
+
+	// Try to find existing nanoflow
+	// Errors treated as "new" to match diffMicroflow and other diff* functions
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		result.IsNew = true
+		return result, nil
+	}
+
+	nfs, err := ctx.Backend.ListNanoflows()
+	if err != nil {
+		result.IsNew = true
+		return result, nil
+	}
+
+	for _, nf := range nfs {
+		modID := h.FindModuleID(nf.ContainerID)
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && nf.Name == s.Name.Name {
+			// Capture current MDL representation
+			var buf bytes.Buffer
+			if err := func() error {
+				oldOutput := ctx.Output
+				ctx.Output = &buf
+				defer func() { ctx.Output = oldOutput }()
+				return describeNanoflow(ctx, s.Name)
+			}(); err != nil {
+				return nil, err
+			}
 			result.Current = strings.TrimSuffix(buf.String(), "\n")
 			result.Changes = compareMicroflows(ctx, result.Current, result.Proposed)
 			return result, nil
@@ -500,7 +548,8 @@ func extractParameters(_ *ExecContext, lines []string) map[string]bool {
 	inParams := false
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "create microflow") || strings.HasPrefix(line, "create nanoflow") {
+		if strings.HasPrefix(line, "create microflow") || strings.HasPrefix(line, "create nanoflow") ||
+			strings.HasPrefix(line, "create or modify microflow") || strings.HasPrefix(line, "create or modify nanoflow") {
 			inParams = true
 			continue
 		}
