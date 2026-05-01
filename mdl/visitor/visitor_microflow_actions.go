@@ -484,6 +484,69 @@ func buildCallJavaScriptActionStatement(ctx parser.ICallJavaScriptActionStatemen
 	return stmt
 }
 
+// buildCallWebServiceStatement converts CALL WEB SERVICE statement context to CallWebServiceStmt.
+func buildCallWebServiceStatement(ctx parser.ICallWebServiceStatementContext) *ast.CallWebServiceStmt {
+	if ctx == nil {
+		return nil
+	}
+	callCtx := ctx.(*parser.CallWebServiceStatementContext)
+
+	stmt := &ast.CallWebServiceStmt{}
+	if v := callCtx.VARIABLE(); v != nil {
+		stmt.OutputVariable = strings.TrimPrefix(v.GetText(), "$")
+	}
+
+	if callCtx.RAW() != nil {
+		if lit := callCtx.STRING_LITERAL(); lit != nil {
+			stmt.RawBSONBase64 = unquoteString(lit.GetText())
+		}
+		if errClause := callCtx.OnErrorClause(); errClause != nil {
+			stmt.ErrorHandling = buildOnErrorClause(errClause)
+		}
+		return stmt
+	}
+
+	// The grammar fixes the structured CALL WEB SERVICE clause order as:
+	// service, optional operation, optional send mapping, optional receive
+	// mapping. Keep the positional reference walk in that same order.
+	refs := callCtx.AllWebServiceReference()
+	idx := 0
+	if len(refs) > idx {
+		stmt.ServiceID = webServiceReferenceText(refs[idx])
+		idx++
+	}
+	if callCtx.OPERATION() != nil && len(refs) > idx {
+		stmt.OperationName = webServiceReferenceText(refs[idx])
+		idx++
+	}
+	if callCtx.SEND() != nil && len(refs) > idx {
+		stmt.SendMappingID = webServiceReferenceText(refs[idx])
+		idx++
+	}
+	if callCtx.RECEIVE() != nil && len(refs) > idx {
+		stmt.ReceiveMappingID = webServiceReferenceText(refs[idx])
+	}
+	if expr := callCtx.Expression(); expr != nil {
+		stmt.Timeout = buildExpression(expr)
+	}
+	if errClause := callCtx.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
+
+	return stmt
+}
+
+func webServiceReferenceText(ctx parser.IWebServiceReferenceContext) string {
+	if ctx == nil {
+		return ""
+	}
+	refCtx := ctx.(*parser.WebServiceReferenceContext)
+	if lit := refCtx.STRING_LITERAL(); lit != nil {
+		return unquoteString(lit.GetText())
+	}
+	return getQualifiedNameText(refCtx.QualifiedName())
+}
+
 // buildExecuteDatabaseQueryStatement converts EXECUTE DATABASE QUERY context to ExecuteDatabaseQueryStmt.
 func buildExecuteDatabaseQueryStatement(ctx parser.IExecuteDatabaseQueryStatementContext) *ast.ExecuteDatabaseQueryStmt {
 	if ctx == nil {
