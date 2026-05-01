@@ -10,15 +10,17 @@ create enumeration EnumSplitExample.Status (
 create microflow EnumSplitExample.RouteStatus (
   $Status: enum EnumSplitExample.Status
 )
-returns boolean
+returns boolean as $IsOpen
 begin
+  declare $IsOpen boolean = false;
   case $Status
     when Open then
-      return true;
+      set $IsOpen = true;
     when Pending then
-      return true;
+      set $IsOpen = false;
     when Closed then
-      return false;
+      set $IsOpen = false;
   end case;
+  return $IsOpen;
 end;
 /
