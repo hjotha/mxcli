@@ -122,6 +122,8 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 
 	// Handle leftover pending annotations (free-floating annotation text)
 	if fb.pendingAnnotations != nil {
+		// Free annotations before a statement stay unattached; trailing free
+		// annotations are drained after the statement loop below.
 		for _, text := range freeAnnotationTexts(fb.pendingAnnotations) {
 			fb.attachFreeAnnotation(text)
 		}
@@ -199,6 +201,14 @@ func collectListInputVariables(stmts []ast.MicroflowStatement) map[string]bool {
 					inputs[s.ListVariable] = true
 				}
 				walk(s.Body)
+			case *ast.AddToListStmt:
+				if s.List != "" {
+					inputs[s.List] = true
+				}
+			case *ast.RemoveFromListStmt:
+				if s.List != "" {
+					inputs[s.List] = true
+				}
 			case *ast.WhileStmt:
 				walk(s.Body)
 			case *ast.IfStmt:
