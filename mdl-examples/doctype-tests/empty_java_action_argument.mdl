@@ -1,3 +1,15 @@
+create module SampleModule;
+
+create persistent entity SampleModule.Item (
+  Name: string(200)
+);
+
+create java action SampleModule.Recalculate(
+  CompanyId: string,
+  RecalculateAll: boolean not null,
+  ItemList: list of SampleModule.Item
+) returns void;
+
 create microflow SampleModule.ACT_RecalculateOpenItems ()
 returns Void
 begin

@@ -20,6 +20,8 @@ begin
       set $IsOpen = false;
     when Closed then
       set $IsOpen = false;
+    when (empty) then
+      set $IsOpen = false;
   end case;
   return $IsOpen;
 end;
