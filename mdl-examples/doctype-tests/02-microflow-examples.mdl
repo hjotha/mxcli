@@ -672,6 +672,28 @@ end;
 /
 
 /**
+ * Example 6.1b: LOOP with custom caption
+ *
+ * Demonstrates activity metadata on a loop.
+ */
+create microflow MfTest.M021_2_LoopWithCaption (
+  $ProductList: list of MfTest.Product
+)
+returns integer as $count
+begin
+  declare $count integer = 0;
+
+  @caption 'Process products'
+  loop $Product in $ProductList
+  begin
+    set $count = $count + 1;
+  end loop;
+
+  return $count;
+end;
+/
+
+/**
  * Example 6.2: LOOP with object modification
  *
  * Loop that modifies each object.
