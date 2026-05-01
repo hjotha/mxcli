@@ -17,11 +17,12 @@ type MicroflowAction interface {
 // CreateObjectAction creates a new object.
 type CreateObjectAction struct {
 	model.BaseElement
-	EntityID            model.ID        `json:"entityId"`
-	EntityQualifiedName string          `json:"entityQualifiedName"` // BY_NAME_REFERENCE
-	OutputVariable      string          `json:"outputVariable,omitempty"`
-	Commit              CommitType      `json:"commit"`
-	InitialMembers      []*MemberChange `json:"initialMembers,omitempty"`
+	ErrorHandlingType   ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	EntityID            model.ID          `json:"entityId"`
+	EntityQualifiedName string            `json:"entityQualifiedName"` // BY_NAME_REFERENCE
+	OutputVariable      string            `json:"outputVariable,omitempty"`
+	Commit              CommitType        `json:"commit"`
+	InitialMembers      []*MemberChange   `json:"initialMembers,omitempty"`
 }
 
 func (CreateObjectAction) isMicroflowAction() {}
@@ -29,10 +30,11 @@ func (CreateObjectAction) isMicroflowAction() {}
 // ChangeObjectAction changes an existing object.
 type ChangeObjectAction struct {
 	model.BaseElement
-	ChangeVariable  string          `json:"changeVariable"`
-	Commit          CommitType      `json:"commit"`
-	RefreshInClient bool            `json:"refreshInClient"`
-	Changes         []*MemberChange `json:"changes,omitempty"`
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	ChangeVariable    string            `json:"changeVariable"`
+	Commit            CommitType        `json:"commit"`
+	RefreshInClient   bool              `json:"refreshInClient"`
+	Changes           []*MemberChange   `json:"changes,omitempty"`
 }
 
 func (ChangeObjectAction) isMicroflowAction() {}
@@ -364,9 +366,10 @@ const (
 // CreateVariableAction creates a variable.
 type CreateVariableAction struct {
 	model.BaseElement
-	VariableName string   `json:"variableName"`
-	DataType     DataType `json:"dataType,omitempty"`
-	InitialValue string   `json:"initialValue,omitempty"`
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	VariableName      string            `json:"variableName"`
+	DataType          DataType          `json:"dataType,omitempty"`
+	InitialValue      string            `json:"initialValue,omitempty"`
 }
 
 func (CreateVariableAction) isMicroflowAction() {}
@@ -374,8 +377,9 @@ func (CreateVariableAction) isMicroflowAction() {}
 // ChangeVariableAction changes a variable.
 type ChangeVariableAction struct {
 	model.BaseElement
-	VariableName string `json:"variableName"`
-	Value        string `json:"value"`
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	VariableName      string            `json:"variableName"`
+	Value             string            `json:"value"`
 }
 
 func (ChangeVariableAction) isMicroflowAction() {}
@@ -394,6 +398,7 @@ func (CastAction) isMicroflowAction() {}
 // ShowPageAction shows a page.
 type ShowPageAction struct {
 	model.BaseElement
+	ErrorHandlingType     ErrorHandlingType       `json:"errorHandlingType,omitempty"`
 	PageID                model.ID                `json:"pageId,omitempty"`
 	PageName              string                  `json:"pageName,omitempty"` // Qualified name for BY_NAME_REFERENCE (e.g., "Module.PageName")
 	FormSettingsID        model.ID                `json:"formSettingsId,omitempty"`
@@ -438,7 +443,8 @@ func (ShowHomePageAction) isMicroflowAction() {}
 // ClosePageAction closes the current page.
 type ClosePageAction struct {
 	model.BaseElement
-	NumberOfPages int `json:"numberOfPages"`
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	NumberOfPages     int               `json:"numberOfPages"`
 }
 
 func (ClosePageAction) isMicroflowAction() {}
@@ -446,10 +452,11 @@ func (ClosePageAction) isMicroflowAction() {}
 // ShowMessageAction shows a message to the user.
 type ShowMessageAction struct {
 	model.BaseElement
-	Template           *model.Text `json:"template,omitempty"`
-	Type               MessageType `json:"type"`
-	Blocking           bool        `json:"blocking"`
-	TemplateParameters []string    `json:"templateParameters,omitempty"` // Expressions for {1}, {2}, etc.
+	ErrorHandlingType  ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	Template           *model.Text       `json:"template,omitempty"`
+	Type               MessageType       `json:"type"`
+	Blocking           bool              `json:"blocking"`
+	TemplateParameters []string          `json:"templateParameters,omitempty"` // Expressions for {1}, {2}, etc.
 }
 
 func (ShowMessageAction) isMicroflowAction() {}
@@ -466,13 +473,14 @@ const (
 // ValidationFeedbackAction shows validation feedback.
 type ValidationFeedbackAction struct {
 	model.BaseElement
-	ObjectVariable     string      `json:"objectVariable"`
-	AttributeName      string      `json:"attributeName,omitempty"`   // BY_NAME_REFERENCE (e.g., "Module.Entity.Attribute")
-	AssociationName    string      `json:"associationName,omitempty"` // BY_NAME_REFERENCE (e.g., "Module.AssociationName")
-	AttributeID        model.ID    `json:"attributeId,omitempty"`     // Deprecated: use AttributeName
-	AssociationID      model.ID    `json:"associationId,omitempty"`   // Deprecated: use AssociationName
-	Template           *model.Text `json:"template,omitempty"`
-	TemplateParameters []string    `json:"templateParameters,omitempty"` // Expressions for {1}, {2}, etc. placeholders
+	ErrorHandlingType  ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	ObjectVariable     string            `json:"objectVariable"`
+	AttributeName      string            `json:"attributeName,omitempty"`   // BY_NAME_REFERENCE (e.g., "Module.Entity.Attribute")
+	AssociationName    string            `json:"associationName,omitempty"` // BY_NAME_REFERENCE (e.g., "Module.AssociationName")
+	AttributeID        model.ID          `json:"attributeId,omitempty"`     // Deprecated: use AttributeName
+	AssociationID      model.ID          `json:"associationId,omitempty"`   // Deprecated: use AssociationName
+	Template           *model.Text       `json:"template,omitempty"`
+	TemplateParameters []string          `json:"templateParameters,omitempty"` // Expressions for {1}, {2}, etc. placeholders
 }
 
 func (ValidationFeedbackAction) isMicroflowAction() {}
@@ -842,11 +850,12 @@ type ErrorHandling struct {
 // LogMessageAction logs a message.
 type LogMessageAction struct {
 	model.BaseElement
-	LogLevel              LogLevel    `json:"logLevel"`
-	LogNodeName           string      `json:"logNodeName,omitempty"`
-	MessageTemplate       *model.Text `json:"messageTemplate,omitempty"`
-	TemplateParameters    []string    `json:"templateParameters,omitempty"` // Expressions for {1}, {2}, etc. placeholders
-	IncludeLastStackTrace bool        `json:"includeLastStackTrace"`
+	ErrorHandlingType     ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	LogLevel              LogLevel          `json:"logLevel"`
+	LogNodeName           string            `json:"logNodeName,omitempty"`
+	MessageTemplate       *model.Text       `json:"messageTemplate,omitempty"`
+	TemplateParameters    []string          `json:"templateParameters,omitempty"` // Expressions for {1}, {2}, etc. placeholders
+	IncludeLastStackTrace bool              `json:"includeLastStackTrace"`
 }
 
 func (LogMessageAction) isMicroflowAction() {}

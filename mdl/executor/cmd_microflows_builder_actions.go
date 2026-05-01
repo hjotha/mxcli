@@ -29,10 +29,11 @@ func (fb *flowBuilder) addCreateVariableAction(s *ast.DeclareStmt) model.ID {
 	fb.declaredVars[s.Variable] = typeName
 
 	action := &microflows.CreateVariableAction{
-		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-		VariableName: s.Variable,
-		DataType:     convertASTToMicroflowDataType(declType, nil),
-		InitialValue: fb.exprToString(s.InitialValue),
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: fb.ehType(nil),
+		VariableName:      s.Variable,
+		DataType:          convertASTToMicroflowDataType(declType, nil),
+		InitialValue:      fb.exprToString(s.InitialValue),
 	}
 
 	activity := &microflows.ActionActivity{
@@ -62,9 +63,10 @@ func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
 	}
 
 	action := &microflows.ChangeVariableAction{
-		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-		VariableName: s.Target,
-		Value:        fb.exprToString(s.Value),
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: fb.ehType(nil),
+		VariableName:      s.Target,
+		Value:             fb.exprToString(s.Value),
 	}
 
 	activity := &microflows.ActionActivity{
@@ -87,9 +89,10 @@ func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
 // addCreateObjectAction creates a CREATE OBJECT statement.
 func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 	action := &microflows.CreateObjectAction{
-		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-		OutputVariable: s.Variable,
-		Commit:         microflows.CommitTypeNo,
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: fb.ehType(s.ErrorHandling),
+		OutputVariable:    s.Variable,
+		Commit:            microflows.CommitTypeNo,
 	}
 	// Set entity reference as qualified name (BY_NAME_REFERENCE)
 	entityQN := ""
@@ -242,10 +245,11 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 	// Empty non-committing changes need RefreshInClient to satisfy Studio Pro
 	// consistency checks; explicit `refresh` keeps the same flag for all changes.
 	action := &microflows.ChangeObjectAction{
-		BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
-		ChangeVariable:  s.Variable,
-		Commit:          microflows.CommitTypeNo,
-		RefreshInClient: s.RefreshInClient || len(s.Changes) == 0,
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: fb.ehType(nil),
+		ChangeVariable:    s.Variable,
+		Commit:            microflows.CommitTypeNo,
+		RefreshInClient:   s.RefreshInClient || len(s.Changes) == 0,
 	}
 
 	// Look up entity type from variable scope
@@ -306,7 +310,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Expression:  "$" + s.Variable,
 		},
-		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+		ErrorHandlingType: fb.ehType(nil),
 	}
 	fb.objects = append(fb.objects, split)
 	splitID := split.ID

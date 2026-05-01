@@ -35,7 +35,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$CreateVariableAction"},
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 			{Key: "VariableName", Value: a.VariableName},
 			{Key: "InitialValue", Value: a.InitialValue},
 		}
@@ -48,7 +48,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$ChangeVariableAction"},
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 			{Key: "ChangeVariableName", Value: a.VariableName},
 			{Key: "Value", Value: a.Value},
 		}
@@ -63,8 +63,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		if a.EntityQualifiedName != "" {
 			doc = append(doc, bson.E{Key: "Entity", Value: a.EntityQualifiedName})
 		}
-		// ErrorHandlingType is required (default to Rollback)
-		doc = append(doc, bson.E{Key: "ErrorHandlingType", Value: "Rollback"})
+		doc = append(doc, bson.E{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")})
 		// Serialize Items (ChangeActionItem) for InitialMembers. Mendix stores
 		// this list with storage-list marker 2, not with the item count.
 		items := bson.A{int32(2)}
@@ -99,7 +98,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$Type", Value: "Microflows$ChangeAction"}, // storageName differs from qualifiedName
 			{Key: "ChangeVariableName", Value: a.ChangeVariable},
 			{Key: "Commit", Value: string(a.Commit)},
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 		}
 		// Serialize Items (ChangeActionItem). Mendix stores this list with
 		// storage-list marker 2, not with the item count.
@@ -156,7 +155,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$LogMessageAction"},
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 			{Key: "IncludeLatestStackTrace", Value: false},
 			{Key: "Level", Value: string(a.LogLevel)},
 			{Key: "Node", Value: a.LogNodeName}, // Already stored as expression (e.g., "'TEST'")
@@ -402,7 +401,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$ShowFormAction"}, // storageName differs from qualifiedName
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 		}
 
 		// FormSettings contains Form (BY_NAME_REFERENCE) and ParameterMappings
@@ -442,7 +441,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$CloseFormAction"},
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 			{Key: "NumberOfPagesToClose", Value: int32(a.NumberOfPages)},
 		}
 		return doc
@@ -459,7 +458,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$ShowMessageAction"},
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 			{Key: "Type", Value: string(a.Type)},
 			{Key: "Blocking", Value: a.Blocking},
 			{Key: "Template", Value: serializeTextTemplate(a.Template, a.TemplateParameters)},
@@ -479,7 +478,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 		doc := bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
 			{Key: "$Type", Value: "Microflows$ValidationFeedbackAction"},
-			{Key: "ErrorHandlingType", Value: "Rollback"},
+			{Key: "ErrorHandlingType", Value: stringOrDefault(string(a.ErrorHandlingType), "Rollback")},
 			{Key: "ValidationVariableName", Value: a.ObjectVariable},
 		}
 		// Always write both Attribute and Association fields — they are mutually

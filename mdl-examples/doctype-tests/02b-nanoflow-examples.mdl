@@ -161,7 +161,7 @@ end;
 
 /**
  * N006: Validates and saves a product via a server-side microflow.
- * Demonstrates calling another nanoflow, calling a microflow with ON ERROR CONTINUE,
+ * Demonstrates calling another nanoflow, calling a microflow,
  * conditional messaging, and closing the current page on success.
  *
  * @param $Product The product to validate and save
@@ -180,8 +180,8 @@ begin
     -- Mark the product as valid before saving
     change $Product (IsValid = true);
 
-    -- Call the server-side save; continue if the call fails (e.g. offline)
-    $Saved = call microflow NanoflowExamples.ACT_SaveProduct ($Product = $Product) on error continue;
+    -- Call the server-side save and show a confirmation
+    $Saved = call microflow NanoflowExamples.ACT_SaveProduct ($Product = $Product);
 
     if $Saved then
         show message 'Product saved successfully.' type Information;
@@ -220,7 +220,7 @@ create or modify nanoflow NanoflowExamples.N008_FormatPrice (
 returns String
 folder 'Helpers'
 begin
-    return $Currency + ' ' + formatDecimal($Amount, 2);
+    return $Currency + ' ' + toString($Amount);
 end;
 
 -- ============================================================================

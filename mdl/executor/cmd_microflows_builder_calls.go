@@ -78,9 +78,10 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 	}
 
 	action := &microflows.LogMessageAction{
-		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-		LogLevel:    logLevel,
-		LogNodeName: logNodeName,
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: fb.ehType(nil),
+		LogLevel:          logLevel,
+		LogNodeName:       logNodeName,
 		MessageTemplate: &model.Text{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 			Translations: map[string]string{
@@ -611,6 +612,7 @@ func (fb *flowBuilder) addShowPageAction(s *ast.ShowPageStmt) model.ID {
 	// The modern Mendix format uses FormSettings.Form as a qualified name string
 	action := &microflows.ShowPageAction{
 		BaseElement:           model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType:     fb.ehType(nil),
 		PageName:              pageQN, // BY_NAME_REFERENCE - qualified name string
 		PageSettings:          pageSettings,
 		PageParameterMappings: mappings,
@@ -704,6 +706,7 @@ func (fb *flowBuilder) addShowMessageAction(s *ast.ShowMessageStmt) model.ID {
 
 	action := &microflows.ShowMessageAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType:  fb.ehType(nil),
 		Template:           template,
 		Type:               msgType,
 		TemplateParameters: templateParams,
@@ -763,8 +766,9 @@ func (fb *flowBuilder) addClosePageAction(s *ast.ClosePageStmt) model.ID {
 	}
 
 	action := &microflows.ClosePageAction{
-		BaseElement:   model.BaseElement{ID: model.ID(types.GenerateID())},
-		NumberOfPages: numPages,
+		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType: fb.ehType(nil),
+		NumberOfPages:     numPages,
 	}
 
 	activity := &microflows.ActionActivity{
@@ -850,6 +854,7 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 
 	action := &microflows.ValidationFeedbackAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
+		ErrorHandlingType:  fb.ehType(nil),
 		ObjectVariable:     varName,
 		AttributeName:      attributeName,
 		AssociationName:    associationName,

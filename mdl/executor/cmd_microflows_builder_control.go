@@ -415,7 +415,7 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 			Objects:     loopBuilder.objects,
 			Flows:       nil, // Internal flows go at top-level, not inside the loop's ObjectCollection
 		},
-		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+		ErrorHandlingType: fb.ehType(nil),
 	}
 
 	// @anchor(iterator: ..., tail: ...) parses and survives on
@@ -653,7 +653,7 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 			Objects:     loopBuilder.objects,
 			Flows:       nil,
 		},
-		ErrorHandlingType: microflows.ErrorHandlingTypeRollback,
+		ErrorHandlingType: fb.ehType(nil),
 	}
 
 	// See addLoopStatement — @anchor(iterator/tail) is parsed but not

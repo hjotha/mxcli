@@ -30,11 +30,11 @@ func convertErrorHandlingType(eh *ast.ErrorHandlingClause) microflows.ErrorHandl
 }
 
 // ehType returns the error handling type for an activity in this flow context.
-// Nanoflows use "" (omitted) as the default because they have no transactions;
-// microflows use "Rollback".
+// Nanoflows default to "Abort" because they have no transactions; microflows
+// default to "Rollback". An explicit ON ERROR clause always overrides the default.
 func (fb *flowBuilder) ehType(eh *ast.ErrorHandlingClause) microflows.ErrorHandlingType {
 	if fb.isNanoflow && eh == nil {
-		return ""
+		return microflows.ErrorHandlingTypeAbort
 	}
 	return convertErrorHandlingType(eh)
 }
