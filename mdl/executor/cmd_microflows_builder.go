@@ -56,6 +56,34 @@ type flowBuilder struct {
 	manualLoopBackTarget  model.ID
 }
 
+type flowBuilderVariableState struct {
+	varTypes     map[string]string
+	declaredVars map[string]string
+}
+
+func (fb *flowBuilder) snapshotVariableState() flowBuilderVariableState {
+	return flowBuilderVariableState{
+		varTypes:     cloneStringMap(fb.varTypes),
+		declaredVars: cloneStringMap(fb.declaredVars),
+	}
+}
+
+func (fb *flowBuilder) restoreVariableState(state flowBuilderVariableState) {
+	fb.varTypes = state.varTypes
+	fb.declaredVars = state.declaredVars
+}
+
+func cloneStringMap(in map[string]string) map[string]string {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
 // addError records a validation error during flow building.
 func (fb *flowBuilder) addError(format string, args ...any) {
 	fb.errors = append(fb.errors, fmt.Sprintf(format, args...))
@@ -139,6 +167,17 @@ func (fb *flowBuilder) registerResultVariableType(varName string, dt microflows.
 	if fb.declaredVars != nil {
 		fb.declaredVars[varName] = dt.GetTypeName()
 	}
+}
+
+func (fb *flowBuilder) resolveVariableName(varName string) string {
+	return varName
+}
+
+func (fb *flowBuilder) resolveVariablePath(path string) string {
+	if before, after, ok := strings.Cut(path, "/"); ok {
+		return fb.resolveVariableName(before) + "/" + after
+	}
+	return fb.resolveVariableName(path)
 }
 
 // lookupMicroflowReturnType resolves the return type of a called microflow by
@@ -294,10 +333,12 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 	}
 
 	switch e := expr.(type) {
+	case *ast.VariableExpr:
+		return &ast.VariableExpr{Name: fb.resolveVariableName(e.Name)}
 	case *ast.AttributePathExpr:
 		resolved := fb.resolvePathSegments(e.Path)
 		return &ast.AttributePathExpr{
-			Variable: e.Variable,
+			Variable: fb.resolveVariableName(e.Variable),
 			Path:     resolved,
 			Segments: e.Segments,
 		}
@@ -332,10 +373,12 @@ func (fb *flowBuilder) resolveAssociationPaths(expr ast.Expression) ast.Expressi
 	case *ast.SourceExpr:
 		if e.Source != "" {
 			// Non-empty Source is the exact expression text to write back.
-			// Rebuilding it here would defeat the whitespace-preservation
-			// purpose of SourceExpr, so keep the parsed tree only for callers
-			// that need semantic inspection.
-			return e
+			// Rebuilding it here would defeat SourceExpr's whitespace-preservation
+			// purpose.
+			return &ast.SourceExpr{
+				Expression: fb.resolveAssociationPaths(e.Expression),
+				Source:     e.Source,
+			}
 		}
 		return fb.resolveAssociationPaths(e.Expression)
 	default:

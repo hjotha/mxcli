@@ -4,11 +4,15 @@
 package executor
 
 import (
+	"regexp"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
+
+var mendixExpressionVariableRefPattern = regexp.MustCompile(`\$([A-Za-z_][A-Za-z0-9_]*)`)
 
 // buildFlowGraph converts AST statements to a Microflow flow graph.
 // Note: posY represents the CENTER LINE for element alignment, not the top position.

@@ -54,16 +54,17 @@ func (fb *flowBuilder) addCreateVariableAction(s *ast.DeclareStmt) model.ID {
 
 // addChangeVariableAction creates a SET statement as a ChangeVariableAction.
 func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
+	target := fb.resolveVariablePath(s.Target)
 	// Validate that the variable has been declared
-	if !fb.isVariableDeclared(s.Target) {
+	if !fb.isVariableDeclared(target) {
 		fb.addErrorWithExample(
-			fmt.Sprintf("variable '%s' is not declared", s.Target),
-			errorExampleDeclareVariable(s.Target))
+			fmt.Sprintf("variable '%s' is not declared", target),
+			errorExampleDeclareVariable(target))
 	}
 
 	action := &microflows.ChangeVariableAction{
 		BaseElement:  model.BaseElement{ID: model.ID(types.GenerateID())},
-		VariableName: s.Target,
+		VariableName: target,
 		Value:        fb.exprToString(s.Value),
 	}
 
@@ -239,19 +240,21 @@ func (fb *flowBuilder) addRollbackAction(s *ast.RollbackStmt) model.ID {
 
 // addChangeObjectAction creates a CHANGE statement.
 func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
-	// Empty non-committing changes need RefreshInClient to satisfy Studio Pro
-	// consistency checks; explicit `refresh` keeps the same flag for all changes.
+	changeVariable := fb.resolveVariableName(s.Variable)
 	action := &microflows.ChangeObjectAction{
-		BaseElement:     model.BaseElement{ID: model.ID(types.GenerateID())},
-		ChangeVariable:  s.Variable,
-		Commit:          microflows.CommitTypeNo,
+		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
+		ChangeVariable: changeVariable,
+		Commit:         microflows.CommitTypeNo,
+		// Studio Pro rejects an empty non-committing change action unless it
+		// refreshes in client. The CE0032 message mentions only items/commit,
+		// but mx check accepts RefreshInClient=true as the third valid escape.
 		RefreshInClient: s.RefreshInClient || len(s.Changes) == 0,
 	}
 
 	// Look up entity type from variable scope
 	entityQN := ""
 	if fb.varTypes != nil {
-		entityQN = fb.varTypes[s.Variable]
+		entityQN = fb.varTypes[changeVariable]
 	}
 
 	// Build MemberChange items for each SET assignment
@@ -507,7 +510,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		assocInfo := fb.lookupAssociation(s.Source.Module, s.Source.Name)
 		startVarType := ""
 		if fb.varTypes != nil {
-			startVarType = fb.varTypes[s.StartVariable]
+			startVarType = fb.varTypes[fb.resolveVariableName(s.StartVariable)]
 		}
 
 		outputUsedAsList := fb.listInputVariables != nil && fb.listInputVariables[s.Variable]
@@ -528,7 +531,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			dbSource := &microflows.DatabaseRetrieveSource{
 				BaseElement:         model.BaseElement{ID: model.ID(types.GenerateID())},
 				EntityQualifiedName: assocInfo.parentEntityQN,
-				XPathConstraint:     "[" + assocQN + " = $" + s.StartVariable + "]",
+				XPathConstraint:     "[" + assocQN + " = $" + fb.resolveVariableName(s.StartVariable) + "]",
 			}
 			source = dbSource
 			if fb.varTypes != nil {
@@ -538,7 +541,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			// Forward traversal or ReferenceSet: use AssociationRetrieveSource
 			source = &microflows.AssociationRetrieveSource{
 				BaseElement:              model.BaseElement{ID: model.ID(types.GenerateID())},
-				StartVariable:            s.StartVariable,
+				StartVariable:            fb.resolveVariableName(s.StartVariable),
 				AssociationQualifiedName: assocQN,
 			}
 			if fb.varTypes != nil {
