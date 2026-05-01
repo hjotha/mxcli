@@ -101,6 +101,23 @@ type DeclareStmt struct {
 
 func (s *DeclareStmt) isMicroflowStatement() {}
 
+// EnumSplitCase represents one enumeration branch in an EnumSplit.
+type EnumSplitCase struct {
+	Value  string // First enumeration value, or "(empty)" for Mendix's empty enum case.
+	Values []string
+	Body   []MicroflowStatement
+}
+
+// EnumSplitStmt represents: SPLIT ENUM $Var ... END SPLIT
+type EnumSplitStmt struct {
+	Variable    string // Variable or attribute path without $ prefix (e.g. EventType or Event/EventType)
+	Cases       []EnumSplitCase
+	ElseBody    []MicroflowStatement
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *EnumSplitStmt) isMicroflowStatement() {}
+
 // MfSetStmt represents: SET $Var = expr or SET $Var/Attr = expr
 // (Named MfSetStmt to avoid conflict with existing SetStmt for SET key = value)
 type MfSetStmt struct {

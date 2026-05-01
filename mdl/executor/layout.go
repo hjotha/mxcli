@@ -73,6 +73,8 @@ func (m *layoutMeasurer) measureStatement(stmt ast.MicroflowStatement) Bounds {
 	switch s := stmt.(type) {
 	case *ast.IfStmt:
 		return m.measureIfStatement(s)
+	case *ast.EnumSplitStmt:
+		return m.measureEnumSplitStatement(s)
 	case *ast.LoopStmt:
 		return m.measureLoopStatement(s)
 	case *ast.WhileStmt:
@@ -84,6 +86,30 @@ func (m *layoutMeasurer) measureStatement(stmt ast.MicroflowStatement) Bounds {
 		// Simple activities have fixed size
 		return Bounds{Width: ActivityWidth, Height: ActivityHeight}
 	}
+}
+
+func (m *layoutMeasurer) measureEnumSplitStatement(s *ast.EnumSplitStmt) Bounds {
+	maxBranchWidth := 0
+	branchCount := len(s.Cases)
+	for _, c := range s.Cases {
+		bounds := m.measureStatements(c.Body)
+		maxBranchWidth = max(maxBranchWidth, bounds.Width)
+	}
+	if len(s.ElseBody) > 0 {
+		bounds := m.measureStatements(s.ElseBody)
+		maxBranchWidth = max(maxBranchWidth, bounds.Width)
+		branchCount++
+	}
+	if maxBranchWidth == 0 {
+		maxBranchWidth = HorizontalSpacing / 2
+	}
+	if branchCount == 0 {
+		branchCount = 1
+	}
+
+	width := SplitWidth + HorizontalSpacing/2 + maxBranchWidth + HorizontalSpacing/2 + MergeSize
+	height := ActivityHeight + (branchCount-1)*VerticalSpacing
+	return Bounds{Width: width, Height: height}
 }
 
 // measureIfStatement calculates bounds for IF/ELSE
