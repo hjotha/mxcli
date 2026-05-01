@@ -576,6 +576,37 @@ func TestFormatAction_ValidationFeedback(t *testing.T) {
 	}
 }
 
+func TestFormatAction_ValidationFeedback_ObjectOnlyTarget(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ValidationFeedbackAction{
+		ObjectVariable: "Customer",
+		Template: &model.Text{
+			Translations: map[string]string{"en_US": "Select a customer"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "validation feedback $Customer message 'Select a customer';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatAction_ValidationFeedback_AssociationTarget(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.ValidationFeedbackAction{
+		ObjectVariable:  "OrderForm",
+		AssociationName: "Sales.OrderForm_Customer",
+		Template: &model.Text{
+			Translations: map[string]string{"en_US": "Select a customer"},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "validation feedback $OrderForm/Sales.OrderForm_Customer message 'Select a customer';"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_LogMessage(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.LogMessageAction{

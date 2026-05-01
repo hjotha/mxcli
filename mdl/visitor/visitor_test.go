@@ -605,6 +605,89 @@ END;`
 	t.Log("VALIDATION FEEDBACK inside IF block parsed correctly")
 }
 
+func TestValidationFeedbackObjectAndAssociationTargets(t *testing.T) {
+	input := `CREATE MICROFLOW Sales.ValidateOrder ($OrderForm: Sales.OrderForm)
+RETURNS Boolean
+BEGIN
+  VALIDATION FEEDBACK $OrderForm MESSAGE 'Select a value';
+  VALIDATION FEEDBACK $OrderForm/Sales.OrderForm_Customer MESSAGE 'Select a customer';
+  RETURN false;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	if len(stmt.Body) < 2 {
+		t.Fatalf("Expected at least two body statements, got %d", len(stmt.Body))
+	}
+
+	objectFeedback, ok := stmt.Body[0].(*ast.ValidationFeedbackStmt)
+	if !ok {
+		t.Fatalf("Expected object-only validation feedback, got %T", stmt.Body[0])
+	}
+	if objectFeedback.AttributePath == nil {
+		t.Fatal("Expected object-only AttributePath to be set")
+	}
+	if objectFeedback.AttributePath.Variable != "OrderForm" {
+		t.Errorf("Expected object-only variable 'OrderForm', got %q", objectFeedback.AttributePath.Variable)
+	}
+	if len(objectFeedback.AttributePath.Path) != 0 || len(objectFeedback.AttributePath.Segments) != 0 {
+		t.Errorf("Expected object-only validation feedback to have no path, got path=%v segments=%v",
+			objectFeedback.AttributePath.Path, objectFeedback.AttributePath.Segments)
+	}
+
+	associationFeedback, ok := stmt.Body[1].(*ast.ValidationFeedbackStmt)
+	if !ok {
+		t.Fatalf("Expected association validation feedback, got %T", stmt.Body[1])
+	}
+	if associationFeedback.AttributePath == nil {
+		t.Fatal("Expected association AttributePath to be set")
+	}
+	if associationFeedback.AttributePath.Variable != "OrderForm" {
+		t.Errorf("Expected association variable 'OrderForm', got %q", associationFeedback.AttributePath.Variable)
+	}
+	if len(associationFeedback.AttributePath.Path) != 1 || associationFeedback.AttributePath.Path[0] != "Sales.OrderForm_Customer" {
+		t.Errorf("Expected association path Sales.OrderForm_Customer, got %v", associationFeedback.AttributePath.Path)
+	}
+	if len(associationFeedback.AttributePath.Segments) != 1 ||
+		associationFeedback.AttributePath.Segments[0].Separator != "/" ||
+		associationFeedback.AttributePath.Segments[0].Name != "Sales.OrderForm_Customer" {
+		t.Errorf("Expected slash-qualified association segment, got %v", associationFeedback.AttributePath.Segments)
+	}
+}
+
+func TestSharedAttributePathKeepsQualifiedSlashSegment(t *testing.T) {
+	input := `CREATE MICROFLOW Sales.UpdateOrder ($Order: Sales.Order)
+RETURNS Boolean
+BEGIN
+  SET $Order/Sales.Order_Customer = empty;
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	setStmt, ok := stmt.Body[0].(*ast.MfSetStmt)
+	if !ok {
+		t.Fatalf("Expected MfSetStmt, got %T", stmt.Body[0])
+	}
+	if setStmt.Target != "$Order/Sales.Order_Customer" {
+		t.Fatalf("Target = %q, want $Order/Sales.Order_Customer", setStmt.Target)
+	}
+}
+
 // TestRollbackStatement verifies the ROLLBACK statement parses correctly.
 func TestRollbackStatement(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestRollback ($Order: Test.Order)
