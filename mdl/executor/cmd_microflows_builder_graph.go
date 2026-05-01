@@ -122,9 +122,10 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 
 	// Handle leftover pending annotations (free-floating annotation text)
 	if fb.pendingAnnotations != nil {
-		// Free annotations before a statement stay unattached; trailing free
-		// annotations are drained after the statement loop below.
-		for _, text := range freeAnnotationTexts(fb.pendingAnnotations) {
+		// Free annotations are standalone Annotation objects. Flush them before
+		// creating the activity so they do not get attached to it; buildFlowGraph
+		// has a final leftover flush for annotations with no following activity.
+		for _, text := range fb.pendingAnnotations.FreeAnnotations {
 			fb.attachFreeAnnotation(text)
 		}
 		if fb.pendingAnnotations.AnnotationText != "" {
@@ -509,10 +510,9 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		fb.posY = fb.pendingAnnotations.Position.Y
 	}
 	if fb.pendingAnnotations != nil {
-		for _, text := range freeAnnotationTexts(fb.pendingAnnotations) {
+		for _, text := range fb.pendingAnnotations.FreeAnnotations {
 			fb.attachFreeAnnotation(text)
 		}
-		fb.pendingAnnotations.FreeAnnotation = ""
 		fb.pendingAnnotations.FreeAnnotations = nil
 	}
 

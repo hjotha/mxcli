@@ -1731,8 +1731,8 @@ END;`
 	if logStmt.Annotations == nil {
 		t.Fatal("expected annotations")
 	}
-	if logStmt.Annotations.FreeAnnotation != "free note" {
-		t.Fatalf("free annotation = %q, want free note", logStmt.Annotations.FreeAnnotation)
+	if got := logStmt.Annotations.FreeAnnotations; len(got) != 1 || got[0] != "free note" {
+		t.Fatalf("free annotations = %#v, want [free note]", got)
 	}
 	if logStmt.Annotations.AnnotationText != "" {
 		t.Fatalf("attached annotation = %q, want empty", logStmt.Annotations.AnnotationText)
@@ -1799,8 +1799,8 @@ END;`
 	if logStmt.Annotations.AnnotationText != "attached note" {
 		t.Fatalf("attached annotation = %q, want attached note", logStmt.Annotations.AnnotationText)
 	}
-	if logStmt.Annotations.FreeAnnotation != "" {
-		t.Fatalf("free annotation = %q, want empty", logStmt.Annotations.FreeAnnotation)
+	if len(logStmt.Annotations.FreeAnnotations) != 0 {
+		t.Fatalf("free annotations = %#v, want empty", logStmt.Annotations.FreeAnnotations)
 	}
 }
 
