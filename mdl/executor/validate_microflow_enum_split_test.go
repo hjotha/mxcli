@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -114,4 +115,18 @@ func TestValidateMicroflow_EnumSplitBranchScopedVariable(t *testing.T) {
 		}
 	}
 	t.Fatalf("expected MDL005 for variable declared inside ENUM split branch, got %#v", violations)
+}
+
+func TestValidateMicroflowBody_EnumSplitRejectsMoreThanSupportedBranches(t *testing.T) {
+	stmt := &ast.CreateMicroflowStmt{
+		Name: ast.QualifiedName{Module: "Sample", Name: "Route"},
+		Body: []ast.MicroflowStatement{
+			enumSplitWithBranchCount(maxEnumSplitBranches + 1),
+		},
+	}
+
+	errors := strings.Join(ValidateMicroflowBody(stmt), "\n")
+	if !strings.Contains(errors, "enum split has 17 branches; at most 16 branches are supported") {
+		t.Fatalf("expected unsupported branch count error, got %q", errors)
+	}
 }
