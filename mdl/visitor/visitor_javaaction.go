@@ -76,7 +76,10 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 			code = code[2 : len(code)-2]
 		}
 		// Trim leading/trailing whitespace but preserve internal formatting
-		stmt.JavaCode = strings.TrimSpace(code)
+		code = strings.TrimSpace(code)
+		// Extract import lines so they go into the file-level import section,
+		// not into the executeAction() method body (a common AI agent mistake).
+		stmt.JavaCode, stmt.Imports = extractJavaImports(code)
 	}
 
 	// Check for documentation comment from parent createStatement
@@ -96,4 +99,22 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 	}
 
 	b.statements = append(b.statements, stmt)
+}
+
+// extractJavaImports separates `import ...;` lines from Java code.
+// Lines matching the Java import statement pattern are returned as imports;
+// the remaining lines form the method body. This handles the common case
+// where AI agents prepend import statements inside the $$ block, which
+// would otherwise end up as illegal Java inside executeAction().
+func extractJavaImports(code string) (body string, imports []string) {
+	var bodyLines []string
+	for _, line := range strings.Split(code, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "import ") && strings.HasSuffix(trimmed, ";") {
+			imports = append(imports, trimmed)
+		} else {
+			bodyLines = append(bodyLines, line)
+		}
+	}
+	return strings.TrimSpace(strings.Join(bodyLines, "\n")), imports
 }

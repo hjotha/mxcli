@@ -46,10 +46,12 @@ BSON schema Registry ◄──── multi-version Support
 | [Microflow Free Annotation](PROPOSAL_microflow_free_annotation.md) | Draft | Order-sensitive `@annotation` handling for free-floating visual notes in microflows | — |
 | [Microflow Download File Statement](PROPOSAL_microflow_download_file_statement.md) | Draft | `download file $FileDocument [show in browser]` for `DownloadFileAction` round-trip and authoring | — |
 | [Empty Java Action Argument](PROPOSAL_microflow_empty_java_action_argument.md) | Implemented | `empty` for unbound Java-action parameters; round-trip preservation of empty `BasicCodeActionParameterValue` bindings | — |
+| [Microflow Call Web Service Statement](PROPOSAL_microflow_call_web_service_statement.md) | Draft | Structured and raw MDL syntax for legacy SOAP `CallWebServiceAction` round-trip preservation | — |
 | [Page Syntax V2](PROPOSAL_page_syntax_v2.md) | Superseded | Page/widget syntax with `{}` blocks and `->` binding. Superseded by V3 (archived) | — |
 | [Page Styling Support](page-styling-support.md) | Partial | CSS classes, inline styles, dynamic classes, design properties. Phase 1 (Class/Style) done | — |
 | [Page Composition](proposal_page_composition.md) | Proposed | Fragment definitions and ALTER PAGE for partial page editing | Page Syntax V2, Page Styling |
 | [XPath Gaps](xpath-gaps-proposal.md) | Partial | XPath constraint support gap analysis. ~85% complete, association paths and nested predicates remain | — |
+| [Microflow CHANGE Refresh Modifier](PROPOSAL_microflow_change_refresh_modifier.md) | Draft | Preserve `RefreshInClient` on change-object actions | — |
 | [LLM MDL Assistance](PROPOSAL_llm_mdl_assistance.md) | Proposed | Enhanced error messages with examples, reorganized skills by use case | — |
 
 ### Testing & Evaluation

@@ -33,6 +33,8 @@ func execRename(ctx *ExecContext, s *ast.RenameStmt) error {
 		return execRenameAssociation(ctx, s)
 	case "constant":
 		return execRenameDocument(ctx, s, "constant")
+	case "javaaction":
+		return execRenameJavaAction(ctx, s)
 	case "module":
 		return execRenameModule(ctx, s)
 	default:
@@ -340,6 +342,58 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 	invalidateDomainModelsCache(ctx)
 
 	fmt.Fprintf(ctx.Output, "Renamed association: %s → %s\n", oldQualifiedName, newQualifiedName)
+	if len(hits) > 0 {
+		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
+	}
+	return nil
+}
+
+// execRenameJavaAction renames a Java action and its .java source file.
+func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
+	oldQualifiedName := s.Name.Module + "." + s.Name.Name
+	newQualifiedName := s.Name.Module + "." + s.NewName
+
+	// Verify the Java action exists
+	jas, err := ctx.Backend.ListJavaActions()
+	if err != nil {
+		return mdlerrors.NewBackend("list java actions", err)
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return err
+	}
+	found := false
+	for _, ja := range jas {
+		modID := h.FindModuleID(ja.ContainerID)
+		if h.GetModuleName(modID) == s.Name.Module && ja.Name == s.Name.Name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return mdlerrors.NewNotFound("java action", oldQualifiedName)
+	}
+
+	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	if err != nil {
+		return mdlerrors.NewBackend("scan references", err)
+	}
+
+	if s.DryRun {
+		printRenameReport(ctx, oldQualifiedName, newQualifiedName, hits)
+		return nil
+	}
+
+	if err := ctx.Backend.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+		return mdlerrors.NewBackend("rename java action", err)
+	}
+	if err := ctx.Backend.RenameJavaSourceFile(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+		return mdlerrors.NewBackend("rename java source file", err)
+	}
+
+	invalidateHierarchy(ctx)
+
+	fmt.Fprintf(ctx.Output, "Renamed java action: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
 		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
 	}

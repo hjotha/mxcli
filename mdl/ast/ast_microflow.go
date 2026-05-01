@@ -192,9 +192,10 @@ func (s *CreateObjectStmt) isMicroflowStatement() {}
 
 // ChangeObjectStmt represents: CHANGE $Var (assignments)
 type ChangeObjectStmt struct {
-	Variable    string               // Variable name
-	Changes     []ChangeItem         // SET assignments
-	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+	Variable        string               // Variable name
+	Changes         []ChangeItem         // SET assignments
+	RefreshInClient bool                 // Whether to refresh in client
+	Annotations     *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
 func (s *ChangeObjectStmt) isMicroflowStatement() {}
@@ -379,6 +380,21 @@ type CallJavaScriptActionStmt struct {
 }
 
 func (s *CallJavaScriptActionStmt) isMicroflowStatement() {}
+
+// CallWebServiceStmt represents a legacy SOAP web service call.
+type CallWebServiceStmt struct {
+	OutputVariable   string               // Optional output variable
+	RawBSONBase64    string               // Raw Microflows$CallWebServiceAction BSON for lossless roundtrip
+	ServiceID        string               // Consumed web service ID or qualified name
+	OperationName    string               // Operation name
+	SendMappingID    string               // Optional export mapping ID or qualified name
+	ReceiveMappingID string               // Optional import mapping ID or qualified name
+	Timeout          Expression           // Optional timeout expression
+	ErrorHandling    *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations      *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *CallWebServiceStmt) isMicroflowStatement() {}
 
 // ExecuteDatabaseQueryStmt represents: EXECUTE DATABASE QUERY Module.Connection.QueryName ...
 type ExecuteDatabaseQueryStmt struct {

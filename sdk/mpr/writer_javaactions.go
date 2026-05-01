@@ -50,7 +50,7 @@ func (w *Writer) DeleteJavaAction(id model.ID) error {
 // javaCode is the executeAction() body code
 // params is the list of parameters with their types
 // returnType is the return type (can be nil for void)
-func (w *Writer) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType) error {
+func (w *Writer) WriteJavaSourceFile(moduleName, actionName string, javaCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) error {
 	// Get project root directory (parent of .mpr file)
 	projectRoot := filepath.Dir(w.reader.path)
 
@@ -64,7 +64,7 @@ func (w *Writer) WriteJavaSourceFile(moduleName, actionName string, javaCode str
 	}
 
 	// Generate Java source
-	source := generateJavaSource(moduleName, actionName, javaCode, params, returnType)
+	source := generateJavaSource(moduleName, actionName, javaCode, params, returnType, extraImports, extraCode)
 
 	// Write the file
 	filePath := filepath.Join(javaDir, actionName+".java")
@@ -72,6 +72,28 @@ func (w *Writer) WriteJavaSourceFile(moduleName, actionName string, javaCode str
 		return fmt.Errorf("failed to write Java source file: %w", err)
 	}
 
+	return nil
+}
+
+// DeleteJavaSourceFile removes the Java source file for a dropped Java action.
+func (w *Writer) DeleteJavaSourceFile(moduleName, actionName string) error {
+	projectRoot := filepath.Dir(w.reader.path)
+	filePath := filepath.Join(projectRoot, "javasource", strings.ToLower(moduleName), "actions", actionName+".java")
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete Java source file: %w", err)
+	}
+	return nil
+}
+
+// RenameJavaSourceFile renames the Java source file when a Java action is renamed.
+func (w *Writer) RenameJavaSourceFile(moduleName, oldName, newName string) error {
+	projectRoot := filepath.Dir(w.reader.path)
+	dir := filepath.Join(projectRoot, "javasource", strings.ToLower(moduleName), "actions")
+	oldPath := filepath.Join(dir, oldName+".java")
+	newPath := filepath.Join(dir, newName+".java")
+	if err := os.Rename(oldPath, newPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to rename Java source file: %w", err)
+	}
 	return nil
 }
 
@@ -90,7 +112,7 @@ func (w *Writer) ReadJavaSourceFile(moduleName, actionName string) (string, erro
 }
 
 // generateJavaSource generates the Java source code for a Java action.
-func generateJavaSource(moduleName, actionName string, userCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType) string {
+func generateJavaSource(moduleName, actionName string, userCode string, params []*javaactions.JavaActionParameter, returnType javaactions.CodeActionReturnType, extraImports []string, extraCode string) string {
 	moduleNameLower := strings.ToLower(moduleName)
 
 	// Determine return type
@@ -117,7 +139,12 @@ func generateJavaSource(moduleName, actionName string, userCode string, params [
 
 	// Imports
 	sb.WriteString("import com.mendix.systemwideinterfaces.core.IContext;\n")
-	sb.WriteString("import com.mendix.systemwideinterfaces.core.UserAction;\n\n")
+	sb.WriteString("import com.mendix.systemwideinterfaces.core.UserAction;\n")
+	for _, imp := range extraImports {
+		sb.WriteString(imp)
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\n")
 
 	// Class
 	sb.WriteString(fmt.Sprintf("public class %s extends UserAction<%s>\n", actionName, returnTypeStr))
@@ -177,6 +204,13 @@ func generateJavaSource(moduleName, actionName string, userCode string, params [
 
 	// Extra code section
 	sb.WriteString("\t// BEGIN EXTRA CODE\n")
+	if extraCode != "" {
+		for line := range strings.SplitSeq(extraCode, "\n") {
+			sb.WriteString("\t")
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+	}
 	sb.WriteString("\t// END EXTRA CODE\n")
 	sb.WriteString("}\n")
 

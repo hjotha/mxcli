@@ -128,11 +128,11 @@ func emitAnchorAnnotationWithActivityMap(
 	id := obj.GetID()
 
 	if _, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
-		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr)
+		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr, false)
 		return
 	}
 	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit {
-		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr)
+		emitSplitAnchorAnnotation(id, flowsByOrigin, flowsByDest, lines, indentStr, true)
 		return
 	}
 	if loop, isLoop := obj.(*microflows.LoopedActivity); isLoop {
@@ -203,6 +203,7 @@ func emitSplitAnchorAnnotation(
 	flowsByDest map[model.ID][]*microflows.SequenceFlow,
 	lines *[]string,
 	indentStr string,
+	preserveDefaultIncoming bool,
 ) {
 	// Incoming flow anchor (where the previous activity's flow lands on the split).
 	var inTo string
@@ -227,12 +228,12 @@ func emitSplitAnchorAnnotation(
 	}
 
 	var parts []string
-	splitDefaultIn := anchorSideKeyword(AnchorLeft)
 	trueDefaultFroms := []string{anchorSideKeyword(AnchorRight), anchorSideKeyword(AnchorBottom)}
 	trueDefaultTos := []string{anchorSideKeyword(AnchorLeft)}
 	falseDefaultFroms := []string{anchorSideKeyword(AnchorBottom), anchorSideKeyword(AnchorRight)}
 	falseDefaultTos := []string{anchorSideKeyword(AnchorTop), anchorSideKeyword(AnchorLeft)}
-	if inTo != "" && inTo != splitDefaultIn {
+	splitDefaultIn := anchorSideKeyword(AnchorLeft)
+	if inTo != "" && (preserveDefaultIncoming || inTo != splitDefaultIn) {
 		parts = append(parts, "to: "+inTo)
 	}
 	if p := branchAnchorFragmentWithDefaultSides("true", trueFrom, trueTo, trueDefaultFroms, trueDefaultTos); p != "" {
@@ -461,6 +462,9 @@ func emitObjectAnnotations(
 	}
 	if split, ok := obj.(*microflows.InheritanceSplit); ok && split.Caption != "" {
 		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(split.Caption)))
+	}
+	if loop, ok := obj.(*microflows.LoopedActivity); ok && loop.Caption != "" {
+		*lines = append(*lines, indentStr+fmt.Sprintf("@caption %s", mdlQuote(loop.Caption)))
 	}
 
 	// @annotation (attached Annotation objects)
@@ -1349,6 +1353,8 @@ func getActionErrorHandlingType(activity *microflows.ActionActivity) microflows.
 	case *microflows.CallExternalAction:
 		return action.ErrorHandlingType
 	case *microflows.RestCallAction:
+		return action.ErrorHandlingType
+	case *microflows.WebServiceCallAction:
 		return action.ErrorHandlingType
 	case *microflows.RestOperationCallAction:
 		return "" // RestOperationCallAction does not support custom error handling (CE6035)
