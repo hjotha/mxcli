@@ -56,7 +56,7 @@ end;
 -- Security
 grant execute on nanoflow NanoflowExamples.NF_ValidateProduct to NanoflowExamples.User;
 grant execute on nanoflow NanoflowExamples.NF_SaveProduct to NanoflowExamples.User;
-grant execute on nanoflow NanoflowExamples.NF_FormatPrice to NanoflowExamples.User, NanoflowExamples.Admin;
+grant execute on nanoflow NanoflowExamples.NF_FormatPrice to NanoflowExamples.User;
 
 -- Show nanoflows
 show nanoflows;
