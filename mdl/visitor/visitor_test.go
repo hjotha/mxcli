@@ -662,6 +662,32 @@ END;`
 	}
 }
 
+func TestSharedAttributePathKeepsQualifiedSlashSegment(t *testing.T) {
+	input := `CREATE MICROFLOW Sales.UpdateOrder ($Order: Sales.Order)
+RETURNS Boolean
+BEGIN
+  SET $Order/Sales.Order_Customer = empty;
+  RETURN true;
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	setStmt, ok := stmt.Body[0].(*ast.MfSetStmt)
+	if !ok {
+		t.Fatalf("Expected MfSetStmt, got %T", stmt.Body[0])
+	}
+	if setStmt.Target != "$Order/Sales.Order_Customer" {
+		t.Fatalf("Target = %q, want $Order/Sales.Order_Customer", setStmt.Target)
+	}
+}
+
 // TestRollbackStatement verifies the ROLLBACK statement parses correctly.
 func TestRollbackStatement(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestRollback ($Order: Test.Order)

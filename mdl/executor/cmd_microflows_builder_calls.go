@@ -869,10 +869,10 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 				// Fully-qualified attributes use Module.Entity.Attribute.
 				attributeName = segs[0].Name
 			}
-		} else if entityQName == "" && strings.Count(segs[0].Name, ".") == 1 {
-			associationName = segs[0].Name
 		} else {
-			// Fallback: treat first segment as attribute
+			// Multi-hop paths are not a validation-feedback association target.
+			// Fall back to the first segment as an attribute so we do not join
+			// unrelated traversal pieces into a synthetic association name.
 			if entityQName != "" {
 				attributeName = entityQName + "." + segs[0].Name
 			} else {
