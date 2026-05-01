@@ -1,0 +1,72 @@
+-- ============================================================================
+-- Bug #369: REST/import mapping result range cardinality conflated
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   Studio Pro stores two related but distinct bits of import-mapping
+--   metadata in `Forms$ResultHandlingMapping`:
+--   - `ForceSingleOccurrence` controls force-single-occurrence behavior.
+--   - `Range.SingleObject` (with object/list variable type) describes the
+--     result cardinality.
+--   The mxcli SDK shape collapsed these to a single `SingleObject` field.
+--   Roundtripping a REST client call action whose Studio Pro source had
+--   `ForceSingleOccurrence = false` and `Range.SingleObject = true`
+--   forced both fields to the same value. The resulting MPR had subtly
+--   different runtime behaviour than the original.
+--
+-- After fix:
+--   - `microflows.ResultHandlingMapping` stores `ForceSingleOccurrence`
+--     separately from `SingleObject`.
+--   - Parser reads `Range.SingleObject` and the object/list ObjectType as
+--     result-cardinality signals; ForceSingleOccurrence stays its own bit.
+--   - Writer emits ForceSingleOccurrence independently of Range for both
+--     REST and XML import mappings.
+--
+-- Reproducibility note:
+--   This PR is a parser/writer roundtrip preservation fix at the BSON
+--   level. There is no new MDL syntax. The negative case (a real Studio
+--   Pro REST client call with the divergent flags) is covered by the
+--   SDK-level Go tests in `sdk/mpr/parser_microflow_test.go`.
+--
+--   This script provides a positive control: an `import from mapping`
+--   call whose result handling exercises the related codepath and must
+--   keep producing a valid MPR.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/369-rest-mapping-result-cardinality.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest369.MF_ImportSinglePet"
+--   `mx check` against the resulting MPR must report 0 errors.
+-- ============================================================================
+
+create module BugTest369;
+
+create json structure BugTest369.JSON_Pet
+snippet '{"id": 1, "name": "Fido", "status": "available"}';
+
+create non-persistent entity BugTest369.PetResponse (
+  PetId : integer,
+  Name : string,
+  Status : string
+);
+/
+
+create import mapping BugTest369.IMM_Pet
+  with json structure BugTest369.JSON_Pet
+{
+  create BugTest369.PetResponse {
+    PetId = id,
+    Name = name,
+    Status = status
+  }
+};
+
+-- import from mapping result handling — exercises the same
+-- ResultHandlingMapping BSON shape that #372 splits apart.
+create microflow BugTest369.MF_ImportSinglePet (
+  $Json: string
+)
+returns BugTest369.PetResponse as $Pet
+begin
+  $Pet = import from mapping BugTest369.IMM_Pet ($Json);
+end;
+/

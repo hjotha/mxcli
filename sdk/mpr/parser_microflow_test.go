@@ -179,6 +179,139 @@ func TestParseSortItemsPreservesIndirectEntityRef(t *testing.T) {
 	}
 }
 
+func TestParseResultHandlingMappingUsesRangeForSingleObject(t *testing.T) {
+	got := parseResultHandling(map[string]any{
+		"$ID":                "result-handling-1",
+		"ResultVariableName": "RemoteApp",
+		"ImportMappingCall": map[string]any{
+			"ReturnValueMapping":    "SampleRuntimeApi.IMM_RemoteApp",
+			"ForceSingleOccurrence": false,
+			"Range": map[string]any{
+				"SingleObject": true,
+			},
+		},
+		"VariableType": map[string]any{
+			"$Type":  "DataTypes$ObjectType",
+			"Entity": "SampleRuntimeApi.RemoteApp",
+		},
+	}, "Mapping")
+
+	rh, ok := got.(*microflows.ResultHandlingMapping)
+	if !ok {
+		t.Fatalf("got %T, want *microflows.ResultHandlingMapping", got)
+	}
+	if !rh.SingleObject {
+		t.Fatal("Range.SingleObject=true must make the result object-valued")
+	}
+	if rh.ForceSingleOccurrence == nil || *rh.ForceSingleOccurrence {
+		t.Fatalf("ForceSingleOccurrence = %v, want explicit false", rh.ForceSingleOccurrence)
+	}
+}
+
+func TestSerializeRestResultHandlingPreservesForceSingleOccurrenceSeparately(t *testing.T) {
+	forceSingleOccurrence := false
+	doc := serializeRestResultHandling(&microflows.ResultHandlingMapping{
+		BaseElement:           model.BaseElement{ID: model.ID("result-handling-1")},
+		MappingID:             model.ID("SampleRuntimeApi.IMM_RemoteApp"),
+		ResultEntityID:        model.ID("SampleRuntimeApi.RemoteApp"),
+		ResultVariable:        "RemoteApp",
+		SingleObject:          true,
+		ForceSingleOccurrence: &forceSingleOccurrence,
+	}, "RemoteApp")
+
+	importCall, ok := bsonDMap(doc)["ImportMappingCall"].(primitive.D)
+	if !ok {
+		t.Fatalf("ImportMappingCall missing or wrong type: %T", bsonDMap(doc)["ImportMappingCall"])
+	}
+	callFields := bsonDMap(importCall)
+	if got := callFields["ForceSingleOccurrence"]; got != false {
+		t.Fatalf("ForceSingleOccurrence = %v, want false", got)
+	}
+	rangeDoc, ok := callFields["Range"].(primitive.D)
+	if !ok {
+		t.Fatalf("Range missing or wrong type: %T", callFields["Range"])
+	}
+	if got := bsonDMap(rangeDoc)["SingleObject"]; got != true {
+		t.Fatalf("Range.SingleObject = %v, want true", got)
+	}
+	varType, ok := bsonDMap(doc)["VariableType"].(primitive.D)
+	if !ok {
+		t.Fatalf("VariableType missing or wrong type: %T", bsonDMap(doc)["VariableType"])
+	}
+	if got := bsonDMap(varType)["$Type"]; got != "DataTypes$ObjectType" {
+		t.Fatalf("VariableType.$Type = %v, want DataTypes$ObjectType", got)
+	}
+}
+
+func TestSerializeImportXmlActionPreservesSingleObjectRange(t *testing.T) {
+	forceSingleOccurrence := false
+	doc := serializeImportXmlAction(&microflows.ImportXmlAction{
+		BaseElement: model.BaseElement{ID: model.ID("import-action-1")},
+		ResultHandling: &microflows.ResultHandlingMapping{
+			BaseElement:           model.BaseElement{ID: model.ID("result-handling-1")},
+			MappingID:             model.ID("SampleRest.IMM_ErrorResponse"),
+			ResultEntityID:        model.ID("SampleRest.Error"),
+			ResultVariable:        "ErrorResponse",
+			SingleObject:          true,
+			ForceSingleOccurrence: &forceSingleOccurrence,
+		},
+		XmlDocumentVariable: "LatestHttpResponse",
+	})
+
+	resultHandling, ok := bsonDMap(doc)["ResultHandling"].(primitive.D)
+	if !ok {
+		t.Fatalf("ResultHandling missing or wrong type: %T", bsonDMap(doc)["ResultHandling"])
+	}
+	importCall, ok := bsonDMap(resultHandling)["ImportMappingCall"].(primitive.D)
+	if !ok {
+		t.Fatalf("ImportMappingCall missing or wrong type: %T", bsonDMap(resultHandling)["ImportMappingCall"])
+	}
+	callFields := bsonDMap(importCall)
+	if got := callFields["ForceSingleOccurrence"]; got != false {
+		t.Fatalf("ForceSingleOccurrence = %v, want false", got)
+	}
+	rangeDoc, ok := callFields["Range"].(primitive.D)
+	if !ok {
+		t.Fatalf("Range missing or wrong type: %T", callFields["Range"])
+	}
+	if got := bsonDMap(rangeDoc)["SingleObject"]; got != true {
+		t.Fatalf("Range.SingleObject = %v, want true", got)
+	}
+}
+
+func TestParseImportXmlActionUsesRangeForSingleObject(t *testing.T) {
+	got := parseImportXmlAction(map[string]any{
+		"$ID":                     "import-action-1",
+		"XmlDocumentVariable":     "LatestHttpResponse",
+		"XmlDocumentVariableName": "LatestHttpResponse",
+		"ResultHandling": map[string]any{
+			"$ID":                "result-handling-1",
+			"ResultVariableName": "ErrorResponse",
+			"ImportMappingCall": map[string]any{
+				"ReturnValueMapping":    "SampleRest.IMM_ErrorResponse",
+				"ForceSingleOccurrence": false,
+				"Range": map[string]any{
+					"SingleObject": true,
+				},
+			},
+			"VariableType": map[string]any{
+				"$Type":  "DataTypes$ObjectType",
+				"Entity": "SampleRest.Error",
+			},
+		},
+	})
+
+	if got.ResultHandling == nil {
+		t.Fatal("ResultHandling missing")
+	}
+	if !got.ResultHandling.SingleObject {
+		t.Fatal("Range.SingleObject=true must make XML import result object-valued")
+	}
+	if got.ResultHandling.ForceSingleOccurrence == nil || *got.ResultHandling.ForceSingleOccurrence {
+		t.Fatalf("ForceSingleOccurrence = %v, want explicit false", got.ResultHandling.ForceSingleOccurrence)
+	}
+}
+
 func bsonDMap(doc primitive.D) map[string]any {
 	out := make(map[string]any, len(doc))
 	for _, elem := range doc {

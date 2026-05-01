@@ -3,9 +3,13 @@
 package executor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	mdltypes "github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 )
 
@@ -51,5 +55,63 @@ func TestAddRestCallAction_ReturnsResponseUsesHttpResponseHandling(t *testing.T)
 	}
 	if httpResponse.VariableName != "Response" {
 		t.Errorf("VariableName = %q, want %q", httpResponse.VariableName, "Response")
+	}
+}
+
+func TestAddRestCallAction_MappingResultPreservesExplicitOutputVariable(t *testing.T) {
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+		backend: &mock.MockBackend{
+			GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+				if moduleName != "Synthetic" || name != "ImportItems" {
+					return nil, fmt.Errorf("unexpected import mapping %s.%s", moduleName, name)
+				}
+				return &model.ImportMapping{JsonStructure: "Synthetic.ItemsPayload"}, nil
+			},
+			GetJsonStructureByQualifiedNameFunc: func(moduleName, name string) (*mdltypes.JsonStructure, error) {
+				if moduleName != "Synthetic" || name != "ItemsPayload" {
+					return nil, fmt.Errorf("unexpected json structure %s.%s", moduleName, name)
+				}
+				return &mdltypes.JsonStructure{
+					Elements: []*mdltypes.JsonElement{{ElementType: "Array"}},
+				}, nil
+			},
+		},
+	}
+
+	stmt := &ast.RestCallStmt{
+		OutputVariable: "Items",
+		Method:         ast.HttpMethodGet,
+		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+		Result: ast.RestResult{
+			Type:         ast.RestResultMapping,
+			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "ImportItems"},
+			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
+		},
+	}
+	fb.addRestCallAction(stmt)
+
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("first object is %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.RestCallAction)
+	if !ok {
+		t.Fatalf("activity.Action is %T, want *microflows.RestCallAction", activity.Action)
+	}
+	mapping, ok := action.ResultHandling.(*microflows.ResultHandlingMapping)
+	if !ok {
+		t.Fatalf("ResultHandling is %T, want *microflows.ResultHandlingMapping", action.ResultHandling)
+	}
+	if action.OutputVariable != "Items" {
+		t.Fatalf("OutputVariable = %q, want Items", action.OutputVariable)
+	}
+	if mapping.ResultVariable != "Items" {
+		t.Fatalf("ResultVariable = %q, want Items", mapping.ResultVariable)
 	}
 }

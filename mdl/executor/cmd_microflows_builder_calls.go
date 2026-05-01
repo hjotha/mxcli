@@ -1007,9 +1007,11 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	case ast.RestResultMapping:
 		mappingQN := s.Result.MappingName.Module + "." + s.Result.MappingName.Name
 		entityQN := s.Result.ResultEntity.Module + "." + s.Result.ResultEntity.Name
-		// Derive the output variable name from the root entity's short name so
-		// callers don't need to hard-code it in the MDL assignment.
-		s.OutputVariable = s.Result.ResultEntity.Name
+		if s.OutputVariable == "" {
+			// Derive a fallback output variable from the root entity only when the
+			// MDL did not explicitly assign one.
+			s.OutputVariable = s.Result.ResultEntity.Name
+		}
 		// Determine whether the import mapping returns a single object or a list by
 		// looking at the JSON structure it references. If the root JSON element is
 		// an Object, the mapping produces one object; if it is an Array, a list.
