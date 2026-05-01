@@ -123,7 +123,7 @@ public IMendixObject executeAction() throws Exception
 | `Core.delete(context, object)` | Delete object |
 | `Core.rollback(context, object)` | Discard uncommitted changes |
 | `Core.retrieveId(context, id)` | Retrieve by GUID |
-| `Core.retrieveXPathQuery(context, xpath)` | Query with XPath |
+| `Core.createXPathQuery(xpath).execute(context)` | Query with XPath |
 | `Core.microflowCall(name).execute(context)` | Call microflow |
 
 ### Reading and Writing Attributes
@@ -146,8 +146,8 @@ order.setValue(context, "ProcessedDate", new java.util.Date());
 
 ```java
 // set association (reference)
-IMendixObject customer = Core.retrieveXPathQuery(context,
-    "//Sales.Customer[CustomerCode = 'CUST001']").get(0);
+IMendixObject customer = Core.createXPathQuery("//Sales.Customer[CustomerCode = 'CUST001']")
+    .execute(context).get(0);
 order.setValue(context, "Sales.Order_Customer", customer.getId());
 
 // get associated object
@@ -162,8 +162,8 @@ if (customerId != null) {
 
 ```java
 // retrieve list
-list<IMendixObject> orders = Core.retrieveXPathQuery(context,
-    "//Sales.Order[status = 'Pending']");
+list<IMendixObject> orders = Core.createXPathQuery("//Sales.Order[status = 'Pending']")
+    .execute(context);
 
 // Process list
 java.math.BigDecimal total = java.math.BigDecimal.ZERO;
@@ -1068,7 +1068,7 @@ int offset = 0;
 int batchSize = 1000;
 list<IMendixObject> batch;
 do {
-    batch = Core.retrieveXPathQuery(context, xpath, batchSize, offset, null);
+    batch = Core.createXPathQuery(xpath).setAmount(batchSize).setOffset(offset).execute(context);
     // Process batch
     offset += batchSize;
 } while (batch.size() == batchSize);
@@ -1187,7 +1187,7 @@ Core.commit(context, obj);
 Core.delete(context, obj);
 
 // query
-list<IMendixObject> results = Core.retrieveXPathQuery(context, "//Module.Entity[attr = 'value']");
+list<IMendixObject> results = Core.createXPathQuery("//Module.Entity[attr = 'value']").execute(context);
 
 // log
 Core.getLogger("ModuleName").info("message");

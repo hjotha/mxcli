@@ -160,6 +160,25 @@ func TestEmitObjectAnnotations_EscapesMultilineText(t *testing.T) {
 	}
 }
 
+func TestEmitObjectAnnotations_LoopCaption(t *testing.T) {
+	obj := &microflows.LoopedActivity{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: mkID("loop")},
+			Position:    model.Point{X: 100, Y: 200},
+		},
+		Caption: "Loop owner's\ncaption",
+	}
+
+	var lines []string
+	// Pass nil flow maps — @anchor emission is intentionally suppressed here.
+	emitObjectAnnotations(obj, &lines, "", nil, nil, nil, nil)
+
+	got := strings.Join(lines, "\n")
+	if !strings.Contains(got, "@caption 'Loop owner''s\\ncaption'") {
+		t.Fatalf("expected escaped loop caption, got:\n%s", got)
+	}
+}
+
 func TestPrependFreeAnnotationLines_ModelAnnotationsStayFree(t *testing.T) {
 	oc := &microflows.MicroflowObjectCollection{
 		Objects: []microflows.MicroflowObject{

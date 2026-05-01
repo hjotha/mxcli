@@ -440,3 +440,94 @@ $$;`
 		t.Errorf("Expected 'Communication & Alerts', got '%s'", stmt.ExposedCategory)
 	}
 }
+
+// =============================================================================
+// Import extraction from $$ block (issue #127)
+// =============================================================================
+
+func TestJavaAction_ImportsExtractedFromDollarBlock(t *testing.T) {
+	input := `CREATE JAVA ACTION MyModule.ReadCSV(File: System.FileDocument) RETURNS String
+AS $$
+import com.mendix.core.Core;
+import java.io.*;
+import java.io.BufferedReader;
+IContext context = this.getContext();
+InputStream is = Core.getFileDocumentContent(context, File.getMendixObject());
+BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+return reader.readLine();
+$$;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+	stmt, ok := prog.Statements[0].(*ast.CreateJavaActionStmt)
+	if !ok {
+		t.Fatalf("Expected CreateJavaActionStmt")
+	}
+
+	if len(stmt.Imports) != 3 {
+		t.Errorf("Expected 3 imports, got %d: %v", len(stmt.Imports), stmt.Imports)
+	}
+	for _, imp := range stmt.Imports {
+		if !isJavaImportLine(imp) {
+			t.Errorf("import line should start with 'import ': %q", imp)
+		}
+	}
+
+	// import lines must not appear in the method body
+	for _, line := range splitLines(stmt.JavaCode) {
+		if isJavaImportLine(line) {
+			t.Errorf("import line leaked into JavaCode body: %q", line)
+		}
+	}
+
+	// actual code must be preserved
+	if stmt.JavaCode == "" {
+		t.Error("JavaCode should not be empty after import extraction")
+	}
+}
+
+func TestJavaAction_NoImportsInDollarBlock(t *testing.T) {
+	input := `CREATE JAVA ACTION MyModule.Simple() RETURNS Boolean
+AS $$
+return true;
+$$;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	stmt := prog.Statements[0].(*ast.CreateJavaActionStmt)
+	if len(stmt.Imports) != 0 {
+		t.Errorf("Expected no imports, got %v", stmt.Imports)
+	}
+	if stmt.JavaCode != "return true;" {
+		t.Errorf("Unexpected JavaCode: %q", stmt.JavaCode)
+	}
+}
+
+func isJavaImportLine(s string) bool {
+	return len(s) > 7 && s[:7] == "import "
+}
+
+func splitLines(s string) []string {
+	start := 0
+	var lines []string
+	for i, c := range s {
+		if c == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}

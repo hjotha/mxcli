@@ -80,6 +80,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = buildCallJavaActionStatement(call)
 	} else if call := mfCtx.CallJavaScriptActionStatement(); call != nil {
 		stmt = buildCallJavaScriptActionStatement(call)
+	} else if call := mfCtx.CallWebServiceStatement(); call != nil {
+		stmt = buildCallWebServiceStatement(call)
 	} else if call := mfCtx.ExecuteDatabaseQueryStatement(); call != nil {
 		stmt = buildExecuteDatabaseQueryStatement(call)
 	} else if call := mfCtx.CallExternalActionStatement(); call != nil {
@@ -449,6 +451,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	case *ast.CallJavaActionStmt:
 		s.Annotations = ann
 	case *ast.CallJavaScriptActionStmt:
+		s.Annotations = ann
+	case *ast.CallWebServiceStmt:
 		s.Annotations = ann
 	case *ast.ExecuteDatabaseQueryStmt:
 		s.Annotations = ann

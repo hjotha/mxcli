@@ -310,3 +310,75 @@ func TestRename_Entity_BackendError(t *testing.T) {
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "scan references")
 }
+
+// ---------------------------------------------------------------------------
+// Rename java action — happy path
+// ---------------------------------------------------------------------------
+
+func TestRename_JavaAction_Success(t *testing.T) {
+	mod := mkModule("MyModule")
+	ja := &types.JavaAction{
+		BaseElement: model.BaseElement{ID: nextID("ja")},
+		ContainerID: mod.ID,
+		Name:        "OldHelper",
+	}
+	documentRenamed := false
+	sourceRenamed := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return []*types.JavaAction{ja}, nil },
+		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
+			return []types.RenameHit{{UnitID: "u1", Name: "SomeMF", Count: 1}}, nil
+		},
+		RenameDocumentByNameFunc: func(module, old, newName string) error {
+			documentRenamed = true
+			return nil
+		},
+		RenameJavaSourceFileFunc: func(module, old, newName string) error {
+			sourceRenamed = true
+			return nil
+		},
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, ja.ContainerID, mod.ID)
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+		ObjectType: "javaaction",
+		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldHelper"},
+		NewName:    "NewHelper",
+	}))
+	if !documentRenamed {
+		t.Error("Expected RenameDocumentByName to be called")
+	}
+	if !sourceRenamed {
+		t.Error("Expected RenameJavaSourceFile to be called")
+	}
+	assertContainsStr(t, buf.String(), "Renamed java action")
+	assertContainsStr(t, buf.String(), "MyModule.OldHelper")
+	assertContainsStr(t, buf.String(), "MyModule.NewHelper")
+}
+
+// ---------------------------------------------------------------------------
+// Rename java action — not found
+// ---------------------------------------------------------------------------
+
+func TestRename_JavaAction_NotFound(t *testing.T) {
+	mod := mkModule("MyModule")
+	mb := &mock.MockBackend{
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListJavaActionsFunc: func() ([]*types.JavaAction, error) { return nil, nil },
+	}
+	h := mkHierarchy(mod)
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execRename(ctx, &ast.RenameStmt{
+		ObjectType: "javaaction",
+		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
+		NewName:    "New",
+	})
+	assertError(t, err)
+	assertContainsStr(t, err.Error(), "not found")
+}

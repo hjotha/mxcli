@@ -648,13 +648,15 @@ type ExternalActionParameterMapping struct {
 // WebServiceCallAction calls a web service.
 type WebServiceCallAction struct {
 	model.BaseElement
-	ServiceID         model.ID `json:"serviceId,omitempty"`
-	OperationName     string   `json:"operationName,omitempty"`
-	SendMappingID     model.ID `json:"sendMappingId,omitempty"`
-	ReceiveMappingID  model.ID `json:"receiveMappingId,omitempty"`
-	OutputVariable    string   `json:"outputVariable,omitempty"`
-	UseReturnVariable bool     `json:"useReturnVariable"`
-	TimeoutExpression string   `json:"timeoutExpression,omitempty"`
+	ErrorHandlingType ErrorHandlingType `json:"errorHandlingType,omitempty"`
+	RawBSON           []byte            `json:"-"`
+	ServiceID         model.ID          `json:"serviceId,omitempty"`
+	OperationName     string            `json:"operationName,omitempty"`
+	SendMappingID     model.ID          `json:"sendMappingId,omitempty"`
+	ReceiveMappingID  model.ID          `json:"receiveMappingId,omitempty"`
+	OutputVariable    string            `json:"outputVariable,omitempty"`
+	UseReturnVariable bool              `json:"useReturnVariable"`
+	TimeoutExpression string            `json:"timeoutExpression,omitempty"`
 }
 
 func (WebServiceCallAction) isMicroflowAction() {}

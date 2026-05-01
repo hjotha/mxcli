@@ -270,6 +270,9 @@ func execDropJavaAction(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 			if err := ctx.Backend.DeleteJavaAction(ja.ID); err != nil {
 				return mdlerrors.NewBackend("delete java action", err)
 			}
+			if err := ctx.Backend.DeleteJavaSourceFile(modName, ja.Name); err != nil {
+				return mdlerrors.NewBackend("delete java source file", err)
+			}
 			fmt.Fprintf(ctx.Output, "Dropped java action: %s.%s\n", s.Name.Module, s.Name.Name)
 			return nil
 		}
@@ -416,7 +419,7 @@ func execCreateJavaAction(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
 
 	// Write Java source file if code is provided
 	if s.JavaCode != "" {
-		if err := ctx.Backend.WriteJavaSourceFile(moduleName, s.Name.Name, s.JavaCode, ja.Parameters, ja.ReturnType); err != nil {
+		if err := ctx.Backend.WriteJavaSourceFile(moduleName, s.Name.Name, s.JavaCode, ja.Parameters, ja.ReturnType, s.Imports, s.ExtraCode); err != nil {
 			return mdlerrors.NewBackend("write java source file", err)
 		}
 	}
