@@ -6,6 +6,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -424,6 +425,63 @@ func parseRestCallAction(raw map[string]any) *microflows.RestCallAction {
 		action.RequestHandling = parseRequestHandling(requestHandlingD.Map(), requestHandlingType)
 	}
 
+	return action
+}
+
+func parseWebServiceCallAction(raw map[string]any) *microflows.WebServiceCallAction {
+	action := &microflows.WebServiceCallAction{}
+	action.ID = model.ID(extractBsonID(raw["$ID"]))
+	action.ErrorHandlingType = microflows.ErrorHandlingType(extractString(raw["ErrorHandlingType"]))
+	action.ServiceID = model.ID(extractString(raw["ImportedService"]))
+	action.OperationName = extractString(raw["OperationName"])
+	action.TimeoutExpression = extractString(raw["TimeOutExpression"])
+
+	if resultHandling := extractBsonMap(raw["NewResultHandling"]); resultHandling != nil {
+		action.OutputVariable = extractString(resultHandling["ResultVariableName"])
+		action.UseReturnVariable = action.OutputVariable != ""
+		if call := extractBsonMap(resultHandling["ImportMappingCall"]); call != nil {
+			action.ReceiveMappingID = model.ID(extractString(call["ReturnValueMapping"]))
+		}
+	}
+	if requestHandling := extractBsonMap(raw["RequestHandling"]); requestHandling != nil {
+		if call := extractBsonMap(requestHandling["ExportMappingCall"]); call != nil {
+			action.SendMappingID = model.ID(extractString(call["Mapping"]))
+		}
+	}
+	if webServiceActionRequiresRawBSON(raw) {
+		if rawBSON, err := bson.Marshal(raw); err == nil {
+			action.RawBSON = rawBSON
+		}
+	}
+
+	return action
+}
+
+func webServiceActionRequiresRawBSON(raw map[string]any) bool {
+	supported := map[string]bool{
+		"$ID":               true,
+		"$Type":             true,
+		"ErrorHandlingType": true,
+		"ImportedService":   true,
+		"OperationName":     true,
+		"TimeOutExpression": true,
+		"UseRequestTimeOut": true,
+		"NewResultHandling": true,
+		"RequestHandling":   true,
+	}
+	for key := range raw {
+		if !supported[key] {
+			return true
+		}
+	}
+	return false
+}
+
+func parseWebServiceCallActionFromD(raw primitive.D) *microflows.WebServiceCallAction {
+	action := parseWebServiceCallAction(raw.Map())
+	if rawBSON, err := bson.Marshal(raw); err == nil {
+		action.RawBSON = rawBSON
+	}
 	return action
 }
 

@@ -306,7 +306,7 @@ renameStatement
     ;
 
 renameTarget
-    : ENTITY | MICROFLOW | NANOFLOW | PAGE | ENUMERATION | ASSOCIATION | CONSTANT
+    : ENTITY | MICROFLOW | NANOFLOW | PAGE | ENUMERATION | ASSOCIATION | CONSTANT | JAVA ACTION
     ;
 
 /**
@@ -1311,6 +1311,7 @@ microflowStatement
     | annotation* callNanoflowStatement SEMICOLON?
     | annotation* callJavaActionStatement SEMICOLON?
     | annotation* callJavaScriptActionStatement SEMICOLON?
+    | annotation* callWebServiceStatement SEMICOLON?
     | annotation* executeDatabaseQueryStatement SEMICOLON?
     | annotation* callExternalActionStatement SEMICOLON?
     | annotation* showPageStatement SEMICOLON?
@@ -1360,7 +1361,7 @@ createObjectStatement
 // CHANGE $Product (Name = $NewName, ModifiedDate = [%CurrentDateTime%]);
 // Aligned with CREATE syntax
 changeObjectStatement
-    : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)?
+    : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)? REFRESH?
     ;
 
 attributePath
@@ -1487,6 +1488,27 @@ callJavaActionStatement
 // $Result = CALL JAVASCRIPT ACTION Module.JSAction(Param = 'value');
 callJavaScriptActionStatement
     : (VARIABLE EQUALS)? CALL JAVASCRIPT ACTION qualifiedName LPAREN callArgumentList? RPAREN onErrorClause?
+    ;
+
+// Legacy SOAP call. The preferred structured form stores service and mapping
+// references in STRING_LITERAL tokens rather than qualifiedName tokens because
+// Structured references prefer qualifiedName tokens. STRING_LITERAL remains as
+// a fallback for dangling raw IDs that cannot be represented as identifiers.
+// Raw BSON remains the escape hatch for unsupported SOAP payload details.
+callWebServiceStatement
+    : (VARIABLE EQUALS)? CALL WEB SERVICE
+      (RAW STRING_LITERAL
+      | webServiceReference
+        (OPERATION webServiceReference)?
+        (SEND MAPPING webServiceReference)?
+        (RECEIVE MAPPING webServiceReference)?
+        (TIMEOUT expression)?)
+      onErrorClause?
+    ;
+
+webServiceReference
+    : qualifiedName
+    | STRING_LITERAL
     ;
 
 // $Result = EXECUTE DATABASE QUERY Module.Connection.QueryName (param = 'value');
@@ -3963,8 +3985,8 @@ keyword
     | MAP | MAPPING | MAPPINGS | MESSAGES | METHOD | NAMESPACE_KW
     | NOT_SUPPORTED | ODATA | OAUTH | OPERATION | PAGING
     | PARAMETER | PARAMETERS | PATH | PUBLISH | PUBLISHED
-    | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
-    | SOURCE_KW | TIMEOUT | VERSION | XML
+    | RAW | RECEIVE | REQUEST | RESOURCE | RESPONSE | REST | SEND | SERVICE | SERVICES
+    | SOURCE_KW | TIMEOUT | VERSION | WEB | XML
     | FILE_KW | LINK | DYNAMIC
 
     // HTTP methods

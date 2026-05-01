@@ -184,6 +184,14 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 			fb.validateStatements(s.ErrorHandling.Body)
 		}
 
+	case *ast.CallWebServiceStmt:
+		if s.OutputVariable != "" {
+			fb.declaredVars[s.OutputVariable] = "Unknown"
+		}
+		if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
+			fb.validateStatements(s.ErrorHandling.Body)
+		}
+
 	case *ast.ExecuteDatabaseQueryStmt:
 		if s.OutputVariable != "" {
 			fb.declaredVars[s.OutputVariable] = "Unknown"

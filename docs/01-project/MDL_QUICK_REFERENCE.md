@@ -218,7 +218,7 @@ authentication basic, session
 | List declaration | `declare $list list of Module.Entity = empty;` | |
 | Assignment | `set $Var = expression;` | Variable must be declared first |
 | Create object | `$Var = create Module.Entity (attr = value);` | |
-| Change object | `change $entity (attr = value);` | |
+| Change object | `change $entity (attr = value) [refresh];` | `refresh` updates the changed object in the client |
 | Commit | `commit $entity [with events] [refresh];` | |
 | Delete | `delete $entity;` | |
 | Rollback | `rollback $entity [refresh];` | Reverts uncommitted changes |
@@ -228,6 +228,8 @@ authentication basic, session
 | Call nanoflow | `$Result = call nanoflow Module.Name (Param = $value);` | |
 | Call JS action | `$Result = call javascript action Module.Name (Param = $value);` | JavaScript action (nanoflow/microflow) |
 | Call Java action | `$Result = call java action Module.Name (Param = $value);` | Java action (microflow only) |
+| Call web service | `$Result = call web service Module.Service operation OperationName;` | Legacy SOAP; quoted refs are fallback for dangling raw IDs |
+| Call web service raw | `$Result = call web service raw 'base64-bson';` | Escape hatch for byte-for-byte legacy SOAP round-trip |
 | Show page | `show page Module.PageName ($Param = $value);` | Also accepts `(Param: $value)` |
 | Close page | `close page;` | |
 | Download file | `download file $FileDocument [show in browser];` | Streams a `System.FileDocument` |
@@ -782,7 +784,9 @@ Module.OrderResponse_CustomerInfo/Module.CustomerInfo as customer {
 | Create Java action | `create java action Module.Name(params) returns type as $$ ... $$;` | Inline Java code |
 | Create with type params | `create java action Module.Name(EntityType: entity <pEntity>, Obj: pEntity) ...;` | Generic type parameters |
 | Create exposed action | `... exposed as 'caption' in 'Category' as $$ ... $$;` | Toolbox-visible in Studio Pro |
-| Drop Java action | `drop java action Module.Name;` | Delete a Java action |
+| Rename Java action | `rename java action Module.Old to New;` | Renames BSON unit and .java source file |
+| Rename Java action (dry run) | `rename java action Module.Old to New dry run;` | Preview reference changes without modifying |
+| Drop Java action | `drop java action Module.Name;` | Deletes MPR unit and .java source file |
 | Call from microflow | `$Result = call java action Module.Name(Param = value);` | Inside BEGIN...END |
 
 **Parameter Types:** `string`, `integer`, `long`, `decimal`, `boolean`, `datetime`, `Module.Entity`, `list of Module.Entity`, `enum Module.EnumName`, `enumeration(Module.EnumName)`, `stringtemplate(sql)`, `stringtemplate(Oql)`, `entity <pEntity>` (type parameter declaration), bare `pEntity` (type parameter reference).

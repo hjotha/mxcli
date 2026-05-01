@@ -378,6 +378,9 @@ $NewProduct = create Test.Product (
 change $Product (
   Name = $NewName,
   ModifiedDate = [%CurrentDateTime%]);
+
+-- Refresh the changed object in the client
+change $Product (Name = $NewName) refresh;
 ```
 
 **Note**: Only specify attributes you want to change. Syntax aligned with CREATE.
@@ -728,6 +731,35 @@ retrieve $Items from Module.Entity where Active = true;
 ```
 
 **Note**: `returns type as $Var` in the microflow signature does NOT create an activity variable — it only names the return value. So `$Var = call java action ...` after `returns as $Var` is fine (one creation).
+
+## Legacy SOAP Web Service Calls
+
+`call web service` preserves legacy Mendix SOAP activities. Prefer REST clients
+for new integrations; this syntax exists mainly so existing projects can
+round-trip without dropping SOAP actions.
+
+```mdl
+-- Structured form. Resolved SOAP references use normal qualified names.
+$Root = call web service SampleSOAP.OrderService
+operation FetchSampleItems
+send mapping SampleSOAP.OrderRequest
+receive mapping SampleSOAP.OrderResponse
+timeout 30
+on error rollback;
+
+-- Quoted raw IDs are accepted when old project references are dangling or unavailable.
+$Root = call web service 'sample-service-id'
+operation FetchSampleItems
+send mapping 'sample-send-mapping-id'
+receive mapping 'sample-receive-mapping-id';
+
+-- Raw escape hatch emitted for unsupported SOAP fields.
+$Root = call web service raw 'AQID';
+```
+
+**Design note:** the raw payload is base64-encoded BSON for the complete action
+and is authoritative on re-exec. Treat this as round-trip support, not a
+recommended authoring format for new integrations.
 
 ## REST Service Calls
 

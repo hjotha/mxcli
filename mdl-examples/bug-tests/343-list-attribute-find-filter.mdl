@@ -1,0 +1,56 @@
+-- ============================================================================
+-- Bug #343: Attribute-based find/filter list operations rebuilt as expressions
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `find($List, Attribute = expression)` and
+--   `filter($List, Attribute = expression)` could be described correctly
+--   from existing models, but `mxcli exec` always rebuilt them as
+--   `FindByExpression` / `FilterByExpression`. Studio Pro's expression
+--   validator then surfaced CE0117 on the list operation activity even
+--   though the MDL source had not been edited.
+--
+-- After fix:
+--   The builder resolves the equality LHS to an attribute (or association)
+--   on the input list's element type and emits
+--   `Microflows$Find` / `Microflows$Filter` (`FindByAttributeOperation` /
+--   `FilterByAttributeOperation`) when possible. Complex conditions still
+--   fall back to the expression-based shape.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/343-list-attribute-find-filter.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest343.MF_FindByAttribute"
+--   `mx check` against the resulting MPR must report 0 errors and the
+--   activities must not surface CE0117 in Studio Pro.
+-- ============================================================================
+
+create module BugTest343;
+
+create entity BugTest343.Item (
+  Name : string(100),
+  Active : boolean
+);
+/
+
+-- find by attribute equality — rebuild must emit Microflows$Find with
+-- attribute-operation shape, not FindByExpression.
+create microflow BugTest343.MF_FindByAttribute (
+  $Items: list of BugTest343.Item,
+  $Target: string
+)
+returns BugTest343.Item as $Found
+begin
+  $Found = find($Items, Name = $Target);
+end;
+/
+
+-- filter by attribute equality — rebuild must emit Microflows$Filter
+-- with attribute-operation shape, not FilterByExpression.
+create microflow BugTest343.MF_FilterByAttribute (
+  $Items: list of BugTest343.Item
+)
+returns list of BugTest343.Item as $Active
+begin
+  $Active = filter($Items, Active = true);
+end;
+/
