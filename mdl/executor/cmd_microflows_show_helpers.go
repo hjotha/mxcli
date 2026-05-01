@@ -691,17 +691,15 @@ func traverseFlow(
 			}
 			return
 		}
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
 		trueFlow, falseFlow := findBranchFlows(flows)
 
 		// Empty-then swap: when the true branch goes directly to the merge
 		// (empty then body) and the false branch has real content, negate
 		// the condition and swap branches for more readable output.
 		// "if cond then else <body> end if;" → "if not(cond) then <body> end if;"
+		// NOTE: must run before emitting the IF header so the swap-negated
+		// condition makes it into the header; emitting twice duplicates the
+		// @position/@annotation/if … then block and breaks re-exec parsing.
 		if trueFlow != nil && falseFlow != nil && mergeID != "" {
 			if trueFlow.DestinationID == mergeID && falseFlow.DestinationID != mergeID {
 				stmt = negateIfCondition(stmt)
@@ -869,16 +867,14 @@ func traverseFlowUntilMerge(
 			}
 			return
 		}
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
 		trueFlow, falseFlow := findBranchFlows(flows)
 		nestedMergeID = resolveNestedMergeID(nestedMergeID, mergeID, trueFlow, falseFlow, flowsByOrigin)
 
 		// Empty-then swap: negate when true branch is empty but false branch has content.
 		// Skip when both branches go directly to merge (both empty).
+		// NOTE: must run before emitting the IF header so the swap-negated
+		// condition makes it into the header; emitting twice duplicates the
+		// @position/@annotation/if … then block and breaks re-exec parsing.
 		if trueFlow != nil && falseFlow != nil && nestedMergeID != "" && nestedMergeID == mergeID {
 			if trueFlow.DestinationID == nestedMergeID && falseFlow.DestinationID != nestedMergeID {
 				stmt = negateIfCondition(stmt)
