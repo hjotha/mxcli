@@ -24,7 +24,19 @@ rename entity RenameTest.Customer to client;
 -- Rename association
 rename association RenameTest.Order_Customer to Order_Client;
 
+-- Rename java action (also renames the .java source file on disk)
+create java action RenameTest.OldHelper() returns string
+as $$
+return "hello";
+$$;
+
+rename java action RenameTest.OldHelper to NewHelper;
+
+-- Dry run: preview what references would change without modifying anything
+rename java action RenameTest.NewHelper to AnotherName dry run;
+
 -- Clean up
+drop java action RenameTest.NewHelper;
 drop association RenameTest.Order_Client;
 drop entity RenameTest.client;
 drop entity RenameTest.Order;

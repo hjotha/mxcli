@@ -3,9 +3,11 @@
 package mpr
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -79,5 +81,71 @@ func TestParseCommitAction_ErrorHandlingTypeDefaultsToRollback(t *testing.T) {
 
 	if action.ErrorHandlingType != microflows.ErrorHandlingTypeRollback {
 		t.Errorf("expected default Rollback, got %q", action.ErrorHandlingType)
+	}
+}
+
+func TestParseActionActivityPreservesWebServiceActionRawBSONOrder(t *testing.T) {
+	rawAction := primitive.D{
+		{Key: "$ID", Value: "web-service-action-ordered"},
+		{Key: "$Type", Value: "Microflows$CallWebServiceAction"},
+		{Key: "ImportedService", Value: "SyntheticSOAP.OrderService"},
+		{Key: "OperationName", Value: "FetchItemsByTenant"},
+		{Key: "TimeOutExpression", Value: "30"},
+		{Key: "NewResultHandling", Value: primitive.D{
+			{Key: "$Type", Value: "Microflows$WebServiceOperationResultHandling"},
+			{Key: "ResultVariableName", Value: "SampleResponse"},
+		}},
+	}
+	expectedRaw, err := bson.Marshal(rawAction)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	activity := parseActionActivity(map[string]any{
+		"$ID":    "activity-with-web-service-action",
+		"$Type":  "Microflows$ActionActivity",
+		"Action": rawAction,
+	})
+	action, ok := activity.Action.(*microflows.WebServiceCallAction)
+	if !ok {
+		t.Fatalf("Action = %T, want *WebServiceCallAction", activity.Action)
+	}
+	if !bytes.Equal(action.RawBSON, expectedRaw) {
+		t.Fatalf("RawBSON was not preserved byte-for-byte")
+	}
+
+	serializedRaw, err := bson.Marshal(serializeWebServiceCallAction(action))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(serializedRaw, expectedRaw) {
+		t.Fatalf("serialized raw BSON was not preserved byte-for-byte")
+	}
+}
+
+func TestParseWebServiceActionFallsBackToRawBSONForUnsupportedFields(t *testing.T) {
+	action := parseWebServiceCallAction(map[string]any{
+		"$ID":             "soap-action-with-simple-request",
+		"$Type":           "Microflows$CallWebServiceAction",
+		"ImportedService": "SyntheticSOAP.OrderService",
+		"OperationName":   "SubmitOrder",
+		"RequestBodyHandling": map[string]any{
+			"$Type": "Microflows$SimpleRequestHandling",
+			"ParameterMappings": []any{
+				int32(2),
+				map[string]any{
+					"$Type":    "Microflows$WebServiceOperationSimpleParameterMapping",
+					"Argument": "$OrderID",
+				},
+			},
+		},
+	})
+
+	if len(action.RawBSON) == 0 {
+		t.Fatal("RawBSON was empty for unsupported SOAP request details")
+	}
+	serialized := serializeWebServiceCallAction(action)
+	if got := bsonGetKey(serialized, "RequestBodyHandling"); got == nil {
+		t.Fatalf("RequestBodyHandling was not preserved in raw fallback: %#v", serialized)
 	}
 }

@@ -501,6 +501,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 	switch s := stmt.(type) {
 	case *ast.DeclareStmt:
 		return fb.addCreateVariableAction(s)
+	case *ast.EnumSplitStmt:
+		return fb.addEnumSplit(s)
 	case *ast.MfSetStmt:
 		return fb.addChangeVariableAction(s)
 	case *ast.ReturnStmt:
@@ -549,6 +551,8 @@ func (fb *flowBuilder) addStatement(stmt ast.MicroflowStatement) model.ID {
 		return fb.addCallJavaActionAction(s)
 	case *ast.CallJavaScriptActionStmt:
 		return fb.addCallJavaScriptActionAction(s)
+	case *ast.CallWebServiceStmt:
+		return fb.addCallWebServiceAction(s)
 	case *ast.ExecuteDatabaseQueryStmt:
 		return fb.addExecuteDatabaseQueryAction(s)
 	case *ast.CallExternalActionStmt:

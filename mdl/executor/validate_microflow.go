@@ -89,6 +89,11 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 		case *ast.IfStmt:
 			v.walkBody(stmt.ThenBody)
 			v.walkBody(stmt.ElseBody)
+		case *ast.EnumSplitStmt:
+			for _, c := range stmt.Cases {
+				v.walkBody(c.Body)
+			}
+			v.walkBody(stmt.ElseBody)
 		case *ast.DeclareStmt:
 			// Track list variables declared as empty (candidates for the empty-list-in-loop anti-pattern)
 			if stmt.Type.Kind == ast.TypeListOf {
@@ -167,6 +172,8 @@ func stmtActivityName(stmt ast.MicroflowStatement) string {
 		return "call java action"
 	case *ast.CallJavaScriptActionStmt:
 		return "call javascript action"
+	case *ast.CallWebServiceStmt:
+		return "call web service"
 	case *ast.ExecuteDatabaseQueryStmt:
 		return "execute database query"
 	default:
@@ -285,6 +292,16 @@ func bodyReturns(stmts []ast.MicroflowStatement) bool {
 		return len(s.ElseBody) > 0 && bodyReturns(s.ThenBody) && bodyReturns(s.ElseBody)
 	case *ast.WhileStmt:
 		return isUnconditionalTrueWhile(s) && !containsBreakForCurrentLoop(s.Body)
+	case *ast.EnumSplitStmt:
+		if len(s.ElseBody) == 0 || !bodyReturns(s.ElseBody) {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !bodyReturns(c.Body) {
+				return false
+			}
+		}
+		return len(s.Cases) > 0
 	}
 	return false
 }
@@ -320,6 +337,17 @@ func (v *microflowValidator) checkBranchScoping(body []ast.MicroflowStatement) {
 			}
 			// Recurse into branches for nested scoping checks
 			v.checkBranchScoping(stmt.ThenBody)
+			v.checkBranchScoping(stmt.ElseBody)
+		case *ast.EnumSplitStmt:
+			for _, c := range stmt.Cases {
+				for varName := range collectDeclaredVars(c.Body) {
+					branchVars[varName] = "enum split branch"
+				}
+				v.checkBranchScoping(c.Body)
+			}
+			for varName := range collectDeclaredVars(stmt.ElseBody) {
+				branchVars[varName] = "enum split else branch"
+			}
 			v.checkBranchScoping(stmt.ElseBody)
 		case *ast.LoopStmt:
 			v.checkBranchScoping(stmt.Body)
@@ -398,6 +426,15 @@ func collectDeclaredVars(body []ast.MicroflowStatement) map[string]bool {
 			if stmt.Variable != "" {
 				vars[stmt.Variable] = true
 			}
+		case *ast.EnumSplitStmt:
+			for _, c := range stmt.Cases {
+				for varName := range collectDeclaredVars(c.Body) {
+					vars[varName] = true
+				}
+			}
+			for varName := range collectDeclaredVars(stmt.ElseBody) {
+				vars[varName] = true
+			}
 		}
 	}
 	return vars
@@ -428,6 +465,16 @@ func referencedVars(stmt ast.MicroflowStatement) []string {
 	case *ast.LogStmt:
 		refs = append(refs, exprVarRefs(s.Node)...)
 		refs = append(refs, exprVarRefs(s.Message)...)
+	case *ast.EnumSplitStmt:
+		refs = append(refs, extractVarName(s.Variable))
+		for _, c := range s.Cases {
+			for _, nested := range c.Body {
+				refs = append(refs, referencedVars(nested)...)
+			}
+		}
+		for _, nested := range s.ElseBody {
+			refs = append(refs, referencedVars(nested)...)
+		}
 	}
 	return refs
 }
@@ -487,6 +534,8 @@ func stmtErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
 	case *ast.DownloadFileStmt:
 		return s.ErrorHandling
 	case *ast.CallJavaScriptActionStmt:
+		return s.ErrorHandling
+	case *ast.CallWebServiceStmt:
 		return s.ErrorHandling
 	case *ast.ExecuteDatabaseQueryStmt:
 		return s.ErrorHandling

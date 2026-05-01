@@ -549,6 +549,9 @@ func (c *flowRefCollector) collectFromStatements(stmts []ast.MicroflowStatement)
 			if s.ActionName.Module != "" {
 				c.javaScriptActions = append(c.javaScriptActions, s.ActionName.String())
 			}
+		case *ast.CallWebServiceStmt:
+			// Web service and mapping references can be raw IDs; reference validation
+			// cannot safely resolve them without project metadata.
 		case *ast.CreateObjectStmt:
 			if s.EntityType.Module != "" {
 				c.entities = append(c.entities, entityRef{name: s.EntityType.String(), source: "create"})
@@ -565,6 +568,11 @@ func (c *flowRefCollector) collectFromStatements(stmts []ast.MicroflowStatement)
 			}
 		case *ast.IfStmt:
 			c.collectFromStatements(s.ThenBody)
+			c.collectFromStatements(s.ElseBody)
+		case *ast.EnumSplitStmt:
+			for _, cse := range s.Cases {
+				c.collectFromStatements(cse.Body)
+			}
 			c.collectFromStatements(s.ElseBody)
 		case *ast.LoopStmt:
 			c.collectFromStatements(s.Body)
@@ -604,6 +612,10 @@ func getErrorHandlerBody(stmt ast.MicroflowStatement) []ast.MicroflowStatement {
 			return s.ErrorHandling.Body
 		}
 	case *ast.CallJavaScriptActionStmt:
+		if s.ErrorHandling != nil && s.ErrorHandling.Body != nil {
+			return s.ErrorHandling.Body
+		}
+	case *ast.CallWebServiceStmt:
 		if s.ErrorHandling != nil && s.ErrorHandling.Body != nil {
 			return s.ErrorHandling.Body
 		}

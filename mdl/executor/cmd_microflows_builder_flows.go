@@ -559,9 +559,9 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 
 // handleErrorHandlerMerge creates an EndEvent for error handlers that want to merge back.
 // This is a fallback until full merge support is implemented. Caller should pass
-// the ID returned by addErrorHandlerFlow and the error handler Y position.
-func (fb *flowBuilder) handleErrorHandlerMerge(lastErrID model.ID, activityID model.ID, errorY int) {
-	fb.handleErrorHandlerMergeWithSkip(errorHandlerTail{id: lastErrID}, activityID, errorY, "")
+// the tail returned by addErrorHandlerFlow and the error handler Y position.
+func (fb *flowBuilder) handleErrorHandlerMerge(tail errorHandlerTail, activityID model.ID, errorY int) {
+	fb.handleErrorHandlerMergeWithSkip(tail, activityID, errorY, "")
 }
 
 func (fb *flowBuilder) handleErrorHandlerMergeWithSkip(tail errorHandlerTail, activityID model.ID, errorY int, skipVar string) {
@@ -596,6 +596,15 @@ func newHorizontalFlowWithCase(originID, destinationID model.ID, caseValue strin
 	flow.CaseValue = microflows.EnumerationCase{
 		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 		Value:       caseValue, // "true" or "false" as string
+	}
+	return flow
+}
+
+func newHorizontalFlowWithEnumCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
+	flow := newHorizontalFlow(originID, destinationID)
+	flow.CaseValue = microflows.EnumerationCase{
+		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+		Value:       caseValue,
 	}
 	return flow
 }
@@ -666,9 +675,9 @@ func pendingFlowAnchors(previousAnchor, pendingAnchor, stmtAnchor *ast.FlowAncho
 // never fall off the end of the body into the parent flow.
 //
 // Terminal statements: ReturnStmt, RaiseErrorStmt, BreakStmt, ContinueStmt. An
-// IfStmt is terminal iff it has an ELSE and both branches are terminal
-// (recursively). A LoopStmt is never terminal — BREAK can exit the loop even if
-// the body returns.
+// Branching statements are terminal iff every branch is present and recursively
+// terminal. A LoopStmt is never terminal — BREAK can exit the loop even if the
+// body returns.
 //
 // Naming kept for history; the predicate is really "last stmt is a guaranteed
 // terminator". Missing this case causes the outer IF to emit a dangling
@@ -698,6 +707,25 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 		return lastStmtIsReturn(s.ThenBody) && lastStmtIsReturn(s.ElseBody)
 	case *ast.WhileStmt:
 		return isManualWhileTrueCandidate(s)
+	case *ast.EnumSplitStmt:
+		if len(s.Cases) == 0 {
+			return false
+		}
+		if len(s.ElseBody) > 0 && !lastStmtIsReturn(s.ElseBody) {
+			return false
+		}
+		for _, c := range s.Cases {
+			if !lastStmtIsReturn(c.Body) {
+				return false
+			}
+		}
+		if len(s.ElseBody) == 0 {
+			// A described enum split may have no default flow at all. When every
+			// explicit case terminates, there is no split continuation to thread
+			// into the parent flow.
+			return true
+		}
+		return true
 	default:
 		return false
 	}
