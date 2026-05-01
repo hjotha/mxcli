@@ -130,19 +130,12 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		Microflow:         mfQN,
 		ParameterMappings: mappings,
 	}
-	useReturnVariable := s.OutputVariable != ""
-	if s.OutputVariable != "" && fb.callOutputDeclarations != nil {
-		if planned, ok := fb.callOutputDeclarations[s]; ok {
-			useReturnVariable = planned
-		}
-	}
-
 	action := &microflows.MicroflowCallAction{
 		BaseElement:        model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		MicroflowCall:      mfCall,
 		ResultVariableName: s.OutputVariable,
-		UseReturnVariable:  useReturnVariable,
+		UseReturnVariable:  s.OutputVariable != "",
 	}
 
 	activityX := fb.posX
@@ -161,7 +154,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	if s.OutputVariable != "" && useReturnVariable {
+	if s.OutputVariable != "" {
 		fb.registerResultVariableType(s.OutputVariable, fb.lookupMicroflowReturnType(mfQN))
 	}
 
@@ -238,7 +231,6 @@ func (fb *flowBuilder) addCallNanoflowAction(s *ast.CallNanoflowStmt) model.ID {
 // addCallJavaActionAction creates a CALL JAVA ACTION statement.
 func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.ID {
 	actionQN := s.ActionName.Module + "." + s.ActionName.Name
-	outputVariable := fb.uniqueImplicitOutputVariable(s.OutputVariable)
 
 	// Try to look up the Java action definition to detect EntityTypeParameterType parameters
 	var jaDef *javaactions.JavaAction
@@ -306,14 +298,14 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 		ErrorHandlingType:  convertErrorHandlingType(s.ErrorHandling),
 		JavaAction:         actionQN,
 		ParameterMappings:  mappings,
-		ResultVariableName: outputVariable,
-		UseReturnVariable:  outputVariable != "",
+		ResultVariableName: s.OutputVariable,
+		UseReturnVariable:  s.OutputVariable != "",
 	}
-	if outputVariable != "" && jaDef != nil && fb.varTypes != nil {
+	if s.OutputVariable != "" && jaDef != nil && fb.varTypes != nil {
 		if varType := javaActionReturnVarType(jaDef.ReturnType); varType != "" {
-			fb.varTypes[outputVariable] = varType
+			fb.varTypes[s.OutputVariable] = varType
 		} else if inferred := fb.inferGenericJavaActionReturnType(jaDef, s); inferred != "" {
-			fb.varTypes[outputVariable] = inferred
+			fb.varTypes[s.OutputVariable] = inferred
 		}
 	}
 

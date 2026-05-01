@@ -87,10 +87,9 @@ func (fb *flowBuilder) addChangeVariableAction(s *ast.MfSetStmt) model.ID {
 
 // addCreateObjectAction creates a CREATE OBJECT statement.
 func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
-	outputVariable := fb.uniqueImplicitOutputVariable(s.Variable)
 	action := &microflows.CreateObjectAction{
 		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-		OutputVariable: outputVariable,
+		OutputVariable: s.Variable,
 		Commit:         microflows.CommitTypeNo,
 	}
 	// Set entity reference as qualified name (BY_NAME_REFERENCE)
@@ -102,7 +101,7 @@ func (fb *flowBuilder) addCreateObjectAction(s *ast.CreateObjectStmt) model.ID {
 
 	// Register variable type for CHANGE statements
 	if fb.varTypes != nil && entityQN != "" {
-		fb.varTypes[outputVariable] = entityQN
+		fb.varTypes[s.Variable] = entityQN
 	}
 
 	// Build InitialMembers for each SET assignment
@@ -289,7 +288,6 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 // addRetrieveAction creates a RETRIEVE statement.
 func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	var source microflows.RetrieveSource
-	outputVariable := fb.uniqueImplicitOutputVariable(s.Variable)
 
 	if s.StartVariable != "" {
 		// Association retrieve: RETRIEVE $List FROM $Parent/Module.AssocName
@@ -330,7 +328,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 			}
 			source = dbSource
 			if fb.varTypes != nil {
-				fb.varTypes[outputVariable] = "List of " + assocInfo.parentEntityQN
+				fb.varTypes[s.Variable] = "List of " + assocInfo.parentEntityQN
 			}
 		} else {
 			// Forward traversal or ReferenceSet: use AssociationRetrieveSource
@@ -349,9 +347,9 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						otherEntity = assocInfo.parentEntityQN
 					}
 					if startVarType == assocInfo.childEntityQN && !outputUsedAsObject {
-						fb.varTypes[outputVariable] = "List of " + otherEntity
+						fb.varTypes[s.Variable] = "List of " + otherEntity
 					} else {
-						fb.varTypes[outputVariable] = otherEntity
+						fb.varTypes[s.Variable] = otherEntity
 					}
 				} else if assocInfo != nil && assocInfo.Type == domainmodel.AssociationTypeReferenceSet {
 					// ReferenceSet traversal returns a list of the entity on the other side,
@@ -361,13 +359,13 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 						otherEntity = assocInfo.parentEntityQN
 					}
 					if otherEntity != "" {
-						fb.varTypes[outputVariable] = "List of " + otherEntity
+						fb.varTypes[s.Variable] = "List of " + otherEntity
 					} else {
-						fb.varTypes[outputVariable] = "List of " + assocQN
+						fb.varTypes[s.Variable] = "List of " + assocQN
 					}
 				} else {
 					// ReferenceSet or unknown: returns a list
-					fb.varTypes[outputVariable] = "List of " + assocQN
+					fb.varTypes[s.Variable] = "List of " + assocQN
 				}
 			}
 		}
@@ -441,17 +439,17 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		if fb.varTypes != nil {
 			if s.Limit == "1" {
 				// LIMIT 1 returns a single entity
-				fb.varTypes[outputVariable] = entityQN
+				fb.varTypes[s.Variable] = entityQN
 			} else {
 				// No LIMIT or LIMIT > 1 returns a list
-				fb.varTypes[outputVariable] = "List of " + entityQN
+				fb.varTypes[s.Variable] = "List of " + entityQN
 			}
 		}
 	}
 
 	action := &microflows.RetrieveAction{
 		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-		OutputVariable: outputVariable,
+		OutputVariable: s.Variable,
 		Source:         source,
 	}
 

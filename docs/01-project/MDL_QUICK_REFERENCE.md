@@ -218,7 +218,6 @@ authentication basic, session
 | List declaration | `declare $list list of Module.Entity = empty;` | |
 | Assignment | `set $Var = expression;` | Variable must be declared first |
 | Create object | `$Var = create Module.Entity (attr = value);` | |
-| Duplicate implicit output | `$Var`, `$Var_2`, `$Var_3` | Builder assigns numeric aliases when duplicate implicit outputs collide at the same canvas position |
 | Change object | `change $entity (attr = value) [refresh];` | `refresh` updates the changed object in the client |
 | Commit | `commit $entity [with events] [refresh];` | |
 | Delete | `delete $entity;` | |
