@@ -5,11 +5,15 @@ package executor
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"sort"
 	"strings"
 
+	mdltypes "github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // formatActivity formats a single microflow activity as an MDL statement.
@@ -829,6 +833,9 @@ func formatAction(
 		}
 		return fmt.Sprintf("call javascript action %s(%s);", jsActionName, paramStr)
 
+	case *microflows.WebServiceCallAction:
+		return formatWebServiceCallAction(ctx, a)
+
 	case *microflows.UnknownAction:
 		return fmt.Sprintf("-- Unsupported action type: %s", a.TypeName)
 
@@ -861,6 +868,179 @@ func formatWorkflowOperationAction(ctx *ExecContext, a *microflows.WorkflowOpera
 	default:
 		return fmt.Sprintf("-- Unknown workflow operation: %T", a.Operation)
 	}
+}
+
+func formatWebServiceCallAction(ctx *ExecContext, a *microflows.WebServiceCallAction) string {
+	prefix := ""
+	if a.OutputVariable != "" {
+		prefix = fmt.Sprintf("$%s = ", a.OutputVariable)
+	}
+	if len(a.RawBSON) > 0 {
+		raw := base64.StdEncoding.EncodeToString(canonicalRawBSON(a.RawBSON))
+		return prefix + "call web service raw " + mdlQuote(raw) + ";"
+	}
+
+	parts := []string{prefix + "call web service " + formatWebServiceReference(resolveWebServiceReference(ctx, a.ServiceID))}
+	if a.OperationName != "" {
+		parts = append(parts, "operation "+formatWebServiceReference(a.OperationName))
+	}
+	if a.SendMappingID != "" {
+		parts = append(parts, "send mapping "+formatWebServiceReference(resolveWebServiceMappingReference(ctx, a.SendMappingID, true)))
+	}
+	if a.ReceiveMappingID != "" {
+		parts = append(parts, "receive mapping "+formatWebServiceReference(resolveWebServiceMappingReference(ctx, a.ReceiveMappingID, false)))
+	}
+	if a.TimeoutExpression != "" {
+		parts = append(parts, "timeout "+strings.TrimRight(a.TimeoutExpression, " \t\n\r"))
+	}
+	return strings.Join(parts, "\n") + ";"
+}
+
+func formatWebServiceReference(ref string) string {
+	if isBareQualifiedReference(ref) {
+		return ref
+	}
+	return mdlQuote(ref)
+}
+
+func isBareQualifiedReference(ref string) bool {
+	if ref == "" {
+		return false
+	}
+	for _, part := range strings.Split(ref, ".") {
+		if !isBareIdentifier(part) {
+			return false
+		}
+	}
+	return true
+}
+
+func isBareIdentifier(part string) bool {
+	if part == "" {
+		return false
+	}
+	for i, r := range part {
+		if i == 0 {
+			if r != '_' && (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') {
+				return false
+			}
+			continue
+		}
+		if r != '_' && (r < 'A' || r > 'Z') && (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
+}
+
+func resolveWebServiceReference(ctx *ExecContext, id model.ID) string {
+	raw := string(id)
+	if raw == "" || ctx == nil || ctx.Backend == nil {
+		return raw
+	}
+	units, err := ctx.Backend.ListRawUnitsByType("WebServices$ImportedWebService")
+	if err != nil {
+		return raw
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return raw
+	}
+	for _, unit := range units {
+		if unit == nil || unit.ID != id {
+			continue
+		}
+		return qualifiedRawUnitName(h, unit, raw)
+	}
+	return raw
+}
+
+func qualifiedRawUnitName(h *ContainerHierarchy, unit *mdltypes.RawUnit, fallback string) string {
+	name := rawUnitName(unit.Contents)
+	if name == "" {
+		return fallback
+	}
+	if h == nil {
+		return name
+	}
+	if qn := h.GetQualifiedName(unit.ContainerID, name); qn != "." && qn != "" {
+		return qn
+	}
+	return name
+}
+
+func resolveWebServiceMappingReference(ctx *ExecContext, id model.ID, preferExport bool) string {
+	if preferExport {
+		if qn := resolveExportMappingReference(ctx, id); qn != "" {
+			return qn
+		}
+		if qn := resolveImportMappingReference(ctx, id); qn != "" {
+			return qn
+		}
+	} else {
+		if qn := resolveImportMappingReference(ctx, id); qn != "" {
+			return qn
+		}
+		if qn := resolveExportMappingReference(ctx, id); qn != "" {
+			return qn
+		}
+	}
+	return string(id)
+}
+
+func resolveImportMappingReference(ctx *ExecContext, id model.ID) string {
+	if id == "" || ctx == nil || ctx.Backend == nil {
+		return ""
+	}
+	mappings, err := ctx.Backend.ListImportMappings()
+	if err != nil {
+		return ""
+	}
+	for _, mapping := range mappings {
+		if mapping != nil && mapping.ID == id {
+			return qualifiedNameForContainer(ctx, mapping.ContainerID, mapping.Name)
+		}
+	}
+	return ""
+}
+
+func resolveExportMappingReference(ctx *ExecContext, id model.ID) string {
+	if id == "" || ctx == nil || ctx.Backend == nil {
+		return ""
+	}
+	mappings, err := ctx.Backend.ListExportMappings()
+	if err != nil {
+		return ""
+	}
+	for _, mapping := range mappings {
+		if mapping != nil && mapping.ID == id {
+			return qualifiedNameForContainer(ctx, mapping.ContainerID, mapping.Name)
+		}
+	}
+	return ""
+}
+
+func qualifiedNameForContainer(ctx *ExecContext, containerID model.ID, name string) string {
+	if name == "" {
+		return ""
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil || h == nil {
+		return name
+	}
+	if qn := h.GetQualifiedName(containerID, name); qn != "." && qn != "" {
+		return qn
+	}
+	return name
+}
+
+func rawUnitName(contents []byte) string {
+	var raw map[string]any
+	if err := bson.Unmarshal(contents, &raw); err != nil {
+		return ""
+	}
+	name, _ := raw["Name"].(string)
+	return name
 }
 
 // formatListOperation formats a list operation as MDL.
@@ -1531,4 +1711,65 @@ func formatSplitCondition(cond microflows.SplitCondition) string {
 	default:
 		return "true"
 	}
+}
+
+func canonicalRawBSON(raw []byte) []byte {
+	// RawBSON is preserved byte-for-byte when written back to disk. This
+	// canonical form only stabilizes the MDL text emitted by describe, so BSON
+	// documents with equivalent key/value content do not drift due to map or
+	// parser ordering.
+	var doc bson.D
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		return raw
+	}
+	canonical, err := bson.Marshal(canonicalBSONValue(doc))
+	if err != nil {
+		return raw
+	}
+	return canonical
+}
+
+func canonicalBSONValue(value any) any {
+	switch v := value.(type) {
+	case bson.D:
+		return canonicalBSONDocument(v)
+	case bson.A:
+		out := make(bson.A, len(v))
+		for i, item := range v {
+			out[i] = canonicalBSONValue(item)
+		}
+		return out
+	case []any:
+		out := make([]any, len(v))
+		for i, item := range v {
+			out[i] = canonicalBSONValue(item)
+		}
+		return out
+	case bson.M:
+		return canonicalBSONMap(map[string]any(v))
+	case map[string]any:
+		return canonicalBSONMap(v)
+	default:
+		return value
+	}
+}
+
+func canonicalBSONDocument(doc bson.D) bson.D {
+	out := make(bson.D, len(doc))
+	copy(out, doc)
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].Key < out[j].Key
+	})
+	for i := range out {
+		out[i].Value = canonicalBSONValue(out[i].Value)
+	}
+	return out
+}
+
+func canonicalBSONMap(m map[string]any) bson.D {
+	doc := make(bson.D, 0, len(m))
+	for k, v := range m {
+		doc = append(doc, bson.E{Key: k, Value: canonicalBSONValue(v)})
+	}
+	return canonicalBSONDocument(doc)
 }

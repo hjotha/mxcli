@@ -7,8 +7,10 @@
 // on the flow entering the split, but the describer never read it back.
 //
 // The fix moves split anchors into a dedicated emitSplitAnchorAnnotation path
-// that emits `@anchor(to: X, true: (...), false: (...))` whenever any of the
-// three has a non-default value.
+// that emits `@anchor(to: X, true: (...), false: (...))` whenever any split
+// has a non-default value. For inheritance splits the incoming side is also
+// preserved when it is `left`: omitting it can make the builder relayout
+// negative-X split-type branches and change branch scoping.
 package executor
 
 import (
@@ -46,6 +48,30 @@ func TestEmitSplitAnchor_EmitsIncomingToSide(t *testing.T) {
 	// The split has no outgoing flows, so true/false fragments must be absent.
 	if strings.Contains(lines[0], "true:") || strings.Contains(lines[0], "false:") {
 		t.Errorf("no outgoing flows configured, but output contains branch fragment: %q", lines[0])
+	}
+}
+
+func TestEmitSplitAnchor_PreservesIncomingLeftSide(t *testing.T) {
+	splitID := model.ID("split-left-incoming")
+	split := &microflows.InheritanceSplit{}
+	split.ID = splitID
+
+	incoming := &microflows.SequenceFlow{
+		DestinationID:              splitID,
+		DestinationConnectionIndex: AnchorLeft,
+	}
+	flowsByDest := map[model.ID][]*microflows.SequenceFlow{
+		splitID: {incoming},
+	}
+
+	var lines []string
+	emitAnchorAnnotation(split, nil, flowsByDest, &lines, "")
+
+	if len(lines) != 1 {
+		t.Fatalf("expected incoming anchor line, got %d: %v", len(lines), lines)
+	}
+	if lines[0] != "@anchor(to: left)" {
+		t.Fatalf("anchor line = %q, want @anchor(to: left)", lines[0])
 	}
 }
 
