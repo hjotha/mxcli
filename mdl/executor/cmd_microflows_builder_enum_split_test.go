@@ -245,3 +245,63 @@ func enumSplitWithBranchCount(count int) *ast.EnumSplitStmt {
 		Cases:    cases,
 	}
 }
+
+// TestEnumSplitBuilderPreservesFirstStatementAnchor guards against silent
+// loss of @anchor(from:..., to:...) on the first statement inside an enum
+// split case. Before the fix the enum split builder never read
+// stmtOwnAnchor(stmt) for case bodies, so any round-tripped anchor dropped
+// on re-exec — describe → exec → describe lost the FlowAnchor entirely.
+func TestEnumSplitBuilderPreservesFirstStatementAnchor(t *testing.T) {
+	fb := &flowBuilder{
+		spacing:  HorizontalSpacing,
+		measurer: &layoutMeasurer{},
+	}
+
+	// @anchor(to: bottom) on the first case statement — bottom is a
+	// non-default destination anchor (AnchorSideBottom == 2) so we can
+	// distinguish it from the layout default.
+	anchor := &ast.FlowAnchors{
+		From: ast.AnchorSideUnset,
+		To:   ast.AnchorSideBottom,
+	}
+	fb.addEnumSplit(&ast.EnumSplitStmt{
+		Variable: "Status",
+		Cases: []ast.EnumSplitCase{
+			{
+				Values: []string{"Open"},
+				Body: []ast.MicroflowStatement{
+					&ast.LogStmt{
+						Level:       ast.LogInfo,
+						Message:     &ast.LiteralExpr{Kind: ast.LiteralString, Value: "open"},
+						Annotations: &ast.ActivityAnnotations{Anchor: anchor},
+					},
+				},
+			},
+		},
+	})
+
+	var split *microflows.ExclusiveSplit
+	for _, obj := range fb.objects {
+		if s, ok := obj.(*microflows.ExclusiveSplit); ok {
+			split = s
+			break
+		}
+	}
+	if split == nil {
+		t.Fatal("expected ExclusiveSplit")
+	}
+
+	var firstCaseFlow *microflows.SequenceFlow
+	for _, f := range fb.flows {
+		if f.OriginID == split.ID {
+			firstCaseFlow = f
+		}
+	}
+	if firstCaseFlow == nil {
+		t.Fatal("expected split→case flow")
+	}
+	if firstCaseFlow.DestinationConnectionIndex != int(ast.AnchorSideBottom) {
+		t.Errorf("DestinationConnectionIndex = %d, want %d — @anchor(to: bottom) was dropped",
+			firstCaseFlow.DestinationConnectionIndex, int(ast.AnchorSideBottom))
+	}
+}
