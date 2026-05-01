@@ -19,6 +19,7 @@ func TestFormatAction_JavaActionCall_EntityTypeParam(t *testing.T) {
 	action := &microflows.JavaActionCallAction{
 		JavaAction:         "MyModule.Validate",
 		ResultVariableName: "IsValid",
+		UseReturnVariable:  true,
 		ParameterMappings: []*microflows.JavaActionParameterMapping{
 			{
 				Parameter: "MyModule.Validate.InputObject",
@@ -40,6 +41,7 @@ func TestFormatAction_JavaActionCall_MixedParamTypes(t *testing.T) {
 	action := &microflows.JavaActionCallAction{
 		JavaAction:         "MyModule.ProcessEntity",
 		ResultVariableName: "Result",
+		UseReturnVariable:  true,
 		ParameterMappings: []*microflows.JavaActionParameterMapping{
 			{
 				Parameter: "MyModule.ProcessEntity.InputObject",
@@ -67,6 +69,7 @@ func TestFormatAction_JavaActionCall_EntityTypeParam_EmptyEntity(t *testing.T) {
 	action := &microflows.JavaActionCallAction{
 		JavaAction:         "MyModule.Validate",
 		ResultVariableName: "IsValid",
+		UseReturnVariable:  true,
 		ParameterMappings: []*microflows.JavaActionParameterMapping{
 			{
 				Parameter: "MyModule.Validate.InputObject",
@@ -280,6 +283,7 @@ func TestFormatAction_JavaActionCall_EntityTypeAndParameterizedParams(t *testing
 	action := &microflows.JavaActionCallAction{
 		JavaAction:         "MyModule.CopyAttributes",
 		ResultVariableName: "Result",
+		UseReturnVariable:  true,
 		ParameterMappings: []*microflows.JavaActionParameterMapping{
 			{
 				Parameter: "MyModule.CopyAttributes.EntityType",

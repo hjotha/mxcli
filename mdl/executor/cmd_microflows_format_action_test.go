@@ -341,6 +341,7 @@ func TestFormatAction_MicroflowCall_WithResult(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.MicroflowCallAction{
 		ResultVariableName: "Result",
+		UseReturnVariable:  true,
 		MicroflowCall: &microflows.MicroflowCall{
 			Microflow: "MyModule.ProcessOrder",
 			ParameterMappings: []*microflows.MicroflowCallParameterMapping{
@@ -373,6 +374,7 @@ func TestFormatAction_JavaActionCall(t *testing.T) {
 	action := &microflows.JavaActionCallAction{
 		JavaAction:         "MyModule.SendEmail",
 		ResultVariableName: "Success",
+		UseReturnVariable:  true,
 		ParameterMappings: []*microflows.JavaActionParameterMapping{
 			{
 				Parameter: "MyModule.SendEmail.To",
@@ -395,6 +397,7 @@ func TestFormatAction_CallExternal(t *testing.T) {
 		ConsumedODataService: "MyModule.OrderService",
 		Name:                 "GetOrders",
 		ResultVariableName:   "Orders",
+		UseReturnVariable:    true,
 	}
 	got := e.formatAction(action, nil, nil)
 	want := "$Orders = call external action MyModule.OrderService.GetOrders();"
@@ -949,6 +952,7 @@ func TestFormatAction_JavaScriptActionCall_WithReturn(t *testing.T) {
 	action := &microflows.JavaScriptActionCallAction{
 		JavaScriptAction:   "MyModule.MyJSAction",
 		OutputVariableName: "Result",
+		UseReturnVariable:  true,
 	}
 	got := e.formatAction(action, nil, nil)
 	want := "$Result = call javascript action MyModule.MyJSAction();"
@@ -970,6 +974,7 @@ func TestFormatAction_JavaScriptActionCall_WithParams(t *testing.T) {
 			},
 		},
 		OutputVariableName: "Result",
+		UseReturnVariable:  true,
 	}
 	got := e.formatAction(action, nil, nil)
 	want := "$Result = call javascript action MyModule.MyJSAction(Input = $MyVar);"
@@ -1108,6 +1113,7 @@ func TestFormatAction_JavaScriptActionCall_WithOutputAndEmptyParam(t *testing.T)
 	action := &microflows.JavaScriptActionCallAction{
 		JavaScriptAction:   "MyModule.MyJSAction",
 		OutputVariableName: "Result",
+		UseReturnVariable:  true,
 		ParameterMappings: []*microflows.JavaScriptActionParameterMapping{
 			{
 				Parameter: "MyModule.MyJSAction.Input",
