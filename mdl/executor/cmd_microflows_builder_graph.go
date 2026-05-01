@@ -313,7 +313,11 @@ func collectObjectInputVariables(stmts []ast.MicroflowStatement) map[string]bool
 			case *ast.AggregateListStmt:
 				walkExpr(s.Expression)
 			case *ast.AddToListStmt:
-				if s.Item != "" {
+				if s.Value != nil {
+					for _, ref := range exprVarRefs(s.Value) {
+						inputs[ref] = true
+					}
+				} else if s.Item != "" {
 					inputs[s.Item] = true
 				}
 			case *ast.CallMicroflowStmt:
