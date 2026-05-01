@@ -471,6 +471,7 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	case *ast.DeclareStmt:
 		s.Annotations = ann
 	case *ast.EnumSplitStmt:
+		s.Annotations = ann
 	case *ast.InheritanceSplitStmt:
 		s.Annotations = ann
 	case *ast.CastObjectStmt:
