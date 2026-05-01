@@ -283,6 +283,11 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 }
 
 func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
+	if count := enumSplitBranchCount(s); count > maxEnumSplitBranches {
+		fb.addError("enum split has %d branches; at most %d branches are supported", count, maxEnumSplitBranches)
+		return ""
+	}
+
 	if fb.measurer == nil {
 		fb.measurer = &layoutMeasurer{varTypes: fb.varTypes}
 	}
@@ -461,6 +466,8 @@ var splitCaseOrderAnchors = []splitCaseOrderAnchor{
 	{AnchorLeft, AnchorBottom},
 }
 
+var maxEnumSplitBranches = len(splitCaseOrderAnchors)
+
 func applySplitCaseOrder(flow *microflows.SequenceFlow, order int) {
 	if flow == nil || order < 0 || order >= len(splitCaseOrderAnchors) {
 		return
@@ -478,6 +485,17 @@ func enumSplitCaseValues(c ast.EnumSplitCase) []string {
 		return []string{c.Value}
 	}
 	return nil
+}
+
+func enumSplitBranchCount(s *ast.EnumSplitStmt) int {
+	if s == nil {
+		return 0
+	}
+	count := len(s.Cases)
+	if len(s.ElseBody) > 0 {
+		count++
+	}
+	return count
 }
 
 func appendEnumBodies(s *ast.EnumSplitStmt) []ast.MicroflowStatement {
