@@ -700,7 +700,7 @@ func traverseFlow(
 		}
 
 		trueTerminates := branchFlowTerminatesBeforeMerge(trueFlow, mergeID, activityMap, flowsByOrigin, splitMergeMap)
-		isGuard := trueTerminates && !branchFlowStartsAtTerminal(falseFlow, activityMap) && !hasExplicitFalseBranchAnchor(falseFlow)
+		isGuard := trueTerminates && flowLooksLikeGuardContinuation(falseFlow, obj, activityMap) && !hasExplicitFalseBranchAnchor(falseFlow)
 
 		if isGuard {
 			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
@@ -861,7 +861,7 @@ func traverseFlowUntilMerge(
 		}
 
 		trueTerminates := branchFlowTerminatesBeforeMerge(trueFlow, nestedMergeID, activityMap, flowsByOrigin, splitMergeMap)
-		isGuard := trueTerminates && !branchFlowStartsAtTerminal(falseFlow, activityMap) && !hasExplicitFalseBranchAnchor(falseFlow)
+		isGuard := trueTerminates && flowLooksLikeGuardContinuation(falseFlow, obj, activityMap) && !hasExplicitFalseBranchAnchor(falseFlow)
 
 		if isGuard {
 			traverseFlowUntilMerge(ctx, trueFlow.DestinationID, nestedMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
@@ -1402,6 +1402,29 @@ func findBranchFlows(flows []*microflows.SequenceFlow) (trueFlow, falseFlow *mic
 		}
 	}
 	return trueFlow, falseFlow
+}
+
+func flowLooksLikeGuardContinuation(
+	flow *microflows.SequenceFlow,
+	split microflows.MicroflowObject,
+	activityMap map[model.ID]microflows.MicroflowObject,
+) bool {
+	if flow == nil || split == nil {
+		return false
+	}
+	dest := activityMap[flow.DestinationID]
+	if dest == nil {
+		return false
+	}
+	switch dest.(type) {
+	case *microflows.EndEvent, *microflows.ErrorEvent:
+		return false
+	}
+	// Builder-generated guard continuations sit on the split's horizontal
+	// centerline. This intentionally relies on mxcli's layout contract so a
+	// real branch that returns to a merge below the split is not collapsed into
+	// a guard-style continuation during describe.
+	return dest.GetPosition().Y == split.GetPosition().Y
 }
 
 // findErrorHandlerFlow returns the error handler flow from an activity's outgoing flows.

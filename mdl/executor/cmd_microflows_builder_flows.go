@@ -202,10 +202,14 @@ func applyUserAnchors(flow *microflows.SequenceFlow, origin *ast.FlowAnchors, de
 }
 
 func branchDestinationAnchor(branchAnchor, stmtAnchor *ast.FlowAnchors) *ast.FlowAnchors {
-	if stmtAnchor != nil && stmtAnchor.To != ast.AnchorSideUnset {
-		return stmtAnchor
+	// The split branch annotation owns the incoming edge to the first branch
+	// activity. If it specifies `to`, it must win over the first statement's
+	// own anchor; the statement anchor applies to that activity's outgoing
+	// edge, not to the split->statement flow.
+	if branchAnchor != nil && branchAnchor.To != ast.AnchorSideUnset {
+		return branchAnchor
 	}
-	return branchAnchor
+	return stmtAnchor
 }
 
 func pendingFlowAnchors(previousAnchor, pendingAnchor, stmtAnchor *ast.FlowAnchors) (*ast.FlowAnchors, *ast.FlowAnchors) {
