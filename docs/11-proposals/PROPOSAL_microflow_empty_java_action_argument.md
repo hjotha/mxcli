@@ -69,5 +69,4 @@ JavaActionParameterMapping {
   and `TestBuildJavaAction_EmptyMicroflowArgumentUsesMicroflowParameterValue`
   in `mdl/executor/cmd_microflows_builder_java_action_test.go`.
 - Example script:
-  `mdl-examples/doctype-tests/empty_java_action_argument.test.mdl`.
-
+  `mdl-examples/doctype-tests/empty_java_action_argument.mdl`.

@@ -280,7 +280,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
 				Entity:      entityName,
 			}
-		} else if isPlaceholderExpression(arg.Value) {
+		} else if isEmptyJavaActionArgument(arg.Value) {
 			if microflowTypeParams[arg.Name] {
 				value = &microflows.MicroflowParameterValue{
 					BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
@@ -460,7 +460,7 @@ func (fb *flowBuilder) addCallJavaScriptActionAction(s *ast.CallJavaScriptAction
 	return activity.ID
 }
 
-func isPlaceholderExpression(expr ast.Expression) bool {
+func isEmptyJavaActionArgument(expr ast.Expression) bool {
 	lit, ok := expr.(*ast.LiteralExpr)
 	return ok && (lit.Kind == ast.LiteralEmpty || lit.Kind == ast.LiteralNull)
 }
