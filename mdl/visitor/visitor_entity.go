@@ -838,7 +838,7 @@ func (b *Builder) ExitRenameStatement(ctx *parser.RenameStatementContext) {
 			oldName := identifierOrKeywordText(ioks[0])
 			newName := identifierOrKeywordText(ioks[1])
 			b.statements = append(b.statements, &ast.RenameStmt{
-				ObjectType: "MODULE",
+				ObjectType: "module",
 				Name:       ast.QualifiedName{Module: oldName, Name: oldName},
 				NewName:    newName,
 				DryRun:     dryRun,

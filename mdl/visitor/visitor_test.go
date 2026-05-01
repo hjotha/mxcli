@@ -1973,3 +1973,26 @@ func TestShouldPreserveExpressionSourceIgnoresStringLiteralPunctuation(t *testin
 		t.Fatal("compact not() expressions should preserve source")
 	}
 }
+
+func TestRenameModule_ObjectTypeIsLowercase(t *testing.T) {
+	prog, errs := Build("RENAME MODULE OldMod TO NewMod;")
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors: %v", errs)
+	}
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+	stmt, ok := prog.Statements[0].(*ast.RenameStmt)
+	if !ok {
+		t.Fatalf("Expected *ast.RenameStmt, got %T", prog.Statements[0])
+	}
+	if stmt.ObjectType != "module" {
+		t.Errorf("Expected ObjectType %q, got %q — executor switch uses lowercase", "module", stmt.ObjectType)
+	}
+	if stmt.Name.Module != "OldMod" {
+		t.Errorf("Expected old name OldMod, got %s", stmt.Name.Module)
+	}
+	if stmt.NewName != "NewMod" {
+		t.Errorf("Expected new name NewMod, got %s", stmt.NewName)
+	}
+}

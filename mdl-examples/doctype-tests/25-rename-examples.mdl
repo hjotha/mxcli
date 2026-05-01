@@ -18,6 +18,10 @@ create association RenameTest.Order_Customer
   from RenameTest.Order to RenameTest.Customer
   type reference;
 
+-- Rename module
+rename module RenameTest to RenameTestRenamed;
+rename module RenameTestRenamed to RenameTest;
+
 -- Rename entity
 rename entity RenameTest.Customer to client;
 
