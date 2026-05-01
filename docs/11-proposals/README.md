@@ -45,6 +45,7 @@ BSON schema Registry ◄──── multi-version Support
 | [MDL Syntax Improvements v2](PROPOSAL_mdl_syntax_improvements_v2.md) | Proposed | Consolidated v2: unified variable declaration, C-style braces, fluent list ops | Syntax Improvements v1 |
 | [Microflow Free Annotation](PROPOSAL_microflow_free_annotation.md) | Draft | Order-sensitive `@annotation` handling for free-floating visual notes in microflows | — |
 | [Microflow Download File Statement](PROPOSAL_microflow_download_file_statement.md) | Draft | `download file $FileDocument [show in browser]` for `DownloadFileAction` round-trip and authoring | — |
+| [Empty Java Action Argument](PROPOSAL_microflow_empty_java_action_argument.md) | Implemented | `empty` for unbound Java-action parameters; round-trip preservation of empty `BasicCodeActionParameterValue` bindings | — |
 | [Microflow Call Web Service Statement](PROPOSAL_microflow_call_web_service_statement.md) | Draft | Structured and raw MDL syntax for legacy SOAP `CallWebServiceAction` round-trip preservation | — |
 | [Page Syntax V2](PROPOSAL_page_syntax_v2.md) | Superseded | Page/widget syntax with `{}` blocks and `->` binding. Superseded by V3 (archived) | — |
 | [Page Styling Support](page-styling-support.md) | Partial | CSS classes, inline styles, dynamic classes, design properties. Phase 1 (Class/Style) done | — |

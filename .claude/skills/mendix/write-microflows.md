@@ -885,6 +885,26 @@ download file $GeneratedReport show in browser;
 download file $GeneratedExport;
 ```
 
+## Empty Java-Action Argument (`empty`)
+
+When `describe` round-trips a Java-action call that has an unbound parameter
+in Studio Pro, it emits `empty` as the argument value. In this Java-action
+argument context, `empty` preserves the
+underlying empty `BasicCodeActionParameterValue.Argument` so that the next
+`describe → exec → describe` cycle stays symmetric.
+
+```mdl
+$Total = call java action SampleModule.Recalculate(
+  CompanyId       = empty,
+  RecalculateAll  = true,
+  ItemList        = empty
+);
+```
+
+New scripts should bind every parameter to a real expression. Use `empty`
+for a Java-action argument only when regenerating MDL from an existing project
+that already had an unbound parameter.
+
 ## Error Handling
 
 MDL supports error handling for activities that may fail (microflow calls, commits, external service calls, etc.).

@@ -1,0 +1,25 @@
+create microflow SampleModule.ACT_RecalculateOpenItems ()
+returns Void
+begin
+  call java action SampleModule.Recalculate(
+    CompanyId       = empty,
+    RecalculateAll  = true,
+    ItemList        = empty
+  );
+  return;
+end;
+/
+
+create microflow SampleModule.ACT_RecalculateForCompany (
+  $CompanyId: String
+)
+returns Void
+begin
+  call java action SampleModule.Recalculate(
+    CompanyId       = $CompanyId,
+    RecalculateAll  = false,
+    ItemList        = empty
+  );
+  return;
+end;
+/

@@ -616,6 +616,15 @@ type BasicCodeActionParameterValue struct {
 
 func (BasicCodeActionParameterValue) isCodeActionParameterValue() {}
 
+// MicroflowParameterValue is a microflow reference passed to a Java action
+// microflow parameter. An empty Microflow keeps Studio Pro's placeholder value.
+type MicroflowParameterValue struct {
+	model.BaseElement
+	Microflow string `json:"microflow,omitempty"` // BY_NAME_REFERENCE: qualified microflow name
+}
+
+func (MicroflowParameterValue) isCodeActionParameterValue() {}
+
 // EntityTypeCodeActionParameterValue is an entity type passed at a call site for a type parameter.
 type EntityTypeCodeActionParameterValue struct {
 	model.BaseElement

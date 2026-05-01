@@ -416,6 +416,32 @@ func TestFormatAction_JavaActionCall(t *testing.T) {
 	}
 }
 
+func TestFormatAction_JavaActionCall_EmptyParameterValues(t *testing.T) {
+	e := newTestExecutor()
+	action := &microflows.JavaActionCallAction{
+		JavaAction: "MyModule.Recalculate",
+		ParameterMappings: []*microflows.JavaActionParameterMapping{
+			{
+				Parameter: "MyModule.Recalculate.CompanyId",
+				Value:     &microflows.BasicCodeActionParameterValue{Argument: ""},
+			},
+			{
+				Parameter: "MyModule.Recalculate.RecalculateAll",
+				Value:     &microflows.BasicCodeActionParameterValue{Argument: "true"},
+			},
+			{
+				Parameter: "MyModule.Recalculate.Callback",
+				Value:     &microflows.MicroflowParameterValue{Microflow: ""},
+			},
+		},
+	}
+	got := e.formatAction(action, nil, nil)
+	want := "call java action MyModule.Recalculate(CompanyId = empty, RecalculateAll = true, Callback = empty);"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestFormatAction_CallExternal(t *testing.T) {
 	e := newTestExecutor()
 	action := &microflows.CallExternalAction{

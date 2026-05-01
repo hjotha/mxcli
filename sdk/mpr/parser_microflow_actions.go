@@ -176,6 +176,11 @@ func parseCodeActionParameterValue(raw map[string]any) microflows.CodeActionPara
 		value.ID = model.ID(extractBsonID(raw["$ID"]))
 		value.Argument = extractString(raw["Argument"])
 		return value
+	case "Microflows$MicroflowParameterValue":
+		value := &microflows.MicroflowParameterValue{}
+		value.ID = model.ID(extractBsonID(raw["$ID"]))
+		value.Microflow = extractString(raw["Microflow"])
+		return value
 	case "Microflows$EntityTypeCodeActionParameterValue":
 		value := &microflows.EntityTypeCodeActionParameterValue{}
 		value.ID = model.ID(extractBsonID(raw["$ID"]))
