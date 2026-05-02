@@ -2892,7 +2892,7 @@ func mdlparserParserInit() {
 		1, 0, 0, 0, 4410, 431, 1, 0, 0, 0, 4411, 4412, 5, 578, 0, 0, 4412, 4413,
 		5, 548, 0, 0, 4413, 4414, 5, 17, 0, 0, 4414, 4415, 5, 13, 0, 0, 4415, 4416,
 		3, 854, 427, 0, 4416, 433, 1, 0, 0, 0, 4417, 4418, 5, 47, 0, 0, 4418, 4419,
-		5, 578, 0, 0, 4419, 4420, 5, 459, 0, 0, 4420, 4421, 5, 578, 0, 0, 4421,
+		3, 810, 405, 0, 4419, 4420, 5, 459, 0, 0, 4420, 4421, 5, 578, 0, 0, 4421,
 		435, 1, 0, 0, 0, 4422, 4423, 5, 141, 0, 0, 4423, 4424, 5, 578, 0, 0, 4424,
 		4425, 5, 72, 0, 0, 4425, 4426, 5, 578, 0, 0, 4426, 437, 1, 0, 0, 0, 4427,
 		4432, 3, 440, 220, 0, 4428, 4429, 5, 559, 0, 0, 4429, 4431, 3, 440, 220,
@@ -60627,9 +60627,9 @@ type IAddToListStatementContext interface {
 
 	// Getter signatures
 	ADD() antlr.TerminalNode
-	AllVARIABLE() []antlr.TerminalNode
-	VARIABLE(i int) antlr.TerminalNode
+	Expression() IExpressionContext
 	TO() antlr.TerminalNode
+	VARIABLE() antlr.TerminalNode
 
 	// IsAddToListStatementContext differentiates from other interfaces.
 	IsAddToListStatementContext()
@@ -60671,16 +60671,28 @@ func (s *AddToListStatementContext) ADD() antlr.TerminalNode {
 	return s.GetToken(MDLParserADD, 0)
 }
 
-func (s *AddToListStatementContext) AllVARIABLE() []antlr.TerminalNode {
-	return s.GetTokens(MDLParserVARIABLE)
-}
+func (s *AddToListStatementContext) Expression() IExpressionContext {
+	var t antlr.RuleContext
+	for _, ctx := range s.GetChildren() {
+		if _, ok := ctx.(IExpressionContext); ok {
+			t = ctx.(antlr.RuleContext)
+			break
+		}
+	}
 
-func (s *AddToListStatementContext) VARIABLE(i int) antlr.TerminalNode {
-	return s.GetToken(MDLParserVARIABLE, i)
+	if t == nil {
+		return nil
+	}
+
+	return t.(IExpressionContext)
 }
 
 func (s *AddToListStatementContext) TO() antlr.TerminalNode {
 	return s.GetToken(MDLParserTO, 0)
+}
+
+func (s *AddToListStatementContext) VARIABLE() antlr.TerminalNode {
+	return s.GetToken(MDLParserVARIABLE, 0)
 }
 
 func (s *AddToListStatementContext) GetRuleContext() antlr.RuleContext {
@@ -60717,11 +60729,7 @@ func (p *MDLParser) AddToListStatement() (localctx IAddToListStatementContext) {
 	}
 	{
 		p.SetState(4418)
-		p.Match(MDLParserVARIABLE)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
-		}
+		p.Expression()
 	}
 	{
 		p.SetState(4419)
