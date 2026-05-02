@@ -59,3 +59,4 @@ grammardoc
 # Snap tool binary (used for BSON fixture generation)
 snap-bson
 .playwright-cli/
+.claude/worktrees/

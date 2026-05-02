@@ -57,8 +57,6 @@ Forty-seven of Mendix's 52 metamodel domains are not yet covered (REST services,
 
 ## What's Next
 
-v0.8.0 is coming later this week. We'll post a full release note here with a demo video.
-
 In the meantime, the best place to start is the [5-Minute Quickstart](../tutorial/quickstart.md). If you want to understand how AI-assisted development works with mxcli, the [MDL + AI Workflow](../tutorial/mdl-ai-workflow.md) guide walks through a complete example.
 
 Questions, issues, and feature requests are welcome on [GitHub](https://github.com/mendixlabs/mxcli).

@@ -120,7 +120,7 @@ create page PgTest.P001_Empty_Page
   title: 'Empty Page',
   layout: Atlas_Core.Atlas_Default,
   url: 'p001_empty_page',
-folder: 'Basic'
+  folder: 'Basic'
 )
 {
   -- Nothing yet

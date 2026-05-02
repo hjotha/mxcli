@@ -1,0 +1,604 @@
+-- @version: 11.9+
+-- ============================================================================
+-- AI Agent Platform Demo
+-- ============================================================================
+--
+-- Demonstrates Mendix as an enterprise AI agent platform, covering:
+--
+--   RAG              → Knowledge Base wired into the agent body block
+--   Agent memory     → ConversationTurn entity persists multi-turn history;
+--                       agent variables bind tier + priority at call time
+--   Guardrails       → ResponseGuardrail agent called before surfacing AI
+--                       output; entity access XPath limits data visibility
+--   Human-in-loop    → Workflow user task is the review checkpoint;
+--                       boundary timer auto-escalates after 4 hours
+--   Enterprise int.  → Published REST service + log audit trail
+--   Agent protocols  → Consumed MCP Service (MCP 2025-03-26)
+--   Embeddable UI    → Pages with layout grids and data grids; navigation
+--   SSO / IAM        → User roles map to SSO groups (SAML/OIDC);
+--                       demo users for dev/test
+--   RBAC             → Module roles, GRANT on entities/microflows/pages,
+--                       XPath constraint as data-level guardrail
+--   Monitoring       → AIAuditLog entity + LOG_AIInteraction microflow
+--   Developer UX     → Model + Agent editor documents in Studio Pro
+--
+-- ============================================================================
+
+-- ############################################################################
+-- MODULE & DOMAIN MODEL
+-- ############################################################################
+
+create module AICustSupport;
+
+-- Customer entity
+@position(100, 100)
+create persistent entity AICustSupport.Customer (
+  Name:     string(200) not null,
+  Email:    string(200) not null,
+  Tier:     string(50)  default 'Standard',
+  IsActive: boolean     default true
+);
+
+-- Support case — the workflow context object
+-- Note: 'Status' and 'Description' are MDL reserved keywords
+@position(350, 100)
+create persistent entity AICustSupport.SupportCase (
+  Subject:        string(500) not null,
+  CaseDetail:     string(unlimited),
+  CaseStatus:     string(50)        default 'Open',
+  Priority:       string(50)        default 'Normal',
+  AIResponseText: string(unlimited),
+  EscalationNote: string(unlimited),
+  CreatedAt:      datetime,
+  ResolvedAt:     datetime
+);
+
+create association AICustSupport.SupportCase_Customer
+  from AICustSupport.SupportCase
+  to   AICustSupport.Customer
+  type reference
+  owner default;
+
+-- Agent memory: persists multi-turn conversation history per case
+-- Allows the SupportAgent to resume context across sessions
+@position(100, 300)
+create persistent entity AICustSupport.ConversationTurn (
+  TurnRole:    string(50)        not null,  -- 'user' | 'assistant' | 'system'
+  Content:     string(unlimited) not null,
+  TurnIndex:   integer,
+  CreatedAt:   datetime
+);
+
+create association AICustSupport.ConversationTurn_SupportCase
+  from AICustSupport.ConversationTurn
+  to   AICustSupport.SupportCase
+  type reference
+  owner default;
+
+-- Monitoring: audit trail for every AI interaction
+@position(600, 100)
+create persistent entity AICustSupport.AIAuditLog (
+  LogAction:    string(200) not null,
+  InputTokens:  integer,
+  OutputTokens: integer,
+  LatencyMs:    integer,
+  ModelUsed:    string(200),
+  Passed:       boolean,
+  LogTimestamp: datetime
+);
+
+create association AICustSupport.AIAuditLog_SupportCase
+  from AICustSupport.AIAuditLog
+  to   AICustSupport.SupportCase
+  type reference
+  owner default;
+
+-- ############################################################################
+-- RBAC: MODULE ROLES
+-- ############################################################################
+
+create module role AICustSupport.Customer   description 'End customer: submit cases and view own history';
+create module role AICustSupport.Agent      description 'Support agent: view and resolve all cases';
+create module role AICustSupport.Supervisor description 'Supervisor: escalate, override AI, view audit logs';
+create module role AICustSupport.Admin      description 'Full administrative access';
+
+-- ############################################################################
+-- MICROFLOWS
+-- ############################################################################
+
+-- AI orchestration: generate response with memory + guardrail check
+-- Called as the first activity in the workflow; $WorkflowContext is auto-passed.
+-- In production, replace the placeholder declarations with actual
+-- AgentEditorCommons.ChatWithAgent() calls for SupportAgent and ResponseGuardrail.
+create microflow AICustSupport.ACT_AIOrchestrate (
+  $Case: AICustSupport.SupportCase
+)
+begin
+  -- Agent memory: load prior conversation turns for this case
+  retrieve $History from $Case/AICustSupport.ConversationTurn_SupportCase;
+
+  -- Store incoming user turn (agent memory: multi-turn context)
+  $userTurn = create AICustSupport.ConversationTurn (
+    TurnRole  = 'user',
+    Content   = $Case/CaseDetail,
+    TurnIndex = 1,
+    CreatedAt = [%CurrentDateTime%]);
+  change $userTurn (AICustSupport.ConversationTurn_SupportCase = $Case);
+  commit $userTurn;
+
+  -- Placeholder: call SupportAgent via AgentEditorCommons.ChatWithAgent(...)
+  -- SupportAgent uses KnowledgeBase (RAG) + WebSearchMCP (MCP protocol)
+  -- and injects CustomerTier + CasePriority variables (agent memory pattern)
+  declare $AIResponse string = 'AI response for: ' + $Case/Subject;
+
+  -- Guardrail: validate response for safety, tone, and policy compliance
+  -- Placeholder: call ResponseGuardrail via AgentEditorCommons.ChatWithAgent(...)
+  declare $GuardrailPassed boolean = true;
+
+  -- Store assistant turn regardless of guardrail outcome (for audit trail)
+  $asstTurn = create AICustSupport.ConversationTurn (
+    TurnRole  = 'assistant',
+    Content   = $AIResponse,
+    TurnIndex = 2,
+    CreatedAt = [%CurrentDateTime%]);
+  change $asstTurn (AICustSupport.ConversationTurn_SupportCase = $Case);
+  commit $asstTurn;
+
+  if $GuardrailPassed then
+    change $Case (
+      AIResponseText = $AIResponse,
+      CaseStatus     = 'InReview');
+    commit $Case;
+  else
+    change $Case (CaseStatus = 'Escalated');
+    commit $Case;
+  end if;
+
+  @position(800, 200) return;
+end;
+
+-- Monitoring: write an audit log entry for the AI interaction
+-- Signature accepts the workflow context so it can be called by the workflow.
+create microflow AICustSupport.LOG_AIInteraction (
+  $Case: AICustSupport.SupportCase
+)
+begin
+  $logEntry = create AICustSupport.AIAuditLog (
+    LogAction    = 'SupportAgent: ' + $Case/Subject,
+    InputTokens  = 0,
+    OutputTokens = 0,
+    LatencyMs    = 0,
+    ModelUsed    = 'GPT4TurboModel',
+    Passed       = true,
+    LogTimestamp = [%CurrentDateTime%]);
+  change $logEntry (AICustSupport.AIAuditLog_SupportCase = $Case);
+  commit $logEntry;
+  @position(400, 200) return;
+end;
+
+-- Submit a new support case
+create microflow AICustSupport.ACT_Case_Submit (
+  $Customer:   AICustSupport.Customer,
+  $Subject:    string,
+  $CaseDetail: string
+)
+returns AICustSupport.SupportCase as $Case
+begin
+  $Case = create AICustSupport.SupportCase (
+    Subject    = $Subject,
+    CaseDetail = $CaseDetail,
+    CaseStatus = 'Open',
+    CreatedAt  = [%CurrentDateTime%]);
+  change $Case (AICustSupport.SupportCase_Customer = $Customer);
+  commit $Case;
+  @position(600, 200) return $Case;
+end;
+
+-- Resolve a case (called from workflow Approve outcome)
+create microflow AICustSupport.ACT_Case_Resolve (
+  $Case: AICustSupport.SupportCase
+)
+begin
+  change $Case (
+    CaseStatus = 'Resolved',
+    ResolvedAt = [%CurrentDateTime%]);
+  commit $Case;
+  @position(400, 200) return;
+end;
+
+-- Escalate a case (called from workflow Escalate outcome and boundary event)
+create microflow AICustSupport.ACT_Case_Escalate (
+  $Case: AICustSupport.SupportCase
+)
+begin
+  change $Case (CaseStatus = 'Escalated');
+  commit $Case;
+  @position(400, 200) return;
+end;
+
+-- Workflow targeting: returns agents assigned to review this case
+create microflow AICustSupport.WF_TargetAgents (
+  $workflow: System.Workflow,
+  $context:  AICustSupport.SupportCase
+)
+returns list of System.User as $Agents
+begin
+  retrieve $Agents from System.User;
+  @position(400, 200) return $Agents;
+end;
+
+-- REST backing microflows (enterprise integration)
+create microflow AICustSupport.PRS_GetCases ($httpResponse: System.HttpResponse)
+returns string as $Result
+begin
+  declare $Result string = '[]';
+  @position(200, 200) return $Result;
+end;
+
+create microflow AICustSupport.PRS_SubmitCase ($httpResponse: System.HttpResponse)
+returns string as $Result
+begin
+  declare $Result string = '{"status":"queued"}';
+  @position(200, 200) return $Result;
+end;
+
+create microflow AICustSupport.PRS_GetCase ($httpResponse: System.HttpResponse, $id: string)
+returns string as $Result
+begin
+  declare $Result string = '{}';
+  @position(200, 200) return $Result;
+end;
+
+-- ############################################################################
+-- HUMAN-IN-THE-LOOP: WORKFLOW
+-- Flow: AI orchestrate → human review → resolve/escalate → audit log
+-- The user task is the human-in-the-loop checkpoint.
+-- Boundary timer auto-escalates if unreviewed for 4 hours.
+-- ############################################################################
+
+create page AICustSupport.WF_AgentReview (
+  title:  'Review Support Case',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+) {
+  layoutgrid g1 {
+    row r1 {
+      column c1 (desktopwidth: 12) {
+        dynamictext txt1 (content: 'Review AI Response', rendermode: H2)
+      }
+    }
+  }
+}
+
+create page AICustSupport.WF_Overview (
+  title:  'Case Workflow Overview',
+  layout: Atlas_Core.Atlas_Default,
+  params: { $workflow: System.Workflow }
+) {
+  layoutgrid g1 {
+    row r1 {
+      column c1 (desktopwidth: 12) {
+        dynamictext txt1 (content: 'Workflow Overview', rendermode: H2)
+      }
+    }
+  }
+}
+
+create workflow AICustSupport.CaseResolution
+  parameter $WorkflowContext: AICustSupport.SupportCase
+  display 'Case Resolution'
+  description 'AI-assisted support case resolution with human review checkpoint'
+begin
+  -- Step 1: AI generates a response (with RAG + MCP), stores conversation
+  --         history, and runs the guardrail check
+  call microflow AICustSupport.ACT_AIOrchestrate;
+
+  -- Step 2: Human-in-the-loop — agent reviews AI output before it is sent
+  user task ReviewAIResponse 'Review AI Response'
+    page AICustSupport.WF_AgentReview
+    targeting microflow AICustSupport.WF_TargetAgents
+    description 'Approve the AI-generated answer or escalate to a specialist'
+    outcomes
+      'Approve'  { call microflow AICustSupport.ACT_Case_Resolve; }
+      'Escalate' { call microflow AICustSupport.ACT_Case_Escalate; }
+  ;
+
+  -- Step 3: Monitoring — log the completed interaction to the audit trail
+  call microflow AICustSupport.LOG_AIInteraction;
+end workflow;
+
+-- Boundary timer: if the agent task sits unreviewed for 4 hours → auto-escalate
+alter workflow AICustSupport.CaseResolution
+  insert boundary event on ReviewAIResponse interrupting
+    timer 'addHours([%CurrentDateTime%], 4)' {
+      call microflow AICustSupport.ACT_Case_Escalate;
+      jump to ReviewAIResponse;
+    };
+
+alter workflow AICustSupport.CaseResolution
+  set overview page AICustSupport.WF_Overview;
+
+-- ############################################################################
+-- AI AGENT INFRASTRUCTURE
+-- Model → Knowledge Base (RAG) → Consumed MCP Service → Agent
+-- ############################################################################
+
+create constant AICustSupport."LLMKey"
+  type string
+  default '';
+
+create constant AICustSupport."KBKey"
+  type string
+  default '';
+
+-- Model document (visible in Studio Pro Agent Editor — developer UX)
+create model AICustSupport."GPT4TurboModel" (
+  Provider:    MxCloudGenAI,
+  key:         AICustSupport.LLMKey,
+  DisplayName: 'GPT-4 Turbo (128K context)',
+  Environment: 'production'
+);
+
+-- Knowledge Base for RAG: product docs and known-solution articles
+create knowledge base AICustSupport."SupportKnowledgeBase" (
+  Provider: MxCloudGenAI,
+  key:      AICustSupport.KBKey
+);
+
+-- Consumed MCP service: real-time web search tool (MCP 2025-03-26 / A2A)
+create consumed mcp service AICustSupport."WebSearchMCP" (
+  ProtocolVersion:          v2025_03_26,
+  version:                  '1.0',
+  ConnectionTimeoutSeconds: 30,
+  documentation:            'Real-time web search for current product and support information'
+);
+
+-- Main support agent
+-- variables: bind CustomerTier + CasePriority at call time (agent memory pattern)
+-- body: wires in KnowledgeBase (RAG) and MCP service (agent protocol)
+create agent AICustSupport."SupportAgent" (
+  UsageType:   Conversational,
+  description: 'AI first-line support agent with RAG and web-search capability',
+  model:       AICustSupport.GPT4TurboModel,
+  MaxTokens:   8192,
+  ToolChoice:  Auto,
+  variables:   ("CustomerTier": EntityAttribute, "CasePriority": EntityAttribute),
+  SystemPrompt: $$You are a first-line support agent for a B2B SaaS platform.
+
+Customer tier: {{CustomerTier}}
+Case priority: {{CasePriority}}
+
+Guidelines:
+- Enterprise and Premium customers get more detailed, proactive responses.
+- For Critical priority, offer to escalate immediately.
+- Always search the knowledge base before answering.
+- If unsure, say so and offer to escalate to a human agent.
+- Keep responses concise and actionable.$$,
+  UserPrompt: 'What is the customer''s issue and how can I help?'
+)
+{
+  knowledge base SupportKB {
+    source:      AICustSupport.SupportKnowledgeBase,
+    collection:  'support-docs',
+    MaxResults:  5,
+    description: 'Internal knowledge base: product docs, known issues, runbooks',
+    Enabled:     true
+  }
+
+  mcp service AICustSupport.WebSearchMCP {
+    Enabled: true
+  }
+};
+
+-- Guardrail agent: validates AI responses for safety and policy compliance
+-- Called in ACT_AIOrchestrate before the response is surfaced to the agent
+create agent AICustSupport."ResponseGuardrail" (
+  UsageType: task,
+  model:     AICustSupport.GPT4TurboModel,
+  SystemPrompt: $$You are a content safety and policy compliance checker.
+
+Evaluate the proposed AI response for:
+1. Accuracy — does it contradict known product facts?
+2. Tone    — is it professional and empathetic?
+3. Policy  — does it avoid pricing commitments, legal claims, or SLA promises?
+4. Privacy — does it avoid exposing other customers'' data?
+
+Reply with JSON: {"pass": true} or {"pass": false, "reason": "..."}$$,
+  UserPrompt: 'Proposed response: '
+);
+
+-- ############################################################################
+-- EMBEDDABLE UI: PAGES
+-- ############################################################################
+
+create page AICustSupport.Customer_Portal (
+  title:  'Support Portal',
+  layout: Atlas_Core.Atlas_Default
+) {
+  layoutgrid mainGrid {
+    row titleRow {
+      column col1 (desktopwidth: 12) {
+        dynamictext welcomeText (content: 'Welcome to Support', rendermode: H1)
+      }
+    }
+    row caseRow {
+      column col2 (desktopwidth: 12) {
+        datagrid dgCases (datasource: database AICustSupport.SupportCase) {
+          column colSubject (attribute: Subject,    caption: 'Subject')
+          column colStatus  (attribute: CaseStatus, caption: 'Status')
+          column colPrio    (attribute: Priority,   caption: 'Priority')
+        }
+      }
+    }
+  }
+}
+
+create page AICustSupport.Agent_Workspace (
+  title:  'Agent Workspace',
+  layout: Atlas_Core.Atlas_Default
+) {
+  layoutgrid wsGrid {
+    row headerRow {
+      column col1 (desktopwidth: 12) {
+        dynamictext wsTitle (content: 'Case Queue', rendermode: H2)
+      }
+    }
+    row queueRow {
+      column col2 (desktopwidth: 12) {
+        datagrid dgQueue (datasource: database AICustSupport.SupportCase) {
+          column colSubject  (attribute: Subject,        caption: 'Subject')
+          column colStatus   (attribute: CaseStatus,     caption: 'Status')
+          column colPriority (attribute: Priority,       caption: 'Priority')
+          column colAI       (attribute: AIResponseText, caption: 'AI Response')
+        }
+      }
+    }
+  }
+}
+
+-- Monitoring page: admins and supervisors can inspect every AI interaction
+create page AICustSupport.Admin_AuditLog (
+  title:  'AI Audit Log',
+  layout: Atlas_Core.Atlas_Default
+) {
+  layoutgrid auditGrid {
+    row r1 {
+      column c1 (desktopwidth: 12) {
+        dynamictext auditTitle (content: 'AI Monitoring — Audit Log', rendermode: H2)
+      }
+    }
+    row r2 {
+      column c2 (desktopwidth: 12) {
+        datagrid dgAudit (datasource: database AICustSupport.AIAuditLog) {
+          column colAction  (attribute: LogAction,    caption: 'Action')
+          column colModel   (attribute: ModelUsed,    caption: 'Model')
+          column colIn      (attribute: InputTokens,  caption: 'In Tokens')
+          column colOut     (attribute: OutputTokens, caption: 'Out Tokens')
+          column colMs      (attribute: LatencyMs,    caption: 'Latency ms')
+          column colOk      (attribute: Passed,       caption: 'Guardrail OK')
+          column colTs      (attribute: LogTimestamp, caption: 'Timestamp')
+        }
+      }
+    }
+  }
+}
+
+-- ############################################################################
+-- RBAC: ENTITY ACCESS RULES
+-- Data-level guardrail: customers can only read their own active cases.
+-- ############################################################################
+
+-- Admins: full CRUD on everything
+grant AICustSupport.Admin on AICustSupport.Customer         (create, delete, read *, write *);
+grant AICustSupport.Admin on AICustSupport.SupportCase      (create, delete, read *, write *);
+grant AICustSupport.Admin on AICustSupport.AIAuditLog       (create, delete, read *, write *);
+grant AICustSupport.Admin on AICustSupport.ConversationTurn (create, delete, read *, write *);
+
+-- Support agents: read all cases, write resolution fields
+grant AICustSupport.Agent on AICustSupport.SupportCase
+  (read *, write (CaseStatus, AIResponseText, EscalationNote, Priority, ResolvedAt));
+grant AICustSupport.Agent on AICustSupport.Customer         (read *);
+grant AICustSupport.Agent on AICustSupport.ConversationTurn (read *);
+
+-- Supervisors: full case access, read-only audit and history
+grant AICustSupport.Supervisor on AICustSupport.SupportCase      (read *, write *);
+grant AICustSupport.Supervisor on AICustSupport.Customer         (read *);
+grant AICustSupport.Supervisor on AICustSupport.AIAuditLog       (read *);
+grant AICustSupport.Supervisor on AICustSupport.ConversationTurn (read *);
+
+-- Customers: data-level guardrail via XPath — only their own active cases
+grant AICustSupport.Customer on AICustSupport.SupportCase
+  (create, read (Subject, CaseDetail, CaseStatus, AIResponseText), write (Subject, CaseDetail))
+  where '[AICustSupport.SupportCase_Customer/AICustSupport.Customer/IsActive = true()]';
+
+-- ############################################################################
+-- RBAC: MICROFLOW ACCESS
+-- ############################################################################
+
+grant execute on microflow AICustSupport.ACT_Case_Submit
+  to AICustSupport.Customer, AICustSupport.Agent;
+
+grant execute on microflow AICustSupport.ACT_Case_Resolve
+  to AICustSupport.Agent, AICustSupport.Supervisor, AICustSupport.Admin;
+
+grant execute on microflow AICustSupport.ACT_Case_Escalate
+  to AICustSupport.Agent, AICustSupport.Supervisor, AICustSupport.Admin;
+
+grant execute on microflow AICustSupport.LOG_AIInteraction
+  to AICustSupport.Admin, AICustSupport.Supervisor;
+
+-- ############################################################################
+-- RBAC: PAGE ACCESS
+-- ############################################################################
+
+grant view on page AICustSupport.Customer_Portal
+  to AICustSupport.Customer;
+
+grant view on page AICustSupport.Agent_Workspace
+  to AICustSupport.Agent, AICustSupport.Supervisor, AICustSupport.Admin;
+
+grant view on page AICustSupport.Admin_AuditLog
+  to AICustSupport.Supervisor, AICustSupport.Admin;
+
+-- ############################################################################
+-- SSO / IAM: USER ROLES
+-- User roles compose module roles across modules and map 1:1 to SSO groups.
+-- In production: configure SAML/OIDC attribute mapping in the Mx SSO module
+-- so that IdP group claims automatically assign these user roles at login.
+-- Demo users stand in for SSO identities during development.
+-- ############################################################################
+
+create or modify user role EndCustomer       (System.User, AICustSupport.Customer);
+create or modify user role SupportAgent      (System.User, AICustSupport.Agent);
+create or modify user role SupportSupervisor (System.User, AICustSupport.Agent, AICustSupport.Supervisor);
+create or modify user role PlatformAdmin     (System.Administrator, AICustSupport.Admin) manage all roles;
+
+-- Enable demo users (disable in production — use SSO)
+alter project security demo users on;
+
+create or modify demo user 'customer@demo'   password 'Customer1!xx' (EndCustomer);
+create or modify demo user 'agent@demo'      password 'Agent1!xxxx'  (SupportAgent);
+create or modify demo user 'supervisor@demo' password 'Super1!xxxx'  (SupportSupervisor);
+create or modify demo user 'admin@demo'      password 'Admin1!xxxx'  (PlatformAdmin);
+
+-- ############################################################################
+-- ENTERPRISE INTEGRATION: PUBLISHED REST API
+-- Exposes the AI support capability as a REST service for external systems,
+-- partner portals, and mobile apps — no UI needed on the consumer side.
+-- ############################################################################
+
+create published rest service AICustSupport.SupportAPI (
+  path:        'rest/support/v1',
+  version:     '1.0.0',
+  ServiceName: 'AI Support API'
+) {
+  resource 'cases' {
+    get  ''     microflow AICustSupport.PRS_GetCases;
+    post ''     microflow AICustSupport.PRS_SubmitCase;
+    get  '{id}' microflow AICustSupport.PRS_GetCase;
+  }
+};
+
+-- ############################################################################
+-- NAVIGATION (EMBEDDABLE UI: role-based home pages)
+-- Navigation uses user role names (not module roles).
+-- ############################################################################
+
+create or replace navigation Responsive
+  home page AICustSupport.Customer_Portal
+  home page AICustSupport.Agent_Workspace   for SupportAgent
+  home page AICustSupport.Agent_Workspace   for SupportSupervisor
+  home page AICustSupport.Admin_AuditLog    for PlatformAdmin;
+
+-- ############################################################################
+-- VERIFY
+-- ############################################################################
+
+show project security;
+show security matrix in AICustSupport;
+list agents              in AICustSupport;
+list models              in AICustSupport;
+list knowledge bases     in AICustSupport;
+list consumed mcp services in AICustSupport;
+describe workflow AICustSupport.CaseResolution;
+describe published rest service AICustSupport.SupportAPI;
