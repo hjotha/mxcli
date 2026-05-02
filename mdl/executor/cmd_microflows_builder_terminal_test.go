@@ -407,6 +407,77 @@ func TestBuildFlowGraph_ConsecutiveCustomHandlersEachRejoinsContinuation(t *test
 	}
 }
 
+func TestBodyHasContinuingCustomErrorHandler_CoversActionStatements(t *testing.T) {
+	continuingHandler := &ast.ErrorHandlingClause{
+		Type: ast.ErrorHandlingCustomWithoutRollback,
+		Body: []ast.MicroflowStatement{
+			&ast.LogStmt{Level: ast.LogError, Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "failed"}},
+		},
+	}
+
+	tests := []struct {
+		name string
+		stmt ast.MicroflowStatement
+	}{
+		{name: "retrieve", stmt: &ast.RetrieveStmt{ErrorHandling: continuingHandler}},
+		{name: "create object", stmt: &ast.CreateObjectStmt{ErrorHandling: continuingHandler}},
+		{name: "commit", stmt: &ast.MfCommitStmt{ErrorHandling: continuingHandler}},
+		{name: "delete", stmt: &ast.DeleteObjectStmt{ErrorHandling: continuingHandler}},
+		{name: "call microflow", stmt: &ast.CallMicroflowStmt{ErrorHandling: continuingHandler}},
+		{name: "call nanoflow", stmt: &ast.CallNanoflowStmt{ErrorHandling: continuingHandler}},
+		{name: "call java action", stmt: &ast.CallJavaActionStmt{ErrorHandling: continuingHandler}},
+		{name: "call javascript action", stmt: &ast.CallJavaScriptActionStmt{ErrorHandling: continuingHandler}},
+		{name: "call web service", stmt: &ast.CallWebServiceStmt{ErrorHandling: continuingHandler}},
+		{name: "execute database query", stmt: &ast.ExecuteDatabaseQueryStmt{ErrorHandling: continuingHandler}},
+		{name: "call external action", stmt: &ast.CallExternalActionStmt{ErrorHandling: continuingHandler}},
+		{name: "download file", stmt: &ast.DownloadFileStmt{ErrorHandling: continuingHandler}},
+		{name: "rest call", stmt: &ast.RestCallStmt{ErrorHandling: continuingHandler}},
+		{name: "send rest request", stmt: &ast.SendRestRequestStmt{ErrorHandling: continuingHandler}},
+		{name: "import mapping", stmt: &ast.ImportFromMappingStmt{ErrorHandling: continuingHandler}},
+		{name: "export mapping", stmt: &ast.ExportToMappingStmt{ErrorHandling: continuingHandler}},
+		{name: "transform json", stmt: &ast.TransformJsonStmt{ErrorHandling: continuingHandler}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !bodyHasContinuingCustomErrorHandler([]ast.MicroflowStatement{tt.stmt}) {
+				t.Fatalf("%T must be visible to continuing custom handler detection", tt.stmt)
+			}
+		})
+	}
+}
+
+func TestStatementReferencesVar_CoversActionStatementInputs(t *testing.T) {
+	ref := &ast.VariableExpr{Name: "SkippedOutput"}
+	tests := []struct {
+		name string
+		stmt ast.MicroflowStatement
+	}{
+		{name: "call nanoflow", stmt: &ast.CallNanoflowStmt{Arguments: []ast.CallArgument{{Name: "value", Value: ref}}}},
+		{name: "call javascript action", stmt: &ast.CallJavaScriptActionStmt{Arguments: []ast.CallArgument{{Name: "value", Value: ref}}}},
+		{name: "call web service timeout", stmt: &ast.CallWebServiceStmt{Timeout: ref}},
+		{name: "execute database query argument", stmt: &ast.ExecuteDatabaseQueryStmt{Arguments: []ast.CallArgument{{Name: "value", Value: ref}}}},
+		{name: "execute database query connection argument", stmt: &ast.ExecuteDatabaseQueryStmt{ConnectionArguments: []ast.CallArgument{{Name: "value", Value: ref}}}},
+		{name: "call external action", stmt: &ast.CallExternalActionStmt{Arguments: []ast.CallArgument{{Name: "value", Value: ref}}}},
+		{name: "rest auth", stmt: &ast.RestCallStmt{Auth: &ast.RestAuth{Username: ref}}},
+		{name: "send rest request parameter", stmt: &ast.SendRestRequestStmt{Parameters: []ast.SendRestParamDef{{Name: "value", Expression: "$SkippedOutput/Name"}}}},
+		{name: "send rest request body", stmt: &ast.SendRestRequestStmt{BodyVariable: "SkippedOutput"}},
+		{name: "import mapping", stmt: &ast.ImportFromMappingStmt{SourceVariable: "SkippedOutput"}},
+		{name: "export mapping", stmt: &ast.ExportToMappingStmt{SourceVariable: "SkippedOutput"}},
+		{name: "transform json", stmt: &ast.TransformJsonStmt{InputVariable: "SkippedOutput"}},
+		{name: "download file", stmt: &ast.DownloadFileStmt{FileDocument: "SkippedOutput"}},
+		{name: "validation feedback target", stmt: &ast.ValidationFeedbackStmt{AttributePath: &ast.AttributePathExpr{Variable: "SkippedOutput", Path: []string{"Name"}}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !statementReferencesVar(tt.stmt, "SkippedOutput") {
+				t.Fatalf("%T must expose input variable references for custom handler routing", tt.stmt)
+			}
+		})
+	}
+}
+
 func TestBuildFlowGraph_EmptyOutputHandlerTerminatesBeforeOutputDependentTail(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallJavaActionStmt{

@@ -453,35 +453,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 func bodyHasContinuingCustomErrorHandler(stmts []ast.MicroflowStatement) bool {
 	for _, stmt := range stmts {
+		if eh := statementErrorHandling(stmt); eh != nil {
+			if isContinuingCustomErrorHandler(eh) || bodyHasContinuingCustomErrorHandler(eh.Body) {
+				return true
+			}
+		}
 		switch s := stmt.(type) {
-		case *ast.CallMicroflowStmt:
-			if isContinuingCustomErrorHandler(s.ErrorHandling) || bodyHasContinuingCustomErrorHandler(errorBody(s.ErrorHandling)) {
-				return true
-			}
-		case *ast.CallJavaActionStmt:
-			if isContinuingCustomErrorHandler(s.ErrorHandling) || bodyHasContinuingCustomErrorHandler(errorBody(s.ErrorHandling)) {
-				return true
-			}
-		case *ast.RestCallStmt:
-			if isContinuingCustomErrorHandler(s.ErrorHandling) || bodyHasContinuingCustomErrorHandler(errorBody(s.ErrorHandling)) {
-				return true
-			}
-		case *ast.ImportFromMappingStmt:
-			if isContinuingCustomErrorHandler(s.ErrorHandling) || bodyHasContinuingCustomErrorHandler(errorBody(s.ErrorHandling)) {
-				return true
-			}
-		case *ast.CreateObjectStmt:
-			if isContinuingCustomErrorHandler(s.ErrorHandling) || bodyHasContinuingCustomErrorHandler(errorBody(s.ErrorHandling)) {
-				return true
-			}
-		case *ast.MfCommitStmt:
-			if isContinuingCustomErrorHandler(s.ErrorHandling) || bodyHasContinuingCustomErrorHandler(errorBody(s.ErrorHandling)) {
-				return true
-			}
-		case *ast.DeleteObjectStmt:
-			if isContinuingCustomErrorHandler(s.ErrorHandling) || bodyHasContinuingCustomErrorHandler(errorBody(s.ErrorHandling)) {
-				return true
-			}
 		case *ast.IfStmt:
 			if bodyHasContinuingCustomErrorHandler(s.ThenBody) || bodyHasContinuingCustomErrorHandler(s.ElseBody) {
 				return true
@@ -663,6 +640,47 @@ func containsBreakForCurrentLoop(stmts []ast.MicroflowStatement) bool {
 		}
 	}
 	return false
+}
+
+func statementErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
+	switch s := stmt.(type) {
+	case *ast.RetrieveStmt:
+		return s.ErrorHandling
+	case *ast.CreateObjectStmt:
+		return s.ErrorHandling
+	case *ast.MfCommitStmt:
+		return s.ErrorHandling
+	case *ast.DeleteObjectStmt:
+		return s.ErrorHandling
+	case *ast.CallMicroflowStmt:
+		return s.ErrorHandling
+	case *ast.CallNanoflowStmt:
+		return s.ErrorHandling
+	case *ast.CallJavaActionStmt:
+		return s.ErrorHandling
+	case *ast.CallJavaScriptActionStmt:
+		return s.ErrorHandling
+	case *ast.CallWebServiceStmt:
+		return s.ErrorHandling
+	case *ast.ExecuteDatabaseQueryStmt:
+		return s.ErrorHandling
+	case *ast.CallExternalActionStmt:
+		return s.ErrorHandling
+	case *ast.DownloadFileStmt:
+		return s.ErrorHandling
+	case *ast.RestCallStmt:
+		return s.ErrorHandling
+	case *ast.SendRestRequestStmt:
+		return s.ErrorHandling
+	case *ast.ImportFromMappingStmt:
+		return s.ErrorHandling
+	case *ast.ExportToMappingStmt:
+		return s.ErrorHandling
+	case *ast.TransformJsonStmt:
+		return s.ErrorHandling
+	default:
+		return nil
+	}
 }
 
 func containsContinueStmt(stmts []ast.MicroflowStatement) bool {

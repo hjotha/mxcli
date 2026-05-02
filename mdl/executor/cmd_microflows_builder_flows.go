@@ -51,9 +51,8 @@ func (fb *flowBuilder) finishCustomErrorHandler(activityID model.ID, activityX i
 		return
 	}
 	if len(eh.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
 		mergeID := fb.addErrorHandlerFlow(activityID, activityX, eh.Body)
-		fb.handleErrorHandlerMergeWithSkip(mergeID, activityID, errorY, outputVar)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activityID, outputVar)
 		return
 	}
 	fb.registerEmptyCustomErrorHandlerWithSkip(activityID, eh, outputVar)
@@ -380,6 +379,22 @@ func statementsReferenceVar(stmts []ast.MicroflowStatement, varName string) bool
 	return false
 }
 
+func callArgumentVarRefs(args []ast.CallArgument) []string {
+	var refs []string
+	for _, arg := range args {
+		refs = append(refs, exprVarRefs(arg.Value)...)
+	}
+	return refs
+}
+
+func templateParamVarRefs(params []ast.TemplateParam) []string {
+	var refs []string
+	for _, param := range params {
+		refs = append(refs, exprVarRefs(param.Value)...)
+	}
+	return refs
+}
+
 func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
 	var refs []string
 	switch s := stmt.(type) {
@@ -390,9 +405,7 @@ func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
 	case *ast.LogStmt:
 		refs = append(refs, exprVarRefs(s.Node)...)
 		refs = append(refs, exprVarRefs(s.Message)...)
-		for _, param := range s.Template {
-			refs = append(refs, exprVarRefs(param.Value)...)
-		}
+		refs = append(refs, templateParamVarRefs(s.Template)...)
 	case *ast.ShowMessageStmt:
 		refs = append(refs, exprVarRefs(s.Message)...)
 		for _, arg := range s.TemplateArgs {
@@ -426,35 +439,71 @@ func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
 		}
 		refs = append(refs, exprVarRefs(s.Where)...)
 	case *ast.CallMicroflowStmt:
-		for _, arg := range s.Arguments {
-			refs = append(refs, exprVarRefs(arg.Value)...)
-		}
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.CallNanoflowStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
 	case *ast.CallJavaActionStmt:
-		for _, arg := range s.Arguments {
-			refs = append(refs, exprVarRefs(arg.Value)...)
-		}
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.CallJavaScriptActionStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.CallWebServiceStmt:
+		refs = append(refs, exprVarRefs(s.Timeout)...)
+	case *ast.ExecuteDatabaseQueryStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+		refs = append(refs, callArgumentVarRefs(s.ConnectionArguments)...)
+	case *ast.CallExternalActionStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
 	case *ast.RestCallStmt:
 		refs = append(refs, exprVarRefs(s.URL)...)
-		for _, param := range s.URLParams {
-			refs = append(refs, exprVarRefs(param.Value)...)
-		}
+		refs = append(refs, templateParamVarRefs(s.URLParams)...)
 		for _, header := range s.Headers {
 			refs = append(refs, exprVarRefs(header.Value)...)
 		}
+		if s.Auth != nil {
+			refs = append(refs, exprVarRefs(s.Auth.Username)...)
+			refs = append(refs, exprVarRefs(s.Auth.Password)...)
+		}
 		if s.Body != nil {
 			refs = append(refs, exprVarRefs(s.Body.Template)...)
-			for _, param := range s.Body.TemplateParams {
-				refs = append(refs, exprVarRefs(param.Value)...)
-			}
+			refs = append(refs, templateParamVarRefs(s.Body.TemplateParams)...)
 			if s.Body.SourceVariable != "" {
 				refs = append(refs, s.Body.SourceVariable)
 			}
 		}
 		refs = append(refs, exprVarRefs(s.Timeout)...)
+	case *ast.SendRestRequestStmt:
+		for _, param := range s.Parameters {
+			refs = append(refs, sourceAttributeVarRefs(param.Expression)...)
+		}
+		if s.BodyVariable != "" {
+			refs = append(refs, s.BodyVariable)
+		}
+	case *ast.ImportFromMappingStmt:
+		if s.SourceVariable != "" {
+			refs = append(refs, s.SourceVariable)
+		}
+	case *ast.ExportToMappingStmt:
+		if s.SourceVariable != "" {
+			refs = append(refs, s.SourceVariable)
+		}
+	case *ast.TransformJsonStmt:
+		if s.InputVariable != "" {
+			refs = append(refs, s.InputVariable)
+		}
 	case *ast.MfCommitStmt:
 		refs = append(refs, s.Variable)
 	case *ast.DeleteObjectStmt:
 		refs = append(refs, s.Variable)
+	case *ast.DownloadFileStmt:
+		refs = append(refs, s.FileDocument)
+	case *ast.ValidationFeedbackStmt:
+		if s.AttributePath != nil {
+			refs = append(refs, s.AttributePath.Variable)
+		}
+		refs = append(refs, exprVarRefs(s.Message)...)
+		for _, arg := range s.TemplateArgs {
+			refs = append(refs, exprVarRefs(arg)...)
+		}
 	case *ast.AddToListStmt:
 		refs = append(refs, s.Item, s.List)
 	case *ast.RemoveFromListStmt:
@@ -514,19 +563,18 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 
 	// Build error handler activities
 	errBuilder := &flowBuilder{
-		posX:           errorX,
-		posY:           errorY,
-		baseY:          errorY,
-		spacing:        HorizontalSpacing,
-		returnType:     fb.returnType,
-		hasReturnValue: fb.hasReturnValue,
-		varTypes:       fb.varTypes,
-		declaredVars:   fb.declaredVars,
-		measurer:       fb.measurer,
-		backend:        fb.backend,
-		hierarchy:      fb.hierarchy,
-		restServices:   fb.restServices,
-		isNanoflow:     fb.isNanoflow,
+		posX:         errorX,
+		posY:         errorY,
+		baseY:        errorY,
+		spacing:      HorizontalSpacing,
+		returnType:   fb.returnType,
+		varTypes:     fb.varTypes,
+		declaredVars: fb.declaredVars,
+		measurer:     fb.measurer,
+		backend:      fb.backend,
+		hierarchy:    fb.hierarchy,
+		restServices: fb.restServices,
+		isNanoflow:   fb.isNanoflow,
 	}
 
 	var lastErrID model.ID
@@ -571,16 +619,16 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 
 // handleErrorHandlerMerge creates an EndEvent for error handlers that want to merge back.
 // This is a fallback until full merge support is implemented. Caller should pass
-// the ID returned by addErrorHandlerFlow and the error handler Y position.
-func (fb *flowBuilder) handleErrorHandlerMerge(lastErrID model.ID, activityID model.ID, errorY int) {
-	fb.handleErrorHandlerMergeWithSkip(errorHandlerTail{id: lastErrID}, activityID, errorY, "")
+// the tail returned by addErrorHandlerFlow and the error handler Y position.
+func (fb *flowBuilder) handleErrorHandlerMerge(tail errorHandlerTail, activityID model.ID, errorY int) {
+	_ = errorY
+	fb.handleErrorHandlerMergeWithSkip(tail, activityID, "")
 }
 
-func (fb *flowBuilder) handleErrorHandlerMergeWithSkip(tail errorHandlerTail, activityID model.ID, errorY int, skipVar string) {
+func (fb *flowBuilder) handleErrorHandlerMergeWithSkip(tail errorHandlerTail, activityID model.ID, skipVar string) {
 	if tail.id == "" {
 		return // No merge needed (error handler terminates with RETURN or RAISE ERROR)
 	}
-	_ = errorY
 	fb.queueActivePendingErrorHandler()
 	fb.errorHandlerSource = activityID
 	fb.errorHandlerTailFrom = tail.id
