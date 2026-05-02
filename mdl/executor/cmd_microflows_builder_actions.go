@@ -227,8 +227,13 @@ func (fb *flowBuilder) addRollbackAction(s *ast.RollbackStmt) model.ID {
 
 // addChangeObjectAction creates a CHANGE statement.
 func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
-	// Empty non-committing changes need RefreshInClient to satisfy Studio Pro
-	// consistency checks; explicit `refresh` keeps the same flag for all changes.
+	// CE0032 rejects change actions with no items that do not commit the
+	// object. The published error text only mentions items/commit, but
+	// `mx check` also accepts RefreshInClient=true as a third valid escape.
+	// The builder auto-promotes empty changes to refresh-only so describe →
+	// exec of such actions stays valid without requiring authored MDL to say
+	// `refresh` explicitly; when the author wrote `refresh`, we keep the
+	// same flag for non-empty changes too.
 	action := &microflows.ChangeObjectAction{
 		BaseElement:       model.BaseElement{ID: model.ID(types.GenerateID())},
 		ErrorHandlingType: fb.ehType(nil),

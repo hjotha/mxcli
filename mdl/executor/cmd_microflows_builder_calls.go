@@ -357,28 +357,28 @@ func javaActionReturnVarType(returnType javaactions.CodeActionReturnType) string
 	return ""
 }
 
+// inferGenericJavaActionReturnType infers the element type of a generic
+// `ListType{Entity: ""}` Java action return by inspecting the caller's
+// variable-typed arguments. When the action parameters don't determine an
+// element type, the function returns "" and the caller records the declaration
+// as Unknown.
 func (fb *flowBuilder) inferGenericJavaActionReturnType(jaDef *javaactions.JavaAction, s *ast.CallJavaActionStmt) string {
 	if jaDef == nil || fb.varTypes == nil || s == nil {
 		return ""
 	}
-	switch t := jaDef.ReturnType.(type) {
-	case *javaactions.ListType:
-		if t.Entity != "" {
-			return ""
-		}
-	case javaactions.ListType:
-		if t.Entity != "" {
-			return ""
-		}
-	default:
+	// ListType is always stored as a pointer by the parser; there is no value
+	// form in the SDK. Only the generic (Entity == "") case reaches the
+	// variable-type lookup below.
+	t, ok := jaDef.ReturnType.(*javaactions.ListType)
+	if !ok || t.Entity != "" {
 		return ""
 	}
 	for _, arg := range s.Arguments {
-		valueExpr := strings.TrimPrefix(strings.Trim(fb.exprToString(arg.Value), "'"), "$")
-		if valueExpr == "" {
+		varExpr, ok := arg.Value.(*ast.VariableExpr)
+		if !ok {
 			continue
 		}
-		if typ := fb.varTypes[valueExpr]; strings.HasPrefix(typ, "List of ") {
+		if typ := fb.varTypes[varExpr.Name]; strings.HasPrefix(typ, "List of ") {
 			return typ
 		}
 	}

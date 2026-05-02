@@ -1654,12 +1654,16 @@ func branchFlowStartsAtTerminal(flow *microflows.SequenceFlow, activityMap map[m
 	}
 }
 
-// hasExplicitFalseBranchAnchor reports whether a flow is the false-branch anchor
-// of a boolean ExclusiveSplit (origin=top, destination=bottom). This heuristic
-// distinguishes boolean false-branch flows from enum-split flows inside isGuard,
-// because both share a nil CaseValue but differ in their anchor positions.
-// Limitation: a custom @anchor that happens to use (top, bottom) would be
-// misclassified; this is accepted because it is an unlikely user choice.
+// hasExplicitFalseBranchAnchor reports whether a false-branch sequence flow
+// carries anchor metadata that the user explicitly authored. Top→Bottom is
+// the non-default pair produced by `@anchor(false: (from: top, to: bottom))`;
+// any other combination is either a builder default or a different author
+// intention that should not trigger the guard-pattern describer.
+//
+// Used by the `isGuard` paths in traverseFlow / traverseFlowUntilMerge to
+// distinguish a real guard continuation from a branch whose layout should
+// stay visible as an explicit `else` in the described MDL. See
+// TestHasExplicitFalseBranchAnchor for the exhaustive cases.
 func hasExplicitFalseBranchAnchor(flow *microflows.SequenceFlow) bool {
 	if flow == nil {
 		return false
