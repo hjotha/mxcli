@@ -1528,9 +1528,8 @@ callJavaScriptActionStatement
     ;
 
 // Legacy SOAP call. The preferred structured form stores service and mapping
-// references in STRING_LITERAL tokens rather than qualifiedName tokens because
-// Structured references prefer qualifiedName tokens. STRING_LITERAL remains as
-// a fallback for dangling raw IDs that cannot be represented as identifiers.
+// references as qualified names. STRING_LITERAL remains as a fallback for
+// dangling raw IDs that cannot be represented as identifiers.
 // Raw BSON remains the escape hatch for unsupported SOAP payload details.
 callWebServiceStatement
     : (VARIABLE EQUALS)? CALL WEB SERVICE
