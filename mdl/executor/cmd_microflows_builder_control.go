@@ -31,9 +31,11 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 
 	// Check if branches end with RETURN (creating their own EndEvents)
 	thenReturns := lastStmtIsReturn(s.ThenBody)
-	hasElseBody := len(s.ElseBody) > 0
+	hasElseBody := s.HasElse || len(s.ElseBody) > 0
 	elseReturns := hasElseBody && lastStmtIsReturn(s.ElseBody)
 	bothReturn := hasElseBody && thenReturns && elseReturns
+	thenNeedsErrorMerge := thenReturns && bodyHasContinuingCustomErrorHandler(s.ThenBody)
+	elseNeedsErrorMerge := elseReturns && bodyHasContinuingCustomErrorHandler(s.ElseBody)
 
 	// Save/restore endsWithReturn around branch processing to avoid
 	// a branch's RETURN affecting the parent flow state prematurely
@@ -86,7 +88,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	needMerge := false
 	if !bothReturn {
 		if hasElseBody {
-			needMerge = !thenReturns && !elseReturns // both branches continue → 2 inputs
+			needMerge = (!thenReturns && !elseReturns) || thenNeedsErrorMerge || elseNeedsErrorMerge
 		} else {
 			needMerge = !thenReturns // THEN continues + FALSE path → 2 inputs
 		}
@@ -193,6 +195,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				applyUserAnchors(flow, trueBranchAnchor, trueBranchAnchor)
 				fb.flows = append(fb.flows, flow)
 			}
+		} else if thenReturns && needMerge {
+			fb.addPendingErrorHandlerFlowTo(mergeID)
 		}
 
 		// Process ELSE body (below the THEN path)
@@ -269,6 +273,8 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				applyUserAnchors(flow, originAnchor, destAnchor)
 				fb.flows = append(fb.flows, flow)
 			}
+		} else if elseReturns && needMerge {
+			fb.addPendingErrorHandlerFlowTo(mergeID)
 		}
 		if !needMerge {
 			if thenReturns && !elseReturns {
@@ -445,6 +451,48 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	return splitID
 }
 
+func bodyHasContinuingCustomErrorHandler(stmts []ast.MicroflowStatement) bool {
+	for _, stmt := range stmts {
+		if eh := statementErrorHandling(stmt); eh != nil {
+			if isContinuingCustomErrorHandler(eh) || bodyHasContinuingCustomErrorHandler(eh.Body) {
+				return true
+			}
+		}
+		switch s := stmt.(type) {
+		case *ast.IfStmt:
+			if bodyHasContinuingCustomErrorHandler(s.ThenBody) || bodyHasContinuingCustomErrorHandler(s.ElseBody) {
+				return true
+			}
+		case *ast.LoopStmt:
+			if bodyHasContinuingCustomErrorHandler(s.Body) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if bodyHasContinuingCustomErrorHandler(s.Body) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isContinuingCustomErrorHandler(eh *ast.ErrorHandlingClause) bool {
+	if eh == nil {
+		return false
+	}
+	if eh.Type != ast.ErrorHandlingCustom && eh.Type != ast.ErrorHandlingCustomWithoutRollback {
+		return false
+	}
+	return len(eh.Body) == 0 || !lastStmtIsReturn(eh.Body)
+}
+
+func errorBody(eh *ast.ErrorHandlingClause) []ast.MicroflowStatement {
+	if eh == nil {
+		return nil
+	}
+	return eh.Body
+}
+
 // addLoopStatement creates a LOOP statement using LoopedActivity.
 // Layout: Auto-sizes the loop box to fit content with padding
 func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
@@ -593,6 +641,47 @@ func containsBreakForCurrentLoop(stmts []ast.MicroflowStatement) bool {
 		}
 	}
 	return false
+}
+
+func statementErrorHandling(stmt ast.MicroflowStatement) *ast.ErrorHandlingClause {
+	switch s := stmt.(type) {
+	case *ast.RetrieveStmt:
+		return s.ErrorHandling
+	case *ast.CreateObjectStmt:
+		return s.ErrorHandling
+	case *ast.MfCommitStmt:
+		return s.ErrorHandling
+	case *ast.DeleteObjectStmt:
+		return s.ErrorHandling
+	case *ast.CallMicroflowStmt:
+		return s.ErrorHandling
+	case *ast.CallNanoflowStmt:
+		return s.ErrorHandling
+	case *ast.CallJavaActionStmt:
+		return s.ErrorHandling
+	case *ast.CallJavaScriptActionStmt:
+		return s.ErrorHandling
+	case *ast.CallWebServiceStmt:
+		return s.ErrorHandling
+	case *ast.ExecuteDatabaseQueryStmt:
+		return s.ErrorHandling
+	case *ast.CallExternalActionStmt:
+		return s.ErrorHandling
+	case *ast.DownloadFileStmt:
+		return s.ErrorHandling
+	case *ast.RestCallStmt:
+		return s.ErrorHandling
+	case *ast.SendRestRequestStmt:
+		return s.ErrorHandling
+	case *ast.ImportFromMappingStmt:
+		return s.ErrorHandling
+	case *ast.ExportToMappingStmt:
+		return s.ErrorHandling
+	case *ast.TransformJsonStmt:
+		return s.ErrorHandling
+	default:
+		return nil
+	}
 }
 
 // containsContinueForCurrentLoop mirrors containsBreakForCurrentLoop:

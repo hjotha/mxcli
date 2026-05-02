@@ -39,15 +39,511 @@ func (fb *flowBuilder) ehType(eh *ast.ErrorHandlingClause) microflows.ErrorHandl
 	return convertErrorHandlingType(eh)
 }
 
+func isEmptyCustomErrorHandler(eh *ast.ErrorHandlingClause) bool {
+	if eh == nil || len(eh.Body) != 0 {
+		return false
+	}
+	return eh.Type == ast.ErrorHandlingCustom || eh.Type == ast.ErrorHandlingCustomWithoutRollback
+}
+
+func (fb *flowBuilder) finishCustomErrorHandler(activityID model.ID, activityX int, eh *ast.ErrorHandlingClause, outputVar string) {
+	if eh == nil {
+		return
+	}
+	if len(eh.Body) > 0 {
+		mergeID := fb.addErrorHandlerFlow(activityID, activityX, eh.Body)
+		fb.handleErrorHandlerMergeWithSkip(mergeID, activityID, outputVar)
+		return
+	}
+	fb.registerEmptyCustomErrorHandlerWithSkip(activityID, eh, outputVar)
+}
+
+func (fb *flowBuilder) registerEmptyCustomErrorHandlerWithSkip(activityID model.ID, eh *ast.ErrorHandlingClause, skipVar string) {
+	if !isEmptyCustomErrorHandler(eh) {
+		return
+	}
+	fb.queueActivePendingErrorHandler()
+	if skipVar == "" {
+		fb.emptyErrorHandlerFrom = activityID
+		return
+	}
+	fb.errorHandlerSource = activityID
+	fb.errorHandlerTailFrom = activityID
+	fb.errorHandlerSkipVar = skipVar
+	fb.errorHandlerTailIsSource = true
+}
+
+type pendingErrorHandlerState struct {
+	emptyFrom    model.ID
+	tailFrom     model.ID
+	source       model.ID
+	skipVar      string
+	tailCase     string
+	tailAnchor   *ast.FlowAnchors
+	tailIsSource bool
+	returnValue  string
+}
+
+func (s pendingErrorHandlerState) activeIsEmpty() bool {
+	return s.emptyFrom == "" && s.tailFrom == "" && s.source == "" && s.skipVar == ""
+}
+
+func (fb *flowBuilder) activePendingErrorHandler() pendingErrorHandlerState {
+	return pendingErrorHandlerState{
+		emptyFrom:    fb.emptyErrorHandlerFrom,
+		tailFrom:     fb.errorHandlerTailFrom,
+		source:       fb.errorHandlerSource,
+		skipVar:      fb.errorHandlerSkipVar,
+		tailCase:     fb.errorHandlerTailCase,
+		tailAnchor:   fb.errorHandlerTailAnchor,
+		tailIsSource: fb.errorHandlerTailIsSource,
+		returnValue:  fb.errorHandlerReturnValue,
+	}
+}
+
+func (fb *flowBuilder) setActivePendingErrorHandler(state pendingErrorHandlerState) {
+	fb.emptyErrorHandlerFrom = state.emptyFrom
+	fb.errorHandlerTailFrom = state.tailFrom
+	fb.errorHandlerSource = state.source
+	fb.errorHandlerSkipVar = state.skipVar
+	fb.errorHandlerTailCase = state.tailCase
+	fb.errorHandlerTailAnchor = state.tailAnchor
+	fb.errorHandlerTailIsSource = state.tailIsSource
+	fb.errorHandlerReturnValue = state.returnValue
+}
+
+func (fb *flowBuilder) queueActivePendingErrorHandler() {
+	state := fb.activePendingErrorHandler()
+	if state.activeIsEmpty() {
+		return
+	}
+	fb.pendingErrorHandlers = append(fb.pendingErrorHandlers, state)
+	fb.setActivePendingErrorHandler(pendingErrorHandlerState{})
+}
+
+func (fb *flowBuilder) rewritePendingErrorHandlers(rewrite func(pendingErrorHandlerState) pendingErrorHandlerState) {
+	queue := fb.pendingErrorHandlers[:0]
+	for _, state := range fb.pendingErrorHandlers {
+		state = rewrite(state)
+		if !state.activeIsEmpty() {
+			queue = append(queue, state)
+		}
+	}
+	fb.pendingErrorHandlers = queue
+
+	active := rewrite(fb.activePendingErrorHandler())
+	fb.setActivePendingErrorHandler(active)
+}
+
+func (fb *flowBuilder) addPendingErrorHandlerFlowForStatement(originID, destinationID model.ID, stmt ast.MicroflowStatement, futureReferencesSkipVar ...bool) {
+	futureReferences := len(futureReferencesSkipVar) > 0 && futureReferencesSkipVar[0]
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		return fb.addPendingErrorHandlerFlowForState(state, originID, destinationID, stmt, futureReferences)
+	})
+}
+
+func (fb *flowBuilder) addPendingErrorHandlerFlowTo(destinationID model.ID) {
+	if destinationID == "" {
+		return
+	}
+	fb.rewritePendingErrorHandlers(func(state pendingErrorHandlerState) pendingErrorHandlerState {
+		if state.emptyFrom != "" {
+			fb.addEmptyErrorHandlerRejoinFlowFrom(state.emptyFrom, state.emptyFrom, destinationID)
+			state.emptyFrom = ""
+		}
+		if state.source != "" && state.tailFrom != "" {
+			fb.addErrorHandlerRejoinFlowForState(state, state.source, destinationID)
+			state.source = ""
+			state.tailFrom = ""
+			state.skipVar = ""
+			state.tailCase = ""
+			state.tailAnchor = nil
+			state.tailIsSource = false
+			state.returnValue = ""
+		}
+		return state
+	})
+}
+
+func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHandlerState, originID, destinationID model.ID, stmt ast.MicroflowStatement, futureReferencesSkipVar bool) pendingErrorHandlerState {
+	if destinationID == "" {
+		return state
+	}
+	if state.emptyFrom != "" {
+		if state.emptyFrom != originID {
+			return state
+		}
+		fb.addEmptyErrorHandlerRejoinFlowFrom(originID, state.emptyFrom, destinationID)
+		state.emptyFrom = ""
+	}
+	if state.tailFrom == "" {
+		return state
+	}
+	if state.source != "" && destinationID == state.source {
+		return state
+	}
+	if state.skipVar != "" {
+		if statementReferencesVar(stmt, state.skipVar) {
+			if !fb.hasDeclaredReturnValue() {
+				if derivedVar := outputDerivedVariable(stmt, state.skipVar); derivedVar != "" {
+					state.skipVar = derivedVar
+				}
+				return state
+			}
+			return state
+		}
+		if futureReferencesSkipVar {
+			return state
+		}
+		fb.addErrorHandlerRejoinFlowForState(state, originID, destinationID)
+		return pendingErrorHandlerState{}
+	}
+	if state.source != "" && state.source == originID {
+		fb.addErrorHandlerRejoinFlowForState(state, originID, destinationID)
+		return pendingErrorHandlerState{}
+	}
+	return state
+}
+
+type errorHandlerTail struct {
+	id         model.ID
+	caseValue  string
+	flowAnchor *ast.FlowAnchors
+}
+
+func (fb *flowBuilder) addEmptyErrorHandlerRejoinFlowFrom(normalOriginID, errorOriginID, destinationID model.ID) {
+	existingIdx := -1
+	for i := len(fb.flows) - 1; i >= 0; i-- {
+		flow := fb.flows[i]
+		if !flow.IsErrorHandler && flow.OriginID == normalOriginID && flow.DestinationID == destinationID {
+			existingIdx = i
+			break
+		}
+	}
+	if existingIdx == -1 {
+		if mergeID := fb.findExistingRejoinMerge(normalOriginID, destinationID); mergeID != "" {
+			fb.flows = append(fb.flows, newErrorHandlerFlow(errorOriginID, mergeID))
+			return
+		}
+		fb.flows = append(fb.flows, newErrorHandlerFlow(errorOriginID, destinationID))
+		return
+	}
+
+	existing := fb.flows[existingIdx]
+	fb.flows = append(fb.flows[:existingIdx], fb.flows[existingIdx+1:]...)
+
+	merge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX - HorizontalSpacing/2, Y: fb.baseY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, merge)
+
+	normalFlow := newHorizontalFlow(normalOriginID, merge.ID)
+	normalFlow.OriginConnectionIndex = existing.OriginConnectionIndex
+	normalFlow.CaseValue = existing.CaseValue
+	fb.flows = append(fb.flows, normalFlow)
+	fb.flows = append(fb.flows, newErrorHandlerFlow(errorOriginID, merge.ID))
+
+	mergeFlow := newHorizontalFlow(merge.ID, destinationID)
+	mergeFlow.DestinationConnectionIndex = existing.DestinationConnectionIndex
+	fb.flows = append(fb.flows, mergeFlow)
+}
+
+func (fb *flowBuilder) addErrorHandlerRejoinFlowForState(state pendingErrorHandlerState, originID, destinationID model.ID) {
+	existingIdx := -1
+	for i := len(fb.flows) - 1; i >= 0; i-- {
+		flow := fb.flows[i]
+		if !flow.IsErrorHandler && flow.OriginID == originID && flow.DestinationID == destinationID {
+			existingIdx = i
+			break
+		}
+	}
+	if existingIdx == -1 {
+		if mergeID := fb.findExistingRejoinMerge(originID, destinationID); mergeID != "" {
+			if state.tailIsSource {
+				fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, mergeID))
+			} else {
+				flow := newUpwardFlow(state.tailFrom, mergeID)
+				applyDeferredFlowCase(flow, state.tailCase, state.tailAnchor)
+				fb.flows = append(fb.flows, flow)
+			}
+			return
+		}
+		if state.tailIsSource {
+			fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, destinationID))
+		} else {
+			flow := newHorizontalFlow(state.tailFrom, destinationID)
+			applyDeferredFlowCase(flow, state.tailCase, state.tailAnchor)
+			fb.flows = append(fb.flows, flow)
+		}
+		return
+	}
+
+	existing := fb.flows[existingIdx]
+	fb.flows = append(fb.flows[:existingIdx], fb.flows[existingIdx+1:]...)
+
+	merge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: fb.posX - HorizontalSpacing/2, Y: fb.baseY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, merge)
+
+	normalFlow := newHorizontalFlow(originID, merge.ID)
+	normalFlow.OriginConnectionIndex = existing.OriginConnectionIndex
+	normalFlow.CaseValue = existing.CaseValue
+	fb.flows = append(fb.flows, normalFlow)
+	if state.tailIsSource {
+		fb.flows = append(fb.flows, newErrorHandlerFlow(state.tailFrom, merge.ID))
+	} else {
+		flow := newUpwardFlow(state.tailFrom, merge.ID)
+		applyDeferredFlowCase(flow, state.tailCase, state.tailAnchor)
+		fb.flows = append(fb.flows, flow)
+	}
+
+	mergeFlow := newHorizontalFlow(merge.ID, destinationID)
+	mergeFlow.DestinationConnectionIndex = existing.DestinationConnectionIndex
+	fb.flows = append(fb.flows, mergeFlow)
+}
+
+func applyDeferredFlowCase(flow *microflows.SequenceFlow, caseValue string, anchor *ast.FlowAnchors) {
+	if flow == nil {
+		return
+	}
+	if caseValue != "" {
+		flow.CaseValue = microflows.EnumerationCase{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Value:       caseValue,
+		}
+	}
+	applyUserAnchors(flow, anchor, anchor)
+}
+
+func (fb *flowBuilder) findExistingRejoinMerge(originID, destinationID model.ID) model.ID {
+	// Error-handler rejoins are rare and microflows are small enough that an
+	// O(objects*flows) scan keeps the write path simpler than maintaining an
+	// incremental merge index.
+	for _, flow := range fb.flows {
+		if flow.OriginID != originID || flow.IsErrorHandler {
+			continue
+		}
+		if !fb.isExclusiveMerge(flow.DestinationID) {
+			continue
+		}
+		for _, mergeFlow := range fb.flows {
+			if mergeFlow.OriginID == flow.DestinationID && mergeFlow.DestinationID == destinationID && !mergeFlow.IsErrorHandler {
+				return flow.DestinationID
+			}
+		}
+	}
+	return ""
+}
+
+func (fb *flowBuilder) isExclusiveMerge(id model.ID) bool {
+	for _, obj := range fb.objects {
+		if obj.GetID() != id {
+			continue
+		}
+		_, ok := obj.(*microflows.ExclusiveMerge)
+		return ok
+	}
+	return false
+}
+
+func statementReferencesVar(stmt ast.MicroflowStatement, varName string) bool {
+	if stmt == nil || varName == "" {
+		return false
+	}
+	for _, ref := range errorHandlerStatementVarRefs(stmt) {
+		if ref == varName {
+			return true
+		}
+	}
+	return false
+}
+
+func statementsReferenceVar(stmts []ast.MicroflowStatement, varName string) bool {
+	if varName == "" {
+		return false
+	}
+	for _, stmt := range stmts {
+		if statementReferencesVar(stmt, varName) {
+			return true
+		}
+	}
+	return false
+}
+
+func callArgumentVarRefs(args []ast.CallArgument) []string {
+	var refs []string
+	for _, arg := range args {
+		refs = append(refs, exprVarRefs(arg.Value)...)
+	}
+	return refs
+}
+
+func templateParamVarRefs(params []ast.TemplateParam) []string {
+	var refs []string
+	for _, param := range params {
+		refs = append(refs, exprVarRefs(param.Value)...)
+	}
+	return refs
+}
+
+func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
+	var refs []string
+	switch s := stmt.(type) {
+	case *ast.DeclareStmt:
+		refs = append(refs, exprVarRefs(s.InitialValue)...)
+	case *ast.ReturnStmt:
+		refs = append(refs, exprVarRefs(s.Value)...)
+	case *ast.LogStmt:
+		refs = append(refs, exprVarRefs(s.Node)...)
+		refs = append(refs, exprVarRefs(s.Message)...)
+		refs = append(refs, templateParamVarRefs(s.Template)...)
+	case *ast.ShowMessageStmt:
+		refs = append(refs, exprVarRefs(s.Message)...)
+		for _, arg := range s.TemplateArgs {
+			refs = append(refs, exprVarRefs(arg)...)
+		}
+	case *ast.IfStmt:
+		refs = append(refs, exprVarRefs(s.Condition)...)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.ThenBody)...)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.ElseBody)...)
+	case *ast.WhileStmt:
+		refs = append(refs, exprVarRefs(s.Condition)...)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.Body)...)
+	case *ast.LoopStmt:
+		refs = append(refs, s.ListVariable)
+		refs = append(refs, errorHandlerStatementsVarRefs(s.Body)...)
+	case *ast.MfSetStmt:
+		refs = append(refs, extractVarName(s.Target))
+		refs = append(refs, exprVarRefs(s.Value)...)
+	case *ast.ChangeObjectStmt:
+		refs = append(refs, s.Variable)
+		for _, change := range s.Changes {
+			refs = append(refs, exprVarRefs(change.Value)...)
+		}
+	case *ast.CreateObjectStmt:
+		for _, change := range s.Changes {
+			refs = append(refs, exprVarRefs(change.Value)...)
+		}
+	case *ast.RetrieveStmt:
+		if s.StartVariable != "" {
+			refs = append(refs, s.StartVariable)
+		}
+		refs = append(refs, exprVarRefs(s.Where)...)
+	case *ast.CallMicroflowStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.CallNanoflowStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.CallJavaActionStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.CallJavaScriptActionStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.CallWebServiceStmt:
+		refs = append(refs, exprVarRefs(s.Timeout)...)
+	case *ast.ExecuteDatabaseQueryStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+		refs = append(refs, callArgumentVarRefs(s.ConnectionArguments)...)
+	case *ast.CallExternalActionStmt:
+		refs = append(refs, callArgumentVarRefs(s.Arguments)...)
+	case *ast.RestCallStmt:
+		refs = append(refs, exprVarRefs(s.URL)...)
+		refs = append(refs, templateParamVarRefs(s.URLParams)...)
+		for _, header := range s.Headers {
+			refs = append(refs, exprVarRefs(header.Value)...)
+		}
+		if s.Auth != nil {
+			refs = append(refs, exprVarRefs(s.Auth.Username)...)
+			refs = append(refs, exprVarRefs(s.Auth.Password)...)
+		}
+		if s.Body != nil {
+			refs = append(refs, exprVarRefs(s.Body.Template)...)
+			refs = append(refs, templateParamVarRefs(s.Body.TemplateParams)...)
+			if s.Body.SourceVariable != "" {
+				refs = append(refs, s.Body.SourceVariable)
+			}
+		}
+		refs = append(refs, exprVarRefs(s.Timeout)...)
+	case *ast.SendRestRequestStmt:
+		for _, param := range s.Parameters {
+			refs = append(refs, sourceAttributeVarRefs(param.Expression)...)
+		}
+		if s.BodyVariable != "" {
+			refs = append(refs, s.BodyVariable)
+		}
+	case *ast.ImportFromMappingStmt:
+		if s.SourceVariable != "" {
+			refs = append(refs, s.SourceVariable)
+		}
+	case *ast.ExportToMappingStmt:
+		if s.SourceVariable != "" {
+			refs = append(refs, s.SourceVariable)
+		}
+	case *ast.TransformJsonStmt:
+		if s.InputVariable != "" {
+			refs = append(refs, s.InputVariable)
+		}
+	case *ast.MfCommitStmt:
+		refs = append(refs, s.Variable)
+	case *ast.DeleteObjectStmt:
+		refs = append(refs, s.Variable)
+	case *ast.DownloadFileStmt:
+		refs = append(refs, s.FileDocument)
+	case *ast.ValidationFeedbackStmt:
+		if s.AttributePath != nil {
+			refs = append(refs, s.AttributePath.Variable)
+		}
+		refs = append(refs, exprVarRefs(s.Message)...)
+		for _, arg := range s.TemplateArgs {
+			refs = append(refs, exprVarRefs(arg)...)
+		}
+	case *ast.AddToListStmt:
+		refs = append(refs, s.Item, s.List)
+	case *ast.RemoveFromListStmt:
+		refs = append(refs, s.Item, s.List)
+	}
+	return refs
+}
+
+func outputDerivedVariable(stmt ast.MicroflowStatement, sourceVar string) string {
+	declare, ok := stmt.(*ast.DeclareStmt)
+	if !ok || declare.Variable == "" {
+		return ""
+	}
+	for _, ref := range exprVarRefs(declare.InitialValue) {
+		if ref == sourceVar {
+			return declare.Variable
+		}
+	}
+	return ""
+}
+
+func errorHandlerStatementsVarRefs(stmts []ast.MicroflowStatement) []string {
+	var refs []string
+	for _, stmt := range stmts {
+		refs = append(refs, errorHandlerStatementVarRefs(stmt)...)
+	}
+	return refs
+}
+
 // newErrorHandlerFlow creates a SequenceFlow with IsErrorHandler=true,
-// connecting from the bottom of the source activity to the left of the error handler.
+// connecting from the bottom of the source activity to the top of the handler.
+// Studio Pro lays custom error handlers below their source, so the destination
+// anchor enters from above rather than from the normal left-side continuation.
 func newErrorHandlerFlow(originID, destinationID model.ID) *microflows.SequenceFlow {
 	return &microflows.SequenceFlow{
 		BaseElement:                model.BaseElement{ID: model.ID(types.GenerateID())},
 		OriginID:                   originID,
 		DestinationID:              destinationID,
 		OriginConnectionIndex:      AnchorBottom,
-		DestinationConnectionIndex: AnchorLeft,
+		DestinationConnectionIndex: AnchorTop,
 		IsErrorHandler:             true,
 	}
 }
@@ -56,9 +552,9 @@ func newErrorHandlerFlow(originID, destinationID model.ID) *microflows.SequenceF
 // positions them below the source activity, and connects them with an error handler flow.
 // Returns the last activity ID if the error handler should merge back to the main flow.
 // Returns empty model.ID if the error handler terminates (via RAISE ERROR or RETURN).
-func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX int, errorBody []ast.MicroflowStatement) model.ID {
+func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX int, errorBody []ast.MicroflowStatement) errorHandlerTail {
 	if len(errorBody) == 0 {
-		return ""
+		return errorHandlerTail{}
 	}
 
 	// Position error handler below the main flow
@@ -71,6 +567,7 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 		posY:         errorY,
 		baseY:        errorY,
 		spacing:      HorizontalSpacing,
+		returnType:   fb.returnType,
 		varTypes:     fb.varTypes,
 		declaredVars: fb.declaredVars,
 		measurer:     fb.measurer,
@@ -81,6 +578,8 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 	}
 
 	var lastErrID model.ID
+	var lastErrCase string
+	var lastErrAnchor *ast.FlowAnchors
 	for _, stmt := range errorBody {
 		actID := errBuilder.addStatement(stmt)
 		if actID != "" {
@@ -93,9 +592,15 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 			}
 			if errBuilder.nextConnectionPoint != "" {
 				lastErrID = errBuilder.nextConnectionPoint
+				lastErrCase = errBuilder.nextFlowCase
+				lastErrAnchor = errBuilder.nextFlowAnchor
 				errBuilder.nextConnectionPoint = ""
+				errBuilder.nextFlowCase = ""
+				errBuilder.nextFlowAnchor = nil
 			} else {
 				lastErrID = actID
+				lastErrCase = ""
+				lastErrAnchor = nil
 			}
 		}
 	}
@@ -107,32 +612,31 @@ func (fb *flowBuilder) addErrorHandlerFlow(sourceActivityID model.ID, sourceX in
 	// If the error handler ends with RAISE ERROR or RETURN, it terminates there.
 	// Otherwise, return the last activity ID so caller can create a merge.
 	if errBuilder.endsWithReturn {
-		return "" // Error handler terminates, no merge needed
+		return errorHandlerTail{} // Error handler terminates, no merge needed
 	}
-	return lastErrID // Error handler should merge back to main flow
+	return errorHandlerTail{id: lastErrID, caseValue: lastErrCase, flowAnchor: lastErrAnchor} // Error handler should merge back to main flow
 }
 
 // handleErrorHandlerMerge creates an EndEvent for error handlers that want to merge back.
 // This is a fallback until full merge support is implemented. Caller should pass
-// the ID returned by addErrorHandlerFlow and the error handler Y position.
-func (fb *flowBuilder) handleErrorHandlerMerge(lastErrID model.ID, activityID model.ID, errorY int) {
-	if lastErrID == "" {
+// the tail returned by addErrorHandlerFlow and the error handler Y position.
+func (fb *flowBuilder) handleErrorHandlerMerge(tail errorHandlerTail, activityID model.ID, errorY int) {
+	_ = errorY
+	fb.handleErrorHandlerMergeWithSkip(tail, activityID, "")
+}
+
+func (fb *flowBuilder) handleErrorHandlerMergeWithSkip(tail errorHandlerTail, activityID model.ID, skipVar string) {
+	if tail.id == "" {
 		return // No merge needed (error handler terminates with RETURN or RAISE ERROR)
 	}
-	// Error handler doesn't end with RETURN/RAISE — create EndEvent to terminate the path.
-	// When the microflow has a return type, use the return value from a prior RETURN statement
-	// if available to avoid "Return value required" errors. If no RETURN has been seen yet,
-	// fall back to empty (works for void microflows).
-	endEvent := &microflows.EndEvent{
-		BaseMicroflowObject: microflows.BaseMicroflowObject{
-			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-			Position:    model.Point{X: fb.posX, Y: errorY},
-			Size:        model.Size{Width: EventSize, Height: EventSize},
-		},
-		ReturnValue: fb.returnValue,
-	}
-	fb.objects = append(fb.objects, endEvent)
-	fb.flows = append(fb.flows, newHorizontalFlow(lastErrID, endEvent.ID))
+	fb.queueActivePendingErrorHandler()
+	fb.errorHandlerSource = activityID
+	fb.errorHandlerTailFrom = tail.id
+	fb.errorHandlerSkipVar = skipVar
+	fb.errorHandlerTailCase = tail.caseValue
+	fb.errorHandlerTailAnchor = tail.flowAnchor
+	fb.errorHandlerTailIsSource = false
+	fb.errorHandlerReturnValue = fb.returnValue
 }
 
 // newHorizontalFlow creates a SequenceFlow with anchors for horizontal left-to-right connection
