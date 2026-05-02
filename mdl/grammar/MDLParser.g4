@@ -2936,7 +2936,7 @@ workflowActivityStmt
     ;
 
 workflowUserTaskStmt
-    : USER TASK IDENTIFIER STRING_LITERAL
+    : USER TASK (IDENTIFIER | QUOTED_IDENTIFIER) STRING_LITERAL
       (PAGE qualifiedName)?
       (TARGETING (USERS | GROUPS)? MICROFLOW qualifiedName)?
       (TARGETING (USERS | GROUPS)? XPATH STRING_LITERAL)?
@@ -2945,7 +2945,7 @@ workflowUserTaskStmt
       (DESCRIPTION STRING_LITERAL)?
       (OUTCOMES workflowUserTaskOutcome+)?
       (BOUNDARY EVENT workflowBoundaryEventClause+)?
-    | MULTI USER TASK IDENTIFIER STRING_LITERAL
+    | MULTI USER TASK (IDENTIFIER | QUOTED_IDENTIFIER) STRING_LITERAL
       (PAGE qualifiedName)?
       (TARGETING (USERS | GROUPS)? MICROFLOW qualifiedName)?
       (TARGETING (USERS | GROUPS)? XPATH STRING_LITERAL)?
@@ -3001,7 +3001,7 @@ workflowParallelPath
     ;
 
 workflowJumpToStmt
-    : JUMP TO IDENTIFIER (COMMENT STRING_LITERAL)?
+    : JUMP TO (IDENTIFIER | QUOTED_IDENTIFIER) (COMMENT STRING_LITERAL)?
     ;
 
 workflowWaitForTimerStmt

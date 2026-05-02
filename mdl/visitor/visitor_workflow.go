@@ -416,8 +416,17 @@ func buildWorkflowActivityStmt(ctx parser.IWorkflowActivityStmtContext) ast.Work
 func buildWorkflowUserTask(ctx parser.IWorkflowUserTaskStmtContext) *ast.WorkflowUserTaskNode {
 	utCtx := ctx.(*parser.WorkflowUserTaskStmtContext)
 
+	// The task name may be a bare IDENTIFIER (ut1) or a QUOTED_IDENTIFIER ("ut1")
+	// to allow reserved-word names. Always strip surrounding quotes.
+	taskName := ""
+	if id := utCtx.IDENTIFIER(); id != nil {
+		taskName = id.GetText()
+	} else if qid := utCtx.QUOTED_IDENTIFIER(); qid != nil {
+		taskName = unquoteIdentifier(qid.GetText())
+	}
+
 	node := &ast.WorkflowUserTaskNode{
-		Name:        utCtx.IDENTIFIER().GetText(),
+		Name:        taskName,
 		IsMultiUser: utCtx.MULTI() != nil,
 	}
 
@@ -650,8 +659,16 @@ func buildWorkflowParallelPath(ctx parser.IWorkflowParallelPathContext) ast.Work
 // buildWorkflowJumpTo builds a WorkflowJumpToNode.
 func buildWorkflowJumpTo(ctx parser.IWorkflowJumpToStmtContext) *ast.WorkflowJumpToNode {
 	jtCtx := ctx.(*parser.WorkflowJumpToStmtContext)
+
+	target := ""
+	if id := jtCtx.IDENTIFIER(); id != nil {
+		target = id.GetText()
+	} else if qid := jtCtx.QUOTED_IDENTIFIER(); qid != nil {
+		target = unquoteIdentifier(qid.GetText())
+	}
+
 	node := &ast.WorkflowJumpToNode{
-		Target: jtCtx.IDENTIFIER().GetText(),
+		Target: target,
 	}
 
 	if jtCtx.COMMENT() != nil && jtCtx.STRING_LITERAL() != nil {

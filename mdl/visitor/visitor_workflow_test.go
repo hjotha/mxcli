@@ -55,6 +55,95 @@ END WORKFLOW;`
 	}
 }
 
+// TestWorkflowVisitor_UserTask_QuotedIdentifier is the regression test for
+// issue #403: user task names written as "quoted-identifiers" caused a nil
+// pointer dereference in buildWorkflowUserTask because the grammar only
+// accepted bare IDENTIFIER tokens.
+func TestWorkflowVisitor_UserTask_QuotedIdentifier(t *testing.T) {
+	input := `CREATE WORKFLOW Module.WF_Test
+BEGIN
+  USER TASK "ut1" 'Review'
+    PAGE Module.Page
+  OUTCOMES
+    'Approve' { }
+    'Reject' { };
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	if len(prog.Statements) != 1 {
+		t.Fatalf("Expected 1 statement, got %d", len(prog.Statements))
+	}
+
+	stmt, ok := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	if !ok {
+		t.Fatalf("Expected CreateWorkflowStmt, got %T", prog.Statements[0])
+	}
+	if len(stmt.Activities) == 0 {
+		t.Fatal("Expected at least 1 activity")
+	}
+	userTask, ok := stmt.Activities[0].(*ast.WorkflowUserTaskNode)
+	if !ok {
+		t.Fatalf("Expected WorkflowUserTaskNode, got %T", stmt.Activities[0])
+	}
+	// Quotes must be stripped: "ut1" → ut1
+	if userTask.Name != "ut1" {
+		t.Errorf("Expected task name %q, got %q", "ut1", userTask.Name)
+	}
+	if userTask.Caption != "Review" {
+		t.Errorf("Expected caption %q, got %q", "Review", userTask.Caption)
+	}
+	if len(userTask.Outcomes) != 2 {
+		t.Fatalf("Expected 2 outcomes, got %d", len(userTask.Outcomes))
+	}
+}
+
+// TestWorkflowVisitor_JumpTo_QuotedIdentifier is the regression test for
+// the JUMP TO "name" variant of the same underlying issue.
+func TestWorkflowVisitor_JumpTo_QuotedIdentifier(t *testing.T) {
+	input := `CREATE WORKFLOW Module.WF_Test
+BEGIN
+  USER TASK "target" 'Target task'
+    OUTCOMES 'Done' { };
+  JUMP TO "target";
+END WORKFLOW;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		t.FailNow()
+	}
+
+	stmt, ok := prog.Statements[0].(*ast.CreateWorkflowStmt)
+	if !ok {
+		t.Fatalf("Expected CreateWorkflowStmt, got %T", prog.Statements[0])
+	}
+
+	// Find the JumpTo activity
+	var jumpTo *ast.WorkflowJumpToNode
+	for _, act := range stmt.Activities {
+		if jt, ok := act.(*ast.WorkflowJumpToNode); ok {
+			jumpTo = jt
+			break
+		}
+	}
+	if jumpTo == nil {
+		t.Fatal("Expected a WorkflowJumpToNode in activities")
+	}
+	// Quotes must be stripped: "target" → target
+	if jumpTo.Target != "target" {
+		t.Errorf("Expected jump target %q, got %q", "target", jumpTo.Target)
+	}
+}
+
 func TestWorkflowVisitor_BoundaryEventNonInterrupting(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
 BEGIN
