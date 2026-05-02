@@ -982,11 +982,13 @@ func findMergeForSplit(
 	}
 
 	branchDistances := make([]map[model.ID]int, 0, len(flows))
+	branchStarts := make([]model.ID, 0, len(flows))
 	for _, flow := range flows {
+		branchStarts = append(branchStarts, flow.DestinationID)
 		branchDistances = append(branchDistances, collectReachableDistances(flow.DestinationID, flowsByOrigin))
 	}
 
-	return selectNearestCommonJoin(activityMap, branchDistances)
+	return selectNearestCommonJoin(activityMap, flowsByOrigin, branchStarts, branchDistances)
 }
 
 // collectReachableDistances collects the shortest normal-flow distance from a
@@ -1025,6 +1027,8 @@ func collectReachableDistances(
 
 func selectNearestCommonJoin(
 	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	branchStarts []model.ID,
 	branchDistances []map[model.ID]int,
 ) model.ID {
 	if len(branchDistances) < 2 {
@@ -1033,6 +1037,7 @@ func selectNearestCommonJoin(
 
 	type candidate struct {
 		id          model.ID
+		reachCount  int
 		maxDistance int
 		sumDistance int
 	}
@@ -1060,6 +1065,7 @@ func selectNearestCommonJoin(
 		if common {
 			candidates = append(candidates, candidate{
 				id:          nodeID,
+				reachCount:  len(branchDistances),
 				maxDistance: maxDistance,
 				sumDistance: sumDistance,
 			})
@@ -1067,10 +1073,48 @@ func selectNearestCommonJoin(
 	}
 
 	if len(candidates) == 0 {
+		byNode := map[model.ID]candidate{}
+		for _, distances := range branchDistances {
+			for nodeID, distance := range distances {
+				if !isSplitJoinCandidate(activityMap[nodeID]) {
+					continue
+				}
+				c := byNode[nodeID]
+				c.id = nodeID
+				c.reachCount++
+				if distance > c.maxDistance {
+					c.maxDistance = distance
+				}
+				c.sumDistance += distance
+				byNode[nodeID] = c
+			}
+		}
+		for _, c := range byNode {
+			if c.reachCount >= 2 {
+				candidates = append(candidates, c)
+			}
+		}
+	}
+
+	if len(candidates) == 0 {
+		return ""
+	}
+
+	filtered := candidates[:0]
+	for _, candidate := range candidates {
+		if splitJoinCandidateDoesNotHaveDownstreamBypass(candidate.id, activityMap, flowsByOrigin, branchStarts) {
+			filtered = append(filtered, candidate)
+		}
+	}
+	candidates = filtered
+	if len(candidates) == 0 {
 		return ""
 	}
 
 	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].reachCount != candidates[j].reachCount {
+			return candidates[i].reachCount > candidates[j].reachCount
+		}
 		if candidates[i].maxDistance != candidates[j].maxDistance {
 			return candidates[i].maxDistance < candidates[j].maxDistance
 		}
@@ -1081,6 +1125,88 @@ func selectNearestCommonJoin(
 	})
 
 	return candidates[0].id
+}
+
+func splitJoinCandidateDoesNotHaveDownstreamBypass(
+	candidateID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	branchStarts []model.ID,
+) bool {
+	downstream := collectReachableNonTerminalObjects(candidateID, activityMap, flowsByOrigin)
+	if len(downstream) == 0 {
+		return true
+	}
+	for _, startID := range branchStarts {
+		if startID == candidateID {
+			continue
+		}
+		if reachesAnyObjectAvoiding(startID, downstream, candidateID, activityMap, flowsByOrigin, map[model.ID]bool{}) {
+			return false
+		}
+	}
+	return true
+}
+
+func collectReachableNonTerminalObjects(
+	startID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+) map[model.ID]bool {
+	result := map[model.ID]bool{}
+	var walk func(model.ID)
+	visited := map[model.ID]bool{startID: true}
+	walk = func(currentID model.ID) {
+		if visited[currentID] {
+			return
+		}
+		visited[currentID] = true
+		if isNonTerminalMicroflowObject(activityMap[currentID]) {
+			result[currentID] = true
+		}
+		for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+			walk(flow.DestinationID)
+		}
+	}
+	for _, flow := range findNormalFlows(flowsByOrigin[startID]) {
+		walk(flow.DestinationID)
+	}
+	return result
+}
+
+func reachesAnyObjectAvoiding(
+	currentID model.ID,
+	targets map[model.ID]bool,
+	avoidID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	visited map[model.ID]bool,
+) bool {
+	if currentID == "" || currentID == avoidID || visited[currentID] {
+		return false
+	}
+	if targets[currentID] {
+		return true
+	}
+	if !isNonTerminalMicroflowObject(activityMap[currentID]) {
+		return false
+	}
+	visited[currentID] = true
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+		if reachesAnyObjectAvoiding(flow.DestinationID, targets, avoidID, activityMap, flowsByOrigin, visited) {
+			return true
+		}
+	}
+	return false
+}
+
+func isNonTerminalMicroflowObject(obj microflows.MicroflowObject) bool {
+	switch obj.(type) {
+	case nil, *microflows.StartEvent, *microflows.EndEvent, *microflows.ErrorEvent:
+		return false
+	default:
+		return true
+	}
 }
 
 func isSplitJoinCandidate(obj microflows.MicroflowObject) bool {

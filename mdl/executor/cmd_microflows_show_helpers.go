@@ -668,12 +668,7 @@ func traverseFlow(
 			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			emitEnumSplitStatement(ctx, currentID, mergeID, variable, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-			if mergeID != "" {
-				visited[mergeID] = true
-				for _, flow := range flowsByOrigin[mergeID] {
-					traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-				}
-			}
+			continueAfterSplitJoin(ctx, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			return
 		}
 		if stmt != "" {
@@ -831,12 +826,7 @@ func traverseFlowUntilMerge(
 			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
 			emitEnumSplitStatement(ctx, currentID, nestedMergeID, variable, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
-			if nestedMergeID != "" && nestedMergeID != mergeID {
-				visited[nestedMergeID] = true
-				for _, flow := range flowsByOrigin[nestedMergeID] {
-					traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
-				}
-			}
+			continueAfterNestedSplitJoin(ctx, nestedMergeID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			return
 		}
 		if stmt != "" {
@@ -845,10 +835,11 @@ func traverseFlowUntilMerge(
 		}
 
 		trueFlow, falseFlow := findBranchFlows(flows)
+		nestedMergeID = resolveNestedMergeID(nestedMergeID, mergeID, trueFlow, falseFlow, flowsByOrigin)
 
 		// Empty-then swap: negate when true branch is empty but false branch has content.
 		// Skip when both branches go directly to merge (both empty).
-		if trueFlow != nil && falseFlow != nil && nestedMergeID != "" {
+		if trueFlow != nil && falseFlow != nil && nestedMergeID != "" && nestedMergeID == mergeID {
 			if trueFlow.DestinationID == nestedMergeID && falseFlow.DestinationID != nestedMergeID {
 				stmt = negateIfCondition(stmt)
 				trueFlow, falseFlow = falseFlow, trueFlow
@@ -998,6 +989,63 @@ func continueAfterNestedSplitJoin(
 		return
 	}
 	traverseFlowUntilMerge(ctx, joinID, parentMergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+}
+
+func resolveNestedMergeID(
+	nestedMergeID model.ID,
+	parentMergeID model.ID,
+	trueFlow *microflows.SequenceFlow,
+	falseFlow *microflows.SequenceFlow,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+) model.ID {
+	if nestedMergeID != "" && parentMergeID != "" && nestedMergeID != parentMergeID &&
+		canReachNode(parentMergeID, nestedMergeID, flowsByOrigin, make(map[model.ID]bool)) {
+		for _, flow := range []*microflows.SequenceFlow{trueFlow, falseFlow} {
+			if flow == nil {
+				continue
+			}
+			if flow.DestinationID == parentMergeID ||
+				canReachNode(flow.DestinationID, parentMergeID, flowsByOrigin, make(map[model.ID]bool)) {
+				return parentMergeID
+			}
+		}
+	}
+	if nestedMergeID != "" || parentMergeID == "" {
+		return nestedMergeID
+	}
+	for _, flow := range []*microflows.SequenceFlow{trueFlow, falseFlow} {
+		if flow == nil {
+			continue
+		}
+		if canReachNode(flow.DestinationID, parentMergeID, flowsByOrigin, make(map[model.ID]bool)) {
+			return parentMergeID
+		}
+	}
+	return ""
+}
+
+func canReachNode(
+	currentID model.ID,
+	targetID model.ID,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	visited map[model.ID]bool,
+) bool {
+	if currentID == "" {
+		return false
+	}
+	if currentID == targetID {
+		return true
+	}
+	if visited[currentID] {
+		return false
+	}
+	visited[currentID] = true
+	for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+		if canReachNode(flow.DestinationID, targetID, flowsByOrigin, visited) {
+			return true
+		}
+	}
+	return false
 }
 
 // traverseLoopBody traverses activities inside a loop body.
@@ -1421,10 +1469,13 @@ func flowLooksLikeGuardContinuation(
 		return false
 	}
 	// Builder-generated guard continuations sit on the split's horizontal
-	// centerline. This intentionally relies on mxcli's layout contract so a
-	// real branch that returns to a merge below the split is not collapsed into
-	// a guard-style continuation during describe.
-	return dest.GetPosition().Y == split.GetPosition().Y
+	// centerline and use the builder's horizontal split→tail flow. This
+	// intentionally relies on mxcli's layout/anchor contract so a real false
+	// branch whose activities happen to be aligned with the split is not
+	// collapsed into a guard-style continuation during describe.
+	return dest.GetPosition().Y == split.GetPosition().Y &&
+		flow.OriginConnectionIndex == AnchorRight &&
+		flow.DestinationConnectionIndex == AnchorLeft
 }
 
 // findErrorHandlerFlow returns the error handler flow from an activity's outgoing flows.
