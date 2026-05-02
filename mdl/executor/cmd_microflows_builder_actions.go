@@ -346,7 +346,7 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 		lastID := model.ID("")
 		pendingCase := ""
 		var prevAnchor *ast.FlowAnchors
-		for _, stmt := range br.body {
+		for j, stmt := range br.body {
 			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID == "" {
@@ -376,6 +376,9 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 				}
 				applyUserAnchors(flow, prevAnchor, thisAnchor)
 				fb.flows = append(fb.flows, flow)
+				if fb.emptyErrorHandlerFrom == lastID {
+					fb.addPendingErrorHandlerFlowForStatement(lastID, actID, stmt, statementsReferenceVar(br.body[j+1:], fb.errorHandlerSkipVar))
+				}
 			}
 			prevAnchor = thisAnchor
 			if fb.nextConnectionPoint != "" {
