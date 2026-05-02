@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -1203,11 +1204,62 @@ func TestTraverseFlow_EmptyThenSwap(t *testing.T) {
 	if !strings.Contains(output, "not($Active)") {
 		t.Errorf("expected negated condition 'not($Active)', got:\n%s", output)
 	}
+	if strings.Count(output, "if ") != 1 {
+		t.Errorf("expected split header to be emitted once, got:\n%s", output)
+	}
 	if !strings.Contains(output, "log info") {
 		t.Errorf("expected 'log info' in output, got:\n%s", output)
 	}
 	if strings.Contains(output, "else") {
 		t.Errorf("expected no empty else block, got:\n%s", output)
+	}
+}
+
+func TestTraverseFlowUntilMerge_NestedEmptyThenSwapEmitsHeaderOnce(t *testing.T) {
+	e := newTestExecutor()
+
+	// Nested empty-then split inside a parent branch:
+	// split → (true)  → nested merge → parent merge
+	//       → (false) → log          → nested merge
+	// The describer negates the condition and must emit only the final
+	// swapped header. Emitting the original header first creates invalid MDL.
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$NestedDone"},
+		},
+		mkID("log"): &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj("log")},
+			Action: &microflows.LogMessageAction{
+				LogLevel:    "Info",
+				LogNodeName: "'Test'",
+			},
+		},
+		mkID("nestedMerge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("nestedMerge")},
+		mkID("parentMerge"): &microflows.ExclusiveMerge{BaseMicroflowObject: mkObj("parentMerge")},
+	}
+
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("split"): {
+			{OriginID: mkID("split"), DestinationID: mkID("nestedMerge"), CaseValue: microflows.EnumerationCase{Value: "true"}},
+			{OriginID: mkID("split"), DestinationID: mkID("log"), CaseValue: microflows.EnumerationCase{Value: "false"}},
+		},
+		mkID("log"):         {{OriginID: mkID("log"), DestinationID: mkID("nestedMerge")}},
+		mkID("nestedMerge"): {{OriginID: mkID("nestedMerge"), DestinationID: mkID("parentMerge")}},
+	}
+	splitMergeMap := map[model.ID]model.ID{mkID("split"): mkID("nestedMerge")}
+
+	var lines []string
+	visited := map[model.ID]bool{}
+
+	traverseFlowUntilMerge(e.newExecContext(context.Background()), mkID("split"), mkID("parentMerge"), activityMap, flowsByOrigin, nil, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
+
+	output := strings.Join(lines, "\n")
+	if strings.Count(output, "if ") != 1 {
+		t.Fatalf("expected nested split header to be emitted once, got:\n%s", output)
+	}
+	if strings.Count(output, "end if;") != 1 {
+		t.Fatalf("expected nested split to close exactly once, got:\n%s", output)
 	}
 }
 

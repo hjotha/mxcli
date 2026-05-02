@@ -671,11 +671,6 @@ func traverseFlow(
 			continueAfterSplitJoin(ctx, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			return
 		}
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
 		trueFlow, falseFlow := findBranchFlows(flows)
 
 		// Empty-then swap: when the true branch goes directly to the merge
@@ -829,11 +824,6 @@ func traverseFlowUntilMerge(
 			continueAfterNestedSplitJoin(ctx, nestedMergeID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
 			return
 		}
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
 		trueFlow, falseFlow := findBranchFlows(flows)
 		nestedMergeID = resolveNestedMergeID(nestedMergeID, mergeID, trueFlow, falseFlow, flowsByOrigin)
 
