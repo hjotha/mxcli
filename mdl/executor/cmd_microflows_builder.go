@@ -288,6 +288,89 @@ func (fb *flowBuilder) lookupNanoflowReturnType(qualifiedName string) microflows
 	return nil
 }
 
+// microflowExists returns true if qualifiedName refers to a microflow present
+// in the connected project. Returns true (no error) when no backend is available
+// or when backend calls fail, so offline / syntax-check mode is unaffected.
+func (fb *flowBuilder) microflowExists(qualifiedName string) bool {
+	if fb.backend == nil {
+		return true
+	}
+	// Fast path: name-indexed lookup; succeeds without loading the full list.
+	if rawUnit, err := fb.backend.GetRawUnitByName("microflow", qualifiedName); err == nil && rawUnit != nil {
+		return true
+	}
+	// Slow path: enumerate microflows in the resolved module.
+	moduleName, mfName, ok := strings.Cut(qualifiedName, ".")
+	if !ok || moduleName == "" || mfName == "" {
+		return true // malformed name — not our problem to report
+	}
+	module, err := fb.backend.GetModuleByName(moduleName)
+	if err != nil || module == nil {
+		return true // module not found — let other validation surface that
+	}
+	if !fb.microflowsCacheLoaded {
+		list, err := fb.backend.ListMicroflows()
+		if err != nil {
+			return true // backend error — don't block
+		}
+		fb.microflowsCache = list
+		fb.microflowsCacheLoaded = true
+	}
+	for _, mf := range fb.microflowsCache {
+		if mf == nil {
+			continue
+		}
+		containerModuleID := mf.ContainerID
+		if fb.hierarchy != nil {
+			containerModuleID = fb.hierarchy.FindModuleID(mf.ContainerID)
+		}
+		if containerModuleID == module.ID && mf.Name == mfName {
+			return true
+		}
+	}
+	return false
+}
+
+// nanoflowExists returns true if qualifiedName refers to a nanoflow present
+// in the connected project. Same fallback-to-true semantics as microflowExists.
+func (fb *flowBuilder) nanoflowExists(qualifiedName string) bool {
+	if fb.backend == nil {
+		return true
+	}
+	if rawUnit, err := fb.backend.GetRawUnitByName("nanoflow", qualifiedName); err == nil && rawUnit != nil {
+		return true
+	}
+	moduleName, nfName, ok := strings.Cut(qualifiedName, ".")
+	if !ok || moduleName == "" || nfName == "" {
+		return true
+	}
+	module, err := fb.backend.GetModuleByName(moduleName)
+	if err != nil || module == nil {
+		return true
+	}
+	if !fb.nanoflowsCacheLoaded {
+		list, err := fb.backend.ListNanoflows()
+		if err != nil {
+			return true
+		}
+		fb.nanoflowsCache = list
+		fb.nanoflowsCacheLoaded = true
+	}
+	for _, nf := range fb.nanoflowsCache {
+		if nf == nil {
+			continue
+		}
+		containerModuleID := nf.ContainerID
+		if fb.hierarchy != nil {
+			containerModuleID = fb.hierarchy.FindModuleID(nf.ContainerID)
+		}
+		if containerModuleID == module.ID && nf.Name == nfName {
+			return true
+		}
+	}
+	return false
+}
+
 func (fb *flowBuilder) resolveEntityQualifiedName(entityID model.ID) string {
 	if fb.backend == nil || entityID == "" {
 		return ""

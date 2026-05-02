@@ -112,6 +112,10 @@ func (fb *flowBuilder) addLogMessageAction(s *ast.LogStmt) model.ID {
 func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID {
 	mfQN := s.MicroflowName.Module + "." + s.MicroflowName.Name
 
+	if !fb.microflowExists(mfQN) {
+		fb.addError("CALL MICROFLOW '%s': microflow not found in the project (check module name and spelling)", mfQN)
+	}
+
 	// Build parameter mappings for MicroflowCall
 	var mappings []*microflows.MicroflowCallParameterMapping
 	for _, arg := range s.Arguments {
@@ -167,6 +171,10 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 // addCallNanoflowAction creates a CALL NANOFLOW statement.
 func (fb *flowBuilder) addCallNanoflowAction(s *ast.CallNanoflowStmt) model.ID {
 	nfQN := s.NanoflowName.Module + "." + s.NanoflowName.Name
+
+	if !fb.nanoflowExists(nfQN) {
+		fb.addError("CALL NANOFLOW '%s': nanoflow not found in the project (check module name and spelling)", nfQN)
+	}
 
 	// Build parameter mappings for NanoflowCall
 	var mappings []*microflows.NanoflowCallParameterMapping
