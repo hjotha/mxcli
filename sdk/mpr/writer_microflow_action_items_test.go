@@ -71,3 +71,16 @@ func TestSerializeChangeObjectActionItemsUseStorageListMarkerAndDefaultErrorHand
 		t.Fatalf("Items marker = %#v, want int32(2)", items[0])
 	}
 }
+
+func TestSerializeCommitActionAlwaysWritesDefaultErrorHandling(t *testing.T) {
+	action := &microflows.CommitObjectsAction{
+		BaseElement:    model.BaseElement{ID: "commit-1"},
+		CommitVariable: "Order",
+	}
+
+	doc := serializeMicroflowAction(action)
+
+	if got := getBSONField(doc, "ErrorHandlingType"); got != "Rollback" {
+		t.Fatalf("ErrorHandlingType = %#v, want Rollback", got)
+	}
+}

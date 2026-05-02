@@ -381,7 +381,7 @@ func TestFormatActivity_StartEvent(t *testing.T) {
 	}
 }
 
-func TestFormatActivity_EndEvent_NoReturn(t *testing.T) {
+func TestFormatActivity_EndEvent_VoidOrUnknownContext(t *testing.T) {
 	e := newTestExecutor()
 	obj := &microflows.EndEvent{BaseMicroflowObject: mkObj("1")}
 	got := e.formatActivity(obj, nil, nil)
