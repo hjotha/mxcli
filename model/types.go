@@ -815,7 +815,17 @@ type ConventionSettings struct {
 // LanguageSettings represents Settings$LanguageSettings.
 type LanguageSettings struct {
 	BaseElement
-	DefaultLanguageCode string `json:"defaultLanguageCode,omitempty"`
+	DefaultLanguageCode string     `json:"defaultLanguageCode,omitempty"`
+	Languages           []Language `json:"languages,omitempty"`
+}
+
+// Language represents a Texts$Language entry in the project language settings.
+type Language struct {
+	Code                string `json:"code"`
+	CheckCompleteness   bool   `json:"checkCompleteness,omitempty"`
+	CustomDateFormat    string `json:"customDateFormat,omitempty"`
+	CustomDateTimeFormat string `json:"customDateTimeFormat,omitempty"`
+	CustomTimeFormat    string `json:"customTimeFormat,omitempty"`
 }
 
 // CertificateSettings represents Settings$CertificateSettings.

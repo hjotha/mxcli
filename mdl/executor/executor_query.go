@@ -105,6 +105,8 @@ func execShow(ctx *ExecContext, s *ast.ShowStmt) error {
 		return listBusinessEvents(ctx, s.InModule)
 	case ast.ShowSettings:
 		return listSettings(ctx)
+	case ast.ShowLanguages:
+		return listLanguages(ctx)
 	case ast.ShowFragments:
 		return listFragments(ctx)
 	case ast.ShowDatabaseConnections:
