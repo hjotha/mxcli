@@ -63,6 +63,37 @@ func TestAddJavaAction_ConcreteListReturnRegistersListType(t *testing.T) {
 	}
 }
 
+// TestAddJavaAction_EntityReturnRegistersEntityType pins ako's review follow-up
+// for PR #357: the most common Java action return shape — a bare
+// `*javaactions.EntityType{Entity: "Mod.Ent"}` — must register the output
+// variable as the entity's qualified name so downstream attribute access
+// resolves against the right domain-model entry.
+func TestAddJavaAction_EntityReturnRegistersEntityType(t *testing.T) {
+	backend := &mock.MockBackend{
+		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
+			return &javaactions.JavaAction{
+				ReturnType: &javaactions.EntityType{Entity: "Orders.Order"},
+			}, nil
+		},
+	}
+
+	fb := &flowBuilder{
+		backend:      backend,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+	}
+
+	fb.addCallJavaActionAction(&ast.CallJavaActionStmt{
+		OutputVariable: "CreatedOrder",
+		ActionName:     ast.QualifiedName{Module: "Orders", Name: "CreateFromPayload"},
+	})
+
+	if got := fb.varTypes["CreatedOrder"]; got != "Orders.Order" {
+		t.Fatalf("CreatedOrder type = %q, want Orders.Order", got)
+	}
+}
+
 func TestAddJavaAction_GenericListReturnInheritsInputListType(t *testing.T) {
 	backend := &mock.MockBackend{
 		ReadJavaActionByNameFunc: func(qualifiedName string) (*javaactions.JavaAction, error) {
