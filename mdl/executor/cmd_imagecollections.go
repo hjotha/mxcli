@@ -29,7 +29,12 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 	// Check if image collection already exists
 	existing := findImageCollection(ctx, s.Name.Module, s.Name.Name)
 	if existing != nil {
-		return mdlerrors.NewAlreadyExists("image collection", s.Name.Module+"."+s.Name.Name)
+		if !s.CreateOrReplace {
+			return mdlerrors.NewAlreadyExists("image collection", s.Name.Module+"."+s.Name.Name)
+		}
+		if err := ctx.Backend.DeleteImageCollection(string(existing.ID)); err != nil {
+			return mdlerrors.NewBackend("delete existing image collection", err)
+		}
 	}
 
 	// Build ImageCollection

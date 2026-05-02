@@ -105,3 +105,67 @@ func TestDescribeImageCollection_Mock(t *testing.T) {
 	out := buf.String()
 	assertContainsStr(t, out, "create or replace image collection")
 }
+
+func TestCreateImageCollection_AlreadyExists_Error(t *testing.T) {
+	mod := mkModule("MyModule")
+	existing := &types.ImageCollection{
+		BaseElement: model.BaseElement{ID: nextID("ic")},
+		ContainerID: mod.ID,
+		Name:        "Icons",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListModulesFunc:          func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{existing}, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	err := execCreateImageCollection(ctx, &ast.CreateImageCollectionStmt{
+		Name: ast.QualifiedName{Module: "MyModule", Name: "Icons"},
+	})
+	assertError(t, err)
+}
+
+func TestCreateImageCollection_CreateOrReplace_DeletesAndRecreates(t *testing.T) {
+	mod := mkModule("MyModule")
+	existing := &types.ImageCollection{
+		BaseElement: model.BaseElement{ID: nextID("ic")},
+		ContainerID: mod.ID,
+		Name:        "Icons",
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, existing.ContainerID, mod.ID)
+
+	deleted := false
+	created := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListModulesFunc:          func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{existing}, nil },
+		DeleteImageCollectionFunc: func(id string) error {
+			deleted = true
+			return nil
+		},
+		CreateImageCollectionFunc: func(ic *types.ImageCollection) error {
+			created = true
+			return nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	err := execCreateImageCollection(ctx, &ast.CreateImageCollectionStmt{
+		Name:            ast.QualifiedName{Module: "MyModule", Name: "Icons"},
+		CreateOrReplace: true,
+	})
+	assertNoError(t, err)
+	if !deleted {
+		t.Error("expected existing collection to be deleted")
+	}
+	if !created {
+		t.Error("expected new collection to be created")
+	}
+	assertContainsStr(t, buf.String(), "Created image collection")
+}
