@@ -272,6 +272,12 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 				}
 				applyUserAnchors(flow, originAnchor, destAnchor)
 				fb.flows = append(fb.flows, flow)
+			} else {
+				// Explicit empty ELSE body: the split still needs a configured
+				// false case when both branches converge at the merge.
+				flow := newDownwardFlowWithCase(splitID, mergeID, "false")
+				applyUserAnchors(flow, falseBranchAnchor, falseBranchAnchor)
+				fb.flows = append(fb.flows, flow)
 			}
 		} else if elseReturns && needMerge {
 			fb.addPendingErrorHandlerFlowTo(mergeID)
