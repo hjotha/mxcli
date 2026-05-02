@@ -241,6 +241,85 @@ func bsonDMap(doc primitive.D) map[string]any {
 	}
 	return out
 }
+
+func TestSerializeSortItemPreservesIndirectEntityRef(t *testing.T) {
+	doc := serializeSortItem(&microflows.SortItem{
+		BaseElement:            model.BaseElement{ID: model.ID("sort-1")},
+		AttributeQualifiedName: "SampleApps.ApplicationView.CreatedAt",
+		EntityRefSteps: []microflows.EntityRefStep{
+			{
+				Association:       "SampleApps.DeploymentTarget_ApplicationView",
+				DestinationEntity: "SampleApps.ApplicationView",
+			},
+		},
+		Direction: microflows.SortDirectionDescending,
+	})
+
+	attrRef, ok := bsonDMap(doc)["AttributeRef"].(primitive.D)
+	if !ok {
+		t.Fatalf("AttributeRef missing or wrong type: %T", bsonDMap(doc)["AttributeRef"])
+	}
+	entityRef, ok := bsonDMap(attrRef)["EntityRef"].(primitive.D)
+	if !ok {
+		t.Fatalf("EntityRef missing or wrong type: %T", bsonDMap(attrRef)["EntityRef"])
+	}
+	if got := bsonDMap(entityRef)["$Type"]; got != "DomainModels$IndirectEntityRef" {
+		t.Fatalf("EntityRef.$Type = %v, want DomainModels$IndirectEntityRef", got)
+	}
+	steps, ok := bsonDMap(entityRef)["Steps"].(primitive.A)
+	if !ok || len(steps) != 2 {
+		t.Fatalf("Steps = %#v, want marker plus one step", bsonDMap(entityRef)["Steps"])
+	}
+	step, ok := steps[1].(primitive.D)
+	if !ok {
+		t.Fatalf("step type = %T, want primitive.D", steps[1])
+	}
+	stepFields := bsonDMap(step)
+	if got := stepFields["Association"]; got != "SampleApps.DeploymentTarget_ApplicationView" {
+		t.Fatalf("Association = %v", got)
+	}
+	if got := stepFields["DestinationEntity"]; got != "SampleApps.ApplicationView" {
+		t.Fatalf("DestinationEntity = %v", got)
+	}
+}
+
+func TestParseSortItemsPreservesIndirectEntityRef(t *testing.T) {
+	got := parseSortItems(map[string]any{
+		"NewSortings": map[string]any{
+			"Sortings": []any{
+				int32(2),
+				map[string]any{
+					"$ID":       "sort-1",
+					"$Type":     "Microflows$RetrieveSorting",
+					"SortOrder": "Descending",
+					"AttributeRef": map[string]any{
+						"$Type":     "DomainModels$AttributeRef",
+						"Attribute": "SampleApps.ApplicationView.CreatedAt",
+						"EntityRef": map[string]any{
+							"$Type": "DomainModels$IndirectEntityRef",
+							"Steps": []any{
+								int32(2),
+								map[string]any{
+									"$Type":             "DomainModels$EntityRefStep",
+									"Association":       "SampleApps.DeploymentTarget_ApplicationView",
+									"DestinationEntity": "SampleApps.ApplicationView",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	if len(got) != 1 {
+		t.Fatalf("got %d sort items, want 1", len(got))
+	}
+	if steps := got[0].EntityRefSteps; len(steps) != 1 || steps[0].Association != "SampleApps.DeploymentTarget_ApplicationView" || steps[0].DestinationEntity != "SampleApps.ApplicationView" {
+		t.Fatalf("EntityRefSteps = %#v", steps)
+	}
+}
+
 func TestParseActionActivityPreservesWebServiceActionRawBSONOrder(t *testing.T) {
 	rawAction := primitive.D{
 		{Key: "$ID", Value: "web-service-action-ordered"},
