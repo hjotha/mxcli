@@ -5,13 +5,15 @@ create persistent entity AddListExample.Item (
 );
 /
 
-create microflow AddListExample.AddFirstItem (
-  $SourceItems: list of AddListExample.Item
+create microflow AddListExample.AddChosenItem (
+  $UseFirst: Boolean
 )
 returns list of AddListExample.Item as $Items
 begin
+  $First = create AddListExample.Item (Name = 'first');
+  $Second = create AddListExample.Item (Name = 'second');
   $Items = create list of AddListExample.Item;
-  add head($SourceItems) to $Items;
+  add if $UseFirst then $First else $Second to $Items;
   return $Items;
 end;
 /

@@ -7,7 +7,7 @@ Status: Draft
 Allow `add` microflow statements to use any expression as the value being added to a list:
 
 ```mdl
-add head($SourceList) to $TargetList;
+add if $UseFirst then $FirstItem else $SecondItem to $TargetList;
 ```
 
 The existing variable-only form remains valid:
@@ -26,7 +26,7 @@ The parser stores the add value as an expression. For compatibility, a bare vari
 
 ## Tests And Examples
 
-`mdl-examples/doctype-tests/add_expression_to_list.test.mdl` demonstrates adding `head($SourceList)` to another list. Go regression tests cover parser behavior and builder output for both expression and simple-variable forms.
+`mdl-examples/doctype-tests/add_expression_to_list.mdl` demonstrates adding an object-valued conditional expression to another list. Go regression tests cover parser behavior and builder output for both expression and simple-variable forms.
 
 ## Open Questions
 

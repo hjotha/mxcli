@@ -537,6 +537,12 @@ func exprVarRefs(expr ast.Expression) []string {
 		}
 	case *ast.ParenExpr:
 		refs = append(refs, exprVarRefs(e.Inner)...)
+	case *ast.IfThenElseExpr:
+		refs = append(refs, exprVarRefs(e.Condition)...)
+		refs = append(refs, exprVarRefs(e.ThenExpr)...)
+		refs = append(refs, exprVarRefs(e.ElseExpr)...)
+	case *ast.SourceExpr:
+		refs = append(refs, exprVarRefs(e.Expression)...)
 	}
 	return refs
 }
