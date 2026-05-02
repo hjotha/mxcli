@@ -122,7 +122,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		var prevThenAnchor *ast.FlowAnchors
 		var pendingThenCase string
 		var pendingThenAnchor *ast.FlowAnchors
-		for _, stmt := range s.ThenBody {
+		for i, stmt := range s.ThenBody {
 			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
@@ -152,6 +152,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 					}
 					applyUserAnchors(flow, originAnchor, destAnchor)
 					fb.flows = append(fb.flows, flow)
+					if fb.emptyErrorHandlerFrom == lastThenID {
+						fb.addPendingErrorHandlerFlowForStatement(lastThenID, actID, stmt, statementsReferenceVar(s.ThenBody[i+1:], fb.errorHandlerSkipVar))
+					}
 				}
 				prevThenAnchor = thisAnchor
 				// For nested compound statements, use their exit point
@@ -209,7 +212,7 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 		var prevElseAnchor *ast.FlowAnchors
 		var pendingElseCase string
 		var pendingElseAnchor *ast.FlowAnchors
-		for _, stmt := range s.ElseBody {
+		for i, stmt := range s.ElseBody {
 			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID != "" {
@@ -237,6 +240,9 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 					}
 					applyUserAnchors(flow, originAnchor, destAnchor)
 					fb.flows = append(fb.flows, flow)
+					if fb.emptyErrorHandlerFrom == lastElseID {
+						fb.addPendingErrorHandlerFlowForStatement(lastElseID, actID, stmt, statementsReferenceVar(s.ElseBody[i+1:], fb.errorHandlerSkipVar))
+					}
 				}
 				prevElseAnchor = thisAnchor
 				// For nested compound statements, use their exit point

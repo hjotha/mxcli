@@ -777,6 +777,58 @@ func TestBuildFlowGraph_EmptyNoOutputHandlerRejoinsAtNextAction(t *testing.T) {
 	t.Fatal("empty no-output handler should rejoin at the next action")
 }
 
+func TestBuildFlowGraph_EmptyNoOutputHandlerInIfBranchRejoinsAtNextAction(t *testing.T) {
+	body := []ast.MicroflowStatement{
+		&ast.IfStmt{
+			Condition: &ast.VariableExpr{Name: "ShouldRefresh"},
+			HasElse:   true,
+			ThenBody: []ast.MicroflowStatement{
+				&ast.CallMicroflowStmt{
+					MicroflowName: ast.QualifiedName{Module: "Synthetic", Name: "RefreshCache"},
+					ErrorHandling: &ast.ErrorHandlingClause{Type: ast.ErrorHandlingCustomWithoutRollback},
+				},
+				&ast.CallJavaActionStmt{
+					OutputVariable: "ProcessedCount",
+					ActionName:     ast.QualifiedName{Module: "Synthetic", Name: "CountProcessedItems"},
+				},
+			},
+			ElseBody: []ast.MicroflowStatement{
+				&ast.ReturnStmt{},
+			},
+		},
+	}
+
+	fb := &flowBuilder{posX: 100, posY: 100, spacing: HorizontalSpacing, measurer: &layoutMeasurer{}}
+	oc := fb.buildFlowGraph(body, nil)
+
+	var callID, javaID model.ID
+	for _, obj := range oc.Objects {
+		activity, ok := obj.(*microflows.ActionActivity)
+		if !ok {
+			continue
+		}
+		switch action := activity.Action.(type) {
+		case *microflows.MicroflowCallAction:
+			if action.MicroflowCall != nil && action.MicroflowCall.Microflow == "Synthetic.RefreshCache" {
+				callID = activity.ID
+			}
+		case *microflows.JavaActionCallAction:
+			if action.ResultVariableName == "ProcessedCount" {
+				javaID = activity.ID
+			}
+		}
+	}
+	if callID == "" || javaID == "" {
+		t.Fatalf("expected no-output call and branch continuation; got call=%q java=%q", callID, javaID)
+	}
+	for _, flow := range oc.Flows {
+		if flow.IsErrorHandler && flow.OriginID == callID && flowPathExists(oc.Flows, flow.DestinationID, javaID) {
+			return
+		}
+	}
+	t.Fatal("empty no-output handler inside IF branch should rejoin at the next branch action")
+}
+
 func TestBuildFlowGraph_ErrorHandlerEmptyElseKeepsFalseCaseOnRejoin(t *testing.T) {
 	body := []ast.MicroflowStatement{
 		&ast.CallMicroflowStmt{
