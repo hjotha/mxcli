@@ -199,15 +199,21 @@ func downloadMxcliBinary(repo, tag, targetOS, targetArch, outputPath string, w i
 	url := mxcliBinaryURL(repo, tag, targetOS, targetArch)
 	fmt.Fprintf(w, "Downloading mxcli %s (%s/%s)...\n", tag, targetOS, targetArch)
 	fmt.Fprintf(w, "  URL: %s\n", url)
+	return downloadMxcliBinaryFromURL(url, outputPath, w)
+}
 
-	resp, err := http.Get(url)
+// downloadMxcliBinaryFromURL fetches a binary from rawURL and writes it to
+// outputPath with executable permissions (0755). Used by downloadMxcliBinary
+// and directly by tests via an httptest.Server URL.
+func downloadMxcliBinaryFromURL(rawURL, outputPath string, w io.Writer) error {
+	resp, err := http.Get(rawURL)
 	if err != nil {
 		return fmt.Errorf("downloading mxcli: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("downloading mxcli: HTTP %d from %s", resp.StatusCode, url)
+		return fmt.Errorf("downloading mxcli: HTTP %d from %s", resp.StatusCode, rawURL)
 	}
 
 	if resp.ContentLength > 0 {
