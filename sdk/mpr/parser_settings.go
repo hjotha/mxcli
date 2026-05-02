@@ -173,6 +173,19 @@ func parseLanguageSettings(raw map[string]any) *model.LanguageSettings {
 	ls.ID = model.ID(extractBsonID(raw["$ID"]))
 	ls.TypeName = extractString(raw["$Type"])
 	ls.DefaultLanguageCode = extractString(raw["DefaultLanguageCode"])
+	for _, item := range extractBsonArray(raw["Languages"]) {
+		langMap := extractBsonMap(item)
+		if langMap == nil {
+			continue
+		}
+		ls.Languages = append(ls.Languages, model.Language{
+			Code:                 extractString(langMap["Code"]),
+			CheckCompleteness:    extractBool(langMap["CheckCompleteness"], false),
+			CustomDateFormat:     extractString(langMap["CustomDateFormat"]),
+			CustomDateTimeFormat: extractString(langMap["CustomDateTimeFormat"]),
+			CustomTimeFormat:     extractString(langMap["CustomTimeFormat"]),
+		})
+	}
 	return ls
 }
 

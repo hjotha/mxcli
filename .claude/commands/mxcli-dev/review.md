@@ -32,6 +32,8 @@ proactively. Add a row after every review that surfaces something new.
 | 7 | Skill/doc table references a function that doesn't exist (e.g. `formatActionStatement()` vs `formatAction()`) | Docs quality | Grep function names before writing: `grep -r "func formatA" mdl/executor/` |
 | 8 | "Always X" rule is too absolute for trivial edge cases (e.g. "always write failing test first" for one-char typos) | Docs quality | Soften to "prefer X" or add an exception clause; include the reasoning so readers can judge edge cases |
 | 9 | Doc comment promises a fallback/feature that doesn't exist in the code (e.g., "raw-map fallback in the client" when no such fallback was implemented) | Docs quality | Grep for function/type names referenced in doc comments to confirm they exist before committing |
+| 10 | BSON array items decoded by mongo driver are `primitive.D`, not `map[string]any` — bare type assertion `item.(map[string]any)` always fails silently, causing silent data loss (e.g. Languages not parsed, issue #480) | BSON parsing | Always use `extractBsonMap(item)` instead of `item.(map[string]any)`; write a parser unit test with `primitive.D` items to catch this class of bug |
+| 11 | `execShow` switch missing a case for a new `ShowXxx` constant — executor handler is wired but never dispatched, command silently does nothing | Dispatch gap | After adding a new `Show*` constant and handler, grep `executor_query.go` to confirm the case is present; add a mock test that calls the handler directly |
 
 ---
 
