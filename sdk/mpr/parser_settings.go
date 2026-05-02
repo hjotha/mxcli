@@ -174,8 +174,8 @@ func parseLanguageSettings(raw map[string]any) *model.LanguageSettings {
 	ls.TypeName = extractString(raw["$Type"])
 	ls.DefaultLanguageCode = extractString(raw["DefaultLanguageCode"])
 	for _, item := range extractBsonArray(raw["Languages"]) {
-		langMap, ok := item.(map[string]any)
-		if !ok {
+		langMap := extractBsonMap(item)
+		if langMap == nil {
 			continue
 		}
 		ls.Languages = append(ls.Languages, model.Language{

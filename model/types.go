@@ -820,12 +820,14 @@ type LanguageSettings struct {
 }
 
 // Language represents a Texts$Language entry in the project language settings.
+// The Languages slice is populated by parseLanguageSettings and is available
+// for use by settings describers and future language-aware commands.
 type Language struct {
-	Code                string `json:"code"`
-	CheckCompleteness   bool   `json:"checkCompleteness,omitempty"`
-	CustomDateFormat    string `json:"customDateFormat,omitempty"`
+	Code                 string `json:"code"`
+	CheckCompleteness    bool   `json:"checkCompleteness,omitempty"`
+	CustomDateFormat     string `json:"customDateFormat,omitempty"`
 	CustomDateTimeFormat string `json:"customDateTimeFormat,omitempty"`
-	CustomTimeFormat    string `json:"customTimeFormat,omitempty"`
+	CustomTimeFormat     string `json:"customTimeFormat,omitempty"`
 }
 
 // CertificateSettings represents Settings$CertificateSettings.

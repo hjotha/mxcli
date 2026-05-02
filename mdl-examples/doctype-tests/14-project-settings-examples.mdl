@@ -145,5 +145,6 @@ alter settings workflows UserEntity = 'System.User';
 -- ALTER SETTINGS LANGUAGE
 -- ALTER SETTINGS WORKFLOWS
 -- SHOW SETTINGS / DESCRIBE SETTINGS (read-only)
+-- SHOW LANGUAGES (lists language codes with string counts; requires refresh catalog full)
 --
 -- ============================================================================

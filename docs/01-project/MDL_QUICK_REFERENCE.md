@@ -457,6 +457,7 @@ create or replace navigation Responsive
 | Drop configuration | `drop configuration 'Name';` | Remove a configuration |
 | Alter language | `alter settings LANGUAGE key = value;` | DefaultLanguageCode |
 | Alter workflows | `alter settings workflows key = value;` | UserEntity, DefaultTaskParallelism |
+| List languages | `show languages;` | Lists language codes with translation string counts (requires `refresh catalog full`) |
 
 ## Business Events
 
