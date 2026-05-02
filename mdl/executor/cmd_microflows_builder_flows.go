@@ -806,12 +806,15 @@ func isTerminalStmt(stmt ast.MicroflowStatement) bool {
 				return false
 			}
 		}
-		// Both paths return true intentionally. isTerminalStmt diverges from
-		// bodyReturns here: bodyReturns requires an ELSE to guarantee all paths
-		// return (a valid Mendix requirement), but isTerminalStmt only needs to
-		// know whether the flow builder must thread a continuation edge past this
-		// statement. When every explicit case terminates the split has no outgoing
-		// merge edge regardless of whether an ELSE exists, so we are always terminal.
+		// Every reachable branch terminates, so the split has no continuation
+		// to thread into the parent flow. This intentionally diverges from
+		// `bodyReturns` in validate_microflow.go: that predicate treats an
+		// enum split without an `else` as non-terminal because authored MDL
+		// is expected to supply a default branch covering missing values.
+		// Here we also accept described-from-MPR graphs where Studio Pro
+		// produced an exhaustive set of value cases without a default flow —
+		// in both no-else and with-else forms the split terminates once we
+		// reach this point.
 		return true
 	case *ast.InheritanceSplitStmt:
 		if len(s.Cases) == 0 || len(s.ElseBody) == 0 || !lastStmtIsReturn(s.ElseBody) {
