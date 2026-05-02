@@ -83,6 +83,7 @@ func formatActivity(
 		if ctx != nil && ctx.DescribingMicroflowHasReturnValue {
 			return ""
 		}
+		// Without render context, default to the void-flow form.
 		return "return;"
 
 	case *microflows.ActionActivity:
@@ -394,7 +395,7 @@ func formatAction(
 					// Split on "][" boundary (possibly separated by \n literals),
 					// then re-wrap each predicate.
 					inner := constraint[1 : len(constraint)-1]
-					// Normalise real newlines between predicates: ]\n[ → ][
+					// Normalise real newlines between predicates: ]\n[ to ][
 					inner = strings.ReplaceAll(inner, "]\n[", "][")
 					parts := strings.Split(inner, "][")
 					if len(parts) > 1 {
@@ -517,7 +518,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.ResultVariableName != "" {
+		if a.UseReturnVariable && a.ResultVariableName != "" {
 			return fmt.Sprintf("$%s = call microflow %s(%s);", a.ResultVariableName, mfName, paramStr)
 		}
 		return fmt.Sprintf("call microflow %s(%s);", mfName, paramStr)
@@ -546,7 +547,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.OutputVariableName != "" {
+		if a.UseReturnVariable && a.OutputVariableName != "" {
 			return fmt.Sprintf("$%s = call nanoflow %s(%s);", a.OutputVariableName, nfName, paramStr)
 		}
 		return fmt.Sprintf("call nanoflow %s(%s);", nfName, paramStr)
@@ -600,7 +601,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.ResultVariableName != "" {
+		if a.UseReturnVariable && a.ResultVariableName != "" {
 			return fmt.Sprintf("$%s = call java action %s(%s);", a.ResultVariableName, javaActionName, paramStr)
 		}
 		return fmt.Sprintf("call java action %s(%s);", javaActionName, paramStr)
@@ -625,7 +626,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.ResultVariableName != "" {
+		if a.UseReturnVariable && a.ResultVariableName != "" {
 			return fmt.Sprintf("$%s = call external action %s.%s(%s);", a.ResultVariableName, serviceName, actionName, paramStr)
 		}
 		return fmt.Sprintf("call external action %s.%s(%s);", serviceName, actionName, paramStr)
@@ -767,7 +768,7 @@ func formatAction(
 		return fmt.Sprintf("get workflow data $%s as %s;", a.WorkflowVariable, a.Workflow)
 
 	case *microflows.WorkflowCallAction:
-		if a.OutputVariableName != "" {
+		if a.UseReturnVariable && a.OutputVariableName != "" {
 			return fmt.Sprintf("$%s = call workflow %s ($%s);", a.OutputVariableName, a.Workflow, a.WorkflowContextVariable)
 		}
 		return fmt.Sprintf("call workflow %s ($%s);", a.Workflow, a.WorkflowContextVariable)
@@ -864,7 +865,7 @@ func formatAction(
 			paramStr = strings.Join(params, ", ")
 		}
 
-		if a.OutputVariableName != "" {
+		if a.UseReturnVariable && a.OutputVariableName != "" {
 			return fmt.Sprintf("$%s = call javascript action %s(%s);", a.OutputVariableName, jsActionName, paramStr)
 		}
 		return fmt.Sprintf("call javascript action %s(%s);", jsActionName, paramStr)
@@ -1600,7 +1601,13 @@ func isSimpleMendixName(name string) bool {
 		return false
 	}
 	for i, r := range name {
-		if r == '_' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || i > 0 && r >= '0' && r <= '9' {
+		if i == 0 {
+			if r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' {
+				continue
+			}
+			return false
+		}
+		if r == '_' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
 			continue
 		}
 		return false
