@@ -65,7 +65,7 @@ func TestValidateMicroflow_EnumSplitElseForbidden(t *testing.T) {
 	t.Fatalf("expected MDL008 for enum split with else branch, got %#v", violations)
 }
 
-func TestValidateMicroflow_EnumSplitMultipleValuesForbidden(t *testing.T) {
+func TestValidateMicroflow_EnumSplitMultipleValuesAllowed(t *testing.T) {
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "Sample", Name: "Route"},
 		Body: []ast.MicroflowStatement{
@@ -83,10 +83,9 @@ func TestValidateMicroflow_EnumSplitMultipleValuesForbidden(t *testing.T) {
 	violations := ValidateMicroflow(stmt)
 	for _, v := range violations {
 		if v.RuleID == "MDL009" {
-			return
+			t.Fatalf("enum split with grouped values must not trigger MDL009: %#v", v)
 		}
 	}
-	t.Fatalf("expected MDL009 for enum split with multiple values per branch, got %#v", violations)
 }
 
 func TestValidateMicroflow_EnumSplitBranchScopedVariable(t *testing.T) {

@@ -90,9 +90,9 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 			v.walkBody(stmt.ThenBody)
 			v.walkBody(stmt.ElseBody)
 		case *ast.EnumSplitStmt:
-			// Mendix enumeration splits map to exclusive splits with one outgoing
-			// flow per enum value. Multiple values per branch and a default (else)
-			// flow are not supported — Studio Pro will reject both with CE errors.
+			// Mendix enumeration splits do not support a default (else) flow.
+			// Multiple values in a single MDL branch are allowed: the builder lowers
+			// them to multiple outgoing enumeration flows that share the same body.
 			if len(stmt.ElseBody) > 0 {
 				v.addViolation("MDL008", linter.SeverityError,
 					fmt.Sprintf("case statement on '$%s' has an else branch; "+
@@ -102,13 +102,6 @@ func (v *microflowValidator) walkBody(body []ast.MicroflowStatement) {
 					"Add an explicit when branch for every enum value instead of using else")
 			}
 			for _, c := range stmt.Cases {
-				if len(c.Values) > 1 {
-					v.addViolation("MDL009", linter.SeverityError,
-						fmt.Sprintf("case statement on '$%s': when branch lists %d values (%s); "+
-							"Mendix enumeration splits require exactly one value per branch.",
-							stmt.Variable, len(c.Values), strings.Join(c.Values, ", ")),
-						"Split into separate when branches, one per enum value")
-				}
 				v.walkBody(c.Body)
 			}
 			v.walkBody(stmt.ElseBody)

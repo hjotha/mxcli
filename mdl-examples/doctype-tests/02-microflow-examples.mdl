@@ -2451,8 +2451,9 @@ end;
  * Example 16.4: CASE statement (enum split)
  *
  * Branches on an enumeration variable using CASE WHEN THEN syntax.
- * Each WHEN must list exactly one value — Mendix does not support multiple
- * values per branch or a default (else) case. (empty) matches an unset value.
+ * A WHEN branch may list multiple values; mxcli lowers that to multiple
+ * Mendix enumeration flows that share the same branch body. Mendix does not
+ * support a default (else) case. (empty) matches an unset value.
  */
 create microflow MfTest.M095_RouteByCountry (
   $Country: enum MfTest.Country

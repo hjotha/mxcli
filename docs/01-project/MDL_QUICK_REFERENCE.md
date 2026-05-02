@@ -241,7 +241,7 @@ authentication basic, session
 | Annotation | `@annotation 'text'` | Visual note attached to next activity |
 | Free annotation | `@annotation 'text'` before `@position(...)` | Free-floating visual note preserved by order |
 | IF | `if condition then ... [else ...] end if;` | |
-| Enum split | `case $Var when Value then ... end case;` | Enumeration decision branches |
+| Enum split | `case $Var when ValueA, ValueB then ... end case;` | Enumeration decision branches; grouped values share the same body |
 | LOOP | `loop $item in $list begin ... end loop;` | FOR EACH over list |
 | WHILE | `while condition begin ... end while;` | Condition-based loop |
 | Return | `return $value;` | Required at end of every flow path |
