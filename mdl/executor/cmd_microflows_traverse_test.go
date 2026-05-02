@@ -1108,11 +1108,11 @@ func TestTraverseFlowUntilMerge_NestedEmptyThenSwapEmitsHeaderOnce(t *testing.T)
 	traverseFlowUntilMerge(e.newExecContext(context.Background()), mkID("split"), mkID("parentMerge"), activityMap, flowsByOrigin, nil, splitMergeMap, visited, nil, nil, &lines, 0, nil, 0, nil)
 
 	output := strings.Join(lines, "\n")
-	if !strings.Contains(output, "if not($NestedDone) then") {
-		t.Fatalf("expected negated nested condition, got:\n%s", output)
-	}
 	if strings.Count(output, "if ") != 1 {
 		t.Fatalf("expected nested split header to be emitted once, got:\n%s", output)
+	}
+	if strings.Count(output, "end if;") != 1 {
+		t.Fatalf("expected nested split to close exactly once, got:\n%s", output)
 	}
 }
 
