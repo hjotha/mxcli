@@ -659,6 +659,21 @@ func traverseFlow(
 	stmt := formatActivity(ctx, obj, entityNames, microflowNames)
 	indentStr := strings.Repeat("  ", indent)
 
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
+		startLine := len(*lines) + headerLineCount
+		mergeID := splitMergeMap[currentID]
+		emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
+		emitInheritanceSplitStatement(ctx, currentID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+		if mergeID != "" {
+			visited[mergeID] = true
+			for _, flow := range flowsByOrigin[mergeID] {
+				traverseFlow(ctx, flow.DestinationID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
+		}
+		return
+	}
+
 	// Handle ExclusiveSplit specially - need to process both branches
 	if split, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
 		startLine := len(*lines) + headerLineCount
@@ -821,6 +836,21 @@ func traverseFlowUntilMerge(
 
 	stmt := formatActivity(ctx, obj, entityNames, microflowNames)
 	indentStr := strings.Repeat("  ", indent)
+
+	if _, isSplit := obj.(*microflows.InheritanceSplit); isSplit && len(findNormalFlows(flowsByOrigin[currentID])) > 1 {
+		startLine := len(*lines) + headerLineCount
+		nestedMergeID := splitMergeMap[currentID]
+		emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
+		emitInheritanceSplitStatement(ctx, currentID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+		recordSourceMap(sourceMap, currentID, startLine, len(*lines)+headerLineCount-1)
+		if nestedMergeID != "" && nestedMergeID != mergeID {
+			visited[nestedMergeID] = true
+			for _, flow := range flowsByOrigin[nestedMergeID] {
+				traverseFlowUntilMerge(ctx, flow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent, sourceMap, headerLineCount, annotationsByTarget)
+			}
+		}
+		return
+	}
 
 	// Handle nested ExclusiveSplit
 	if split, isSplit := obj.(*microflows.ExclusiveSplit); isSplit {
@@ -1280,6 +1310,56 @@ func emitEnumSplitStatement(
 	*lines = append(*lines, indentStr+"end case;")
 }
 
+func emitInheritanceSplitStatement(
+	ctx *ExecContext,
+	currentID model.ID,
+	stopID model.ID,
+	activityMap map[model.ID]microflows.MicroflowObject,
+	flowsByOrigin map[model.ID][]*microflows.SequenceFlow,
+	flowsByDest map[model.ID][]*microflows.SequenceFlow,
+	splitMergeMap map[model.ID]model.ID,
+	visited map[model.ID]bool,
+	entityNames map[model.ID]string,
+	microflowNames map[model.ID]string,
+	lines *[]string,
+	indent int,
+	sourceMap map[string]elkSourceRange,
+	headerLineCount int,
+	annotationsByTarget map[model.ID][]string,
+) {
+	split, _ := activityMap[currentID].(*microflows.InheritanceSplit)
+	if split == nil {
+		return
+	}
+	varName := split.VariableName
+	if !strings.HasPrefix(varName, "$") {
+		varName = "$" + varName
+	}
+	indentStr := strings.Repeat("  ", indent)
+	*lines = append(*lines, indentStr+"split type "+varName)
+
+	branchStopID := splitMergeMap[currentID]
+	if branchStopID == "" {
+		branchStopID = stopID
+	}
+
+	var elseFlow *microflows.SequenceFlow
+	for _, flow := range orderedInheritanceSplitFlows(findNormalFlows(flowsByOrigin[currentID])) {
+		caseName, ok := inheritanceCaseName(flow, entityNames)
+		if !ok {
+			elseFlow = flow
+			continue
+		}
+		*lines = append(*lines, indentStr+"case "+caseName)
+		traverseFlowUntilMerge(ctx, flow.DestinationID, branchStopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+	if elseFlow != nil {
+		*lines = append(*lines, indentStr+"else")
+		traverseFlowUntilMerge(ctx, elseFlow.DestinationID, branchStopID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, cloneVisited(visited), entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+	}
+	*lines = append(*lines, indentStr+"end split;")
+}
+
 func enumSplitVariable(split *microflows.ExclusiveSplit) (string, bool) {
 	if split == nil {
 		return "", false
@@ -1318,10 +1398,41 @@ func enumCaseValue(flow *microflows.SequenceFlow) (string, bool) {
 	}
 }
 
+func inheritanceCaseName(flow *microflows.SequenceFlow, entityNames map[model.ID]string) (string, bool) {
+	if flow == nil || flow.CaseValue == nil {
+		return "", false
+	}
+	switch cv := flow.CaseValue.(type) {
+	case *microflows.InheritanceCase:
+		if cv.EntityQualifiedName != "" {
+			return cv.EntityQualifiedName, true
+		}
+		if name := entityNames[cv.EntityID]; name != "" {
+			return name, true
+		}
+	case microflows.InheritanceCase:
+		if cv.EntityQualifiedName != "" {
+			return cv.EntityQualifiedName, true
+		}
+		if name := entityNames[cv.EntityID]; name != "" {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 func orderedEnumSplitFlows(flows []*microflows.SequenceFlow) []*microflows.SequenceFlow {
 	ordered := append([]*microflows.SequenceFlow(nil), flows...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		return splitCaseOrder(ordered[i]) < splitCaseOrder(ordered[j])
+	})
+	return ordered
+}
+
+func orderedInheritanceSplitFlows(flows []*microflows.SequenceFlow) []*microflows.SequenceFlow {
+	ordered := append([]*microflows.SequenceFlow(nil), flows...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		return inheritanceSplitCaseOrder(ordered[i]) < inheritanceSplitCaseOrder(ordered[j])
 	})
 	return ordered
 }
@@ -1331,6 +1442,18 @@ func splitCaseOrder(flow *microflows.SequenceFlow) int {
 		return 1 << 20
 	}
 	for i, pair := range splitCaseOrderAnchors {
+		if flow.OriginConnectionIndex == pair.origin && flow.DestinationConnectionIndex == pair.destination {
+			return i
+		}
+	}
+	return (1 << 10) + flow.OriginConnectionIndex*4 + flow.DestinationConnectionIndex
+}
+
+func inheritanceSplitCaseOrder(flow *microflows.SequenceFlow) int {
+	if flow == nil {
+		return 1 << 20
+	}
+	for i, pair := range inheritanceSplitCaseOrderAnchors {
 		if flow.OriginConnectionIndex == pair.origin && flow.DestinationConnectionIndex == pair.destination {
 			return i
 		}

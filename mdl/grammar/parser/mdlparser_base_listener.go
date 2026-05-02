@@ -918,6 +918,26 @@ func (s *BaseMDLParserListener) EnterEnumSplitCaseValue(ctx *EnumSplitCaseValueC
 // ExitEnumSplitCaseValue is called when production enumSplitCaseValue is exited.
 func (s *BaseMDLParserListener) ExitEnumSplitCaseValue(ctx *EnumSplitCaseValueContext) {}
 
+// EnterInheritanceSplitStatement is called when production inheritanceSplitStatement is entered.
+func (s *BaseMDLParserListener) EnterInheritanceSplitStatement(ctx *InheritanceSplitStatementContext) {
+}
+
+// ExitInheritanceSplitStatement is called when production inheritanceSplitStatement is exited.
+func (s *BaseMDLParserListener) ExitInheritanceSplitStatement(ctx *InheritanceSplitStatementContext) {
+}
+
+// EnterInheritanceSplitCase is called when production inheritanceSplitCase is entered.
+func (s *BaseMDLParserListener) EnterInheritanceSplitCase(ctx *InheritanceSplitCaseContext) {}
+
+// ExitInheritanceSplitCase is called when production inheritanceSplitCase is exited.
+func (s *BaseMDLParserListener) ExitInheritanceSplitCase(ctx *InheritanceSplitCaseContext) {}
+
+// EnterCastObjectStatement is called when production castObjectStatement is entered.
+func (s *BaseMDLParserListener) EnterCastObjectStatement(ctx *CastObjectStatementContext) {}
+
+// ExitCastObjectStatement is called when production castObjectStatement is exited.
+func (s *BaseMDLParserListener) ExitCastObjectStatement(ctx *CastObjectStatementContext) {}
+
 // EnterSetStatement is called when production setStatement is entered.
 func (s *BaseMDLParserListener) EnterSetStatement(ctx *SetStatementContext) {}
 
