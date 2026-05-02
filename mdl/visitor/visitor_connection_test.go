@@ -40,3 +40,37 @@ func TestDisconnect(t *testing.T) {
 		t.Fatalf("Expected DisconnectStmt, got %T", prog.Statements[0])
 	}
 }
+
+func TestStatus_BareKeyword(t *testing.T) {
+	prog, errs := Build(`STATUS;`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors for bare STATUS: %v", errs)
+	}
+	if _, ok := prog.Statements[0].(*ast.StatusStmt); !ok {
+		t.Fatalf("Expected StatusStmt, got %T", prog.Statements[0])
+	}
+}
+
+func TestStatus_ShowStatus(t *testing.T) {
+	prog, errs := Build(`SHOW STATUS;`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors for SHOW STATUS: %v", errs)
+	}
+	if _, ok := prog.Statements[0].(*ast.StatusStmt); !ok {
+		t.Fatalf("Expected StatusStmt for SHOW STATUS, got %T", prog.Statements[0])
+	}
+}
+
+func TestStatus_ShowCatalogStatusUnaffected(t *testing.T) {
+	prog, errs := Build(`SHOW CATALOG STATUS;`)
+	if len(errs) > 0 {
+		t.Fatalf("Parse errors for SHOW CATALOG STATUS: %v", errs)
+	}
+	stmt, ok := prog.Statements[0].(*ast.ShowStmt)
+	if !ok {
+		t.Fatalf("Expected ShowStmt, got %T", prog.Statements[0])
+	}
+	if stmt.ObjectType != ast.ShowCatalogStatus {
+		t.Errorf("Expected ShowCatalogStatus, got %v", stmt.ObjectType)
+	}
+}

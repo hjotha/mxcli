@@ -1162,6 +1162,9 @@ type MDLParserListener interface {
 	// EnterDisconnectStatement is called when entering the disconnectStatement production.
 	EnterDisconnectStatement(c *DisconnectStatementContext)
 
+	// EnterStatusStatement is called when entering the statusStatement production.
+	EnterStatusStatement(c *StatusStatementContext)
+
 	// EnterUpdateStatement is called when entering the updateStatement production.
 	EnterUpdateStatement(c *UpdateStatementContext)
 
@@ -2508,6 +2511,9 @@ type MDLParserListener interface {
 
 	// ExitDisconnectStatement is called when exiting the disconnectStatement production.
 	ExitDisconnectStatement(c *DisconnectStatementContext)
+
+	// ExitStatusStatement is called when exiting the statusStatement production.
+	ExitStatusStatement(c *StatusStatementContext)
 
 	// ExitUpdateStatement is called when exiting the updateStatement production.
 	ExitUpdateStatement(c *UpdateStatementContext)

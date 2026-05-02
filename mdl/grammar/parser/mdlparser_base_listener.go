@@ -2438,6 +2438,12 @@ func (s *BaseMDLParserListener) EnterDisconnectStatement(ctx *DisconnectStatemen
 // ExitDisconnectStatement is called when production disconnectStatement is exited.
 func (s *BaseMDLParserListener) ExitDisconnectStatement(ctx *DisconnectStatementContext) {}
 
+// EnterStatusStatement is called when production statusStatement is entered.
+func (s *BaseMDLParserListener) EnterStatusStatement(ctx *StatusStatementContext) {}
+
+// ExitStatusStatement is called when production statusStatement is exited.
+func (s *BaseMDLParserListener) ExitStatusStatement(ctx *StatusStatementContext) {}
+
 // EnterUpdateStatement is called when production updateStatement is entered.
 func (s *BaseMDLParserListener) EnterUpdateStatement(ctx *UpdateStatementContext) {}
 

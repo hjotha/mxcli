@@ -217,13 +217,15 @@ func (b *Builder) ExitShowStatement(ctx *parser.ShowStatementContext) {
 	} else if ctx.VERSION() != nil {
 		b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowVersion})
 	} else if ctx.CATALOG() != nil {
-		// Check for SHOW CATALOG STATUS
+		// SHOW CATALOG STATUS or SHOW CATALOG TABLES
 		if ctx.STATUS() != nil {
 			b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowCatalogStatus})
 		} else {
-			// SHOW CATALOG TABLES (or other catalog show commands)
 			b.statements = append(b.statements, &ast.ShowStmt{ObjectType: ast.ShowCatalogTables})
 		}
+	} else if ctx.STATUS() != nil {
+		// SHOW STATUS — print connection status (path, version, module count)
+		b.statements = append(b.statements, &ast.StatusStmt{})
 	} else if ctx.CALLERS() != nil {
 		// SHOW CALLERS OF Module.Microflow [TRANSITIVE]
 		if qn := ctx.QualifiedName(); qn != nil {
@@ -1033,8 +1035,6 @@ func (b *Builder) ExitHelpStatement(ctx *parser.HelpStatementContext) {
 			b.statements = append(b.statements, stmt)
 		case "exit", "quit":
 			b.statements = append(b.statements, &ast.ExitStmt{})
-		case "status":
-			b.statements = append(b.statements, &ast.StatusStmt{})
 		}
 	}
 }

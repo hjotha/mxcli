@@ -3467,6 +3467,7 @@ limitOffsetClause
 utilityStatement
     : connectStatement
     | disconnectStatement
+    | statusStatement
     | updateStatement
     | checkStatement
     | buildStatement
@@ -3495,6 +3496,10 @@ connectStatement
 
 disconnectStatement
     : DISCONNECT
+    ;
+
+statusStatement
+    : STATUS
     ;
 
 updateStatement

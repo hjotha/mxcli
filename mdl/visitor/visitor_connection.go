@@ -28,6 +28,11 @@ func (b *Builder) ExitDisconnectStatement(ctx *parser.DisconnectStatementContext
 	b.statements = append(b.statements, &ast.DisconnectStmt{})
 }
 
+// ExitStatusStatement is called when exiting the statusStatement production (bare STATUS).
+func (b *Builder) ExitStatusStatement(ctx *parser.StatusStatementContext) {
+	b.statements = append(b.statements, &ast.StatusStmt{})
+}
+
 // ----------------------------------------------------------------------------
 // Module Statements
 // ----------------------------------------------------------------------------
