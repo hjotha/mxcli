@@ -272,9 +272,8 @@ func (fb *flowBuilder) addChangeObjectAction(s *ast.ChangeObjectStmt) model.ID {
 }
 
 func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
-	if len(s.Cases) > len(splitCaseOrderAnchors) {
-		fb.addError("case statement on '$%s' has %d cases; maximum supported is %d",
-			s.Variable, len(s.Cases), len(splitCaseOrderAnchors))
+	if count := enumSplitBranchCount(s); count > maxEnumSplitBranches {
+		fb.addError("enum split has %d branches; at most %d branches are supported", count, maxEnumSplitBranches)
 		return ""
 	}
 
@@ -346,7 +345,9 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 
 		lastID := model.ID("")
 		pendingCase := ""
+		var prevAnchor *ast.FlowAnchors
 		for _, stmt := range br.body {
+			thisAnchor := stmtOwnAnchor(stmt)
 			actID := fb.addStatement(stmt)
 			if actID == "" {
 				continue
@@ -357,14 +358,26 @@ func (fb *flowBuilder) addEnumSplit(s *ast.EnumSplitStmt) model.ID {
 			}
 			if lastID == "" {
 				fb.addGroupedEnumSplitFlows(splitID, actID, br.values, i, splitX+SplitWidth+HorizontalSpacing/4, branchY)
+				// The first statement in a case can carry @anchor(from:…,
+				// to:…) that should apply to the split→firstActivity flow.
+				// addGroupedEnumSplitFlows appends one flow per case value;
+				// anchor the last one so `@anchor(to: top)` etc. round-trips
+				// through describe → exec without silently dropping.
+				if thisAnchor != nil && len(fb.flows) > 0 {
+					applyUserAnchors(fb.flows[len(fb.flows)-1], nil, thisAnchor)
+				}
 			} else {
+				var flow *microflows.SequenceFlow
 				if pendingCase != "" {
-					fb.flows = append(fb.flows, newHorizontalFlowWithCase(lastID, actID, pendingCase))
+					flow = newHorizontalFlowWithCase(lastID, actID, pendingCase)
 					pendingCase = ""
 				} else {
-					fb.flows = append(fb.flows, newHorizontalFlow(lastID, actID))
+					flow = newHorizontalFlow(lastID, actID)
 				}
+				applyUserAnchors(flow, prevAnchor, thisAnchor)
+				fb.flows = append(fb.flows, flow)
 			}
+			prevAnchor = thisAnchor
 			if fb.nextConnectionPoint != "" {
 				lastID = fb.nextConnectionPoint
 				fb.nextConnectionPoint = ""
@@ -641,6 +654,8 @@ var splitCaseOrderAnchors = []splitCaseOrderAnchor{
 	{AnchorLeft, AnchorBottom},
 }
 
+var maxEnumSplitBranches = len(splitCaseOrderAnchors)
+
 func applySplitCaseOrder(flow *microflows.SequenceFlow, order int) {
 	if flow == nil || order < 0 || order >= len(splitCaseOrderAnchors) {
 		return
@@ -658,6 +673,17 @@ func enumSplitCaseValues(c ast.EnumSplitCase) []string {
 		return []string{c.Value}
 	}
 	return nil
+}
+
+func enumSplitBranchCount(s *ast.EnumSplitStmt) int {
+	if s == nil {
+		return 0
+	}
+	count := len(s.Cases)
+	if len(s.ElseBody) > 0 {
+		count++
+	}
+	return count
 }
 
 func appendEnumBodies(s *ast.EnumSplitStmt) []ast.MicroflowStatement {
