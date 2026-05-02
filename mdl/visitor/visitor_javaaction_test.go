@@ -300,6 +300,27 @@ $$;`
 	}
 }
 
+func TestJavaAction_ExplicitVoidReturnType(t *testing.T) {
+	input := `CREATE JAVA ACTION MyModule.DoStuff()
+RETURNS Void
+AS $$
+System.out.println("done");
+$$;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			t.Errorf("Parse error: %v", err)
+		}
+		return
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateJavaActionStmt)
+	if stmt.ReturnType.Kind != ast.TypeVoid {
+		t.Fatalf("ReturnType.Kind = %v, want TypeVoid", stmt.ReturnType.Kind)
+	}
+}
+
 func TestJavaAction_TypeParamWithMixedParamTypes(t *testing.T) {
 	// Mix ENTITY <pEntity> declaration, bare type param ref, and regular typed params
 	input := `CREATE JAVA ACTION MyModule.ProcessEntity(
