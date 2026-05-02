@@ -6,13 +6,13 @@
 --   Qualified function/microflow-style calls used as IF conditions failed to
 --   parse when the expression callee was not a built-in function name.
 --
--- After fix:
---   The expression grammar accepts qualified names as function call targets,
---   including three-segment names emitted by describe for rule-like split
---   conditions.
+-- Status: working — regression guard added for issue #447.
+--   The expression grammar already accepts qualified names as function call
+--   targets, including three-segment names emitted by describe for rule-like
+--   split conditions. This file keeps that behavior covered.
 --
 -- Usage:
---   mxcli check mdl-examples/bug-tests/qualified-function-call-expression.mdl
+--   mxcli check mdl-examples/bug-tests/447-qualified-function-call-expression.mdl
 -- ============================================================================
 
 create module SyntheticQualifiedCall;
