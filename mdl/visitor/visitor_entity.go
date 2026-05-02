@@ -497,6 +497,9 @@ func parseAnnotationParamInt(ctx parser.IAnnotationParamContext) int {
 	}
 	paramCtx := ctx.(*parser.AnnotationParamContext)
 	if valueCtx := paramCtx.AnnotationValue(); valueCtx != nil {
+		if val, err := strconv.Atoi(strings.TrimSpace(valueCtx.GetText())); err == nil {
+			return val
+		}
 		annValue := valueCtx.(*parser.AnnotationValueContext)
 		if lit := annValue.Literal(); lit != nil {
 			litCtx := lit.(*parser.LiteralContext)

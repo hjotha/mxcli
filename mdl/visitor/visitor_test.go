@@ -1804,6 +1804,31 @@ END;`
 	}
 }
 
+func TestMicroflowPositionAnnotationAcceptsNegativeCoordinates(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.Check ()
+BEGIN
+  @position(-150, -210)
+  LOG INFO NODE 'SyntheticLog' 'message';
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	stmt := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	logStmt, ok := stmt.Body[0].(*ast.LogStmt)
+	if !ok {
+		t.Fatalf("Expected LogStmt, got %T", stmt.Body[0])
+	}
+	if logStmt.Annotations == nil || logStmt.Annotations.Position == nil {
+		t.Fatal("expected position annotation")
+	}
+	if got := *logStmt.Annotations.Position; got.X != -150 || got.Y != -210 {
+		t.Fatalf("position = (%d, %d), want (-150, -210)", got.X, got.Y)
+	}
+}
+
 func TestCallJavaActionAcceptsEmptyArguments(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
