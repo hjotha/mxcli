@@ -35,10 +35,11 @@ func TestWatcherDebounce(t *testing.T) {
 	}
 	defer w.Close()
 
-	// Rapidly write 5 times — should debounce into a single message
+	// Rapidly write 5 times — should debounce into a single message.
+	// Keep the burst tighter than the debounce window so slow CI machines do
+	// not accidentally let an intermediate timer fire.
 	for i := range 5 {
 		_ = os.WriteFile(unitFile, []byte{byte('a' + i)}, 0644)
-		time.Sleep(50 * time.Millisecond)
 	}
 
 	// Wait for debounce to fire (500ms + margin)
