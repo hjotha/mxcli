@@ -641,11 +641,6 @@ func traverseFlow(
 			}
 			return
 		}
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
 		trueFlow, falseFlow := findBranchFlows(flows)
 
 		// Empty-then swap: when the true branch goes directly to the merge
@@ -804,11 +799,6 @@ func traverseFlowUntilMerge(
 			}
 			return
 		}
-		if stmt != "" {
-			emitObjectAnnotations(obj, lines, indentStr, annotationsByTarget, flowsByOrigin, flowsByDest, activityMap)
-			*lines = append(*lines, indentStr+stmt)
-		}
-
 		trueFlow, falseFlow := findBranchFlows(flows)
 
 		// Empty-then swap: negate when true branch is empty but false branch has content.
