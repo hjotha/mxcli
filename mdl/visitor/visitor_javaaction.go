@@ -55,7 +55,7 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 	// Get return type
 	if retType := ctx.JavaActionReturnType(); retType != nil {
 		if dt := retType.DataType(); dt != nil {
-			stmt.ReturnType = buildDataType(dt)
+			stmt.ReturnType = buildJavaActionReturnType(dt)
 		}
 	}
 
@@ -99,6 +99,35 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 	}
 
 	b.statements = append(b.statements, stmt)
+}
+
+func buildJavaActionReturnType(ctx parser.IDataTypeContext) ast.DataType {
+	dt := buildDataType(ctx)
+	if isVoidReturnType(dt) {
+		return ast.DataType{Kind: ast.TypeVoid}
+	}
+	return dt
+}
+
+func isVoidReturnType(dt ast.DataType) bool {
+	var name ast.QualifiedName
+	switch dt.Kind {
+	case ast.TypeVoid:
+		return true
+	case ast.TypeEntity:
+		if dt.EntityRef == nil {
+			return false
+		}
+		name = *dt.EntityRef
+	case ast.TypeEnumeration:
+		if dt.EnumRef == nil {
+			return false
+		}
+		name = *dt.EnumRef
+	default:
+		return false
+	}
+	return name.Module == "" && strings.EqualFold(name.Name, "void")
 }
 
 // extractJavaImports separates `import ...;` lines from Java code.
