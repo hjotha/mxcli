@@ -1,86 +1,22 @@
--- ============================================================================
--- Nanoflow Examples — client-side flows
--- ============================================================================
---
--- Demonstrates all nanoflow features: validation, navigation, messaging,
--- loops, variables, error handling, and return types.
---
--- Nanoflows run client-side (browser/native mobile). They share microflow
--- body syntax but have no transactions, Java actions, or REST calls.
---
--- Key differences from microflows:
---   - No RAISE ERROR / ErrorEvent
---   - No Java actions (use CALL JAVASCRIPT ACTION instead)
---   - No direct REST/external calls (call a microflow for server work)
---   - No binary return type
---   - Error handling per-action via ON ERROR, not transactional ROLLBACK
---   - SYNCHRONIZE available for offline native mobile contexts
---
--- ============================================================================
+-- Nanoflow examples — client-side flows
+-- Nanoflows share microflow body syntax but restrict server-side actions.
 
--- MARK: Module and entity setup
-
+-- Setup
 create module NanoflowExamples;
-create module role NanoflowExamples.User;
-create module role NanoflowExamples.Admin;
-
-/**
- * Product entity used throughout the nanoflow examples.
- */
 create entity NanoflowExamples.Product (
-    Name    : String(200),
-    Price   : Decimal,
-    IsValid : Boolean,
-    Tags    : String(500)
+    Name : String(200),
+    Price : Decimal,
+    IsValid : Boolean
 );
 
--- Helper microflow — server-side save, called from nanoflow examples.
-create microflow NanoflowExamples.ACT_SaveProduct (
-    $Product : NanoflowExamples.Product
-)
-returns Boolean
-begin
-    commit $Product;
-    return true;
-end;
-/
+-- Minimal nanoflow (empty body)
+create nanoflow NanoflowExamples.NF_Empty () begin end;
 
--- Helper page — used by N007_OpenProductDetail (requires Mendix 11.0+ page params).
-create page NanoflowExamples.ProductDetail
-(
-    params: {
-        $Product: NanoflowExamples.Product
-    },
-    title: 'Product Detail',
-    layout: Atlas_Core.Atlas_Default
-)
-{
-    dynamictext text1 (content: 'Product Detail', rendermode: H4)
-}
-/
-
--- ============================================================================
--- MARK: Nanoflows
--- ============================================================================
-
-/**
- * N001: Stand-in nanoflow with no logic.
- * Used as a placeholder during scaffolding.
- */
-create nanoflow NanoflowExamples.N001_Placeholder () begin end;
-
-/**
- * N002: Validates a Product before it is saved.
- * Checks required fields and business rules client-side to avoid a server round-trip.
- *
- * @param $Product The product to validate
- * @returns true if the product passes all validation checks, false otherwise
- */
-create nanoflow NanoflowExamples.N002_ValidateProduct (
-    $Product : NanoflowExamples.Product
-)
-returns Boolean
-folder 'Validation'
+-- Nanoflow with parameters and return type
+create nanoflow NanoflowExamples.NF_ValidateProduct
+    ($Product : NanoflowExamples.Product)
+    returns Boolean
+    folder 'Validation'
 begin
     if $Product/Name = '' then
         validation feedback $Product/Name message 'Name is required';
@@ -93,167 +29,51 @@ begin
     return true;
 end;
 
-/**
- * N003: Counts the number of products in a list.
- * Demonstrates LOOP with BEGIN/END LOOP, DECLARE, and SET.
- *
- * @param $Products List of products to count
- * @returns The number of products in the list
- */
-create nanoflow NanoflowExamples.N003_CountProducts (
-    $Products : list of NanoflowExamples.Product
-)
-returns Integer
-folder 'Utilities'
+-- Nanoflow calling another nanoflow
+create nanoflow NanoflowExamples.NF_SaveProduct
+    ($Product : NanoflowExamples.Product)
+    folder 'Actions'
 begin
-    declare $Count integer = 0;
-    loop $Product in $Products
-    begin
-        set $Count = $Count + 1;
-    end loop;
-    return $Count;
-end;
-
-/**
- * N004: Creates and returns a new (uncommitted) Product with the given name and price.
- * Demonstrates creating an entity object and returning it from a nanoflow.
- *
- * @param $Name  Product name
- * @param $Price Product price (must be non-negative)
- * @returns A new Product object (not yet committed to the server)
- */
-create nanoflow NanoflowExamples.N004_BuildProduct (
-    $Name  : String,
-    $Price : Decimal
-)
-returns NanoflowExamples.Product
-folder 'Factory'
-begin
-    $Product = create NanoflowExamples.Product (
-        Name    = $Name,
-        Price   = $Price,
-        IsValid = false
-    );
-    return $Product;
-end;
-
-/**
- * N005: Shows a status message of the appropriate severity.
- * Demonstrates SHOW MESSAGE with different type keywords.
- *
- * @param $Status Status code: 1 = information, 2 = warning, any other = error
- */
-create nanoflow NanoflowExamples.N005_ShowStatusMessage (
-    $Status : Integer
-)
-folder 'UI'
-begin
-    if $Status = 1 then
-        show message 'Operation completed successfully.' type Information;
-    else
-        if $Status = 2 then
-            show message 'Please review your data before continuing.' type Warning;
-        else
-            show message 'An error occurred. Please try again.' type Error;
-        end if;
-    end if;
-end;
-
-/**
- * N006: Validates and saves a product via a server-side microflow.
- * Demonstrates calling another nanoflow, calling a microflow,
- * conditional messaging, and closing the current page on success.
- *
- * @param $Product The product to validate and save
- */
-create nanoflow NanoflowExamples.N006_SaveProduct (
-    $Product : NanoflowExamples.Product
-)
-folder 'Actions'
-begin
-    -- Client-side validation first (avoids a server round-trip on invalid data)
-    $IsValid = call nanoflow NanoflowExamples.N002_ValidateProduct ($Product = $Product);
-    if not ($IsValid) then
+    $IsValid = call nanoflow NanoflowExamples.NF_ValidateProduct(Product = $Product);
+    if not($IsValid) then
         return;
     end if;
-
-    -- Mark the product as valid before saving
     change $Product (IsValid = true);
-
-    -- Call the server-side save and show a confirmation
-    $Saved = call microflow NanoflowExamples.ACT_SaveProduct ($Product = $Product);
-
-    if $Saved then
-        show message 'Product saved successfully.' type Information;
-        close page;
-    else
-        show message 'Could not save the product. Please try again.' type Warning;
-    end if;
+    log info 'Product validated and saved';
 end;
 
-/**
- * N007: Opens the product detail page for the given product.
- * Demonstrates SHOW PAGE with a page parameter.
- *
- * @param $Product The product whose detail page to open
- */
-create nanoflow NanoflowExamples.N007_OpenProductDetail (
-    $Product : NanoflowExamples.Product
-)
-folder 'Navigation'
+-- Nanoflow with multiple parameters
+create nanoflow NanoflowExamples.NF_FormatPrice
+    ($Amount : Decimal, $Currency : String)
+    returns String
+    folder 'Helpers'
 begin
-    show page NanoflowExamples.ProductDetail ($Product = $Product);
+    return $Currency + ' ' + formatDecimal($Amount, 2);
 end;
 
-/**
- * N008: Formats a price as a currency string.
- * Uses CREATE OR MODIFY so repeated execution is idempotent.
- *
- * @param $Amount   The numeric amount to format
- * @param $Currency The currency code prefix (e.g. 'USD', 'EUR')
- * @returns A formatted string like 'EUR 12.50'
- */
-create or modify nanoflow NanoflowExamples.N008_FormatPrice (
-    $Amount   : Decimal,
-    $Currency : String
-)
-returns String
-folder 'Helpers'
-begin
-    return $Currency + ' ' + toString($Amount);
-end;
+-- Security
+grant execute on nanoflow NanoflowExamples.NF_ValidateProduct to NanoflowExamples.User;
+grant execute on nanoflow NanoflowExamples.NF_SaveProduct to NanoflowExamples.User;
+grant execute on nanoflow NanoflowExamples.NF_FormatPrice to NanoflowExamples.User;
 
--- ============================================================================
--- MARK: Security
--- ============================================================================
-
-grant execute on nanoflow NanoflowExamples.N002_ValidateProduct   to NanoflowExamples.User;
-grant execute on nanoflow NanoflowExamples.N003_CountProducts     to NanoflowExamples.User;
-grant execute on nanoflow NanoflowExamples.N004_BuildProduct      to NanoflowExamples.User;
-grant execute on nanoflow NanoflowExamples.N005_ShowStatusMessage to NanoflowExamples.User;
-grant execute on nanoflow NanoflowExamples.N006_SaveProduct       to NanoflowExamples.User;
-grant execute on nanoflow NanoflowExamples.N007_OpenProductDetail to NanoflowExamples.User;
-grant execute on nanoflow NanoflowExamples.N008_FormatPrice       to NanoflowExamples.User, NanoflowExamples.Admin;
-
--- ============================================================================
--- MARK: Discovery commands
--- ============================================================================
-
+-- Show nanoflows
 show nanoflows;
 show nanoflows in NanoflowExamples;
-describe nanoflow NanoflowExamples.N002_ValidateProduct;
-show access on nanoflow NanoflowExamples.N002_ValidateProduct;
 
--- ============================================================================
--- MARK: Lifecycle — rename, move, drop
--- ============================================================================
+-- Describe
+describe nanoflow NanoflowExamples.NF_ValidateProduct;
 
-rename nanoflow NanoflowExamples.N001_Placeholder to N001_Unused;
-move nanoflow NanoflowExamples.N001_Unused to NanoflowExamples;
-drop nanoflow NanoflowExamples.N001_Unused;
+-- Rename
+rename nanoflow NanoflowExamples.NF_Empty to NF_Placeholder;
 
--- ============================================================================
--- MARK: Access management
--- ============================================================================
+-- Move
+move nanoflow NanoflowExamples.NF_Placeholder to NanoflowExamples;
 
-revoke execute on nanoflow NanoflowExamples.N002_ValidateProduct from NanoflowExamples.User;
+-- Drop
+drop nanoflow NanoflowExamples.NF_Placeholder;
+
+-- Show access
+show access on nanoflow NanoflowExamples.NF_ValidateProduct;
+
+-- Revoke
+revoke execute on nanoflow NanoflowExamples.NF_ValidateProduct from NanoflowExamples.User;
