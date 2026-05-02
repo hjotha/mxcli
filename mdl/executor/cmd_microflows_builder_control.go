@@ -553,6 +553,7 @@ func (fb *flowBuilder) addLoopStatement(s *ast.LoopStmt) model.ID {
 	// Add the internal flows to the parent's flows (top-level), not inside loop
 	// This is how Mendix stores them - all flows at the microflow level
 	fb.flows = append(fb.flows, loopBuilder.flows...)
+	fb.annotationFlows = append(fb.annotationFlows, loopBuilder.annotationFlows...)
 
 	// Re-apply this loop's own annotations now that its activity exists.
 	if savedLoopAnnotations != nil {
@@ -785,6 +786,7 @@ func (fb *flowBuilder) addWhileStatement(s *ast.WhileStmt) model.ID {
 
 	fb.objects = append(fb.objects, loop)
 	fb.flows = append(fb.flows, loopBuilder.flows...)
+	fb.annotationFlows = append(fb.annotationFlows, loopBuilder.annotationFlows...)
 
 	if savedWhileAnnotations != nil {
 		fb.applyAnnotations(loop.ID, savedWhileAnnotations)

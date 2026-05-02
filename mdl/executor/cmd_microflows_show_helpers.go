@@ -21,13 +21,8 @@ func buildAnnotationsByTarget(oc *microflows.MicroflowObjectCollection) map[mode
 		return result
 	}
 
-	// Build a map of annotation IDs to their captions
 	annotCaptions := make(map[model.ID]string)
-	for _, obj := range oc.Objects {
-		if annot, ok := obj.(*microflows.Annotation); ok {
-			annotCaptions[annot.ID] = annot.Caption
-		}
-	}
+	collectAnnotationCaptions(oc, annotCaptions)
 
 	// Map each annotation flow's destination (the activity) to the annotation's caption
 	for _, af := range oc.AnnotationFlows {
@@ -37,6 +32,46 @@ func buildAnnotationsByTarget(oc *microflows.MicroflowObjectCollection) map[mode
 	}
 
 	return result
+}
+
+func collectAnnotationCaptions(oc *microflows.MicroflowObjectCollection, captions map[model.ID]string) {
+	if oc == nil {
+		return
+	}
+	for _, obj := range oc.Objects {
+		if annot, ok := obj.(*microflows.Annotation); ok {
+			captions[annot.ID] = annot.Caption
+			continue
+		}
+		if loop, ok := obj.(*microflows.LoopedActivity); ok {
+			collectAnnotationCaptions(loop.ObjectCollection, captions)
+		}
+	}
+}
+
+// mergeAnnotationsByTarget combines parent-level annotations with the
+// loop-local overlay so each activity gets every caption that points at it,
+// regardless of which collection the annotation flow lives in.
+//
+// When one side is empty the function returns the other map by reference (no
+// copy). The current callers — emitLoopBody passing a freshly built overlay,
+// or a freshly inherited parent map — never mutate the result, so aliasing is
+// safe. New callers that intend to mutate the result must copy first.
+func mergeAnnotationsByTarget(base, overlay map[model.ID][]string) map[model.ID][]string {
+	if len(base) == 0 {
+		return overlay
+	}
+	if len(overlay) == 0 {
+		return base
+	}
+	merged := make(map[model.ID][]string, len(base)+len(overlay))
+	for id, captions := range base {
+		merged[id] = captions
+	}
+	for id, captions := range overlay {
+		merged[id] = append(merged[id], captions...)
+	}
+	return merged
 }
 
 // collectFreeAnnotations returns captions for annotations not referenced by any AnnotationFlow.
@@ -1009,6 +1044,8 @@ func emitLoopBody(
 		return
 	}
 
+	loopAnnotationsByTarget := mergeAnnotationsByTarget(annotationsByTarget, buildAnnotationsByTarget(loop.ObjectCollection))
+
 	// Build a map of objects in the loop body
 	loopActivityMap := make(map[model.ID]microflows.MicroflowObject)
 	for _, loopObj := range loop.ObjectCollection.Objects {
@@ -1076,7 +1113,7 @@ func emitLoopBody(
 		loopVisited := make(map[model.ID]bool)
 		// Build split→merge map for ExclusiveSplit handling inside the loop
 		loopSplitMergeMap := findSplitMergePoints(ctx, loop.ObjectCollection, loopActivityMap)
-		traverseLoopBody(ctx, firstID, loopActivityMap, loopFlowsByOrigin, loopFlowsByDest, loopSplitMergeMap, loopVisited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+		traverseLoopBody(ctx, firstID, loopActivityMap, loopFlowsByOrigin, loopFlowsByDest, loopSplitMergeMap, loopVisited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, loopAnnotationsByTarget)
 	}
 }
 
