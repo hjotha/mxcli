@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -78,6 +79,7 @@ func newWatcher(mprPath, contentsDir string, sender MsgSender) (*Watcher, error)
 
 func (w *Watcher) run(sender MsgSender) {
 	var debounceTimer *time.Timer
+	var debounceSeq atomic.Uint64
 
 	for {
 		select {
@@ -110,7 +112,11 @@ func (w *Watcher) run(sender MsgSender) {
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
+			seq := debounceSeq.Add(1)
 			debounceTimer = time.AfterFunc(watchDebounce, func() {
+				if debounceSeq.Load() != seq {
+					return
+				}
 				sender.Send(MprChangedMsg{})
 			})
 
