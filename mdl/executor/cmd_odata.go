@@ -766,6 +766,11 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 		return err
 	}
 
+	// Validate that the referenced OData client exists.
+	if err := validateODataClientExists(ctx, s.ServiceRef); err != nil {
+		return err
+	}
+
 	// Get domain model
 	dm, err := ctx.Backend.GetDomainModel(module.ID)
 	if err != nil {
@@ -1443,6 +1448,27 @@ func validateMetadataURL(rawURL string) error {
 		return nil
 	}
 	return mdlerrors.NewValidationf("MetadataUrl %q is not a valid URL or file path: use an http/https URL, a file:// URL, or a relative path (e.g. './service/$metadata.xml')", rawURL)
+}
+
+// validateODataClientExists returns an error if no consumed OData service matching
+// the given qualified name exists in the project.
+func validateODataClientExists(ctx *ExecContext, ref ast.QualifiedName) error {
+	services, err := ctx.Backend.ListConsumedODataServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list consumed OData services", err)
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, ref.Module) && strings.EqualFold(svc.Name, ref.Name) {
+			return nil
+		}
+	}
+	return mdlerrors.NewNotFoundMsg("odata client", ref.String(), fmt.Sprintf("odata client not found: %s", ref))
 }
 
 // formatExprValue formats a Mendix expression value for MDL output.

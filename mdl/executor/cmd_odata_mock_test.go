@@ -9,6 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 )
 
 func TestShowODataClients_Mock(t *testing.T) {
@@ -200,6 +201,78 @@ func TestDescribeODataService_NotFound(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, describeODataService(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
+}
+
+// TestCreateExternalEntity_RejectsNonExistentClient verifies that CREATE EXTERNAL ENTITY
+// returns an error when the referenced OData client does not exist (issue #417).
+func TestCreateExternalEntity_RejectsNonExistentClient(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+	dm := &domainmodel.DomainModel{BaseElement: model.BaseElement{ID: nextID("dm")}, ContainerID: mod.ID}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+			return dm, nil
+		},
+		ListConsumedODataServicesFunc: func() ([]*model.ConsumedODataService, error) {
+			return nil, nil // no services registered
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	stmt := &ast.CreateExternalEntityStmt{
+		Name:       ast.QualifiedName{Module: "MyModule", Name: "FakeEntity"},
+		ServiceRef: ast.QualifiedName{Module: "MyModule", Name: "NonExistentClient"},
+		EntitySet:  "Products",
+	}
+	err := execCreateExternalEntity(ctx, stmt)
+	assertError(t, err)
+	assertContainsStr(t, err.Error(), "odata client not found")
+}
+
+func TestCreateExternalEntity_AcceptsExistingClient(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+	svc := &model.ConsumedODataService{
+		BaseElement: model.BaseElement{ID: nextID("cos")},
+		ContainerID: mod.ID,
+		Name:        "ProductsClient",
+	}
+	withContainer(h, svc.ContainerID, mod.ID)
+	dm := &domainmodel.DomainModel{BaseElement: model.BaseElement{ID: nextID("dm")}, ContainerID: mod.ID}
+
+	var created *domainmodel.Entity
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+			return dm, nil
+		},
+		ListConsumedODataServicesFunc: func() ([]*model.ConsumedODataService, error) {
+			return []*model.ConsumedODataService{svc}, nil
+		},
+		CreateEntityFunc: func(dmID model.ID, entity *domainmodel.Entity) error {
+			created = entity
+			return nil
+		},
+	}
+
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	stmt := &ast.CreateExternalEntityStmt{
+		Name:       ast.QualifiedName{Module: "MyModule", Name: "Product"},
+		ServiceRef: ast.QualifiedName{Module: "MyModule", Name: "ProductsClient"},
+		EntitySet:  "Products",
+	}
+	assertNoError(t, execCreateExternalEntity(ctx, stmt))
+	if created == nil {
+		t.Error("expected CreateEntity to be called")
+	}
 }
 
 // TestDescribeODataService_ExposeRoundtrip verifies that DESCRIBE ODATA SERVICE
