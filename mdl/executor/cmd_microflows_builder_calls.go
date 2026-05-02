@@ -839,30 +839,46 @@ func (fb *flowBuilder) addValidationFeedbackAction(s *ast.ValidationFeedbackStmt
 	}
 
 	// Build attribute or association name from variable type and attribute path.
-	// Single segment with /: attribute access ($Product/Code → "Module.Entity.Code")
-	// Two segments where first uses / and second uses .: association traversal
-	//   ($Instructor/Module.Association → AssociationName = "Module.Association")
-	//   The grammar splits "Module.Association" into two segments: {Module, /} and {Association, .}
+	// The current grammar keeps `$Product/Module.Association` as one slash
+	// segment, so dot count on that segment is the disambiguator:
+	//   0 dots: attribute relative to the target entity.
+	//   1 dot: association qualified by module.
+	//   2+ dots: fully qualified attribute.
 	var attributeName string
 	var associationName string
-	if entityQName, ok := fb.varTypes[s.AttributePath.Variable]; ok && len(s.AttributePath.Segments) > 0 {
+	entityQName := ""
+	if fb.varTypes != nil {
+		entityQName = fb.varTypes[s.AttributePath.Variable]
+	}
+	if len(s.AttributePath.Segments) > 0 {
 		segs := s.AttributePath.Segments
 		if len(segs) == 1 {
-			// Single segment: direct attribute access
-			attributeName = entityQName + "." + segs[0].Name
-		} else if len(segs) >= 2 && segs[0].Separator == "/" && segs[1].Separator == "." {
-			// Two+ segments starting with / then .: association qualified name
-			// Reconstruct "Module.AssociationName" from segments
-			parts := make([]string, len(segs))
-			for i, seg := range segs {
-				parts[i] = seg.Name
+			switch strings.Count(segs[0].Name, ".") {
+			case 0:
+				// Single bare segment: direct attribute access.
+				if entityQName != "" {
+					attributeName = entityQName + "." + segs[0].Name
+				} else {
+					attributeName = segs[0].Name
+				}
+			case 1:
+				// Qualified association names use Module.Association.
+				associationName = segs[0].Name
+			default:
+				// Fully-qualified attributes use Module.Entity.Attribute.
+				attributeName = segs[0].Name
 			}
-			associationName = strings.Join(parts, ".")
 		} else {
-			// Fallback: treat first segment as attribute
-			attributeName = entityQName + "." + segs[0].Name
+			// Multi-hop paths are not a validation-feedback association target.
+			// Fall back to the first segment as an attribute so we do not join
+			// unrelated traversal pieces into a synthetic association name.
+			if entityQName != "" {
+				attributeName = entityQName + "." + segs[0].Name
+			} else {
+				attributeName = segs[0].Name
+			}
 		}
-	} else if entityQName, ok := fb.varTypes[s.AttributePath.Variable]; ok && len(s.AttributePath.Path) > 0 {
+	} else if entityQName != "" && len(s.AttributePath.Path) > 0 {
 		// Fallback for legacy Path without Segments
 		attributeName = entityQName + "." + s.AttributePath.Path[0]
 	}

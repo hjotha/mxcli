@@ -1216,6 +1216,10 @@ func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementCon
 	// Build attribute path
 	if attrPath := vfCtx.AttributePath(); attrPath != nil {
 		stmt.AttributePath = buildAttributePathFromContext(attrPath)
+	} else if variable := vfCtx.VARIABLE(); variable != nil {
+		stmt.AttributePath = &ast.AttributePathExpr{
+			Variable: strings.TrimPrefix(variable.GetText(), "$"),
+		}
 	}
 
 	// Build message expression
@@ -1238,7 +1242,10 @@ func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementCon
 }
 
 // buildAttributePathFromContext builds an AttributePathExpr from attributePath context.
-// Grammar: VARIABLE ((SLASH | DOT) (IDENTIFIER | qualifiedName))+
+// Grammar: VARIABLE ((SLASH | DOT) qualifiedName)+
+// attributePath is shared by SET, LOOP, aggregate expressions, and validation
+// feedback targets, so keep separator capture generic rather than specializing
+// it for validation feedback.
 // Iterates children in order to preserve the separator (/ vs .) for each segment.
 func buildAttributePathFromContext(ctx parser.IAttributePathContext) *ast.AttributePathExpr {
 	if ctx == nil {
