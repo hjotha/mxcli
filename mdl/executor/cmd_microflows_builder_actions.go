@@ -557,10 +557,15 @@ func (fb *flowBuilder) addStructuredInheritanceSplit(s *ast.InheritanceSplitStmt
 	fb.endsWithReturn = savedEndsWithReturn
 	if allBranchesReturn {
 		fb.endsWithReturn = true
-	} else if len(branchTails) == 1 && !branchTails[0].fromSplit {
-		fb.nextConnectionPoint = branchTails[0].id
-		fb.nextFlowCase = branchTails[0].caseValue
 	} else if len(branchTails) > 0 {
+		// Always emit an ExclusiveMerge when at least one branch continues.
+		// Previous code skipped the merge when exactly one non-split branch
+		// continued and wired the parent's next statement directly to that
+		// branch's tail — but re-describe then buried the parent continuation
+		// inside the case body, and Studio Pro rejected the terminating
+		// branches' outgoing flows with CE0079 ("condition value should be
+		// configured for an outgoing flow") because they had no merge to
+		// converge on.
 		merge := &microflows.ExclusiveMerge{
 			BaseMicroflowObject: microflows.BaseMicroflowObject{
 				BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
