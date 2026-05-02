@@ -783,53 +783,108 @@ func formatMicroflowActivities(
 	return lines
 }
 
+type outputVariableSeen struct {
+	pos model.Point
+}
+
 func duplicateOutputVariableWarnings(oc *microflows.MicroflowObjectCollection) []string {
-	type occurrence struct {
-		variable string
-		pos      model.Point
-	}
-	var occurrences []occurrence
-	var walk func(*microflows.MicroflowObjectCollection)
-	walk = func(collection *microflows.MicroflowObjectCollection) {
+	warningPositions := make(map[string]model.Point)
+
+	var walkCollection func(*microflows.MicroflowObjectCollection, map[string]outputVariableSeen)
+	walkCollection = func(collection *microflows.MicroflowObjectCollection, inherited map[string]outputVariableSeen) {
 		if collection == nil {
 			return
 		}
+		activityMap := make(map[model.ID]microflows.MicroflowObject)
+		flowsByOrigin := make(map[model.ID][]*microflows.SequenceFlow)
+		var starts []model.ID
 		for _, obj := range collection.Objects {
+			activityMap[obj.GetID()] = obj
+			if _, ok := obj.(*microflows.StartEvent); ok {
+				starts = append(starts, obj.GetID())
+			}
+		}
+		for _, flow := range collection.Flows {
+			flowsByOrigin[flow.OriginID] = append(flowsByOrigin[flow.OriginID], flow)
+		}
+		if len(starts) == 0 {
+			for _, obj := range collection.Objects {
+				starts = append(starts, obj.GetID())
+			}
+		}
+
+		var walkNode func(model.ID, map[string]outputVariableSeen, map[model.ID]bool)
+		walkNode = func(currentID model.ID, seen map[string]outputVariableSeen, path map[model.ID]bool) {
+			if currentID == "" || path[currentID] {
+				return
+			}
+			obj := activityMap[currentID]
+			if obj == nil {
+				return
+			}
+			path = cloneIDBoolMap(path)
+			path[currentID] = true
+			seen = cloneSeenOutputs(seen)
+
 			if activity, ok := obj.(*microflows.ActionActivity); ok {
 				if name := actionOutputVariableName(activity.Action); name != "" {
-					occurrences = append(occurrences, occurrence{variable: name, pos: obj.GetPosition()})
+					if first, ok := seen[name]; ok {
+						if _, recorded := warningPositions[name]; !recorded {
+							warningPositions[name] = first.pos
+						}
+					} else {
+						seen[name] = outputVariableSeen{pos: obj.GetPosition()}
+					}
 				}
 			}
 			if loop, ok := obj.(*microflows.LoopedActivity); ok {
-				walk(loop.ObjectCollection)
+				walkCollection(loop.ObjectCollection, seen)
+			}
+			for _, flow := range findNormalFlows(flowsByOrigin[currentID]) {
+				walkNode(flow.DestinationID, seen, path)
 			}
 		}
-	}
-	walk(oc)
 
-	counts := make(map[string]int)
-	firstPos := make(map[string]model.Point)
-	for _, occ := range occurrences {
-		counts[occ.variable]++
-		if _, ok := firstPos[occ.variable]; !ok {
-			firstPos[occ.variable] = occ.pos
+		for _, startID := range starts {
+			walkNode(startID, cloneSeenOutputs(inherited), nil)
 		}
 	}
+	walkCollection(oc, nil)
 
 	var names []string
-	for name, count := range counts {
-		if count > 1 {
-			names = append(names, name)
-		}
+	for name := range warningPositions {
+		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	warnings := make([]string, 0, len(names))
 	for _, name := range names {
-		pos := firstPos[name]
+		pos := warningPositions[name]
 		warnings = append(warnings, fmt.Sprintf("-- WARNING: duplicate output variable $%s at position (%d, %d) - model is invalid; open in Studio Pro to fix", name, pos.X, pos.Y))
 	}
 	return warnings
+}
+
+func cloneSeenOutputs(src map[string]outputVariableSeen) map[string]outputVariableSeen {
+	if src == nil {
+		return make(map[string]outputVariableSeen)
+	}
+	dst := make(map[string]outputVariableSeen, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+func cloneIDBoolMap(src map[model.ID]bool) map[model.ID]bool {
+	if src == nil {
+		return make(map[model.ID]bool)
+	}
+	dst := make(map[model.ID]bool, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
 
 func actionOutputVariableName(action any) string {

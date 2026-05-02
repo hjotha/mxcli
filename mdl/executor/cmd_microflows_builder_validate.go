@@ -67,6 +67,14 @@ func (fb *flowBuilder) validateStatements(stmts []ast.MicroflowStatement) {
 	}
 }
 
+func (fb *flowBuilder) validateScopedStatements(stmts []ast.MicroflowStatement) {
+	scoped := *fb
+	scoped.varTypes = cloneStringMap(fb.varTypes)
+	scoped.declaredVars = cloneStringMap(fb.declaredVars)
+	scoped.validateStatements(stmts)
+	fb.errors = scoped.errors
+}
+
 // validateStatement validates a single statement for semantic errors.
 func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 	switch s := stmt.(type) {
@@ -93,11 +101,9 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 		}
 
 	case *ast.IfStmt:
-		// Validate then branch
-		fb.validateStatements(s.ThenBody)
-		// Validate else branch if present
+		fb.validateScopedStatements(s.ThenBody)
 		if len(s.ElseBody) > 0 {
-			fb.validateStatements(s.ElseBody)
+			fb.validateScopedStatements(s.ElseBody)
 		}
 
 	case *ast.EnumSplitStmt:
@@ -105,10 +111,10 @@ func (fb *flowBuilder) validateStatement(stmt ast.MicroflowStatement) {
 			fb.addError("enum split has %d branches; at most %d branches are supported", count, maxEnumSplitBranches)
 		}
 		for _, c := range s.Cases {
-			fb.validateStatements(c.Body)
+			fb.validateScopedStatements(c.Body)
 		}
 		if len(s.ElseBody) > 0 {
-			fb.validateStatements(s.ElseBody)
+			fb.validateScopedStatements(s.ElseBody)
 		}
 
 	case *ast.LoopStmt:
