@@ -21,7 +21,7 @@ jobs:
         run: |
           FAILED=0
           for f in mdl-examples/doctype-tests/*.mdl; do
-            [[ "$f" == *.test.mdl ]] && continue
+            case "$f" in *.test.mdl) continue ;; esac
             NAME=$(basename "$f")
             echo "::group::$NAME"
             if ./bin/mxcli check "$f"; then

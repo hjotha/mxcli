@@ -4,6 +4,7 @@
 #   make build     - Build mxcli for current platform
 #   make release   - Build mxcli for all platforms (macOS, Windows, Linux)
 #   make test      - Run unit tests
+#   make check-mdl - Check MDL syntax for all doctype example scripts
 #   make test-integration - Run integration tests (requires mx/mxbuild)
 #   make test-mdl  - Run MDL integration tests (requires Docker)
 #   make lint      - Lint all code (Go + TypeScript)
@@ -142,6 +143,22 @@ release: clean vscode-ext sync-all
 # Run tests
 test:
 	CGO_ENABLED=0 go test ./...
+
+# Check MDL syntax for all doctype example scripts
+check-mdl: build
+	@FAILED=0; \
+	for f in mdl-examples/doctype-tests/*.mdl; do \
+		case "$$f" in *.test.mdl) continue ;; esac; \
+		NAME=$$(basename "$$f"); \
+		if ./$(BUILD_DIR)/$(BINARY_NAME) check "$$f" > /dev/null 2>&1; then \
+			echo "PASS: $$NAME"; \
+		else \
+			echo "FAIL: $$NAME"; \
+			./$(BUILD_DIR)/$(BINARY_NAME) check "$$f" 2>&1 | grep -v "^WARNING"; \
+			FAILED=1; \
+		fi; \
+	done; \
+	exit $$FAILED
 
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
