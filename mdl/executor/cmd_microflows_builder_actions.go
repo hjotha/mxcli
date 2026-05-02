@@ -625,7 +625,7 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 		// Convert WHERE expression if present
 		// XPath constraints are stored with square brackets in BSON: [expression]
 		if s.Where != nil {
-			dbSource.XPathConstraint = "[" + expressionToXPath(s.Where) + "]"
+			dbSource.XPathConstraint = retrieveXPathConstraint(s.Where)
 		}
 
 		// Convert SORT BY columns if present
@@ -708,6 +708,14 @@ func (fb *flowBuilder) addRetrieveAction(s *ast.RetrieveStmt) model.ID {
 	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.Variable)
 
 	return activity.ID
+}
+
+func retrieveXPathConstraint(expr ast.Expression) string {
+	xpath := expressionToXPath(expr)
+	if strings.HasPrefix(strings.TrimSpace(xpath), "[") && strings.HasSuffix(strings.TrimSpace(xpath), "]") {
+		return strings.TrimSpace(xpath)
+	}
+	return "[" + xpath + "]"
 }
 
 func (fb *flowBuilder) inferSortEntityRefSteps(sourceEntityQN, attrPath string) []microflows.EntityRefStep {

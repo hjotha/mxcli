@@ -1,0 +1,48 @@
+-- ============================================================================
+-- Retrieve with multiple XPath predicates
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   A retrieve with several XPath predicates was parsed as a single chained
+--   `and` expression. When the first predicate contained `or`, the writer
+--   emitted one XPathConstraint without preserving the predicate boundary:
+--     [A or B][C][D] -> [A or B and C and D]
+--   That changes XPath operator precedence.
+--
+-- After fix:
+--   The parser keeps the original predicate boundaries as bracketed XPath
+--   source and the writer stores the same `[predicate][predicate]` shape.
+--
+-- Usage:
+--   mxcli check mdl-examples/bug-tests/retrieve-multiple-xpath-predicates.mdl
+--   mxcli exec mdl-examples/bug-tests/retrieve-multiple-xpath-predicates.mdl -p app.mpr
+--   describe -> exec -> describe must preserve the three predicates.
+-- ============================================================================
+
+create module BugTestXPathPredicates;
+
+create entity BugTestXPathPredicates.Token (
+  CreatedAt : datetime,
+  ItemId : string(100)
+);
+/
+
+create entity BugTestXPathPredicates.Item (
+  CreatedAt : datetime,
+  ItemId : string(100),
+  ExternalId : string(100)
+);
+/
+
+create microflow BugTestXPathPredicates.MF_RetrieveWithPredicates (
+  $Token: BugTestXPathPredicates.Token
+)
+returns list of BugTestXPathPredicates.Item as $Items
+begin
+  retrieve $Items from BugTestXPathPredicates.Item
+    where [CreatedAt > $Token/CreatedAt or (CreatedAt = $Token/CreatedAt and ItemId > $Token/ItemId)]
+    [CreatedAt < '[%CurrentDateTime%]']
+    [ExternalId != empty];
+  return $Items;
+end;
+/

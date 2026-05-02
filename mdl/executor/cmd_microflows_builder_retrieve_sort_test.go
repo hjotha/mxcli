@@ -98,3 +98,48 @@ func TestAddRetrieveAction_AllowsAssociationPathSortAttribute(t *testing.T) {
 		t.Fatalf("second sort entity ref steps = %#v, want none", got)
 	}
 }
+
+func TestAddRetrieveAction_PreservesMultipleXPathPredicates(t *testing.T) {
+	fb := &flowBuilder{
+		varTypes: map[string]string{},
+	}
+	where := "[CreatedAt > $Token/CreatedAt or (CreatedAt = $Token/CreatedAt and ItemId > $Token/ItemId)][CreatedAt < '[%CurrentDateTime%]'][ExternalId != empty]"
+
+	fb.addRetrieveAction(&ast.RetrieveStmt{
+		Variable: "Items",
+		Source: ast.QualifiedName{
+			Module: "Synthetic",
+			Name:   "Item",
+		},
+		Where: &ast.SourceExpr{
+			Expression: &ast.BinaryExpr{
+				Left:     &ast.IdentifierExpr{Name: "CreatedAt"},
+				Operator: ">",
+				Right:    &ast.AttributePathExpr{Variable: "Token", Path: []string{"CreatedAt"}},
+			},
+			Source: where,
+		},
+	})
+
+	if len(fb.errors) > 0 {
+		t.Fatalf("unexpected builder errors: %v", fb.errors)
+	}
+	if len(fb.objects) != 1 {
+		t.Fatalf("got %d objects, want 1", len(fb.objects))
+	}
+	activity, ok := fb.objects[0].(*microflows.ActionActivity)
+	if !ok {
+		t.Fatalf("got object %T, want *microflows.ActionActivity", fb.objects[0])
+	}
+	action, ok := activity.Action.(*microflows.RetrieveAction)
+	if !ok {
+		t.Fatalf("got action %T, want *microflows.RetrieveAction", activity.Action)
+	}
+	source, ok := action.Source.(*microflows.DatabaseRetrieveSource)
+	if !ok {
+		t.Fatalf("got source %T, want *microflows.DatabaseRetrieveSource", action.Source)
+	}
+	if source.XPathConstraint != where {
+		t.Fatalf("XPathConstraint = %q, want %q", source.XPathConstraint, where)
+	}
+}

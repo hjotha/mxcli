@@ -1045,12 +1045,21 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 				stmt.Where = buildXPathSourceExpression(xpathExpr)
 			}
 		} else if len(xpathConstraints) > 1 {
-			// Multiple predicates [cond1][cond2] — combine with AND
+			// Multiple predicates [cond1][cond2] are semantically ANDed by
+			// XPath, but their predicate boundaries matter when one predicate
+			// contains OR. Preserve the bracketed source so the builder can
+			// write the same XPathConstraint shape back to the MPR.
 			var andExprs []ast.Expression
+			var predicateSources []string
 			for _, xc := range xpathConstraints {
 				xcCtx := xc.(*parser.XpathConstraintContext)
 				if xpathExpr := xcCtx.XpathExpr(); xpathExpr != nil {
 					andExprs = append(andExprs, buildXPathSourceExpression(xpathExpr))
+					if prc, ok := xpathExpr.(antlr.ParserRuleContext); ok {
+						if source := strings.TrimSpace(extractOriginalText(prc)); source != "" {
+							predicateSources = append(predicateSources, "["+source+"]")
+						}
+					}
 				}
 			}
 			if len(andExprs) == 1 {
@@ -1060,6 +1069,12 @@ func buildRetrieveStatement(ctx parser.IRetrieveStatementContext) *ast.RetrieveS
 				result := andExprs[0]
 				for _, expr := range andExprs[1:] {
 					result = &ast.BinaryExpr{Left: result, Operator: "and", Right: expr}
+				}
+				if len(predicateSources) == len(andExprs) {
+					result = &ast.SourceExpr{
+						Expression: result,
+						Source:     strings.Join(predicateSources, ""),
+					}
 				}
 				stmt.Where = result
 			}

@@ -1981,6 +1981,34 @@ END;`
 	}
 }
 
+func TestRetrieveMultipleXPathPredicatesPreservePredicateBoundaries(t *testing.T) {
+	input := `CREATE MICROFLOW Synthetic.PreserveXPathPredicates (
+  $Token: Synthetic.Token
+)
+BEGIN
+  RETRIEVE $Items FROM Synthetic.Item
+    WHERE [CreatedAt > $Token/CreatedAt or (CreatedAt = $Token/CreatedAt and ItemId > $Token/ItemId)]
+    [CreatedAt < '[%CurrentDateTime%]']
+    [ExternalId != empty];
+END;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected parse errors: %v", errs)
+	}
+
+	mf := prog.Statements[0].(*ast.CreateMicroflowStmt)
+	retrieveStmt := mf.Body[0].(*ast.RetrieveStmt)
+	source, ok := retrieveStmt.Where.(*ast.SourceExpr)
+	if !ok {
+		t.Fatalf("expected retrieve XPath SourceExpr, got %T", retrieveStmt.Where)
+	}
+	want := "[CreatedAt > $Token/CreatedAt or (CreatedAt = $Token/CreatedAt and ItemId > $Token/ItemId)][CreatedAt < '[%CurrentDateTime%]'][ExternalId != empty]"
+	if source.Source != want {
+		t.Fatalf("XPath source = %q, want %q", source.Source, want)
+	}
+}
+
 func TestTrailingExpressionWhitespacePreservedForRoundtripSlots(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.PreserveTrailingExpressionWhitespace (
   $Object: Synthetic.Entity
