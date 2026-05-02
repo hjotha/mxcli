@@ -3,6 +3,52 @@
 package syntax
 
 func init() {
+	// ── Connection ──────────────────────────────────────────────────────
+
+	Register(SyntaxFeature{
+		Path:    "connect",
+		Summary: "Connect to a Mendix project (.mpr file) for the current session",
+		Keywords: []string{
+			"connect", "connect local", "connect project",
+			"open project", "mpr", "connection",
+		},
+		Syntax: `CONNECT LOCAL '<path/to/app.mpr>';
+CONNECT LOCAL '<path>' BRANCH '<branch>';
+
+-- CLI flags (equivalent)
+mxcli -p <path/to/app.mpr> -c "<statement>"`,
+		Example: `CONNECT LOCAL '/projects/MyApp/MyApp.mpr';
+
+-- Read-write session
+CONNECT LOCAL '/projects/MyApp/MyApp.mpr';
+CREATE ENTITY MyModule.Product ( Name: String(200) );
+DISCONNECT;`,
+		SeeAlso: []string{"disconnect", "status"},
+	})
+
+	Register(SyntaxFeature{
+		Path:    "disconnect",
+		Summary: "Close the current project connection",
+		Keywords: []string{
+			"disconnect", "close", "close connection", "close project",
+		},
+		Syntax:  "DISCONNECT;",
+		Example: "DISCONNECT;",
+		SeeAlso: []string{"connect", "status"},
+	})
+
+	Register(SyntaxFeature{
+		Path:    "status",
+		Summary: "Show the current connection status: project path, Mendix version, and module count",
+		Keywords: []string{
+			"status", "show status", "connection status",
+			"project info", "version", "connected",
+		},
+		Syntax:  "STATUS;\nSHOW STATUS;",
+		Example: "STATUS;\n-- Output: Connected to /projects/MyApp/MyApp.mpr (Mendix 10.24.0, 5 modules)",
+		SeeAlso: []string{"connect", "disconnect"},
+	})
+
 	// ── Navigation ──────────────────────────────────────────────────────
 
 	Register(SyntaxFeature{

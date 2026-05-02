@@ -23,6 +23,12 @@ var registeredPaths = map[string]bool{}
 
 // topicAliases maps legacy topic names and common variants to registry paths.
 var topicAliases = map[string]string{
+	// Connection aliases
+	"connection":    "connect",
+	"open":          "connect",
+	"close":         "disconnect",
+	"show-status":   "status",
+	"show_status":   "status",
 	// Domain model aliases
 	"keywords":        "domain-model.keywords",
 	"reserved":        "domain-model.keywords",
