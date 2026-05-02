@@ -365,8 +365,8 @@ func TestFreeAnnotationBeforePositionStaysUnattached(t *testing.T) {
 			Level:   ast.LogInfo,
 			Message: &ast.LiteralExpr{Kind: ast.LiteralString, Value: "message"},
 			Annotations: &ast.ActivityAnnotations{
-				FreeAnnotation: "free synthetic note",
-				Position:       &ast.Position{X: 120, Y: 240},
+				FreeAnnotations: []string{"free synthetic note"},
+				Position:        &ast.Position{X: 120, Y: 240},
 			},
 		},
 	}
