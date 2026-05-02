@@ -170,7 +170,7 @@ func (w *Writer) serializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
 func serializeSequenceFlow(flow *microflows.SequenceFlow, majorVersion int) bson.D {
 	// Build the case document. Every sequence flow needs a case — NoCase is the
 	// default when no branch condition has been set.
-	caseDoc := buildSequenceFlowCase(flow.CaseValue)
+	caseDoc := buildSequenceFlowCase(flow.CaseValue, majorVersion)
 
 	originCV := flow.OriginControlVector
 	if originCV == "" {
@@ -221,12 +221,14 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow, majorVersion int) bson
 // buildSequenceFlowCase renders the case document for a sequence flow.
 // When no case has been set on the flow, a NoCase document is synthesised —
 // Studio Pro requires every SequenceFlow to carry an explicit case object.
-func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
+func buildSequenceFlowCase(cv microflows.CaseValue, majorVersion int) bson.D {
 	// Normalise value receivers to pointers so each case is handled once.
 	switch c := cv.(type) {
 	case microflows.EnumerationCase:
 		cv = &c
 	case microflows.NoCase:
+		cv = &c
+	case microflows.ExpressionCase:
 		cv = &c
 	}
 
@@ -249,6 +251,23 @@ func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(id)},
 			{Key: "$Type", Value: "Microflows$NoCase"},
+		}
+	case *microflows.ExpressionCase:
+		id := string(c.ID)
+		if id == "" {
+			id = generateUUID()
+		}
+		if majorVersion <= 9 {
+			return bson.D{
+				{Key: "$ID", Value: idToBsonBinary(id)},
+				{Key: "$Type", Value: "Microflows$EnumerationCase"},
+				{Key: "Value", Value: c.Expression},
+			}
+		}
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(id)},
+			{Key: "$Type", Value: "Microflows$ExpressionCase"},
+			{Key: "Expression", Value: c.Expression},
 		}
 	}
 	// Default: synthesise a NoCase document with a fresh ID.

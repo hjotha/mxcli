@@ -47,17 +47,10 @@ func TestBuilder_GuardPatternPreservesFalseBranchAnchor(t *testing.T) {
 	oc := fb.buildFlowGraph(body, nil)
 
 	// Find the flow from the split to the tail log. It's the only one with
-	// an EnumerationCase Value=="false" that doesn't target an EndEvent.
+	// a false branch case that doesn't target an EndEvent.
 	var found *microflows.SequenceFlow
 	for _, f := range oc.Flows {
-		cv, ok := f.CaseValue.(microflows.EnumerationCase)
-		if !ok {
-			if p, okp := f.CaseValue.(*microflows.EnumerationCase); okp {
-				cv = *p
-				ok = true
-			}
-		}
-		if !ok || cv.Value != "false" {
+		if flowCaseString(f.CaseValue) != "false" {
 			continue
 		}
 		// Exclude flows pointing at an EndEvent.
@@ -83,5 +76,33 @@ func TestBuilder_GuardPatternPreservesFalseBranchAnchor(t *testing.T) {
 	}
 	if found.DestinationConnectionIndex != AnchorTop {
 		t.Errorf("destination: got %d, want %d (Top)", found.DestinationConnectionIndex, AnchorTop)
+	}
+}
+
+func TestCaseValueForFlowUsesExpressionCaseForBooleanBranches(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  string
+	}{
+		{value: "true", want: "true"},
+		{value: "false", want: "false"},
+	} {
+		got, ok := caseValueForFlow(tc.value).(*microflows.ExpressionCase)
+		if !ok {
+			t.Fatalf("caseValueForFlow(%q) = %T, want *ExpressionCase", tc.value, caseValueForFlow(tc.value))
+		}
+		if got.Expression != tc.want {
+			t.Fatalf("caseValueForFlow(%q).Expression = %q, want %q", tc.value, got.Expression, tc.want)
+		}
+	}
+}
+
+func TestCaseValueForFlowKeepsEnumValuesAsEnumerationCase(t *testing.T) {
+	got, ok := caseValueForFlow("Submitted").(microflows.EnumerationCase)
+	if !ok {
+		t.Fatalf("caseValueForFlow(enum) = %T, want EnumerationCase", caseValueForFlow("Submitted"))
+	}
+	if got.Value != "Submitted" {
+		t.Fatalf("enum case value = %q, want Submitted", got.Value)
 	}
 }

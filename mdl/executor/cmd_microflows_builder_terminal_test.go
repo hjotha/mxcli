@@ -892,17 +892,9 @@ func flowCaseString(caseValue microflows.CaseValue) string {
 		if c != nil {
 			return c.Value
 		}
-	case microflows.BooleanCase:
-		if c.Value {
-			return "true"
-		}
-		return "false"
-	case *microflows.BooleanCase:
-		if c != nil && c.Value {
-			return "true"
-		}
+	case *microflows.ExpressionCase:
 		if c != nil {
-			return "false"
+			return c.Expression
 		}
 	}
 	return ""

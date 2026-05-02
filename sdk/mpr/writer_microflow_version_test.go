@@ -161,10 +161,38 @@ func TestSerializeMicroflowParameter_Mx9_OmitsMx10OnlyKeys(t *testing.T) {
 
 func TestBuildSequenceFlowCase_NormalisesValueReceiver(t *testing.T) {
 	// A value-receiver NoCase must produce the same shape as a pointer.
-	fromValue := buildSequenceFlowCase(microflows.NoCase{BaseElement: model.BaseElement{ID: "x"}})
-	fromPointer := buildSequenceFlowCase(&microflows.NoCase{BaseElement: model.BaseElement{ID: "x"}})
+	fromValue := buildSequenceFlowCase(microflows.NoCase{BaseElement: model.BaseElement{ID: "x"}}, 9)
+	fromPointer := buildSequenceFlowCase(&microflows.NoCase{BaseElement: model.BaseElement{ID: "x"}}, 9)
 
 	if bsonGetKey(fromValue, "$Type") != bsonGetKey(fromPointer, "$Type") {
 		t.Error("value and pointer NoCase must produce identical $Type")
+	}
+}
+
+func TestBuildSequenceFlowCase_ExpressionCase_Mx10(t *testing.T) {
+	doc := buildSequenceFlowCase(microflows.ExpressionCase{
+		BaseElement: model.BaseElement{ID: "case-false"},
+		Expression:  "false",
+	}, 10)
+
+	if got := bsonGetKey(doc, "$Type"); got != "Microflows$ExpressionCase" {
+		t.Fatalf("$Type = %v, want Microflows$ExpressionCase", got)
+	}
+	if got := bsonGetKey(doc, "Expression"); got != "false" {
+		t.Fatalf("Expression = %v, want false", got)
+	}
+}
+
+func TestBuildSequenceFlowCase_ExpressionCase_Mx9UsesEnumerationCase(t *testing.T) {
+	doc := buildSequenceFlowCase(microflows.ExpressionCase{
+		BaseElement: model.BaseElement{ID: "case-false"},
+		Expression:  "false",
+	}, 9)
+
+	if got := bsonGetKey(doc, "$Type"); got != "Microflows$EnumerationCase" {
+		t.Fatalf("$Type = %v, want Microflows$EnumerationCase", got)
+	}
+	if got := bsonGetKey(doc, "Value"); got != "false" {
+		t.Fatalf("Value = %v, want false", got)
 	}
 }

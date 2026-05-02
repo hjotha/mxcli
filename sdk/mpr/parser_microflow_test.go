@@ -35,6 +35,27 @@ func TestParseSequenceFlow_NewCaseValueEnumerationCase(t *testing.T) {
 	}
 }
 
+func TestParseSequenceFlow_NewCaseValueExpressionCase(t *testing.T) {
+	flow := parseSequenceFlow(map[string]any{
+		"$ID":                "flow-1",
+		"OriginPointer":      "start-1",
+		"DestinationPointer": "dest-1",
+		"NewCaseValue": primitive.D{
+			{Key: "$ID", Value: "case-1"},
+			{Key: "$Type", Value: "Microflows$ExpressionCase"},
+			{Key: "Expression", Value: "false"},
+		},
+	})
+
+	got, ok := flow.CaseValue.(*microflows.ExpressionCase)
+	if !ok {
+		t.Fatalf("expected *ExpressionCase, got %T", flow.CaseValue)
+	}
+	if got.Expression != "false" {
+		t.Fatalf("expected false branch, got %q", got.Expression)
+	}
+}
+
 func TestParseSequenceFlow_NewCaseValueNoCase(t *testing.T) {
 	flow := parseSequenceFlow(map[string]any{
 		"$ID":                "flow-1",

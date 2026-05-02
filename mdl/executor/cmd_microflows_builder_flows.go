@@ -653,10 +653,7 @@ func newHorizontalFlow(originID, destinationID model.ID) *microflows.SequenceFlo
 // newHorizontalFlowWithCase creates a horizontal SequenceFlow with a boolean case value (for splits)
 func newHorizontalFlowWithCase(originID, destinationID model.ID, caseValue string) *microflows.SequenceFlow {
 	flow := newHorizontalFlow(originID, destinationID)
-	flow.CaseValue = microflows.EnumerationCase{
-		BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-		Value:       caseValue, // "true" or "false" as string
-	}
+	flow.CaseValue = caseValueForFlow(caseValue)
 	return flow
 }
 
@@ -678,10 +675,27 @@ func newDownwardFlowWithCase(originID, destinationID model.ID, caseValue string)
 		DestinationID:              destinationID,
 		OriginConnectionIndex:      AnchorBottom, // Connect from bottom of origin (going down)
 		DestinationConnectionIndex: AnchorLeft,   // Connect to left side of destination
-		CaseValue: microflows.EnumerationCase{
+		CaseValue:                  caseValueForFlow(caseValue),
+	}
+}
+
+func caseValueForFlow(caseValue string) microflows.CaseValue {
+	switch caseValue {
+	case "true":
+		return &microflows.ExpressionCase{
 			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-			Value:       caseValue, // "true" or "false" as string
-		},
+			Expression:  "true",
+		}
+	case "false":
+		return &microflows.ExpressionCase{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Expression:  "false",
+		}
+	default:
+		return microflows.EnumerationCase{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Value:       caseValue,
+		}
 	}
 }
 

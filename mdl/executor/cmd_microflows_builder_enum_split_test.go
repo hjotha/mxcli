@@ -111,7 +111,7 @@ func TestEnumSplitNestedEmptyThenBranchKeepsContinuationCase(t *testing.T) {
 		if flow.OriginID != nestedSplitID {
 			continue
 		}
-		if value, ok := enumCaseValue(flow); ok && value == "true" {
+		if flowCaseString(flow.CaseValue) == "true" {
 			if _, ok := objects[flow.DestinationID].(*microflows.ExclusiveMerge); ok {
 				return
 			}
