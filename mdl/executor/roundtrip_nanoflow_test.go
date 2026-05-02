@@ -136,8 +136,7 @@ func TestRoundtripNanoflow_Loop(t *testing.T) {
 begin
   retrieve $Items from ` + testModule + `.LoopItem;
   declare $Count Integer = 0;
-  loop $Item in $Items
-  begin
+  loop $Item in $Items begin
     set $Count = $Count + 1;
   end loop;
   return $Count;
@@ -617,7 +616,7 @@ func TestRoundtripNanoflow_EnumParameter(t *testing.T) {
 	}
 
 	nfName := testModule + ".RT_NF_EnumParam"
-	createMDL := `create nanoflow ` + nfName + ` ($Color: ` + testModule + `.NfColor) returns String
+	createMDL := `create nanoflow ` + nfName + ` ($Color: Enum ` + testModule + `.NfColor) returns String
 begin
   return 'got color';
 end;`
