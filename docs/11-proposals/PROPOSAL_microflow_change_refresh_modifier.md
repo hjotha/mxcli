@@ -21,7 +21,7 @@ The `refresh` modifier maps directly to `ChangeObjectAction.RefreshInClient`. Om
 
 ## Tests And Examples
 
-`mdl-examples/doctype-tests/change_refresh_modifier.test.mdl` demonstrates both forms. Go tests cover formatter output, parser behavior, and builder serialization.
+`mdl-examples/doctype-tests/change_refresh_modifier.mdl` demonstrates both forms. Go tests cover formatter output, parser behavior, and builder serialization.
 
 ## Open Questions
 
