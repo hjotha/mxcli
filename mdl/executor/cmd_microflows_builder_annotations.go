@@ -233,6 +233,7 @@ func (fb *flowBuilder) addEndEventWithReturn(s *ast.ReturnStmt) model.ID {
 
 	fb.objects = append(fb.objects, endEvent)
 	fb.endsWithReturn = true
+	fb.lastReturnEndID = endEvent.ID
 	fb.posX += fb.spacing / 2
 	return endEvent.ID
 }

@@ -159,12 +159,7 @@ func (fb *flowBuilder) addCallMicroflowAction(s *ast.CallMicroflowStmt) model.ID
 		fb.registerResultVariableType(s.OutputVariable, fb.lookupMicroflowReturnType(mfQN))
 	}
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -219,12 +214,7 @@ func (fb *flowBuilder) addCallNanoflowAction(s *ast.CallNanoflowStmt) model.ID {
 		fb.registerResultVariableType(s.OutputVariable, fb.lookupNanoflowReturnType(nfQN))
 	}
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -348,12 +338,7 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -450,12 +435,7 @@ func (fb *flowBuilder) addCallJavaScriptActionAction(s *ast.CallJavaScriptAction
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -586,12 +566,7 @@ func (fb *flowBuilder) addCallExternalActionAction(s *ast.CallExternalActionStmt
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -1108,12 +1083,7 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -1317,12 +1287,7 @@ func (fb *flowBuilder) addExecuteDatabaseQueryAction(s *ast.ExecuteDatabaseQuery
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	// Build custom error handler flow if present
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -1389,11 +1354,7 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 		}
 	}
 
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, s.OutputVariable)
 
 	return activity.ID
 }
@@ -1425,11 +1386,7 @@ func (fb *flowBuilder) addTransformJsonAction(s *ast.TransformJsonStmt) model.ID
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, "")
 
 	return activity.ID
 }
@@ -1463,11 +1420,7 @@ func (fb *flowBuilder) addExportToMappingAction(s *ast.ExportToMappingStmt) mode
 	fb.objects = append(fb.objects, activity)
 	fb.posX += fb.spacing
 
-	if s.ErrorHandling != nil && len(s.ErrorHandling.Body) > 0 {
-		errorY := fb.posY + VerticalSpacing
-		mergeID := fb.addErrorHandlerFlow(activity.ID, activityX, s.ErrorHandling.Body)
-		fb.handleErrorHandlerMerge(mergeID, activity.ID, errorY)
-	}
+	fb.finishCustomErrorHandler(activity.ID, activityX, s.ErrorHandling, "")
 
 	return activity.ID
 }
