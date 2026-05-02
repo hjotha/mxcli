@@ -724,18 +724,20 @@ func traverseFlow(
 				traverseFlowUntilMerge(ctx, trueFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
 			}
 
-			// Emit the ELSE branch only if it has statements. When the false
-			// flow jumps straight to the merge (the MDL was `if X then ... end if`
-			// with no else), emitting `else` with no body produces an empty
-			// branch that normalizes away on re-parse.
-			falseHasBody := falseFlow != nil && falseFlow.DestinationID != mergeID
-			if falseHasBody {
+			if falseFlow != nil {
+				elseLineIdx := len(*lines)
 				*lines = append(*lines, indentStr+"else")
 				visitedFalseBranch := make(map[model.ID]bool)
 				for id := range visited {
 					visitedFalseBranch[id] = true
 				}
 				traverseFlowUntilMerge(ctx, falseFlow.DestinationID, mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visitedFalseBranch, entityNames, microflowNames, lines, indent+1, sourceMap, headerLineCount, annotationsByTarget)
+				// Remove empty else block. A false branch can point at a
+				// continuation already emitted through the true branch, so checking
+				// only falseFlow.DestinationID != mergeID is not enough.
+				if len(*lines) == elseLineIdx+1 {
+					*lines = (*lines)[:elseLineIdx]
+				}
 			}
 
 			*lines = append(*lines, indentStr+"end if;")

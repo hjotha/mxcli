@@ -561,6 +561,63 @@ func TestTraverseFlow_SequentialIfWithoutElseKeepsContinuationOutsideFirstIf(t *
 	}
 }
 
+func TestTraverseFlow_TopLevelIfRemovesEmptyElseAfterVisitedContinuation(t *testing.T) {
+	e := newTestExecutor()
+
+	logAction := func(id, message string) *microflows.ActionActivity {
+		return &microflows.ActionActivity{
+			BaseActivity: microflows.BaseActivity{BaseMicroflowObject: mkObj(id)},
+			Action: &microflows.LogMessageAction{
+				LogLevel:        "Info",
+				LogNodeName:     "'Synthetic'",
+				MessageTemplate: &model.Text{Translations: map[string]string{"en_US": message}},
+			},
+		}
+	}
+
+	activityMap := map[model.ID]microflows.MicroflowObject{
+		mkID("start"): &microflows.StartEvent{BaseMicroflowObject: mkObj("start")},
+		mkID("outer_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("outer_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$UseNestedPath"},
+		},
+		mkID("inner_split"): &microflows.ExclusiveSplit{
+			BaseMicroflowObject: mkObj("inner_split"),
+			SplitCondition:      &microflows.ExpressionSplitCondition{Expression: "$HasContinuation"},
+		},
+		mkID("inner_return"): &microflows.EndEvent{BaseMicroflowObject: mkObj("inner_return")},
+		mkID("tail_log"):     logAction("tail_log", "shared tail"),
+		mkID("end"):          &microflows.EndEvent{BaseMicroflowObject: mkObj("end")},
+	}
+	flowsByOrigin := map[model.ID][]*microflows.SequenceFlow{
+		mkID("start"): {mkFlow("start", "outer_split")},
+		mkID("outer_split"): {
+			mkBranchFlow("outer_split", "inner_split", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("outer_split", "tail_log", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("inner_split"): {
+			mkBranchFlow("inner_split", "tail_log", &microflows.ExpressionCase{Expression: "true"}),
+			mkBranchFlow("inner_split", "inner_return", &microflows.ExpressionCase{Expression: "false"}),
+		},
+		mkID("tail_log"): {mkFlow("tail_log", "end")},
+	}
+
+	splitMergeMap := map[model.ID]model.ID{
+		mkID("outer_split"): mkID("end"),
+		mkID("inner_split"): mkID("tail_log"),
+	}
+	var lines []string
+	e.traverseFlow(mkID("start"), activityMap, flowsByOrigin, splitMergeMap, make(map[model.ID]bool), nil, nil, &lines, 0, nil, 0, nil)
+
+	out := strings.Join(lines, "\n")
+	if strings.Contains(out, "\nelse\nend if;") {
+		t.Fatalf("empty top-level else should be removed:\n%s", out)
+	}
+	if got := strings.Count(out, "shared tail"); got != 1 {
+		t.Fatalf("shared tail emitted %d times, want once:\n%s", got, out)
+	}
+}
+
 func TestTraverseFlow_GuardBranchWithMultipleActivitiesKeepsContinuationOutsideElse(t *testing.T) {
 	e := newTestExecutor()
 
