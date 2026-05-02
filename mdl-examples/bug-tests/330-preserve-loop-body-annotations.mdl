@@ -1,0 +1,64 @@
+-- ============================================================================
+-- Bug #330: Annotations inside loop bodies disappeared after describe/exec
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   `@annotation 'note'` attached to a statement nested inside `loop ... end loop;`
+--   (or `while ... end while;`) survived the first execution but disappeared
+--   on the next describe → exec roundtrip. The annotation existed in the
+--   loop's local object collection but the parent microflow graph never
+--   saw it, so the next describer pass dropped it. Annotations on nested
+--   decisions (IF inside a LOOP) were the most visible casualty — the
+--   notes that explain WHY a loop exists were silently lost.
+--
+-- Root cause:
+--   The microflow builder copied nested loop sequence flows back to the
+--   parent graph but did not copy nested ANNOTATION flows. The describer
+--   then collected annotation captions only from the top-level object
+--   collection, ignoring captions stored inside nested loop collections.
+--
+-- After fix:
+--   - Builder: loop/while statement handlers also copy
+--     `nested.AnnotationFlows` into the parent graph.
+--   - Describer: `collectAnnotationCaptions` walks recursively into
+--     nested loop object collections, and `emitLoopBody` merges the
+--     loop-local annotation map into the per-body traversal.
+--
+-- Scope note:
+--   The Go-side regression `TestLoopBodyIfAnnotationPromotedToParentFlows`
+--   covers the AST→BSON build path. This MDL script reproduces the
+--   describer side: after exec, the annotation must appear in the
+--   describe output. A full describe → exec → describe FIXPOINT for
+--   nested IF inside LOOP additionally depends on the nearest split-merge
+--   pairing fix (issue #326 / PR #327); on a branch that includes both
+--   fixes, this script round-trips cleanly.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/330-preserve-loop-body-annotations.mdl -p app.mpr
+--   mxcli -p app.mpr -c "describe microflow BugTest330.MF_LoopWithAnnotations"
+--   The describe output must contain `@annotation 'note on nested if'`
+--   on the IF inside the loop body.
+-- ============================================================================
+
+create module BugTest330;
+
+create entity BugTest330.Item (
+  Name : string(100)
+);
+/
+
+-- LOOP body containing an annotated IF — the case that originally lost the
+-- annotation. The note on the IF must appear in the describe output.
+create microflow BugTest330.MF_LoopWithAnnotations (
+  $Items: list of BugTest330.Item
+)
+begin
+  loop $Item in $Items
+  begin
+    @annotation 'note on nested if'
+    if $Item/Name != empty then
+      log info node 'BugTest330' 'has name';
+    end if;
+  end loop;
+end;
+/
