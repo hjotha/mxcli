@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var tuiCmd = &cobra.Command{
@@ -61,6 +62,11 @@ Example:
 		}
 
 		if projectPath == "" {
+			if !term.IsTerminal(int(os.Stdin.Fd())) {
+				fmt.Fprintln(os.Stderr, "Error: --project (-p) is required when stdin is not an interactive terminal")
+				fmt.Fprintln(os.Stderr, "\nExample: mxcli tui -p app.mpr")
+				os.Exit(1)
+			}
 			picker := tui.NewPickerModel()
 			p := tea.NewProgram(picker, tea.WithAltScreen())
 			result, err := p.Run()

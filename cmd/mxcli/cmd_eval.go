@@ -238,8 +238,12 @@ Examples:
   mxcli eval list docs/14-eval/
   mxcli eval list docs/14-eval/eval-1.md
 `,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			_ = cmd.Help()
+			return
+		}
 		path := args[0]
 		var tests []*evalrunner.EvalTest
 		var err error

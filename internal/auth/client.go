@@ -60,8 +60,11 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Mendix platform APIs return 401 when no valid credential is presented,
 	// and 403 when the PAT is invalid/expired (per the portal PAT docs).
 	// Both mean "credential rejected" for our purposes.
+	// Close the body and return (nil, err) to follow the RoundTripper contract —
+	// callers must not see both a non-nil resp and a non-nil err.
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return resp, &ErrUnauthenticated{Profile: t.cred.Profile}
+		_ = resp.Body.Close()
+		return nil, &ErrUnauthenticated{Profile: t.cred.Profile}
 	}
 	return resp, nil
 }

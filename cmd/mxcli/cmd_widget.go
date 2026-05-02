@@ -50,7 +50,11 @@ var widgetInitCmd = &cobra.Command{
 	Long: `Scan the project's widgets/ directory, extract .def.json for each .mpk,
 and generate skill documentation in .claude/skills/widgets/.
 
-This enables CREATE PAGE to use any project widget via the pluggable engine.`,
+This enables CREATE PAGE to use any project widget via the pluggable engine.
+
+Requires --project (-p) to locate the project's widgets/ directory.`,
+	Example: `  mxcli widget init -p /path/to/app.mpr
+  mxcli widget init -p app.mpr`,
 	RunE: runWidgetInit,
 }
 
