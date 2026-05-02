@@ -423,7 +423,7 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 		for _, thenStmt := range s.ThenBody {
 			lines = append(lines, microflowStatementToMDL(ctx, thenStmt, indent+1)...)
 		}
-		if len(s.ElseBody) > 0 {
+		if s.HasElse || len(s.ElseBody) > 0 {
 			lines = append(lines, indentStr+"else")
 			for _, elseStmt := range s.ElseBody {
 				lines = append(lines, microflowStatementToMDL(ctx, elseStmt, indent+1)...)
