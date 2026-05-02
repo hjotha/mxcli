@@ -1966,7 +1966,7 @@ createListStatement
  * ```
  */
 addToListStatement
-    : ADD VARIABLE TO VARIABLE
+    : ADD expression TO VARIABLE
     ;
 
 /**

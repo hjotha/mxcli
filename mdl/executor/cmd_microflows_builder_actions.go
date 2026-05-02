@@ -1005,11 +1005,15 @@ func (fb *flowBuilder) addCreateListAction(s *ast.CreateListStmt) model.ID {
 
 // addAddToListAction creates an ADD TO list statement.
 func (fb *flowBuilder) addAddToListAction(s *ast.AddToListStmt) model.ID {
+	value := fb.exprToString(s.Value)
+	if value == "" && s.Item != "" {
+		value = "$" + s.Item
+	}
 	action := &microflows.ChangeListAction{
 		BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
 		Type:           microflows.ChangeListTypeAdd,
 		ChangeVariable: s.List,
-		Value:          "$" + s.Item,
+		Value:          value,
 	}
 
 	activity := &microflows.ActionActivity{
