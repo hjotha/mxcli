@@ -7,7 +7,7 @@ package ast
 //	RENAME ENTITY Module.OldName TO NewName [DRY RUN];
 //	RENAME MODULE OldName TO NewName [DRY RUN];
 //	RENAME JAVA ACTION Module.OldName TO NewName [DRY RUN];
-//	... and microflow, nanoflow, page, enumeration, association, constant
+//	... and microflow, nanoflow, page, enumeration, association, constant, workflow
 type RenameStmt struct {
 	ObjectType string        // lowercase type key, e.g. "entity", "module", "javaaction"
 	Name       QualifiedName // Current name (Module.Entity or Module for modules)

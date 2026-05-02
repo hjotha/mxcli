@@ -33,6 +33,8 @@ func execRename(ctx *ExecContext, s *ast.RenameStmt) error {
 		return execRenameAssociation(ctx, s)
 	case "constant":
 		return execRenameDocument(ctx, s, "constant")
+	case "workflow":
+		return execRenameDocument(ctx, s, "workflow")
 	case "javaaction":
 		return execRenameJavaAction(ctx, s)
 	case "module":
@@ -196,6 +198,15 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 		for _, c := range cs {
 			modID := h.FindModuleID(c.ContainerID)
 			if h.GetModuleName(modID) == s.Name.Module && c.Name == s.Name.Name {
+				found = true
+				break
+			}
+		}
+	case "workflow":
+		wfs, _ := ctx.Backend.ListWorkflows()
+		for _, wf := range wfs {
+			modID := h.FindModuleID(wf.ContainerID)
+			if h.GetModuleName(modID) == s.Name.Module && wf.Name == s.Name.Name {
 				found = true
 				break
 			}

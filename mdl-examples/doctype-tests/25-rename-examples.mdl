@@ -39,7 +39,15 @@ rename java action RenameTest.OldHelper to NewHelper;
 -- Dry run: preview what references would change without modifying anything
 rename java action RenameTest.NewHelper to AnotherName dry run;
 
+-- Rename workflow
+create workflow RenameTest.OldProcess
+begin
+end workflow;
+
+rename workflow RenameTest.OldProcess to NewProcess;
+
 -- Clean up
+drop workflow RenameTest.NewProcess;
 drop java action RenameTest.NewHelper;
 drop association RenameTest.Order_Client;
 drop entity RenameTest.client;

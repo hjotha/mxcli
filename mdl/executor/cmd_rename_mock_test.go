@@ -13,6 +13,7 @@ import (
 	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
+	"github.com/mendixlabs/mxcli/sdk/workflows"
 )
 
 // ---------------------------------------------------------------------------
@@ -39,7 +40,7 @@ func TestRename_UnsupportedType(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	err := execRename(ctx, &ast.RenameStmt{
-		ObjectType: "workflow",
+		ObjectType: "snippet",
 		Name:       ast.QualifiedName{Module: "M", Name: "N"},
 		NewName:    "X",
 	})
@@ -377,6 +378,66 @@ func TestRename_JavaAction_NotFound(t *testing.T) {
 	err := execRename(ctx, &ast.RenameStmt{
 		ObjectType: "javaaction",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
+		NewName:    "New",
+	})
+	assertError(t, err)
+	assertContainsStr(t, err.Error(), "not found")
+}
+
+// ---------------------------------------------------------------------------
+// Rename workflow — happy path
+// ---------------------------------------------------------------------------
+
+func TestRename_Workflow_Success(t *testing.T) {
+	mod := mkModule("BPModule")
+	wf := mkWorkflow(mod.ID, "OldProcess")
+	renameCalled := false
+	mb := &mock.MockBackend{
+		IsConnectedFunc:   func() bool { return true },
+		ListModulesFunc:   func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:   func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return []*workflows.Workflow{wf}, nil },
+		RenameReferencesFunc: func(old, new string, dryRun bool) ([]types.RenameHit, error) {
+			return nil, nil
+		},
+		RenameDocumentByNameFunc: func(module, old, newName string) error {
+			renameCalled = true
+			return nil
+		},
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, wf.ContainerID, mod.ID)
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+		ObjectType: "workflow",
+		Name:       ast.QualifiedName{Module: "BPModule", Name: "OldProcess"},
+		NewName:    "NewProcess",
+	}))
+	if !renameCalled {
+		t.Error("Expected RenameDocumentByName to be called")
+	}
+	assertContainsStr(t, buf.String(), "Renamed workflow")
+	assertContainsStr(t, buf.String(), "BPModule.OldProcess")
+	assertContainsStr(t, buf.String(), "BPModule.NewProcess")
+}
+
+// ---------------------------------------------------------------------------
+// Rename workflow — not found
+// ---------------------------------------------------------------------------
+
+func TestRename_Workflow_NotFound(t *testing.T) {
+	mod := mkModule("BPModule")
+	mb := &mock.MockBackend{
+		IsConnectedFunc:   func() bool { return true },
+		ListModulesFunc:   func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:   func() ([]*types.FolderInfo, error) { return nil, nil },
+		ListWorkflowsFunc: func() ([]*workflows.Workflow, error) { return nil, nil },
+	}
+	h := mkHierarchy(mod)
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execRename(ctx, &ast.RenameStmt{
+		ObjectType: "workflow",
+		Name:       ast.QualifiedName{Module: "BPModule", Name: "Missing"},
 		NewName:    "New",
 	})
 	assertError(t, err)
