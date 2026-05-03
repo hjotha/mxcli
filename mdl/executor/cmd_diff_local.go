@@ -753,8 +753,10 @@ func parseRefRange(ref string) (base, target string, isRange bool) {
 	return "", ref, false
 }
 
-// execCommand creates an exec.Cmd for running git commands
-func execCommand(name string, args ...string) *exec.Cmd {
+// execCommand creates an exec.Cmd for running git commands.
+// It is a package-level variable so tests can replace it with a stub that
+// simulates git failures without actually invoking git.
+var execCommand = func(name string, args ...string) *exec.Cmd {
 	return exec.Command(name, args...)
 }
 
