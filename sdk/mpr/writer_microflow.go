@@ -170,7 +170,7 @@ func (w *Writer) serializeMicroflow(mf *microflows.Microflow) ([]byte, error) {
 func serializeSequenceFlow(flow *microflows.SequenceFlow, majorVersion int) bson.D {
 	// Build the case document. Every sequence flow needs a case — NoCase is the
 	// default when no branch condition has been set.
-	caseDoc := buildSequenceFlowCase(flow.CaseValue, majorVersion)
+	caseDoc := buildSequenceFlowCase(flow.CaseValue)
 
 	originCV := flow.OriginControlVector
 	if originCV == "" {
@@ -221,7 +221,7 @@ func serializeSequenceFlow(flow *microflows.SequenceFlow, majorVersion int) bson
 // buildSequenceFlowCase renders the case document for a sequence flow.
 // When no case has been set on the flow, a NoCase document is synthesised —
 // Studio Pro requires every SequenceFlow to carry an explicit case object.
-func buildSequenceFlowCase(cv microflows.CaseValue, majorVersion int) bson.D {
+func buildSequenceFlowCase(cv microflows.CaseValue) bson.D {
 	// Normalise value receivers to pointers so each case is handled once.
 	switch c := cv.(type) {
 	case microflows.EnumerationCase:
@@ -257,17 +257,14 @@ func buildSequenceFlowCase(cv microflows.CaseValue, majorVersion int) bson.D {
 		if id == "" {
 			id = generateUUID()
 		}
-		if majorVersion <= 9 {
-			return bson.D{
-				{Key: "$ID", Value: idToBsonBinary(id)},
-				{Key: "$Type", Value: "Microflows$EnumerationCase"},
-				{Key: "Value", Value: c.Expression},
-			}
-		}
+		// Studio Pro always uses EnumerationCase with Value="true"/"false" on the
+		// SequenceFlow; the expression itself lives on ExclusiveSplit.SplitCondition.
+		// This applies to all Mendix versions — Microflows$ExpressionCase was a
+		// mxcli-only type that Studio Pro has never recognised.
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(id)},
-			{Key: "$Type", Value: "Microflows$ExpressionCase"},
-			{Key: "Expression", Value: c.Expression},
+			{Key: "$Type", Value: "Microflows$EnumerationCase"},
+			{Key: "Value", Value: c.Expression},
 		}
 	}
 	// Default: synthesise a NoCase document with a fresh ID.
