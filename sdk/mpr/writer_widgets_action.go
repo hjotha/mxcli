@@ -69,7 +69,7 @@ func serializeClientAction(action pages.ClientAction) bson.D {
 			{Key: "$Type", Value: "Forms$FormSettings"},
 			{Key: "Form", Value: a.PageName}, // BY_NAME_REFERENCE - qualified name, or empty string if no page
 			{Key: "ParameterMappings", Value: bson.A{int32(2)}},
-			{Key: "TitleOverride", Value: nil},
+			{Key: "TitleOverride", Value: emptyTextTemplate()},
 		}
 		return bson.D{
 			{Key: "$ID", Value: idToBsonBinary(string(a.ID))},
@@ -90,7 +90,7 @@ func serializeClientAction(action pages.ClientAction) bson.D {
 			{Key: "$Type", Value: "Forms$FormSettings"},
 			{Key: "Form", Value: a.PageName}, // BY_NAME_REFERENCE - qualified name
 			{Key: "ParameterMappings", Value: bson.A{int32(2)}},
-			{Key: "TitleOverride", Value: nil},
+			{Key: "TitleOverride", Value: emptyTextTemplate()},
 		}
 
 		return bson.D{

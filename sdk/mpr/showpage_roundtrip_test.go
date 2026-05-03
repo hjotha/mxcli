@@ -145,6 +145,40 @@ func TestShowPageAction_RoundtripNoParams(t *testing.T) {
 	}
 }
 
+// TestShowPageAction_TitleOverride_NotNil verifies that FormSettings.TitleOverride is written as
+// an embedded Microflows$TextTemplate object, not nil.  Studio Pro rejects null embedded objects
+// on project load (same class of bug as FormSettings.ParameterMappings.Variable — issue #295).
+func TestShowPageAction_TitleOverride_NotNil(t *testing.T) {
+	action := &microflows.ShowPageAction{
+		BaseElement: model.BaseElement{ID: "test-action-id"},
+		PageName:    "Sales.Product_NewEdit",
+	}
+
+	doc := serializeMicroflowAction(action)
+	data, err := bson.Marshal(doc)
+	if err != nil {
+		t.Fatalf("failed to marshal BSON: %v", err)
+	}
+
+	var raw map[string]any
+	if err := bson.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal BSON: %v", err)
+	}
+
+	formSettings := toMap(raw["FormSettings"])
+	if formSettings == nil {
+		t.Fatal("FormSettings missing")
+	}
+
+	to := toMap(formSettings["TitleOverride"])
+	if to == nil {
+		t.Fatal("TitleOverride is nil; Studio Pro rejects null Microflows$TextTemplate objects (issue #468)")
+	}
+	if got := extractString(to["$Type"]); got != "Microflows$TextTemplate" {
+		t.Fatalf("TitleOverride.$Type = %q, want %q", got, "Microflows$TextTemplate")
+	}
+}
+
 // TestShowPageAction_RoundtripMultipleParams verifies multiple parameter mappings survive roundtrip.
 func TestShowPageAction_RoundtripMultipleParams(t *testing.T) {
 	action := &microflows.ShowPageAction{

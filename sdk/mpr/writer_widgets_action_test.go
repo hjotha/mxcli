@@ -150,4 +150,25 @@ func TestPageClientAction_RequiredFields(t *testing.T) {
 	if !fsFields["TitleOverride"] {
 		t.Errorf("FormSettings missing required field %q", "TitleOverride")
 	}
+
+	// TitleOverride must be an embedded Microflows$TextTemplate object, not nil.
+	// Studio Pro rejects null embedded objects on project load (same class of bug as issue #295).
+	for _, e := range formSettings {
+		if e.Key != "TitleOverride" {
+			continue
+		}
+		to, ok := e.Value.(bson.D)
+		if !ok || to == nil {
+			t.Fatalf("TitleOverride must be a bson.D embedded object, got %T (%v)", e.Value, e.Value)
+		}
+		var typ string
+		for _, f := range to {
+			if f.Key == "$Type" {
+				typ, _ = f.Value.(string)
+			}
+		}
+		if typ != "Microflows$TextTemplate" {
+			t.Errorf("TitleOverride.$Type = %q, want %q", typ, "Microflows$TextTemplate")
+		}
+	}
 }

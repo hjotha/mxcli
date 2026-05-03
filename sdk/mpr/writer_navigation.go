@@ -241,7 +241,7 @@ func buildFormSettingsBson(formName string) bson.D {
 		{Key: "$Type", Value: "Forms$FormSettings"},
 		{Key: "Form", Value: formName},
 		{Key: "ParameterMappings", Value: bson.A{int32(1)}},
-		{Key: "TitleOverride", Value: nil},
+		{Key: "TitleOverride", Value: emptyTextTemplate()},
 	}
 }
 

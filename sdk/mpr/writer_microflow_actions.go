@@ -430,7 +430,7 @@ func serializeMicroflowAction(action microflows.MicroflowAction) bson.D {
 			{Key: "$Type", Value: "Forms$FormSettings"},
 			{Key: "Form", Value: a.PageName}, // BY_NAME_REFERENCE (page qualified name)
 			{Key: "ParameterMappings", Value: paramMappings},
-			{Key: "TitleOverride", Value: nil},
+			{Key: "TitleOverride", Value: emptyTextTemplate()},
 		}
 		doc = append(doc, bson.E{Key: "FormSettings", Value: formSettings})
 		doc = append(doc, bson.E{Key: "NumberOfPagesToClose", Value: ""})
@@ -555,6 +555,23 @@ func emptyPageVariable() bson.D {
 		{Key: "SnippetParameter", Value: ""},
 		{Key: "UseAllPages", Value: false},
 		{Key: "Widget", Value: ""},
+	}
+}
+
+// emptyTextTemplate returns an empty Microflows$TextTemplate embedded object.
+// TitleOverride on Forms$FormSettings is a Microflows$TextTemplate (not a scalar),
+// so it must be written as an empty object rather than nil — same pattern as
+// emptyPageVariable() for Forms$PageVariable (see PR #338 / issue #295).
+func emptyTextTemplate() bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Microflows$TextTemplate"},
+		{Key: "Parameters", Value: bson.A{int32(2)}},
+		{Key: "Text", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Texts$Text"},
+			{Key: "Items", Value: bson.A{int32(2)}},
+		}},
 	}
 }
 
