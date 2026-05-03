@@ -350,6 +350,77 @@ API token cost is visible on a bill. Developer time cost is invisible but larger
 
 ---
 
+### 9. The Compiler Evolution — Making mxcli Progressively Better
+
+mxcli is already closer to a compiler than it might appear. The executor correctly translates MDL AST to BSON (a compiler back-end). `mxcli check` is a type checker. The version registry models target-platform capabilities. The gap between "MDL executor" and "Mendix compiler" is specific and tractable — it is not a rearchitecture.
+
+**The core gap:** pattern knowledge lives in skill files, applied probabilistically by the LLM, rather than in the executor, applied deterministically.
+
+Skill files teach the LLM *how* to write MDL for CRUD, for microflow patterns, for standard page structures. If those skill files were instead executor logic, the LLM's job would shrink to: *which high-level command to invoke*, not *how to correctly implement the pattern*. The LLM becomes an orchestrator; the executor becomes the expert.
+
+**What needs to be added, in priority order:**
+
+**1. High-level expansion commands in the grammar**
+
+New first-class MDL statements that expand deterministically to complete implementations:
+
+```sql
+create crud Bookstore.Book;
+-- expands to: entity + DS_Get + ACT_Create + ACT_Edit + ACT_Delete
+--             + overview page + edit form + navigation item + entity access rules
+
+create module Bookstore with roles (Administrator, User);
+-- expands to: module + roles + user roles + default security settings
+
+create app "Bookstore Inventory" with module Bookstore
+  entities (Book, Author, Publisher)
+  crud for all;
+-- expands to: full skeleton app, ready to open
+```
+
+The test for a compiler command: remove all skill files — does `CREATE CRUD Bookstore.Book` still produce a correct, complete, idiomatic Mendix implementation? For a compiler, yes. Currently, no.
+
+**2. Convention encoding in the executor**
+
+Naming conventions — `DS_Get_Entity`, `ACT_Create_Entity`, `Module_Entity_Overview` — currently live in skill files as text the LLM reads and applies. The executor should encode these as rules so the same input always produces the same names, the same microflow skeleton, the same page structure, regardless of which model generated the MDL.
+
+**3. Cross-cutting concern propagation**
+
+`CREATE CRUD Bookstore.Book` should automatically propagate to:
+- Entity access rules for existing module roles
+- Navigation item in the default profile
+- Any index the entity needs for its standard queries
+
+Currently these require explicit MDL statements. The LLM must know to include them and regularly forgets one. A compiler propagates them because it understands what "CRUD for an entity" implies as a complete unit.
+
+**4. A completeness model**
+
+mxcli currently checks *syntactic and referential correctness* — you get what you write, nothing more. A compiler checks *architectural completeness*: a CRUD entity without a navigation item is incomplete and should warn. This shifts the tool's guarantee from "this MDL is valid" to "this MDL produces a working, navigable feature."
+
+**5. A pattern library in the executor**
+
+Standard patterns — the `DS_Get` microflow body, the save/cancel button bar on an edit page, the delete confirmation popup — currently live in skill files. Moving them into the executor as named, versioned templates that expansion commands instantiate makes them deterministic, testable, and Mendix-version-aware without any LLM involvement.
+
+**Impact on the strategic metrics**
+
+Each step up the compiler ladder compounds the advantages already documented:
+
+| Metric | Today (MDL executor) | With compiler commands |
+|---|---|---|
+| LLM output for CRUD entity | ~150–200 lines MDL | ~1 line (`create crud Mod.Entity`) |
+| Token cost | Low | Near-zero |
+| Correctness | High (LLM + skill files) | Deterministic |
+| Model tier needed | Sonnet | Local 7B model |
+| Completeness guarantee | Syntactic + referential | Architectural |
+
+The token cost for generating a full CRUD feature drops from ~1,000 tokens of MDL to a single statement. The model tier drops further — generating `create crud Bookstore.Book` is well within a local 7B model's capability. The correctness guarantee strengthens from probabilistic (the LLM applied the skill correctly) to deterministic (the executor expanded the pattern).
+
+**The skill file role shifts**
+
+Skill files do not disappear — they become higher-level. Instead of encoding *how to write CRUD microflows*, they encode *when to use CRUD vs. a custom microflow*, *how to name modules in a multi-app portfolio*, *which patterns suit which requirements*. The files shrink; the judgment they encode compounds. This is analogous to how SQL documentation shifted from "how to write a SELECT" to "when to use a CTE vs. a subquery."
+
+---
+
 ## At enterprise scale: a capability ceiling, not just a cost ceiling
 
 Mendix customers exist with projects comprising **100+ modules, 1,000+ entities, 1,000+ microflows, and 500+ pages**. At this scale the thesis stops being about efficiency and becomes about what is mathematically possible inside a single agent session.
@@ -444,6 +515,9 @@ Query cost is ~500 tokens in, ~200–2k out, regardless of project size. The age
 19. **Backend-semantics documentation.** Explicitly document atomicity, error handling, lock behaviour, rollback across `.mpr` and live backends. Avoid customers discovering semantic differences by incident.
 20. **Local model compatibility testing.** Benchmark MDL generation on Qwen Coder / Gemma tiers against the doctype-test corpus. Publish the task complexity threshold where local models are reliable. Establishes the cost floor and the on-premises privacy story for enterprise customers.
 21. **Workflow phase benchmarking.** Measure token and model-tier cost across all six agentic phases (comprehension → planning → generation → verification → correction) for MDL vs. MCP on representative tasks. Converts the analytical efficiency argument into cited data points.
+22. **High-level expansion commands in the MDL grammar.** `CREATE CRUD`, `CREATE MODULE WITH ROLES`, `CREATE APP` as first-class grammar rules with deterministic executor expansion. Each command moves a pattern from skill file (LLM-applied, probabilistic) to executor (deterministic). Start with `CREATE CRUD` — highest frequency, clearest pattern, immediately measurable improvement.
+23. **Convention registry in the executor.** Encode Mendix naming conventions (`DS_Get_Entity`, `ACT_Create_Entity`, `Module_Entity_Overview`) and standard structural patterns as executor rules, not skill file text. Same input → same output, always, regardless of model.
+24. **Completeness model.** Define what constitutes a complete feature (entity + microflows + page + navigation + access rules) and have `mxcli check` warn when a declared feature is architecturally incomplete. Shifts the guarantee from "syntactically valid" to "architecturally complete."
 
 ---
 
@@ -688,3 +762,39 @@ API fees appear on the bill. Developer time does not. A senior developer blocked
 MDL-generated applications will be better — not because the model is more capable, but because the team can afford to iterate. One PED attempt per day vs. ten MDL cycles per hour is a compounding quality advantage across a project.
 
 **Slide message:** *"One shot per day, or twenty iterations per hour. The answer determines whether your team ships or waits."*
+
+---
+
+## Slide 10 — The Compiler Roadmap: From Executor to Expert System
+
+**Thesis:** mxcli is already most of a compiler. The gap is specific and tractable. Each step closes it further — and each step compounds every advantage already in this deck.
+
+**What mxcli already has:**
+
+- Deterministic BSON writer (compiler back-end — correct, versioned)
+- `mxcli check` — type checker for syntax and references
+- Version registry — target-platform model
+- `CREATE OR MODIFY` — idempotent application
+
+**The gap in one sentence:** pattern knowledge lives in skill files (LLM-applied, probabilistic) rather than in the executor (deterministic). Moving it across is the compiler transition.
+
+**Five steps, in priority order:**
+
+1. **High-level expansion commands** — `CREATE CRUD`, `CREATE MODULE WITH ROLES`, `CREATE APP` in the MDL grammar. One statement; deterministic, complete expansion. Test: remove all skill files — does it still work?
+2. **Convention registry** — naming patterns and structural idioms encoded as executor rules, not skill text. Same input, same output, always.
+3. **Cross-cutting propagation** — `CREATE CRUD` automatically wires security, navigation, and standard indexes. No forgotten steps.
+4. **Completeness model** — `mxcli check` warns when a declared feature is architecturally incomplete, not just syntactically valid.
+5. **Pattern library** — standard microflow bodies and page structures as versioned executor templates. Deterministic, Mendix-version-aware, testable.
+
+**How each step compounds the strategic metrics:**
+
+| Step | Token cost | Model tier needed | Correctness |
+|---|---|---|---|
+| Today | Low | Sonnet | High (skill-dependent) |
+| + Expansion commands | Near-zero | Local 7B | Deterministic |
+| + Convention registry | Near-zero | Local 7B | Deterministic |
+| + Completeness model | Near-zero | Local 7B | Guaranteed complete |
+
+**The skill file role shifts — it does not shrink to zero.** Skills move from encoding *how to implement patterns* to encoding *when to use which pattern* and *how to compose patterns for complex requirements*. Higher-level judgment; less syntax coaching. The files get shorter; the value they encode per line increases.
+
+**Slide message:** *"mxcli is already most of a compiler. The roadmap is five concrete steps — not a rearchitecture. Each step makes the tool faster, cheaper, and more correct than the last."*
