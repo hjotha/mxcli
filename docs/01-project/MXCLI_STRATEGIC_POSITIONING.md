@@ -171,6 +171,119 @@ Every stage except "agent writes MDL" runs outside the agent's context. The agen
 
 ---
 
+### 5. Agentic Workflow Phases — Token Cost Is Not Uniform
+
+The strategic case above focuses on the execution phase (generating and applying changes). In practice, an agentic editing session has six phases, each with different token and model-tier costs. Treating the workflow as monolithic understates the advantage in the phases that happen most frequently.
+
+| Phase | Description | MDL | MCP (PED) |
+|---|---|---|---|
+| 1. Understand requirements | Parse user intent | Same (LLM reasoning) | Same |
+| 2. Understand project context | Learn existing app structure | Catalog SQL: ~500 tokens/query | Document walks: 5–20k tokens/doc |
+| 3. Generate plan | Decide what changes to make | Low — feeds from cheap phase 2 | High — feeds from expensive phase 2 |
+| 4. Generate steps | Produce the change operations | MDL script: ~500–5k tokens | Tool calls: 10–100k tokens |
+| 5. Verify results | Check correctness | `mxcli check`: ~200 tokens | Schema fetch + error response per doc |
+| 6. Correct and iterate | Fix errors | Replace specific lines, re-check | Fix partial state, one-shot budget |
+
+**Phase 2 is the hidden cost.** The catalog's advantage is usually argued for edit operations, but it's equally large at comprehension time. Understanding an existing 50-entity domain model via MCP requires loading 50+ documents into context. `mxcli catalog query` answers "what entities exist, what are their attributes, what associates them?" in three SQL queries totalling ~2k tokens — constant regardless of project size.
+
+**Phase 2 quality determines phase 4 cost.** An agent that spent 2k tokens building project context via SQL is more likely to write correct MDL on the first attempt than one that spent 40k tokens walking documents and still has an incomplete picture. The phase 2 advantage compounds forward into generation and correction.
+
+**Phases 5 and 6 are asymmetric.** `mxcli check` validates before execution and returns per-statement errors with line numbers. Corrections are surgical. `ped_check_errors` fires after partial application with a one-shot fix budget — the agent must diagnose what the document's current state is and fix it in a single attempt. Error recovery cost for MCP scales with operation complexity; for MDL it is bounded by script size regardless of complexity.
+
+---
+
+### 6. Model Tier Requirements and the Compound Cost Multiplier
+
+The preceding analysis focuses on token count. There is a second cost dimension that changes the strategic picture significantly: which model tier is required to execute the task reliably.
+
+**MCP tool calling requires Opus for non-trivial tasks.** The execution is inherently stateful and multi-turn:
+
+- **Index tracking** — adding elements to an array shifts subsequent indices. Every mutation changes the ground truth that subsequent operations must reference. Skill docs can remind the model to track this; they cannot do the tracking — that happens in the model's working memory at runtime.
+- **Dynamic reference resolution** — `$id(/entities/3/attributes/1)` is valid only until the next mutation reshapes the array. The model must recompute correct paths after every operation.
+- **Dependency ordering** — entities before associations, activities before sequenceflows. The rules are stateable in a skill doc; applying them correctly while simultaneously constructing payloads across 20+ turns is a working-memory problem, not a knowledge problem.
+- **Partial state diagnosis** — when `ped_check_errors` fires after 15 operations, the model must reason about which operation caused the problem and what the document's current shape is. This is exactly the multi-step reasoning task where smaller models fail consistently.
+
+**MDL generation is viable on Sonnet.** It is a declarative, all-at-once text generation task. The executor handles all state management — ID assignment, reference wiring, ordering — regardless of what model produced the script. Errors are reported per statement with a specific message; the fix is replacing one line. No state tracking required.
+
+**Skill documents can partially close the gap — but only for knowledge problems.** Schema patterns, common type names, ordering rules, error recovery recipes: all of these can be encoded in skill docs and do raise PED's reliability floor for simple operations. What skill docs cannot address is runtime state management. The index arithmetic, path recomputation, and partial state diagnosis that MCP requires at execution time are not knowledge problems — they are execution problems. The ceiling moves with better skill docs; it does not disappear. And it falls precisely at the complex, high-value operations where cost pressure is most acute.
+
+**The compound cost multiplier:**
+
+```
+cost = tokens × price_per_token(model_tier)
+```
+
+If MCP requires Opus (approximately 4× the per-token price of Sonnet) and uses 10–50× more tokens for the same task:
+
+```
+ratio = (tokens_MCP / tokens_MDL) × (price_Opus / price_Sonnet)
+      ≈ 10–50 × 4
+      = 40–200×
+```
+
+This is not theoretical: teams report 500M+ tokens/month on Opus-tier models for PED-driven workflows. The MDL approach changes the cost model rather than optimising within it.
+
+**Model tier by phase:**
+
+| Phase | MDL | MCP (PED) |
+|---|---|---|
+| Understand project context | Sonnet (SQL → table output) | Opus (document walk, schema inference) |
+| Generate plan | Sonnet | Sonnet |
+| Generate steps | Sonnet (write MDL script) | Opus (stateful multi-turn, index tracking) |
+| Verify | Sonnet (parse check output) | Sonnet |
+| Correct | Sonnet (fix specific lines) | Opus (fix partial state, one-shot budget) |
+
+MDL allows the full workflow to run on Sonnet. MCP forces Opus on the two most token-intensive phases — and those are also the phases that occur most frequently in a real session.
+
+---
+
+### 7. Local Model Compatibility
+
+MDL's declarative structure opens a capability that is structurally out of reach for MCP: **reliable execution by local, on-device models**.
+
+**Why MDL works for local models:**
+
+- The grammar is SQL-like and consistent — coding-specialised local models (Qwen Coder, Gemma) transfer well from pretraining on SQL and similar DSLs
+- Output is bounded — most MDL scripts are a few hundred tokens, within the reliable generation window of 32B-class models
+- The feedback loop is deterministic — `mxcli check` returns a line number and specific message; the fix is mechanical
+- No runtime state management — the executor handles all ID assignment, reference wiring, and ordering regardless of what model produced the script
+
+**Why MCP does not work for local models on complex tasks.** The index tracking, dynamic reference resolution, and partial state diagnosis that MCP requires are exactly the multi-step dependency tasks where 32B local models fail relative to frontier models. The practical ceiling for local models on MCP is roughly "create one entity with three attributes." A 20-activity microflow via MCP on a local model produces broken references or misordered elements before completion.
+
+**What works on 64GB M5 Max (e.g., Qwen Coder 32B at Q6, ~22GB):**
+
+| Task | Local model viability |
+|---|---|
+| Catalog SQL queries, `show structure` | High |
+| Create entity, enumeration, association | High |
+| Simple microflows (5–10 activities, linear) | Medium |
+| Complex microflows (decisions, loops, 20+ activities) | Low |
+| CRUD page layout | Medium |
+| Full app generation (domain + microflows + pages) | Low without scaffolding |
+| `mxcli check` error correction (per statement) | High |
+
+**Graceful degradation by complexity:**
+
+```
+try locally (Qwen Coder 32B, zero API cost)
+  → mxcli check clean: commit
+  → broken after one fix: escalate to Sonnet
+    → still broken: escalate to Opus
+```
+
+The validation gate is deterministic so the escalation decision is mechanical. A failed local attempt costs milliseconds and nothing — not a broken partially-applied project.
+
+**Strategic implications:**
+
+- **Zero cost for routine work.** Local inference has no per-token cost. Routine CRUD generation, catalog queries, and check/fix cycles cost nothing in API fees.
+- **Privacy for enterprise.** Project code never leaves the customer's infrastructure. No data in cloud API calls. A meaningful adoption blocker removed for banks, insurers, and government customers — the primary target segment. Every PED tool invocation sends a payload to a cloud API.
+- **Offline and air-gapped operation.** mxcli + local model runs in customer datacentres with no internet access.
+- **On-device speed.** An M5 Max running Qwen Coder 32B generates short MDL scripts in seconds — often lower latency than a round-trip to a cloud API for a simple operation.
+
+**The cost floor:** MDL on a local model is free. MDL on Sonnet is low cost. MDL on Opus is reserved for genuinely complex tasks. MCP on a local model is unreliable for anything non-trivial. MCP on Opus is the only viable path for complex work — and it is the most expensive option at every level.
+
+---
+
 ## At enterprise scale: a capability ceiling, not just a cost ceiling
 
 Mendix customers exist with projects comprising **100+ modules, 1,000+ entities, 1,000+ microflows, and 500+ pages**. At this scale the thesis stops being about efficiency and becomes about what is mathematically possible inside a single agent session.
@@ -234,7 +347,8 @@ Query cost is ~500 tokens in, ~200–2k out, regardless of project size. The age
 - **Training lag is real.** Publishing docs doesn't automatically seed pretraining. Requires volume: public repos, Stack-Overflow-style Q&A, blog content, open reference corpora. Treat as product investment.
 - **MDL v1 becomes a permanent commitment** once it lands in model weights. Backward-compat discipline is now strategic, not just developer-courtesy. SQL's conservatism is the right model; early-JavaScript churn is the antipattern.
 - **Name collision risk.** "MDL" has other meanings. Make sure the distinctive training signal is the grammar (`CREATE PERSISTENT ENTITY …`, `.mdl` extension, statement shape), not the acronym.
-- **These arguments assume capable agents.** Not a broad-consumer story; this is platform-team and power-user territory.
+- **These arguments assume capable agents.** Not a broad-consumer story; this is platform-team and power-user territory. The local model path (section 7) is the exception: for routine tasks, even a 32B local model is sufficient.
+- **Skill docs address knowledge problems, not execution complexity.** PED skill documents can raise reliability for simple and moderate MCP operations by encoding schema patterns, ordering rules, and error recovery recipes. They cannot address runtime state management — the index tracking, reference computation, and partial state diagnosis that drive Opus dependency on complex tasks. The ceiling moves with better skill docs; it does not disappear.
 - **catalog.db coverage must be invested in** for the query-as-composition argument to hold. Shallow metadata limits the reach.
 - **Mendix testing maturity is a gating variable.** The testing advantage only lands for customers who invest in test suites. Meeting customers where they are — scaffolding, generators, patterns — is part of the product, not just a documentation problem.
 
@@ -261,6 +375,8 @@ Query cost is ~500 tokens in, ~200–2k out, regardless of project size. The age
 17. **Recordable live editing as a headline feature.** The dual-backend enables live edits that *also* produce reviewable MDL scripts. Name it, brand it, demo it — nobody else has this. Turns every Studio Pro session into a git-reviewable change set.
 18. **Live-backend catalog freshness.** Event-driven refresh (or a ModelAPI-backed live catalog) so queries don't go stale mid-session. This is the hardest technical investment but it's load-bearing for the composition story when the backend is live.
 19. **Backend-semantics documentation.** Explicitly document atomicity, error handling, lock behaviour, rollback across `.mpr` and live backends. Avoid customers discovering semantic differences by incident.
+20. **Local model compatibility testing.** Benchmark MDL generation on Qwen Coder / Gemma tiers against the doctype-test corpus. Publish the task complexity threshold where local models are reliable. Establishes the cost floor and the on-premises privacy story for enterprise customers.
+21. **Workflow phase benchmarking.** Measure token and model-tier cost across all six agentic phases (comprehension → planning → generation → verification → correction) for MDL vs. MCP on representative tasks. Converts the analytical efficiency argument into cited data points.
 
 ---
 
@@ -415,3 +531,59 @@ Every stage except "agent writes MDL" runs outside the agent's context. Pass/fai
 - Idempotent, partial-failure-safe execution for volume operations.
 
 **Target buyer for this slide:** platform engineering lead at a bank, insurer, telco, or large government — the person whose nightmare is "how do I maintain consistency across 40 apps built by 80 developers over 6 years." This is the slide they remember.
+
+---
+
+## Slide 7 — The Compound Cost Multiplier: Tokens × Model Tier
+
+**Thesis:** the token efficiency argument understates the real cost difference. MCP forces Opus; MDL runs on Sonnet. Multiply the token ratio by the model price ratio and the cost difference is 40–200×, not 10–50×.
+
+**Six phases, two cost drivers:**
+
+Every agentic session has six phases: understand requirements → understand project context → plan → generate steps → verify → correct. MDL runs all six on Sonnet. MCP forces Opus on the two most token-intensive phases — project comprehension (document walks instead of catalog SQL) and step generation (stateful multi-turn tool calling instead of declarative script authoring).
+
+**Why skill documents don't close the gap:**
+
+Better PED skill docs raise the reliability floor for simple operations by encoding schema patterns and ordering rules. They do not address runtime state management — the index tracking, path recomputation, and partial state diagnosis that are intrinsic to multi-turn tool calling. The ceiling moves; it does not disappear. It falls precisely at complex, high-value operations.
+
+**The arithmetic:**
+
+- MCP: N tokens at Opus price
+- MDL: N/10–N/50 tokens at Sonnet price (~4× cheaper per token)
+- Combined ratio: **40–200×**
+
+User data: 500M+ tokens/month at Opus prices reported for PED-heavy workflows. This is the line item that makes the conversation happen.
+
+**Slide message:** *"It's not just fewer tokens. It's cheaper tokens. And the gap compounds across every phase of the workflow."*
+
+---
+
+## Slide 8 — Local Models: The Cost Floor Reaches Zero
+
+**Thesis:** MDL's declarative structure enables effective use of local, on-device models for routine work. MCP cannot. This creates a three-tier cost structure with a zero-cost floor — and removes the cloud-data constraint that blocks enterprise adoption.
+
+**Why MDL works for local models:**
+
+MDL is a text generation task with a learnable SQL-like grammar and deterministic feedback. A 32B coding model (Qwen Coder, Gemma) running on a MacBook Pro M5 Max with 64GB RAM can generate correct MDL for routine operations — create entity, simple microflow, CRUD page. The executor handles all state management; the model writes declaratively. `mxcli check` gives per-line error messages; fixes are mechanical.
+
+**Why MCP does not work for local models on non-trivial tasks:**
+
+Index tracking, dynamic reference resolution, and partial state diagnosis under a one-shot fix budget are exactly the multi-step dependency tasks where 32B models fail reliably. The practical local model ceiling for MCP is "create one entity with three attributes."
+
+**The three-tier cost structure:**
+
+| Tier | Model | Cost | Suitable for |
+|---|---|---|---|
+| Local | Qwen Coder 32B | $0 | Routine CRUD, catalog queries, check/fix |
+| Cloud mid | Sonnet | Low | Moderate microflows, multi-doc operations |
+| Cloud top | Opus | Higher | Complex generation, large-scale refactoring |
+
+**Graceful degradation:** `mxcli check` after a local attempt is the gate. Failure is cheap and immediate; escalation is mechanical. No partial state to recover from.
+
+**The enterprise story beyond cost:**
+
+- Project data never leaves the customer's infrastructure — no cloud API calls
+- Offline and air-gapped operation in secure datacentres
+- Removes a meaningful compliance blocker for financial services and government
+
+**Slide message:** *"Local models for free. Sonnet for most. Opus only when you need it. And your project data stays on your hardware."*
