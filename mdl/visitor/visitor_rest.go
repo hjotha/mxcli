@@ -373,7 +373,9 @@ func (b *Builder) ExitCreatePublishedRestServiceStatement(ctx *parser.CreatePubl
 	// Parse resources
 	for _, resCtx := range ctx.AllPublishedRestResource() {
 		rc := resCtx.(*parser.PublishedRestResourceContext)
-		stmt.Resources = append(stmt.Resources, buildPublishedRestResourceDef(rc))
+		if res := buildPublishedRestResourceDef(rc); res != nil {
+			stmt.Resources = append(stmt.Resources, res)
+		}
 	}
 
 	b.statements = append(b.statements, stmt)
@@ -381,7 +383,11 @@ func (b *Builder) ExitCreatePublishedRestServiceStatement(ctx *parser.CreatePubl
 
 // buildPublishedRestResourceDef converts a PublishedRestResourceContext to a
 // PublishedRestResourceDef AST node. Shared by CREATE and ALTER.
+// Returns nil when the resource name token is absent (ANTLR error-recovery path).
 func buildPublishedRestResourceDef(rc *parser.PublishedRestResourceContext) *ast.PublishedRestResourceDef {
+	if rc.STRING_LITERAL() == nil {
+		return nil
+	}
 	resDef := &ast.PublishedRestResourceDef{
 		Name: unquoteString(rc.STRING_LITERAL().GetText()),
 	}
@@ -472,8 +478,9 @@ func (b *Builder) exitAlterPublishedRestServiceStatement(ctx *parser.AlterStatem
 		// ADD RESOURCE 'name' { ... }
 		if ac.ADD() != nil {
 			if rc := ac.PublishedRestResource(); rc != nil {
-				resDef := buildPublishedRestResourceDef(rc.(*parser.PublishedRestResourceContext))
-				stmt.Actions = append(stmt.Actions, &ast.PublishedRestAddResourceAction{Resource: resDef})
+				if resDef := buildPublishedRestResourceDef(rc.(*parser.PublishedRestResourceContext)); resDef != nil {
+					stmt.Actions = append(stmt.Actions, &ast.PublishedRestAddResourceAction{Resource: resDef})
+				}
 			}
 			continue
 		}

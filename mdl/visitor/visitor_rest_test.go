@@ -88,3 +88,15 @@ func TestCreatePublishedRestService(t *testing.T) {
 		t.Errorf("Expected 2 operations, got %d", len(stmt.Resources[0].Operations))
 	}
 }
+
+// TestCreatePublishedRestService_EndResourceSyntax_NoPanic verifies that the
+// unsupported `end resource` keyword syntax does not cause a SIGSEGV (issue #429).
+// ANTLR error recovery produces a PublishedRestResourceContext with a nil
+// STRING_LITERAL token; the nil guard in buildPublishedRestResourceDef must
+// prevent the panic and let Build return without crashing.
+func TestCreatePublishedRestService_EndResourceSyntax_NoPanic(t *testing.T) {
+	input := "create published rest service MyModule.TestREST (Version: '1.0', Path: '/api') resource 'items' get '/all' microflow MyModule.GetItems; end resource;"
+	// Must not panic — parse errors are acceptable, a crash is not.
+	prog, _ := Build(input)
+	_ = prog
+}
