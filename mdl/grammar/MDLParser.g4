@@ -3057,7 +3057,7 @@ activitySetProperty
     ;
 
 alterActivityRef
-    : IDENTIFIER (AT NUMBER_LITERAL)?
+    : identifierOrKeyword (AT NUMBER_LITERAL)?
     | STRING_LITERAL (AT NUMBER_LITERAL)?
     ;
 

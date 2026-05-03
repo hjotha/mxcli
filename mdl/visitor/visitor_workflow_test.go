@@ -1161,6 +1161,54 @@ func TestAlterWorkflow_SetActivityTargeting(t *testing.T) {
 	}
 }
 
+// TestAlterWorkflow_DropBoundaryEvent_KeywordActivityRef verifies that using a keyword
+// token (e.g. "activity") as an activity reference in DROP BOUNDARY EVENT does not panic
+// — regression for issue #430 where AlterActivityRef() returned nil causing a panic via
+// a bare type assertion with no nil guard.
+func TestAlterWorkflow_DropBoundaryEvent_KeywordActivityRef(t *testing.T) {
+	// "activity" is a keyword token; alterActivityRef now uses identifierOrKeyword so
+	// this must parse without panicking and produce a DropBoundaryEventOp with ref "activity".
+	input := `ALTER WORKFLOW M.WF DROP BOUNDARY EVENT ON activity;`
+
+	prog, errs := Build(input)
+	if len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("Parse error: %v", e)
+		}
+		t.FailNow()
+	}
+
+	stmt, ok := prog.Statements[0].(*ast.AlterWorkflowStmt)
+	if !ok || len(stmt.Operations) == 0 {
+		t.Fatal("Expected AlterWorkflowStmt with at least 1 operation")
+	}
+	op, ok := stmt.Operations[0].(*ast.DropBoundaryEventOp)
+	if !ok {
+		t.Fatalf("Expected DropBoundaryEventOp, got %T", stmt.Operations[0])
+	}
+	if op.ActivityRef != "activity" {
+		t.Errorf("ActivityRef = %q, want %q", op.ActivityRef, "activity")
+	}
+}
+
+// TestAlterWorkflow_DropBoundaryEvent_NilGuard verifies that a malformed
+// DROP BOUNDARY EVENT (activity ref missing) does not panic — it must return
+// nil silently rather than dereferencing a nil AlterActivityRef context.
+func TestAlterWorkflow_DropBoundaryEvent_NilGuard(t *testing.T) {
+	// Intentionally omit the activity ref to trigger ANTLR error recovery.
+	// The visitor must not panic; it is acceptable to get a parse error or to
+	// produce 0 operations (the nil-guard returns nil from buildAlterWorkflowAction).
+	input := `ALTER WORKFLOW M.WF DROP BOUNDARY EVENT ON ;`
+
+	// Must not panic.
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("panic in visitor for malformed DROP BOUNDARY EVENT: %v", r)
+		}
+	}()
+	Build(input) //nolint:errcheck
+}
+
 func TestAlterWorkflow_SetActivityDueDate(t *testing.T) {
 	input := `ALTER WORKFLOW M.WF SET ACTIVITY 'Review' DUE DATE 'PT72H';`
 
