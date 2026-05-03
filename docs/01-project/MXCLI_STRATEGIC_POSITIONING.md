@@ -99,14 +99,14 @@ mxcli has a structural token advantage that grows with project size, edit breadt
 
 **Four mechanisms:**
 
-1. **Document reads scale with project size; MDL edits don't.** PED reads whole documents into context to edit them; a mature microflow/page is 5–20k tokens of JSON. An `ALTER PAGE … { INSERT AFTER txtEmail … }` is ~30 tokens and never needs the whole page.
+1. **PED navigation and schema cost scales with operation complexity; MDL edits don't.** PED uses progressive disclosure — documents are read one level at a time, children returned as stubs until explicitly navigated. Targeted edits of a known path can be efficient. However, any write requires a per-type schema fetch (typically 1–5k tokens per type), and creating or understanding complex structures requires navigating multiple levels across many paths before the first edit is made. An `ALTER PAGE … { INSERT AFTER txtEmail … }` is ~30 tokens and requires no schema fetch, no navigation, and no awareness of the surrounding document structure.
 2. **Catalog queries replace document walks.** Answers over `catalog.db` are 50-token SQL queries returning 200-token tables. The PED equivalent requires loading every candidate document. The gap widens linearly with project size.
 3. **Schemas amortise differently.** PED fetches schemas per session, per type. MDL's grammar lives in the parser; the agent pays once for a bounded skill-file set (~2–10k tokens) that amortises across edits.
-4. **Error loops are asymmetric.** `mxcli check --references` validates before apply; failed attempts cost only script size (~100–500 tokens). PED failures force document re-reads for diagnosis with a one-shot fix budget.
+4. **Error loops are asymmetric.** `mxcli check --references` validates before apply; failed attempts cost only script size (~100–500 tokens). PED failures require path re-reads and schema re-fetches to diagnose current state, within a one-shot fix budget.
 
 **Back-of-envelope for a realistic refactor** (rename `Customer.Email` → `Customer.EmailAddress` across 1 entity + 3 microflows + 2 pages + 4 filters):
 
-- PED: ~50–80k tokens of tool I/O (9 document reads + 9 updates + check + potential re-reads).
+- PED: ~50–80k tokens of tool I/O (progressive navigation reads + per-type schema fetches + 9 updates + check + potential re-reads for diagnosis).
 - MDL: ~1–2k tokens (catalog query + one ~400-token script + check + exec results).
 
 **Long-term compounding via LLM pretraining.** As MDL is published and used publicly, frontier models will learn the grammar natively — analogous to SQL. Implications:
@@ -178,7 +178,7 @@ The strategic case above focuses on the execution phase (generating and applying
 | Phase | Description | MDL | MCP (PED) |
 |---|---|---|---|
 | 1. Understand requirements | Parse user intent | Same (LLM reasoning) | Same |
-| 2. Understand project context | Learn existing app structure | Catalog SQL: ~500 tokens/query | Document walks: 5–20k tokens/doc |
+| 2. Understand project context | Learn existing app structure | Catalog SQL: ~500 tokens/query | Progressive tree navigation + schema fetches: multiple round-trips, cost scales with breadth explored |
 | 3. Generate plan | Decide what changes to make | Low — feeds from cheap phase 2 | High — feeds from expensive phase 2 |
 | 4. Generate steps | Produce the change operations | MDL script: ~500–5k tokens | Tool calls: 10–100k tokens |
 | 5. Verify results | Check correctness | `mxcli check`: ~200 tokens | Schema fetch + error response per doc |
