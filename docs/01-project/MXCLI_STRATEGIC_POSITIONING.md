@@ -141,7 +141,7 @@ Most questions about a Mendix project don't need judgment — they need filterin
 
 - MCP has cleaner safety boundaries (typed args, no bash accidents) — matters for novice users, not for platform teams in their own shells.
 - Shell fluency requires capable agents — aligned with the target segment, which already uses frontier-class agents.
-- Discoverability is weaker; invest in `mxcli --help` that reads well to an LLM and `man` pages an agent can grep.
+- Discoverability requires learning MDL syntax — but `mxcli syntax --json` provides a machine-readable feature registry organised by topic (domain-model, microflow, page, security, workflow, …) with drill-down and a built-in LLM caching hint. Skill files distributed via `mxcli init` bring patterns and examples directly into the agent's context. The discoverability gap is narrowing.
 
 ### 4. Test-informed safety and verification — the force multiplier
 
@@ -474,7 +474,7 @@ A focused six-slide deck. Slide 1 sets the axis — the dual-backend refactor me
 
 **Strategic positioning:** this makes mxcli not "a CLI for Mendix" but **Mendix's place in the Unix ecosystem** — a much bigger and more defensible position than anything MCP-bounded can become.
 
-**Required investments to realise it:** stable pipe-friendly output modes, `mxcli query` as first-class SQL surface, machine-readable `--help`, aggressive catalog coverage.
+**Required investments to realise it:** stable pipe-friendly output modes, `mxcli query` as first-class SQL surface, aggressive catalog coverage. (`mxcli syntax --json` already provides machine-readable command discovery.)
 
 ---
 
