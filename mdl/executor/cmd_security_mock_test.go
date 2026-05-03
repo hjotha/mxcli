@@ -6,7 +6,10 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/sdk/domainmodel"
 	"github.com/mendixlabs/mxcli/sdk/microflows"
 	"github.com/mendixlabs/mxcli/sdk/pages"
 	"github.com/mendixlabs/mxcli/sdk/security"
@@ -280,4 +283,150 @@ func TestShowAccessOnWorkflow_Mock_Unsupported(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	assertError(t, listAccessOnWorkflow(ctx, &ast.QualifiedName{Module: "MyModule", Name: "SomeWorkflow"}))
+}
+
+// TestGrantEntityAccess_XPathConstraint_PreservesRights verifies that granting
+// entity access with an XPath WHERE clause shows the correct rights immediately
+// after the GRANT (issue #431: output showed "(no access)" instead of "read *, write *").
+func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	statusAttr := &domainmodel.Attribute{
+		BaseElement: model.BaseElement{ID: nextID("attr")},
+		Name:        "Status",
+	}
+	entityBefore := &domainmodel.Entity{
+		BaseElement: model.BaseElement{ID: nextID("ent")},
+		ContainerID: mod.ID,
+		Name:        "Order",
+		Persistable: true,
+		Attributes:  []*domainmodel.Attribute{statusAttr},
+		AccessRules: nil, // no rules yet
+	}
+	dmBefore := &domainmodel.DomainModel{
+		BaseElement: model.BaseElement{ID: nextID("dm")},
+		ContainerID: mod.ID,
+		Entities:    []*domainmodel.Entity{entityBefore},
+	}
+
+	// After AddEntityAccessRule, the second GetDomainModel call returns the entity
+	// with the rule already applied (simulating what a real MPR backend would do).
+	entityAfter := &domainmodel.Entity{
+		BaseElement: model.BaseElement{ID: entityBefore.ID},
+		ContainerID: mod.ID,
+		Name:        "Order",
+		Persistable: true,
+		Attributes:  []*domainmodel.Attribute{statusAttr},
+		AccessRules: []*domainmodel.AccessRule{
+			{
+				ModuleRoleNames:           []string{"MyModule.User"},
+				AllowCreate:               false,
+				AllowDelete:               false,
+				DefaultMemberAccessRights: domainmodel.MemberAccessRightsReadWrite,
+				XPathConstraint:           "[Status = 'Open']",
+				MemberAccesses: []*domainmodel.MemberAccess{
+					{
+						AttributeName: "MyModule.Order.Status",
+						AccessRights:  domainmodel.MemberAccessRightsReadWrite,
+					},
+				},
+			},
+		},
+	}
+	dmAfter := &domainmodel.DomainModel{
+		BaseElement: model.BaseElement{ID: dmBefore.ID},
+		ContainerID: mod.ID,
+		Entities:    []*domainmodel.Entity{entityAfter},
+	}
+
+	callCount := 0
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListModulesFunc: func() ([]*model.Module, error) {
+			return []*model.Module{mod}, nil
+		},
+		GetDomainModelFunc: func(id model.ID) (*domainmodel.DomainModel, error) {
+			callCount++
+			if callCount == 1 {
+				return dmBefore, nil // first call: before grant
+			}
+			return dmAfter, nil // second call (formatAccessRuleResult): after grant
+		},
+		AddEntityAccessRuleFunc: func(params backend.EntityAccessRuleParams) error {
+			if params.XPathConstraint != "[Status = 'Open']" {
+				t.Errorf("XPathConstraint not passed: got %q, want %q", params.XPathConstraint, "[Status = 'Open']")
+			}
+			if params.DefaultMemberAccess != "ReadWrite" {
+				t.Errorf("DefaultMemberAccess not passed: got %q, want ReadWrite", params.DefaultMemberAccess)
+			}
+			return nil
+		},
+		ReconcileMemberAccessesFunc: func(unitID model.ID, moduleName string) (int, error) {
+			return 0, nil
+		},
+	}
+
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	stmt := &ast.GrantEntityAccessStmt{
+		Entity: ast.QualifiedName{Module: "MyModule", Name: "Order"},
+		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "User"}},
+		Rights: []ast.EntityAccessRight{
+			{Type: ast.EntityAccessReadAll},
+			{Type: ast.EntityAccessWriteAll},
+		},
+		XPathConstraint: "[Status = 'Open']",
+	}
+	assertNoError(t, execGrantEntityAccess(ctx, stmt))
+
+	out := buf.String()
+	assertContainsStr(t, out, "Granted access")
+	assertNotContainsStr(t, out, "(no access)")
+	assertContainsStr(t, out, "read *")
+}
+
+// TestOutputEntityAccessGrants_XPathConstraint_EscapedQuotes verifies that
+// outputEntityAccessGrants escapes single quotes inside the XPath constraint
+// so the DESCRIBE ENTITY output is valid re-parseable MDL (issue #431).
+func TestOutputEntityAccessGrants_XPathConstraint_EscapedQuotes(t *testing.T) {
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+
+	entity := &domainmodel.Entity{
+		BaseElement: model.BaseElement{ID: nextID("ent")},
+		ContainerID: mod.ID,
+		Name:        "Order",
+		Persistable: true,
+		Attributes: []*domainmodel.Attribute{
+			{BaseElement: model.BaseElement{ID: nextID("attr")}, Name: "Status"},
+		},
+		AccessRules: []*domainmodel.AccessRule{
+			{
+				ModuleRoleNames:           []string{"MyModule.User"},
+				DefaultMemberAccessRights: domainmodel.MemberAccessRightsReadWrite,
+				XPathConstraint:           "[Status = 'Open']",
+				MemberAccesses: []*domainmodel.MemberAccess{
+					{
+						AttributeName: "MyModule.Order.Status",
+						AccessRights:  domainmodel.MemberAccessRightsReadWrite,
+					},
+				},
+			},
+		},
+	}
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	outputEntityAccessGrants(ctx, entity, "MyModule", "Order")
+
+	out := buf.String()
+	// Single quotes inside the XPath must be doubled for valid MDL
+	assertContainsStr(t, out, "''Open''")
+	// Should NOT contain unescaped version
+	assertNotContainsStr(t, out, "= 'Open'")
+	// The outer where clause delimiters must still be single quotes
+	assertContainsStr(t, out, "where '")
 }

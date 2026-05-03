@@ -46,7 +46,8 @@ func outputEntityAccessGrants(ctx *ExecContext, entity *domainmodel.Entity, modu
 			strings.Join(roleStrs, ", "), moduleName, entityName, rightsStr)
 
 		if rule.XPathConstraint != "" {
-			grantLine += fmt.Sprintf(" where '%s'", rule.XPathConstraint)
+			escaped := strings.ReplaceAll(rule.XPathConstraint, "'", "''")
+			grantLine += fmt.Sprintf(" where '%s'", escaped)
 		}
 		grantLine += ";"
 

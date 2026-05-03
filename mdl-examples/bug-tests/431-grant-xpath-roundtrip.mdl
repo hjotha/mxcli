@@ -1,0 +1,30 @@
+-- Bug test: GRANT with XPath WHERE clause must preserve rights and emit re-parseable MDL.
+-- Issue #431: granting entity access with an XPath WHERE clause containing string literals
+-- (e.g., where '[Status = ''Open'']') was reported to produce empty access rules
+-- and the DESCRIBE output emitted un-escaped single quotes, breaking roundtrip parsing.
+--
+-- After the fix:
+--   1. The XPath constraint and DefaultMemberAccessRights are stored correctly in BSON.
+--   2. DESCRIBE ENTITY emits the XPath with doubled single quotes ('' not '),
+--      so the output is valid MDL that can be parsed without errors.
+--   3. Re-running the DESCRIBE output does not corrupt the existing rule.
+--
+-- Run with: mxcli exec 431-grant-xpath-roundtrip.mdl -p app.mpr
+--   Then verify: mxcli -p app.mpr -c "show access on entity bug431.Order"
+--     should show: Rights: read, write  and  where '[Status = ''Open'']'
+--
+-- Studio Pro validation: open app.mpr in Studio Pro and verify no consistency errors.
+
+create module bug431;
+
+create persistent entity bug431.Order (
+  Status: string(50),
+  Amount: decimal
+);
+
+create module role bug431.User;
+
+-- GRANT with XPath WHERE clause containing a string literal with single quotes.
+-- The XPath '[Status = ''Open'']' must be stored as [Status = 'Open'] in BSON.
+grant bug431.User on bug431.Order (read *, write *)
+  where '[Status = ''Open'']';
