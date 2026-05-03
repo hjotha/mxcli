@@ -4,11 +4,14 @@
 package mpr
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/types"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -586,4 +589,65 @@ func (r *Reader) ListRawUnits(objectType string) ([]*RawUnitInfo, error) {
 	}
 
 	return result, nil
+}
+
+// getUnitByID fetches a single rawUnit by its UUID string without loading all units.
+// Returns (nil, nil) when the ID is not found.
+// V1: direct SQLite BLOB lookup — O(1). V2: cache lookup + single file read — O(cache size).
+func (r *Reader) getUnitByID(id string) (*rawUnit, error) {
+	if r.version == MPRVersionV2 {
+		return r.getUnitByIDV2(id)
+	}
+	return r.getUnitByIDV1(id)
+}
+
+func (r *Reader) getUnitByIDV1(id string) (*rawUnit, error) {
+	blob := types.UUIDToBlob(id)
+	if blob == nil {
+		return nil, fmt.Errorf("invalid unit ID: %s", id)
+	}
+	row := r.db.QueryRow(
+		"SELECT UnitID, ContainerID, ContainmentName, Contents FROM Unit WHERE UnitID = ?",
+		blob,
+	)
+	var unitID, containerID []byte
+	var containmentName string
+	var contents []byte
+	if err := row.Scan(&unitID, &containerID, &containmentName, &contents); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to query unit %s: %w", id, err)
+	}
+	return &rawUnit{
+		ID:              blobToUUID(unitID),
+		ContainerID:     blobToUUID(containerID),
+		ContainmentName: containmentName,
+		Type:            getTypeFromContents(contents),
+		Contents:        contents,
+	}, nil
+}
+
+func (r *Reader) getUnitByIDV2(id string) (*rawUnit, error) {
+	if !r.unitCacheValid {
+		if err := r.buildUnitCache(); err != nil {
+			return nil, err
+		}
+	}
+	for _, cu := range r.unitCache {
+		if cu.ID == id {
+			contents, err := r.readMprContents(id)
+			if err != nil {
+				return nil, err
+			}
+			return &rawUnit{
+				ID:              cu.ID,
+				ContainerID:     cu.ContainerID,
+				ContainmentName: cu.ContainmentName,
+				Type:            cu.Type,
+				Contents:        contents,
+			}, nil
+		}
+	}
+	return nil, nil
 }

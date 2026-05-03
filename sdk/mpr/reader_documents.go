@@ -201,19 +201,16 @@ func (r *Reader) ListMicroflows() ([]*microflows.Microflow, error) {
 }
 
 // GetMicroflow retrieves a microflow by ID.
+// Uses a direct unit lookup (O(1) for V1, O(cache) for V2) instead of loading all microflows.
 func (r *Reader) GetMicroflow(id model.ID) (*microflows.Microflow, error) {
-	microflowsList, err := r.ListMicroflows()
+	unit, err := r.getUnitByID(string(id))
 	if err != nil {
 		return nil, err
 	}
-
-	for _, mf := range microflowsList {
-		if mf.ID == id {
-			return mf, nil
-		}
+	if unit == nil {
+		return nil, fmt.Errorf("microflow not found: %s", id)
 	}
-
-	return nil, fmt.Errorf("microflow not found: %s", id)
+	return r.parseMicroflow(unit.ID, unit.ContainerID, unit.Contents)
 }
 
 // IsRule reports whether the given qualified name refers to a rule
@@ -285,19 +282,16 @@ func (r *Reader) ListNanoflows() ([]*microflows.Nanoflow, error) {
 }
 
 // GetNanoflow retrieves a nanoflow by ID.
+// Uses a direct unit lookup (O(1) for V1, O(cache) for V2) instead of loading all nanoflows.
 func (r *Reader) GetNanoflow(id model.ID) (*microflows.Nanoflow, error) {
-	nanoflows, err := r.ListNanoflows()
+	unit, err := r.getUnitByID(string(id))
 	if err != nil {
 		return nil, err
 	}
-
-	for _, nf := range nanoflows {
-		if nf.ID == id {
-			return nf, nil
-		}
+	if unit == nil {
+		return nil, fmt.Errorf("nanoflow not found: %s", id)
 	}
-
-	return nil, fmt.Errorf("nanoflow not found: %s", id)
+	return r.parseNanoflow(unit.ID, unit.ContainerID, unit.Contents)
 }
 
 // ListPages returns all pages in the project.
