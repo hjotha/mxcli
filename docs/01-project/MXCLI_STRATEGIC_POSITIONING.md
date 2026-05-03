@@ -350,74 +350,74 @@ API token cost is visible on a bill. Developer time cost is invisible but larger
 
 ---
 
-### 9. The Compiler Evolution — Making mxcli Progressively Better
+### 9. A Three-Layer Architecture: Compiler, Starlark, Skills
 
-mxcli is already closer to a compiler than it might appear. The executor correctly translates MDL AST to BSON (a compiler back-end). `mxcli check` is a type checker. The version registry models target-platform capabilities. The gap between "MDL executor" and "Mendix compiler" is specific and tractable — it is not a rearchitecture.
+The linting system already embodies the right design principle: Starlark handles quantitative rules (naming conventions, complexity thresholds, structural checks); skill files handle qualitative guidance (architectural judgment, design heuristics). The same split applies to generation — and once applied, it clarifies exactly what belongs in the compiler itself.
 
-**The core gap:** pattern knowledge lives in skill files, applied probabilistically by the LLM, rather than in the executor, applied deterministically.
+**The three layers:**
 
-Skill files teach the LLM *how* to write MDL for CRUD, for microflow patterns, for standard page structures. If those skill files were instead executor logic, the LLM's job would shrink to: *which high-level command to invoke*, not *how to correctly implement the pattern*. The LLM becomes an orchestrator; the executor becomes the expert.
+| Layer | Handles | Mechanism | Example |
+|---|---|---|---|
+| **Compiler** (mxcli) | Correctness — type safety, semantic completeness, dependency resolution | Type system, semantic analysis built into the tool | Catch `$Amount + $Customer/Name` as a type error |
+| **Starlark scripts** | Quantitative patterns — deterministic implementation of known patterns | User- and community-defined generation scripts | `create_crud(module, entity)` always produces the same microflows |
+| **LLM skills** | Qualitative judgment — what to build, which pattern fits | Skill files read by the LLM | "Should this be a workflow or a microflow?" |
 
-**What needs to be added, in priority order:**
+**Moving patterns from skills to Starlark**
 
-**1. High-level expansion commands in the grammar**
+Skills currently encode two different things. Implementation patterns — how to correctly build CRUD, an approval workflow, a master-detail page — are quantitative: given the same inputs, the correct output is always the same. These should move to Starlark generation scripts, parallel to how quantitative lint rules already live in Starlark.
 
-New first-class MDL statements that expand deterministically to complete implementations:
+Judgment — when to use a workflow vs. a microflow, how to structure a domain model for a given use case, which UI pattern suits the requirement — is qualitative. These stay as skills because they require contextual reasoning the LLM provides.
 
-```sql
-create crud Bookstore.Book;
--- expands to: entity + DS_Get + ACT_Create + ACT_Edit + ACT_Delete
---             + overview page + edit form + navigation item + entity access rules
+The result: skill files become shorter and higher-value. They encode *when and why*, not *how*. The Starlark scripts encode *how*, deterministically and testably.
 
-create module Bookstore with roles (Administrator, User);
--- expands to: module + roles + user roles + default security settings
+**The Starlark generation extension system**
 
-create app "Bookstore Inventory" with module Bookstore
-  entities (Book, Author, Publisher)
-  crud for all;
--- expands to: full skeleton app, ready to open
+The same extension mechanism that exists for lint rules applies to generation. Users and organisations define named generation scripts:
+
+```python
+# myorg/patterns/crud.star
+def create_crud(ctx, module, entity):
+    ctx.mdl(f"create entity {module}.{entity} ...")
+    ctx.mdl(f"create microflow {module}.DS_Get_{entity} ...")
+    ctx.mdl(f"create page {module}.{entity}_Overview ...")
+    ctx.mdl(f"alter navigation ...")
 ```
 
-The test for a compiler command: remove all skill files — does `CREATE CRUD Bookstore.Book` still produce a correct, complete, idiomatic Mendix implementation? For a compiler, yes. Currently, no.
+Invoked from MDL:
+```sql
+apply pattern myorg.crud (module: Bookstore, entity: Book);
+```
 
-**2. Convention encoding in the executor**
+Organisations encode their conventions once. The LLM invokes the script with parameters — a task well within local 7B model capability. The pattern expands deterministically. Mendix could ship an official standard library of patterns; organisations override or extend them with their own conventions.
 
-Naming conventions — `DS_Get_Entity`, `ACT_Create_Entity`, `Module_Entity_Overview` — currently live in skill files as text the LLM reads and applies. The executor should encode these as rules so the same input always produces the same names, the same microflow skeleton, the same page structure, regardless of which model generated the MDL.
+**What genuinely belongs in the compiler**
 
-**3. Cross-cutting concern propagation**
+After moving patterns to Starlark, what remains for the compiler is correctness guarantees — things neither Starlark nor skills can provide:
 
-`CREATE CRUD Bookstore.Book` should automatically propagate to:
-- Entity access rules for existing module roles
-- Navigation item in the default profile
-- Any index the entity needs for its standard queries
+**Type system for MDL expressions.** MDL expressions have types: `$Customer/Name` is a String, `$Amount > 100` is a Boolean. mxcli currently checks that `$Customer/Name` refers to an attribute that exists, but not that it is used as the right type. A compiler catches:
+```sql
+set $Total = $Customer/Name + 100;          -- String + Integer: type error
+call Mod.ACT_Process (Amount: $Customer/Name); -- wrong parameter type
+```
+These are caught today only when Studio Pro opens the file.
 
-Currently these require explicit MDL statements. The LLM must know to include them and regularly forgets one. A compiler propagates them because it understands what "CRUD for an entity" implies as a complete unit.
+**Cross-document semantic analysis.** `mxcli check --references` verifies that `Mod.ACT_Process` exists. It does not verify that the caller passes the correct parameter types. A full semantic pass resolves the call graph and checks types across document boundaries — the guarantee a typed language gives you.
 
-**4. A completeness model**
+**Forward reference and dependency resolution.** MDL scripts currently require declaration-order: entity before association, microflow before call site. A compiler builds a dependency graph and resolves order automatically, freeing the LLM and Starlark scripts from having to get this right.
 
-mxcli currently checks *syntactic and referential correctness* — you get what you write, nothing more. A compiler checks *architectural completeness*: a CRUD entity without a navigation item is incomplete and should warn. This shifts the tool's guarantee from "this MDL is valid" to "this MDL produces a working, navigable feature."
+**Multi-error reporting.** A compiler makes a full pass and reports all errors at once. Faster iteration, especially for generated scripts.
 
-**5. A pattern library in the executor**
+**Completeness model.** `mxcli check` warns when a declared feature is architecturally incomplete — entity without access rules, CRUD without navigation. A semantic check that belongs in the compiler, not in a Starlark script.
 
-Standard patterns — the `DS_Get` microflow body, the save/cancel button bar on an edit page, the delete confirmation popup — currently live in skill files. Moving them into the executor as named, versioned templates that expansion commands instantiate makes them deterministic, testable, and Mendix-version-aware without any LLM involvement.
+**Impact on strategic metrics**
 
-**Impact on the strategic metrics**
-
-Each step up the compiler ladder compounds the advantages already documented:
-
-| Metric | Today (MDL executor) | With compiler commands |
-|---|---|---|
-| LLM output for CRUD entity | ~150–200 lines MDL | ~1 line (`create crud Mod.Entity`) |
-| Token cost | Low | Near-zero |
-| Correctness | High (LLM + skill files) | Deterministic |
-| Model tier needed | Sonnet | Local 7B model |
-| Completeness guarantee | Syntactic + referential | Architectural |
-
-The token cost for generating a full CRUD feature drops from ~1,000 tokens of MDL to a single statement. The model tier drops further — generating `create crud Bookstore.Book` is well within a local 7B model's capability. The correctness guarantee strengthens from probabilistic (the LLM applied the skill correctly) to deterministic (the executor expanded the pattern).
-
-**The skill file role shifts**
-
-Skill files do not disappear — they become higher-level. Instead of encoding *how to write CRUD microflows*, they encode *when to use CRUD vs. a custom microflow*, *how to name modules in a multi-app portfolio*, *which patterns suit which requirements*. The files shrink; the judgment they encode compounds. This is analogous to how SQL documentation shifted from "how to write a SELECT" to "when to use a CTE vs. a subquery."
+| Metric | Today | + Starlark patterns | + Compiler type system |
+|---|---|---|---|
+| LLM output for CRUD | ~150–200 lines MDL | `apply pattern crud (...)` | Same — errors caught earlier |
+| Token cost | Low | Near-zero | Near-zero |
+| Model tier needed | Sonnet | Local 7B | Local 7B |
+| Correctness | High (skill-dependent) | Deterministic patterns | Deterministic + type-safe |
+| Errors caught at | Studio Pro open | mxcli exec | mxcli check |
 
 ---
 
@@ -515,9 +515,10 @@ Query cost is ~500 tokens in, ~200–2k out, regardless of project size. The age
 19. **Backend-semantics documentation.** Explicitly document atomicity, error handling, lock behaviour, rollback across `.mpr` and live backends. Avoid customers discovering semantic differences by incident.
 20. **Local model compatibility testing.** Benchmark MDL generation on Qwen Coder / Gemma tiers against the doctype-test corpus. Publish the task complexity threshold where local models are reliable. Establishes the cost floor and the on-premises privacy story for enterprise customers.
 21. **Workflow phase benchmarking.** Measure token and model-tier cost across all six agentic phases (comprehension → planning → generation → verification → correction) for MDL vs. MCP on representative tasks. Converts the analytical efficiency argument into cited data points.
-22. **High-level expansion commands in the MDL grammar.** `CREATE CRUD`, `CREATE MODULE WITH ROLES`, `CREATE APP` as first-class grammar rules with deterministic executor expansion. Each command moves a pattern from skill file (LLM-applied, probabilistic) to executor (deterministic). Start with `CREATE CRUD` — highest frequency, clearest pattern, immediately measurable improvement.
-23. **Convention registry in the executor.** Encode Mendix naming conventions (`DS_Get_Entity`, `ACT_Create_Entity`, `Module_Entity_Overview`) and standard structural patterns as executor rules, not skill file text. Same input → same output, always, regardless of model.
-24. **Completeness model.** Define what constitutes a complete feature (entity + microflows + page + navigation + access rules) and have `mxcli check` warn when a declared feature is architecturally incomplete. Shifts the guarantee from "syntactically valid" to "architecturally complete."
+22. **Starlark generation scripts.** Extend the existing Starlark lint system to the write path: generation scripts that produce MDL instead of findings. Same engine, same extension mechanism, same community sharing model. Quantitative implementation patterns (CRUD, approval workflows, master-detail pages) move from skill files (LLM-applied, probabilistic) to Starlark scripts (deterministic, testable). Ship a standard library of common patterns that organisations adopt or override with their own conventions.
+23. **Type system for MDL expressions.** Add type inference and type checking to `mxcli check`: catch parameter type mismatches, wrong-type attribute references, and cross-document call-graph type errors before Studio Pro opens the file. The most impactful genuine compiler addition — moves a class of errors from runtime discovery to check-time.
+24. **Completeness model.** Extend `mxcli check` to warn on architecturally incomplete features: entity without access rules, CRUD without navigation, microflow with unreachable paths. Shifts the tool's guarantee from "syntactically and referentially valid" to "architecturally complete."
+25. **Forward reference resolution.** Allow MDL scripts to declare elements in any order; the executor resolves the dependency graph automatically. Removes ordering constraints from LLM- and Starlark-generated scripts.
 
 ---
 
@@ -765,36 +766,39 @@ MDL-generated applications will be better — not because the model is more capa
 
 ---
 
-## Slide 10 — The Compiler Roadmap: From Executor to Expert System
+## Slide 10 — Three Layers: Compiler, Starlark, Skills
 
-**Thesis:** mxcli is already most of a compiler. The gap is specific and tractable. Each step closes it further — and each step compounds every advantage already in this deck.
+**Thesis:** the linting system already shows the right design. Quantitative rules go in Starlark; qualitative judgment stays in skills. Apply the same split to generation — and the result is a three-layer architecture where each layer does exactly what it is good at.
 
-**What mxcli already has:**
+**The three layers:**
 
-- Deterministic BSON writer (compiler back-end — correct, versioned)
-- `mxcli check` — type checker for syntax and references
-- Version registry — target-platform model
-- `CREATE OR MODIFY` — idempotent application
+| Layer | Quantitative or qualitative? | Mechanism |
+|---|---|---|
+| **Compiler** | Correctness guarantees | Type system, semantic analysis, dependency resolution |
+| **Starlark scripts** | Quantitative patterns | Deterministic generation scripts, user- and community-defined |
+| **LLM skills** | Qualitative judgment | Skill files — when, why, and which pattern |
 
-**The gap in one sentence:** pattern knowledge lives in skill files (LLM-applied, probabilistic) rather than in the executor (deterministic). Moving it across is the compiler transition.
+**What moves from skills to Starlark:**
 
-**Five steps, in priority order:**
+Implementation patterns — CRUD, approval workflows, master-detail pages — are quantitative: given the same inputs, the correct output is always the same. They currently live in skill files, applied probabilistically by the LLM. Moving them to Starlark generation scripts makes them deterministic, testable, shareable, and invokable by a local 7B model.
 
-1. **High-level expansion commands** — `CREATE CRUD`, `CREATE MODULE WITH ROLES`, `CREATE APP` in the MDL grammar. One statement; deterministic, complete expansion. Test: remove all skill files — does it still work?
-2. **Convention registry** — naming patterns and structural idioms encoded as executor rules, not skill text. Same input, same output, always.
-3. **Cross-cutting propagation** — `CREATE CRUD` automatically wires security, navigation, and standard indexes. No forgotten steps.
-4. **Completeness model** — `mxcli check` warns when a declared feature is architecturally incomplete, not just syntactically valid.
-5. **Pattern library** — standard microflow bodies and page structures as versioned executor templates. Deterministic, Mendix-version-aware, testable.
+**What stays in skills:**
 
-**How each step compounds the strategic metrics:**
+Judgment — when to use a workflow vs. a microflow, how to structure a domain model for a given use case. Inherently qualitative. Requires contextual reasoning. Always LLM territory.
 
-| Step | Token cost | Model tier needed | Correctness |
+**What the compiler gains:**
+
+Type checking for expressions, cross-document parameter type validation, forward reference resolution, and a completeness model. These are correctness guarantees neither Starlark nor skills can provide — they require systematic analysis of the full program.
+
+**The compounding effect:**
+
+| | Today | + Starlark patterns | + Compiler type system |
 |---|---|---|---|
-| Today | Low | Sonnet | High (skill-dependent) |
-| + Expansion commands | Near-zero | Local 7B | Deterministic |
-| + Convention registry | Near-zero | Local 7B | Deterministic |
-| + Completeness model | Near-zero | Local 7B | Guaranteed complete |
+| Token cost | Low | Near-zero | Near-zero |
+| Model tier | Sonnet | Local 7B | Local 7B |
+| Errors caught at | Studio Pro | mxcli exec | mxcli check |
+| Correctness | Skill-dependent | Deterministic | Type-safe + complete |
 
-**The skill file role shifts — it does not shrink to zero.** Skills move from encoding *how to implement patterns* to encoding *when to use which pattern* and *how to compose patterns for complex requirements*. Higher-level judgment; less syntax coaching. The files get shorter; the value they encode per line increases.
+**The network effect:** organisations publish their Starlark pattern libraries. Mendix ships a standard library. The community of patterns grows independently of the mxcli release cycle. mxcli becomes the runtime for an ecosystem — not the owner of every pattern.
 
-**Slide message:** *"mxcli is already most of a compiler. The roadmap is five concrete steps — not a rearchitecture. Each step makes the tool faster, cheaper, and more correct than the last."*
+**Slide message:** *"Quantitative patterns move to Starlark. Qualitative judgment stays in skills. The compiler guarantees correctness for both. The same design that works for linting works for generation."*
