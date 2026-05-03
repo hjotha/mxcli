@@ -62,7 +62,8 @@ create persistent entity DgTest.Category (
 create association DgTest.Product_Category
   from DgTest.Product to DgTest.Category;
 
--- Helper page: edit form opened from CRUD examples
+-- @version: 11.0+
+-- Helper page: edit form opened from CRUD examples (page params require 11.0+)
 create page DgTest.Product_Edit (
   params: { $Product: DgTest.Product },
   title: 'Edit Product',
@@ -80,6 +81,7 @@ create page DgTest.Product_Edit (
   }
 };
 
+-- @version: any
 -- Helper microflow for DG04 (microflow datasource)
 create microflow DgTest.DSO_GetActiveProducts ()
   returns list of DgTest.Product
@@ -227,6 +229,7 @@ create page DgTest.DG04_Microflow_DataSource (
 -- DG05: Association datasource (by-association path from DataView context)
 -- ============================================================================
 
+-- @version: 11.0+
 /**
  * DG05: DataGrid inside a DataView sourced via an association path.
  * The outer DataView provides $Category; the inner DataGrid shows its Products.
@@ -250,6 +253,7 @@ create page DgTest.DG05_Association_DataSource (
   }
 };
 
+-- @version: any
 -- ============================================================================
 -- DG06: Paging options
 -- ============================================================================
@@ -414,6 +418,7 @@ create page DgTest.DG09_Custom_Content_Column (
   }
 };
 
+-- @version: 11.0+
 -- ============================================================================
 -- DG10: Control bar — New button
 -- ============================================================================
@@ -485,6 +490,7 @@ create page DgTest.DG11_CRUD (
   }
 };
 
+-- @version: any
 -- ============================================================================
 -- DG12: Microflow row actions — pass $currentObject to a microflow
 -- ============================================================================
