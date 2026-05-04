@@ -29,14 +29,18 @@ func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
 // the next newExecContext call picks up handler-side state changes.
 //
 // Fields intentionally NOT synced back (read-only from handler perspective):
-//   - Output, Format, Quiet, Logger — set once at Executor construction
+//   - Output, Quiet, Logger — set once at Executor construction
 //   - BackendFactory — set once at Executor construction
 //   - OutputGuard — removed; writeDescribeJSON captures via Output swap only
 //   - ExecuteFn, ExecuteProgramFn, FinalizeFn — bound to Executor methods, immutable
+//
+// Format IS synced back so that `SET format = json` takes effect for all
+// subsequent statements in the same session.
 func (e *Executor) syncBack(ctx *ExecContext) {
 	e.backend = ctx.Backend
 	e.mprPath = ctx.MprPath
 	e.cache = ctx.Cache
+	e.format = ctx.Format
 	e.catalogMu.Lock()
 	old := e.catalog
 	e.catalog = ctx.Catalog

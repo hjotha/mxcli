@@ -43,6 +43,17 @@ func execSet(ctx *ExecContext, s *ast.SetStmt) error {
 		ctx.Settings = make(map[string]any)
 	}
 	ctx.Settings[s.Key] = s.Value
+
+	// Apply recognized session keys to the live context immediately.
+	// syncBack will persist ctx.Format back to e.format so subsequent
+	// statements in the same session also pick up the change.
+	switch strings.ToLower(s.Key) {
+	case "format":
+		if v, ok := s.Value.(string); ok {
+			ctx.Format = OutputFormat(strings.ToLower(v))
+		}
+	}
+
 	fmt.Fprintf(ctx.Output, "Set %s = %v\n", s.Key, s.Value)
 	return nil
 }
