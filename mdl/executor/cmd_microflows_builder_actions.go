@@ -1187,20 +1187,29 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 	}
 	moduleName := parts[0]
 
-	// If memberName is already qualified (e.g., "MfTest.Order_Customer"),
-	// extract the bare name for association lookup.
+	// If memberName is already qualified (e.g., "Module.Assoc"), the qualifier
+	// is the module that OWNS the association, not the create/change target's
+	// module. Associations can live in any module (see cross-association
+	// lookups below), so prefer the authored module when present.
 	bareName := memberName
 	qualifiedName := memberName
+	lookupModule := moduleName
 	if dot := strings.Index(memberName, "."); dot >= 0 {
+		lookupModule = memberName[:dot]
 		bareName = memberName[dot+1:]
 		// qualifiedName is already set to the full memberName
 	} else {
 		qualifiedName = moduleName + "." + memberName
 	}
 
-	// Query domain model to check if this member is an association
+	// Query the authored (or target) module's domain model first. When the
+	// association actually lives in a different module — the common case for
+	// cross-module associations like `OtherModule.Assoc_Name` on a
+	// `TargetModule.Entity` entity — keep the qualified name so the writer
+	// serialises `Association` correctly instead of falling back to
+	// `Attribute` and triggering Studio Pro CE1613 on re-open.
 	if fb.backend != nil {
-		if mod, err := fb.backend.GetModuleByName(moduleName); err == nil && mod != nil {
+		if mod, err := fb.backend.GetModuleByName(lookupModule); err == nil && mod != nil {
 			if dm, err := fb.backend.GetDomainModel(mod.ID); err == nil && dm != nil {
 				for _, a := range dm.Associations {
 					if a.Name == bareName {
@@ -1214,9 +1223,11 @@ func (fb *flowBuilder) resolveMemberChange(mc *microflows.MemberChange, memberNa
 						return
 					}
 				}
-				// Not an association — it's an attribute
+				// Not an association in the authored module — if the author
+				// qualified it (e.g. `Module.Attr`) the qualification is an
+				// error we must preserve rather than silently dropping; the
+				// writer will surface it during mx check.
 				if strings.Contains(memberName, ".") {
-					// Already qualified, don't double-qualify
 					mc.AttributeQualifiedName = memberName
 				} else if attrQN, ok := fb.resolveAttributeInEntityHierarchy(entityQN, memberName); ok {
 					mc.AttributeQualifiedName = attrQN

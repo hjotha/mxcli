@@ -193,14 +193,29 @@ func formatAction(
 
 		if len(a.InitialMembers) > 0 {
 			var members []string
+			// entityModule is the module of the create target (e.g. "TargetModule"
+			// for `create TargetModule.Entity`). Associations in other modules
+			// must keep their module prefix so the re-exec resolver finds them.
+			entityModule := ""
+			if parts := strings.SplitN(entityName, ".", 2); len(parts) == 2 {
+				entityModule = parts[0]
+			}
 			for _, m := range a.InitialMembers {
 				var memberName string
 				// Check if this is an association change or an attribute change
 				if m.AssociationQualifiedName != "" {
-					// Association: extract just the association name
+					// Association: keep the module prefix when the association
+					// is defined in a different module than the create target.
+					// The authored form `Module.Assoc` is preserved so re-exec
+					// resolves against the association's owning module rather
+					// than defaulting to the create target's module, which
+					// would cause Studio Pro CE1613 "attribute no longer exists"
+					// at re-open.
 					memberName = m.AssociationQualifiedName
-					if parts := strings.Split(memberName, "."); len(parts) > 0 {
-						memberName = parts[len(parts)-1]
+					if parts := strings.SplitN(memberName, ".", 2); len(parts) == 2 {
+						if parts[0] == entityModule {
+							memberName = parts[1]
+						}
 					}
 				} else {
 					// Attribute: extract just the attribute name
