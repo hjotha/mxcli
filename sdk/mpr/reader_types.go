@@ -180,27 +180,22 @@ func (r *Reader) ListJsonStructures() ([]*types.JsonStructure, error) {
 }
 
 // GetJsonStructureByQualifiedName retrieves a JSON structure by its qualified name (Module.Name).
+// Resolves folder containment: the stored ContainerID may be a folder inside
+// the module, not the module itself, so we map container IDs through the
+// module hierarchy before matching on module name.
 func (r *Reader) GetJsonStructureByQualifiedName(moduleName, name string) (*types.JsonStructure, error) {
 	all, err := r.ListJsonStructures()
 	if err != nil {
 		return nil, err
 	}
 
-	modules, err := r.ListModules()
+	moduleMap, err := r.buildContainerModuleNameMap()
 	if err != nil {
 		return nil, err
 	}
 
-	moduleID := ""
-	for _, m := range modules {
-		if m.Name == moduleName {
-			moduleID = string(m.ID)
-			break
-		}
-	}
-
 	for _, js := range all {
-		if js.Name == name && (moduleID == "" || string(js.ContainerID) == moduleID) {
+		if js.Name == name && moduleMap[js.ContainerID] == moduleName {
 			return js, nil
 		}
 	}
