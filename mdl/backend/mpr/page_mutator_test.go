@@ -859,3 +859,123 @@ func TestSetLayout_EmptyForm_Error(t *testing.T) {
 		t.Fatal("Expected error when current layout cannot be determined")
 	}
 }
+
+// ============================================================================
+// deriveColumnNameBson / sanitizeColumnName regression tests (issue #116)
+// ============================================================================
+
+func makePropTypeID116(b byte) primitive.Binary {
+	data := make([]byte, 16)
+	data[0] = b
+	return primitive.Binary{Subtype: 0x04, Data: data}
+}
+
+func TestDeriveColumnNameBson_AttributeBinding(t *testing.T) {
+	typeID := makePropTypeID116(0x01)
+	propKeyMap := map[string]string{extractBinaryIDFromDoc(typeID): "attribute"}
+
+	colDoc := bson.D{
+		{Key: "Properties", Value: bson.A{
+			int32(2),
+			bson.D{
+				{Key: "TypePointer", Value: typeID},
+				{Key: "Value", Value: bson.D{
+					{Key: "AttributeRef", Value: "MyModule.Customer.Description"},
+				}},
+			},
+		}},
+	}
+
+	got := deriveColumnNameBson(colDoc, propKeyMap, 0)
+	if got != "Description" {
+		t.Errorf("expected 'Description', got %q", got)
+	}
+}
+
+func TestDeriveColumnNameBson_CaptionFallback(t *testing.T) {
+	typeID := makePropTypeID116(0x02)
+	propKeyMap := map[string]string{extractBinaryIDFromDoc(typeID): "header"}
+
+	colDoc := bson.D{
+		{Key: "Properties", Value: bson.A{
+			int32(2),
+			bson.D{
+				{Key: "TypePointer", Value: typeID},
+				{Key: "Value", Value: bson.D{
+					{Key: "TextTemplate", Value: bson.D{
+						{Key: "Template", Value: bson.D{
+							{Key: "Items", Value: bson.A{
+								int32(2),
+								bson.D{{Key: "Text", Value: "Order Status"}},
+							}},
+						}},
+					}},
+				}},
+			},
+		}},
+	}
+
+	got := deriveColumnNameBson(colDoc, propKeyMap, 0)
+	if got != "Order_Status" {
+		t.Errorf("expected 'Order_Status', got %q", got)
+	}
+}
+
+func TestDeriveColumnNameBson_AllSpecialCharCaptionFallsBackToColN(t *testing.T) {
+	typeID := makePropTypeID116(0x03)
+	propKeyMap := map[string]string{extractBinaryIDFromDoc(typeID): "header"}
+
+	colDoc := bson.D{
+		{Key: "Properties", Value: bson.A{
+			int32(2),
+			bson.D{
+				{Key: "TypePointer", Value: typeID},
+				{Key: "Value", Value: bson.D{
+					{Key: "TextTemplate", Value: bson.D{
+						{Key: "Template", Value: bson.D{
+							{Key: "Items", Value: bson.A{
+								int32(2),
+								bson.D{{Key: "Text", Value: "---"}},
+							}},
+						}},
+					}},
+				}},
+			},
+		}},
+	}
+
+	got := deriveColumnNameBson(colDoc, propKeyMap, 0)
+	if got != "col1" {
+		t.Errorf("expected 'col1' for all-special-char caption, got %q", got)
+	}
+}
+
+func TestDeriveColumnNameBson_IndexFallback(t *testing.T) {
+	colDoc := bson.D{{Key: "Properties", Value: bson.A{int32(2)}}}
+	got := deriveColumnNameBson(colDoc, map[string]string{}, 2)
+	if got != "col3" {
+		t.Errorf("expected 'col3', got %q", got)
+	}
+}
+
+func TestSanitizeColumnName(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"Description", "Description"},
+		{" Description ", "Description"},
+		{"Order Status", "Order_Status"},
+		{"!Order Status!", "Order_Status"},
+		{"Hello World", "Hello_World"},
+		{"___", ""},
+		{"---", ""},
+	}
+	for _, c := range cases {
+		got := sanitizeColumnName(c.input)
+		if got != c.want {
+			t.Errorf("sanitizeColumnName(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
+
