@@ -184,6 +184,18 @@ func (fb *flowBuilder) addPendingErrorHandlerFlowForState(state pendingErrorHand
 	}
 	if state.skipVar != "" {
 		if statementReferencesVar(stmt, state.skipVar) {
+			// An IF whose condition reads the skipVar itself handles the
+			// empty/error case in its own branches (e.g. `if $Response !=
+			// empty and $Response/StatusCode < 400 then … else <fallback>`).
+			// The original Mendix flow in these cases routes the error-
+			// handler edge directly into the IF's split, reusing the
+			// fallback path. Re-using the split as the rejoin point avoids
+			// the phantom EndEvent that terminatePendingErrorHandlersAtEnd
+			// would otherwise create when both IF branches terminate.
+			if _, ok := stmt.(*ast.IfStmt); ok {
+				fb.addErrorHandlerRejoinFlowForState(state, originID, destinationID)
+				return pendingErrorHandlerState{}
+			}
 			if !fb.hasDeclaredReturnValue() {
 				if derivedVar := outputDerivedVariable(stmt, state.skipVar); derivedVar != "" {
 					state.skipVar = derivedVar
