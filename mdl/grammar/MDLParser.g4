@@ -3484,7 +3484,29 @@ utilityStatement
     | defineFragmentStatement
     | sqlStatement
     | importStatement
+    | sessionSetStatement
     | helpStatement
+    ;
+
+/**
+ * Session-level SET: stores a key/value pair in the executor settings map.
+ * Distinct from the microflow-level setStatement (SET $var = expr).
+ *
+ * Examples:
+ *   SET format = json
+ *   SET format = 'table'
+ *   SET debug = true
+ */
+sessionSetStatement
+    : SET identifierOrKeyword EQUALS sessionSetValue
+    ;
+
+sessionSetValue
+    : STRING_LITERAL
+    | NUMBER_LITERAL
+    | TRUE
+    | FALSE
+    | identifierOrKeyword
     ;
 
 searchStatement

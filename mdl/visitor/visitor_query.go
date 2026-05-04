@@ -1021,6 +1021,35 @@ func (b *Builder) ExitExecuteScriptStatement(ctx *parser.ExecuteScriptStatementC
 	}
 }
 
+// ExitSessionSetStatement handles session-level SET key = value
+// Grammar: sessionSetStatement: SET identifierOrKeyword EQUALS sessionSetValue
+func (b *Builder) ExitSessionSetStatement(ctx *parser.SessionSetStatementContext) {
+	keyCtx := ctx.IdentifierOrKeyword()
+	valCtx := ctx.SessionSetValue()
+	if keyCtx == nil || valCtx == nil {
+		return
+	}
+	key := keyCtx.GetText()
+	var value any
+	switch {
+	case valCtx.TRUE() != nil:
+		value = true
+	case valCtx.FALSE() != nil:
+		value = false
+	case valCtx.NUMBER_LITERAL() != nil:
+		if i, err := strconv.ParseInt(valCtx.NUMBER_LITERAL().GetText(), 10, 64); err == nil {
+			value = i
+		} else {
+			value = valCtx.NUMBER_LITERAL().GetText()
+		}
+	case valCtx.STRING_LITERAL() != nil:
+		value = unquoteString(valCtx.STRING_LITERAL().GetText())
+	case valCtx.IdentifierOrKeyword() != nil:
+		value = valCtx.IdentifierOrKeyword().GetText()
+	}
+	b.statements = append(b.statements, &ast.SetStmt{Key: key, Value: value})
+}
+
 // ExitHelpStatement handles help/exit/quit commands
 // Grammar: helpStatement: IDENTIFIER (identifierOrKeyword)*
 func (b *Builder) ExitHelpStatement(ctx *parser.HelpStatementContext) {

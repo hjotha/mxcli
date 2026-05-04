@@ -1153,6 +1153,12 @@ type MDLParserListener interface {
 	// EnterUtilityStatement is called when entering the utilityStatement production.
 	EnterUtilityStatement(c *UtilityStatementContext)
 
+	// EnterSessionSetStatement is called when entering the sessionSetStatement production.
+	EnterSessionSetStatement(c *SessionSetStatementContext)
+
+	// EnterSessionSetValue is called when entering the sessionSetValue production.
+	EnterSessionSetValue(c *SessionSetValueContext)
+
 	// EnterSearchStatement is called when entering the searchStatement production.
 	EnterSearchStatement(c *SearchStatementContext)
 
@@ -2502,6 +2508,12 @@ type MDLParserListener interface {
 
 	// ExitUtilityStatement is called when exiting the utilityStatement production.
 	ExitUtilityStatement(c *UtilityStatementContext)
+
+	// ExitSessionSetStatement is called when exiting the sessionSetStatement production.
+	ExitSessionSetStatement(c *SessionSetStatementContext)
+
+	// ExitSessionSetValue is called when exiting the sessionSetValue production.
+	ExitSessionSetValue(c *SessionSetValueContext)
 
 	// ExitSearchStatement is called when exiting the searchStatement production.
 	ExitSearchStatement(c *SearchStatementContext)

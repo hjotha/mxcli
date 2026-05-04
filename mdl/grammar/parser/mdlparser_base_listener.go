@@ -2420,6 +2420,18 @@ func (s *BaseMDLParserListener) EnterUtilityStatement(ctx *UtilityStatementConte
 // ExitUtilityStatement is called when production utilityStatement is exited.
 func (s *BaseMDLParserListener) ExitUtilityStatement(ctx *UtilityStatementContext) {}
 
+// EnterSessionSetStatement is called when production sessionSetStatement is entered.
+func (s *BaseMDLParserListener) EnterSessionSetStatement(ctx *SessionSetStatementContext) {}
+
+// ExitSessionSetStatement is called when production sessionSetStatement is exited.
+func (s *BaseMDLParserListener) ExitSessionSetStatement(ctx *SessionSetStatementContext) {}
+
+// EnterSessionSetValue is called when production sessionSetValue is entered.
+func (s *BaseMDLParserListener) EnterSessionSetValue(ctx *SessionSetValueContext) {}
+
+// ExitSessionSetValue is called when production sessionSetValue is exited.
+func (s *BaseMDLParserListener) ExitSessionSetValue(ctx *SessionSetValueContext) {}
+
 // EnterSearchStatement is called when production searchStatement is entered.
 func (s *BaseMDLParserListener) EnterSearchStatement(ctx *SearchStatementContext) {}
 
