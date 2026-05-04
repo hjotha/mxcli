@@ -57,27 +57,17 @@ Examples:
 			os.Exit(1)
 		}
 
-		// Step 1: Resolve MxBuild and mx binary.
-		// On Windows, prefer Studio Pro installation (ships both mxbuild.exe and mx.exe).
-		// Fall back to CDN download on other platforms or when Studio Pro is not installed.
+		// Step 1: Resolve mx binary.
+		// On Windows and macOS, Studio Pro ships a native mx binary — prefer it.
+		// CDN downloads contain Linux ELF binaries that cannot run on those platforms.
+		// On Linux (CI, devcontainers), download mxbuild from CDN and derive mx.
 		fmt.Printf("Step 1/4: Resolving MxBuild %s...\n", mendixVersion)
-		var mxbuildPath string
-		if studioDir := docker.ResolveStudioProDir(mendixVersion); studioDir != "" {
-			mxbuildPath = filepath.Join(studioDir, "modeler", "mxbuild.exe")
-			fmt.Printf("  Using Studio Pro: %s\n", studioDir)
-		} else {
-			var err error
-			mxbuildPath, err = docker.DownloadMxBuild(mendixVersion, os.Stdout)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error downloading MxBuild: %v\n", err)
-				os.Exit(1)
-			}
-		}
-
-		// Resolve mx binary from mxbuild path
-		mxPath, err := docker.ResolveMx(mxbuildPath)
+		mxPath, err := docker.ResolveMxForNewProject(mendixVersion, os.Stdout)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: could not find mx binary: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: could not find mx binary for version %s: %v\n", mendixVersion, err)
+			if runtime.GOOS == "darwin" {
+				fmt.Fprintf(os.Stderr, "  On macOS, install Mendix Studio Pro %s from the Mendix Marketplace.\n", mendixVersion)
+			}
 			os.Exit(1)
 		}
 

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"regexp"
 	"strings"
 )
 
@@ -137,6 +138,10 @@ func NewestVersionedPath(paths []string) string {
 }
 
 func versionFromPath(path string) string {
+	// macOS Studio Pro bundles: .../Mendix Studio Pro X.Y.Z*.app/Contents/modeler/<binary>
+	if m := regexp.MustCompile(`Mendix Studio Pro (\d+\.\d+\.\d+)`).FindStringSubmatch(path); m != nil {
+		return m[1]
+	}
 	versionDir := filepath.Dir(filepath.Dir(path))
 	return filepath.Base(versionDir)
 }

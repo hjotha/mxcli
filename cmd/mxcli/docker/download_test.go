@@ -194,3 +194,24 @@ func TestResolveMxBuild_FindsCachedVersion(t *testing.T) {
 		}
 	}
 }
+
+func TestVersionFromPath_MacOSAppBundle(t *testing.T) {
+	path := "/Applications/Mendix Studio Pro 11.10.0.app/Contents/modeler/mx"
+	if got := versionFromPath(path); got != "11.10.0" {
+		t.Errorf("versionFromPath(%q) = %q; want %q", path, got, "11.10.0")
+	}
+}
+
+func TestVersionFromPath_MacOSAppBundle_RC(t *testing.T) {
+	path := "/Applications/Mendix Studio Pro 11.10.0-rc.7 Beta.app/Contents/modeler/mx"
+	if got := versionFromPath(path); got != "11.10.0" {
+		t.Errorf("versionFromPath(%q) = %q; want %q", path, got, "11.10.0")
+	}
+}
+
+func TestVersionFromPath_CachedLinux(t *testing.T) {
+	path := "/home/user/.mxcli/mxbuild/11.9.0/modeler/mxbuild"
+	if got := versionFromPath(path); got != "11.9.0" {
+		t.Errorf("versionFromPath(%q) = %q; want %q", path, got, "11.9.0")
+	}
+}

@@ -179,6 +179,24 @@ func ResolveMxForVersion(mxbuildPath, preferredVersion string) (string, error) {
 	return "", fmt.Errorf("mx not found; specify --mxbuild-path pointing to Mendix installation directory")
 }
 
+// ResolveMxForNewProject finds the mx binary for use by mxcli new.
+// On Windows and macOS it prefers an installed Studio Pro to avoid downloading
+// Linux CDN binaries that won't execute on those platforms. On Linux (and as a
+// fallback) it downloads mxbuild from the CDN and derives mx from the same dir.
+func ResolveMxForNewProject(version string, progressWriter io.Writer) (string, error) {
+	// Fast path: Studio Pro or cached download already present
+	if mxPath, err := ResolveMxForVersion("", version); err == nil {
+		return mxPath, nil
+	}
+	// Slow path: download mxbuild from CDN (works on Linux; on macOS/Windows
+	// this is only reached if Studio Pro is not installed)
+	mxbuildPath, err := DownloadMxBuild(version, progressWriter)
+	if err != nil {
+		return "", err
+	}
+	return ResolveMx(mxbuildPath)
+}
+
 func CachedMxPath(version string) string {
 	cacheDir, err := MxBuildCacheDir(version)
 	if err != nil {

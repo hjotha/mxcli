@@ -197,12 +197,24 @@ func TestJdkSearchPaths_NoHardcodedDriveLetter(t *testing.T) {
 	}
 }
 
-func TestResolveStudioProDir_NotWindows(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("non-windows test")
+func TestResolveStudioProDir_Linux(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("linux-only test")
 	}
 	if dir := ResolveStudioProDir("11.6.4"); dir != "" {
-		t.Errorf("expected empty on non-windows, got %s", dir)
+		t.Errorf("expected empty on linux, got %s", dir)
+	}
+}
+
+func TestResolveStudioProDir_MacOS_FakeInstall(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS-only test")
+	}
+	// Simulate a Studio Pro .app bundle in a temp Applications directory.
+	// resolveStudioProDirMacOS is hard-coded to /Applications, so we test
+	// it indirectly by confirming that a non-existent version returns "".
+	if dir := resolveStudioProDirMacOS("0.0.0"); dir != "" {
+		t.Errorf("expected empty for non-existent version, got %s", dir)
 	}
 }
 

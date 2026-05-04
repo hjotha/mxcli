@@ -9,13 +9,17 @@
 // CDN downloads (mxbuild tar.gz) contain Linux ELF binaries that cannot
 // execute on Windows, so Studio Pro installations MUST be preferred.
 //
-// On Linux/macOS (CI, devcontainers), Studio Pro is not available.
+// On macOS, Studio Pro installs to "/Applications/Mendix Studio Pro X.Y.Z.app/".
+// CDN downloads are Linux ELF binaries and also cannot run on macOS.
+// Studio Pro installations are therefore preferred on macOS as well.
+//
+// On Linux (CI, devcontainers), Studio Pro is not available.
 // CDN downloads are the primary source for mxbuild and runtime.
 //
 // Resolution priority (all platforms):
 //  1. Explicit path (--mxbuild-path)
 //  2. PATH lookup
-//  3. OS-specific known locations (Studio Pro on Windows)
+//  3. OS-specific known locations (Studio Pro on Windows and macOS)
 //  4. Cached CDN downloads (~/.mxcli/mxbuild/)
 //
 // Path discovery on Windows must NOT hardcode drive letters. Use environment
@@ -136,16 +140,40 @@ func resolveMxBuild(explicitPath string, preferredVersion ...string) (string, er
 }
 
 // ResolveStudioProDir finds the Studio Pro installation directory for a specific
-// Mendix version on Windows. Returns the installation root (e.g.,
-// "D:\Program Files\Mendix\11.6.4") or empty string if not found.
-// On non-Windows platforms, always returns empty string.
+// Mendix version. Returns the installation root on Windows (e.g.,
+// "D:\Program Files\Mendix\11.6.4") or the app Contents directory on macOS
+// (e.g., "/Applications/Mendix Studio Pro 11.10.0.app/Contents").
+// Returns empty string if not found or on Linux.
 func ResolveStudioProDir(version string) string {
-	if runtime.GOOS != "windows" {
-		return ""
+	switch runtime.GOOS {
+	case "windows":
+		for _, dir := range windowsProgramDirs() {
+			candidate := filepath.Join(dir, "Mendix", version)
+			if info, err := os.Stat(filepath.Join(candidate, "modeler", "mxbuild.exe")); err == nil && !info.IsDir() {
+				return candidate
+			}
+		}
+	case "darwin":
+		return resolveStudioProDirMacOS(version)
 	}
-	for _, dir := range windowsProgramDirs() {
-		candidate := filepath.Join(dir, "Mendix", version)
-		if info, err := os.Stat(filepath.Join(candidate, "modeler", "mxbuild.exe")); err == nil && !info.IsDir() {
+	return ""
+}
+
+// resolveStudioProDirMacOS finds an installed Studio Pro on macOS that matches
+// the requested version. App bundles are named "Mendix Studio Pro X.Y.Z*.app"
+// where X.Y.Z is the base version (e.g., "11.10.0-rc.7 Beta" for 11.10.0).
+// Returns the bundle's Contents directory, or "" if not found.
+func resolveStudioProDirMacOS(version string) string {
+	matches, _ := filepath.Glob("/Applications/Mendix Studio Pro *.app")
+	re := regexp.MustCompile(`^Mendix Studio Pro (\d+\.\d+\.\d+)`)
+	for _, match := range matches {
+		base := strings.TrimSuffix(filepath.Base(match), ".app")
+		m := re.FindStringSubmatch(base)
+		if m == nil || m[1] != version {
+			continue
+		}
+		candidate := filepath.Join(match, "Contents")
+		if _, err := os.Stat(filepath.Join(candidate, "modeler", "mx")); err == nil {
 			return candidate
 		}
 	}
@@ -189,7 +217,7 @@ func mendixSearchPaths(binaryName string) []string {
 		}
 		return paths
 	case "darwin":
-		return []string{filepath.Join("/Applications/Mendix/*/modeler", binaryName)}
+		return []string{"/Applications/Mendix Studio Pro *.app/Contents/modeler/" + binaryName}
 	default: // linux
 		paths := []string{filepath.Join("/opt/mendix/*/modeler", binaryName)}
 		if home, err := os.UserHomeDir(); err == nil {
