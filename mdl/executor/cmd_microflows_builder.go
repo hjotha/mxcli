@@ -32,6 +32,13 @@ type flowBuilder struct {
 	errors              []string          // Validation errors collected during build
 	measurer            *layoutMeasurer   // For measuring statement dimensions
 	nextConnectionPoint model.ID          // For compound statements: the exit point differs from entry point
+	// incomingRedirect, when set, instructs the next enclosing flow emission to
+	// terminate at this merge/activity ID instead of the most recently emitted
+	// activity. Used by retry-loop error handlers (where a merge is inserted
+	// before the source activity so the normal inbound flow enters the merge
+	// and the error-handler tail loops back to the same merge). Cleared after
+	// the outer loop consumes it for the next flow.
+	incomingRedirect model.ID
 	nextFlowCase        string            // If set, next connecting flow uses this case value (for merge-less splits)
 	// nextFlowAnchor carries the branch-specific FlowAnchors that should be
 	// applied to the flow created by the NEXT iteration of buildFlowGraph.

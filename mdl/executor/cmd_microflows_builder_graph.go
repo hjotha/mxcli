@@ -76,13 +76,21 @@ func (fb *flowBuilder) buildFlowGraph(stmts []ast.MicroflowStatement, returns *a
 		activityID := fb.addStatement(stmt)
 		if activityID != "" {
 			fb.applyPendingAnnotations(activityID)
-			// Connect to previous object with horizontal SequenceFlow
+			// Connect to previous object with horizontal SequenceFlow.
+			// When incomingRedirect is set (retry-loop error handler built a
+			// merge before the activity), the inbound flow terminates at the
+			// merge instead of the activity itself.
+			inboundTarget := activityID
+			if fb.incomingRedirect != "" {
+				inboundTarget = fb.incomingRedirect
+				fb.incomingRedirect = ""
+			}
 			var flow *microflows.SequenceFlow
 			if pendingCase != "" {
-				flow = newHorizontalFlowWithCase(lastID, activityID, pendingCase)
+				flow = newHorizontalFlowWithCase(lastID, inboundTarget, pendingCase)
 				pendingCase = ""
 			} else {
-				flow = newHorizontalFlow(lastID, activityID)
+				flow = newHorizontalFlow(lastID, inboundTarget)
 			}
 			// Prefer the pendingFlowAnchor (carried from a guard-pattern IF's
 			// branch) over the previous statement's own anchor — it encodes

@@ -51,11 +51,113 @@ func (fb *flowBuilder) finishCustomErrorHandler(activityID model.ID, activityX i
 		return
 	}
 	if len(eh.Body) > 0 {
+		// Retry-loop pattern: error body ends with an IF whose non-terminating
+		// branch should loop back to the source activity (Studio Pro authors
+		// this as a merge placed before the source, with the handler tail
+		// returning to that merge). MDL cannot express the loop-back directly,
+		// so we detect the shape and wire the topology ourselves.
+		if isRetryLoopErrorHandler(eh.Body) {
+			fb.buildRetryLoopErrorHandler(activityID, activityX, eh.Body)
+			return
+		}
 		mergeID := fb.addErrorHandlerFlow(activityID, activityX, eh.Body)
 		fb.handleErrorHandlerMergeWithSkip(mergeID, activityID, outputVar)
 		return
 	}
 	fb.registerEmptyCustomErrorHandlerWithSkip(activityID, eh, outputVar)
+}
+
+// isRetryLoopErrorHandler reports whether the error-handler body looks like
+// a retry loop: the last statement is an IF whose else branch terminates
+// (via RAISE ERROR or RETURN) and whose then branch continues. That shape
+// mirrors the Studio Pro retry pattern where the non-terminating branch
+// loops back to the source activity to re-attempt it.
+func isRetryLoopErrorHandler(body []ast.MicroflowStatement) bool {
+	if len(body) == 0 {
+		return false
+	}
+	ifStmt, ok := body[len(body)-1].(*ast.IfStmt)
+	if !ok {
+		return false
+	}
+	if len(ifStmt.ThenBody) == 0 || len(ifStmt.ElseBody) == 0 {
+		return false
+	}
+	thenTerminates := bodyTerminates(ifStmt.ThenBody)
+	elseTerminates := bodyTerminates(ifStmt.ElseBody)
+	// Exactly one branch must terminate (the "error" branch) and one must
+	// continue (the "retry" branch). If both or neither terminate, the shape
+	// is some other IF and the standard merge-forward path still applies.
+	return thenTerminates != elseTerminates
+}
+
+// bodyTerminates reports whether a statement body ends with a terminator
+// (RAISE ERROR, RETURN, or nested IF where every branch terminates).
+func bodyTerminates(body []ast.MicroflowStatement) bool {
+	if len(body) == 0 {
+		return false
+	}
+	last := body[len(body)-1]
+	switch s := last.(type) {
+	case *ast.RaiseErrorStmt:
+		return true
+	case *ast.ReturnStmt:
+		return true
+	case *ast.IfStmt:
+		if len(s.ElseBody) == 0 {
+			return false
+		}
+		return bodyTerminates(s.ThenBody) && bodyTerminates(s.ElseBody)
+	}
+	return false
+}
+
+// buildRetryLoopErrorHandler wires a retry-loop topology for an error handler
+// whose body ends with a terminating/continuing IF. The non-terminating
+// branch's tail loops back to a new merge placed before the source activity;
+// the merge then feeds into the source. The outer loop consumes
+// fb.incomingRedirect so the normal inbound flow also terminates at the
+// merge instead of directly at the source.
+func (fb *flowBuilder) buildRetryLoopErrorHandler(sourceActivityID model.ID, sourceX int, errorBody []ast.MicroflowStatement) {
+	// Build the handler activities with tracking of where the non-terminating
+	// branch's tail ends up. We reuse addErrorHandlerFlow; it returns the tail
+	// that would have forwarded to the next main-path activity. For a retry
+	// loop, that tail is the continue-branch exit of the trailing IF.
+	tail := fb.addErrorHandlerFlow(sourceActivityID, sourceX, errorBody)
+	if tail.id == "" {
+		// The handler terminates unexpectedly — nothing to loop back.
+		return
+	}
+
+	// Insert a merge just left of the source activity, on the main flow row.
+	merge := &microflows.ExclusiveMerge{
+		BaseMicroflowObject: microflows.BaseMicroflowObject{
+			BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
+			Position:    model.Point{X: sourceX - fb.spacing/2, Y: fb.baseY},
+			Size:        model.Size{Width: MergeSize, Height: MergeSize},
+		},
+	}
+	fb.objects = append(fb.objects, merge)
+
+	// Merge -> source (normal flow into the REST/microflow call)
+	fb.flows = append(fb.flows, newHorizontalFlow(merge.ID, sourceActivityID))
+
+	// Handler tail -> merge (loop-back). Authored Studio Pro flows mark this
+	// edge as a normal SequenceFlow (not IsErrorHandler) — the error flow
+	// marker only applies to the SOURCE → first-handler-activity edge, which
+	// addErrorHandlerFlow already emitted. Using a plain horizontal flow here
+	// avoids triggering spurious CE0136/CE0019 diagnostics that fire when a
+	// retrieve's start variable is deemed to flow through an error edge.
+	loopFlow := newHorizontalFlow(tail.id, merge.ID)
+	if tail.caseValue != "" {
+		applyDeferredFlowCase(loopFlow, tail.caseValue, tail.flowAnchor)
+	} else if tail.flowAnchor != nil {
+		applyDeferredFlowCase(loopFlow, "", tail.flowAnchor)
+	}
+	fb.flows = append(fb.flows, loopFlow)
+
+	// Next inbound normal flow must terminate at the merge, not at the source.
+	fb.incomingRedirect = merge.ID
 }
 
 func (fb *flowBuilder) registerEmptyCustomErrorHandlerWithSkip(activityID model.ID, eh *ast.ErrorHandlingClause, skipVar string) {
