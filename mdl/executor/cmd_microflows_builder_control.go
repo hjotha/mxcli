@@ -41,6 +41,36 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	// a branch's RETURN affecting the parent flow state prematurely
 	savedEndsWithReturn := fb.endsWithReturn
 
+	// Capture an incoming empty custom error handler whose source is the
+	// previous call activity (set by finishCustomErrorHandler via
+	// registerEmptyCustomErrorHandlerWithSkip) when the call has a
+	// non-empty output variable (skipVar). The Studio Pro authored pattern
+	// wires the error edge into the IF's ELSE branch — at the first
+	// activity in the ELSE body — so the fallback path handles both "no
+	// value" and "error" cases. Left un-rejoined,
+	// terminatePendingErrorHandlersAtEnd would synthesise a phantom
+	// EndEvent; naively rejoining at the split would bypass the output
+	// variable declaration and trigger CE0108 "variable not in scope" on
+	// subsequent activities.
+	//
+	// We consume the pending state here so the rejoin is emitted in the
+	// `lastElseID == ""` block below (when the first ELSE activity is
+	// created); the corresponding builder fields are cleared so downstream
+	// logic does not see the handler twice.
+	pendingElseErrorOrigin := model.ID("")
+	if fb.errorHandlerSource != "" && fb.errorHandlerTailFrom == fb.errorHandlerSource &&
+		fb.errorHandlerSkipVar != "" && fb.errorHandlerTailIsSource &&
+		hasElseBody && len(s.ElseBody) > 0 &&
+		bothReturn && // only when both branches terminate — a continuation in THEN would need a different rejoin target
+		statementReferencesVar(s, fb.errorHandlerSkipVar) &&
+		firstElseIsLeafActivity(s.ElseBody) {
+		pendingElseErrorOrigin = fb.errorHandlerSource
+		fb.errorHandlerSource = ""
+		fb.errorHandlerTailFrom = ""
+		fb.errorHandlerSkipVar = ""
+		fb.errorHandlerTailIsSource = false
+	}
+
 	// Save current center line position
 	splitX := fb.posX
 	centerY := fb.posY // This is the center line for the happy path
@@ -223,6 +253,17 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 					flow := newDownwardFlowWithCase(splitID, actID, "false")
 					applyUserAnchors(flow, falseBranchAnchor, branchDestinationAnchor(falseBranchAnchor, thisAnchor))
 					fb.flows = append(fb.flows, flow)
+					// Rejoin a pending empty custom error handler from the
+					// previous call activity at the first ELSE activity.
+					// Mendix authors the error edge directly into the ELSE
+					// fallback path (same entry point as the split `false`
+					// branch), preserving output-variable scope while giving
+					// the error case the same handling as the happy-path
+					// fallback.
+					if pendingElseErrorOrigin != "" {
+						fb.addEmptyErrorHandlerRejoinFlowFrom(splitID, pendingElseErrorOrigin, actID)
+						pendingElseErrorOrigin = ""
+					}
 				} else {
 					var flow *microflows.SequenceFlow
 					originAnchor := prevElseAnchor
@@ -461,6 +502,22 @@ func (fb *flowBuilder) addIfStatement(s *ast.IfStmt) model.ID {
 	}
 
 	return splitID
+}
+
+// firstElseIsLeafActivity reports whether the ELSE body's first statement is
+// a plain activity (not a compound split/if/loop). Rejoining an error flow
+// onto a compound statement's internal split/merge would need extra plumbing
+// that the caller is not equipped for; fall back to the default phantom-
+// EndEvent terminator in that case.
+func firstElseIsLeafActivity(stmts []ast.MicroflowStatement) bool {
+	if len(stmts) == 0 {
+		return false
+	}
+	switch stmts[0].(type) {
+	case *ast.IfStmt, *ast.LoopStmt, *ast.WhileStmt, *ast.EnumSplitStmt:
+		return false
+	}
+	return true
 }
 
 func bodyHasContinuingCustomErrorHandler(stmts []ast.MicroflowStatement) bool {
