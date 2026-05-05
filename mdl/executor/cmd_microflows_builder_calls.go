@@ -1025,17 +1025,30 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			// MDL did not explicitly assign one.
 			s.OutputVariable = s.Result.ResultEntity.Name
 		}
-		// Determine whether the import mapping returns a single object or a list by
-		// looking at the JSON structure it references. If the root JSON element is
-		// an Object, the mapping produces one object; if it is an Array, a list.
+		// Determine whether the import mapping returns a single object or a list.
+		// First try the JSON structure it references — if the root JSON element
+		// is an Object, the mapping produces one object; if it is an Array, a
+		// list. When the mapping is backed by an XML schema or message
+		// definition (no JsonStructure set), fall back to the import mapping's
+		// own root element kind, which Studio Pro authors as "Object" or
+		// "Array" the same way.
 		singleObject := false
 		if fb.backend != nil {
-			if im, err := fb.backend.GetImportMappingByQualifiedName(s.Result.MappingName.Module, s.Result.MappingName.Name); err == nil && im.JsonStructure != "" {
-				// im.JsonStructure is "Module.Name" — split and look up the JSON structure.
-				if parts := strings.SplitN(im.JsonStructure, ".", 2); len(parts) == 2 {
-					if js, err := fb.backend.GetJsonStructureByQualifiedName(parts[0], parts[1]); err == nil && len(js.Elements) > 0 {
-						singleObject = js.Elements[0].ElementType == "Object"
+			if im, err := fb.backend.GetImportMappingByQualifiedName(s.Result.MappingName.Module, s.Result.MappingName.Name); err == nil {
+				resolved := false
+				if im.JsonStructure != "" {
+					// im.JsonStructure is "Module.Name" — split and look up the JSON structure.
+					if parts := strings.SplitN(im.JsonStructure, ".", 2); len(parts) == 2 {
+						if js, err := fb.backend.GetJsonStructureByQualifiedName(parts[0], parts[1]); err == nil && len(js.Elements) > 0 {
+							singleObject = js.Elements[0].ElementType == "Object"
+							resolved = true
+						}
 					}
+				}
+				if !resolved && len(im.Elements) > 0 && im.Elements[0] != nil {
+					// XML schema / message-definition mappings carry the
+					// single-vs-list shape on the root mapping element itself.
+					singleObject = im.Elements[0].Kind == "Object"
 				}
 			}
 		}
@@ -1318,9 +1331,13 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 	}
 
 	// Determine single vs list and result entity from the import mapping.
+	// JSON structure check covers JSON-backed mappings; for XML schema or
+	// message-definition mappings JsonStructure is empty and the root
+	// element kind on the mapping itself indicates Array vs Object.
 	resultEntityQN := ""
 	if fb.backend != nil {
 		if im, err := fb.backend.GetImportMappingByQualifiedName(s.Mapping.Module, s.Mapping.Name); err == nil {
+			resolved := false
 			if im.JsonStructure != "" {
 				parts := strings.SplitN(im.JsonStructure, ".", 2)
 				if len(parts) == 2 {
@@ -1328,8 +1345,12 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 						if js.Elements[0].ElementType == "Array" {
 							resultHandling.SingleObject = false
 						}
+						resolved = true
 					}
 				}
+			}
+			if !resolved && len(im.Elements) > 0 && im.Elements[0] != nil && im.Elements[0].Kind == "Array" {
+				resultHandling.SingleObject = false
 			}
 			if len(im.Elements) > 0 && im.Elements[0].Entity != "" {
 				resultEntityQN = im.Elements[0].Entity

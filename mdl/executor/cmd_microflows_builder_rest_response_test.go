@@ -58,6 +58,101 @@ func TestAddRestCallAction_ReturnsResponseUsesHttpResponseHandling(t *testing.T)
 	}
 }
 
+// REST call mappings backed by an XML schema or message definition (no
+// JsonStructure set) must still infer single-vs-list from the import
+// mapping's own root element kind. Otherwise the builder defaults to
+// SingleObject=false and emits a ListType result, which mismatches the
+// authored ObjectType return and triggers CE0117 / CE0019 / CE0136
+// downstream when the microflow's return value references the result.
+func TestAddRestCallAction_MappingFallsBackToImportMappingRootKindWhenJsonStructureMissing(t *testing.T) {
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+		backend: &mock.MockBackend{
+			GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+				if moduleName != "Synthetic" || name != "MsgDefMapping" {
+					return nil, fmt.Errorf("unexpected import mapping %s.%s", moduleName, name)
+				}
+				return &model.ImportMapping{
+					Name: "MsgDefMapping",
+					// Empty JsonStructure simulates an XML-schema or message-
+					// definition backed mapping.
+					JsonStructure: "",
+					Elements: []*model.ImportMappingElement{
+						{Kind: "Object", Entity: "Synthetic.Item"},
+					},
+				}, nil
+			},
+		},
+	}
+
+	stmt := &ast.RestCallStmt{
+		OutputVariable: "Item",
+		Method:         ast.HttpMethodGet,
+		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+		Result: ast.RestResult{
+			Type:         ast.RestResultMapping,
+			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "MsgDefMapping"},
+			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
+		},
+	}
+	fb.addRestCallAction(stmt)
+
+	activity := fb.objects[0].(*microflows.ActionActivity)
+	action := activity.Action.(*microflows.RestCallAction)
+	mapping := action.ResultHandling.(*microflows.ResultHandlingMapping)
+	if !mapping.SingleObject {
+		t.Errorf("SingleObject = false, want true (root mapping element Kind=Object)")
+	}
+}
+
+// And the inverse: an Array root on the mapping element must yield a
+// list-typed result handling.
+func TestAddRestCallAction_MappingFallsBackToArrayKindWhenJsonStructureMissing(t *testing.T) {
+	fb := &flowBuilder{
+		posX:         100,
+		posY:         100,
+		spacing:      HorizontalSpacing,
+		varTypes:     map[string]string{},
+		declaredVars: map[string]string{},
+		measurer:     &layoutMeasurer{},
+		backend: &mock.MockBackend{
+			GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
+				return &model.ImportMapping{
+					Name:          "ArrMapping",
+					JsonStructure: "",
+					Elements: []*model.ImportMappingElement{
+						{Kind: "Array", Entity: "Synthetic.Item"},
+					},
+				}, nil
+			},
+		},
+	}
+
+	stmt := &ast.RestCallStmt{
+		OutputVariable: "Items",
+		Method:         ast.HttpMethodGet,
+		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
+		Result: ast.RestResult{
+			Type:         ast.RestResultMapping,
+			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "ArrMapping"},
+			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
+		},
+	}
+	fb.addRestCallAction(stmt)
+
+	activity := fb.objects[0].(*microflows.ActionActivity)
+	action := activity.Action.(*microflows.RestCallAction)
+	mapping := action.ResultHandling.(*microflows.ResultHandlingMapping)
+	if mapping.SingleObject {
+		t.Errorf("SingleObject = true, want false (root mapping element Kind=Array)")
+	}
+}
+
 func TestAddRestCallAction_MappingResultPreservesExplicitOutputVariable(t *testing.T) {
 	fb := &flowBuilder{
 		posX:         100,
