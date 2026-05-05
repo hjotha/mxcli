@@ -241,15 +241,24 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 		}
 	}
 
-	// Build a map of parameter name -> param type for the Java action
+	// Build a map of parameter name -> param type for the Java action.
+	// listTypeParams tracks list-typed parameters: when bound to `empty` in
+	// MDL, Studio Pro authors them as `Argument: "empty"` (the MDL literal
+	// string) rather than `Argument: ""`, the unbound primitive marker. The
+	// distinction matters: `mx check` reports CE0126 "Missing value for
+	// parameter X" when a list-typed parameter receives `Argument: ""`.
 	entityTypeParams := make(map[string]bool)
 	microflowTypeParams := make(map[string]bool)
+	listTypeParams := make(map[string]bool)
 	if jaDef != nil {
 		for _, p := range jaDef.Parameters {
-			if _, ok := p.ParameterType.(*javaactions.EntityTypeParameterType); ok {
+			switch p.ParameterType.(type) {
+			case *javaactions.EntityTypeParameterType:
 				entityTypeParams[p.Name] = true
-			} else if _, ok := p.ParameterType.(*javaactions.MicroflowType); ok {
+			case *javaactions.MicroflowType:
 				microflowTypeParams[p.Name] = true
+			case *javaactions.ListType:
+				listTypeParams[p.Name] = true
 			}
 		}
 	}
@@ -285,9 +294,16 @@ func (fb *flowBuilder) addCallJavaActionAction(s *ast.CallJavaActionStmt) model.
 					Microflow:   "",
 				}
 			} else {
+				// List-typed parameters bound to `empty` keep the literal
+				// "empty" expression in BSON; primitive parameters use the
+				// blank Argument as their unbound marker.
+				argument := ""
+				if listTypeParams[arg.Name] {
+					argument = "empty"
+				}
 				value = &microflows.BasicCodeActionParameterValue{
 					BaseElement: model.BaseElement{ID: model.ID(types.GenerateID())},
-					Argument:    "",
+					Argument:    argument,
 				}
 			}
 		} else {
