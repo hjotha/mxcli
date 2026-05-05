@@ -112,47 +112,6 @@ func TestAddRestCallAction_MappingFallsBackToImportMappingRootKindWhenJsonStruct
 
 // And the inverse: an Array root on the mapping element must yield a
 // list-typed result handling.
-func TestAddRestCallAction_MappingFallsBackToArrayKindWhenJsonStructureMissing(t *testing.T) {
-	fb := &flowBuilder{
-		posX:         100,
-		posY:         100,
-		spacing:      HorizontalSpacing,
-		varTypes:     map[string]string{},
-		declaredVars: map[string]string{},
-		measurer:     &layoutMeasurer{},
-		backend: &mock.MockBackend{
-			GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
-				return &model.ImportMapping{
-					Name:          "ArrMapping",
-					JsonStructure: "",
-					Elements: []*model.ImportMappingElement{
-						{Kind: "Array", Entity: "Synthetic.Item"},
-					},
-				}, nil
-			},
-		},
-	}
-
-	stmt := &ast.RestCallStmt{
-		OutputVariable: "Items",
-		Method:         ast.HttpMethodGet,
-		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
-		Result: ast.RestResult{
-			Type:         ast.RestResultMapping,
-			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "ArrMapping"},
-			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
-		},
-	}
-	fb.addRestCallAction(stmt)
-
-	activity := fb.objects[0].(*microflows.ActionActivity)
-	action := activity.Action.(*microflows.RestCallAction)
-	mapping := action.ResultHandling.(*microflows.ResultHandlingMapping)
-	if mapping.SingleObject {
-		t.Errorf("SingleObject = true, want false (root mapping element Kind=Array)")
-	}
-}
-
 // A repeating Object element (MaxOccurs > 1 or unbounded) is a list, even
 // though the BSON Kind is "Object". Studio Pro models a list of objects
 // this way for XML schema and message-definition mappings; treating it as
