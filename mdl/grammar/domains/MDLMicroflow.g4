@@ -520,11 +520,12 @@ restCallTimeoutClause
 
 // RETURNS clause specifies how to handle the response
 restCallReturnsClause
-    : RETURNS STRING_TYPE                                    // Return as string
-    | RETURNS RESPONSE                                       // Return HttpResponse object
-    | RETURNS MAPPING qualifiedName AS qualifiedName         // Import mapping with result entity
-    | RETURNS NONE                                           // Ignore response
-    | RETURNS NOTHING                                        // Ignore response (alias)
+    : RETURNS STRING_TYPE                                       // Return as string
+    | RETURNS RESPONSE                                          // Return HttpResponse object
+    | RETURNS MAPPING qualifiedName AS LIST_OF qualifiedName    // Import mapping → list result
+    | RETURNS MAPPING qualifiedName AS qualifiedName            // Import mapping → single object
+    | RETURNS NONE                                              // Ignore response
+    | RETURNS NOTHING                                           // Ignore response (alias)
     ;
 
 /**

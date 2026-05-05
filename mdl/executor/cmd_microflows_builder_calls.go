@@ -1025,52 +1025,24 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 			// MDL did not explicitly assign one.
 			s.OutputVariable = s.Result.ResultEntity.Name
 		}
-		// Determine whether the import mapping returns a single object or a list.
-		// First try the JSON structure it references — if the root JSON element
-		// is an Object, the mapping produces one object; if it is an Array, a
-		// list. When the mapping is backed by an XML schema or message
-		// definition (no JsonStructure set), fall back to the import mapping's
-		// own root element kind, which Studio Pro authors as "Object" or
-		// "Array" the same way.
-		singleObject := false
-		if fb.backend != nil {
-			if im, err := fb.backend.GetImportMappingByQualifiedName(s.Result.MappingName.Module, s.Result.MappingName.Name); err == nil {
-				resolved := false
-				if im.JsonStructure != "" {
-					// im.JsonStructure is "Module.Name" — split and look up the JSON structure.
-					if parts := strings.SplitN(im.JsonStructure, ".", 2); len(parts) == 2 {
-						if js, err := fb.backend.GetJsonStructureByQualifiedName(parts[0], parts[1]); err == nil && len(js.Elements) > 0 {
-							singleObject = js.Elements[0].ElementType == "Object"
-							resolved = true
-						}
-					}
-				}
-				if !resolved && len(im.Elements) > 0 && im.Elements[0] != nil {
-					// XML schema / message-definition mappings carry the
-					// single-vs-list shape on the root mapping element
-					// itself. MaxOccurs > 1 or unbounded (-1) signals a
-					// list — Studio Pro models a repeating Object element
-					// as a list, distinct from a singleton. Mendix's
-					// import-mapping element BSON only ever uses
-					// `ImportMappings$ObjectMappingElement` or
-					// `ImportMappings$ValueMappingElement`; there is no
-					// `Array` element kind from real MPR data, so
-					// repetition has to come from MaxOccurs.
-					root := im.Elements[0]
-					if root.MaxOccurs == -1 || root.MaxOccurs > 1 {
-						singleObject = false
-					} else {
-						singleObject = root.Kind == "Object"
-					}
-				}
-			}
-		}
+		// Cardinality is authored on the microflow's ImportMappingCall in
+		// BSON (Range.SingleObject + ForceSingleOccurrence) — the same
+		// import mapping can yield either single or list depending on the
+		// call site. The describer emits `as list of Module.Entity` for a
+		// list and `as Module.Entity` for a single object; the builder
+		// trusts that explicit choice. ForceSingleOccurrence mirrors
+		// SingleObject so the writer reproduces the BSON shape Studio Pro
+		// emits (Range and ForceSingleOccurrence agree on whether one
+		// value is bound).
+		singleObject := !s.Result.IsList
+		fso := singleObject
 		resultHandling = &microflows.ResultHandlingMapping{
-			BaseElement:    model.BaseElement{ID: model.ID(types.GenerateID())},
-			MappingID:      model.ID(mappingQN),
-			ResultEntityID: model.ID(entityQN),
-			ResultVariable: s.OutputVariable,
-			SingleObject:   singleObject,
+			BaseElement:           model.BaseElement{ID: model.ID(types.GenerateID())},
+			MappingID:             model.ID(mappingQN),
+			ResultEntityID:        model.ID(entityQN),
+			ResultVariable:        s.OutputVariable,
+			SingleObject:          singleObject,
+			ForceSingleOccurrence: &fso,
 		}
 	case ast.RestResultNone:
 		resultHandling = &microflows.ResultHandlingNone{

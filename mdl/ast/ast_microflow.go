@@ -730,6 +730,13 @@ type RestResult struct {
 	Type         RestResultType // Result type
 	MappingName  QualifiedName  // Import mapping name (for Mapping type)
 	ResultEntity QualifiedName  // Result entity type (for Mapping type)
+	// IsList distinguishes `as Module.Entity` (single object) from
+	// `as list of Module.Entity` (list). Studio Pro stores this on the
+	// microflow's ImportMappingCall (Range.SingleObject /
+	// ForceSingleOccurrence), independently of whether the underlying
+	// import mapping is list-typed: the same mapping can yield either a
+	// single object or a list depending on this flag.
+	IsList bool
 }
 
 // RestCallStmt represents: $Var = REST CALL METHOD url [HEADER ...] [AUTH ...] [BODY ...] [TIMEOUT ...] RETURNS ...

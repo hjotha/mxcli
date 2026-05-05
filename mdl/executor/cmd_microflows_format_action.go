@@ -1296,7 +1296,16 @@ func formatRestCallAction(ctx *ExecContext, a *microflows.RestCallAction) string
 			sb.WriteString("mapping ")
 			sb.WriteString(string(rh.MappingID))
 			if rh.ResultEntityID != "" {
-				sb.WriteString(" as ")
+				// `as list of Entity` when the mapping yields a list,
+				// otherwise `as Entity` for a single object. Studio Pro
+				// keeps this on the ImportMappingCall (Range.SingleObject
+				// + ForceSingleOccurrence); the parser collapses both into
+				// SingleObject, so a list is `!SingleObject`.
+				if rh.SingleObject {
+					sb.WriteString(" as ")
+				} else {
+					sb.WriteString(" as list of ")
+				}
 				sb.WriteString(string(rh.ResultEntityID))
 			}
 		case *microflows.ResultHandlingNone:

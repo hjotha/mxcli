@@ -58,13 +58,14 @@ func TestAddRestCallAction_ReturnsResponseUsesHttpResponseHandling(t *testing.T)
 	}
 }
 
-// REST call mappings backed by an XML schema or message definition (no
-// JsonStructure set) must still infer single-vs-list from the import
-// mapping's own root element kind. Otherwise the builder defaults to
-// SingleObject=false and emits a ListType result, which mismatches the
-// authored ObjectType return and triggers CE0117 / CE0019 / CE0136
-// downstream when the microflow's return value references the result.
-func TestAddRestCallAction_MappingFallsBackToImportMappingRootKindWhenJsonStructureMissing(t *testing.T) {
+// `as Module.Entity` (no `list of`) marks the REST result as a single
+// object regardless of whether the underlying import mapping is
+// list-typed. Studio Pro stores this on the microflow's
+// ImportMappingCall (Range.SingleObject + ForceSingleOccurrence), so the
+// builder must trust the explicit MDL syntax — using mapping shape as a
+// proxy collides with cases like PCD's REST_GetEnvironmentByUUID, where
+// the mapping has MaxOccurs=-1 but the call site binds a single Object.
+func TestAddRestCallAction_MappingAsEntityProducesSingleObject(t *testing.T) {
 	fb := &flowBuilder{
 		posX:         100,
 		posY:         100,
@@ -72,22 +73,6 @@ func TestAddRestCallAction_MappingFallsBackToImportMappingRootKindWhenJsonStruct
 		varTypes:     map[string]string{},
 		declaredVars: map[string]string{},
 		measurer:     &layoutMeasurer{},
-		backend: &mock.MockBackend{
-			GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
-				if moduleName != "Synthetic" || name != "MsgDefMapping" {
-					return nil, fmt.Errorf("unexpected import mapping %s.%s", moduleName, name)
-				}
-				return &model.ImportMapping{
-					Name: "MsgDefMapping",
-					// Empty JsonStructure simulates an XML-schema or message-
-					// definition backed mapping.
-					JsonStructure: "",
-					Elements: []*model.ImportMappingElement{
-						{Kind: "Object", Entity: "Synthetic.Item", MaxOccurs: 1, MinOccurs: 1},
-					},
-				}, nil
-			},
-		},
 	}
 
 	stmt := &ast.RestCallStmt{
@@ -98,6 +83,7 @@ func TestAddRestCallAction_MappingFallsBackToImportMappingRootKindWhenJsonStruct
 			Type:         ast.RestResultMapping,
 			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "MsgDefMapping"},
 			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
+			IsList:       false,
 		},
 	}
 	fb.addRestCallAction(stmt)
@@ -106,18 +92,17 @@ func TestAddRestCallAction_MappingFallsBackToImportMappingRootKindWhenJsonStruct
 	action := activity.Action.(*microflows.RestCallAction)
 	mapping := action.ResultHandling.(*microflows.ResultHandlingMapping)
 	if !mapping.SingleObject {
-		t.Errorf("SingleObject = false, want true (root mapping element Kind=Object)")
+		t.Errorf("SingleObject = false, want true (no `list of` => single object)")
+	}
+	if mapping.ForceSingleOccurrence == nil || !*mapping.ForceSingleOccurrence {
+		t.Errorf("ForceSingleOccurrence = %v, want explicit true to mirror SingleObject", mapping.ForceSingleOccurrence)
 	}
 }
 
-// And the inverse: an Array root on the mapping element must yield a
-// list-typed result handling.
-// A repeating Object element (MaxOccurs > 1 or unbounded) is a list, even
-// though the BSON Kind is "Object". Studio Pro models a list of objects
-// this way for XML schema and message-definition mappings; treating it as
-// a singleton triggers `mx check` CE0013/CE0100 ("Input variable must be
-// of type 'List'") on downstream aggregate or loop activities.
-func TestAddRestCallAction_MappingObjectKindWithUnboundedMaxOccursIsList(t *testing.T) {
+// `as list of Module.Entity` produces a list-typed result regardless of
+// the import mapping's underlying shape. ForceSingleOccurrence mirrors
+// SingleObject so the writer reproduces the BSON layout Studio Pro emits.
+func TestAddRestCallAction_MappingAsListOfEntityProducesListResult(t *testing.T) {
 	fb := &flowBuilder{
 		posX:         100,
 		posY:         100,
@@ -125,17 +110,6 @@ func TestAddRestCallAction_MappingObjectKindWithUnboundedMaxOccursIsList(t *test
 		varTypes:     map[string]string{},
 		declaredVars: map[string]string{},
 		measurer:     &layoutMeasurer{},
-		backend: &mock.MockBackend{
-			GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
-				return &model.ImportMapping{
-					Name:          "RepeatingObjectMapping",
-					JsonStructure: "",
-					Elements: []*model.ImportMappingElement{
-						{Kind: "Object", Entity: "Synthetic.Item", MaxOccurs: -1, MinOccurs: 0},
-					},
-				}, nil
-			},
-		},
 	}
 
 	stmt := &ast.RestCallStmt{
@@ -146,6 +120,7 @@ func TestAddRestCallAction_MappingObjectKindWithUnboundedMaxOccursIsList(t *test
 			Type:         ast.RestResultMapping,
 			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "RepeatingObjectMapping"},
 			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
+			IsList:       true,
 		},
 	}
 	fb.addRestCallAction(stmt)
@@ -154,48 +129,10 @@ func TestAddRestCallAction_MappingObjectKindWithUnboundedMaxOccursIsList(t *test
 	action := activity.Action.(*microflows.RestCallAction)
 	mapping := action.ResultHandling.(*microflows.ResultHandlingMapping)
 	if mapping.SingleObject {
-		t.Errorf("SingleObject = true, want false (Kind=Object MaxOccurs=-1 should be a list)")
+		t.Errorf("SingleObject = true, want false (`list of` => list result)")
 	}
-}
-
-// MaxOccurs > 1 (e.g. a fixed-bound repeating element) must also yield a
-// list, not a singleton.
-func TestAddRestCallAction_MappingObjectKindWithBoundedRepeatIsList(t *testing.T) {
-	fb := &flowBuilder{
-		posX:         100,
-		posY:         100,
-		spacing:      HorizontalSpacing,
-		varTypes:     map[string]string{},
-		declaredVars: map[string]string{},
-		measurer:     &layoutMeasurer{},
-		backend: &mock.MockBackend{
-			GetImportMappingByQualifiedNameFunc: func(moduleName, name string) (*model.ImportMapping, error) {
-				return &model.ImportMapping{
-					Name:          "BoundedRepeatMapping",
-					JsonStructure: "",
-					Elements: []*model.ImportMappingElement{
-						{Kind: "Object", Entity: "Synthetic.Item", MaxOccurs: 5, MinOccurs: 1},
-					},
-				}, nil
-			},
-		},
-	}
-
-	stmt := &ast.RestCallStmt{
-		OutputVariable: "Items",
-		Method:         ast.HttpMethodGet,
-		URL:            &ast.LiteralExpr{Kind: ast.LiteralString, Value: "https://example.com"},
-		Result: ast.RestResult{
-			Type:         ast.RestResultMapping,
-			MappingName:  ast.QualifiedName{Module: "Synthetic", Name: "BoundedRepeatMapping"},
-			ResultEntity: ast.QualifiedName{Module: "Synthetic", Name: "Item"},
-		},
-	}
-	fb.addRestCallAction(stmt)
-
-	mapping := fb.objects[0].(*microflows.ActionActivity).Action.(*microflows.RestCallAction).ResultHandling.(*microflows.ResultHandlingMapping)
-	if mapping.SingleObject {
-		t.Errorf("SingleObject = true, want false (Kind=Object MaxOccurs=5 should be a list)")
+	if mapping.ForceSingleOccurrence == nil || *mapping.ForceSingleOccurrence {
+		t.Errorf("ForceSingleOccurrence = %v, want explicit false to mirror SingleObject", mapping.ForceSingleOccurrence)
 	}
 }
 
