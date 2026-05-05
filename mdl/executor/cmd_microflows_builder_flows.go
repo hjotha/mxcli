@@ -607,7 +607,12 @@ func errorHandlerStatementVarRefs(stmt ast.MicroflowStatement) []string {
 			refs = append(refs, exprVarRefs(arg)...)
 		}
 	case *ast.AddToListStmt:
-		refs = append(refs, s.Item, s.List)
+		if s.Value != nil {
+			refs = append(refs, exprVarRefs(s.Value)...)
+		} else if s.Item != "" {
+			refs = append(refs, s.Item)
+		}
+		refs = append(refs, s.List)
 	case *ast.RemoveFromListStmt:
 		refs = append(refs, s.Item, s.List)
 	}

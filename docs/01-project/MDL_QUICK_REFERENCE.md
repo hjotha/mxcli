@@ -224,6 +224,7 @@ authentication basic, session
 | Rollback | `rollback $entity [refresh];` | Reverts uncommitted changes |
 | Retrieve (DB) | `retrieve $Var from Module.Entity [where condition];` | Database XPath retrieve |
 | Retrieve (Assoc) | `retrieve $list from $Parent/Module.AssocName;` | Retrieve by association |
+| Add to list | `add expression to $list;` | Also accepts existing `add $item to $list;` form |
 | Call microflow | `$Result = call microflow Module.Name (Param = $value);` | |
 | Call nanoflow | `$Result = call nanoflow Module.Name (Param = $value);` | |
 | Call JS action | `$Result = call javascript action Module.Name (Param = $value);` | JavaScript action (nanoflow/microflow) |

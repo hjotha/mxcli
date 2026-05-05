@@ -481,7 +481,12 @@ func referencedVars(stmt ast.MicroflowStatement) []string {
 	case *ast.DeleteObjectStmt:
 		refs = append(refs, s.Variable)
 	case *ast.AddToListStmt:
-		refs = append(refs, s.Item, s.List)
+		if s.Value != nil {
+			refs = append(refs, exprVarRefs(s.Value)...)
+		} else {
+			refs = append(refs, s.Item)
+		}
+		refs = append(refs, s.List)
 	case *ast.RemoveFromListStmt:
 		refs = append(refs, s.Item, s.List)
 	case *ast.LogStmt:
@@ -532,6 +537,12 @@ func exprVarRefs(expr ast.Expression) []string {
 		}
 	case *ast.ParenExpr:
 		refs = append(refs, exprVarRefs(e.Inner)...)
+	case *ast.IfThenElseExpr:
+		refs = append(refs, exprVarRefs(e.Condition)...)
+		refs = append(refs, exprVarRefs(e.ThenExpr)...)
+		refs = append(refs, exprVarRefs(e.ElseExpr)...)
+	case *ast.SourceExpr:
+		refs = append(refs, exprVarRefs(e.Expression)...)
 	}
 	return refs
 }
