@@ -83,6 +83,19 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 		snippetName = snippetRef
 	}
 
+	// First, check if the snippet was created during this session
+	// (not yet visible via reader)
+	if pb.execCache != nil && pb.execCache.createdSnippets != nil {
+		if info, ok := pb.execCache.createdSnippets[snippetRef]; ok {
+			return info.ID, nil
+		}
+		if moduleName != "" {
+			if info, ok := pb.execCache.createdSnippets[moduleName+"."+snippetName]; ok {
+				return info.ID, nil
+			}
+		}
+	}
+
 	snippets, err := pb.backend.ListSnippets()
 	if err != nil {
 		return "", err
