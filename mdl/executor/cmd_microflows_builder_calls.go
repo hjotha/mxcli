@@ -1048,7 +1048,16 @@ func (fb *flowBuilder) addRestCallAction(s *ast.RestCallStmt) model.ID {
 				if !resolved && len(im.Elements) > 0 && im.Elements[0] != nil {
 					// XML schema / message-definition mappings carry the
 					// single-vs-list shape on the root mapping element itself.
-					singleObject = im.Elements[0].Kind == "Object"
+					// MaxOccurs > 1 or unbounded (-1) signals a list even
+					// when the kind is Object — Studio Pro models a
+					// repeating Object element as a list, distinct from a
+					// singleton.
+					root := im.Elements[0]
+					if root.Kind == "Array" || root.MaxOccurs == -1 || root.MaxOccurs > 1 {
+						singleObject = false
+					} else {
+						singleObject = root.Kind == "Object"
+					}
 				}
 			}
 		}
@@ -1349,8 +1358,13 @@ func (fb *flowBuilder) addImportFromMappingAction(s *ast.ImportFromMappingStmt) 
 					}
 				}
 			}
-			if !resolved && len(im.Elements) > 0 && im.Elements[0] != nil && im.Elements[0].Kind == "Array" {
-				resultHandling.SingleObject = false
+			if !resolved && len(im.Elements) > 0 && im.Elements[0] != nil {
+				// MaxOccurs > 1 or unbounded (-1) signals a list even when
+				// the kind is Object.
+				root := im.Elements[0]
+				if root.Kind == "Array" || root.MaxOccurs == -1 || root.MaxOccurs > 1 {
+					resultHandling.SingleObject = false
+				}
 			}
 			if len(im.Elements) > 0 && im.Elements[0].Entity != "" {
 				resultEntityQN = im.Elements[0].Entity
