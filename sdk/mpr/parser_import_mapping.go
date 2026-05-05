@@ -10,20 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-// bsonInt reads a BSON numeric field that may be int32 or int64
-// (Mendix authors numeric scalars as either, depending on the element).
-func bsonInt(v any) int {
-	switch x := v.(type) {
-	case int32:
-		return int(x)
-	case int64:
-		return int(x)
-	case int:
-		return x
-	}
-	return 0
-}
-
 // parseImportMapping parses an ImportMappings$ImportMapping unit from BSON.
 func (r *Reader) parseImportMapping(unitID, containerID string, contents []byte) (*model.ImportMapping, error) {
 	contents, err := r.resolveContents(unitID, contents)
@@ -119,8 +105,8 @@ func parseImportObjectMappingElement(raw map[string]any) *model.ImportMappingEle
 	if v, ok := raw["Association"].(string); ok {
 		elem.Association = v
 	}
-	elem.MinOccurs = bsonInt(raw["MinOccurs"])
-	elem.MaxOccurs = bsonInt(raw["MaxOccurs"])
+	elem.MinOccurs = extractInt(raw["MinOccurs"])
+	elem.MaxOccurs = extractInt(raw["MaxOccurs"])
 
 	// Parse children recursively (mix of object and value elements)
 	if children, ok := raw["Children"].(bson.A); ok {
@@ -157,8 +143,8 @@ func parseImportValueMappingElement(raw map[string]any) *model.ImportMappingElem
 	if v, ok := raw["IsKey"].(bool); ok {
 		elem.IsKey = v
 	}
-	elem.MinOccurs = bsonInt(raw["MinOccurs"])
-	elem.MaxOccurs = bsonInt(raw["MaxOccurs"])
+	elem.MinOccurs = extractInt(raw["MinOccurs"])
+	elem.MaxOccurs = extractInt(raw["MaxOccurs"])
 
 	// Extract the primitive type from the nested Type object
 	if typeObj, ok := raw["Type"].(map[string]any); ok {
