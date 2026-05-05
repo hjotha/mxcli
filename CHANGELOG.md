@@ -6,33 +6,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-05
+
 ### Added
 
-- **mxcli catalog search** — Search Mendix Catalog for data sources and services with filters for service type, environment, and ownership (#213)
-- **Local file metadata for OData clients** — `CREATE ODATA CLIENT` now supports `file://` URLs and relative paths for `MetadataUrl`, enabling offline development, reproducible testing, and version-pinned contracts (#206)
-- **Path normalization** — Relative paths in `MetadataUrl` are automatically converted to absolute `file://` URLs for Studio Pro compatibility
-- **ServiceUrl validation** — `ServiceUrl` parameter must now be a constant reference (e.g., `@Module.ConstantName`) to enforce Mendix best practice
-- **Shared URL utilities** — `internal/pathutil` package with `NormalizeURL()`, `URIToPath()`, and `PathFromURL()` for reuse across components
-- **@anchor sequence flow annotation** — optional `@anchor(from: X, to: Y)` annotation on microflow statements that pins the side of the activity box a SequenceFlow attaches to (top / right / bottom / left). Split (`if`) statements support the combined form `@anchor(to: X, true: (from: ..., to: ...), false: (from: ..., to: ...))` so the incoming and per-branch outgoing anchors survive describe → exec round-trip. When omitted, the builder derives the anchor from the visual flow direction (existing behaviour is unchanged). Keeps the flow diagram stable across patches when an agent-generated microflow is applied back to a project
-- **@anchor loop form** — `LOOP`/`WHILE` statements accept `@anchor(iterator: (...), tail: (...))` in the grammar so authoring tools can forward-propagate the intent. Today the builder deliberately does not translate those into SequenceFlows: Studio Pro rejects edges between a `LoopedActivity` and its body statements with CE0709 ("Sequence flow is not accepted by origin or destination"), since the iterator icon is drawn implicitly from the loop geometry. Reserving the grammar slot keeps scripts forward-compatible with any future Mendix capability
-- **OpenAPI import for REST clients** — `CREATE REST CLIENT` now accepts `OpenAPI: 'path/or/url'` to auto-generate a consumed REST service document from an OpenAPI 3.0 spec (JSON or YAML); operations, path/query parameters, request bodies, response types, resource groups (tags), and Basic auth are derived automatically; spec content is stored in `OpenApiFile` for Studio Pro parity (#207)
-- **DESCRIBE CONTRACT OPERATION FROM OPENAPI** — Preview what would be generated from an OpenAPI spec without writing to the project
+- **CREATE/DROP NANOFLOW** — Full nanoflow authoring pipeline: grammar, AST, visitor, executor, BSON writer, CALL NANOFLOW statement, GRANT/REVOKE nanoflow access, and nanoflow ELK diagram support in VS Code preview
+- **CALL JAVASCRIPT ACTION** — `call javascript action Module.ActionName(params)` fully supported in CREATE NANOFLOW/MICROFLOW bodies: grammar, parser, builder, serializer, and roundtrip
+- **CASE/WHEN enum split** — Enum-value split statements with `CASE $var WHEN Module.Value THEN ... END CASE` syntax; replaces the earlier `split on enum` draft
+- **CALL WEB SERVICE (SOAP)** — Legacy SOAP microflow call statement with unsupported-detail preservation as raw BSON
+- **RENAME WORKFLOW / RENAME MODULE** — RENAME now covers workflows and modules with reference refactoring
+- **Ellipsis placeholder expression** — `...` as a placeholder in microflow expressions
+- **Add-to-list expressions** — `add expression to $list` syntax in microflow/nanoflow bodies
+- **Free microflow annotations** — Unattached `@annotation` nodes in microflow bodies survive describe → exec round-trip
+- **@anchor sequence flow annotation** — `@anchor(from: X, to: Y)` on microflow statements pins SequenceFlow attachment sides; split and loop forms supported; builder-default and layout-equivalent anchors suppressed from DESCRIBE output
+- **OpenAPI import for REST clients** — `CREATE REST CLIENT` accepts `OpenAPI: 'path/or/url'` to auto-generate a consumed REST service from an OpenAPI 3.0 spec (#207)
+- **DESCRIBE CONTRACT OPERATION FROM OPENAPI** — Preview OpenAPI-generated operations without writing to the project
+- **mxcli catalog search** — Search Mendix Catalog for data sources and services (#213)
+- **Local file metadata for OData clients** — `CREATE ODATA CLIENT` supports `file://` URLs and relative paths for `MetadataUrl` (#206)
+- **CATALOG.ASSOCIATIONS table** — Query association metadata via `select ... from CATALOG.ASSOCIATIONS` (#419)
+- **SET format = json** — Session-level `SET key = value` command; `SET format = json` applies to all subsequent output
+- **Java action improvements** — DROP/RENAME updates source file references; `void` qualified name resolved as VoidType; explicit void returns parsed correctly
+- **SHOW LANGUAGES** — Language listing with Languages array parsing and executor handler (#480)
+- **VS Code extension** — LSP coverage extended to all document types (nanoflows, workflows, Java actions, JSON structures, import/export mappings)
+- **LSP snippet completions** — `CREATE NANOFLOW`, `CALL MICROFLOW`, `CALL NANOFLOW`, `CALL JAVASCRIPT ACTION`, `CALL JAVA ACTION` snippets added
+- **make check-mdl** — Fast doctype script syntax validation target; wired into CI
+- **Nanoflow diff support** — `mxcli diff` detects and displays nanoflow changes
+- **Nanoflow validation parity** — `mxcli check` runs full body validation on nanoflows via shared `validateFlowBody` helper
 
-- **Flow bug fixes** — Module existence validation for SHOW NANOFLOWS and SHOW MICROFLOWS, numeric return literals no longer get spurious `$` prefix, empty flow names rejected at create time, `NanoflowCallAction` error handling type resolved correctly, `not()` expression spacing preserved on roundtrip, JavaScript action call rendering in DESCRIBE output
-- **Nanoflow diff support** — `mxcli diff` now detects and displays nanoflow changes (previously silently skipped)
-- **Nanoflow validation parity** — `mxcli check` now runs full body validation on nanoflows (undeclared variables, missing returns, branch scoping) via shared `validateFlowBody` helper; `allNames()` includes nanoflows for forward-reference detection
-- **DownloadFileStmt denylist** — `DOWNLOAD FILE` added to nanoflow disallowed action list
-- **JavaScript action MDL syntax** — `call javascript action Module.ActionName(params)` now fully supported in CREATE NANOFLOW/MICROFLOW bodies: grammar, parser, builder, serializer, and roundtrip
-- **LSP snippet completions** — Added `CREATE NANOFLOW (with params)`, `CALL MICROFLOW`, `CALL NANOFLOW`, `CALL JAVASCRIPT ACTION`, `CALL JAVA ACTION` snippets
-- **Flow builder cache** — `lookupMicroflowReturnType` and `lookupNanoflowReturnType` now cache results with lazy-load bool flags, avoiding repeated `ListNanoflows`/`ListMicroflows` calls; nanoflow lookup uses `GetRawUnitByName` fast path
-- **Parser fixes** — Negative literals no longer greedily consumed by lexer (`-?` removed from `NUMBER_LITERAL`); XPath multi-predicate brackets correctly split and re-wrapped; multi-line string literals in change/create object expressions escaped; `ExclusiveSplit` (if/else) inside loop bodies now emits correct `end if;`
-- **Empty action params** — JS and Java action parameters with empty/nil values are omitted from DESCRIBE output instead of rendering as `...` or bare `= )`
-- **Association retrieve roundtrip fidelity** — `retrieve $X from $Y/Module.Association` syntax preserved on roundtrip (previously converted to `from Entity where Assoc = $Y`)
-- **DESCRIBE empty-then optimization** — If/else blocks with empty true branches are swapped and condition negated for readable output
+### Fixed
+
+- SIGSEGV in `buildPublishedRestResourceDef` on malformed REST syntax (#429)
+- nil panic in ALTER WORKFLOW when activity ref is missing or uses a keyword (#430)
+- Single quotes not escaped in DESCRIBE ENTITY XPath output (#431)
+- `diff-local` git-error propagation and regression tests (#424)
+- DataGrid2 column name derivation for ALTER PAGE (#116)
+- O(N²) `GetMicroflow`/`GetNanoflow` replaced with direct unit lookup (#397)
+- `CALL MICROFLOW`/`CALL NANOFLOW` validates targets exist before writing model (#395)
+- `mxcli new` exits 0 on download failure (#422)
+- Reject obviously malformed `MetadataUrl` in CREATE ODATA CLIENT (#427)
+- Rename commands reject collisions with existing names (#432)
+- Exit codes and error messages for marketplace, eval list, widget init, TUI (#425)
+- `connect`/`disconnect`/`status` registered in syntax registry (#441)
+- `resolveSnippetRef` checks session cache before querying backend (#509)
+- DESCRIBE WORKFLOW output was missing the `CREATE` keyword (#478)
+- RENAME MODULE failed due to uppercase ObjectType comparison in visitor (#473)
+- JSON structure qualified-name lookup through folder hierarchy (#508)
+- Retry-style error handler tail now loops back to a merge before the source (#507)
+- Cross-module associations preserved on CREATE object actions (#502)
+- Negative annotation coordinates parsed correctly (#494)
+- Multiple retrieve XPath predicates preserved (#500)
+- Custom error handler routing, empty else branch preservation, and structured conditional emit (#366)
+- Validation feedback targets preserved with fully-qualified association paths (#359)
+- Mapping result range cardinality and explicit REST mapping output variables (#372)
+- SNIPPETCALL on parameterised snippets no longer corrupts model
+- SHOW_PAGE button actions no longer produce null `PageParameterMapping.Variable` (#295)
+- `Forms$SnippetParameterMapping` used for snippet call parameter mappings
+- Marketplace search applies client-side filtering (#479)
+- Recursion depth limit added to EXECUTE SCRIPT (#472)
+- `CATALOG.ASSOCIATIONS`/`CONSTANTS`/`OBJECTS` returning no rows (#419)
 
 ### Changed
 
-- **MDL string literal escapes** — `mdlQuote`/`unquoteString` now treat `\n`, `\r`, `\t`, and `\\` inside single-quoted literals as escape sequences (previously a literal backslash followed by the letter). This is a compatibility break for any MDL script that intentionally embedded a raw `\n` / `\t` / `\\` as two characters; such scripts must now double the backslash (`\\n` to preserve the two-character form). Applies to `LOG` messages, `@caption`/`@annotation` text, and other string literals round-tripped via the describer.
+- **MDL string literal escapes** — `\n`, `\r`, `\t`, `\\` inside single-quoted literals are now escape sequences. Scripts embedding raw backslash sequences must double the backslash.
+- **CatalogDB/CatalogTx interfaces** — Catalog, Builder, and LintContext migrated to interface; SQLite implementation extracted to `catalogdb_sqlite.go`
+- **LintReader interface** — `sdk/mpr` removed from linter and executor; all reads go through `LintReader`
+- **Type-safe BSON helpers** — `bsonString`/`bsonBool` consolidated in `mdl/bsonutil` package
 
 ## [0.7.0] - 2026-04-21
 
