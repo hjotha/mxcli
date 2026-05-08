@@ -357,6 +357,8 @@ end split;
 
 `case` values are qualified entity names. The optional `else` branch handles objects that do not match any listed specialization.
 
+**`cast` only stores the output variable.** Studio Pro persists Microflows$CastAction with a single `VariableName` field — the source variable is implicit (the type-split's input). Use `cast $SpecificName;` to give the specialized variable its name. The two-variable form `$Output = cast $Source;` parses but `$Source` is dropped on roundtrip; prefer the single-variable form.
+
 ### LOOP Statements
 
 ```mdl
